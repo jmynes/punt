@@ -41,8 +41,6 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [] }: KanbanCard
 	const handleClick = (e: React.MouseEvent) => {
 		// Ctrl/Cmd + click: toggle selection
 		if (e.ctrlKey || e.metaKey) {
-			e.preventDefault()
-			e.stopPropagation()
 			toggleTicket(ticket.id)
 			return
 		}

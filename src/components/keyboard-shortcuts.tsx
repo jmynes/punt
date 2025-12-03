@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
 
@@ -22,6 +23,7 @@ export function KeyboardShortcuts() {
 	const { columns, addTicket, removeTicket } = useBoardStore()
 	const { popDeleted, pushRedo, popRedo, pushDeleted, pushDeletedBatch } = useUndoStore()
 	const { clearSelection, selectedTicketIds, getSelectedIds } = useSelectionStore()
+	const { activeTicketId, setActiveTicketId, createTicketOpen, setCreateTicketOpen } = useUIStore()
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 	const [ticketsToDelete, setTicketsToDelete] = useState<TicketWithRelations[]>([])
 	const deleteButtonRef = useRef<HTMLButtonElement>(null)
@@ -34,6 +36,30 @@ export function KeyboardShortcuts() {
 			}, 0)
 		}
 	}, [showDeleteConfirm])
+
+	// Handle Ctrl+click to close modals/drawers (workaround for Radix not handling modifier clicks)
+	useEffect(() => {
+		const handleClick = (e: MouseEvent) => {
+			if (e.ctrlKey || e.metaKey) {
+				// Check if clicking on an overlay (outside modal content)
+				const target = e.target as HTMLElement
+				const isOverlay = target.matches('[data-slot="sheet-overlay"], [data-slot="dialog-overlay"]')
+				
+				if (isOverlay) {
+					// Close any open drawer/modal
+					if (activeTicketId) {
+						setActiveTicketId(null)
+					}
+					if (createTicketOpen) {
+						setCreateTicketOpen(false)
+					}
+				}
+			}
+		}
+
+		window.addEventListener('click', handleClick)
+		return () => window.removeEventListener('click', handleClick)
+	}, [activeTicketId, setActiveTicketId, createTicketOpen, setCreateTicketOpen])
 
 	// Get all tickets flat from columns
 	const allTickets = columns.flatMap((col) => col.tickets)
