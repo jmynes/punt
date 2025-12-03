@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronRight, FolderKanban, Home, Layers, Plus, Settings } from 'lucide-react'
+import { FolderKanban, Home, Layers, List, Plus, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -110,7 +110,10 @@ export function Sidebar() {
 							<Button
 								variant="ghost"
 								size="sm"
-								className="w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100"
+								className={cn(
+									'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100',
+									pathname.includes('/board') && 'bg-zinc-800/50 text-zinc-100',
+								)}
 							>
 								<Layers className="h-3.5 w-3.5" />
 								Board
@@ -120,9 +123,12 @@ export function Sidebar() {
 							<Button
 								variant="ghost"
 								size="sm"
-								className="w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100"
+								className={cn(
+									'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100',
+									pathname.includes('/backlog') && 'bg-zinc-800/50 text-zinc-100',
+								)}
 							>
-								<ChevronRight className="h-3.5 w-3.5" />
+								<List className="h-3.5 w-3.5" />
 								Backlog
 							</Button>
 						</Link>
@@ -130,7 +136,10 @@ export function Sidebar() {
 							<Button
 								variant="ghost"
 								size="sm"
-								className="w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100"
+								className={cn(
+									'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100',
+									pathname.includes('/settings') && 'bg-zinc-800/50 text-zinc-100',
+								)}
 							>
 								<Settings className="h-3.5 w-3.5" />
 								Settings
