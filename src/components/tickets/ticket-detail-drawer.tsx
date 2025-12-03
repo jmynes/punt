@@ -151,7 +151,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 											<span className="text-sm text-zinc-200">{ticket.assignee.name}</span>
 										</div>
 									) : (
-										<span className="text-sm text-zinc-500">Unassigned</span>
+										<div className="flex items-center gap-2 text-zinc-500">
+											<div className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-zinc-600">
+												<User className="h-3.5 w-3.5" />
+											</div>
+											<span className="text-sm">Unassigned</span>
+										</div>
 									)}
 								</div>
 

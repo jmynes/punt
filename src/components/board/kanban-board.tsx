@@ -25,7 +25,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ projectKey }: KanbanBoardProps) {
-	const { columns, moveTicket, searchQuery } = useBoardStore()
+	const { columns, moveTicket, reorderTicket, searchQuery } = useBoardStore()
 	const { setCreateTicketOpen } = useUIStore()
 	const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
 
@@ -89,16 +89,38 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 		[columns, moveTicket],
 	)
 
-	const handleDragEnd = useCallback((event: DragEndEvent) => {
-		setActiveTicket(null)
+	const handleDragEnd = useCallback(
+		(event: DragEndEvent) => {
+			setActiveTicket(null)
 
-		const { active, over } = event
-		if (!over) return
+			const { active, over } = event
+			if (!over) return
 
-		// Here you would sync with the server
-		// For now, the optimistic update from handleDragOver is sufficient
-		console.log('Drag ended:', { activeId: active.id, overId: over.id })
-	}, [])
+			const activeId = active.id as string
+			const overId = over.id as string
+
+			if (activeId === overId) return
+
+			// Find which column the active item is in
+			const activeColumn = columns.find((col) => col.tickets.some((t) => t.id === activeId))
+			// Find which column we're over (could be a column or a ticket)
+			const overColumn =
+				columns.find((col) => col.id === overId) ||
+				columns.find((col) => col.tickets.some((t) => t.id === overId))
+
+			if (!activeColumn || !overColumn) return
+
+			// Same column reordering
+			if (activeColumn.id === overColumn.id) {
+				const overTicketIndex = activeColumn.tickets.findIndex((t) => t.id === overId)
+				if (overTicketIndex >= 0) {
+					reorderTicket(activeColumn.id, activeId, overTicketIndex)
+				}
+			}
+			// Cross-column move is already handled in handleDragOver
+		},
+		[columns, reorderTicket],
+	)
 
 	if (columns.length === 0) {
 		return (
