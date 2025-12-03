@@ -1,0 +1,213 @@
+'use client'
+
+import { format, isBefore, isToday } from 'date-fns'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+import type { BacklogColumn } from '@/stores/backlog-store'
+import { useUIStore } from '@/stores/ui-store'
+import type { TicketWithRelations } from '@/types'
+import { PriorityBadge } from '../common/priority-badge'
+import { TypeBadge } from '../common/type-badge'
+
+interface BacklogRowProps {
+	ticket: TicketWithRelations
+	projectKey: string
+	columns: BacklogColumn[]
+	getStatusName: (columnId: string) => string
+}
+
+export function BacklogRow({ ticket, projectKey, columns, getStatusName }: BacklogRowProps) {
+	const { setActiveTicketId } = useUIStore()
+
+	const handleClick = () => {
+		setActiveTicketId(ticket.id)
+		// Could also navigate to ticket detail page
+	}
+
+	const handleKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			handleClick()
+		}
+	}
+
+	const renderCell = (column: BacklogColumn) => {
+		switch (column.id) {
+			case 'type':
+				return <TypeBadge type={ticket.type} />
+
+			case 'key':
+				return (
+					<span className="font-mono text-sm text-zinc-400">
+						{projectKey}-{ticket.number}
+					</span>
+				)
+
+			case 'title':
+				return (
+					<div className="flex items-center gap-2">
+						<span className="truncate font-medium">{ticket.title}</span>
+						{ticket._count && ticket._count.subtasks > 0 && (
+							<Badge variant="outline" className="shrink-0 text-xs">
+								{ticket._count.subtasks} subtasks
+							</Badge>
+						)}
+					</div>
+				)
+
+			case 'status':
+				return (
+					<Badge variant="secondary" className="whitespace-nowrap">
+						{getStatusName(ticket.columnId)}
+					</Badge>
+				)
+
+			case 'priority':
+				return <PriorityBadge priority={ticket.priority} showLabel />
+
+			case 'assignee':
+				return ticket.assignee ? (
+					<div className="flex items-center gap-2">
+						<Avatar className="h-5 w-5">
+							<AvatarImage src={ticket.assignee.avatar || undefined} />
+							<AvatarFallback className="text-[10px]">
+								{ticket.assignee.name
+									.split(' ')
+									.map((n) => n[0])
+									.join('')
+									.toUpperCase()}
+							</AvatarFallback>
+						</Avatar>
+						<span className="truncate text-sm">{ticket.assignee.name}</span>
+					</div>
+				) : (
+					<span className="text-zinc-500">Unassigned</span>
+				)
+
+			case 'reporter':
+				return (
+					<div className="flex items-center gap-2">
+						<Avatar className="h-5 w-5">
+							<AvatarImage src={ticket.creator.avatar || undefined} />
+							<AvatarFallback className="text-[10px]">
+								{ticket.creator.name
+									.split(' ')
+									.map((n) => n[0])
+									.join('')
+									.toUpperCase()}
+							</AvatarFallback>
+						</Avatar>
+						<span className="truncate text-sm">{ticket.creator.name}</span>
+					</div>
+				)
+
+			case 'labels':
+				return (
+					<div className="flex flex-wrap gap-1">
+						{ticket.labels.slice(0, 2).map((label) => (
+							<Badge
+								key={label.id}
+								variant="outline"
+								style={{
+									borderColor: label.color,
+									color: label.color,
+								}}
+								className="text-xs"
+							>
+								{label.name}
+							</Badge>
+						))}
+						{ticket.labels.length > 2 && (
+							<Badge variant="outline" className="text-xs">
+								+{ticket.labels.length - 2}
+							</Badge>
+						)}
+					</div>
+				)
+
+			case 'sprint':
+				return ticket.sprint ? (
+					<Badge variant={ticket.sprint.isActive ? 'default' : 'secondary'}>
+						{ticket.sprint.name}
+					</Badge>
+				) : (
+					<span className="text-zinc-500">—</span>
+				)
+
+			case 'storyPoints':
+				return ticket.storyPoints !== null ? (
+					<Badge variant="outline" className="font-mono">
+						{ticket.storyPoints}
+					</Badge>
+				) : (
+					<span className="text-zinc-500">—</span>
+				)
+
+			case 'estimate':
+				return ticket.estimate ? (
+					<span className="text-sm">{ticket.estimate}</span>
+				) : (
+					<span className="text-zinc-500">—</span>
+				)
+
+			case 'dueDate': {
+				if (!ticket.dueDate) return <span className="text-zinc-500">—</span>
+				const isOverdue = isBefore(ticket.dueDate, new Date()) && !isToday(ticket.dueDate)
+				const isDueToday = isToday(ticket.dueDate)
+				return (
+					<span
+						className={cn(
+							'text-sm',
+							isOverdue && 'font-medium text-red-400',
+							isDueToday && 'font-medium text-amber-400',
+						)}
+					>
+						{format(ticket.dueDate, 'MMM d, yyyy')}
+					</span>
+				)
+			}
+
+			case 'created':
+				return (
+					<span className="text-sm text-zinc-400">{format(ticket.createdAt, 'MMM d, yyyy')}</span>
+				)
+
+			case 'updated':
+				return (
+					<span className="text-sm text-zinc-400">{format(ticket.updatedAt, 'MMM d, yyyy')}</span>
+				)
+
+			case 'parent':
+				return ticket.parentId ? (
+					<span className="text-sm text-zinc-400">{ticket.parentId}</span>
+				) : (
+					<span className="text-zinc-500">—</span>
+				)
+
+			default:
+				return null
+		}
+	}
+
+	return (
+		<tr
+			onClick={handleClick}
+			onKeyDown={handleKeyDown}
+			tabIndex={0}
+			className="cursor-pointer border-b border-zinc-800/50 transition-colors hover:bg-zinc-800/50 focus:bg-zinc-800/50 focus:outline-none"
+		>
+			{columns.map((column) => (
+				<td
+					key={column.id}
+					style={{
+						width: column.width || undefined,
+						minWidth: column.minWidth,
+					}}
+					className="px-3 py-2"
+				>
+					{renderCell(column)}
+				</td>
+			))}
+		</tr>
+	)
+}
