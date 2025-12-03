@@ -22,15 +22,27 @@ import {
 } from '@/types'
 import { TicketForm } from './ticket-form'
 
-// Demo data - in production these come from API
+// Demo labels - these should be CATEGORIES, not types or priorities
+// Good labels: area/component, team, customer-facing, technical debt, etc.
 const DEMO_LABELS: LabelSummary[] = [
-	{ id: 'label-1', name: 'bug', color: '#ef4444' },
-	{ id: 'label-2', name: 'feature', color: '#10b981' },
-	{ id: 'label-3', name: 'enhancement', color: '#3b82f6' },
-	{ id: 'label-4', name: 'documentation', color: '#8b5cf6' },
-	{ id: 'label-5', name: 'urgent', color: '#f59e0b' },
-	{ id: 'label-6', name: 'backend', color: '#06b6d4' },
-	{ id: 'label-7', name: 'frontend', color: '#ec4899' },
+	// Area/Component labels
+	{ id: 'label-1', name: 'frontend', color: '#ec4899' },
+	{ id: 'label-2', name: 'backend', color: '#06b6d4' },
+	{ id: 'label-3', name: 'database', color: '#8b5cf6' },
+	{ id: 'label-4', name: 'api', color: '#f59e0b' },
+	{ id: 'label-5', name: 'auth', color: '#ef4444' },
+	{ id: 'label-6', name: 'ui/ux', color: '#14b8a6' },
+	// Category labels
+	{ id: 'label-7', name: 'documentation', color: '#64748b' },
+	{ id: 'label-8', name: 'testing', color: '#22c55e' },
+	{ id: 'label-9', name: 'performance', color: '#eab308' },
+	{ id: 'label-10', name: 'security', color: '#dc2626' },
+	{ id: 'label-11', name: 'refactor', color: '#a855f7' },
+	{ id: 'label-12', name: 'tech-debt', color: '#78716c' },
+	// Status-ish labels
+	{ id: 'label-13', name: 'needs-review', color: '#3b82f6' },
+	{ id: 'label-14', name: 'blocked', color: '#991b1b' },
+	{ id: 'label-15', name: 'help-wanted', color: '#16a34a' },
 ]
 
 const DEMO_SPRINTS: SprintSummary[] = [
@@ -49,6 +61,42 @@ const DEMO_SPRINTS: SprintSummary[] = [
 		endDate: new Date('2024-01-28'),
 	},
 	{ id: 'sprint-3', name: 'Sprint 3 - Polish', isActive: false, startDate: null, endDate: null },
+]
+
+// Demo parent tickets (epics and stories that can contain subtasks)
+export interface ParentTicketOption {
+	id: string
+	number: number
+	title: string
+	type: 'epic' | 'story'
+	projectKey: string
+}
+
+const DEMO_PARENT_TICKETS: ParentTicketOption[] = [
+	{
+		id: 'epic-1',
+		number: 100,
+		title: 'User Authentication System',
+		type: 'epic',
+		projectKey: 'PUNT',
+	},
+	{
+		id: 'epic-2',
+		number: 101,
+		title: 'Kanban Board Implementation',
+		type: 'epic',
+		projectKey: 'PUNT',
+	},
+	{ id: 'epic-3', number: 102, title: 'Ticket Management', type: 'epic', projectKey: 'PUNT' },
+	{
+		id: 'story-1',
+		number: 103,
+		title: 'Login and Registration Flow',
+		type: 'story',
+		projectKey: 'PUNT',
+	},
+	{ id: 'story-2', number: 104, title: 'Drag and Drop Cards', type: 'story', projectKey: 'PUNT' },
+	{ id: 'story-3', number: 105, title: 'Create Ticket Form', type: 'story', projectKey: 'PUNT' },
 ]
 
 export function CreateTicketDialog() {
@@ -105,6 +153,7 @@ export function CreateTicketDialog() {
 							onChange={setFormData}
 							labels={DEMO_LABELS}
 							sprints={DEMO_SPRINTS}
+							parentTickets={DEMO_PARENT_TICKETS}
 							disabled={isSubmitting}
 						/>
 					</div>
