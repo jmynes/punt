@@ -281,17 +281,19 @@ export default function BoardPage() {
 	const projectId = params.projectId as string
 	const projectKey = projectKeys[projectId] || 'PROJ'
 
-	const { columns, setColumns, searchQuery, setSearchQuery } = useBoardStore()
+	const { columns, setColumns, searchQuery, setSearchQuery, _hasHydrated } = useBoardStore()
 	const { setCreateTicketOpen, setActiveProjectId } = useUIStore()
 
-	// Load demo data on mount (only if columns are empty of tickets)
+	// Load demo data after hydration (only if columns are empty of tickets)
 	useEffect(() => {
+		if (!_hasHydrated) return // Wait for hydration
+		
 		const hasTickets = columns.some((col) => col.tickets.length > 0)
 		if (!hasTickets) {
 			setColumns(demoColumns)
 		}
 		setActiveProjectId(projectId)
-	}, []) // Only run once on mount
+	}, [_hasHydrated]) // Run when hydration completes
 
 	// Clear search when leaving page
 	useEffect(() => {

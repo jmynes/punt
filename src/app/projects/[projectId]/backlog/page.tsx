@@ -276,12 +276,14 @@ export default function BacklogPage() {
 	const projectId = params.projectId as string
 	const projectKey = projectKeys[projectId] || 'PROJ'
 
-	const { columns, setColumns } = useBoardStore()
+	const { columns, setColumns, _hasHydrated } = useBoardStore()
 	const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
 		useUIStore()
 
-	// Initialize with demo data on mount (only if columns are empty of tickets)
+	// Initialize with demo data after hydration (only if columns are empty of tickets)
 	useEffect(() => {
+		if (!_hasHydrated) return // Wait for hydration
+		
 		const hasTickets = columns.some((col) => col.tickets.length > 0)
 		if (!hasTickets) {
 			// Populate columns with demo tickets
@@ -291,7 +293,7 @@ export default function BacklogPage() {
 			}))
 			setColumns(columnsWithTickets)
 		}
-	}, []) // Only run once on mount
+	}, [_hasHydrated]) // Run when hydration completes
 
 	// Set active project on mount
 	useEffect(() => {
