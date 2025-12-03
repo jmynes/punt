@@ -63,7 +63,12 @@ export function KanbanColumn({ column, projectKey }: KanbanColumnProps) {
 				<div ref={setNodeRef} className="flex flex-col gap-2 min-h-[100px]">
 					<SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
 						{column.tickets.map((ticket) => (
-							<KanbanCard key={ticket.id} ticket={ticket} projectKey={projectKey} />
+							<KanbanCard
+								key={ticket.id}
+								ticket={ticket}
+								projectKey={projectKey}
+								allTicketIds={ticketIds}
+							/>
 						))}
 					</SortableContext>
 

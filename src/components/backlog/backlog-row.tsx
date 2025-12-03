@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { BacklogColumn } from '@/stores/backlog-store'
+import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { TicketWithRelations } from '@/types'
 import { PriorityBadge } from '../common/priority-badge'
@@ -19,6 +20,7 @@ interface BacklogRowProps {
 	columns: BacklogColumn[]
 	getStatusName: (columnId: string) => string
 	isDraggable?: boolean
+	allTicketIds: string[]
 }
 
 export function BacklogRow({
@@ -27,8 +29,11 @@ export function BacklogRow({
 	columns,
 	getStatusName,
 	isDraggable = true,
+	allTicketIds,
 }: BacklogRowProps) {
 	const { setActiveTicketId } = useUIStore()
+	const { isSelected, selectTicket, toggleTicket, selectRange } = useSelectionStore()
+	const selected = isSelected(ticket.id)
 
 	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
 		id: ticket.id,
@@ -40,14 +45,28 @@ export function BacklogRow({
 		transition,
 	}
 
-	const handleClick = () => {
+	const handleClick = (e: React.MouseEvent) => {
+		// Ctrl/Cmd + click: toggle selection (don't open detail)
+		if (e.ctrlKey || e.metaKey) {
+			toggleTicket(ticket.id)
+			return
+		}
+
+		// Shift + click: range selection (don't open detail)
+		if (e.shiftKey) {
+			selectRange(ticket.id, allTicketIds)
+			return
+		}
+
+		// Normal click: open ticket detail (and select only this one)
+		selectTicket(ticket.id)
 		setActiveTicketId(ticket.id)
-		// Could also navigate to ticket detail page
 	}
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === 'Enter' || e.key === ' ') {
-			handleClick()
+			selectTicket(ticket.id)
+			setActiveTicketId(ticket.id)
 		}
 	}
 
@@ -232,6 +251,7 @@ export function BacklogRow({
 				'group border-b border-zinc-800/50 transition-colors hover:bg-zinc-800/50 focus:bg-zinc-800/50 focus:outline-none select-none',
 				isDragging && 'opacity-50 bg-zinc-800 shadow-lg',
 				isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
+				selected && 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50',
 			)}
 			{...(isDraggable ? attributes : {})}
 			{...(isDraggable ? listeners : {})}

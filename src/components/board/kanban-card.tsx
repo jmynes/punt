@@ -10,16 +10,20 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { IssueType, Priority, TicketWithRelations } from '@/types'
 
 interface KanbanCardProps {
 	ticket: TicketWithRelations
 	projectKey: string
+	allTicketIds?: string[]
 }
 
-export function KanbanCard({ ticket, projectKey }: KanbanCardProps) {
+export function KanbanCard({ ticket, projectKey, allTicketIds = [] }: KanbanCardProps) {
 	const { setActiveTicketId } = useUIStore()
+	const { isSelected, selectTicket, toggleTicket, selectRange } = useSelectionStore()
+	const selected = isSelected(ticket.id)
 
 	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
 		id: ticket.id,
@@ -32,6 +36,28 @@ export function KanbanCard({ ticket, projectKey }: KanbanCardProps) {
 	const style = {
 		transform: CSS.Transform.toString(transform),
 		transition,
+	}
+
+	const handleClick = (e: React.MouseEvent) => {
+		// Ctrl/Cmd + click: toggle selection
+		if (e.ctrlKey || e.metaKey) {
+			e.preventDefault()
+			e.stopPropagation()
+			toggleTicket(ticket.id)
+			return
+		}
+
+		// Shift + click: range selection
+		if (e.shiftKey) {
+			e.preventDefault()
+			e.stopPropagation()
+			selectRange(ticket.id, allTicketIds)
+			return
+		}
+
+		// Normal click: open ticket detail (and select only this one)
+		selectTicket(ticket.id)
+		setActiveTicketId(ticket.id)
 	}
 
 	const commentCount = ticket._count?.comments ?? 0
@@ -48,8 +74,9 @@ export function KanbanCard({ ticket, projectKey }: KanbanCardProps) {
 			className={cn(
 				'group relative cursor-grab border-zinc-800 bg-zinc-900/80 p-3 hover:border-zinc-700 hover:bg-zinc-900 transition-colors select-none active:cursor-grabbing',
 				isDragging && 'opacity-50 shadow-lg ring-2 ring-amber-500/50',
+				selected && 'ring-2 ring-amber-500 border-amber-500/50 bg-amber-500/10',
 			)}
-			onClick={() => setActiveTicketId(ticket.id)}
+			onClick={handleClick}
 		>
 			{/* Drag handle indicator - visible on hover */}
 			<div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
