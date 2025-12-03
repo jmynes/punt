@@ -12,13 +12,15 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useCurrentUser } from '@/hooks/use-current-user'
+import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
 import {
 	DEFAULT_TICKET_FORM,
 	type LabelSummary,
 	type SprintSummary,
 	type TicketFormData,
+	type TicketWithRelations,
 } from '@/types'
 import { TicketForm } from './ticket-form'
 
@@ -99,9 +101,14 @@ const DEMO_PARENT_TICKETS: ParentTicketOption[] = [
 	{ id: 'story-3', number: 105, title: 'Create Ticket Form', type: 'story', projectKey: 'PUNT' },
 ]
 
+// Simple counter for generating ticket numbers (in production, this comes from the database)
+let ticketCounter = 200
+
 export function CreateTicketDialog() {
 	const { createTicketOpen, setCreateTicketOpen } = useUIStore()
+	const { columns, addTicket } = useBoardStore()
 	const currentUser = useCurrentUser()
+	const members = useProjectMembers()
 	const [formData, setFormData] = useState<TicketFormData>(DEFAULT_TICKET_FORM)
 	const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -118,21 +125,77 @@ export function CreateTicketDialog() {
 
 		setIsSubmitting(true)
 
-		// Simulate API call
-		await new Promise((resolve) => setTimeout(resolve, 500))
+		// Simulate API call delay
+		await new Promise((resolve) => setTimeout(resolve, 300))
 
-		// In production, this would:
-		// 1. Call API to create ticket
-		// 2. Invalidate queries to refresh board
-		// 3. Show success toast
-		console.log('Creating ticket:', {
-			...formData,
+		// Find the "To Do" column, or fall back to first column
+		const targetColumn = columns.find((c) => c.name === 'To Do') || columns[0]
+		if (!targetColumn) {
+			console.error('No columns available')
+			setIsSubmitting(false)
+			return
+		}
+
+		// Generate unique ID and ticket number
+		const ticketId = `ticket-${Date.now()}`
+		const ticketNumber = ++ticketCounter
+
+		// Build the labels array from selected label IDs
+		const selectedLabels = formData.labelIds
+			.map((id) => DEMO_LABELS.find((l) => l.id === id))
+			.filter((l): l is LabelSummary => l !== undefined)
+
+		// Build the sprint object if selected
+		const selectedSprint = formData.sprintId
+			? DEMO_SPRINTS.find((s) => s.id === formData.sprintId) || null
+			: null
+
+		// Create the full ticket object
+		const newTicket: TicketWithRelations = {
+			id: ticketId,
+			number: ticketNumber,
+			title: formData.title.trim(),
+			description: formData.description || null,
+			type: formData.type,
+			priority: formData.priority,
+			order: targetColumn.tickets.length, // Add to end of column
+			storyPoints: formData.storyPoints,
+			estimate: formData.estimate || null,
+			startDate: formData.startDate,
+			dueDate: formData.dueDate,
+			environment: formData.environment || null,
+			affectedVersion: null,
+			fixVersion: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			projectId: 'project-1', // Demo project
+			columnId: targetColumn.id,
+			assigneeId: formData.assigneeId,
 			creatorId: currentUser.id,
-		})
+			sprintId: formData.sprintId,
+			parentId: formData.parentId,
+			assignee: formData.assigneeId
+				? members.find((m) => m.id === formData.assigneeId) || null
+				: null,
+			creator: currentUser,
+			sprint: selectedSprint,
+			labels: selectedLabels,
+			watchers: [],
+			_count: {
+				comments: 0,
+				subtasks: 0,
+				attachments: formData.attachments.length,
+			},
+		}
+
+		// Add ticket to the board store
+		addTicket(targetColumn.id, newTicket)
+
+		console.log('Created ticket:', newTicket)
 
 		setIsSubmitting(false)
 		handleClose()
-	}, [formData, currentUser.id, handleClose])
+	}, [formData, currentUser, members, columns, addTicket, handleClose])
 
 	const isValid = formData.title.trim().length > 0
 

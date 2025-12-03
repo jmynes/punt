@@ -6,49 +6,12 @@ import { useEffect, useMemo } from 'react'
 import { BacklogTable, ColumnConfig } from '@/components/backlog'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
+import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
-import type { ColumnWithTickets, IssueType, Priority, TicketWithRelations } from '@/types'
+import type { IssueType, Priority, TicketWithRelations } from '@/types'
 
-// Demo data - same as board but flattened for backlog view
-const demoColumns: ColumnWithTickets[] = [
-	{
-		id: 'col-1',
-		name: 'Backlog',
-		order: 0,
-		projectId: '1',
-		tickets: [],
-	},
-	{
-		id: 'col-2',
-		name: 'To Do',
-		order: 1,
-		projectId: '1',
-		tickets: [],
-	},
-	{
-		id: 'col-3',
-		name: 'In Progress',
-		order: 2,
-		projectId: '1',
-		tickets: [],
-	},
-	{
-		id: 'col-4',
-		name: 'Review',
-		order: 3,
-		projectId: '1',
-		tickets: [],
-	},
-	{
-		id: 'col-5',
-		name: 'Done',
-		order: 4,
-		projectId: '1',
-		tickets: [],
-	},
-]
-
-const demoTickets: TicketWithRelations[] = [
+// Initial demo tickets to populate the store
+const INITIAL_DEMO_TICKETS: TicketWithRelations[] = [
 	{
 		id: 'ticket-1',
 		number: 1,
@@ -313,18 +276,37 @@ export default function BacklogPage() {
 	const projectId = params.projectId as string
 	const projectKey = projectKeys[projectId] || 'PROJ'
 
+	const { columns, setColumns } = useBoardStore()
 	const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
 		useUIStore()
+
+	// Initialize with demo data on mount (only if columns are empty of tickets)
+	useEffect(() => {
+		const hasTickets = columns.some((col) => col.tickets.length > 0)
+		if (!hasTickets) {
+			// Populate columns with demo tickets
+			const columnsWithTickets = columns.map((col) => ({
+				...col,
+				tickets: INITIAL_DEMO_TICKETS.filter((t) => t.columnId === col.id),
+			}))
+			setColumns(columnsWithTickets)
+		}
+	}, []) // Only run once on mount
 
 	// Set active project on mount
 	useEffect(() => {
 		setActiveProjectId(projectId)
 	}, [projectId, setActiveProjectId])
 
+	// Extract all tickets from columns (flattened for backlog view)
+	const allTickets = useMemo(() => {
+		return columns.flatMap((col) => col.tickets)
+	}, [columns])
+
 	// Find the selected ticket
 	const selectedTicket = useMemo(
-		() => demoTickets.find((t) => t.id === activeTicketId) || null,
-		[activeTicketId],
+		() => allTickets.find((t) => t.id === activeTicketId) || null,
+		[activeTicketId, allTickets],
 	)
 
 	return (
@@ -357,7 +339,7 @@ export default function BacklogPage() {
 
 			{/* Backlog table */}
 			<div className="flex-1 overflow-hidden">
-				<BacklogTable tickets={demoTickets} columns={demoColumns} projectKey={projectKey} />
+				<BacklogTable tickets={allTickets} columns={columns} projectKey={projectKey} />
 			</div>
 
 			{/* Column config sheet */}

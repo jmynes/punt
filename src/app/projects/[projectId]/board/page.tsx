@@ -281,14 +281,17 @@ export default function BoardPage() {
 	const projectId = params.projectId as string
 	const projectKey = projectKeys[projectId] || 'PROJ'
 
-	const { setColumns, searchQuery, setSearchQuery } = useBoardStore()
+	const { columns, setColumns, searchQuery, setSearchQuery } = useBoardStore()
 	const { setCreateTicketOpen, setActiveProjectId } = useUIStore()
 
-	// Load demo data on mount
+	// Load demo data on mount (only if columns are empty of tickets)
 	useEffect(() => {
-		setColumns(demoColumns)
+		const hasTickets = columns.some((col) => col.tickets.length > 0)
+		if (!hasTickets) {
+			setColumns(demoColumns)
+		}
 		setActiveProjectId(projectId)
-	}, [projectId, setColumns, setActiveProjectId])
+	}, []) // Only run once on mount
 
 	// Clear search when leaving page
 	useEffect(() => {
