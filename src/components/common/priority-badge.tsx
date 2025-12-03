@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Flame, Minus } from 'lucide-react'
+import { ArrowUp, ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, Flame } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Priority } from '@/types'
@@ -17,20 +17,30 @@ const priorityConfig: Record<
 		className: string
 	}
 > = {
+	lowest: {
+		label: 'Lowest',
+		icon: ChevronsDown,
+		className: 'bg-zinc-800/50 text-zinc-400 border-zinc-700',
+	},
 	low: {
 		label: 'Low',
-		icon: ArrowDown,
+		icon: ChevronDown,
 		className: 'bg-zinc-700/50 text-zinc-300 border-zinc-600',
 	},
 	medium: {
 		label: 'Medium',
-		icon: Minus,
+		icon: ArrowUp,
 		className: 'bg-blue-900/50 text-blue-300 border-blue-700',
 	},
 	high: {
 		label: 'High',
-		icon: ArrowUp,
+		icon: ChevronUp,
 		className: 'bg-amber-900/50 text-amber-300 border-amber-700',
+	},
+	highest: {
+		label: 'Highest',
+		icon: ChevronsUp,
+		className: 'bg-orange-900/50 text-orange-300 border-orange-700',
 	},
 	critical: {
 		label: 'Critical',
@@ -41,6 +51,8 @@ const priorityConfig: Record<
 
 export function PriorityBadge({ priority, showLabel = true, size = 'md' }: PriorityBadgeProps) {
 	const config = priorityConfig[priority]
+	if (!config) return null
+
 	const Icon = config.icon
 
 	return (

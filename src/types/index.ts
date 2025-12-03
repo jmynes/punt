@@ -1,21 +1,66 @@
 // Re-export Prisma types
 export type {
+	Attachment,
 	Column,
 	Comment,
 	Label,
 	Project,
 	ProjectMember,
+	Sprint,
 	Ticket,
+	TicketEdit,
+	TicketLink,
+	TicketWatcher,
 	User,
 } from '@/generated/prisma'
 
+// Issue types
+export const ISSUE_TYPES = ['epic', 'story', 'task', 'bug', 'subtask'] as const
+export type IssueType = (typeof ISSUE_TYPES)[number]
+
 // Priority levels for tickets
-export const PRIORITIES = ['low', 'medium', 'high', 'critical'] as const
+export const PRIORITIES = ['lowest', 'low', 'medium', 'high', 'highest', 'critical'] as const
 export type Priority = (typeof PRIORITIES)[number]
 
 // Project member roles
 export const ROLES = ['owner', 'admin', 'member'] as const
 export type Role = (typeof ROLES)[number]
+
+// Link types between tickets
+export const LINK_TYPES = [
+	'blocks',
+	'is_blocked_by',
+	'relates_to',
+	'duplicates',
+	'is_duplicated_by',
+	'clones',
+	'is_cloned_by',
+] as const
+export type LinkType = (typeof LINK_TYPES)[number]
+
+// User summary for display
+export interface UserSummary {
+	id: string
+	name: string
+	email: string
+	avatar: string | null
+}
+
+// Label for display
+export interface LabelSummary {
+	id: string
+	name: string
+	color: string
+}
+
+// Sprint summary
+export interface SprintSummary {
+	id: string
+	name: string
+	isActive: boolean
+	startDate: Date | null
+	endDate: Date | null
+}
 
 // Extended types with relations
 export interface TicketWithRelations {
@@ -23,29 +68,34 @@ export interface TicketWithRelations {
 	number: number
 	title: string
 	description: string | null
+	type: IssueType
 	priority: Priority
 	order: number
+	storyPoints: number | null
+	estimate: string | null
+	startDate: Date | null
+	dueDate: Date | null
+	environment: string | null
+	affectedVersion: string | null
+	fixVersion: string | null
 	createdAt: Date
 	updatedAt: Date
 	projectId: string
 	columnId: string
 	assigneeId: string | null
 	creatorId: string
-	assignee: {
-		id: string
-		name: string
-		avatar: string | null
-	} | null
-	creator: {
-		id: string
-		name: string
-		avatar: string | null
+	sprintId: string | null
+	parentId: string | null
+	assignee: UserSummary | null
+	creator: UserSummary
+	sprint: SprintSummary | null
+	labels: LabelSummary[]
+	watchers: UserSummary[]
+	_count?: {
+		comments: number
+		subtasks: number
+		attachments: number
 	}
-	labels: {
-		id: string
-		name: string
-		color: string
-	}[]
 }
 
 export interface ColumnWithTickets {
@@ -68,19 +118,47 @@ export interface ProjectWithDetails {
 	members: {
 		id: string
 		role: Role
-		user: {
-			id: string
-			name: string
-			email: string
-			avatar: string | null
-		}
+		user: UserSummary
 	}[]
-	labels: {
-		id: string
-		name: string
-		color: string
-	}[]
+	labels: LabelSummary[]
+	sprints: SprintSummary[]
 	_count: {
 		tickets: number
 	}
+}
+
+// Form data for creating/editing tickets
+export interface TicketFormData {
+	title: string
+	description: string
+	type: IssueType
+	priority: Priority
+	assigneeId: string | null
+	sprintId: string | null
+	labelIds: string[]
+	watcherIds: string[]
+	storyPoints: number | null
+	estimate: string
+	startDate: Date | null
+	dueDate: Date | null
+	environment: string
+	parentId: string | null
+}
+
+// Default values for new tickets
+export const DEFAULT_TICKET_FORM: TicketFormData = {
+	title: '',
+	description: '',
+	type: 'task',
+	priority: 'medium',
+	assigneeId: null,
+	sprintId: null,
+	labelIds: [],
+	watcherIds: [],
+	storyPoints: null,
+	estimate: '',
+	startDate: null,
+	dueDate: null,
+	environment: '',
+	parentId: null,
 }

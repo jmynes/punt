@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
+import { Dialogs } from '@/components/dialogs'
 import { Header, MobileNav, Sidebar } from '@/components/layout'
 import { Providers } from '@/components/providers'
 
@@ -39,6 +40,7 @@ export default function RootLayout({
 							<main className="flex-1 overflow-hidden">{children}</main>
 						</div>
 						<MobileNav />
+						<Dialogs />
 					</div>
 				</Providers>
 			</body>

@@ -18,10 +18,17 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assignedTickets Ticket[]        @relation("Assignee")
-  createdTickets  Ticket[]        @relation("Creator")
-  projects        ProjectMember[]
-  comments        Comment[]
+  // Ticket relations
+  assignedTickets  Ticket[]        @relation("Assignee")
+  createdTickets   Ticket[]        @relation("Creator")
+  watchingTickets  TicketWatcher[]
+  
+  // Project relations
+  projects         ProjectMember[]
+  
+  // Activity
+  comments         Comment[]
+  ticketEdits      TicketEdit[]
 }
 
 model Project {
@@ -29,14 +36,15 @@ model Project {
   name        String
   key         String   @unique // e.g., "PUNT", "PROJ"
   description String?
-  color       String   @default("#6366f1") // Project accent color
+  color       String   @default("#6366f1")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  columns Column[]
-  tickets Ticket[]
-  members ProjectMember[]
-  labels  Label[]
+  columns  Column[]
+  tickets  Ticket[]
+  members  ProjectMember[]
+  labels   Label[]
+  sprints  Sprint[]
 }
 
 model ProjectMember {
@@ -49,6 +57,23 @@ model ProjectMember {
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([userId, projectId])
+}
+
+model Sprint {
+  id        String    @id @default(cuid())
+  name      String
+  goal      String?
+  startDate DateTime?
+  endDate   DateTime?
+  isActive  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tickets   Ticket[]
+
+  @@index([projectId])
 }
 
 model Column {
@@ -64,30 +89,120 @@ model Column {
 }
 
 model Ticket {
-  id          String   @id @default(cuid())
-  number      Int // Auto-increment per project (managed in app)
+  id     String @id @default(cuid())
+  number Int    // Auto-increment per project (managed in app)
+
+  // Core fields
   title       String
-  description String?
-  priority    String   @default("medium") // low, medium, high, critical
-  order       Int // Position within column
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  description String? // Rich text / markdown body
+  type        String  @default("task") // bug, task, story, epic, subtask
 
+  // Status & Priority
+  priority String @default("medium") // lowest, low, medium, high, highest, critical
+  order    Int    // Position within column
+
+  // Estimation
+  storyPoints Int?
+  estimate    String? // Time estimate like "2h", "1d", "1w"
+
+  // Dates
+  startDate DateTime?
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Environment / Context
+  environment  String? // e.g., "Production", "Staging", "Development"
+  affectedVersion String?
+  fixVersion   String?
+
+  // Relationships
   projectId  String
-  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   columnId   String
-  column     Column   @relation(fields: [columnId], references: [id])
+  column     Column  @relation(fields: [columnId], references: [id])
+  
+  // Users
   assigneeId String?
-  assignee   User?    @relation("Assignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  assignee   User?   @relation("Assignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   creatorId  String
-  creator    User     @relation("Creator", fields: [creatorId], references: [id])
+  creator    User    @relation("Creator", fields: [creatorId], references: [id])
 
-  labels   Label[]
-  comments Comment[]
+  // Sprint
+  sprintId String?
+  sprint   Sprint? @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+
+  // Parent ticket (for subtasks)
+  parentId String?
+  parent   Ticket?  @relation("Subtasks", fields: [parentId], references: [id], onDelete: SetNull)
+  subtasks Ticket[] @relation("Subtasks")
+
+  // Many-to-many
+  labels      Label[]
+  watchers    TicketWatcher[]
+  linkedFrom  TicketLink[] @relation("LinkedFrom")
+  linkedTo    TicketLink[] @relation("LinkedTo")
+  
+  // Activity
+  comments    Comment[]
+  editHistory TicketEdit[]
+  attachments Attachment[]
 
   @@unique([projectId, number])
   @@index([projectId])
   @@index([columnId])
+  @@index([assigneeId])
+  @@index([sprintId])
+  @@index([parentId])
+}
+
+// Watchers (CC users on a ticket)
+model TicketWatcher {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, userId])
+  @@index([ticketId])
+  @@index([userId])
+}
+
+// Linked tickets (blocks, is blocked by, relates to, duplicates, etc.)
+model TicketLink {
+  id       String @id @default(cuid())
+  linkType String // blocks, is_blocked_by, relates_to, duplicates, is_duplicated_by, clones, is_cloned_by
+
+  fromTicketId String
+  fromTicket   Ticket @relation("LinkedFrom", fields: [fromTicketId], references: [id], onDelete: Cascade)
+  toTicketId   String
+  toTicket     Ticket @relation("LinkedTo", fields: [toTicketId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([fromTicketId, toTicketId, linkType])
+  @@index([fromTicketId])
+  @@index([toTicketId])
+}
+
+// Edit history for tickets
+model TicketEdit {
+  id        String   @id @default(cuid())
+  field     String   // Which field was changed
+  oldValue  String?  // Previous value (JSON stringified if complex)
+  newValue  String?  // New value
+  createdAt DateTime @default(now())
+
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([createdAt])
 }
 
 model Label {
@@ -105,7 +220,7 @@ model Label {
 
 model Comment {
   id        String   @id @default(cuid())
-  content   String
+  content   String   // Markdown content
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -113,6 +228,20 @@ model Comment {
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   authorId String
   author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  filename  String
+  mimeType  String
+  size      Int      // File size in bytes
+  url       String   // Storage path or URL
+  createdAt DateTime @default(now())
+
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
 }

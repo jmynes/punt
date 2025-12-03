@@ -2,14 +2,16 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, MessageSquare, User } from 'lucide-react'
+import { format, isPast, isToday } from 'date-fns'
+import { Calendar, GripVertical, MessageSquare, Paperclip, User } from 'lucide-react'
 import { PriorityBadge } from '@/components/common/priority-badge'
+import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
-import type { Priority, TicketWithRelations } from '@/types'
+import type { IssueType, Priority, TicketWithRelations } from '@/types'
 
 interface KanbanCardProps {
 	ticket: TicketWithRelations
@@ -32,6 +34,11 @@ export function KanbanCard({ ticket, projectKey }: KanbanCardProps) {
 		transition,
 	}
 
+	const commentCount = ticket._count?.comments ?? 0
+	const attachmentCount = ticket._count?.attachments ?? 0
+	const isOverdue = ticket.dueDate && isPast(ticket.dueDate) && !isToday(ticket.dueDate)
+	const isDueToday = ticket.dueDate && isToday(ticket.dueDate)
+
 	return (
 		<Card
 			ref={setNodeRef}
@@ -52,12 +59,15 @@ export function KanbanCard({ ticket, projectKey }: KanbanCardProps) {
 			</div>
 
 			<div className="pl-4">
-				{/* Ticket key */}
+				{/* Header row: Type, Key, Priority */}
 				<div className="flex items-center gap-2 mb-2">
+					<TypeBadge type={ticket.type as IssueType} size="sm" />
 					<span className="text-xs font-mono text-zinc-500">
 						{projectKey}-{ticket.number}
 					</span>
-					<PriorityBadge priority={ticket.priority as Priority} showLabel={false} size="sm" />
+					<div className="ml-auto">
+						<PriorityBadge priority={ticket.priority as Priority} showLabel={false} size="sm" />
+					</div>
 				</div>
 
 				{/* Title */}
@@ -91,26 +101,63 @@ export function KanbanCard({ ticket, projectKey }: KanbanCardProps) {
 					</div>
 				)}
 
+				{/* Due date if set */}
+				{ticket.dueDate && (
+					<div
+						className={cn(
+							'flex items-center gap-1 text-[10px] mb-2',
+							isOverdue && 'text-red-400',
+							isDueToday && 'text-amber-400',
+							!isOverdue && !isDueToday && 'text-zinc-500',
+						)}
+					>
+						<Calendar className="h-3 w-3" />
+						<span>{format(ticket.dueDate, 'MMM d')}</span>
+						{isOverdue && <span className="font-medium">(Overdue)</span>}
+						{isDueToday && <span className="font-medium">(Today)</span>}
+					</div>
+				)}
+
 				{/* Footer */}
 				<div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/50">
 					{/* Assignee */}
 					{ticket.assignee ? (
-						<Avatar className="h-5 w-5">
+						<Avatar className="h-5 w-5" title={ticket.assignee.name}>
 							<AvatarImage src={ticket.assignee.avatar || undefined} />
 							<AvatarFallback className="bg-zinc-800 text-zinc-400 text-[10px]">
 								{ticket.assignee.name.charAt(0).toUpperCase()}
 							</AvatarFallback>
 						</Avatar>
 					) : (
-						<div className="h-5 w-5 rounded-full border border-dashed border-zinc-700 flex items-center justify-center">
+						<div
+							className="h-5 w-5 rounded-full border border-dashed border-zinc-700 flex items-center justify-center"
+							title="Unassigned"
+						>
 							<User className="h-2.5 w-2.5 text-zinc-600" />
 						</div>
 					)}
 
-					{/* Comment count placeholder */}
-					<div className="flex items-center gap-1 text-zinc-600">
-						<MessageSquare className="h-3 w-3" />
-						<span className="text-[10px]">0</span>
+					{/* Story points */}
+					{ticket.storyPoints && (
+						<span className="text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+							{ticket.storyPoints} SP
+						</span>
+					)}
+
+					{/* Metadata counts */}
+					<div className="flex items-center gap-2 text-zinc-600">
+						{attachmentCount > 0 && (
+							<div className="flex items-center gap-0.5" title={`${attachmentCount} attachment(s)`}>
+								<Paperclip className="h-3 w-3" />
+								<span className="text-[10px]">{attachmentCount}</span>
+							</div>
+						)}
+						{commentCount > 0 && (
+							<div className="flex items-center gap-0.5" title={`${commentCount} comment(s)`}>
+								<MessageSquare className="h-3 w-3" />
+								<span className="text-[10px]">{commentCount}</span>
+							</div>
+						)}
 					</div>
 				</div>
 			</div>
