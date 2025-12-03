@@ -10,13 +10,14 @@ import {
 	useSensors,
 } from '@dnd-kit/core'
 import {
+	arrayMove,
 	horizontalListSortingStrategy,
 	SortableContext,
 	sortableKeyboardCoordinates,
 	verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { Settings2 } from 'lucide-react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { useBacklogStore } from '@/stores/backlog-store'
@@ -45,6 +46,25 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 		setColumnConfigOpen,
 	} = useBacklogStore()
 
+	// Local state for manual ticket ordering
+	const [orderedTickets, setOrderedTickets] = useState<TicketWithRelations[]>(tickets)
+	const [hasManualOrder, setHasManualOrder] = useState(false)
+
+	// Sync with incoming tickets prop
+	useEffect(() => {
+		if (!hasManualOrder) {
+			setOrderedTickets(tickets)
+		}
+	}, [tickets, hasManualOrder])
+
+	// Reset manual order when sort changes (user clicked a column header to sort)
+	useEffect(() => {
+		if (sort) {
+			setHasManualOrder(false)
+			setOrderedTickets(tickets)
+		}
+	}, [sort, tickets])
+
 	const sensors = useSensors(
 		useSensor(PointerSensor, {
 			activationConstraint: {
@@ -58,7 +78,7 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 
 	// Filter and sort tickets
 	const filteredTickets = useMemo(() => {
-		let result = [...tickets]
+		let result = [...orderedTickets]
 
 		// Filter out subtasks if disabled
 		if (!showSubtasks) {
@@ -100,8 +120,8 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 			}
 		}
 
-		// Sort
-		if (sort) {
+		// Sort (skip if using manual order from drag & drop)
+		if (sort && !hasManualOrder) {
 			result.sort((a, b) => {
 				let aVal: string | number | Date | null = null
 				let bVal: string | number | Date | null = null
@@ -176,7 +196,7 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 
 		return result
 	}, [
-		tickets,
+		orderedTickets,
 		showSubtasks,
 		searchQuery,
 		filterByType,
@@ -184,29 +204,40 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 		filterByAssignee,
 		filterBySprint,
 		sort,
+		hasManualOrder,
 		projectKey,
 	])
 
 	const visibleColumns = columns.filter((c) => c.visible)
 	const columnIds = visibleColumns.map((c) => c.id)
 
-	// Handle column header drag
-	function handleColumnDragEnd(event: DragEndEvent) {
+	// Handle drag end for both columns and rows
+	function handleDragEnd(event: DragEndEvent) {
 		const { active, over } = event
-		if (over && active.id !== over.id) {
-			const oldIndex = columns.findIndex((c) => c.id === active.id)
-			const newIndex = columns.findIndex((c) => c.id === over.id)
-			reorderColumns(oldIndex, newIndex)
-		}
-	}
+		if (!over || active.id === over.id) return
 
-	// Handle row drag (for reordering tickets)
-	function handleRowDragEnd(event: DragEndEvent) {
-		const { active, over } = event
-		if (over && active.id !== over.id) {
-			// For now, just log - in real app this would update the ticket order
-			console.log('Reorder tickets:', { from: active.id, to: over.id })
-			// Could dispatch an action to reorder tickets in the store
+		const activeId = active.id as string
+
+		// Check if it's a column drag (column IDs are like 'type', 'key', 'title', etc.)
+		const isColumnDrag = columnIds.includes(activeId as (typeof columnIds)[number])
+
+		if (isColumnDrag) {
+			// Column reordering
+			const oldIndex = columns.findIndex((c) => c.id === activeId)
+			const newIndex = columns.findIndex((c) => c.id === over.id)
+			if (oldIndex !== -1 && newIndex !== -1) {
+				reorderColumns(oldIndex, newIndex)
+			}
+		} else {
+			// Row/ticket reordering
+			const oldIndex = filteredTickets.findIndex((t) => t.id === activeId)
+			const newIndex = filteredTickets.findIndex((t) => t.id === over.id)
+
+			if (oldIndex !== -1 && newIndex !== -1) {
+				const newOrder = arrayMove(filteredTickets, oldIndex, newIndex)
+				setOrderedTickets(newOrder)
+				setHasManualOrder(true)
+			}
 		}
 	}
 
@@ -236,13 +267,14 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 
 			{/* Table */}
 			<ScrollArea className="flex-1">
-				<table className="w-full border-collapse">
-					{/* Header with column reordering */}
-					<DndContext
-						sensors={sensors}
-						collisionDetection={closestCenter}
-						onDragEnd={handleColumnDragEnd}
-					>
+				<DndContext
+					id="backlog-dnd"
+					sensors={sensors}
+					collisionDetection={closestCenter}
+					onDragEnd={handleDragEnd}
+				>
+					<table className="w-full border-collapse">
+						{/* Header with column reordering */}
 						<thead className="sticky top-0 z-10 bg-zinc-900">
 							<SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
 								<tr className="border-b border-zinc-800">
@@ -254,14 +286,8 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 								</tr>
 							</SortableContext>
 						</thead>
-					</DndContext>
 
-					{/* Body with row reordering */}
-					<DndContext
-						sensors={sensors}
-						collisionDetection={closestCenter}
-						onDragEnd={handleRowDragEnd}
-					>
+						{/* Body with row reordering - disabled when sorted */}
 						<SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
 							<tbody>
 								{filteredTickets.map((ticket) => (
@@ -271,12 +297,13 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 										projectKey={projectKey}
 										columns={visibleColumns}
 										getStatusName={getStatusName}
+										isDraggable={!sort}
 									/>
 								))}
 							</tbody>
 						</SortableContext>
-					</DndContext>
-				</table>
+					</table>
+				</DndContext>
 
 				{filteredTickets.length === 0 && (
 					<div className="flex h-40 items-center justify-center text-zinc-500">

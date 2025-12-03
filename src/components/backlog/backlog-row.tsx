@@ -30,14 +30,7 @@ export function BacklogRow({
 }: BacklogRowProps) {
 	const { setActiveTicketId } = useUIStore()
 
-	const {
-		attributes,
-		listeners,
-		setNodeRef,
-		transform,
-		transition,
-		isDragging,
-	} = useSortable({
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
 		id: ticket.id,
 		disabled: !isDraggable,
 	})
@@ -235,9 +228,9 @@ export function BacklogRow({
 				isDragging && 'opacity-50 bg-zinc-800 shadow-lg',
 			)}
 		>
-			{/* Drag handle cell */}
-			{isDraggable && (
-				<td className="w-8 px-1 py-2">
+			{/* Drag handle cell - always render to maintain table alignment */}
+			<td className="w-8 px-1 py-2">
+				{isDraggable && (
 					<button
 						type="button"
 						{...attributes}
@@ -247,8 +240,8 @@ export function BacklogRow({
 					>
 						<GripVertical className="h-4 w-4 text-zinc-500" />
 					</button>
-				</td>
-			)}
+				)}
+			</td>
 			{columns.map((column) => (
 				<td
 					key={column.id}
