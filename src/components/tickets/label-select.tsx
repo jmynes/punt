@@ -69,7 +69,7 @@ export function LabelSelect({ value, onChange, labels, disabled }: LabelSelectPr
 										key={label.id}
 										value={label.name}
 										onSelect={() => toggleLabel(label.id)}
-										className="cursor-pointer"
+										className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
 									>
 										<div
 											className="mr-2 h-3 w-3 rounded-full"
