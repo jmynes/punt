@@ -13,9 +13,11 @@ import {
 } from '@dnd-kit/core'
 import { Layers } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { EmptyState } from '@/components/common/empty-state'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useUndoStore } from '@/stores/undo-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { TicketWithRelations } from '@/types'
 import { KanbanCard } from './kanban-card'
@@ -34,6 +36,9 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 	
 	// Store the selection at drag start to ensure we have consistent state throughout the drag
 	const [dragSelectionIds, setDragSelectionIds] = useState<string[]>([])
+	
+	// Track source columns for undo functionality
+	const dragSourceColumns = useRef<Map<string, string>>(new Map())
 
 	// Filter tickets based on search query
 	const filteredColumns = useMemo(() => {
@@ -70,9 +75,21 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 			const currentSelection = selectionStore.selectedTicketIds
 			const activeId = active.id as string
 			
+			// Track source columns for all tickets being dragged
+			dragSourceColumns.current = new Map()
+			
 			// Only use multi-select if the dragged ticket is part of the selection
 			if (currentSelection.size > 1 && currentSelection.has(activeId)) {
-				setDragSelectionIds(Array.from(currentSelection))
+				const selectedIds = Array.from(currentSelection)
+				setDragSelectionIds(selectedIds)
+				
+				// Record source column for each selected ticket
+				for (const ticketId of selectedIds) {
+					const col = columns.find((c) => c.tickets.some((t) => t.id === ticketId))
+					if (col) {
+						dragSourceColumns.current.set(ticketId, col.id)
+					}
+				}
 			} else {
 				// Dragging a non-selected ticket - clear selection and use just this ticket
 				// Only clear if there's actually something selected to avoid unnecessary re-renders
@@ -80,9 +97,15 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 					selectionStore.clearSelection()
 				}
 				setDragSelectionIds([activeId])
+				
+				// Record source column for the single ticket
+				const col = columns.find((c) => c.tickets.some((t) => t.id === activeId))
+				if (col) {
+					dragSourceColumns.current.set(activeId, col.id)
+				}
 			}
 		}
-	}, [])
+	}, [columns])
 
 	// Track last drag operation to prevent duplicate state updates
 	const lastDragOperation = useRef<string | null>(null)
@@ -167,20 +190,74 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 	const handleDragEnd = useCallback(
 		(event: DragEndEvent) => {
 			const wasMultiDrag = dragSelectionIds.length > 1
+			const sourceColumns = new Map(dragSourceColumns.current)
+			
+			// Check if any tickets moved to a different column
+			const moves: Array<{ ticketId: string; fromColumnId: string; toColumnId: string }> = []
+			for (const ticketId of dragSelectionIds) {
+				const fromColumnId = sourceColumns.get(ticketId)
+				const toColumn = columns.find((c) => c.tickets.some((t) => t.id === ticketId))
+				if (fromColumnId && toColumn && fromColumnId !== toColumn.id) {
+					moves.push({ ticketId, fromColumnId, toColumnId: toColumn.id })
+				}
+			}
+			
+			// If there were cross-column moves, show toast and push to undo stack
+			if (moves.length > 0) {
+				const fromColumn = columns.find((c) => c.id === moves[0].fromColumnId)
+				const toColumn = columns.find((c) => c.id === moves[0].toColumnId)
+				const fromName = fromColumn?.name || 'Unknown'
+				const toName = toColumn?.name || 'Unknown'
+				
+				// Look up ticket IDs from columns
+				const allTickets = columns.flatMap((col) => col.tickets)
+				const ticketKeys = moves
+					.map((move) => {
+						const ticket = allTickets.find((t) => t.id === move.ticketId)
+						return ticket ? `${projectKey}-${ticket.number}` : move.ticketId
+					})
+					.filter(Boolean)
+				
+				const toastId = toast.success(
+					moves.length === 1
+						? 'Ticket moved'
+						: `${moves.length} tickets moved`,
+					{
+						description:
+							moves.length === 1
+								? `${ticketKeys[0]} moved to ${toName}`
+								: `${ticketKeys.join(', ')} moved to ${toName}`,
+						duration: 5000,
+						action: {
+							label: 'Undo',
+							onClick: () => {
+								// Move tickets back
+								const boardStore = useBoardStore.getState()
+								for (const move of moves) {
+									boardStore.moveTicket(move.ticketId, move.toColumnId, move.fromColumnId, 0)
+								}
+								toast.success('Move undone', { duration: 2000 })
+							},
+						},
+					},
+				)
+				
+				// Push to undo stack
+				useUndoStore.getState().pushMove(moves, fromName, toName, toastId)
+			}
 			
 			// Reset drag state
 			setActiveTicket(null)
 			setDragSelectionIds([])
-			lastDragOperation.current = null // Reset operation tracking
+			lastDragOperation.current = null
+			dragSourceColumns.current = new Map()
 
 			// Clear selection after multi-drag completes
 			if (wasMultiDrag) {
 				useSelectionStore.getState().clearSelection()
 			}
-			
-			// All actual moving/reordering is handled in handleDragOver
 		},
-		[dragSelectionIds],
+		[dragSelectionIds, columns],
 	)
 
 	if (columns.length === 0) {
