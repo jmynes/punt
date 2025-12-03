@@ -3,14 +3,22 @@
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { useBoardStore } from '@/stores/board-store'
+import { useSelectionStore } from '@/stores/selection-store'
 import { useUndoStore } from '@/stores/undo-store'
 
 export function KeyboardShortcuts() {
 	const { addTicket, removeTicket } = useBoardStore()
 	const { popDeleted, pushRedo, popRedo, pushDeleted } = useUndoStore()
+	const { clearSelection, selectedTicketIds } = useSelectionStore()
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
+			// Escape: clear selection
+			if (e.key === 'Escape' && selectedTicketIds.size > 0) {
+				clearSelection()
+				return
+			}
+
 			// Check for Ctrl/Cmd + Z (Undo)
 			if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
 				e.preventDefault()
@@ -59,7 +67,7 @@ export function KeyboardShortcuts() {
 
 		window.addEventListener('keydown', handleKeyDown)
 		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [addTicket, removeTicket, popDeleted, pushRedo, popRedo, pushDeleted])
+	}, [addTicket, removeTicket, popDeleted, pushRedo, popRedo, pushDeleted, clearSelection, selectedTicketIds])
 
 	return null
 }

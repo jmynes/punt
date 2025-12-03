@@ -15,6 +15,7 @@ import { Layers } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { EmptyState } from '@/components/common/empty-state'
 import { useBoardStore } from '@/stores/board-store'
+import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { TicketWithRelations } from '@/types'
 import { KanbanCard } from './kanban-card'
@@ -25,8 +26,9 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ projectKey }: KanbanBoardProps) {
-	const { columns, moveTicket, reorderTicket, searchQuery } = useBoardStore()
+	const { columns, moveTicket, moveTickets, reorderTicket, reorderTickets, searchQuery } = useBoardStore()
 	const { setCreateTicketOpen } = useUIStore()
+	const { selectedTicketIds, isSelected, clearSelection } = useSelectionStore()
 	const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
 
 	// Filter tickets based on search query
@@ -84,9 +86,17 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 			const overTicketIndex = overColumn.tickets.findIndex((t) => t.id === overId)
 			const newOrder = overTicketIndex >= 0 ? overTicketIndex : overColumn.tickets.length
 
-			moveTicket(activeId, activeColumn.id, overColumn.id, newOrder)
+			// Check if we're doing multi-select drag
+			if (selectedTicketIds.size > 1 && isSelected(activeId)) {
+				// Multi-drag: move all selected tickets
+				const selectedIds = Array.from(selectedTicketIds)
+				moveTickets(selectedIds, activeColumn.id, overColumn.id, newOrder)
+			} else {
+				// Single drag
+				moveTicket(activeId, activeColumn.id, overColumn.id, newOrder)
+			}
 		},
-		[columns, moveTicket],
+		[columns, moveTicket, moveTickets, selectedTicketIds, isSelected],
 	)
 
 	const handleDragEnd = useCallback(
@@ -94,7 +104,13 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 			setActiveTicket(null)
 
 			const { active, over } = event
-			if (!over) return
+			if (!over) {
+				// Drag cancelled - clear selection if we had multi-select
+				if (selectedTicketIds.size > 1) {
+					clearSelection()
+				}
+				return
+			}
 
 			const activeId = active.id as string
 			const overId = over.id as string
@@ -114,12 +130,25 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 			if (activeColumn.id === overColumn.id) {
 				const overTicketIndex = activeColumn.tickets.findIndex((t) => t.id === overId)
 				if (overTicketIndex >= 0) {
-					reorderTicket(activeColumn.id, activeId, overTicketIndex)
+					// Check if we're doing multi-select drag
+					if (selectedTicketIds.size > 1 && isSelected(activeId)) {
+						// Multi-drag: move all selected tickets at once
+						const selectedIds = Array.from(selectedTicketIds)
+						reorderTickets(activeColumn.id, selectedIds, overTicketIndex)
+						clearSelection()
+					} else {
+						// Single drag
+						reorderTicket(activeColumn.id, activeId, overTicketIndex)
+					}
+				}
+			} else {
+				// Cross-column move was handled in handleDragOver, just clear selection
+				if (selectedTicketIds.size > 1 && isSelected(activeId)) {
+					clearSelection()
 				}
 			}
-			// Cross-column move is already handled in handleDragOver
 		},
-		[columns, reorderTicket],
+		[columns, reorderTicket, reorderTickets, selectedTicketIds, isSelected, clearSelection],
 	)
 
 	if (columns.length === 0) {
@@ -153,8 +182,13 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 
 			<DragOverlay>
 				{activeTicket ? (
-					<div className="rotate-3 scale-105">
+					<div className="rotate-3 scale-105 relative">
 						<KanbanCard ticket={activeTicket} projectKey={projectKey} />
+						{selectedTicketIds.size > 1 && isSelected(activeTicket.id) && (
+							<div className="absolute -top-2 -right-2 bg-amber-500 text-black text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg">
+								{selectedTicketIds.size}
+							</div>
+						)}
 					</div>
 				) : null}
 			</DragOverlay>

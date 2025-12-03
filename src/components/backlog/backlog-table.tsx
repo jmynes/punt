@@ -21,6 +21,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { useBacklogStore } from '@/stores/backlog-store'
+import { useSelectionStore } from '@/stores/selection-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { BacklogFilters } from './backlog-filters'
 import { BacklogHeader } from './backlog-header'
@@ -211,6 +212,9 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 	const visibleColumns = columns.filter((c) => c.visible)
 	const columnIds = visibleColumns.map((c) => c.id)
 
+	// Get selection store
+	const { selectedTicketIds, clearSelection, isSelected } = useSelectionStore()
+
 	// Handle drag end for both columns and rows
 	function handleDragEnd(event: DragEndEvent) {
 		const { active, over } = event
@@ -230,13 +234,47 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 			}
 		} else {
 			// Row/ticket reordering
-			const oldIndex = filteredTickets.findIndex((t) => t.id === activeId)
-			const newIndex = filteredTickets.findIndex((t) => t.id === over.id)
+			const targetIndex = filteredTickets.findIndex((t) => t.id === over.id)
 
-			if (oldIndex !== -1 && newIndex !== -1) {
-				const newOrder = arrayMove(filteredTickets, oldIndex, newIndex)
+			// Check if we're dragging selected tickets
+			if (selectedTicketIds.size > 1 && isSelected(activeId)) {
+				// Multi-drag: move all selected tickets to the target position
+				const selectedIds = Array.from(selectedTicketIds)
+				
+				// Remove all selected tickets from their current positions
+				const remainingTickets = filteredTickets.filter((t) => !selectedIds.includes(t.id))
+				
+				// Get the selected tickets in their current order
+				const selectedTickets = filteredTickets.filter((t) => selectedIds.includes(t.id))
+				
+				// Find where to insert (adjust for removed items)
+				const targetTicket = filteredTickets.find((t) => t.id === over.id)
+				let insertIndex = targetTicket ? remainingTickets.findIndex((t) => t.id === over.id) : remainingTickets.length
+				
+				// If target is one of the selected, insert at end
+				if (selectedIds.includes(over.id as string)) {
+					insertIndex = remainingTickets.length
+				}
+				
+				// Insert selected tickets at the target position
+				const newOrder = [
+					...remainingTickets.slice(0, insertIndex),
+					...selectedTickets,
+					...remainingTickets.slice(insertIndex),
+				]
+				
 				setOrderedTickets(newOrder)
 				setHasManualOrder(true)
+				clearSelection()
+			} else {
+				// Single drag
+				const oldIndex = filteredTickets.findIndex((t) => t.id === activeId)
+				
+				if (oldIndex !== -1 && targetIndex !== -1) {
+					const newOrder = arrayMove(filteredTickets, oldIndex, targetIndex)
+					setOrderedTickets(newOrder)
+					setHasManualOrder(true)
+				}
 			}
 		}
 	}
@@ -298,6 +336,7 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 										columns={visibleColumns}
 										getStatusName={getStatusName}
 										isDraggable={!sort}
+										allTicketIds={filteredTickets.map((t) => t.id)}
 									/>
 								))}
 							</tbody>
