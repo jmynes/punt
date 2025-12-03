@@ -2,11 +2,13 @@
 
 import { Filter, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { KanbanBoard } from '@/components/board'
+import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useBoardStore } from '@/stores/board-store'
+import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets, IssueType, Priority } from '@/types'
 
@@ -282,7 +284,21 @@ export default function BoardPage() {
 	const projectKey = projectKeys[projectId] || 'PROJ'
 
 	const { columns, setColumns, searchQuery, setSearchQuery, _hasHydrated } = useBoardStore()
-	const { setCreateTicketOpen, setActiveProjectId } = useUIStore()
+	const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } = useUIStore()
+	const { clearSelection } = useSelectionStore()
+
+	// Clear selection and active ticket when entering this page
+	useEffect(() => {
+		clearSelection()
+		setActiveTicketId(null)
+	}, [clearSelection, setActiveTicketId])
+
+	// Get all tickets for finding the selected one
+	const allTickets = useMemo(() => columns.flatMap((col) => col.tickets), [columns])
+	const selectedTicket = useMemo(
+		() => allTickets.find((t) => t.id === activeTicketId) || null,
+		[activeTicketId, allTickets],
+	)
 
 	// Load demo data after hydration (only if columns are empty of tickets)
 	useEffect(() => {
@@ -356,6 +372,13 @@ export default function BoardPage() {
 			<div className="flex-1 overflow-x-auto p-4 lg:p-6">
 				<KanbanBoard projectKey={projectKey} />
 			</div>
+
+			{/* Ticket detail drawer */}
+			<TicketDetailDrawer
+				ticket={selectedTicket}
+				projectKey={projectKey}
+				onClose={() => setActiveTicketId(null)}
+			/>
 		</div>
 	)
 }

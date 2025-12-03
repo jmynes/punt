@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { TicketFormData } from '@/types'
 
 interface UIState {
 	// Sidebar
@@ -19,6 +20,11 @@ interface UIState {
 	setCreateTicketOpen: (open: boolean) => void
 	createProjectOpen: boolean
 	setCreateProjectOpen: (open: boolean) => void
+
+	// Pre-filled data for creating a ticket (e.g., when cloning)
+	prefillTicketData: Partial<TicketFormData> | null
+	openCreateTicketWithData: (data: Partial<TicketFormData>) => void
+	clearPrefillData: () => void
 
 	// Ticket detail drawer
 	activeTicketId: string | null
@@ -41,9 +47,14 @@ export const useUIStore = create<UIState>((set) => ({
 
 	// Modals
 	createTicketOpen: false,
-	setCreateTicketOpen: (open) => set({ createTicketOpen: open }),
+	setCreateTicketOpen: (open) => set({ createTicketOpen: open, prefillTicketData: open ? null : null }),
 	createProjectOpen: false,
 	setCreateProjectOpen: (open) => set({ createProjectOpen: open }),
+
+	// Pre-filled data for creating a ticket (e.g., when cloning)
+	prefillTicketData: null,
+	openCreateTicketWithData: (data) => set({ createTicketOpen: true, prefillTicketData: data }),
+	clearPrefillData: () => set({ prefillTicketData: null }),
 
 	// Ticket detail drawer
 	activeTicketId: null,

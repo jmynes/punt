@@ -7,6 +7,7 @@ import { BacklogTable, ColumnConfig } from '@/components/backlog'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { useBoardStore } from '@/stores/board-store'
+import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { IssueType, Priority, TicketWithRelations } from '@/types'
 
@@ -279,6 +280,13 @@ export default function BacklogPage() {
 	const { columns, setColumns, _hasHydrated } = useBoardStore()
 	const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
 		useUIStore()
+	const { clearSelection } = useSelectionStore()
+
+	// Clear selection and active ticket when entering this page
+	useEffect(() => {
+		clearSelection()
+		setActiveTicketId(null)
+	}, [clearSelection, setActiveTicketId])
 
 	// Initialize with demo data after hydration (only if columns are empty of tickets)
 	useEffect(() => {
