@@ -151,7 +151,7 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
 					variant="outline"
 					size="icon"
 					disabled={disabled}
-					className="shrink-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800"
+					className="shrink-0 border-zinc-700 bg-zinc-900 hover:bg-red-900/50 hover:text-red-400 hover:border-red-800"
 					onClick={() => onChange(null)}
 					title="Remove parent"
 				>

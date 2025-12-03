@@ -35,7 +35,7 @@ export interface BacklogColumn {
 export const DEFAULT_COLUMNS: BacklogColumn[] = [
 	{ id: 'type', label: 'Type', width: 40, minWidth: 40, visible: true, sortable: true },
 	{ id: 'key', label: 'Key', width: 100, minWidth: 80, visible: true, sortable: true },
-	{ id: 'title', label: 'Summary', width: 0, minWidth: 200, visible: true, sortable: true },
+	{ id: 'title', label: 'Summary', width: 300, minWidth: 200, visible: true, sortable: true },
 	{ id: 'status', label: 'Status', width: 120, minWidth: 100, visible: true, sortable: true },
 	{ id: 'priority', label: 'Priority', width: 100, minWidth: 80, visible: true, sortable: true },
 	{ id: 'assignee', label: 'Assignee', width: 140, minWidth: 100, visible: true, sortable: true },

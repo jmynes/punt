@@ -2,8 +2,9 @@
 
 import { List, Plus } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { BacklogTable, ColumnConfig } from '@/components/backlog'
+import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets, IssueType, Priority, TicketWithRelations } from '@/types'
@@ -312,12 +313,19 @@ export default function BacklogPage() {
 	const projectId = params.projectId as string
 	const projectKey = projectKeys[projectId] || 'PROJ'
 
-	const { setCreateTicketOpen, setActiveProjectId } = useUIStore()
+	const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
+		useUIStore()
 
 	// Set active project on mount
 	useEffect(() => {
 		setActiveProjectId(projectId)
 	}, [projectId, setActiveProjectId])
+
+	// Find the selected ticket
+	const selectedTicket = useMemo(
+		() => demoTickets.find((t) => t.id === activeTicketId) || null,
+		[activeTicketId],
+	)
 
 	return (
 		<div className="flex h-[calc(100vh-3.5rem)] flex-col">
@@ -354,6 +362,13 @@ export default function BacklogPage() {
 
 			{/* Column config sheet */}
 			<ColumnConfig />
+
+			{/* Ticket detail drawer */}
+			<TicketDetailDrawer
+				ticket={selectedTicket}
+				projectKey={projectKey}
+				onClose={() => setActiveTicketId(null)}
+			/>
 		</div>
 	)
 }

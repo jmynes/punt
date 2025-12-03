@@ -123,7 +123,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
 					variant="ghost"
 					size="sm"
 					onClick={clearFilters}
-					className="shrink-0 text-zinc-400 hover:text-zinc-200"
+					className="shrink-0 text-zinc-400 hover:text-red-400 hover:bg-red-900/20"
 				>
 					<X className="mr-1 h-4 w-4" />
 					Clear
