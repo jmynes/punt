@@ -305,7 +305,7 @@ export default function BoardPage() {
 						<input
 							type="search"
 							placeholder="Filter tickets..."
-							className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-10 pr-4 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 lg:w-64"
+							className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-10 pr-4 text-sm text-zinc-100 placeholder:text-zinc-500 transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:bg-transparent lg:w-64"
 						/>
 					</div>
 
@@ -313,7 +313,7 @@ export default function BoardPage() {
 					<Button
 						variant="outline"
 						size="sm"
-						className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+						className="border-zinc-700 text-zinc-400 hover:bg-amber-500/15 hover:border-zinc-600"
 					>
 						<Filter className="h-4 w-4 mr-2" />
 						Filter
@@ -321,7 +321,7 @@ export default function BoardPage() {
 					<Button
 						variant="outline"
 						size="sm"
-						className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+						className="border-zinc-700 text-zinc-400 hover:bg-amber-500/15 hover:border-zinc-600"
 					>
 						<SlidersHorizontal className="h-4 w-4 mr-2" />
 						View

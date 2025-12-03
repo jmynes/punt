@@ -161,7 +161,7 @@ export function TicketForm({
 					value={data.sprintId || ''}
 					onChange={(e) => updateField('sprintId', e.target.value || null)}
 					disabled={disabled}
-					className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+					className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
 				>
 					<option value="">No sprint (Backlog)</option>
 					{sprints.map((sprint) => (

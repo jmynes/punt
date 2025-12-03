@@ -53,8 +53,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 				className="w-full border-zinc-800 bg-zinc-950 p-0 sm:max-w-xl md:max-w-2xl"
 			>
 				<div className="flex h-full flex-col">
-					{/* Header */}
-					<SheetHeader className="border-b border-zinc-800 px-6 py-4">
+					{/* Header - pr-14 gives space for the close button */}
+					<SheetHeader className="border-b border-zinc-800 px-6 pr-14 py-4">
 						<div className="flex items-start justify-between gap-4">
 							<div className="flex items-center gap-3">
 								<TypeBadge type={ticket.type} size="md" />

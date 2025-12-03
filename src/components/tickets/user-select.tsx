@@ -48,7 +48,7 @@ export function UserSelect({
 						role="combobox"
 						aria-expanded={open}
 						disabled={disabled}
-						className="flex-1 justify-between bg-zinc-900 border-zinc-700 hover:bg-zinc-800"
+						className="flex-1 justify-between"
 					>
 						{selectedUser ? (
 							<div className="flex items-center gap-2">

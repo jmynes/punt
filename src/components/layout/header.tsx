@@ -11,6 +11,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
 import { useIsMobile } from '@/hooks/use-media-query'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -50,11 +51,7 @@ export function Header() {
 			<div className="hidden flex-1 md:block">
 				<div className="relative max-w-md">
 					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-					<input
-						type="search"
-						placeholder="Search tickets..."
-						className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-10 pr-4 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-					/>
+					<Input type="search" placeholder="Search tickets..." className="pl-10" />
 				</div>
 			</div>
 
