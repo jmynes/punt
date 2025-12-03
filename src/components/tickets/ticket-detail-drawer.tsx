@@ -2,7 +2,6 @@
 
 import { format } from 'date-fns'
 import {
-	Calendar,
 	Clock,
 	Eye,
 	Link2,
@@ -10,12 +9,24 @@ import {
 	MoreHorizontal,
 	Paperclip,
 	Share2,
+	Trash2,
 	User,
+	X,
 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -28,7 +39,7 @@ import {
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { useUIStore } from '@/stores/ui-store'
+import { useBoardStore } from '@/stores/board-store'
 import type { TicketWithRelations } from '@/types'
 import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
@@ -40,11 +51,31 @@ interface TicketDetailDrawerProps {
 }
 
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
+	const { removeTicket } = useBoardStore()
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+	const deleteButtonRef = useRef<HTMLButtonElement>(null)
+
+	// Focus delete button when dialog opens
+	useEffect(() => {
+		if (showDeleteConfirm) {
+			// Small delay to ensure dialog is rendered
+			setTimeout(() => {
+				deleteButtonRef.current?.focus()
+			}, 0)
+		}
+	}, [showDeleteConfirm])
+
 	if (!ticket) return null
 
 	const ticketKey = `${projectKey}-${ticket.number}`
 	const isOverdue =
 		ticket.dueDate && new Date(ticket.dueDate) < new Date() && ticket.columnId !== 'col-5'
+
+	const handleDelete = () => {
+		removeTicket(ticket.id)
+		setShowDeleteConfirm(false)
+		onClose()
+	}
 
 	return (
 		<Sheet open={!!ticket} onOpenChange={(open) => !open && onClose()}>
@@ -333,13 +364,42 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 								variant="outline"
 								size="sm"
 								className="text-red-400 hover:text-red-300 hover:bg-red-900/20 hover:border-red-800"
+								onClick={() => setShowDeleteConfirm(true)}
 							>
+								<Trash2 className="h-4 w-4 mr-1" />
 								Delete
 							</Button>
 						</div>
 					</div>
 				</div>
 			</SheetContent>
+
+			{/* Delete confirmation dialog */}
+			<AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+				<AlertDialogContent className="bg-zinc-950 border-zinc-800">
+					<AlertDialogHeader>
+						<AlertDialogTitle className="text-zinc-100">Delete ticket?</AlertDialogTitle>
+						<AlertDialogDescription className="text-zinc-400">
+							Are you sure you want to delete <span className="font-mono text-zinc-300">{ticketKey}</span>?
+							This action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+							<X className="h-4 w-4 mr-1" />
+							Cancel
+						</AlertDialogCancel>
+						<AlertDialogAction
+							ref={deleteButtonRef}
+							onClick={handleDelete}
+							className="bg-red-600 hover:bg-red-700 text-white"
+						>
+							<Trash2 className="h-4 w-4 mr-1" />
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</Sheet>
 	)
 }

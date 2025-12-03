@@ -1,6 +1,15 @@
 import { create } from 'zustand'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
+// Default columns for a new project
+const DEFAULT_COLUMNS: ColumnWithTickets[] = [
+	{ id: 'col-1', name: 'Backlog', order: 0, projectId: 'project-1', tickets: [] },
+	{ id: 'col-2', name: 'To Do', order: 1, projectId: 'project-1', tickets: [] },
+	{ id: 'col-3', name: 'In Progress', order: 2, projectId: 'project-1', tickets: [] },
+	{ id: 'col-4', name: 'In Review', order: 3, projectId: 'project-1', tickets: [] },
+	{ id: 'col-5', name: 'Done', order: 4, projectId: 'project-1', tickets: [] },
+]
+
 interface BoardState {
 	columns: ColumnWithTickets[]
 	setColumns: (columns: ColumnWithTickets[]) => void
@@ -26,7 +35,7 @@ interface BoardState {
 }
 
 export const useBoardStore = create<BoardState>((set) => ({
-	columns: [],
+	columns: DEFAULT_COLUMNS,
 	setColumns: (columns) => set({ columns }),
 
 	// Search/filter
