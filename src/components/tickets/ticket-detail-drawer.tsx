@@ -3,6 +3,7 @@
 import { format } from 'date-fns'
 import {
 	Clock,
+	Copy,
 	Eye,
 	Link2,
 	MessageSquare,
@@ -40,6 +41,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
+import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
 import { toast } from 'sonner'
@@ -55,6 +57,7 @@ interface TicketDetailDrawerProps {
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
 	const { removeTicket, addTicket } = useBoardStore()
 	const { pushDeleted, removeDeleted } = useUndoStore()
+	const { openCreateTicketWithData } = useUIStore()
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 	const deleteButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -143,6 +146,30 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 				},
 			})
 		}, 1000)
+	}
+
+	const handleClone = () => {
+		// Open the create ticket dialog with pre-filled data from this ticket
+		openCreateTicketWithData({
+			title: `${ticket.title} (Copy)`,
+			description: ticket.description || '',
+			type: ticket.type,
+			priority: ticket.priority,
+			assigneeId: ticket.assigneeId,
+			sprintId: ticket.sprintId,
+			labelIds: ticket.labels.map((l) => l.id),
+			watcherIds: ticket.watchers.map((w) => w.id),
+			storyPoints: ticket.storyPoints,
+			estimate: ticket.estimate || '',
+			startDate: ticket.startDate,
+			dueDate: ticket.dueDate,
+			environment: ticket.environment || '',
+			parentId: ticket.parentId,
+			attachments: [], // Attachments would need to be re-uploaded in a real implementation
+		})
+
+		// Close the detail drawer
+		onClose()
 	}
 
 	return (
@@ -425,7 +452,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 							Edit
 						</Button>
 						<div className="flex items-center gap-2">
-							<Button variant="outline" size="sm">
+							<Button variant="outline" size="sm" onClick={handleClone}>
+								<Copy className="h-4 w-4 mr-1" />
 								Clone
 							</Button>
 							<Button

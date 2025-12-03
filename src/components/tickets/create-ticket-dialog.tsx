@@ -1,7 +1,7 @@
 'use client'
 
 import { Loader2 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -106,18 +106,26 @@ const DEMO_PARENT_TICKETS: ParentTicketOption[] = [
 let ticketCounter = 200
 
 export function CreateTicketDialog() {
-	const { createTicketOpen, setCreateTicketOpen } = useUIStore()
+	const { createTicketOpen, setCreateTicketOpen, prefillTicketData, clearPrefillData } = useUIStore()
 	const { columns, addTicket } = useBoardStore()
 	const currentUser = useCurrentUser()
 	const members = useProjectMembers()
 	const [formData, setFormData] = useState<TicketFormData>(DEFAULT_TICKET_FORM)
 	const [isSubmitting, setIsSubmitting] = useState(false)
 
+	// Apply prefill data when dialog opens with clone data
+	useEffect(() => {
+		if (createTicketOpen && prefillTicketData) {
+			setFormData({ ...DEFAULT_TICKET_FORM, ...prefillTicketData })
+		}
+	}, [createTicketOpen, prefillTicketData])
+
 	const handleClose = useCallback(() => {
 		setCreateTicketOpen(false)
+		clearPrefillData()
 		// Reset form after close animation
 		setTimeout(() => setFormData(DEFAULT_TICKET_FORM), 200)
-	}, [setCreateTicketOpen])
+	}, [setCreateTicketOpen, clearPrefillData])
 
 	const handleSubmit = useCallback(async () => {
 		if (!formData.title.trim()) {
