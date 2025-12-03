@@ -12,6 +12,9 @@ interface BoardState {
 	// Optimistic updates for drag and drop
 	moveTicket: (ticketId: string, fromColumnId: string, toColumnId: string, newOrder: number) => void
 
+	// Reorder ticket within the same column
+	reorderTicket: (columnId: string, ticketId: string, newIndex: number) => void
+
 	// Update a single ticket
 	updateTicket: (ticketId: string, updates: Partial<TicketWithRelations>) => void
 
@@ -66,6 +69,29 @@ export const useBoardStore = create<BoardState>((set) => ({
 				}
 
 				return column
+			})
+
+			return { columns: newColumns }
+		}),
+
+	reorderTicket: (columnId, ticketId, newIndex) =>
+		set((state) => {
+			const newColumns = state.columns.map((column) => {
+				if (column.id !== columnId) return column
+
+				const tickets = [...column.tickets]
+				const currentIndex = tickets.findIndex((t) => t.id === ticketId)
+				if (currentIndex === -1 || currentIndex === newIndex) return column
+
+				// Remove from current position and insert at new position
+				const [ticket] = tickets.splice(currentIndex, 1)
+				tickets.splice(newIndex, 0, ticket)
+
+				// Update order for all tickets
+				return {
+					...column,
+					tickets: tickets.map((t, idx) => ({ ...t, order: idx })),
+				}
 			})
 
 			return { columns: newColumns }

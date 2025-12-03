@@ -3,7 +3,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { format, isBefore, isToday } from 'date-fns'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, User } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -101,7 +101,12 @@ export function BacklogRow({
 						<span className="truncate text-sm">{ticket.assignee.name}</span>
 					</div>
 				) : (
-					<span className="text-zinc-500">Unassigned</span>
+					<div className="flex items-center gap-2 text-zinc-500">
+						<div className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-zinc-600">
+							<User className="h-3 w-3" />
+						</div>
+						<span className="truncate text-sm">Unassigned</span>
+					</div>
 				)
 
 			case 'reporter':
@@ -224,22 +229,19 @@ export function BacklogRow({
 			onKeyDown={handleKeyDown}
 			tabIndex={0}
 			className={cn(
-				'group cursor-pointer border-b border-zinc-800/50 transition-colors hover:bg-zinc-800/50 focus:bg-zinc-800/50 focus:outline-none select-none',
+				'group border-b border-zinc-800/50 transition-colors hover:bg-zinc-800/50 focus:bg-zinc-800/50 focus:outline-none select-none',
 				isDragging && 'opacity-50 bg-zinc-800 shadow-lg',
+				isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
 			)}
+			{...(isDraggable ? attributes : {})}
+			{...(isDraggable ? listeners : {})}
 		>
 			{/* Drag handle cell - always render to maintain table alignment */}
 			<td className="w-8 px-1 py-2">
 				{isDraggable && (
-					<button
-						type="button"
-						{...attributes}
-						{...listeners}
-						className="flex h-6 w-6 cursor-grab items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-zinc-700 active:cursor-grabbing transition-opacity"
-						onClick={(e) => e.stopPropagation()}
-					>
+					<div className="flex h-6 w-6 items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
 						<GripVertical className="h-4 w-4 text-zinc-500" />
-					</button>
+					</div>
 				)}
 			</td>
 			{columns.map((column) => (

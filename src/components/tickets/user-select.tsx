@@ -81,7 +81,9 @@ export function UserSelect({
 									}}
 									className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
 								>
-									<User className="mr-2 h-4 w-4 text-zinc-500" />
+									<div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-zinc-600">
+										<User className="h-3 w-3 text-zinc-500" />
+									</div>
 									<span className="text-zinc-400">Unassigned</span>
 									<Check
 										className={cn('ml-auto h-4 w-4', value === null ? 'opacity-100' : 'opacity-0')}
