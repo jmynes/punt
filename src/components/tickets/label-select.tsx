@@ -108,7 +108,7 @@ export function LabelSelect({ value, onChange, labels, disabled }: LabelSelectPr
 							<button
 								type="button"
 								onClick={() => removeLabel(label.id)}
-								className="ml-1 rounded-full hover:bg-white/20 p-0.5"
+								className="ml-1 rounded-full hover:bg-red-500/30 hover:text-red-300 p-0.5 transition-colors"
 							>
 								<X className="h-3 w-3" />
 							</button>

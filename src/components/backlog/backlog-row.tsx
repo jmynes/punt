@@ -127,7 +127,14 @@ export function BacklogRow({ ticket, projectKey, columns, getStatusName }: Backl
 
 			case 'sprint':
 				return ticket.sprint ? (
-					<Badge variant={ticket.sprint.isActive ? 'default' : 'secondary'}>
+					<Badge
+						variant="outline"
+						className={cn(
+							ticket.sprint.isActive
+								? 'border-green-600 bg-green-900/30 text-green-400'
+								: 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
+						)}
+					>
 						{ticket.sprint.name}
 					</Badge>
 				) : (
