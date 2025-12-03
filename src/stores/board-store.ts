@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
 // Default columns for a new project
@@ -10,9 +11,36 @@ const DEFAULT_COLUMNS: ColumnWithTickets[] = [
 	{ id: 'col-5', name: 'Done', order: 4, projectId: 'project-1', tickets: [] },
 ]
 
+// Helper to revive Date objects from JSON
+function reviveDates(obj: unknown): unknown {
+	if (obj === null || obj === undefined) return obj
+	if (typeof obj === 'string') {
+		// Check if it looks like an ISO date string
+		if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(obj)) {
+			return new Date(obj)
+		}
+		return obj
+	}
+	if (Array.isArray(obj)) {
+		return obj.map(reviveDates)
+	}
+	if (typeof obj === 'object') {
+		const result: Record<string, unknown> = {}
+		for (const [key, value] of Object.entries(obj)) {
+			result[key] = reviveDates(value)
+		}
+		return result
+	}
+	return obj
+}
+
 interface BoardState {
 	columns: ColumnWithTickets[]
 	setColumns: (columns: ColumnWithTickets[]) => void
+
+	// Hydration state
+	_hasHydrated: boolean
+	setHasHydrated: (value: boolean) => void
 
 	// Search/filter
 	searchQuery: string
@@ -40,13 +68,19 @@ interface BoardState {
 	removeTicket: (ticketId: string) => void
 }
 
-export const useBoardStore = create<BoardState>((set) => ({
-	columns: DEFAULT_COLUMNS,
-	setColumns: (columns) => set({ columns }),
+export const useBoardStore = create<BoardState>()(
+	persist(
+		(set) => ({
+			columns: DEFAULT_COLUMNS,
+			setColumns: (columns) => set({ columns }),
 
-	// Search/filter
-	searchQuery: '',
-	setSearchQuery: (query) => set({ searchQuery: query }),
+			// Hydration state
+			_hasHydrated: false,
+			setHasHydrated: (value) => set({ _hasHydrated: value }),
+
+			// Search/filter
+			searchQuery: '',
+			setSearchQuery: (query) => set({ searchQuery: query }),
 
 	moveTicket: (ticketId, fromColumnId, toColumnId, newOrder) =>
 		set((state) => {
@@ -219,4 +253,18 @@ export const useBoardStore = create<BoardState>((set) => ({
 				tickets: column.tickets.filter((t) => t.id !== ticketId),
 			})),
 		})),
-}))
+		}),
+		{
+			name: 'punt-board-storage',
+			// Don't persist searchQuery or hydration state
+			partialize: (state) => ({ columns: state.columns }),
+			// Revive Date objects when loading from storage and mark as hydrated
+			onRehydrateStorage: () => (state) => {
+				if (state) {
+					state.columns = reviveDates(state.columns) as ColumnWithTickets[]
+					state.setHasHydrated(true)
+				}
+			},
+		},
+	),
+)
