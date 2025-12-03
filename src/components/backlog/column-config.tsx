@@ -154,6 +154,7 @@ export function ColumnConfig() {
 
 					{/* Column list */}
 					<DndContext
+						id="column-config-dnd"
 						sensors={sensors}
 						collisionDetection={closestCenter}
 						onDragEnd={handleDragEnd}
