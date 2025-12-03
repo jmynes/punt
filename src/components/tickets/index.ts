@@ -1,5 +1,7 @@
+export { AttachmentList } from './attachment-list'
 export { CreateTicketDialog } from './create-ticket-dialog'
 export { DatePicker } from './date-picker'
+export { FileUpload, type UploadedFile } from './file-upload'
 export { LabelSelect } from './label-select'
 export { ParentSelect } from './parent-select'
 export { PrioritySelect } from './priority-select'
