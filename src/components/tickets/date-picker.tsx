@@ -28,7 +28,7 @@ export function DatePicker({
 						variant="outline"
 						disabled={disabled}
 						className={cn(
-							'flex-1 justify-start text-left font-normal bg-zinc-900 border-zinc-700 hover:bg-zinc-800',
+							'flex-1 justify-start text-left font-normal',
 							!value && 'text-zinc-500',
 						)}
 					>

@@ -164,7 +164,7 @@ export function CreateTicketDialog() {
 						variant="outline"
 						onClick={handleClose}
 						disabled={isSubmitting}
-						className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+						className="border-zinc-700 text-zinc-300 hover:bg-red-900/30 hover:text-red-400 hover:border-red-800"
 					>
 						Cancel
 					</Button>

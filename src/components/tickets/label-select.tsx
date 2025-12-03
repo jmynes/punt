@@ -48,7 +48,7 @@ export function LabelSelect({ value, onChange, labels, disabled }: LabelSelectPr
 						role="combobox"
 						aria-expanded={open}
 						disabled={disabled}
-						className="w-full justify-between bg-zinc-900 border-zinc-700 hover:bg-zinc-800"
+						className="w-full justify-between"
 					>
 						<span className="text-zinc-500">
 							{selectedLabels.length > 0

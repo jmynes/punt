@@ -34,7 +34,7 @@ export function PrioritySelect({ value, onChange, disabled }: PrioritySelectProp
 
 	return (
 		<Select value={value} onValueChange={(v) => onChange(v as Priority)} disabled={disabled}>
-			<SelectTrigger className="w-full bg-zinc-900 border-zinc-700">
+			<SelectTrigger className="w-full">
 				<SelectValue>
 					<div className="flex items-center gap-2">
 						<Icon className={`h-4 w-4 ${config.color}`} />
