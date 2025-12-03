@@ -1,5 +1,6 @@
 'use client'
 
+import { Paperclip } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -12,9 +13,11 @@ import {
 	type Priority,
 	type SprintSummary,
 	type TicketFormData,
+	type UploadedFileInfo,
 } from '@/types'
 import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
+import { FileUpload } from './file-upload'
 import { LabelSelect } from './label-select'
 import { ParentSelect } from './parent-select'
 import { PrioritySelect } from './priority-select'
@@ -243,6 +246,25 @@ export function TicketForm({
 					disabled={disabled}
 					className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
 				/>
+			</div>
+
+			<Separator className="bg-zinc-800" />
+
+			{/* Attachments */}
+			<div className="space-y-2">
+				<Label className="text-zinc-300 flex items-center gap-2">
+					<Paperclip className="h-4 w-4" />
+					Attachments
+				</Label>
+				<FileUpload
+					value={data.attachments}
+					onChange={(files) => updateField('attachments', files as UploadedFileInfo[])}
+					maxFiles={10}
+					disabled={disabled}
+				/>
+				<p className="text-xs text-zinc-500">
+					Upload images, videos, PDFs, or documents. Max 10 files.
+				</p>
 			</div>
 		</div>
 	)

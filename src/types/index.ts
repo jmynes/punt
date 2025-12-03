@@ -127,6 +127,17 @@ export interface ProjectWithDetails {
 	}
 }
 
+// Uploaded file info for attachments
+export interface UploadedFileInfo {
+	id: string
+	filename: string
+	originalName: string
+	mimetype: string
+	size: number
+	url: string
+	category: 'image' | 'video' | 'document'
+}
+
 // Form data for creating/editing tickets
 export interface TicketFormData {
 	title: string
@@ -143,6 +154,7 @@ export interface TicketFormData {
 	dueDate: Date | null
 	environment: string
 	parentId: string | null
+	attachments: UploadedFileInfo[]
 }
 
 // Default values for new tickets
@@ -161,4 +173,5 @@ export const DEFAULT_TICKET_FORM: TicketFormData = {
 	dueDate: null,
 	environment: '',
 	parentId: null,
+	attachments: [],
 }
