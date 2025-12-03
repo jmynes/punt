@@ -12,7 +12,7 @@ import {
 	useSensors,
 } from '@dnd-kit/core'
 import { Layers } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { EmptyState } from '@/components/common/empty-state'
 import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -25,9 +25,26 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ projectKey }: KanbanBoardProps) {
-	const { columns, moveTicket } = useBoardStore()
+	const { columns, moveTicket, searchQuery } = useBoardStore()
 	const { setCreateTicketOpen } = useUIStore()
 	const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
+
+	// Filter tickets based on search query
+	const filteredColumns = useMemo(() => {
+		if (!searchQuery.trim()) return columns
+
+		const query = searchQuery.toLowerCase()
+		return columns.map((column) => ({
+			...column,
+			tickets: column.tickets.filter(
+				(ticket) =>
+					ticket.title.toLowerCase().includes(query) ||
+					`${projectKey}-${ticket.number}`.toLowerCase().includes(query) ||
+					ticket.description?.toLowerCase().includes(query) ||
+					ticket.labels.some((label) => label.name.toLowerCase().includes(query)),
+			),
+		}))
+	}, [columns, searchQuery, projectKey])
 
 	const sensors = useSensors(
 		useSensor(PointerSensor, {
@@ -106,7 +123,7 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 			onDragEnd={handleDragEnd}
 		>
 			<div className="flex gap-4 h-full overflow-x-auto pb-4">
-				{columns.map((column) => (
+				{filteredColumns.map((column) => (
 					<KanbanColumn key={column.id} column={column} projectKey={projectKey} />
 				))}
 			</div>

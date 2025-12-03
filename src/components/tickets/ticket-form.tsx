@@ -206,14 +206,22 @@ export function TicketForm({
 						id="storyPoints"
 						type="number"
 						min={0}
+						step={1}
 						value={data.storyPoints ?? ''}
-						onChange={(e) =>
-							updateField(
-								'storyPoints',
-								e.target.value ? Number.parseInt(e.target.value, 10) : null,
-							)
-						}
-						placeholder="0"
+						onChange={(e) => {
+							const val = e.target.value ? Number.parseInt(e.target.value, 10) : null
+							updateField('storyPoints', val !== null && val < 0 ? 0 : val)
+						}}
+						onKeyDown={(e) => {
+							// Handle arrow keys for increment/decrement
+							if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+								e.preventDefault()
+								const current = data.storyPoints ?? 1
+								const newVal = e.key === 'ArrowUp' ? current + 1 : Math.max(0, current - 1)
+								updateField('storyPoints', newVal)
+							}
+						}}
+						placeholder="1"
 						disabled={disabled}
 						className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
 					/>

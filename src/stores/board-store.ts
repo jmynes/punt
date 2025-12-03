@@ -5,6 +5,10 @@ interface BoardState {
 	columns: ColumnWithTickets[]
 	setColumns: (columns: ColumnWithTickets[]) => void
 
+	// Search/filter
+	searchQuery: string
+	setSearchQuery: (query: string) => void
+
 	// Optimistic updates for drag and drop
 	moveTicket: (ticketId: string, fromColumnId: string, toColumnId: string, newOrder: number) => void
 
@@ -21,6 +25,10 @@ interface BoardState {
 export const useBoardStore = create<BoardState>((set) => ({
 	columns: [],
 	setColumns: (columns) => set({ columns }),
+
+	// Search/filter
+	searchQuery: '',
+	setSearchQuery: (query) => set({ searchQuery: query }),
 
 	moveTicket: (ticketId, fromColumnId, toColumnId, newOrder) =>
 		set((state) => {

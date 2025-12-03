@@ -167,7 +167,7 @@ export const DEFAULT_TICKET_FORM: TicketFormData = {
 	sprintId: null,
 	labelIds: [],
 	watcherIds: [],
-	storyPoints: null,
+	storyPoints: 1,
 	estimate: '',
 	startDate: null,
 	dueDate: null,

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { useEffect } from 'react'
 import { KanbanBoard } from '@/components/board'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets, IssueType, Priority } from '@/types'
@@ -280,7 +281,7 @@ export default function BoardPage() {
 	const projectId = params.projectId as string
 	const projectKey = projectKeys[projectId] || 'PROJ'
 
-	const { setColumns } = useBoardStore()
+	const { setColumns, searchQuery, setSearchQuery } = useBoardStore()
 	const { setCreateTicketOpen, setActiveProjectId } = useUIStore()
 
 	// Load demo data on mount
@@ -288,6 +289,11 @@ export default function BoardPage() {
 		setColumns(demoColumns)
 		setActiveProjectId(projectId)
 	}, [projectId, setColumns, setActiveProjectId])
+
+	// Clear search when leaving page
+	useEffect(() => {
+		return () => setSearchQuery('')
+	}, [setSearchQuery])
 
 	return (
 		<div className="flex h-[calc(100vh-3.5rem)] flex-col">
@@ -300,12 +306,14 @@ export default function BoardPage() {
 
 				<div className="flex items-center gap-2">
 					{/* Search */}
-					<div className="relative">
+					<div className="relative lg:w-64">
 						<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-						<input
+						<Input
 							type="search"
 							placeholder="Filter tickets..."
-							className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-10 pr-4 text-sm text-zinc-100 placeholder:text-zinc-500 transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:bg-transparent lg:w-64"
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							className="pl-10"
 						/>
 					</div>
 

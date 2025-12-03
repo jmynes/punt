@@ -43,18 +43,16 @@ export function KanbanCard({ ticket, projectKey }: KanbanCardProps) {
 		<Card
 			ref={setNodeRef}
 			style={style}
+			{...attributes}
+			{...listeners}
 			className={cn(
-				'group relative cursor-pointer border-zinc-800 bg-zinc-900/80 p-3 hover:border-zinc-700 hover:bg-zinc-900 transition-colors',
+				'group relative cursor-grab border-zinc-800 bg-zinc-900/80 p-3 hover:border-zinc-700 hover:bg-zinc-900 transition-colors select-none active:cursor-grabbing',
 				isDragging && 'opacity-50 shadow-lg ring-2 ring-amber-500/50',
 			)}
 			onClick={() => setActiveTicketId(ticket.id)}
 		>
-			{/* Drag handle */}
-			<div
-				{...attributes}
-				{...listeners}
-				className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing transition-opacity"
-			>
+			{/* Drag handle indicator - visible on hover */}
+			<div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
 				<GripVertical className="h-4 w-4 text-zinc-600" />
 			</div>
 
