@@ -49,8 +49,8 @@ interface BoardState {
 	// Optimistic updates for drag and drop
 	moveTicket: (ticketId: string, fromColumnId: string, toColumnId: string, newOrder: number) => void
 
-	// Move multiple tickets between columns (for multi-select drag)
-	moveTickets: (ticketIds: string[], fromColumnId: string, toColumnId: string, newOrder: number) => void
+	// Move multiple tickets to a column (from any source columns)
+	moveTickets: (ticketIds: string[], toColumnId: string, newOrder: number) => void
 
 	// Reorder ticket within the same column
 	reorderTicket: (columnId: string, ticketId: string, newIndex: number) => void
@@ -123,32 +123,27 @@ export const useBoardStore = create<BoardState>()(
 			return { columns: newColumns }
 		}),
 
-	moveTickets: (ticketIds, fromColumnId, toColumnId, newOrder) =>
+	moveTickets: (ticketIds, toColumnId, newOrder) =>
 		set((state) => {
-			// Get the tickets being moved from the source column
-			const sourceColumn = state.columns.find((c) => c.id === fromColumnId)
-			if (!sourceColumn) return state
-
-			const ticketsToMove = sourceColumn.tickets
-				.filter((t) => ticketIds.includes(t.id))
-				.map((t) => ({ ...t, columnId: toColumnId }))
+			// Collect all tickets being moved from ALL columns
+			const ticketsToMove: TicketWithRelations[] = []
+			for (const column of state.columns) {
+				for (const ticket of column.tickets) {
+					if (ticketIds.includes(ticket.id)) {
+						ticketsToMove.push({ ...ticket, columnId: toColumnId })
+					}
+				}
+			}
 
 			if (ticketsToMove.length === 0) return state
 
 			const newColumns = state.columns.map((column) => {
-				// Remove from source column
-				if (column.id === fromColumnId) {
-					return {
-						...column,
-						tickets: column.tickets
-							.filter((t) => !ticketIds.includes(t.id))
-							.map((t, idx) => ({ ...t, order: idx })),
-					}
-				}
-
+				// Remove selected tickets from any column they're in
+				const remainingTickets = column.tickets.filter((t) => !ticketIds.includes(t.id))
+				
 				// Add to target column
 				if (column.id === toColumnId) {
-					const newTickets = [...column.tickets]
+					const newTickets = [...remainingTickets]
 					// Insert all moving tickets at the target position
 					newTickets.splice(newOrder, 0, ...ticketsToMove)
 
@@ -156,6 +151,14 @@ export const useBoardStore = create<BoardState>()(
 					return {
 						...column,
 						tickets: newTickets.map((t, idx) => ({ ...t, order: idx })),
+					}
+				}
+
+				// For other columns, just return with remaining tickets (selected ones removed)
+				if (remainingTickets.length !== column.tickets.length) {
+					return {
+						...column,
+						tickets: remainingTickets.map((t, idx) => ({ ...t, order: idx })),
 					}
 				}
 

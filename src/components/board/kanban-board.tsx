@@ -28,8 +28,11 @@ interface KanbanBoardProps {
 export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 	const { columns, moveTicket, moveTickets, reorderTicket, reorderTickets, searchQuery } = useBoardStore()
 	const { setCreateTicketOpen } = useUIStore()
-	const { selectedTicketIds, isSelected, clearSelection } = useSelectionStore()
+	const { clearSelection } = useSelectionStore()
 	const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
+	
+	// Store the selection at drag start to ensure we have consistent state throughout the drag
+	const [dragSelectionIds, setDragSelectionIds] = useState<string[]>([])
 
 	// Filter tickets based on search query
 	const filteredColumns = useMemo(() => {
@@ -60,6 +63,18 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 		const { active } = event
 		if (active.data.current?.type === 'ticket') {
 			setActiveTicket(active.data.current.ticket)
+			
+			// Capture selection state at drag start
+			const currentSelection = useSelectionStore.getState().selectedTicketIds
+			const activeId = active.id as string
+			
+			// Only use multi-select if the dragged ticket is part of the selection
+			if (currentSelection.size > 1 && currentSelection.has(activeId)) {
+				setDragSelectionIds(Array.from(currentSelection))
+			} else {
+				// Single drag - just this ticket
+				setDragSelectionIds([activeId])
+			}
 		}
 	}, [])
 
@@ -71,84 +86,67 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 			const activeId = active.id as string
 			const overId = over.id as string
 
-			// Find which column the active item is in
-			const activeColumn = columns.find((col) => col.tickets.some((t) => t.id === activeId))
-			// Find which column we're over
-			const overColumn =
-				columns.find((col) => col.id === overId) ||
-				columns.find((col) => col.tickets.some((t) => t.id === overId))
-
-			if (!activeColumn || !overColumn || activeColumn.id === overColumn.id) {
-				return
-			}
-
-			// Calculate new order
-			const overTicketIndex = overColumn.tickets.findIndex((t) => t.id === overId)
-			const newOrder = overTicketIndex >= 0 ? overTicketIndex : overColumn.tickets.length
-
-			// Check if we're doing multi-select drag
-			if (selectedTicketIds.size > 1 && isSelected(activeId)) {
-				// Multi-drag: move all selected tickets
-				const selectedIds = Array.from(selectedTicketIds)
-				moveTickets(selectedIds, activeColumn.id, overColumn.id, newOrder)
-			} else {
-				// Single drag
-				moveTicket(activeId, activeColumn.id, overColumn.id, newOrder)
-			}
-		},
-		[columns, moveTicket, moveTickets, selectedTicketIds, isSelected],
-	)
-
-	const handleDragEnd = useCallback(
-		(event: DragEndEvent) => {
-			setActiveTicket(null)
-
-			const { active, over } = event
-			if (!over) {
-				// Drag cancelled - clear selection if we had multi-select
-				if (selectedTicketIds.size > 1) {
-					clearSelection()
-				}
-				return
-			}
-
-			const activeId = active.id as string
-			const overId = over.id as string
-
+			// Don't do anything if hovering over self
 			if (activeId === overId) return
 
 			// Find which column the active item is in
 			const activeColumn = columns.find((col) => col.tickets.some((t) => t.id === activeId))
-			// Find which column we're over (could be a column or a ticket)
+			// Find which column we're over (could be a column itself or a ticket in a column)
 			const overColumn =
 				columns.find((col) => col.id === overId) ||
 				columns.find((col) => col.tickets.some((t) => t.id === overId))
 
 			if (!activeColumn || !overColumn) return
 
-			// Same column reordering
-			if (activeColumn.id === overColumn.id) {
-				const overTicketIndex = activeColumn.tickets.findIndex((t) => t.id === overId)
-				if (overTicketIndex >= 0) {
-					// Check if we're doing multi-select drag
-					if (selectedTicketIds.size > 1 && isSelected(activeId)) {
-						// Multi-drag: move all selected tickets at once
-						const selectedIds = Array.from(selectedTicketIds)
-						reorderTickets(activeColumn.id, selectedIds, overTicketIndex)
-						clearSelection()
-					} else {
-						// Single drag
-						reorderTicket(activeColumn.id, activeId, overTicketIndex)
-					}
+			const isMultiDrag = dragSelectionIds.length > 1
+			
+			// Calculate target position
+			const overTicketIndex = overColumn.tickets.findIndex((t) => t.id === overId)
+			const newOrder = overTicketIndex >= 0 ? overTicketIndex : overColumn.tickets.length
+
+			if (isMultiDrag) {
+				// Check if all selected tickets are already in the target column
+				const allInTargetColumn = dragSelectionIds.every((id) =>
+					overColumn.tickets.some((t) => t.id === id)
+				)
+				
+				if (allInTargetColumn) {
+					// Same column - reorder all selected tickets together
+					reorderTickets(overColumn.id, dragSelectionIds, newOrder)
+				} else {
+					// Cross-column: move all selected tickets from any column
+					moveTickets(dragSelectionIds, overColumn.id, newOrder)
 				}
 			} else {
-				// Cross-column move was handled in handleDragOver, just clear selection
-				if (selectedTicketIds.size > 1 && isSelected(activeId)) {
-					clearSelection()
+				// Single drag
+				if (activeColumn.id === overColumn.id) {
+					// Same column - reorder
+					reorderTicket(activeColumn.id, activeId, newOrder)
+				} else {
+					// Cross-column
+					moveTicket(activeId, activeColumn.id, overColumn.id, newOrder)
 				}
 			}
 		},
-		[columns, reorderTicket, reorderTickets, selectedTicketIds, isSelected, clearSelection],
+		[columns, moveTicket, moveTickets, reorderTicket, reorderTickets, dragSelectionIds],
+	)
+
+	const handleDragEnd = useCallback(
+		(event: DragEndEvent) => {
+			const wasMultiDrag = dragSelectionIds.length > 1
+			
+			// Reset drag state
+			setActiveTicket(null)
+			setDragSelectionIds([])
+
+			// Clear selection after multi-drag completes
+			if (wasMultiDrag) {
+				clearSelection()
+			}
+			
+			// All actual moving/reordering is handled in handleDragOver
+		},
+		[dragSelectionIds, clearSelection],
 	)
 
 	if (columns.length === 0) {
@@ -184,9 +182,9 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 				{activeTicket ? (
 					<div className="rotate-3 scale-105 relative">
 						<KanbanCard ticket={activeTicket} projectKey={projectKey} />
-						{selectedTicketIds.size > 1 && isSelected(activeTicket.id) && (
+						{dragSelectionIds.length > 1 && (
 							<div className="absolute -top-2 -right-2 bg-amber-500 text-black text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg">
-								{selectedTicketIds.size}
+								{dragSelectionIds.length}
 							</div>
 						)}
 					</div>

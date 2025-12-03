@@ -58,6 +58,14 @@ export function BacklogRow({
 			return
 		}
 
+		// If this ticket is already selected and part of a multi-selection,
+		// don't change selection (allows dragging the group)
+		// Only open ticket detail if it's the only one selected
+		if (selected && useSelectionStore.getState().selectedTicketIds.size > 1) {
+			// Don't change selection, allow drag to proceed
+			return
+		}
+
 		// Normal click: open ticket detail (and select only this one)
 		selectTicket(ticket.id)
 		setActiveTicketId(ticket.id)
