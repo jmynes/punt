@@ -86,15 +86,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 		setShowDeleteConfirm(false)
 		onClose()
 
-		// Show toast with countdown and undo button
-		let secondsLeft = 10
-		const toastId = toast.error(`Ticket deleted (${secondsLeft}s to undo)`, {
-			description: (
-				<span>
-					<span className="font-mono">{ticketKey}</span> - {deletedTicket.title}
-				</span>
-			),
-			duration: 10000,
+		// Show toast with undo button
+		const toastId = toast.error('Ticket deleted', {
+			description: <span className="font-mono">{ticketKey}</span>,
+			duration: 5000,
 			action: {
 				label: 'Undo',
 				onClick: () => {
@@ -115,37 +110,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
 		// Push to undo store for Ctrl+Z
 		pushDeleted(deletedTicket, columnId, toastId)
-
-		// Update countdown in toast
-		const countdownInterval = setInterval(() => {
-			secondsLeft--
-			if (secondsLeft <= 0) {
-				clearInterval(countdownInterval)
-				return
-			}
-			// Update the toast message with new countdown
-			toast.error(`Ticket deleted (${secondsLeft}s to undo)`, {
-				id: toastId,
-				description: (
-					<span>
-						<span className="font-mono">{ticketKey}</span> - {deletedTicket.title}
-					</span>
-				),
-				duration: secondsLeft * 1000,
-				action: {
-					label: 'Undo',
-					onClick: () => {
-						clearInterval(countdownInterval)
-						addTicket(columnId, deletedTicket)
-						removeDeleted(toastId)
-						toast.success('Ticket restored', {
-							description: deletedTicket.title,
-							duration: 3000,
-						})
-					},
-				},
-			})
-		}, 1000)
 	}
 
 	const handleClone = () => {

@@ -6,27 +6,38 @@ interface DeletedTicket {
 	columnId: string
 }
 
-// An undo entry can be a single ticket or a batch
+interface MovedTicket {
+	ticketId: string
+	fromColumnId: string
+	toColumnId: string
+}
+
+// Different types of undoable actions
+type UndoAction =
+	| { type: 'delete'; tickets: DeletedTicket[] }
+	| { type: 'move'; moves: MovedTicket[]; fromColumnName: string; toColumnName: string }
+
 interface UndoEntry {
-	tickets: DeletedTicket[]
-	deletedAt: number
+	action: UndoAction
+	timestamp: number
 	toastId: string | number
 }
 
 interface UndoState {
-	// Stack of undo entries (each can contain multiple tickets)
+	// Stack of undo entries
 	undoStack: UndoEntry[]
 	// Stack of redo entries
 	redoStack: UndoEntry[]
 
-	// Add a single deleted ticket to the undo stack
+	// Add a delete action to the undo stack
 	pushDeleted: (ticket: TicketWithRelations, columnId: string, toastId: string | number) => void
-
-	// Add multiple deleted tickets as a single undo entry
 	pushDeletedBatch: (tickets: DeletedTicket[], toastId: string | number) => void
 
+	// Add a move action to the undo stack
+	pushMove: (moves: MovedTicket[], fromColumnName: string, toColumnName: string, toastId: string | number) => void
+
 	// Pop and return the most recent undo entry
-	popDeleted: () => UndoEntry | undefined
+	popUndo: () => UndoEntry | undefined
 
 	// Push to redo stack (when undoing)
 	pushRedo: (item: UndoEntry) => void
@@ -35,10 +46,14 @@ interface UndoState {
 	popRedo: () => UndoEntry | undefined
 
 	// Remove a specific undo entry by toastId
-	removeDeleted: (toastId: string | number) => void
+	removeEntry: (toastId: string | number) => void
 
 	// Clear redo stack (when a new action is performed)
 	clearRedo: () => void
+
+	// Legacy aliases for backwards compatibility
+	popDeleted: () => UndoEntry | undefined
+	removeDeleted: (toastId: string | number) => void
 }
 
 export const useUndoStore = create<UndoState>((set, get) => ({
@@ -47,17 +62,44 @@ export const useUndoStore = create<UndoState>((set, get) => ({
 
 	pushDeleted: (ticket, columnId, toastId) =>
 		set((state) => ({
-			undoStack: [...state.undoStack, { tickets: [{ ticket, columnId }], deletedAt: Date.now(), toastId }],
-			redoStack: [], // Clear redo stack when new action is performed
+			undoStack: [
+				...state.undoStack,
+				{
+					action: { type: 'delete', tickets: [{ ticket, columnId }] },
+					timestamp: Date.now(),
+					toastId,
+				},
+			],
+			redoStack: [],
 		})),
 
 	pushDeletedBatch: (tickets, toastId) =>
 		set((state) => ({
-			undoStack: [...state.undoStack, { tickets, deletedAt: Date.now(), toastId }],
-			redoStack: [], // Clear redo stack when new action is performed
+			undoStack: [
+				...state.undoStack,
+				{
+					action: { type: 'delete', tickets },
+					timestamp: Date.now(),
+					toastId,
+				},
+			],
+			redoStack: [],
 		})),
 
-	popDeleted: () => {
+	pushMove: (moves, fromColumnName, toColumnName, toastId) =>
+		set((state) => ({
+			undoStack: [
+				...state.undoStack,
+				{
+					action: { type: 'move', moves, fromColumnName, toColumnName },
+					timestamp: Date.now(),
+					toastId,
+				},
+			],
+			redoStack: [],
+		})),
+
+	popUndo: () => {
 		const state = get()
 		if (state.undoStack.length === 0) return undefined
 
@@ -80,11 +122,15 @@ export const useUndoStore = create<UndoState>((set, get) => ({
 		return item
 	},
 
-	removeDeleted: (toastId) =>
+	removeEntry: (toastId) =>
 		set((state) => ({
 			undoStack: state.undoStack.filter((d) => d.toastId !== toastId),
 		})),
 
 	clearRedo: () => set({ redoStack: [] }),
+
+	// Legacy aliases
+	popDeleted: () => get().popUndo(),
+	removeDeleted: (toastId) => get().removeEntry(toastId),
 }))
 
