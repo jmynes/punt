@@ -4,6 +4,7 @@ import {
 	closestCenter,
 	DndContext,
 	type DragEndEvent,
+	type DragStartEvent,
 	KeyboardSensor,
 	PointerSensor,
 	useSensor,
@@ -215,6 +216,21 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 	// Get selection store
 	const { selectedTicketIds, clearSelection, isSelected } = useSelectionStore()
 
+	// Handle drag start - clear selection if dragging a non-selected ticket
+	function handleDragStart(event: DragStartEvent) {
+		const { active } = event
+		const activeId = active.id as string
+		
+		// Only for ticket drags (not column drags)
+		const isColumnDrag = columnIds.includes(activeId as (typeof columnIds)[number])
+		if (isColumnDrag) return
+		
+		// If dragging a ticket that's not part of the current selection, clear selection
+		if (selectedTicketIds.size > 0 && !isSelected(activeId)) {
+			clearSelection()
+		}
+	}
+
 	// Handle drag end for both columns and rows
 	function handleDragEnd(event: DragEndEvent) {
 		const { active, over } = event
@@ -304,11 +320,24 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 			</div>
 
 			{/* Table */}
-			<ScrollArea className="flex-1">
+			<ScrollArea 
+				className="flex-1"
+				onClick={(e) => {
+					// Clear selection when clicking on empty space (not on a ticket row)
+					const target = e.target as HTMLElement
+					if (
+						target.closest('[data-ticket-row]') === null &&
+						selectedTicketIds.size > 0
+					) {
+						clearSelection()
+					}
+				}}
+			>
 				<DndContext
 					id="backlog-dnd"
 					sensors={sensors}
 					collisionDetection={closestCenter}
+					onDragStart={handleDragStart}
 					onDragEnd={handleDragEnd}
 				>
 					<table className="w-full border-collapse">
