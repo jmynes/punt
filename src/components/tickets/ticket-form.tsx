@@ -13,8 +13,10 @@ import {
 	type SprintSummary,
 	type TicketFormData,
 } from '@/types'
+import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
 import { LabelSelect } from './label-select'
+import { ParentSelect } from './parent-select'
 import { PrioritySelect } from './priority-select'
 import { TypeSelect } from './type-select'
 import { UserSelect } from './user-select'
@@ -24,15 +26,33 @@ interface TicketFormProps {
 	onChange: (data: TicketFormData) => void
 	labels: LabelSummary[]
 	sprints: SprintSummary[]
+	parentTickets?: ParentTicketOption[]
 	disabled?: boolean
 }
 
-export function TicketForm({ data, onChange, labels, sprints, disabled }: TicketFormProps) {
+export function TicketForm({
+	data,
+	onChange,
+	labels,
+	sprints,
+	parentTickets = [],
+	disabled,
+}: TicketFormProps) {
 	const currentUser = useCurrentUser()
 	const members = useProjectMembers()
 
 	const updateField = <K extends keyof TicketFormData>(field: K, value: TicketFormData[K]) => {
 		onChange({ ...data, [field]: value })
+	}
+
+	// Auto-set type to subtask when parent is selected
+	const handleParentChange = (parentId: string | null) => {
+		updateField('parentId', parentId)
+		// If selecting a parent and current type isn't subtask, suggest subtask
+		if (parentId && data.type !== 'subtask') {
+			// Optionally auto-switch to subtask type
+			// updateField('type', 'subtask')
+		}
 	}
 
 	return (
@@ -71,6 +91,22 @@ export function TicketForm({ data, onChange, labels, sprints, disabled }: Ticket
 					/>
 				</div>
 			</div>
+
+			{/* Parent Epic/Story */}
+			{parentTickets.length > 0 && (
+				<div className="space-y-2">
+					<Label className="text-zinc-300">Parent Epic / Story</Label>
+					<ParentSelect
+						value={data.parentId}
+						onChange={handleParentChange}
+						parentTickets={parentTickets}
+						disabled={disabled}
+					/>
+					<p className="text-xs text-zinc-500">
+						Link this ticket to an Epic or Story for better organization
+					</p>
+				</div>
+			)}
 
 			{/* Description */}
 			<div className="space-y-2">
