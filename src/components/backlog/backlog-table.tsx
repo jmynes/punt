@@ -13,6 +13,7 @@ import {
 	horizontalListSortingStrategy,
 	SortableContext,
 	sortableKeyboardCoordinates,
+	verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { Settings2 } from 'lucide-react'
 import { useMemo } from 'react'
@@ -189,7 +190,8 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 	const visibleColumns = columns.filter((c) => c.visible)
 	const columnIds = visibleColumns.map((c) => c.id)
 
-	function handleDragEnd(event: DragEndEvent) {
+	// Handle column header drag
+	function handleColumnDragEnd(event: DragEndEvent) {
 		const { active, over } = event
 		if (over && active.id !== over.id) {
 			const oldIndex = columns.findIndex((c) => c.id === active.id)
@@ -198,11 +200,23 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 		}
 	}
 
+	// Handle row drag (for reordering tickets)
+	function handleRowDragEnd(event: DragEndEvent) {
+		const { active, over } = event
+		if (over && active.id !== over.id) {
+			// For now, just log - in real app this would update the ticket order
+			console.log('Reorder tickets:', { from: active.id, to: over.id })
+			// Could dispatch an action to reorder tickets in the store
+		}
+	}
+
 	// Get status name from columnId
 	const getStatusName = (columnId: string) => {
 		const col = statusColumns.find((c) => c.id === columnId)
 		return col?.name || 'Unknown'
 	}
+
+	const ticketIds = filteredTickets.map((t) => t.id)
 
 	return (
 		<div className="flex h-full flex-col">
@@ -222,30 +236,47 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 
 			{/* Table */}
 			<ScrollArea className="flex-1">
-				<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-					<table className="w-full border-collapse">
+				<table className="w-full border-collapse">
+					{/* Header with column reordering */}
+					<DndContext
+						sensors={sensors}
+						collisionDetection={closestCenter}
+						onDragEnd={handleColumnDragEnd}
+					>
 						<thead className="sticky top-0 z-10 bg-zinc-900">
 							<SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
 								<tr className="border-b border-zinc-800">
+									{/* Empty cell for drag handle column */}
+									<th className="w-8" />
 									{visibleColumns.map((column) => (
 										<BacklogHeader key={column.id} column={column} />
 									))}
 								</tr>
 							</SortableContext>
 						</thead>
-						<tbody>
-							{filteredTickets.map((ticket) => (
-								<BacklogRow
-									key={ticket.id}
-									ticket={ticket}
-									projectKey={projectKey}
-									columns={visibleColumns}
-									getStatusName={getStatusName}
-								/>
-							))}
-						</tbody>
-					</table>
-				</DndContext>
+					</DndContext>
+
+					{/* Body with row reordering */}
+					<DndContext
+						sensors={sensors}
+						collisionDetection={closestCenter}
+						onDragEnd={handleRowDragEnd}
+					>
+						<SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
+							<tbody>
+								{filteredTickets.map((ticket) => (
+									<BacklogRow
+										key={ticket.id}
+										ticket={ticket}
+										projectKey={projectKey}
+										columns={visibleColumns}
+										getStatusName={getStatusName}
+									/>
+								))}
+							</tbody>
+						</SortableContext>
+					</DndContext>
+				</table>
 
 				{filteredTickets.length === 0 && (
 					<div className="flex h-40 items-center justify-center text-zinc-500">

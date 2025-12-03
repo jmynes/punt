@@ -1,6 +1,9 @@
 'use client'
 
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { format, isBefore, isToday } from 'date-fns'
+import { GripVertical } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -15,10 +18,34 @@ interface BacklogRowProps {
 	projectKey: string
 	columns: BacklogColumn[]
 	getStatusName: (columnId: string) => string
+	isDraggable?: boolean
 }
 
-export function BacklogRow({ ticket, projectKey, columns, getStatusName }: BacklogRowProps) {
+export function BacklogRow({
+	ticket,
+	projectKey,
+	columns,
+	getStatusName,
+	isDraggable = true,
+}: BacklogRowProps) {
 	const { setActiveTicketId } = useUIStore()
+
+	const {
+		attributes,
+		listeners,
+		setNodeRef,
+		transform,
+		transition,
+		isDragging,
+	} = useSortable({
+		id: ticket.id,
+		disabled: !isDraggable,
+	})
+
+	const style = {
+		transform: CSS.Transform.toString(transform),
+		transition,
+	}
 
 	const handleClick = () => {
 		setActiveTicketId(ticket.id)
@@ -198,11 +225,30 @@ export function BacklogRow({ ticket, projectKey, columns, getStatusName }: Backl
 
 	return (
 		<tr
+			ref={setNodeRef}
+			style={style}
 			onClick={handleClick}
 			onKeyDown={handleKeyDown}
 			tabIndex={0}
-			className="cursor-pointer border-b border-zinc-800/50 transition-colors hover:bg-zinc-800/50 focus:bg-zinc-800/50 focus:outline-none"
+			className={cn(
+				'group cursor-pointer border-b border-zinc-800/50 transition-colors hover:bg-zinc-800/50 focus:bg-zinc-800/50 focus:outline-none select-none',
+				isDragging && 'opacity-50 bg-zinc-800 shadow-lg',
+			)}
 		>
+			{/* Drag handle cell */}
+			{isDraggable && (
+				<td className="w-8 px-1 py-2">
+					<button
+						type="button"
+						{...attributes}
+						{...listeners}
+						className="flex h-6 w-6 cursor-grab items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-zinc-700 active:cursor-grabbing transition-opacity"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<GripVertical className="h-4 w-4 text-zinc-500" />
+					</button>
+				</td>
+			)}
 			{columns.map((column) => (
 				<td
 					key={column.id}
