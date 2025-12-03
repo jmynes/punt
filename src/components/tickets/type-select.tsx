@@ -46,7 +46,7 @@ export function TypeSelect({ value, onChange, disabled }: TypeSelectProps) {
 					const cfg = typeConfig[type]
 					const TypeIcon = cfg.icon
 					return (
-						<SelectItem key={type} value={type} className="focus:bg-zinc-800">
+						<SelectItem key={type} value={type} className="focus:bg-zinc-800 focus:text-zinc-100">
 							<div className="flex items-center gap-2">
 								<TypeIcon className={`h-4 w-4 ${cfg.color}`} />
 								<span>{cfg.label}</span>

@@ -79,7 +79,7 @@ export function UserSelect({
 										onChange(null)
 										setOpen(false)
 									}}
-									className="cursor-pointer"
+									className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
 								>
 									<User className="mr-2 h-4 w-4 text-zinc-500" />
 									<span className="text-zinc-400">Unassigned</span>
@@ -96,7 +96,7 @@ export function UserSelect({
 											onChange(user.id)
 											setOpen(false)
 										}}
-										className="cursor-pointer"
+										className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
 									>
 										<Avatar className="mr-2 h-5 w-5">
 											<AvatarImage src={user.avatar || undefined} />

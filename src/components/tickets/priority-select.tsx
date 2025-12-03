@@ -47,7 +47,11 @@ export function PrioritySelect({ value, onChange, disabled }: PrioritySelectProp
 					const cfg = priorityConfig[priority]
 					const PriorityIcon = cfg.icon
 					return (
-						<SelectItem key={priority} value={priority} className="focus:bg-zinc-800">
+						<SelectItem
+							key={priority}
+							value={priority}
+							className="focus:bg-zinc-800 focus:text-zinc-100"
+						>
 							<div className="flex items-center gap-2">
 								<PriorityIcon className={`h-4 w-4 ${cfg.color}`} />
 								<span>{cfg.label}</span>

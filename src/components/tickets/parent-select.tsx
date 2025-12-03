@@ -73,7 +73,7 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
 										onChange(null)
 										setOpen(false)
 									}}
-									className="cursor-pointer"
+									className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
 								>
 									<span className="text-zinc-400">No parent (standalone ticket)</span>
 									<Check
@@ -93,7 +93,7 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
 												onChange(ticket.id)
 												setOpen(false)
 											}}
-											className="cursor-pointer"
+											className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
 										>
 											<Zap className="mr-2 h-4 w-4 text-purple-400" />
 											<span className="font-mono text-zinc-500 mr-2">
@@ -122,7 +122,7 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
 												onChange(ticket.id)
 												setOpen(false)
 											}}
-											className="cursor-pointer"
+											className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
 										>
 											<Lightbulb className="mr-2 h-4 w-4 text-green-400" />
 											<span className="font-mono text-zinc-500 mr-2">
