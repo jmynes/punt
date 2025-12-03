@@ -257,10 +257,11 @@ export function BacklogRow({
 			onKeyDown={handleKeyDown}
 			tabIndex={0}
 			className={cn(
-				'group border-b border-zinc-800/50 transition-colors hover:bg-zinc-800/50 focus:bg-zinc-800/50 focus:outline-none select-none',
+				'group border-b border-zinc-800/50 transition-colors focus:outline-none select-none',
+				!selected && 'hover:bg-zinc-800/50 focus:bg-zinc-800/50',
 				isDragging && 'opacity-50 bg-zinc-800 shadow-lg',
 				isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
-				selected && 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50',
+				selected && 'bg-amber-500/20 hover:bg-amber-500/25 focus:bg-amber-500/25 border-amber-500/50',
 			)}
 			{...(isDraggable ? attributes : {})}
 			{...(isDraggable ? listeners : {})}

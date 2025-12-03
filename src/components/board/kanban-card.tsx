@@ -79,9 +79,10 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [] }: KanbanCard
 			{...attributes}
 			{...listeners}
 			className={cn(
-				'group relative cursor-grab border-zinc-800 bg-zinc-900/80 p-3 hover:border-zinc-700 hover:bg-zinc-900 transition-colors select-none active:cursor-grabbing',
+				'group relative cursor-grab border-zinc-800 bg-zinc-900/80 p-3 transition-colors select-none active:cursor-grabbing',
+				!selected && 'hover:border-zinc-700 hover:bg-zinc-900',
 				isDragging && 'opacity-50 shadow-lg ring-2 ring-amber-500/50',
-				selected && 'ring-2 ring-amber-500 border-amber-500/50 bg-amber-500/10',
+				selected && 'ring-2 ring-amber-500 border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/15',
 			)}
 			onClick={handleClick}
 		>
