@@ -40,7 +40,9 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
+import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
+import { toast } from 'sonner'
 import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
 
@@ -51,7 +53,8 @@ interface TicketDetailDrawerProps {
 }
 
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
-	const { removeTicket } = useBoardStore()
+	const { removeTicket, addTicket } = useBoardStore()
+	const { pushDeleted, removeDeleted } = useUndoStore()
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 	const deleteButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -72,9 +75,74 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 		ticket.dueDate && new Date(ticket.dueDate) < new Date() && ticket.columnId !== 'col-5'
 
 	const handleDelete = () => {
+		const columnId = ticket.columnId
+		const deletedTicket = { ...ticket }
+
+		// Remove the ticket
 		removeTicket(ticket.id)
 		setShowDeleteConfirm(false)
 		onClose()
+
+		// Show toast with countdown and undo button
+		let secondsLeft = 10
+		const toastId = toast.error(`Ticket deleted (${secondsLeft}s to undo)`, {
+			description: (
+				<span>
+					<span className="font-mono">{ticketKey}</span> - {deletedTicket.title}
+				</span>
+			),
+			duration: 10000,
+			action: {
+				label: 'Undo',
+				onClick: () => {
+					// Restore the ticket
+					addTicket(columnId, deletedTicket)
+					removeDeleted(toastId)
+					toast.success('Ticket restored', {
+						description: deletedTicket.title,
+						duration: 3000,
+					})
+				},
+			},
+			onDismiss: () => {
+				// Clean up from undo store when toast is dismissed
+				removeDeleted(toastId)
+			},
+		})
+
+		// Push to undo store for Ctrl+Z
+		pushDeleted(deletedTicket, columnId, toastId)
+
+		// Update countdown in toast
+		const countdownInterval = setInterval(() => {
+			secondsLeft--
+			if (secondsLeft <= 0) {
+				clearInterval(countdownInterval)
+				return
+			}
+			// Update the toast message with new countdown
+			toast.error(`Ticket deleted (${secondsLeft}s to undo)`, {
+				id: toastId,
+				description: (
+					<span>
+						<span className="font-mono">{ticketKey}</span> - {deletedTicket.title}
+					</span>
+				),
+				duration: secondsLeft * 1000,
+				action: {
+					label: 'Undo',
+					onClick: () => {
+						clearInterval(countdownInterval)
+						addTicket(columnId, deletedTicket)
+						removeDeleted(toastId)
+						toast.success('Ticket restored', {
+							description: deletedTicket.title,
+							duration: 3000,
+						})
+					},
+				},
+			})
+		}, 1000)
 	}
 
 	return (

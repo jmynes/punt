@@ -2,6 +2,7 @@
 
 import { Loader2 } from 'lucide-react'
 import { useCallback, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
 	Dialog,
@@ -191,7 +192,11 @@ export function CreateTicketDialog() {
 		// Add ticket to the board store
 		addTicket(targetColumn.id, newTicket)
 
-		console.log('Created ticket:', newTicket)
+		// Show success toast
+		toast.success('Ticket created', {
+			description: `PUNT-${ticketNumber}: ${newTicket.title}`,
+			duration: 4000,
+		})
 
 		setIsSubmitting(false)
 		handleClose()
