@@ -252,6 +252,7 @@ export function BacklogRow({
 		<tr
 			ref={setNodeRef}
 			style={style}
+			data-ticket-row
 			onClick={handleClick}
 			onKeyDown={handleKeyDown}
 			tabIndex={0}

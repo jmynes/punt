@@ -12,7 +12,7 @@ import {
 	useSensors,
 } from '@dnd-kit/core'
 import { Layers } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { EmptyState } from '@/components/common/empty-state'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -28,7 +28,8 @@ interface KanbanBoardProps {
 export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 	const { columns, moveTicket, moveTickets, reorderTicket, reorderTickets, searchQuery } = useBoardStore()
 	const { setCreateTicketOpen } = useUIStore()
-	const { clearSelection } = useSelectionStore()
+	// Note: we use useSelectionStore.getState().clearSelection() directly in handlers
+	// to avoid dependency issues that can cause infinite loops
 	const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
 	
 	// Store the selection at drag start to ensure we have consistent state throughout the drag
@@ -64,19 +65,27 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 		if (active.data.current?.type === 'ticket') {
 			setActiveTicket(active.data.current.ticket)
 			
-			// Capture selection state at drag start
-			const currentSelection = useSelectionStore.getState().selectedTicketIds
+			// Capture selection state at drag start (use getState to avoid stale closures)
+			const selectionStore = useSelectionStore.getState()
+			const currentSelection = selectionStore.selectedTicketIds
 			const activeId = active.id as string
 			
 			// Only use multi-select if the dragged ticket is part of the selection
 			if (currentSelection.size > 1 && currentSelection.has(activeId)) {
 				setDragSelectionIds(Array.from(currentSelection))
 			} else {
-				// Single drag - just this ticket
+				// Dragging a non-selected ticket - clear selection and use just this ticket
+				// Only clear if there's actually something selected to avoid unnecessary re-renders
+				if (currentSelection.size > 0) {
+					selectionStore.clearSelection()
+				}
 				setDragSelectionIds([activeId])
 			}
 		}
 	}, [])
+
+	// Track last drag operation to prevent duplicate state updates
+	const lastDragOperation = useRef<string | null>(null)
 
 	const handleDragOver = useCallback(
 		(event: DragOverEvent) => {
@@ -89,6 +98,14 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 			// Don't do anything if hovering over self
 			if (activeId === overId) return
 
+			const isMultiDrag = dragSelectionIds.length > 1
+
+			// If multi-dragging and hovering over another selected ticket, do nothing
+			// (dragging within the selected group shouldn't reorder)
+			if (isMultiDrag && dragSelectionIds.includes(overId)) {
+				return
+			}
+
 			// Find which column the active item is in
 			const activeColumn = columns.find((col) => col.tickets.some((t) => t.id === activeId))
 			// Find which column we're over (could be a column itself or a ticket in a column)
@@ -98,7 +115,12 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 
 			if (!activeColumn || !overColumn) return
 
-			const isMultiDrag = dragSelectionIds.length > 1
+			// Create a key for this operation to prevent duplicate calls
+			const operationKey = `${activeId}-${overId}-${overColumn.id}`
+			if (lastDragOperation.current === operationKey) {
+				return // Skip duplicate operation
+			}
+			lastDragOperation.current = operationKey
 			
 			// Calculate target position
 			const overTicketIndex = overColumn.tickets.findIndex((t) => t.id === overId)
@@ -111,7 +133,18 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 				)
 				
 				if (allInTargetColumn) {
-					// Same column - reorder all selected tickets together
+					// All selected tickets are in the same column
+					// Check if ALL tickets in the column are selected (nothing to reorder around)
+					const allColumnTicketsSelected = overColumn.tickets.every((t) =>
+						dragSelectionIds.includes(t.id)
+					)
+					
+					if (allColumnTicketsSelected) {
+						// All tickets in column are selected - nothing to reorder
+						return
+					}
+					
+					// Same column, but there are non-selected tickets - reorder around them
 					reorderTickets(overColumn.id, dragSelectionIds, newOrder)
 				} else {
 					// Cross-column: move all selected tickets from any column
@@ -138,15 +171,16 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 			// Reset drag state
 			setActiveTicket(null)
 			setDragSelectionIds([])
+			lastDragOperation.current = null // Reset operation tracking
 
 			// Clear selection after multi-drag completes
 			if (wasMultiDrag) {
-				clearSelection()
+				useSelectionStore.getState().clearSelection()
 			}
 			
 			// All actual moving/reordering is handled in handleDragOver
 		},
-		[dragSelectionIds, clearSelection],
+		[dragSelectionIds],
 	)
 
 	if (columns.length === 0) {
@@ -163,6 +197,19 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 		)
 	}
 
+	// Clear selection when clicking on empty space
+	const handleBoardClick = useCallback((e: React.MouseEvent) => {
+		// Only clear if clicking directly on the board background, not on a ticket
+		const target = e.target as HTMLElement
+		// Check if we clicked on the board container itself or a column container (not a ticket card)
+		if (
+			target.closest('[data-ticket-card]') === null &&
+			useSelectionStore.getState().selectedTicketIds.size > 0
+		) {
+			useSelectionStore.getState().clearSelection()
+		}
+	}, [])
+
 	return (
 		<DndContext
 			id="kanban-board-dnd"
@@ -172,7 +219,7 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 			onDragOver={handleDragOver}
 			onDragEnd={handleDragEnd}
 		>
-			<div className="flex gap-4 h-full overflow-x-auto pb-4">
+			<div className="flex gap-4 h-full overflow-x-auto pb-4" onClick={handleBoardClick}>
 				{filteredColumns.map((column) => (
 					<KanbanColumn key={column.id} column={column} projectKey={projectKey} />
 				))}

@@ -75,6 +75,7 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [] }: KanbanCard
 		<Card
 			ref={setNodeRef}
 			style={style}
+			data-ticket-card
 			{...attributes}
 			{...listeners}
 			className={cn(
