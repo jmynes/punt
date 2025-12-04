@@ -17,8 +17,8 @@ import { toast } from 'sonner'
 import { EmptyState } from '@/components/common/empty-state'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
-import { useUndoStore } from '@/stores/undo-store'
 import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
 import { KanbanCard } from './kanban-card'
 import { KanbanColumn } from './kanban-column'
@@ -135,10 +135,13 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 
       // Find which column the active item is in
       const activeColumn = columns.find((col) => col.tickets.some((t) => t.id === activeId))
+
       // Find which column we're over (could be a column itself or a ticket in a column)
-      const overColumn =
-        columns.find((col) => col.id === overId) ||
-        columns.find((col) => col.tickets.some((t) => t.id === overId))
+      // Check if we're hovering over a column (empty space) by checking the data type
+      const isOverColumn = over.data.current?.type === 'column'
+      const overColumn = isOverColumn
+        ? columns.find((col) => col.id === overId)
+        : columns.find((col) => col.tickets.some((t) => t.id === overId))
 
       if (!activeColumn || !overColumn) return
 
@@ -150,8 +153,48 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
       lastDragOperation.current = operationKey
 
       // Calculate target position
-      const overTicketIndex = overColumn.tickets.findIndex((t) => t.id === overId)
-      const newOrder = overTicketIndex >= 0 ? overTicketIndex : overColumn.tickets.length
+      // If hovering over the column itself (empty space), drop at the end
+      // Otherwise, drop at the position of the ticket we're hovering over
+      let newOrder: number
+      if (isOverColumn) {
+        // Hovering over column (empty space) - drop at the end
+        // For multi-drag, we need to exclude the tickets being dragged from the count
+        const remainingTickets = overColumn.tickets.filter((t) => !dragSelectionIds.includes(t.id))
+        newOrder = remainingTickets.length
+      } else {
+        // Hovering over a ticket - drop at that ticket's position
+        const overTicketIndex = overColumn.tickets.findIndex((t) => t.id === overId)
+        if (overTicketIndex >= 0) {
+          // For multi-drag, we need to account for tickets being dragged
+          // If the target ticket is not being dragged, use its position
+          // If it is being dragged, we need to find where it would be after removal
+          if (isMultiDrag && dragSelectionIds.includes(overId)) {
+            // Target ticket is part of the selection - this shouldn't happen due to early return
+            // But as a fallback, calculate position after removing dragged tickets
+            const remainingTickets = overColumn.tickets.filter(
+              (t) => !dragSelectionIds.includes(t.id),
+            )
+            newOrder = remainingTickets.length
+          } else {
+            // Target ticket is not being dragged - use its position
+            // For multi-drag, we need to exclude dragged tickets from the count
+            if (isMultiDrag) {
+              const remainingBeforeTarget = overColumn.tickets
+                .slice(0, overTicketIndex)
+                .filter((t) => !dragSelectionIds.includes(t.id))
+              newOrder = remainingBeforeTarget.length
+            } else {
+              newOrder = overTicketIndex
+            }
+          }
+        } else {
+          // Fallback: drop at the end
+          const remainingTickets = overColumn.tickets.filter(
+            (t) => !dragSelectionIds.includes(t.id),
+          )
+          newOrder = remainingTickets.length
+        }
+      }
 
       if (isMultiDrag) {
         // Check if all selected tickets are already in the target column
@@ -306,14 +349,69 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 
       <DragOverlay>
         {activeTicket ? (
-          <div className="rotate-3 scale-105 relative">
-            <KanbanCard ticket={activeTicket} projectKey={projectKey} />
-            {dragSelectionIds.length > 1 && (
-              <div className="absolute -top-2 -right-2 bg-amber-500 text-black text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg">
-                {dragSelectionIds.length}
+          dragSelectionIds.length > 1 ? (
+            // Multi-drag: show stacked cards with primary ticket on top
+            <div className="relative" style={{ width: '288px', height: '140px', overflow: 'visible' }}>
+              {/* Stack of cards effect - show visible corners peeking out */}
+              <div className="relative w-full h-full" style={{ overflow: 'visible' }}>
+                {/* Bottom card - shows bottom-right corner */}
+                <div
+                  className="absolute rounded-lg border border-zinc-800 bg-zinc-900/50"
+                  style={{
+                    top: '6px',
+                    left: '6px',
+                    width: '272px',
+                    height: '120px',
+                    transform: 'rotate(-1.5deg)',
+                    opacity: 0.35,
+                    zIndex: 1,
+                  }}
+                />
+                {/* Middle card - shows top-left corner */}
+                <div
+                  className="absolute rounded-lg border border-zinc-800 bg-zinc-900/60"
+                  style={{
+                    top: '-3px',
+                    left: '-3px',
+                    width: '272px',
+                    height: '120px',
+                    transform: 'rotate(1deg)',
+                    opacity: 0.45,
+                    zIndex: 2,
+                  }}
+                />
+                {/* Second-to-top card - shows bottom-left corner */}
+                <div
+                  className="absolute rounded-lg border border-zinc-800 bg-zinc-900/70"
+                  style={{
+                    top: '3px',
+                    left: '-2px',
+                    width: '272px',
+                    height: '120px',
+                    transform: 'rotate(-0.5deg)',
+                    opacity: 0.55,
+                    zIndex: 3,
+                  }}
+                />
+                {/* Top card (primary ticket - the one actually clicked/dragged) */}
+                <div
+                  className="absolute top-0 left-0 scale-105 shadow-2xl"
+                  style={{ transform: 'translate(0, 0) rotate(1deg) scale(1.05)', zIndex: 10 }}
+                >
+                  <KanbanCard ticket={activeTicket} projectKey={projectKey} />
+                  {/* Badge showing count */}
+                  <div className="absolute -top-2 -right-2 bg-amber-500 text-black text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg z-20 border-2 border-zinc-900">
+                    {dragSelectionIds.length}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            // Single drag: show single card
+            <div className="rotate-3 scale-105">
+              <KanbanCard ticket={activeTicket} projectKey={projectKey} />
+            </div>
+          )
         ) : null}
       </DragOverlay>
     </DndContext>

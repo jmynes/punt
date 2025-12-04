@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
+import { type FileStorage, FilesystemStorage } from '@/lib/file-storage'
 import { logger } from '@/lib/logger'
-import { FilesystemStorage, type FileStorage } from '@/lib/file-storage'
 
 // Default to filesystem storage (can be overridden for testing)
 let fileStorage: FileStorage = new FilesystemStorage()
@@ -121,7 +121,11 @@ export async function POST(request: Request) {
         category: getFileCategory(file.type),
       }
       uploadedFiles.push(fileInfo)
-      logger.info('File uploaded successfully', { filename, originalName: file.name, size: file.size })
+      logger.info('File uploaded successfully', {
+        filename,
+        originalName: file.name,
+        size: file.size,
+      })
     }
 
     logger.info('All files uploaded successfully', { count: uploadedFiles.length })

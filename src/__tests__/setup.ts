@@ -52,4 +52,3 @@ const sessionStorageMock = {
   clear: vi.fn(),
 }
 global.sessionStorage = sessionStorageMock as unknown as Storage
-

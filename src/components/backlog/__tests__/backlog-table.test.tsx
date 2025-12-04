@@ -1,9 +1,9 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createMockColumns, createMockTicket } from '@/__tests__/utils/mocks'
 import { render } from '@/__tests__/utils/test-utils'
-import { BacklogTable } from '../backlog-table'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
-import { createMockTicket, createMockColumns } from '@/__tests__/utils/mocks'
+import { BacklogTable } from '../backlog-table'
 
 // Mock stores
 vi.mock('@/stores/backlog-store', () => ({
@@ -98,4 +98,3 @@ describe('BacklogTable', () => {
     expect(container).toBeInTheDocument()
   })
 })
-

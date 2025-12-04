@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockFile, createMockFormData } from '@/__tests__/utils/mocks'
-import { InMemoryStorage, FilesystemStorage } from '@/lib/file-storage'
-import { POST, GET, setFileStorage } from '../route'
+import { FilesystemStorage, InMemoryStorage } from '@/lib/file-storage'
+import { GET, POST, setFileStorage } from '../route'
 
 describe('Upload API Route', () => {
   let mockStorage: InMemoryStorage
@@ -51,7 +51,10 @@ describe('Upload API Route', () => {
 
     it('should reject files that are too large', async () => {
       // Create a file that's actually 11MB (larger than the 10MB limit)
-      const largeContent = new Array(11 * 1024 * 1024).fill(0).map(() => 'a').join('')
+      const largeContent = new Array(11 * 1024 * 1024)
+        .fill(0)
+        .map(() => 'a')
+        .join('')
       const largeFile = new File([largeContent], 'large.jpg', { type: 'image/jpeg' })
       const formData = createMockFormData([largeFile])
       const request = new Request('http://localhost/api/upload', {

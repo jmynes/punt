@@ -129,7 +129,12 @@ export const useBoardStore = create<BoardState>()(
 
       moveTickets: (ticketIds, toColumnId, newOrder) =>
         set((state) => {
-          logger.debug('Moving multiple tickets', { ticketIds, toColumnId, newOrder, count: ticketIds.length })
+          logger.debug('Moving multiple tickets', {
+            ticketIds,
+            toColumnId,
+            newOrder,
+            count: ticketIds.length,
+          })
           const startTime = performance.now()
 
           // Collect all tickets being moved from ALL columns
@@ -203,7 +208,12 @@ export const useBoardStore = create<BoardState>()(
 
       reorderTickets: (columnId, ticketIds, targetIndex) =>
         set((state) => {
-          logger.debug('Reordering multiple tickets', { columnId, ticketIds, targetIndex, count: ticketIds.length })
+          logger.debug('Reordering multiple tickets', {
+            columnId,
+            ticketIds,
+            targetIndex,
+            count: ticketIds.length,
+          })
           const newColumns = state.columns.map((column) => {
             if (column.id !== columnId) return column
 

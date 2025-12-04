@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, type RenderOptions } from '@testing-library/react'
-import { type ReactElement, type ReactNode } from 'react'
+import { type RenderOptions, render } from '@testing-library/react'
+import type { ReactElement, ReactNode } from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 // Create a test query client with default options
@@ -51,4 +51,3 @@ export { customRender as render }
 
 // Helper to wait for async operations
 export const waitForAsync = () => new Promise((resolve) => setTimeout(resolve, 0))
-

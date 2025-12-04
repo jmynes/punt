@@ -9,7 +9,7 @@ export interface FileStorage {
   join(...paths: string[]): string
 }
 
-import { mkdir, writeFile as fsWriteFile } from 'node:fs/promises'
+import { writeFile as fsWriteFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
 /**
@@ -67,4 +67,3 @@ export class InMemoryStorage implements FileStorage {
     this.directories.clear()
   }
 }
-

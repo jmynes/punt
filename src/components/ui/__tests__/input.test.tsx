@@ -1,7 +1,7 @@
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@/__tests__/utils/test-utils'
 import { Input } from '../input'
-import userEvent from '@testing-library/user-event'
 
 describe('Input', () => {
   it('should render input element', () => {
@@ -37,4 +37,3 @@ describe('Input', () => {
     expect(handleChange).toHaveBeenCalled()
   })
 })
-

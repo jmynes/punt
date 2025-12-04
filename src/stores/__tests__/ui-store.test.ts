@@ -87,4 +87,3 @@ describe('UI Store', () => {
     })
   })
 })
-

@@ -23,10 +23,7 @@ class Logger {
     }
 
     // Enable in development or if explicitly enabled
-    return (
-      process.env.NODE_ENV === 'development' ||
-      process.env.NEXT_PUBLIC_DEBUG === 'true'
-    )
+    return process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_DEBUG === 'true'
   }
 
   private formatLog(entry: LogEntry): string {
@@ -130,17 +127,16 @@ class Logger {
       return result
     } catch (error) {
       const duration = performance.now() - start
-      this.performance(label, duration, { ...data, error: error instanceof Error ? error.message : String(error) })
+      this.performance(label, duration, {
+        ...data,
+        error: error instanceof Error ? error.message : String(error),
+      })
       throw error
     }
   }
 
   // Helper to measure async performance
-  async measureAsync<T>(
-    label: string,
-    fn: () => Promise<T>,
-    data?: unknown,
-  ): Promise<T> {
+  async measureAsync<T>(label: string, fn: () => Promise<T>, data?: unknown): Promise<T> {
     const start = performance.now()
     try {
       const result = await fn()
@@ -149,7 +145,10 @@ class Logger {
       return result
     } catch (error) {
       const duration = performance.now() - start
-      this.performance(label, duration, { ...data, error: error instanceof Error ? error.message : String(error) })
+      this.performance(label, duration, {
+        ...data,
+        error: error instanceof Error ? error.message : String(error),
+      })
       throw error
     }
   }
@@ -157,4 +156,3 @@ class Logger {
 
 // Export singleton instance
 export const logger = new Logger()
-

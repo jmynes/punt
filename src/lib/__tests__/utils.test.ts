@@ -42,4 +42,3 @@ describe('cn (class name utility)', () => {
     expect(cn(false, null, undefined, '')).toBe('')
   })
 })
-
