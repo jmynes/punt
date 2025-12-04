@@ -174,8 +174,8 @@ export function CreateTicketDialog() {
       startDate: formData.startDate,
       dueDate: formData.dueDate,
       environment: formData.environment || null,
-      affectedVersion: null,
-      fixVersion: null,
+      affectedVersion: formData.affectedVersion || null,
+      fixVersion: formData.fixVersion || null,
       createdAt: new Date(),
       updatedAt: new Date(),
       projectId: 'project-1', // Demo project
