@@ -138,16 +138,33 @@ export const useBoardStore = create<BoardState>()(
           const startTime = performance.now()
 
           // Collect all tickets being moved from ALL columns
-          const ticketsToMove: TicketWithRelations[] = []
+          // Sort by: 1) column order (leftmost first), 2) ticket order within column
+          const ticketsToMove: Array<{ ticket: TicketWithRelations; columnOrder: number; ticketOrder: number }> = []
           for (const column of state.columns) {
             for (const ticket of column.tickets) {
               if (ticketIds.includes(ticket.id)) {
-                ticketsToMove.push({ ...ticket, columnId: toColumnId })
+                const ticketIndex = column.tickets.findIndex((t) => t.id === ticket.id)
+                ticketsToMove.push({
+                  ticket: { ...ticket, columnId: toColumnId },
+                  columnOrder: column.order,
+                  ticketOrder: ticketIndex,
+                })
               }
             }
           }
+          
+          // Sort by column order first (leftmost first), then by ticket order within column
+          ticketsToMove.sort((a, b) => {
+            if (a.columnOrder !== b.columnOrder) {
+              return a.columnOrder - b.columnOrder
+            }
+            return a.ticketOrder - b.ticketOrder
+          })
+          
+          // Extract just the tickets in the correct order
+          const sortedTickets = ticketsToMove.map((item) => item.ticket)
 
-          if (ticketsToMove.length === 0) return state
+          if (sortedTickets.length === 0) return state
 
           const newColumns = state.columns.map((column) => {
             // Remove selected tickets from any column they're in
@@ -156,8 +173,8 @@ export const useBoardStore = create<BoardState>()(
             // Add to target column
             if (column.id === toColumnId) {
               const newTickets = [...remainingTickets]
-              // Insert all moving tickets at the target position
-              newTickets.splice(newOrder, 0, ...ticketsToMove)
+              // Insert all moving tickets at the target position (in correct order)
+              newTickets.splice(newOrder, 0, ...sortedTickets)
 
               // Update order for all tickets
               return {

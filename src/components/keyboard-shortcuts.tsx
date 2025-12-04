@@ -211,11 +211,23 @@ export function KeyboardShortcuts() {
               },
             )
           } else if (entry.action.type === 'move') {
-            // Move tickets back to original columns
+            // Restore the exact column state from before the move
             const boardStore = useBoardStore.getState()
-            for (const move of entry.action.moves) {
-              boardStore.moveTicket(move.ticketId, move.toColumnId, move.fromColumnId, 0)
+            if (entry.action.originalColumns) {
+              // Use the stored original column state for precise undo
+              const restoredColumns = entry.action.originalColumns.map((col) => ({
+                ...col,
+                tickets: col.tickets.map((t) => ({ ...t })), // Deep copy
+              }))
+              boardStore.setColumns(restoredColumns)
+            } else {
+              // Fallback: move tickets back one by one (legacy behavior)
+              for (const move of entry.action.moves) {
+                boardStore.moveTicket(move.ticketId, move.toColumnId, move.fromColumnId, 0)
+              }
             }
+            
+            // Push to redo stack (same entry, will restore to afterColumns when redoing)
             pushRedo(entry)
 
             // Look up ticket IDs from columns
@@ -271,10 +283,26 @@ export function KeyboardShortcuts() {
             )
             pushDeletedBatch(entry.action.tickets, newToastId)
           } else if (entry.action.type === 'move') {
-            // Move tickets again (redo the move)
+            // Capture current state before redo (state we want to restore to when undoing again)
             const boardStore = useBoardStore.getState()
-            for (const move of entry.action.moves) {
-              boardStore.moveTicket(move.ticketId, move.fromColumnId, move.toColumnId, 0)
+            const currentStateBeforeRedo = boardStore.columns.map((col) => ({
+              ...col,
+              tickets: col.tickets.map((t) => ({ ...t })), // Deep copy
+            }))
+            
+            // Restore the exact column state after the move (redo)
+            if (entry.action.afterColumns) {
+              // Use the stored after column state for precise redo
+              const restoredColumns = entry.action.afterColumns.map((col) => ({
+                ...col,
+                tickets: col.tickets.map((t) => ({ ...t })), // Deep copy
+              }))
+              boardStore.setColumns(restoredColumns)
+            } else {
+              // Fallback: move tickets one by one (legacy behavior)
+              for (const move of entry.action.moves) {
+                boardStore.moveTicket(move.ticketId, move.fromColumnId, move.toColumnId, 0)
+              }
             }
 
             // Look up ticket IDs from columns
@@ -298,14 +326,18 @@ export function KeyboardShortcuts() {
                 duration: 5000,
               },
             )
-            useUndoStore
-              .getState()
-              .pushMove(
-                entry.action.moves,
-                entry.action.fromColumnName,
-                entry.action.toColumnName,
-                newToastId,
-              )
+            
+            // Push back to undo stack: when undoing again, we want to restore to currentStateBeforeRedo (A)
+            // So: originalColumns = currentStateBeforeRedo (A, restore to this when undoing)
+            //     afterColumns = entry.action.afterColumns (B, current state after redo)
+            useUndoStore.getState().pushMove(
+              entry.action.moves,
+              entry.action.toColumnName,
+              entry.action.fromColumnName,
+              newToastId,
+              currentStateBeforeRedo, // originalColumns: state to restore to when undoing (A)
+              entry.action.afterColumns, // afterColumns: current state after redo (B)
+            )
           }
         }
       }
