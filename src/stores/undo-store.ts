@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { TicketWithRelations } from '@/types'
+import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
 interface DeletedTicket {
   ticket: TicketWithRelations
@@ -15,7 +15,14 @@ interface MovedTicket {
 // Different types of undoable actions
 type UndoAction =
   | { type: 'delete'; tickets: DeletedTicket[] }
-  | { type: 'move'; moves: MovedTicket[]; fromColumnName: string; toColumnName: string }
+  | {
+      type: 'move'
+      moves: MovedTicket[]
+      fromColumnName: string
+      toColumnName: string
+      originalColumns?: ColumnWithTickets[] // Store original column state for precise undo (before move)
+      afterColumns?: ColumnWithTickets[] // Store state after move for precise redo
+    }
 
 interface UndoEntry {
   action: UndoAction
@@ -39,6 +46,8 @@ interface UndoState {
     fromColumnName: string,
     toColumnName: string,
     toastId: string | number,
+    originalColumns?: ColumnWithTickets[], // Optional: store original column state for precise undo (before move)
+    afterColumns?: ColumnWithTickets[], // Optional: store state after move for precise redo
   ) => void
 
   // Pop and return the most recent undo entry
@@ -91,12 +100,29 @@ export const useUndoStore = create<UndoState>((set, get) => ({
       redoStack: [],
     })),
 
-  pushMove: (moves, fromColumnName, toColumnName, toastId) =>
+  pushMove: (moves, fromColumnName, toColumnName, toastId, originalColumns, afterColumns) =>
     set((state) => ({
       undoStack: [
         ...state.undoStack,
         {
-          action: { type: 'move', moves, fromColumnName, toColumnName },
+          action: {
+            type: 'move',
+            moves,
+            fromColumnName,
+            toColumnName,
+            originalColumns: originalColumns
+              ? originalColumns.map((col) => ({
+                  ...col,
+                  tickets: col.tickets.map((t) => ({ ...t })), // Deep copy
+                }))
+              : undefined,
+            afterColumns: afterColumns
+              ? afterColumns.map((col) => ({
+                  ...col,
+                  tickets: col.tickets.map((t) => ({ ...t })), // Deep copy
+                }))
+              : undefined,
+          },
           timestamp: Date.now(),
           toastId,
         },

@@ -47,8 +47,13 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
   // Track source columns for undo functionality
   const dragSourceColumns = useRef<Map<string, string>>(new Map())
 
-  // Track the original column state at drag start to calculate correct insertion positions
+  // Track original positions within source columns for preserving order
+  const dragSourcePositions = useRef<Map<string, { columnOrder: number; ticketOrder: number }>>(new Map())
+
+  // Track the original column state at drag start to calculate correct insertion positions and for undo
   const originalColumnState = useRef<Map<string, ColumnWithTickets>>(new Map())
+  // Also store the original column order to restore columns in the exact same order
+  const originalColumnOrder = useRef<ColumnWithTickets[]>([])
 
   // Filter tickets based on search query
   const filteredColumns = useMemo(() => {
@@ -86,16 +91,23 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
         const currentSelection = selectionStore.selectedTicketIds
         const activeId = active.id as string
 
-        // Track source columns for all tickets being dragged
+        // Track source columns and positions for all tickets being dragged
         dragSourceColumns.current = new Map()
+        dragSourcePositions.current = new Map()
 
         // Store original column state at drag start to calculate correct insertion positions
         const currentColumns = useBoardStore.getState().columns
         originalColumnState.current = new Map()
-        for (const col of currentColumns) {
+        // Store the original column order as well
+        originalColumnOrder.current = currentColumns.map((col) => ({
+          ...col,
+          tickets: col.tickets.map((t) => ({ ...t })), // Deep copy each ticket, preserving array order
+        }))
+        for (const col of originalColumnOrder.current) {
+          // Deep copy the entire column, preserving ticket order exactly
           originalColumnState.current.set(col.id, {
             ...col,
-            tickets: [...col.tickets], // Deep copy tickets array
+            tickets: col.tickets.map((t) => ({ ...t })), // Deep copy each ticket, preserving array order
           })
         }
 
@@ -104,11 +116,26 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
           const selectedIds = Array.from(currentSelection)
           setDragSelectionIds(selectedIds)
 
-          // Record source column for each selected ticket
+          // Record source column and position for each selected ticket
+          // Use the original column state to get correct positions
           for (const ticketId of selectedIds) {
-            const col = columns.find((c) => c.tickets.some((t) => t.id === ticketId))
+            // Find the column in the original state (from store, not filtered prop)
+            let col = null
+            for (const originalCol of currentColumns) {
+              if (originalCol.tickets.some((t) => t.id === ticketId)) {
+                col = originalCol
+                break
+              }
+            }
             if (col) {
               dragSourceColumns.current.set(ticketId, col.id)
+              const ticketOrder = col.tickets.findIndex((t) => t.id === ticketId)
+              if (ticketOrder >= 0) {
+                dragSourcePositions.current.set(ticketId, {
+                  columnOrder: col.order,
+                  ticketOrder,
+                })
+              }
             }
           }
         } else {
@@ -119,10 +146,24 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
           }
           setDragSelectionIds([activeId])
 
-          // Record source column for the single ticket
-          const col = columns.find((c) => c.tickets.some((t) => t.id === activeId))
+          // Record source column and position for the single ticket
+          // Use the original column state to get correct positions
+          let col = null
+          for (const originalCol of currentColumns) {
+            if (originalCol.tickets.some((t) => t.id === activeId)) {
+              col = originalCol
+              break
+            }
+          }
           if (col) {
             dragSourceColumns.current.set(activeId, col.id)
+            const ticketOrder = col.tickets.findIndex((t) => t.id === activeId)
+            if (ticketOrder >= 0) {
+              dragSourcePositions.current.set(activeId, {
+                columnOrder: col.order,
+                ticketOrder,
+              })
+            }
           }
         }
       }
@@ -322,10 +363,12 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
       }
 
       // Check if any tickets moved to a different column
+      // Use current store state to ensure we detect moves to empty columns
+      const currentStoreColumns = useBoardStore.getState().columns
       const moves: Array<{ ticketId: string; fromColumnId: string; toColumnId: string }> = []
       for (const ticketId of dragSelectionIds) {
         const fromColumnId = sourceColumns.get(ticketId)
-        const toColumn = columns.find((c) => c.tickets.some((t) => t.id === ticketId))
+        const toColumn = currentStoreColumns.find((c) => c.tickets.some((t) => t.id === ticketId))
         if (fromColumnId && toColumn && fromColumnId !== toColumn.id) {
           moves.push({ ticketId, fromColumnId, toColumnId: toColumn.id })
         }
@@ -333,13 +376,13 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 
       // If there were cross-column moves, show toast and push to undo stack
       if (moves.length > 0) {
-        const fromColumn = columns.find((c) => c.id === moves[0].fromColumnId)
-        const toColumn = columns.find((c) => c.id === moves[0].toColumnId)
+        const fromColumn = currentStoreColumns.find((c) => c.id === moves[0].fromColumnId)
+        const toColumn = currentStoreColumns.find((c) => c.id === moves[0].toColumnId)
         const fromName = fromColumn?.name || 'Unknown'
         const toName = toColumn?.name || 'Unknown'
 
         // Look up ticket IDs from columns
-        const allTickets = columns.flatMap((col) => col.tickets)
+        const allTickets = currentStoreColumns.flatMap((col) => col.tickets)
         const ticketKeys = moves
           .map((move) => {
             const ticket = allTickets.find((t) => t.id === move.ticketId)
@@ -358,19 +401,39 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
             action: {
               label: 'Undo',
               onClick: () => {
-                // Move tickets back
+                // Restore the exact column state from before the drag started
                 const boardStore = useBoardStore.getState()
-                for (const move of moves) {
-                  boardStore.moveTicket(move.ticketId, move.toColumnId, move.fromColumnId, 0)
-                }
+                
+                // Restore from the original column order to ensure exact preservation
+                const restoredColumns = originalColumnOrder.current.map((originalCol) => {
+                  // Deep copy the entire column with tickets in their original order
+                  return {
+                    ...originalCol,
+                    tickets: originalCol.tickets.map((t) => ({ ...t })), // Deep copy, preserving array order
+                  }
+                })
+                
+                boardStore.setColumns(restoredColumns)
                 toast.success('Move undone', { duration: 2000 })
               },
             },
           },
         )
 
-        // Push to undo stack
-        useUndoStore.getState().pushMove(moves, fromName, toName, toastId)
+        // Push to undo stack with original column state (before move) and after state (after move) for precise undo/redo
+        useUndoStore
+          .getState()
+          .pushMove(
+            moves,
+            fromName,
+            toName,
+            toastId,
+            Array.from(originalColumnOrder.current), // Before move
+            currentStoreColumns.map((col) => ({
+              ...col,
+              tickets: col.tickets.map((t) => ({ ...t })), // Deep copy
+            })), // After move
+          )
       }
 
       // Reset drag state
@@ -379,7 +442,8 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
       setActiveDragTarget(null)
       lastDragOperation.current = null
       dragSourceColumns.current = new Map()
-      originalColumnState.current = new Map()
+      dragSourcePositions.current = new Map()
+      // Keep originalColumnState and originalColumnOrder for undo until next drag starts
 
       // Clear selection after multi-drag completes
       if (wasMultiDrag) {
