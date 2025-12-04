@@ -18,9 +18,10 @@ interface KanbanCardProps {
   ticket: TicketWithRelations
   projectKey: string
   allTicketIds?: string[]
+  isBeingDragged?: boolean
 }
 
-export function KanbanCard({ ticket, projectKey, allTicketIds = [] }: KanbanCardProps) {
+export function KanbanCard({ ticket, projectKey, allTicketIds = [], isBeingDragged = false }: KanbanCardProps) {
   const { setActiveTicketId } = useUIStore()
   const { isSelected, selectTicket, toggleTicket, selectRange } = useSelectionStore()
   const selected = isSelected(ticket.id)
@@ -70,6 +71,11 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [] }: KanbanCard
   const attachmentCount = ticket._count?.attachments ?? 0
   const isOverdue = ticket.dueDate && isPast(ticket.dueDate) && !isToday(ticket.dueDate)
   const isDueToday = ticket.dueDate && isToday(ticket.dueDate)
+
+  // Hide the card if it's being dragged (for multi-drag support)
+  if (isBeingDragged) {
+    return null
+  }
 
   return (
     <Card
