@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { logger } from '@/lib/logger'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
 // Default columns for a new project
@@ -84,6 +85,9 @@ export const useBoardStore = create<BoardState>()(
 
       moveTicket: (ticketId, fromColumnId, toColumnId, newOrder) =>
         set((state) => {
+          logger.debug('Moving ticket', { ticketId, fromColumnId, toColumnId, newOrder })
+          const startTime = performance.now()
+
           const newColumns = state.columns.map((column) => {
             // Remove from source column
             if (column.id === fromColumnId) {
@@ -125,6 +129,9 @@ export const useBoardStore = create<BoardState>()(
 
       moveTickets: (ticketIds, toColumnId, newOrder) =>
         set((state) => {
+          logger.debug('Moving multiple tickets', { ticketIds, toColumnId, newOrder, count: ticketIds.length })
+          const startTime = performance.now()
+
           // Collect all tickets being moved from ALL columns
           const ticketsToMove: TicketWithRelations[] = []
           for (const column of state.columns) {
@@ -165,11 +172,14 @@ export const useBoardStore = create<BoardState>()(
             return column
           })
 
+          const duration = performance.now() - startTime
+          logger.performance('moveTickets', duration, { count: ticketIds.length, toColumnId })
           return { columns: newColumns }
         }),
 
       reorderTicket: (columnId, ticketId, newIndex) =>
         set((state) => {
+          logger.debug('Reordering ticket', { columnId, ticketId, newIndex })
           const newColumns = state.columns.map((column) => {
             if (column.id !== columnId) return column
 
@@ -193,6 +203,7 @@ export const useBoardStore = create<BoardState>()(
 
       reorderTickets: (columnId, ticketIds, targetIndex) =>
         set((state) => {
+          logger.debug('Reordering multiple tickets', { columnId, ticketIds, targetIndex, count: ticketIds.length })
           const newColumns = state.columns.map((column) => {
             if (column.id !== columnId) return column
 
@@ -233,29 +244,38 @@ export const useBoardStore = create<BoardState>()(
         }),
 
       updateTicket: (ticketId, updates) =>
-        set((state) => ({
-          columns: state.columns.map((column) => ({
-            ...column,
-            tickets: column.tickets.map((ticket) =>
-              ticket.id === ticketId ? { ...ticket, ...updates } : ticket,
-            ),
-          })),
-        })),
+        set((state) => {
+          logger.debug('Updating ticket', { ticketId, updates })
+          return {
+            columns: state.columns.map((column) => ({
+              ...column,
+              tickets: column.tickets.map((ticket) =>
+                ticket.id === ticketId ? { ...ticket, ...updates } : ticket,
+              ),
+            })),
+          }
+        }),
 
       addTicket: (columnId, ticket) =>
-        set((state) => ({
-          columns: state.columns.map((column) =>
-            column.id === columnId ? { ...column, tickets: [...column.tickets, ticket] } : column,
-          ),
-        })),
+        set((state) => {
+          logger.info('Adding ticket', { ticketId: ticket.id, columnId, title: ticket.title })
+          return {
+            columns: state.columns.map((column) =>
+              column.id === columnId ? { ...column, tickets: [...column.tickets, ticket] } : column,
+            ),
+          }
+        }),
 
       removeTicket: (ticketId) =>
-        set((state) => ({
-          columns: state.columns.map((column) => ({
-            ...column,
-            tickets: column.tickets.filter((t) => t.id !== ticketId),
-          })),
-        })),
+        set((state) => {
+          logger.info('Removing ticket', { ticketId })
+          return {
+            columns: state.columns.map((column) => ({
+              ...column,
+              tickets: column.tickets.filter((t) => t.id !== ticketId),
+            })),
+          }
+        }),
     }),
     {
       name: 'punt-board-storage',
@@ -264,8 +284,10 @@ export const useBoardStore = create<BoardState>()(
       // Revive Date objects when loading from storage and mark as hydrated
       onRehydrateStorage: () => (state) => {
         if (state) {
+          logger.debug('Rehydrating board store from localStorage')
           state.columns = reviveDates(state.columns) as ColumnWithTickets[]
           state.setHasHydrated(true)
+          logger.info('Board store rehydrated', { columnCount: state.columns.length })
         }
       },
     },
