@@ -36,7 +36,8 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [], isBeingDragg
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    // Disable transitions during drag to prevent visual glitches when items are inserted
+    transition: isDragging ? 'none' : transition,
   }
 
   const handleClick = (e: React.MouseEvent) => {

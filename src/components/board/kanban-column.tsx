@@ -14,9 +14,17 @@ interface KanbanColumnProps {
   column: ColumnWithTickets
   projectKey: string
   dragSelectionIds?: string[]
+  activeTicketId?: string | null
+  activeDragTarget?: number | null
 }
 
-export function KanbanColumn({ column, projectKey, dragSelectionIds = [] }: KanbanColumnProps) {
+export function KanbanColumn({
+  column,
+  projectKey,
+  dragSelectionIds = [],
+  activeTicketId = null,
+  activeDragTarget = null,
+}: KanbanColumnProps) {
   const { setCreateTicketOpen } = useUIStore()
 
   const { setNodeRef, isOver } = useDroppable({
@@ -27,7 +35,10 @@ export function KanbanColumn({ column, projectKey, dragSelectionIds = [] }: Kanb
     },
   })
 
-  const ticketIds = column.tickets.map((t) => t.id)
+  // Exclude dragged tickets from SortableContext items to prevent transform calculation issues
+  const ticketIds = column.tickets
+    .filter((t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId)
+    .map((t) => t.id)
 
   return (
     <div
@@ -63,16 +74,52 @@ export function KanbanColumn({ column, projectKey, dragSelectionIds = [] }: Kanb
       <ScrollArea className="flex-1 p-2">
         <div ref={setNodeRef} className="flex flex-col gap-2 min-h-[100px]">
           <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
-            {column.tickets.map((ticket) => (
-              <KanbanCard
-                key={ticket.id}
-                ticket={ticket}
-                projectKey={projectKey}
-                allTicketIds={ticketIds}
-                isBeingDragged={dragSelectionIds.includes(ticket.id)}
-              />
-            ))}
+            {column.tickets.map((ticket, index) => {
+              // Hide ticket if it's in the drag selection OR if it's the active ticket being dragged
+              const isBeingDragged = dragSelectionIds.includes(ticket.id) || ticket.id === activeTicketId
+              // Calculate the visual index (excluding dragged tickets)
+              const visibleTickets = column.tickets.filter(
+                (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
+              )
+              const visualIndex = visibleTickets.findIndex((t) => t.id === ticket.id)
+              
+              // Show insertion point before this ticket if it's the target
+              const showInsertionPoint =
+                activeDragTarget !== null &&
+                !isBeingDragged &&
+                visualIndex === activeDragTarget &&
+                dragSelectionIds.length > 0
+
+              return (
+                <div key={ticket.id}>
+                  {/* Show full-size placeholder before this ticket if it's the target */}
+                  {showInsertionPoint && (
+                    <div className="mb-2 rounded-lg border-2 border-amber-500/50 border-dashed bg-amber-500/10 min-h-[120px] flex items-center justify-center pointer-events-none">
+                      <span className="text-xs text-amber-500/70">Drop here</span>
+                    </div>
+                  )}
+                  <KanbanCard
+                    ticket={ticket}
+                    projectKey={projectKey}
+                    allTicketIds={ticketIds}
+                    isBeingDragged={isBeingDragged}
+                  />
+                </div>
+              )
+            })}
           </SortableContext>
+
+          {/* Show full-size placeholder at the end if target is beyond last ticket */}
+          {activeDragTarget !== null &&
+            activeDragTarget >=
+              column.tickets.filter(
+                (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
+              ).length &&
+            (dragSelectionIds.length > 0 || activeTicketId) && (
+              <div className="mt-2 rounded-lg border-2 border-amber-500/50 border-dashed bg-amber-500/10 min-h-[120px] flex items-center justify-center pointer-events-none">
+                <span className="text-xs text-amber-500/70">Drop here</span>
+              </div>
+            )}
 
           {/* Drop zone indicator when empty */}
           {column.tickets.length === 0 && (
