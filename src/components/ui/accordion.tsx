@@ -10,7 +10,7 @@ interface AccordionProps {
   children: ReactNode
   defaultOpen?: boolean
   className?: string
-  scrollTo?: 'content' | 'bottom'
+  scrollTo?: 'noscroll' | 'content' | 'bottom'
 }
 
 export function Accordion({
@@ -18,14 +18,14 @@ export function Accordion({
   children,
   defaultOpen = false,
   className,
-  scrollTo = 'content',
+  scrollTo = 'noscroll',
 }: AccordionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen)
   const contentRef = useRef<HTMLDivElement>(null)
   const accordionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && scrollTo !== 'noscroll') {
       // Small delay to ensure content is rendered before scrolling
       const timeoutId = setTimeout(() => {
         if (scrollTo === 'bottom') {
@@ -50,8 +50,8 @@ export function Accordion({
             top: document.documentElement.scrollHeight,
             behavior: 'smooth',
           })
-        } else {
-          // Default: scroll to content
+        } else if (scrollTo === 'content') {
+          // Scroll to content
           accordionRef.current?.scrollIntoView({
             behavior: 'smooth',
             block: 'nearest',
