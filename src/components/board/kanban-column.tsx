@@ -13,9 +13,10 @@ import { KanbanCard } from './kanban-card'
 interface KanbanColumnProps {
   column: ColumnWithTickets
   projectKey: string
+  dragSelectionIds?: string[]
 }
 
-export function KanbanColumn({ column, projectKey }: KanbanColumnProps) {
+export function KanbanColumn({ column, projectKey, dragSelectionIds = [] }: KanbanColumnProps) {
   const { setCreateTicketOpen } = useUIStore()
 
   const { setNodeRef, isOver } = useDroppable({
@@ -68,6 +69,7 @@ export function KanbanColumn({ column, projectKey }: KanbanColumnProps) {
                 ticket={ticket}
                 projectKey={projectKey}
                 allTicketIds={ticketIds}
+                isBeingDragged={dragSelectionIds.includes(ticket.id)}
               />
             ))}
           </SortableContext>

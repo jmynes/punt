@@ -343,68 +343,69 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
     >
       <div className="flex gap-4 h-full overflow-x-auto pb-4" onClick={handleBoardClick}>
         {filteredColumns.map((column) => (
-          <KanbanColumn key={column.id} column={column} projectKey={projectKey} />
+          <KanbanColumn
+            key={column.id}
+            column={column}
+            projectKey={projectKey}
+            dragSelectionIds={dragSelectionIds}
+          />
         ))}
       </div>
 
       <DragOverlay>
         {activeTicket ? (
           dragSelectionIds.length > 1 ? (
-            // Multi-drag: show stacked cards with primary ticket on top
-            <div className="relative" style={{ width: '288px', height: '140px', overflow: 'visible' }}>
-              {/* Stack of cards effect - show visible corners peeking out */}
-              <div className="relative w-full h-full" style={{ overflow: 'visible' }}>
-                {/* Bottom card - shows bottom-right corner */}
-                <div
-                  className="absolute rounded-lg border border-zinc-800 bg-zinc-900/50"
-                  style={{
-                    top: '6px',
-                    left: '6px',
-                    width: '272px',
-                    height: '120px',
-                    transform: 'rotate(-1.5deg)',
-                    opacity: 0.35,
-                    zIndex: 1,
-                  }}
-                />
-                {/* Middle card - shows top-left corner */}
-                <div
-                  className="absolute rounded-lg border border-zinc-800 bg-zinc-900/60"
-                  style={{
-                    top: '-3px',
-                    left: '-3px',
-                    width: '272px',
-                    height: '120px',
-                    transform: 'rotate(1deg)',
-                    opacity: 0.45,
-                    zIndex: 2,
-                  }}
-                />
-                {/* Second-to-top card - shows bottom-left corner */}
-                <div
-                  className="absolute rounded-lg border border-zinc-800 bg-zinc-900/70"
-                  style={{
-                    top: '3px',
-                    left: '-2px',
-                    width: '272px',
-                    height: '120px',
-                    transform: 'rotate(-0.5deg)',
-                    opacity: 0.55,
-                    zIndex: 3,
-                  }}
-                />
-                {/* Top card (primary ticket - the one actually clicked/dragged) */}
-                <div
-                  className="absolute top-0 left-0 scale-105 shadow-2xl"
-                  style={{ transform: 'translate(0, 0) rotate(1deg) scale(1.05)', zIndex: 10 }}
-                >
-                  <KanbanCard ticket={activeTicket} projectKey={projectKey} />
-                  {/* Badge showing count */}
-                  <div className="absolute -top-2 -right-2 bg-amber-500 text-black text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg z-20 border-2 border-zinc-900">
-                    {dragSelectionIds.length}
-                  </div>
-                </div>
-              </div>
+            // Multi-drag: show actual ticket cards stacked, offset and tilted
+            <div className="relative">
+              {/* Get all tickets being dragged */}
+              {(() => {
+                const allTickets = columns.flatMap((col) => col.tickets)
+                const draggedTickets = dragSelectionIds
+                  .map((id) => allTickets.find((t) => t.id === id))
+                  .filter(Boolean) as TicketWithRelations[]
+                
+                // Show up to 4 cards behind the primary one
+                const visibleCount = Math.min(draggedTickets.length, 5)
+                
+                return (
+                  <>
+                    {/* Cards behind the primary one - actual KanbanCard components, offset and tilted */}
+                    {Array.from({ length: visibleCount - 1 }, (_, index) => {
+                      const cardIndex = index + 1
+                      const ticket = draggedTickets[cardIndex]
+                      if (!ticket) return null
+                      
+                      const offsetX = cardIndex * 3 // Progressive offset to the right
+                      const offsetY = cardIndex * 4 // Progressive offset downward
+                      const rotation = cardIndex * 1.5 // Slight rotation to the right
+                      
+                      return (
+                        <div
+                          key={ticket.id}
+                          className="absolute [&_*]:text-transparent"
+                          style={{
+                            top: `${offsetY}px`,
+                            left: `${offsetX}px`,
+                            transform: `rotate(${rotation}deg)`,
+                            zIndex: cardIndex,
+                            pointerEvents: 'none',
+                          }}
+                        >
+                          <KanbanCard ticket={ticket} projectKey={projectKey} />
+                        </div>
+                      )
+                    })}
+                    {/* Primary card (the one actually clicked/dragged) - at same position as single drag */}
+                    <div className="relative rotate-3" style={{ zIndex: 10 }}>
+                      <KanbanCard ticket={activeTicket} projectKey={projectKey} />
+                      {/* Badge showing count - solid orange circle with white text */}
+                      <div className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center z-20 shadow-sm">
+                        {dragSelectionIds.length}
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           ) : (
             // Single drag: show single card
