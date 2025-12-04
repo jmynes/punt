@@ -10,6 +10,8 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useUIStore } from '@/stores/ui-store'
@@ -78,6 +80,25 @@ const recentActivity = [
 
 export default function DashboardPage() {
   const { setCreateTicketOpen, setCreateProjectOpen } = useUIStore()
+  const hasShownRedirectToast = useRef(false)
+
+  // Show toast if redirected from invalid route
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const invalidPath = sessionStorage.getItem('punt:invalidPath')
+
+    if (invalidPath && !hasShownRedirectToast.current) {
+      hasShownRedirectToast.current = true
+      toast.error('404 Not Found', {
+        description: `The URL ${invalidPath} is invalid. Redirecting to dashboard...`,
+        duration: 5000,
+      })
+
+      // Clean up sessionStorage
+      sessionStorage.removeItem('punt:invalidPath')
+    }
+  }, [])
 
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-y-auto p-4 lg:p-6">
