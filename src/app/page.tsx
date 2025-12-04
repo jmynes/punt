@@ -90,8 +90,8 @@ export default function DashboardPage() {
 
     if (invalidPath && !hasShownRedirectToast.current) {
       hasShownRedirectToast.current = true
-      toast.error('404 Not Found', {
-        description: `The URL ${invalidPath} is invalid. Redirecting to dashboard...`,
+      toast.error('404 - Page Not Found', {
+        description: `The page "${invalidPath}" doesn't exist. You've been redirected to the dashboard.`,
         duration: 5000,
       })
 
