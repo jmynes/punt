@@ -1,8 +1,8 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@/__tests__/utils/test-utils'
-import { KanbanBoard } from '../kanban-board'
-import { useBoardStore } from '@/stores/board-store'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockColumns } from '@/__tests__/utils/mocks'
+import { render, screen } from '@/__tests__/utils/test-utils'
+import { useBoardStore } from '@/stores/board-store'
+import { KanbanBoard } from '../kanban-board'
 
 // Mock the stores
 vi.mock('@/stores/board-store', () => ({
@@ -80,4 +80,3 @@ describe('KanbanBoard', () => {
     expect(document.body).toBeInTheDocument()
   })
 })
-

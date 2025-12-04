@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useCurrentUser, useProjectMembers, DEMO_MEMBERS } from '../use-current-user'
+import { describe, expect, it } from 'vitest'
+import { DEMO_MEMBERS, useCurrentUser, useProjectMembers } from '../use-current-user'
 
 describe('useCurrentUser', () => {
   it('should return demo user', () => {
@@ -21,4 +21,3 @@ describe('useProjectMembers', () => {
     expect(result.current).toHaveLength(4)
   })
 })
-

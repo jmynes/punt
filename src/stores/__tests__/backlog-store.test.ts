@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useBacklogStore, DEFAULT_COLUMNS } from '../backlog-store'
+import { DEFAULT_COLUMNS, useBacklogStore } from '../backlog-store'
 
 describe('Backlog Store', () => {
   beforeEach(() => {
@@ -30,9 +30,7 @@ describe('Backlog Store', () => {
 
       useBacklogStore.getState().toggleColumnVisibility(columnId)
 
-      const newVisible = useBacklogStore
-        .getState()
-        .columns.find((c) => c.id === columnId)?.visible
+      const newVisible = useBacklogStore.getState().columns.find((c) => c.id === columnId)?.visible
       expect(newVisible).toBe(!initialVisible)
     })
 
@@ -154,4 +152,3 @@ describe('Backlog Store', () => {
     })
   })
 })
-

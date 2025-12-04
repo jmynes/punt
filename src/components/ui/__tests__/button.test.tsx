@@ -1,7 +1,7 @@
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@/__tests__/utils/test-utils'
 import { Button } from '../button'
-import userEvent from '@testing-library/user-event'
 
 describe('Button', () => {
   it('should render button with text', () => {
@@ -33,4 +33,3 @@ describe('Button', () => {
     expect(container.firstChild).toHaveClass('h-10')
   })
 })
-

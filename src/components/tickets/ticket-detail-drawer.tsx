@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,14 +40,22 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
+import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
-import type { TicketWithRelations } from '@/types'
-import { toast } from 'sonner'
+import type {
+  IssueType,
+  LabelSummary,
+  Priority,
+  SprintSummary,
+  TicketWithRelations,
+  UploadedFileInfo,
+} from '@/types'
 import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
+import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
 import { FileUpload } from './file-upload'
 import { LabelSelect } from './label-select'
@@ -54,9 +63,6 @@ import { ParentSelect } from './parent-select'
 import { PrioritySelect } from './priority-select'
 import { TypeSelect } from './type-select'
 import { UserSelect } from './user-select'
-import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
-import type { IssueType, LabelSummary, Priority, SprintSummary, UploadedFileInfo } from '@/types'
-import type { ParentTicketOption } from './create-ticket-dialog'
 
 interface TicketDetailDrawerProps {
   ticket: TicketWithRelations | null
@@ -420,9 +426,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     setEditingField(field)
   }
 
-  const selectedSprint = ticket.sprint
-    ? DEMO_SPRINTS.find((s) => s.id === ticket.sprintId)
-    : null
+  const selectedSprint = ticket.sprint ? DEMO_SPRINTS.find((s) => s.id === ticket.sprintId) : null
 
   return (
     <Sheet open={!!ticket} onOpenChange={(open) => !open && onClose()}>

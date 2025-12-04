@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useUndoStore } from '../undo-store'
 import { createMockTicket } from '@/__tests__/utils/mocks'
+import { useUndoStore } from '../undo-store'
 
 describe('Undo Store', () => {
   beforeEach(() => {
@@ -58,12 +58,14 @@ describe('Undo Store', () => {
 
   describe('pushMove', () => {
     it('should add a move entry to undo stack', () => {
-      useUndoStore.getState().pushMove(
-        [{ ticketId: 'ticket-1', fromColumnId: 'col-1', toColumnId: 'col-2' }],
-        'To Do',
-        'Done',
-        'toast-1',
-      )
+      useUndoStore
+        .getState()
+        .pushMove(
+          [{ ticketId: 'ticket-1', fromColumnId: 'col-1', toColumnId: 'col-2' }],
+          'To Do',
+          'Done',
+          'toast-1',
+        )
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry).toBeDefined()
@@ -157,4 +159,3 @@ describe('Undo Store', () => {
     })
   })
 })
-

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createMockColumns, createMockTicket } from '@/__tests__/utils/mocks'
 import { useBoardStore } from '../board-store'
-import { createMockTicket, createMockColumns } from '@/__tests__/utils/mocks'
 
 // Mock localStorage
 const localStorageMock = {
@@ -136,9 +136,9 @@ describe('Board Store', () => {
 
     it('should not change order if ticket is already at target index', () => {
       const ticket1 = createMockTicket({ id: 'ticket-1', columnId: 'col-1', order: 0 })
-      useBoardStore.getState().setColumns([
-        { id: 'col-1', name: 'To Do', order: 0, projectId: 'p1', tickets: [ticket1] },
-      ])
+      useBoardStore
+        .getState()
+        .setColumns([{ id: 'col-1', name: 'To Do', order: 0, projectId: 'p1', tickets: [ticket1] }])
 
       const before = useBoardStore.getState().columns[0].tickets
       useBoardStore.getState().reorderTicket('col-1', 'ticket-1', 0)
@@ -178,9 +178,9 @@ describe('Board Store', () => {
   describe('updateTicket', () => {
     it('should update a ticket', () => {
       const ticket = createMockTicket({ id: 'ticket-1', title: 'Old Title' })
-      useBoardStore.getState().setColumns([
-        { id: 'col-1', name: 'To Do', order: 0, projectId: 'p1', tickets: [ticket] },
-      ])
+      useBoardStore
+        .getState()
+        .setColumns([{ id: 'col-1', name: 'To Do', order: 0, projectId: 'p1', tickets: [ticket] }])
 
       useBoardStore.getState().updateTicket('ticket-1', { title: 'New Title' })
 
@@ -212,9 +212,9 @@ describe('Board Store', () => {
   describe('addTicket', () => {
     it('should add a ticket to the specified column', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
-      useBoardStore.getState().setColumns([
-        { id: 'col-1', name: 'To Do', order: 0, projectId: 'p1', tickets: [] },
-      ])
+      useBoardStore
+        .getState()
+        .setColumns([{ id: 'col-1', name: 'To Do', order: 0, projectId: 'p1', tickets: [] }])
 
       useBoardStore.getState().addTicket('col-1', ticket)
 
@@ -274,4 +274,3 @@ describe('Board Store', () => {
     })
   })
 })
-

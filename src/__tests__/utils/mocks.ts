@@ -36,9 +36,7 @@ export const createMockSprint = (overrides?: Partial<SprintSummary>): SprintSumm
 })
 
 // Mock ticket data
-export const createMockTicket = (
-  overrides?: Partial<TicketWithRelations>,
-): TicketWithRelations => {
+export const createMockTicket = (overrides?: Partial<TicketWithRelations>): TicketWithRelations => {
   const defaultUser = createMockUser()
   const defaultSprint = createMockSprint()
 
@@ -80,9 +78,7 @@ export const createMockTicket = (
 }
 
 // Mock column data
-export const createMockColumn = (
-  overrides?: Partial<ColumnWithTickets>,
-): ColumnWithTickets => ({
+export const createMockColumn = (overrides?: Partial<ColumnWithTickets>): ColumnWithTickets => ({
   id: 'col-1',
   name: 'To Do',
   order: 0,
@@ -126,15 +122,11 @@ export const createMockColumns = (): ColumnWithTickets[] => [
 ]
 
 // Mock file for upload tests
-export const createMockFile = (
-  name = 'test.jpg',
-  type = 'image/jpeg',
-  size = 1024,
-): File => {
+export const createMockFile = (name = 'test.jpg', type = 'image/jpeg', size = 1024): File => {
   const blob = new Blob(['test content'], { type })
   const file = new File([blob], name, { type })
   // Ensure size is set correctly
-  Object.defineProperty(file, 'size', { 
+  Object.defineProperty(file, 'size', {
     value: size,
     writable: false,
     configurable: true,
@@ -156,4 +148,3 @@ export const createMockFormData = (files: File[]): FormData => {
   })
   return formData
 }
-

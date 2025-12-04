@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
-import { useMediaQuery, useIsMobile, useIsTablet, useIsDesktop } from '../use-media-query'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useIsDesktop, useIsMobile, useIsTablet, useMediaQuery } from '../use-media-query'
 
 describe('useMediaQuery', () => {
   let matchMedia: (query: string) => MediaQueryList
@@ -114,4 +114,3 @@ describe('useIsDesktop', () => {
     expect(result.current).toBeDefined()
   })
 })
-
