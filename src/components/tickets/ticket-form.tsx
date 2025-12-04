@@ -1,6 +1,7 @@
 'use client'
 
 import { Paperclip } from 'lucide-react'
+import { Accordion } from '@/components/ui/accordion'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -241,22 +242,55 @@ export function TicketForm({
         </div>
       </div>
 
-      {/* Environment */}
-      <div className="space-y-2">
-        <Label htmlFor="environment" className="text-zinc-300">
-          Environment
-        </Label>
-        <Input
-          id="environment"
-          value={data.environment}
-          onChange={(e) => updateField('environment', e.target.value)}
-          placeholder="e.g., Production, Staging, Development"
-          disabled={disabled}
-          className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
-        />
-      </div>
-
       <Separator className="bg-zinc-800" />
+
+      {/* Additional Fields Accordion */}
+      <Accordion title="Additional Fields">
+        {/* Environment */}
+        <div className="space-y-2">
+          <Label htmlFor="environment" className="text-zinc-300">
+            Environment
+          </Label>
+          <Input
+            id="environment"
+            value={data.environment}
+            onChange={(e) => updateField('environment', e.target.value)}
+            placeholder="e.g., Production, Staging, Development"
+            disabled={disabled}
+            className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
+          />
+        </div>
+
+        {/* Version fields - Row */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="affectedVersion" className="text-zinc-300">
+              Affected Version
+            </Label>
+            <Input
+              id="affectedVersion"
+              value={data.affectedVersion || ''}
+              onChange={(e) => updateField('affectedVersion', e.target.value)}
+              placeholder="e.g., 1.0.0"
+              disabled={disabled}
+              className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="fixVersion" className="text-zinc-300">
+              Fix Version
+            </Label>
+            <Input
+              id="fixVersion"
+              value={data.fixVersion || ''}
+              onChange={(e) => updateField('fixVersion', e.target.value)}
+              placeholder="e.g., 1.0.1"
+              disabled={disabled}
+              className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
+            />
+          </div>
+        </div>
+      </Accordion>
 
       {/* Attachments */}
       <div className="space-y-2">

@@ -153,6 +153,8 @@ export interface TicketFormData {
   startDate: Date | null
   dueDate: Date | null
   environment: string
+  affectedVersion: string
+  fixVersion: string
   parentId: string | null
   attachments: UploadedFileInfo[]
 }
@@ -172,6 +174,8 @@ export const DEFAULT_TICKET_FORM: TicketFormData = {
   startDate: null,
   dueDate: null,
   environment: '',
+  affectedVersion: '',
+  fixVersion: '',
   parentId: null,
   attachments: [],
 }

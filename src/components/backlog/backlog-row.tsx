@@ -221,19 +221,19 @@ export function BacklogRow({
               isDueToday && 'font-medium text-amber-400',
             )}
           >
-            {format(ticket.dueDate, 'MMM d, yyyy')}
+            {format(ticket.dueDate, 'yyyy-MM-dd')}
           </span>
         )
       }
 
       case 'created':
         return (
-          <span className="text-sm text-zinc-400">{format(ticket.createdAt, 'MMM d, yyyy')}</span>
+          <span className="text-sm text-zinc-400">{format(ticket.createdAt, 'yyyy-MM-dd')}</span>
         )
 
       case 'updated':
         return (
-          <span className="text-sm text-zinc-400">{format(ticket.updatedAt, 'MMM d, yyyy')}</span>
+          <span className="text-sm text-zinc-400">{format(ticket.updatedAt, 'yyyy-MM-dd')}</span>
         )
 
       case 'parent':

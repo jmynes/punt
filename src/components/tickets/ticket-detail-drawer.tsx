@@ -11,10 +11,9 @@ import {
   Paperclip,
   Share2,
   Trash2,
-  User,
   X,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +27,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -47,6 +47,16 @@ import type { TicketWithRelations } from '@/types'
 import { toast } from 'sonner'
 import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
+import { DatePicker } from './date-picker'
+import { FileUpload } from './file-upload'
+import { LabelSelect } from './label-select'
+import { ParentSelect } from './parent-select'
+import { PrioritySelect } from './priority-select'
+import { TypeSelect } from './type-select'
+import { UserSelect } from './user-select'
+import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import type { IssueType, LabelSummary, Priority, SprintSummary, UploadedFileInfo } from '@/types'
+import type { ParentTicketOption } from './create-ticket-dialog'
 
 interface TicketDetailDrawerProps {
   ticket: TicketWithRelations | null
@@ -54,17 +64,190 @@ interface TicketDetailDrawerProps {
   onClose: () => void
 }
 
+// Demo labels - same as in create-ticket-dialog
+const DEMO_LABELS: LabelSummary[] = [
+  { id: 'label-1', name: 'frontend', color: '#ec4899' },
+  { id: 'label-2', name: 'backend', color: '#06b6d4' },
+  { id: 'label-3', name: 'database', color: '#8b5cf6' },
+  { id: 'label-4', name: 'api', color: '#f59e0b' },
+  { id: 'label-5', name: 'auth', color: '#ef4444' },
+  { id: 'label-6', name: 'ui/ux', color: '#14b8a6' },
+  { id: 'label-7', name: 'documentation', color: '#64748b' },
+  { id: 'label-8', name: 'testing', color: '#22c55e' },
+  { id: 'label-9', name: 'performance', color: '#eab308' },
+  { id: 'label-10', name: 'security', color: '#dc2626' },
+  { id: 'label-11', name: 'refactor', color: '#a855f7' },
+  { id: 'label-12', name: 'tech-debt', color: '#78716c' },
+  { id: 'label-13', name: 'needs-review', color: '#3b82f6' },
+  { id: 'label-14', name: 'blocked', color: '#991b1b' },
+  { id: 'label-15', name: 'help-wanted', color: '#16a34a' },
+]
+
+const DEMO_SPRINTS: SprintSummary[] = [
+  {
+    id: 'sprint-1',
+    name: 'Sprint 1 - Foundation',
+    isActive: false,
+    startDate: new Date('2024-01-01'),
+    endDate: new Date('2024-01-14'),
+  },
+  {
+    id: 'sprint-2',
+    name: 'Sprint 2 - Core Features',
+    isActive: true,
+    startDate: new Date('2024-01-15'),
+    endDate: new Date('2024-01-28'),
+  },
+  { id: 'sprint-3', name: 'Sprint 3 - Polish', isActive: false, startDate: null, endDate: null },
+]
+
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
-  const { removeTicket, addTicket } = useBoardStore()
+  const { removeTicket, addTicket, updateTicket, columns } = useBoardStore()
   const { pushDeleted, removeDeleted } = useUndoStore()
   const { openCreateTicketWithData } = useUIStore()
+  const currentUser = useCurrentUser()
+  const members = useProjectMembers()
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
+
+  // State for editing fields
+  const [editingField, setEditingField] = useState<string | null>(null)
+  const [tempTitle, setTempTitle] = useState('')
+  const [tempDescription, setTempDescription] = useState('')
+  const [tempType, setTempType] = useState<IssueType>('task')
+  const [tempPriority, setTempPriority] = useState<Priority>('medium')
+  const [tempAssigneeId, setTempAssigneeId] = useState<string | null>(null)
+  const [tempLabelIds, setTempLabelIds] = useState<string[]>([])
+  const [tempSprintId, setTempSprintId] = useState<string | null>(null)
+  const [tempStoryPoints, setTempStoryPoints] = useState<number | null>(null)
+  const [tempEstimate, setTempEstimate] = useState('')
+  const [tempStartDate, setTempStartDate] = useState<Date | null>(null)
+  const [tempDueDate, setTempDueDate] = useState<Date | null>(null)
+  const [tempEnvironment, setTempEnvironment] = useState('')
+  const [tempAffectedVersion, setTempAffectedVersion] = useState('')
+  const [tempFixVersion, setTempFixVersion] = useState('')
+  const [tempParentId, setTempParentId] = useState<string | null>(null)
+  const [tempCreatorId, setTempCreatorId] = useState<string>('')
+  const [tempAttachments, setTempAttachments] = useState<UploadedFileInfo[]>([])
+
+  // Get all tickets for parent selection (exclude current ticket)
+  const parentTickets: ParentTicketOption[] = useMemo(() => {
+    const allTickets = columns.flatMap((col) => col.tickets)
+    return allTickets
+      .filter((t) => t.id !== ticket?.id && (t.type === 'epic' || t.type === 'story'))
+      .map((t) => ({
+        id: t.id,
+        number: t.number,
+        title: t.title,
+        type: t.type as 'epic' | 'story',
+        projectKey,
+      }))
+  }, [columns, ticket?.id, projectKey])
+
+  // Reset editing state when ticket changes
+  useEffect(() => {
+    if (ticket) {
+      setEditingField(null)
+      setTempTitle(ticket.title)
+      setTempDescription(ticket.description || '')
+      setTempType(ticket.type)
+      setTempPriority(ticket.priority)
+      setTempAssigneeId(ticket.assigneeId)
+      setTempLabelIds(ticket.labels.map((l) => l.id))
+      setTempSprintId(ticket.sprintId)
+      setTempStoryPoints(ticket.storyPoints)
+      setTempEstimate(ticket.estimate || '')
+      setTempStartDate(ticket.startDate)
+      setTempDueDate(ticket.dueDate)
+      setTempEnvironment(ticket.environment || '')
+      setTempAffectedVersion(ticket.affectedVersion || '')
+      setTempFixVersion(ticket.fixVersion || '')
+      setTempParentId(ticket.parentId)
+      setTempCreatorId(ticket.creatorId)
+      // Attachments would need to be loaded from the ticket's attachment array
+      setTempAttachments([])
+    }
+  }, [ticket])
+
+  // Handler for immediate save on change (for always-visible fields)
+  const handleImmediateChange = (field: string, value: unknown) => {
+    if (!ticket) return
+
+    const updates: Partial<TicketWithRelations> = {
+      updatedAt: new Date(),
+    }
+
+    switch (field) {
+      case 'assignee': {
+        const assigneeId = value as string | null
+        updates.assigneeId = assigneeId
+        updates.assignee = assigneeId ? members.find((m) => m.id === assigneeId) || null : null
+        setTempAssigneeId(assigneeId)
+        break
+      }
+      case 'creator': {
+        const creatorId = value as string
+        updates.creatorId = creatorId
+        updates.creator = members.find((m) => m.id === creatorId) || ticket.creator
+        setTempCreatorId(creatorId)
+        break
+      }
+      case 'startDate': {
+        const date = value as Date | null
+        updates.startDate = date
+        setTempStartDate(date)
+        break
+      }
+      case 'dueDate': {
+        const date = value as Date | null
+        updates.dueDate = date
+        setTempDueDate(date)
+        break
+      }
+      case 'labels': {
+        const labelIds = value as string[]
+        updates.labels = labelIds
+          .map((id: string) => DEMO_LABELS.find((l) => l.id === id))
+          .filter((l): l is LabelSummary => l !== undefined)
+        setTempLabelIds(labelIds)
+        break
+      }
+      case 'parent': {
+        const parentId = value as string | null
+        updates.parentId = parentId
+        setTempParentId(parentId)
+        break
+      }
+      case 'environment': {
+        const env = value as string
+        updates.environment = env || null
+        setTempEnvironment(env)
+        break
+      }
+      case 'affectedVersion': {
+        const version = value as string
+        updates.affectedVersion = version || null
+        setTempAffectedVersion(version)
+        break
+      }
+      case 'fixVersion': {
+        const version = value as string
+        updates.fixVersion = version || null
+        setTempFixVersion(version)
+        break
+      }
+      case 'attachments':
+        // Attachments would be handled separately in a real implementation
+        return
+    }
+
+    updateTicket(ticket.id, updates)
+  }
 
   // Focus delete button when dialog opens
   useEffect(() => {
     if (showDeleteConfirm) {
-      // Small delay to ensure dialog is rendered
       setTimeout(() => {
         deleteButtonRef.current?.focus()
       }, 0)
@@ -77,23 +260,122 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const isOverdue =
     ticket.dueDate && new Date(ticket.dueDate) < new Date() && ticket.columnId !== 'col-5'
 
+  const handleSaveField = (field: string) => {
+    if (!ticket) return
+
+    const updates: Partial<TicketWithRelations> = {
+      updatedAt: new Date(),
+    }
+
+    switch (field) {
+      case 'title':
+        if (tempTitle.trim()) {
+          updates.title = tempTitle.trim()
+        } else {
+          return // Don't save empty title
+        }
+        break
+      case 'description':
+        updates.description = tempDescription || null
+        break
+      case 'type':
+        updates.type = tempType
+        break
+      case 'priority':
+        updates.priority = tempPriority
+        break
+      case 'assignee':
+        updates.assigneeId = tempAssigneeId
+        updates.assignee = tempAssigneeId
+          ? members.find((m) => m.id === tempAssigneeId) || null
+          : null
+        break
+      case 'labels':
+        updates.labels = tempLabelIds
+          .map((id) => DEMO_LABELS.find((l) => l.id === id))
+          .filter((l): l is LabelSummary => l !== undefined)
+        break
+      case 'sprint':
+        updates.sprintId = tempSprintId
+        updates.sprint = tempSprintId
+          ? DEMO_SPRINTS.find((s) => s.id === tempSprintId) || null
+          : null
+        break
+      case 'storyPoints':
+        updates.storyPoints = tempStoryPoints
+        break
+      case 'estimate':
+        updates.estimate = tempEstimate || null
+        break
+      case 'startDate':
+        updates.startDate = tempStartDate
+        break
+      case 'dueDate':
+        updates.dueDate = tempDueDate
+        break
+      case 'environment':
+        updates.environment = tempEnvironment || null
+        break
+      case 'affectedVersion':
+        updates.affectedVersion = tempAffectedVersion || null
+        break
+      case 'fixVersion':
+        updates.fixVersion = tempFixVersion || null
+        break
+      case 'parent':
+        updates.parentId = tempParentId
+        break
+      case 'attachments':
+        // Attachments would be handled separately in a real implementation
+        // For now, just close the editor
+        setEditingField(null)
+        return
+    }
+
+    updateTicket(ticket.id, updates)
+    setEditingField(null)
+    toast.success('Ticket updated', {
+      description: ticketKey,
+      duration: 3000,
+    })
+  }
+
+  const handleCancelEdit = () => {
+    // Reset temp values to current ticket values
+    if (ticket) {
+      setTempTitle(ticket.title)
+      setTempDescription(ticket.description || '')
+      setTempType(ticket.type)
+      setTempPriority(ticket.priority)
+      setTempAssigneeId(ticket.assigneeId)
+      setTempLabelIds(ticket.labels.map((l) => l.id))
+      setTempSprintId(ticket.sprintId)
+      setTempStoryPoints(ticket.storyPoints)
+      setTempEstimate(ticket.estimate || '')
+      setTempStartDate(ticket.startDate)
+      setTempDueDate(ticket.dueDate)
+      setTempEnvironment(ticket.environment || '')
+      setTempAffectedVersion(ticket.affectedVersion || '')
+      setTempFixVersion(ticket.fixVersion || '')
+      setTempParentId(ticket.parentId)
+    }
+    setEditingField(null)
+  }
+
   const handleDelete = () => {
     const columnId = ticket.columnId
     const deletedTicket = { ...ticket }
 
-    // Remove the ticket
     removeTicket(ticket.id)
     setShowDeleteConfirm(false)
     onClose()
 
-    // Show toast with undo button
     const toastId = toast.error('Ticket deleted', {
       description: <span className="font-mono">{ticketKey}</span>,
       duration: 5000,
       action: {
         label: 'Undo',
         onClick: () => {
-          // Restore the ticket
           addTicket(columnId, deletedTicket)
           removeDeleted(toastId)
           toast.success('Ticket restored', {
@@ -103,17 +385,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         },
       },
       onDismiss: () => {
-        // Clean up from undo store when toast is dismissed
         removeDeleted(toastId)
       },
     })
 
-    // Push to undo store for Ctrl+Z
     pushDeleted(deletedTicket, columnId, toastId)
   }
 
   const handleClone = () => {
-    // Open the create ticket dialog with pre-filled data from this ticket
     openCreateTicketWithData({
       title: `${ticket.title} (Copy)`,
       description: ticket.description || '',
@@ -128,13 +407,22 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       startDate: ticket.startDate,
       dueDate: ticket.dueDate,
       environment: ticket.environment || '',
+      affectedVersion: ticket.affectedVersion || '',
+      fixVersion: ticket.fixVersion || '',
       parentId: ticket.parentId,
-      attachments: [], // Attachments would need to be re-uploaded in a real implementation
+      attachments: [],
     })
 
-    // Close the detail drawer
     onClose()
   }
+
+  const startEditing = (field: string) => {
+    setEditingField(field)
+  }
+
+  const selectedSprint = ticket.sprint
+    ? DEMO_SPRINTS.find((s) => s.id === ticket.sprintId)
+    : null
 
   return (
     <Sheet open={!!ticket} onOpenChange={(open) => !open && onClose()}>
@@ -172,50 +460,234 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
           <ScrollArea className="flex-1">
             <div className="space-y-6 p-6">
               {/* Title */}
-              <div>
-                <h2 className="text-xl font-semibold text-zinc-100">{ticket.title}</h2>
+              <div className="space-y-2">
+                <Label className="text-zinc-400">Title</Label>
+                {editingField === 'title' ? (
+                  <div className="space-y-2">
+                    <Input
+                      value={tempTitle}
+                      onChange={(e) => setTempTitle(e.target.value)}
+                      className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSaveField('title')
+                        } else if (e.key === 'Escape') {
+                          handleCancelEdit()
+                        }
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveField('title')}
+                        className="bg-amber-600 hover:bg-amber-700"
+                      >
+                        Save
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <h2
+                    className="text-xl font-semibold text-zinc-100 cursor-pointer hover:bg-amber-500/15 rounded px-2 py-1 -mx-2"
+                    onClick={() => startEditing('title')}
+                  >
+                    {ticket.title}
+                  </h2>
+                )}
               </div>
 
               {/* Meta row */}
               <div className="flex flex-wrap items-center gap-4 text-sm">
-                <PriorityBadge priority={ticket.priority} showLabel />
+                {editingField === 'priority' ? (
+                  <div className="flex items-center gap-2">
+                    <PrioritySelect
+                      value={tempPriority}
+                      onChange={(value) => setTempPriority(value)}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveField('priority')}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    className="cursor-pointer hover:bg-amber-500/15 rounded px-2 py-1 -mx-2"
+                    onClick={() => startEditing('priority')}
+                  >
+                    <PriorityBadge priority={ticket.priority} showLabel />
+                  </div>
+                )}
 
-                {ticket.sprint && (
+                {editingField === 'type' ? (
+                  <div className="flex items-center gap-2">
+                    <TypeSelect value={tempType} onChange={(value) => setTempType(value)} />
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveField('type')}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    className="cursor-pointer hover:bg-amber-500/15 rounded px-2 py-1 -mx-2"
+                    onClick={() => startEditing('type')}
+                  >
+                    <TypeBadge type={ticket.type} size="sm" />
+                  </div>
+                )}
+
+                {editingField === 'sprint' ? (
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={tempSprintId || ''}
+                      onChange={(e) => setTempSprintId(e.target.value || null)}
+                      className="h-8 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 text-sm transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500"
+                    >
+                      <option value="">No sprint (Backlog)</option>
+                      {DEMO_SPRINTS.map((sprint) => (
+                        <option key={sprint.id} value={sprint.id}>
+                          {sprint.name} {sprint.isActive && '(Active)'}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveField('sprint')}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : ticket.sprint ? (
                   <Badge
                     variant="outline"
                     className={cn(
+                      'cursor-pointer hover:bg-amber-500/15',
                       ticket.sprint.isActive
                         ? 'border-green-600 bg-green-900/30 text-green-400'
                         : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
                     )}
+                    onClick={() => startEditing('sprint')}
                   >
                     {ticket.sprint.name}
                   </Badge>
-                )}
+                ) : null}
 
-                {ticket.storyPoints !== null && (
-                  <Badge variant="outline" className="font-mono">
+                {editingField === 'storyPoints' ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={tempStoryPoints ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value ? Number.parseInt(e.target.value, 10) : null
+                        setTempStoryPoints(val !== null && val < 0 ? 0 : val)
+                      }}
+                      className="w-20 h-8 bg-zinc-900 border-zinc-700 focus:border-amber-500"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveField('storyPoints')}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : ticket.storyPoints !== null ? (
+                  <Badge
+                    variant="outline"
+                    className="font-mono cursor-pointer hover:bg-amber-500/15"
+                    onClick={() => startEditing('storyPoints')}
+                  >
                     {ticket.storyPoints} pts
                   </Badge>
-                )}
+                ) : null}
 
-                {ticket.estimate && (
-                  <span className="flex items-center gap-1 text-zinc-400">
+                {editingField === 'estimate' ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={tempEstimate}
+                      onChange={(e) => setTempEstimate(e.target.value)}
+                      placeholder="e.g., 2h, 1d"
+                      className="w-24 h-8 bg-zinc-900 border-zinc-700 focus:border-amber-500"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveField('estimate')}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : ticket.estimate ? (
+                  <span
+                    className="flex items-center gap-1 text-zinc-400 cursor-pointer hover:bg-amber-500/15 rounded px-2 py-1 -mx-2"
+                    onClick={() => startEditing('estimate')}
+                  >
                     <Clock className="h-3.5 w-3.5" />
                     {ticket.estimate}
                   </span>
-                )}
+                ) : null}
               </div>
 
               {/* Description */}
               <div className="space-y-2">
                 <Label className="text-zinc-400">Description</Label>
-                {ticket.description ? (
-                  <div className="rounded-md bg-zinc-900/50 p-4 text-sm text-zinc-300 whitespace-pre-wrap">
-                    {ticket.description}
+                {editingField === 'description' ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={tempDescription}
+                      onChange={(e) => setTempDescription(e.target.value)}
+                      rows={6}
+                      className="bg-zinc-900 border-zinc-700 focus:border-amber-500 resize-none"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveField('description')}
+                        className="bg-amber-600 hover:bg-amber-700"
+                      >
+                        Save
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-zinc-500 italic">No description provided</p>
+                  <div
+                    className="rounded-md bg-zinc-900/50 p-4 text-sm text-zinc-300 whitespace-pre-wrap cursor-pointer hover:bg-amber-500/15 min-h-[60px]"
+                    onClick={() => startEditing('description')}
+                  >
+                    {ticket.description || (
+                      <span className="text-zinc-500 italic">No description provided</span>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -226,123 +698,101 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 {/* Assignee */}
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Assignee</Label>
-                  {ticket.assignee ? (
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={ticket.assignee.avatar || undefined} />
-                        <AvatarFallback className="text-xs">
-                          {ticket.assignee.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')
-                            .toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm text-zinc-200">{ticket.assignee.name}</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-zinc-500">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-zinc-600">
-                        <User className="h-3.5 w-3.5" />
-                      </div>
-                      <span className="text-sm">Unassigned</span>
-                    </div>
-                  )}
+                  <UserSelect
+                    value={ticket.assigneeId}
+                    onChange={(value) => handleImmediateChange('assignee', value)}
+                    users={members}
+                    currentUserId={currentUser.id}
+                    placeholder="Unassigned"
+                    showAssignToMe
+                  />
                 </div>
 
                 {/* Reporter */}
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Reporter</Label>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={ticket.creator.avatar || undefined} />
-                      <AvatarFallback className="text-xs">
-                        {ticket.creator.name
-                          .split(' ')
-                          .map((n) => n[0])
-                          .join('')
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-zinc-200">{ticket.creator.name}</span>
-                  </div>
+                  <UserSelect
+                    value={ticket.creatorId}
+                    onChange={(value) => handleImmediateChange('creator', value)}
+                    users={members}
+                    currentUserId={currentUser.id}
+                    placeholder="Unassigned"
+                  />
                 </div>
 
-                {/* Due Date */}
+                {/* Parent Epic/Story */}
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">Due Date</Label>
-                  {ticket.dueDate ? (
-                    <span
-                      className={cn(
-                        'text-sm',
-                        isOverdue ? 'text-red-400 font-medium' : 'text-zinc-200',
-                      )}
-                    >
-                      {format(ticket.dueDate, 'MMM d, yyyy')}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-zinc-500">Not set</span>
-                  )}
+                  <Label className="text-zinc-400">Parent Epic / Story</Label>
+                  <ParentSelect
+                    value={ticket.parentId}
+                    onChange={(value) => handleImmediateChange('parent', value)}
+                    parentTickets={parentTickets}
+                  />
+                </div>
+
+                {/* Environment */}
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Environment</Label>
+                  <Input
+                    value={ticket.environment || ''}
+                    onChange={(e) => handleImmediateChange('environment', e.target.value)}
+                    placeholder="e.g., Production, Staging"
+                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
+                  />
                 </div>
 
                 {/* Start Date */}
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Start Date</Label>
-                  {ticket.startDate ? (
-                    <span className="text-sm text-zinc-200">
-                      {format(ticket.startDate, 'MMM d, yyyy')}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-zinc-500">Not set</span>
-                  )}
+                  <DatePicker
+                    value={ticket.startDate}
+                    onChange={(value) => handleImmediateChange('startDate', value)}
+                    placeholder="Set start date"
+                  />
                 </div>
 
-                {/* Environment */}
-                {ticket.environment && (
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400">Environment</Label>
-                    <span className="text-sm text-zinc-200">{ticket.environment}</span>
-                  </div>
-                )}
+                {/* Due Date */}
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Due Date</Label>
+                  <DatePicker
+                    value={ticket.dueDate}
+                    onChange={(value) => handleImmediateChange('dueDate', value)}
+                    placeholder="Set due date"
+                  />
+                </div>
 
                 {/* Affected Version */}
-                {ticket.affectedVersion && (
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400">Affected Version</Label>
-                    <span className="text-sm text-zinc-200">{ticket.affectedVersion}</span>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Affected Version</Label>
+                  <Input
+                    value={ticket.affectedVersion || ''}
+                    onChange={(e) => handleImmediateChange('affectedVersion', e.target.value)}
+                    placeholder="e.g., 1.0.0"
+                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
+                  />
+                </div>
 
                 {/* Fix Version */}
-                {ticket.fixVersion && (
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400">Fix Version</Label>
-                    <span className="text-sm text-zinc-200">{ticket.fixVersion}</span>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Fix Version</Label>
+                  <Input
+                    value={ticket.fixVersion || ''}
+                    onChange={(e) => handleImmediateChange('fixVersion', e.target.value)}
+                    placeholder="e.g., 1.0.1"
+                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
+                  />
+                </div>
               </div>
 
               {/* Labels */}
-              {ticket.labels.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-zinc-400">Labels</Label>
-                  <div className="flex flex-wrap gap-1">
-                    {ticket.labels.map((label) => (
-                      <Badge
-                        key={label.id}
-                        variant="outline"
-                        style={{
-                          borderColor: label.color,
-                          color: label.color,
-                        }}
-                        className="text-xs"
-                      >
-                        {label.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label className="text-zinc-400">Labels</Label>
+                <LabelSelect
+                  value={ticket.labels.map((l) => l.id)}
+                  onChange={(value) => handleImmediateChange('labels', value)}
+                  labels={DEMO_LABELS}
+                />
+              </div>
 
               {/* Watchers */}
               {ticket.watchers.length > 0 && (
@@ -364,6 +814,19 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   </div>
                 </div>
               )}
+
+              {/* Attachments */}
+              <div className="space-y-2">
+                <Label className="text-zinc-400 flex items-center gap-2">
+                  <Paperclip className="h-4 w-4" />
+                  Attachments
+                </Label>
+                <FileUpload
+                  value={tempAttachments}
+                  onChange={(files) => setTempAttachments(files as UploadedFileInfo[])}
+                  maxFiles={10}
+                />
+              </div>
 
               <Separator className="bg-zinc-800" />
 
@@ -412,9 +875,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
           {/* Footer actions */}
           <div className="flex items-center justify-between border-t border-zinc-800 px-6 py-4">
-            <Button variant="outline" size="sm">
-              Edit
-            </Button>
+            <div />
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={handleClone}>
                 <Copy className="h-4 w-4 mr-1" />
