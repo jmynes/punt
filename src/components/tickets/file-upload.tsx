@@ -6,258 +6,258 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export interface UploadedFile {
-	id: string
-	filename: string
-	originalName: string
-	mimetype: string
-	size: number
-	url: string
-	category: 'image' | 'video' | 'document'
+  id: string
+  filename: string
+  originalName: string
+  mimetype: string
+  size: number
+  url: string
+  category: 'image' | 'video' | 'document'
 }
 
 interface FileUploadProps {
-	value: UploadedFile[]
-	onChange: (files: UploadedFile[]) => void
-	maxFiles?: number
-	disabled?: boolean
+  value: UploadedFile[]
+  onChange: (files: UploadedFile[]) => void
+  maxFiles?: number
+  disabled?: boolean
 }
 
 const ALLOWED_EXTENSIONS = [
-	// Images
-	'.jpg',
-	'.jpeg',
-	'.png',
-	'.gif',
-	'.webp',
-	'.svg',
-	// Videos
-	'.mp4',
-	'.webm',
-	'.ogg',
-	'.mov',
-	// Documents
-	'.pdf',
-	'.doc',
-	'.docx',
-	'.xls',
-	'.xlsx',
-	'.txt',
-	'.csv',
+  // Images
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.svg',
+  // Videos
+  '.mp4',
+  '.webm',
+  '.ogg',
+  '.mov',
+  // Documents
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.txt',
+  '.csv',
 ]
 
 function formatFileSize(bytes: number): string {
-	if (bytes === 0) return '0 Bytes'
-	const k = 1024
-	const sizes = ['Bytes', 'KB', 'MB', 'GB']
-	const i = Math.floor(Math.log(bytes) / Math.log(k))
-	return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`
 }
 
 function getFileIcon(category: 'image' | 'video' | 'document') {
-	switch (category) {
-		case 'image':
-			return FileImage
-		case 'video':
-			return FileVideo
-		default:
-			return FileText
-	}
+  switch (category) {
+    case 'image':
+      return FileImage
+    case 'video':
+      return FileVideo
+    default:
+      return FileText
+  }
 }
 
 export function FileUpload({ value, onChange, maxFiles = 10, disabled }: FileUploadProps) {
-	const [isDragging, setIsDragging] = useState(false)
-	const [isUploading, setIsUploading] = useState(false)
-	const [error, setError] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-	const handleDragOver = useCallback((e: React.DragEvent) => {
-		e.preventDefault()
-		e.stopPropagation()
-		setIsDragging(true)
-	}, [])
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }, [])
 
-	const handleDragLeave = useCallback((e: React.DragEvent) => {
-		e.preventDefault()
-		e.stopPropagation()
-		setIsDragging(false)
-	}, [])
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }, [])
 
-	const uploadFiles = useCallback(
-		async (files: FileList | File[]) => {
-			if (disabled || isUploading) return
+  const uploadFiles = useCallback(
+    async (files: FileList | File[]) => {
+      if (disabled || isUploading) return
 
-			const fileArray = Array.from(files)
+      const fileArray = Array.from(files)
 
-			// Check max files limit
-			if (value.length + fileArray.length > maxFiles) {
-				setError(`Maximum ${maxFiles} files allowed`)
-				return
-			}
+      // Check max files limit
+      if (value.length + fileArray.length > maxFiles) {
+        setError(`Maximum ${maxFiles} files allowed`)
+        return
+      }
 
-			setError(null)
-			setIsUploading(true)
+      setError(null)
+      setIsUploading(true)
 
-			try {
-				const formData = new FormData()
-				for (const file of fileArray) {
-					formData.append('files', file)
-				}
+      try {
+        const formData = new FormData()
+        for (const file of fileArray) {
+          formData.append('files', file)
+        }
 
-				const response = await fetch('/api/upload', {
-					method: 'POST',
-					body: formData,
-				})
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        })
 
-				if (!response.ok) {
-					const data = await response.json()
-					throw new Error(data.error || 'Upload failed')
-				}
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Upload failed')
+        }
 
-				const data = await response.json()
-				onChange([...value, ...data.files])
-			} catch (err) {
-				setError(err instanceof Error ? err.message : 'Upload failed')
-			} finally {
-				setIsUploading(false)
-			}
-		},
-		[disabled, isUploading, maxFiles, onChange, value],
-	)
+        const data = await response.json()
+        onChange([...value, ...data.files])
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Upload failed')
+      } finally {
+        setIsUploading(false)
+      }
+    },
+    [disabled, isUploading, maxFiles, onChange, value],
+  )
 
-	const handleDrop = useCallback(
-		(e: React.DragEvent) => {
-			e.preventDefault()
-			e.stopPropagation()
-			setIsDragging(false)
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDragging(false)
 
-			const { files } = e.dataTransfer
-			if (files && files.length > 0) {
-				uploadFiles(files)
-			}
-		},
-		[uploadFiles],
-	)
+      const { files } = e.dataTransfer
+      if (files && files.length > 0) {
+        uploadFiles(files)
+      }
+    },
+    [uploadFiles],
+  )
 
-	const handleFileSelect = useCallback(
-		(e: React.ChangeEvent<HTMLInputElement>) => {
-			const { files } = e.target
-			if (files && files.length > 0) {
-				uploadFiles(files)
-			}
-			// Reset input so same file can be selected again
-			e.target.value = ''
-		},
-		[uploadFiles],
-	)
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { files } = e.target
+      if (files && files.length > 0) {
+        uploadFiles(files)
+      }
+      // Reset input so same file can be selected again
+      e.target.value = ''
+    },
+    [uploadFiles],
+  )
 
-	const removeFile = useCallback(
-		(fileId: string) => {
-			onChange(value.filter((f) => f.id !== fileId))
-		},
-		[onChange, value],
-	)
+  const removeFile = useCallback(
+    (fileId: string) => {
+      onChange(value.filter((f) => f.id !== fileId))
+    },
+    [onChange, value],
+  )
 
-	return (
-		<div className="space-y-3">
-			{/* biome-ignore lint/a11y/useSemanticElements: Drop zone requires div for drag events */}
-			<div
-				role="region"
-				aria-label="File drop zone"
-				onDragOver={handleDragOver}
-				onDragLeave={handleDragLeave}
-				onDrop={handleDrop}
-				className={cn(
-					'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors',
-					isDragging
-						? 'border-amber-500 bg-amber-500/10'
-						: 'border-zinc-700 bg-zinc-900/50 hover:border-zinc-600',
-					disabled && 'cursor-not-allowed opacity-50',
-				)}
-			>
-				{isUploading ? (
-					<>
-						<Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-						<p className="mt-2 text-sm text-zinc-400">Uploading...</p>
-					</>
-				) : (
-					<>
-						<Upload className="h-8 w-8 text-zinc-500" />
-						<p className="mt-2 text-sm text-zinc-400">
-							Drag & drop files here, or{' '}
-							<label className="cursor-pointer text-amber-500 hover:text-amber-400">
-								browse
-								<input
-									type="file"
-									multiple
-									accept={ALLOWED_EXTENSIONS.join(',')}
-									onChange={handleFileSelect}
-									disabled={disabled || isUploading}
-									className="sr-only"
-								/>
-							</label>
-						</p>
-						<p className="mt-1 text-xs text-zinc-500">
-							Images, videos, PDFs, documents up to 100MB
-						</p>
-					</>
-				)}
-			</div>
+  return (
+    <div className="space-y-3">
+      {/* biome-ignore lint/a11y/useSemanticElements: Drop zone requires div for drag events */}
+      <div
+        role="region"
+        aria-label="File drop zone"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={cn(
+          'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors',
+          isDragging
+            ? 'border-amber-500 bg-amber-500/10'
+            : 'border-zinc-700 bg-zinc-900/50 hover:border-zinc-600',
+          disabled && 'cursor-not-allowed opacity-50',
+        )}
+      >
+        {isUploading ? (
+          <>
+            <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+            <p className="mt-2 text-sm text-zinc-400">Uploading...</p>
+          </>
+        ) : (
+          <>
+            <Upload className="h-8 w-8 text-zinc-500" />
+            <p className="mt-2 text-sm text-zinc-400">
+              Drag & drop files here, or{' '}
+              <label className="cursor-pointer text-amber-500 hover:text-amber-400">
+                browse
+                <input
+                  type="file"
+                  multiple
+                  accept={ALLOWED_EXTENSIONS.join(',')}
+                  onChange={handleFileSelect}
+                  disabled={disabled || isUploading}
+                  className="sr-only"
+                />
+              </label>
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Images, videos, PDFs, documents up to 100MB
+            </p>
+          </>
+        )}
+      </div>
 
-			{/* Error message */}
-			{error && <p className="text-sm text-red-400">{error}</p>}
+      {/* Error message */}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
-			{/* Uploaded files list */}
-			{value.length > 0 && (
-				<div className="space-y-2">
-					{value.map((file) => {
-						const Icon = getFileIcon(file.category)
-						return (
-							<div
-								key={file.id}
-								className="flex items-center gap-3 rounded-md border border-zinc-800 bg-zinc-900 p-2"
-							>
-								{/* Preview for images */}
-								{file.category === 'image' ? (
-									<div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-800">
-										<img
-											src={file.url}
-											alt={file.originalName}
-											className="h-full w-full object-cover"
-										/>
-									</div>
-								) : (
-									<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-zinc-800">
-										<Icon className="h-5 w-5 text-zinc-400" />
-									</div>
-								)}
+      {/* Uploaded files list */}
+      {value.length > 0 && (
+        <div className="space-y-2">
+          {value.map((file) => {
+            const Icon = getFileIcon(file.category)
+            return (
+              <div
+                key={file.id}
+                className="flex items-center gap-3 rounded-md border border-zinc-800 bg-zinc-900 p-2"
+              >
+                {/* Preview for images */}
+                {file.category === 'image' ? (
+                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-800">
+                    <img
+                      src={file.url}
+                      alt={file.originalName}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-zinc-800">
+                    <Icon className="h-5 w-5 text-zinc-400" />
+                  </div>
+                )}
 
-								{/* File info */}
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-medium text-zinc-200">{file.originalName}</p>
-									<p className="text-xs text-zinc-500">{formatFileSize(file.size)}</p>
-								</div>
+                {/* File info */}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-zinc-200">{file.originalName}</p>
+                  <p className="text-xs text-zinc-500">{formatFileSize(file.size)}</p>
+                </div>
 
-								{/* Remove button */}
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									className="h-8 w-8 shrink-0 text-zinc-500 hover:text-red-400"
-									onClick={() => removeFile(file.id)}
-								>
-									<X className="h-4 w-4" />
-								</Button>
-							</div>
-						)
-					})}
-				</div>
-			)}
+                {/* Remove button */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 text-zinc-500 hover:text-red-400"
+                  onClick={() => removeFile(file.id)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
-			{/* File count */}
-			{value.length > 0 && (
-				<p className="text-xs text-zinc-500">
-					{value.length} of {maxFiles} files
-				</p>
-			)}
-		</div>
-	)
+      {/* File count */}
+      {value.length > 0 && (
+        <p className="text-xs text-zinc-500">
+          {value.length} of {maxFiles} files
+        </p>
+      )}
+    </div>
+  )
 }
