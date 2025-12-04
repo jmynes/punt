@@ -1,6 +1,17 @@
-import { mkdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import { NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
+import { FilesystemStorage, type FileStorage } from '@/lib/file-storage'
+
+// Default to filesystem storage (can be overridden for testing)
+let fileStorage: FileStorage = new FilesystemStorage()
+
+/**
+ * Set the file storage implementation (for testing)
+ * @internal - Only used in tests
+ */
+export function setFileStorage(storage: FileStorage) {
+  fileStorage = storage
+}
 
 // Allowed file types
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
@@ -44,12 +55,16 @@ function generateFilename(originalName: string): string {
 
 export async function POST(request: Request) {
   try {
+    logger.info('File upload request received')
     const formData = await request.formData()
     const files = formData.getAll('files') as File[]
 
     if (!files || files.length === 0) {
+      logger.warn('Upload request with no files')
       return NextResponse.json({ error: 'No files provided' }, { status: 400 })
     }
+
+    logger.debug('Processing file upload', { fileCount: files.length })
 
     const uploadedFiles: Array<{
       id: string
@@ -62,18 +77,22 @@ export async function POST(request: Request) {
     }> = []
 
     // Ensure upload directory exists
-    const uploadDir = join(process.cwd(), 'public', 'uploads')
-    await mkdir(uploadDir, { recursive: true })
+    const uploadDir = fileStorage.join(process.cwd(), 'public', 'uploads')
+    await fileStorage.ensureDirectoryExists(uploadDir)
 
     for (const file of files) {
+      logger.debug('Validating file', { name: file.name, type: file.type, size: file.size })
+
       // Validate file type
       if (!ALLOWED_TYPES.includes(file.type)) {
+        logger.warn('File type not allowed', { name: file.name, type: file.type })
         return NextResponse.json({ error: `File type not allowed: ${file.type}` }, { status: 400 })
       }
 
       // Validate file size
       const maxSize = getMaxSize(file.type)
       if (file.size > maxSize) {
+        logger.warn('File too large', { name: file.name, size: file.size, maxSize })
         return NextResponse.json(
           {
             error: `File too large: ${file.name}. Maximum size is ${Math.round(maxSize / 1024 / 1024)}MB`,
@@ -84,15 +103,15 @@ export async function POST(request: Request) {
 
       // Generate unique filename
       const filename = generateFilename(file.name)
-      const filepath = join(uploadDir, filename)
+      const filepath = fileStorage.join(uploadDir, filename)
 
       // Write file to disk
       const bytes = await file.arrayBuffer()
       const buffer = Buffer.from(bytes)
-      await writeFile(filepath, buffer)
+      await fileStorage.writeFile(filepath, buffer)
 
       // Add to uploaded files list
-      uploadedFiles.push({
+      const fileInfo = {
         id: `upload-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
         filename,
         originalName: file.name,
@@ -100,15 +119,20 @@ export async function POST(request: Request) {
         size: file.size,
         url: `/uploads/${filename}`,
         category: getFileCategory(file.type),
-      })
+      }
+      uploadedFiles.push(fileInfo)
+      logger.info('File uploaded successfully', { filename, originalName: file.name, size: file.size })
     }
 
+    logger.info('All files uploaded successfully', { count: uploadedFiles.length })
     return NextResponse.json({
       success: true,
       files: uploadedFiles,
     })
   } catch (error) {
-    console.error('Upload error:', error)
+    logger.error('Upload error', error instanceof Error ? error : new Error(String(error)), {
+      message: 'Failed to upload file',
+    })
     return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 })
   }
 }

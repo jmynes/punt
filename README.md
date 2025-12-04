@@ -84,6 +84,27 @@ pnpm lint:fix
 pnpm format
 ```
 
+### Testing
+
+```bash
+# Run tests once
+pnpm test
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Open Vitest UI
+pnpm test:ui
+
+# Generate coverage report
+pnpm test:coverage
+
+# Run tests in CI mode (with coverage)
+pnpm test:ci
+```
+
+See [docs/TESTING.md](docs/TESTING.md) for detailed testing guidelines.
+
 ## Project Structure
 
 ```
@@ -133,6 +154,7 @@ Create a `.env` file:
 
 ```env
 DATABASE_URL="file:./punt.db"
+NEXT_PUBLIC_DEBUG=true  # Enable debug logging (disabled in production)
 ```
 
 ## Contributing
