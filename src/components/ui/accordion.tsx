@@ -10,25 +10,57 @@ interface AccordionProps {
   children: ReactNode
   defaultOpen?: boolean
   className?: string
+  scrollTo?: 'content' | 'bottom'
 }
 
-export function Accordion({ title, children, defaultOpen = false, className }: AccordionProps) {
+export function Accordion({
+  title,
+  children,
+  defaultOpen = false,
+  className,
+  scrollTo = 'content',
+}: AccordionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen)
   const contentRef = useRef<HTMLDivElement>(null)
   const accordionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (isOpen && accordionRef.current) {
+    if (isOpen) {
       // Small delay to ensure content is rendered before scrolling
       const timeoutId = setTimeout(() => {
-        accordionRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-        })
+        if (scrollTo === 'bottom') {
+          // Find the nearest scrollable parent and scroll to bottom
+          let scrollableParent: HTMLElement | null = accordionRef.current
+          while (scrollableParent) {
+            const overflowY = window.getComputedStyle(scrollableParent).overflowY
+            if (
+              (overflowY === 'auto' || overflowY === 'scroll') &&
+              scrollableParent.scrollHeight > scrollableParent.clientHeight
+            ) {
+              scrollableParent.scrollTo({
+                top: scrollableParent.scrollHeight,
+                behavior: 'smooth',
+              })
+              return
+            }
+            scrollableParent = scrollableParent.parentElement
+          }
+          // Fallback: scroll window to bottom
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'smooth',
+          })
+        } else {
+          // Default: scroll to content
+          accordionRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+          })
+        }
       }, 150)
       return () => clearTimeout(timeoutId)
     }
-  }, [isOpen])
+  }, [isOpen, scrollTo])
 
   const handleToggle = () => {
     setIsOpen(!isOpen)
@@ -41,9 +73,9 @@ export function Accordion({ title, children, defaultOpen = false, className }: A
           type="button"
           variant="ghost"
           onClick={handleToggle}
-          className="w-full justify-between p-0 h-auto hover:bg-transparent ml-0 pl-0"
+          className="w-full justify-between p-0 px-0 h-auto hover:bg-transparent [&:has(>svg)]:px-0"
         >
-          <span className="text-sm font-medium text-zinc-300 ml-0 pl-0">{title}</span>
+          <span className="text-sm font-medium text-zinc-300">{title}</span>
           <ChevronDown
             className={cn(
               'h-4 w-4 text-zinc-400 transition-transform',

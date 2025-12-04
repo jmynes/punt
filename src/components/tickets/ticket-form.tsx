@@ -245,7 +245,7 @@ export function TicketForm({
       <Separator className="bg-zinc-800" />
 
       {/* Additional Fields Accordion */}
-      <Accordion title="Additional Fields">
+      <Accordion title="Additional Fields" scrollTo="bottom">
         {/* Environment */}
         <div className="space-y-2">
           <Label htmlFor="environment" className="text-zinc-300">
