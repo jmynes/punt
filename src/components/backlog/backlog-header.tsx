@@ -7,69 +7,69 @@ import { cn } from '@/lib/utils'
 import { type BacklogColumn, useBacklogStore } from '@/stores/backlog-store'
 
 interface BacklogHeaderProps {
-	column: BacklogColumn
+  column: BacklogColumn
 }
 
 export function BacklogHeader({ column }: BacklogHeaderProps) {
-	const { sort, toggleSort } = useBacklogStore()
-	const isSorted = sort?.column === column.id
+  const { sort, toggleSort } = useBacklogStore()
+  const isSorted = sort?.column === column.id
 
-	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-		id: column.id,
-	})
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: column.id,
+  })
 
-	const style = {
-		transform: CSS.Transform.toString(transform),
-		transition,
-		width: column.width || undefined,
-		minWidth: column.minWidth,
-	}
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    width: column.width || undefined,
+    minWidth: column.minWidth,
+  }
 
-	return (
-		<th
-			ref={setNodeRef}
-			style={style}
-			className={cn(
-				'relative select-none whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-zinc-400',
-				isDragging && 'z-50 bg-zinc-800 opacity-80',
-				column.sortable && 'cursor-pointer hover:text-zinc-200',
-			)}
-		>
-			<div className="flex items-center gap-1">
-				{/* Drag handle */}
-				<button
-					type="button"
-					className="cursor-grab touch-none text-zinc-600 hover:text-zinc-400 active:cursor-grabbing"
-					{...attributes}
-					{...listeners}
-				>
-					<GripVertical className="h-3 w-3" />
-				</button>
+  return (
+    <th
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'relative select-none whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-zinc-400',
+        isDragging && 'z-50 bg-zinc-800 opacity-80',
+        column.sortable && 'cursor-pointer hover:text-zinc-200',
+      )}
+    >
+      <div className="flex items-center gap-1">
+        {/* Drag handle */}
+        <button
+          type="button"
+          className="cursor-grab touch-none text-zinc-600 hover:text-zinc-400 active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-3 w-3" />
+        </button>
 
-				{/* Column label */}
-				<button
-					type="button"
-					onClick={column.sortable ? () => toggleSort(column.id) : undefined}
-					disabled={!column.sortable}
-					className={cn(
-						'bg-transparent border-none p-0 text-left',
-						column.sortable && 'hover:underline cursor-pointer',
-					)}
-				>
-					{column.label}
-				</button>
+        {/* Column label */}
+        <button
+          type="button"
+          onClick={column.sortable ? () => toggleSort(column.id) : undefined}
+          disabled={!column.sortable}
+          className={cn(
+            'bg-transparent border-none p-0 text-left',
+            column.sortable && 'hover:underline cursor-pointer',
+          )}
+        >
+          {column.label}
+        </button>
 
-				{/* Sort indicator */}
-				{isSorted && (
-					<span className="text-amber-500">
-						{sort.direction === 'asc' ? (
-							<ArrowUp className="h-3 w-3" />
-						) : (
-							<ArrowDown className="h-3 w-3" />
-						)}
-					</span>
-				)}
-			</div>
-		</th>
-	)
+        {/* Sort indicator */}
+        {isSorted && (
+          <span className="text-amber-500">
+            {sort.direction === 'asc' ? (
+              <ArrowUp className="h-3 w-3" />
+            ) : (
+              <ArrowDown className="h-3 w-3" />
+            )}
+          </span>
+        )}
+      </div>
+    </th>
+  )
 }
