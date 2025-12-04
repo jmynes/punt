@@ -38,8 +38,17 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
   // Store the selection at drag start to ensure we have consistent state throughout the drag
   const [dragSelectionIds, setDragSelectionIds] = useState<string[]>([])
 
+  // Track the active drag target for visual feedback
+  const [activeDragTarget, setActiveDragTarget] = useState<{
+    columnId: string
+    insertIndex: number
+  } | null>(null)
+
   // Track source columns for undo functionality
   const dragSourceColumns = useRef<Map<string, string>>(new Map())
+
+  // Track the original column state at drag start to calculate correct insertion positions
+  const originalColumnState = useRef<Map<string, ColumnWithTickets>>(new Map())
 
   // Filter tickets based on search query
   const filteredColumns = useMemo(() => {
@@ -79,6 +88,16 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
 
         // Track source columns for all tickets being dragged
         dragSourceColumns.current = new Map()
+
+        // Store original column state at drag start to calculate correct insertion positions
+        const currentColumns = useBoardStore.getState().columns
+        originalColumnState.current = new Map()
+        for (const col of currentColumns) {
+          originalColumnState.current.set(col.id, {
+            ...col,
+            tickets: [...col.tickets], // Deep copy tickets array
+          })
+        }
 
         // Only use multi-select if the dragged ticket is part of the selection
         if (currentSelection.size > 1 && currentSelection.has(activeId)) {
@@ -133,15 +152,27 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
         return
       }
 
-      // Find which column the active item is in
-      const activeColumn = columns.find((col) => col.tickets.some((t) => t.id === activeId))
+      // Get current columns from store to ensure we have the latest state
+      const currentColumns = useBoardStore.getState().columns
+
+      // Find which column the active item is in (use original state to avoid issues with already-inserted tickets)
+      const originalActiveColumn = originalColumnState.current.get(
+        currentColumns.find((col) => col.tickets.some((t) => t.id === activeId))?.id || '',
+      )
+      const activeColumn = originalActiveColumn || currentColumns.find((col) => col.tickets.some((t) => t.id === activeId))
 
       // Find which column we're over (could be a column itself or a ticket in a column)
       // Check if we're hovering over a column (empty space) by checking the data type
       const isOverColumn = over.data.current?.type === 'column'
-      const overColumn = isOverColumn
-        ? columns.find((col) => col.id === overId)
-        : columns.find((col) => col.tickets.some((t) => t.id === overId))
+      const overColumnId = isOverColumn
+        ? overId
+        : currentColumns.find((col) => col.tickets.some((t) => t.id === overId))?.id
+      
+      if (!overColumnId) return
+      
+      // Use original column state to calculate insertion position correctly
+      const originalOverColumn = originalColumnState.current.get(overColumnId)
+      const overColumn = originalOverColumn || currentColumns.find((col) => col.id === overColumnId)
 
       if (!activeColumn || !overColumn) return
 
@@ -152,32 +183,28 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
       }
       lastDragOperation.current = operationKey
 
-      // Calculate target position
-      // If hovering over the column itself (empty space), drop at the end
-      // Otherwise, drop at the position of the ticket we're hovering over
+      // Calculate target position and update visual feedback
+      // Behavior: insert BEFORE the ticket we're hovering over (or at the end if hovering over empty space)
       let newOrder: number
       if (isOverColumn) {
-        // Hovering over column (empty space) - drop at the end
+        // Hovering over column (empty space) - assume it's at the bottom (drop at the end)
         // For multi-drag, we need to exclude the tickets being dragged from the count
         const remainingTickets = overColumn.tickets.filter((t) => !dragSelectionIds.includes(t.id))
         newOrder = remainingTickets.length
       } else {
-        // Hovering over a ticket - drop at that ticket's position
+        // Hovering over a ticket
         const overTicketIndex = overColumn.tickets.findIndex((t) => t.id === overId)
         if (overTicketIndex >= 0) {
-          // For multi-drag, we need to account for tickets being dragged
-          // If the target ticket is not being dragged, use its position
-          // If it is being dragged, we need to find where it would be after removal
-          if (isMultiDrag && dragSelectionIds.includes(overId)) {
-            // Target ticket is part of the selection - this shouldn't happen due to early return
-            // But as a fallback, calculate position after removing dragged tickets
-            const remainingTickets = overColumn.tickets.filter(
-              (t) => !dragSelectionIds.includes(t.id),
-            )
-            newOrder = remainingTickets.length
+          // Check if we're moving from the same column
+          const isSameColumn = activeColumn.id === overColumn.id
+          
+          if (isSameColumn) {
+            // Same column reorder: insert at the target position (before the ticket)
+            // The reorderTicket function handles the index adjustment correctly
+            newOrder = overTicketIndex
           } else {
-            // Target ticket is not being dragged - use its position
-            // For multi-drag, we need to exclude dragged tickets from the count
+            // Cross-column move: insert at the target position (before the ticket)
+            // For multi-drag, exclude dragged tickets that are already in target column
             if (isMultiDrag) {
               const remainingBeforeTarget = overColumn.tickets
                 .slice(0, overTicketIndex)
@@ -196,48 +223,103 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
         }
       }
 
-      if (isMultiDrag) {
-        // Check if all selected tickets are already in the target column
-        const allInTargetColumn = dragSelectionIds.every((id) =>
-          overColumn.tickets.some((t) => t.id === id),
-        )
+      // Calculate if we're inserting at the end (no tickets need to move)
+      const remainingTickets = overColumn.tickets.filter((t) => !dragSelectionIds.includes(t.id))
+      const isInsertingAtEnd = newOrder >= remainingTickets.length
 
-        if (allInTargetColumn) {
-          // All selected tickets are in the same column
-          // Check if ALL tickets in the column are selected (nothing to reorder around)
-          const allColumnTicketsSelected = overColumn.tickets.every((t) =>
-            dragSelectionIds.includes(t.id),
+      // Only update store during drag if tickets need to move (not inserting at end)
+      // This prevents unnecessary movement when dragging to the bottom of a non-full column
+      if (!isInsertingAtEnd) {
+        if (isMultiDrag) {
+          // Check if all selected tickets are already in the target column
+          const allInTargetColumn = dragSelectionIds.every((id) =>
+            overColumn.tickets.some((t) => t.id === id),
           )
 
-          if (allColumnTicketsSelected) {
-            // All tickets in column are selected - nothing to reorder
-            return
-          }
+          if (allInTargetColumn) {
+            // All selected tickets are in the same column
+            // Check if ALL tickets in the column are selected (nothing to reorder around)
+            const allColumnTicketsSelected = overColumn.tickets.every((t) =>
+              dragSelectionIds.includes(t.id),
+            )
 
-          // Same column, but there are non-selected tickets - reorder around them
-          reorderTickets(overColumn.id, dragSelectionIds, newOrder)
+            if (allColumnTicketsSelected) {
+              // All tickets in column are selected - nothing to reorder
+              // Still update visual feedback
+              setActiveDragTarget({ columnId: overColumn.id, insertIndex: newOrder })
+              return
+            }
+
+            // Same column, but there are non-selected tickets - reorder around them
+            reorderTickets(overColumn.id, dragSelectionIds, newOrder)
+          } else {
+            // Cross-column: move all selected tickets from any column
+            moveTickets(dragSelectionIds, overColumn.id, newOrder)
+          }
         } else {
-          // Cross-column: move all selected tickets from any column
-          moveTickets(dragSelectionIds, overColumn.id, newOrder)
-        }
-      } else {
-        // Single drag
-        if (activeColumn.id === overColumn.id) {
-          // Same column - reorder
-          reorderTicket(activeColumn.id, activeId, newOrder)
-        } else {
-          // Cross-column
-          moveTicket(activeId, activeColumn.id, overColumn.id, newOrder)
+          // Single drag
+          if (activeColumn.id === overColumn.id) {
+            // Same column - reorder
+            reorderTicket(activeColumn.id, activeId, newOrder)
+          } else {
+            // Cross-column
+            moveTicket(activeId, activeColumn.id, overColumn.id, newOrder)
+          }
         }
       }
+
+      // Always update visual feedback target (even when not updating store)
+      setActiveDragTarget({ columnId: overColumn.id, insertIndex: newOrder })
     },
-    [columns, moveTicket, moveTickets, reorderTicket, reorderTickets, dragSelectionIds],
+    [moveTicket, moveTickets, reorderTicket, reorderTickets, dragSelectionIds],
   )
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const wasMultiDrag = dragSelectionIds.length > 1
       const sourceColumns = new Map(dragSourceColumns.current)
+
+      // If we have an active drag target, ensure the final move happens
+      // (in case we were inserting at the end and didn't update during drag)
+      if (activeDragTarget) {
+        const targetColumn = columns.find((c) => c.id === activeDragTarget.columnId)
+        if (targetColumn) {
+          const remainingTickets = targetColumn.tickets.filter(
+            (t) => !dragSelectionIds.includes(t.id),
+          )
+          const isInsertingAtEnd = activeDragTarget.insertIndex >= remainingTickets.length
+
+          // If we were inserting at the end, do the move now
+          if (isInsertingAtEnd) {
+            if (wasMultiDrag) {
+              // Check if all selected tickets are already in the target column
+              const allInTargetColumn = dragSelectionIds.every((id) =>
+                targetColumn.tickets.some((t) => t.id === id),
+              )
+
+              if (allInTargetColumn) {
+                // All selected tickets are in the same column - reorder
+                reorderTickets(targetColumn.id, dragSelectionIds, activeDragTarget.insertIndex)
+              } else {
+                // Cross-column: move all selected tickets from any column
+                moveTickets(dragSelectionIds, targetColumn.id, activeDragTarget.insertIndex)
+              }
+            } else {
+              const activeId = event.active.id as string
+              const activeColumn = columns.find((col) => col.tickets.some((t) => t.id === activeId))
+              if (activeColumn) {
+                if (activeColumn.id === targetColumn.id) {
+                  // Same column - reorder
+                  reorderTicket(activeColumn.id, activeId, activeDragTarget.insertIndex)
+                } else {
+                  // Cross-column
+                  moveTicket(activeId, activeColumn.id, targetColumn.id, activeDragTarget.insertIndex)
+                }
+              }
+            }
+          }
+        }
+      }
 
       // Check if any tickets moved to a different column
       const moves: Array<{ ticketId: string; fromColumnId: string; toColumnId: string }> = []
@@ -294,15 +376,17 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
       // Reset drag state
       setActiveTicket(null)
       setDragSelectionIds([])
+      setActiveDragTarget(null)
       lastDragOperation.current = null
       dragSourceColumns.current = new Map()
+      originalColumnState.current = new Map()
 
       // Clear selection after multi-drag completes
       if (wasMultiDrag) {
         useSelectionStore.getState().clearSelection()
       }
     },
-    [dragSelectionIds, columns],
+    [dragSelectionIds, columns, activeDragTarget, moveTicket, moveTickets, reorderTicket, reorderTickets],
   )
 
   if (columns.length === 0) {
@@ -348,6 +432,10 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
             column={column}
             projectKey={projectKey}
             dragSelectionIds={dragSelectionIds}
+            activeTicketId={activeTicket?.id}
+            activeDragTarget={
+              activeDragTarget?.columnId === column.id ? activeDragTarget.insertIndex : null
+            }
           />
         ))}
       </div>

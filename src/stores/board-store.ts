@@ -192,8 +192,20 @@ export const useBoardStore = create<BoardState>()(
             const currentIndex = tickets.findIndex((t) => t.id === ticketId)
             if (currentIndex === -1 || currentIndex === newIndex) return column
 
-            // Remove from current position and insert at new position
+            // Remove from current position
             const [ticket] = tickets.splice(currentIndex, 1)
+            
+            // Insert at the target position
+            // When moving down (currentIndex < newIndex), use newIndex directly
+            // because we want to insert at the position that corresponds to newIndex in the original array
+            // After removal, if newIndex >= tickets.length, splice will insert at the end
+            // Example: [1,2,3] move 1 to position 2
+            //   Remove 1: [2,3] (length 2)
+            //   Insert at 2: splice(2,0,1) -> [2,3,1] ✓ (splice inserts at end if index >= length)
+            // When moving up (currentIndex > newIndex), use newIndex directly
+            // Example: [1,2,3] move 3 to position 0
+            //   Remove 3: [1,2] (indices 0,1)
+            //   Insert at 0: splice(0,0,3) -> [3,1,2] ✓
             tickets.splice(newIndex, 0, ticket)
 
             // Update order for all tickets
