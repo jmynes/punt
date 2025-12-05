@@ -1,11 +1,19 @@
 import { create } from 'zustand'
 
+interface TicketOrigin {
+  columnId: string
+  position: number
+}
+
 interface SelectionState {
   // Set of selected ticket IDs
   selectedTicketIds: Set<string>
 
   // Last selected ticket ID (for shift+click range selection)
   lastSelectedId: string | null
+
+  // Track original column and position for each selected ticket (for arrow key movement)
+  ticketOrigins: Map<string, TicketOrigin>
 
   // Select a single ticket (clear others)
   selectTicket: (ticketId: string) => void
@@ -18,6 +26,12 @@ interface SelectionState {
 
   // Add multiple tickets to selection
   addToSelection: (ticketIds: string[]) => void
+
+  // Set origin for a ticket (used when tracking original position for arrow key movement)
+  setTicketOrigin: (ticketId: string, origin: TicketOrigin) => void
+
+  // Get origin for a ticket
+  getTicketOrigin: (ticketId: string) => TicketOrigin | undefined
 
   // Check if a ticket is selected
   isSelected: (ticketId: string) => boolean
@@ -32,11 +46,13 @@ interface SelectionState {
 export const useSelectionStore = create<SelectionState>((set, get) => ({
   selectedTicketIds: new Set(),
   lastSelectedId: null,
+  ticketOrigins: new Map(),
 
   selectTicket: (ticketId) =>
     set({
       selectedTicketIds: new Set([ticketId]),
       lastSelectedId: ticketId,
+      ticketOrigins: new Map(), // Clear origins when selecting a new ticket
     }),
 
   toggleTicket: (ticketId) =>
@@ -102,12 +118,22 @@ export const useSelectionStore = create<SelectionState>((set, get) => ({
       return { selectedTicketIds: newSet }
     }),
 
+  setTicketOrigin: (ticketId, origin) =>
+    set((state) => {
+      const newOrigins = new Map(state.ticketOrigins)
+      newOrigins.set(ticketId, origin)
+      return { ticketOrigins: newOrigins }
+    }),
+
+  getTicketOrigin: (ticketId) => get().ticketOrigins.get(ticketId),
+
   isSelected: (ticketId) => get().selectedTicketIds.has(ticketId),
 
   clearSelection: () =>
     set({
       selectedTicketIds: new Set(),
       lastSelectedId: null,
+      ticketOrigins: new Map(), // Clear origins when clearing selection
     }),
 
   getSelectedIds: () => Array.from(get().selectedTicketIds),
