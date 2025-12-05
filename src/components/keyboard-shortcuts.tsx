@@ -43,9 +43,9 @@ function formatTicketId(ticket: TicketWithRelations): string {
 }
 
 export function KeyboardShortcuts() {
-  const { columns, addTicket, removeTicket } = useBoardStore()
+  const { columns, addTicket, removeTicket, reorderTicket, reorderTickets, moveTicket, moveTickets } = useBoardStore()
   const { popUndo, pushRedo, popRedo, pushDeletedBatch } = useUndoStore()
-  const { clearSelection, selectedTicketIds, getSelectedIds } = useSelectionStore()
+  const { clearSelection, selectedTicketIds, getSelectedIds, setTicketOrigin, getTicketOrigin } = useSelectionStore()
   const { activeTicketId, setActiveTicketId, createTicketOpen, setCreateTicketOpen } = useUIStore()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
@@ -179,6 +179,268 @@ export function KeyboardShortcuts() {
           clearSelection()
           return
         }
+      }
+
+      // Arrow keys: move selected tickets up/down within their column
+      if (selectedTicketIds.size > 0 && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault()
+        
+        // Get all selected ticket IDs
+        const selectedIds = getSelectedIds()
+        if (selectedIds.length === 0) return
+
+        // Find all selected tickets and their columns
+        const selectedTicketsWithColumns: Array<{
+          ticket: TicketWithRelations
+          columnId: string
+          currentIndex: number
+        }> = []
+        
+        for (const column of columns) {
+          for (let i = 0; i < column.tickets.length; i++) {
+            const ticket = column.tickets[i]
+            if (selectedIds.includes(ticket.id)) {
+              selectedTicketsWithColumns.push({
+                ticket,
+                columnId: column.id,
+                currentIndex: i,
+              })
+            }
+          }
+        }
+
+        if (selectedTicketsWithColumns.length === 0) return
+
+        // Group tickets by column
+        const ticketsByColumn = new Map<string, typeof selectedTicketsWithColumns>()
+        for (const item of selectedTicketsWithColumns) {
+          const existing = ticketsByColumn.get(item.columnId) || []
+          existing.push(item)
+          ticketsByColumn.set(item.columnId, existing)
+        }
+
+        // Move tickets in each column
+        for (const [columnId, columnTickets] of ticketsByColumn.entries()) {
+          const column = columns.find((c) => c.id === columnId)
+          if (!column) continue
+
+          // Sort tickets by their current index to preserve relative order
+          columnTickets.sort((a, b) => a.currentIndex - b.currentIndex)
+          
+          const ticketIds = columnTickets.map((item) => item.ticket.id)
+          const firstTicketIndex = columnTickets[0].currentIndex
+          const lastTicketIndex = columnTickets[columnTickets.length - 1].currentIndex
+
+          if (e.key === 'ArrowUp') {
+            // Move up: move to position before the first selected ticket
+            if (firstTicketIndex === 0) {
+              // Already at top, can't move up
+              continue
+            }
+            
+            if (ticketIds.length === 1) {
+              // Single ticket: move up by 1 position
+              reorderTicket(columnId, ticketIds[0], firstTicketIndex - 1)
+            } else {
+              // Multiple tickets: move the group up by 1 position
+              reorderTickets(columnId, ticketIds, firstTicketIndex - 1)
+            }
+          } else if (e.key === 'ArrowDown') {
+            // Move down: move to position after the last selected ticket
+            if (lastTicketIndex >= column.tickets.length - 1) {
+              // Already at bottom, can't move down
+              continue
+            }
+            
+            if (ticketIds.length === 1) {
+              // Single ticket: move down by 1 position
+              reorderTicket(columnId, ticketIds[0], lastTicketIndex + 1)
+            } else {
+              // Multiple tickets: move the group down by 1 position
+              reorderTickets(columnId, ticketIds, lastTicketIndex + 2)
+            }
+          }
+        }
+        
+        return
+      }
+
+      // Arrow keys: move selected tickets left/right between columns
+      if (selectedTicketIds.size > 0 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault()
+        
+        // Get all selected ticket IDs
+        const selectedIds = getSelectedIds()
+        if (selectedIds.length === 0) return
+
+        // Find all selected tickets and their columns
+        const selectedTicketsWithColumns: Array<{
+          ticket: TicketWithRelations
+          columnId: string
+          currentIndex: number
+        }> = []
+        
+        for (const column of columns) {
+          for (let i = 0; i < column.tickets.length; i++) {
+            const ticket = column.tickets[i]
+            if (selectedIds.includes(ticket.id)) {
+              // Track origin if not already tracked
+              const origin = getTicketOrigin(ticket.id)
+              if (!origin) {
+                setTicketOrigin(ticket.id, { columnId: column.id, position: i })
+              }
+              
+              selectedTicketsWithColumns.push({
+                ticket,
+                columnId: column.id,
+                currentIndex: i,
+              })
+            }
+          }
+        }
+
+        if (selectedTicketsWithColumns.length === 0) return
+
+        // Store original column state for undo
+        const boardStore = useBoardStore.getState()
+        const originalColumns = boardStore.columns.map((col) => ({
+          ...col,
+          tickets: col.tickets.map((t) => ({ ...t })),
+        }))
+
+        // Group tickets by column
+        const ticketsByColumn = new Map<string, typeof selectedTicketsWithColumns>()
+        for (const item of selectedTicketsWithColumns) {
+          const existing = ticketsByColumn.get(item.columnId) || []
+          existing.push(item)
+          ticketsByColumn.set(item.columnId, existing)
+        }
+
+        const moves: Array<{ ticketId: string; fromColumnId: string; toColumnId: string }> = []
+
+        // Move tickets in each column
+        for (const [columnId, columnTickets] of ticketsByColumn.entries()) {
+          const column = columns.find((c) => c.id === columnId)
+          if (!column) continue
+
+          // Sort tickets by their current index to preserve relative order
+          columnTickets.sort((a, b) => a.currentIndex - b.currentIndex)
+          
+          const ticketIds = columnTickets.map((item) => item.ticket.id)
+          const sortedColumns = [...columns].sort((a, b) => a.order - b.order)
+          const currentColumnIndex = sortedColumns.findIndex((c) => c.id === columnId)
+
+          if (e.key === 'ArrowLeft') {
+            // Move left: move to the previous column
+            if (currentColumnIndex === 0) {
+              // Already at leftmost column, can't move left
+              continue
+            }
+            
+            const targetColumn = sortedColumns[currentColumnIndex - 1]
+            
+            // Check if all tickets have this as their origin column
+            const allHaveOriginInTarget = ticketIds.every((id) => {
+              const origin = getTicketOrigin(id)
+              return origin?.columnId === targetColumn.id
+            })
+
+            let targetPosition: number
+            if (allHaveOriginInTarget && ticketIds.length > 0) {
+              // All tickets originated from target column - restore to the first ticket's original position
+              // (they'll be placed together as a group at that position)
+              const firstTicketOrigin = getTicketOrigin(ticketIds[0])
+              targetPosition = firstTicketOrigin?.position ?? targetColumn.tickets.length
+            } else {
+              // Default to bottom when moving left (unless all tickets are returning to origin)
+              targetPosition = targetColumn.tickets.length
+            }
+
+            if (ticketIds.length === 1) {
+              moveTicket(ticketIds[0], columnId, targetColumn.id, targetPosition)
+              moves.push({ ticketId: ticketIds[0], fromColumnId: columnId, toColumnId: targetColumn.id })
+            } else {
+              moveTickets(ticketIds, targetColumn.id, targetPosition)
+              for (const ticketId of ticketIds) {
+                moves.push({ ticketId, fromColumnId: columnId, toColumnId: targetColumn.id })
+              }
+            }
+          } else if (e.key === 'ArrowRight') {
+            // Move right: move to the next column
+            if (currentColumnIndex >= sortedColumns.length - 1) {
+              // Already at rightmost column, can't move right
+              continue
+            }
+            
+            const targetColumn = sortedColumns[currentColumnIndex + 1]
+            
+            // Check if all tickets have this as their origin column
+            const allHaveOriginInTarget = ticketIds.every((id) => {
+              const origin = getTicketOrigin(id)
+              return origin?.columnId === targetColumn.id
+            })
+
+            let targetPosition: number
+            if (allHaveOriginInTarget && ticketIds.length > 0) {
+              // All tickets originated from target column - restore to the first ticket's original position
+              // (they'll be placed together as a group at that position)
+              const firstTicketOrigin = getTicketOrigin(ticketIds[0])
+              targetPosition = firstTicketOrigin?.position ?? targetColumn.tickets.length
+            } else {
+              // Default to bottom when moving right (unless all tickets are returning to origin)
+              targetPosition = targetColumn.tickets.length
+            }
+
+            if (ticketIds.length === 1) {
+              moveTicket(ticketIds[0], columnId, targetColumn.id, targetPosition)
+              moves.push({ ticketId: ticketIds[0], fromColumnId: columnId, toColumnId: targetColumn.id })
+            } else {
+              moveTickets(ticketIds, targetColumn.id, targetPosition)
+              for (const ticketId of ticketIds) {
+                moves.push({ ticketId, fromColumnId: columnId, toColumnId: targetColumn.id })
+              }
+            }
+          }
+        }
+
+        // If there were moves, create undo entry
+        if (moves.length > 0) {
+          const fromColumn = columns.find((c) => c.id === moves[0].fromColumnId)
+          const toColumn = columns.find((c) => c.id === moves[0].toColumnId)
+          const fromName = fromColumn?.name || 'Unknown'
+          const toName = toColumn?.name || 'Unknown'
+
+          // Get current state after move for undo
+          const afterColumns = boardStore.columns.map((col) => ({
+            ...col,
+            tickets: col.tickets.map((t) => ({ ...t })),
+          }))
+
+          // Look up ticket IDs from columns for toast
+          const allTickets = afterColumns.flatMap((col) => col.tickets)
+          const ticketKeys = moves
+            .map((move) => {
+              const ticket = allTickets.find((t) => t.id === move.ticketId)
+              return ticket ? formatTicketId(ticket) : move.ticketId
+            })
+            .filter(Boolean)
+
+          const toastId = toast.success(
+            moves.length === 1 ? 'Ticket moved' : `${moves.length} tickets moved`,
+            {
+              description:
+                moves.length === 1
+                  ? `${ticketKeys[0]} moved to ${toName}`
+                  : `${ticketKeys.join(', ')} moved to ${toName}`,
+              duration: 5000,
+            },
+          )
+
+          // Push to undo stack
+          useUndoStore.getState().pushMove(moves, fromName, toName, toastId, originalColumns, afterColumns)
+        }
+
+        return
       }
 
       // Check for Ctrl/Cmd + Z (Undo) - must check before redo to avoid conflicts
@@ -348,12 +610,19 @@ export function KeyboardShortcuts() {
   }, [
     addTicket,
     removeTicket,
+    reorderTicket,
+    reorderTickets,
+    moveTicket,
+    moveTickets,
     popUndo,
     pushRedo,
     popRedo,
     pushDeletedBatch,
     clearSelection,
     selectedTicketIds,
+    getSelectedIds,
+    setTicketOrigin,
+    getTicketOrigin,
     showDeleteConfirm,
     showShortcuts,
     columns,
