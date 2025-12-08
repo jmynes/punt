@@ -107,7 +107,7 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [], isBeingDragg
             {projectKey}-{ticket.number}
           </span>
           <div className="ml-auto">
-            <PriorityBadge priority={ticket.priority as Priority} showLabel={false} size="sm" />
+            <PriorityBadge priority={ticket.priority as Priority} size="sm" />
           </div>
         </div>
 
