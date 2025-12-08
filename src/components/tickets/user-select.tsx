@@ -13,7 +13,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { cn, getAvatarColor } from '@/lib/utils'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import type { UserSummary } from '@/types'
 
 interface UserSelectProps {
@@ -58,7 +58,7 @@ export function UserSelect({
                     className="text-xs text-white font-medium"
                     style={{ backgroundColor: getAvatarColor(selectedUser.id || selectedUser.name) }}
                   >
-                    {selectedUser.name.charAt(0).toUpperCase()}
+                    {getInitials(selectedUser.name)}
                   </AvatarFallback>
                 </Avatar>
                 <span className="truncate">{selectedUser.name}</span>
@@ -109,7 +109,7 @@ export function UserSelect({
                         className="text-xs text-white font-medium"
                         style={{ backgroundColor: getAvatarColor(user.id || user.name) }}
                       >
-                        {user.name.charAt(0).toUpperCase()}
+                        {getInitials(user.name)}
                       </AvatarFallback>
                     </Avatar>
                     <span>{user.name}</span>

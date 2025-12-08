@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
-import { cn, getAvatarColor } from '@/lib/utils'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
@@ -810,11 +810,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                           className="text-xs text-white font-medium"
                           style={{ backgroundColor: getAvatarColor(watcher.id || watcher.name) }}
                         >
-                          {watcher.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')
-                            .toUpperCase()}
+                          {getInitials(watcher.name)}
                         </AvatarFallback>
                       </Avatar>
                     ))}
