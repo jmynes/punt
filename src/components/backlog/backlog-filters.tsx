@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { getAvatarColor } from '@/lib/utils'
+import { getAvatarColor, getInitials } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
 import type { ColumnWithTickets, IssueType, Priority, UserSummary } from '@/types'
 import { ISSUE_TYPES, PRIORITIES } from '@/types'
@@ -241,7 +241,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     className="text-[10px] text-white font-medium"
                     style={{ backgroundColor: getAvatarColor(user.id || user.name) }}
                   >
-                    {user.name.charAt(0).toUpperCase()}
+                    {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
                 <span>{user.name}</span>

@@ -9,7 +9,7 @@ import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { cn, getAvatarColor } from '@/lib/utils'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { IssueType, Priority, TicketWithRelations } from '@/types'
@@ -195,7 +195,7 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [], isBeingDragg
                 className="text-white text-[10px] font-medium"
                 style={{ backgroundColor: getAvatarColor(ticket.assignee.id || ticket.assignee.name) }}
               >
-                {ticket.assignee.name.charAt(0).toUpperCase()}
+                {getInitials(ticket.assignee.name)}
               </AvatarFallback>
             </Avatar>
           ) : (

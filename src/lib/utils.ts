@@ -39,3 +39,16 @@ export function getAvatarColor(identifier: string): string {
   const index = Math.abs(hash) % AVATAR_COLORS.length
   return AVATAR_COLORS[index]
 }
+
+/**
+ * Get initials from a name (first letter of first and last name)
+ * e.g., "Alice Smith" -> "AS", "Bob" -> "B"
+ */
+export function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) // Max 2 characters
+}

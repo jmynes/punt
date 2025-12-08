@@ -6,7 +6,7 @@ import { format, isBefore, isToday } from 'date-fns'
 import { GripVertical, User } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { cn, getAvatarColor } from '@/lib/utils'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import type { BacklogColumn } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -121,11 +121,7 @@ export function BacklogRow({
                 className="text-[10px] text-white font-medium"
                 style={{ backgroundColor: getAvatarColor(ticket.assignee.id || ticket.assignee.name) }}
               >
-                {ticket.assignee.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .toUpperCase()}
+                {getInitials(ticket.assignee.name)}
               </AvatarFallback>
             </Avatar>
             <span className="truncate text-sm">{ticket.assignee.name}</span>
@@ -148,11 +144,7 @@ export function BacklogRow({
                 className="text-[10px] text-white font-medium"
                 style={{ backgroundColor: getAvatarColor(ticket.creator.id || ticket.creator.name) }}
               >
-                {ticket.creator.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .toUpperCase()}
+                {getInitials(ticket.creator.name)}
               </AvatarFallback>
             </Avatar>
             <span className="truncate text-sm">{ticket.creator.name}</span>
