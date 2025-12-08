@@ -271,23 +271,24 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             style={{ position: 'fixed', left: coords.x, top: coords.y }}
           >
             <div className="py-1 text-sm text-zinc-200 relative">
-              <MenuSection title={`Modify ${multi ? `${selectedIds.length} Tasks` : '1 Task'}`}>
-                <MenuButton
-                  icon={<UserIcon className="h-4 w-4" />}
-                  label="Assign"
-                  trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-                  onMouseEnter={openSubmenu('assign')}
-                  onMouseLeave={closeSubmenu}
-                />
-                <MenuButton
-                  icon={<UserCheck className="h-4 w-4" />}
-                  label="Priority"
-                  trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-                  onMouseEnter={openSubmenu('priority')}
-                  onMouseLeave={closeSubmenu}
-                />
-                {!multi && <MenuButton icon={<Pencil className="h-4 w-4" />} label="Edit" onClick={doEdit} />}
-              </MenuSection>
+              <div className="px-3 pb-1 text-xs uppercase text-zinc-500">
+                {multi ? `Modify ${selectedIds.length} Tasks` : 'Modify Task'}
+              </div>
+              <MenuButton
+                icon={<UserIcon className="h-4 w-4" />}
+                label="Assign"
+                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                onMouseEnter={openSubmenu('assign')}
+                onMouseLeave={closeSubmenu}
+              />
+              <MenuButton
+                icon={<UserCheck className="h-4 w-4" />}
+                label="Priority"
+                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                onMouseEnter={openSubmenu('priority')}
+                onMouseLeave={closeSubmenu}
+              />
+              {!multi && <MenuButton icon={<Pencil className="h-4 w-4" />} label="Edit" onClick={doEdit} />}
 
               <MenuSection title="Send To">
                 <MenuButton
