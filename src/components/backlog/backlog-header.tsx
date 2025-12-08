@@ -18,6 +18,8 @@ export function BacklogHeader({ column }: BacklogHeaderProps) {
     id: column.id,
   })
 
+  const handleSortClick = column.sortable ? () => toggleSort(column.id) : undefined
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -34,6 +36,9 @@ export function BacklogHeader({ column }: BacklogHeaderProps) {
         isDragging && 'z-50 bg-zinc-800 opacity-80',
         column.sortable && 'cursor-pointer hover:text-zinc-200',
       )}
+      onClick={handleSortClick}
+      role={column.sortable ? 'button' : undefined}
+      aria-pressed={column.sortable ? isSorted : undefined}
     >
       <div className="flex items-center gap-1">
         {/* Drag handle */}
@@ -42,22 +47,13 @@ export function BacklogHeader({ column }: BacklogHeaderProps) {
           className="cursor-grab touch-none text-zinc-600 hover:text-zinc-400 active:cursor-grabbing"
           {...attributes}
           {...listeners}
+          onClick={(e) => e.stopPropagation()}
         >
           <GripVertical className="h-3 w-3" />
         </button>
 
         {/* Column label */}
-        <button
-          type="button"
-          onClick={column.sortable ? () => toggleSort(column.id) : undefined}
-          disabled={!column.sortable}
-          className={cn(
-            'bg-transparent border-none p-0 text-left',
-            column.sortable && 'hover:underline cursor-pointer',
-          )}
-        >
-          {column.label}
-        </button>
+        <span className={cn(column.sortable && 'hover:underline')}>{column.label}</span>
 
         {/* Sort indicator */}
         {isSorted && (
