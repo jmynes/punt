@@ -308,7 +308,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
               {submenu && (
                 <div
-                  className="absolute z-[201] min-w-[200px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
+                  className="fixed z-[201] min-w-[200px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
                   style={{
                     left: submenu.anchor.x + 8,
                     top: submenu.anchor.y,
