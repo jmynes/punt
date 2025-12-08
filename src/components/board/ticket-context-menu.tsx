@@ -13,6 +13,16 @@ import {
   UserCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
@@ -44,8 +54,11 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const uiStore = useUIStore.getState ? useUIStore.getState() : useUIStore()
   const selection = useSelectionStore()
   const selectionApi = (useSelectionStore as any).getState ? (useSelectionStore as any).getState() : selection
+  const shortcutsApi = (useUIStore as any).getState?.() || uiStore
   const currentUser = useCurrentUser()
   const members = useProjectMembers()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<TicketWithRelations[]>([])
 
   const selectedIds = useMemo(() => {
     const getIds =
@@ -197,53 +210,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       }
     }
     if (ticketsToDelete.length === 0) return
-
-    if (typeof window !== 'undefined') {
-      const ok = window.confirm(
-        ticketsToDelete.length === 1
-          ? 'Delete this ticket?'
-          : `Delete ${ticketsToDelete.length} tickets?`,
-      )
-      if (!ok) return
-    }
-
-    const removeTicket = board.removeTicket || (() => {})
-    const addTicket = board.addTicket || (() => {})
-
-    const deletedBatch = ticketsToDelete.map((t) => ({ ticket: t, columnId: t.columnId }))
-    const ticketKeys = ticketsToDelete.map((t) => formatTicketId(t))
-
-    ticketsToDelete.forEach((t) => removeTicket(t.id))
-    selectionApi.clearSelection?.()
-
-    const toastId = toast.error(
-      ticketsToDelete.length === 1
-        ? `${formatTicketId(ticketsToDelete[0])} deleted`
-        : `${ticketsToDelete.length} tickets deleted`,
-      {
-        description:
-          ticketsToDelete.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
-        duration: 5000,
-        action: {
-          label: 'Undo',
-          onClick: () => {
-            deletedBatch.forEach(({ ticket, columnId }) => addTicket(columnId, ticket))
-            useUndoStore.getState?.()?.removeEntry?.(toastId)
-            toast.success(
-              ticketsToDelete.length === 1
-                ? 'Ticket restored'
-                : `${ticketsToDelete.length} tickets restored`,
-              { duration: 3000 },
-            )
-          },
-        },
-      },
-    )
-
-    const pushDeletedBatch =
-      (useUndoStore as any).getState?.().pushDeletedBatch || useUndoStore.getState().pushDeletedBatch
-    pushDeletedBatch(deletedBatch, toastId)
-
+    setPendingDelete(ticketsToDelete)
+    setShowDeleteConfirm(true)
     setOpen(false)
     setSubmenu(null)
   }
@@ -282,6 +250,51 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     )
     setOpen(false)
     setSubmenu(null)
+  }
+
+  const confirmDeleteNow = () => {
+    const ticketsToDelete = pendingDelete
+    if (ticketsToDelete.length === 0) return
+
+    const removeTicket = board.removeTicket || (() => {})
+    const addTicket = board.addTicket || (() => {})
+
+    const deletedBatch = ticketsToDelete.map((t) => ({ ticket: t, columnId: t.columnId }))
+    const ticketKeys = ticketsToDelete.map((t) => formatTicketId(t))
+
+    ticketsToDelete.forEach((t) => removeTicket(t.id))
+    selectionApi.clearSelection?.()
+
+    const toastId = toast.error(
+      ticketsToDelete.length === 1
+        ? 'Ticket deleted'
+        : `${ticketsToDelete.length} tickets deleted`,
+      {
+        description:
+          ticketsToDelete.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+        duration: 5000,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            deletedBatch.forEach(({ ticket, columnId }) => addTicket(columnId, ticket))
+            useUndoStore.getState?.()?.removeEntry?.(toastId)
+            toast.success(
+              ticketsToDelete.length === 1
+                ? 'Ticket restored'
+                : `${ticketsToDelete.length} tickets restored`,
+              { duration: 3000 },
+            )
+          },
+        },
+      },
+    )
+
+    const pushDeletedBatch =
+      (useUndoStore as any).getState?.().pushDeletedBatch || useUndoStore.getState().pushDeletedBatch
+    pushDeletedBatch(deletedBatch, toastId)
+
+    setPendingDelete([])
+    setShowDeleteConfirm(false)
   }
 
   const contextChild = useMemo(
@@ -447,6 +460,41 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           </div>,
           document.body,
         )}
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">
+              Delete {pendingDelete.length === 1 ? 'ticket' : `${pendingDelete.length} tickets`}?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              {pendingDelete.length === 1 ? (
+                <>
+                  Are you sure you want to delete{' '}
+                  <span className="font-semibold text-zinc-300">{pendingDelete[0]?.title}</span>?
+                </>
+              ) : (
+                <>
+                  Are you sure you want to delete these {pendingDelete.length} tickets? This action can be
+                  undone with Ctrl+Z.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteNow}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
