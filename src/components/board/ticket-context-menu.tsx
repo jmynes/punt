@@ -349,7 +349,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                 trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
                 onMouseEnter={openSubmenu('priority')}
               />
-              {!multi && <MenuButton icon={<Pencil className="h-4 w-4" />} label="Edit" onClick={doEdit} />}
+              {!multi && <MenuButton icon={<Pencil className="h-4 w-4" />} label="Edit" onMouseEnter={closeSubmenu} onClick={doEdit} />}
 
               <MenuSection title="Send To">
                 <MenuButton
@@ -365,12 +365,14 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                   icon={<ClipboardCopy className="h-4 w-4" />}
                   label="Copy"
                   shortcut="Ctrl/Cmd + C"
+                  onMouseEnter={closeSubmenu}
                   onClick={doCopy}
                 />
                 <MenuButton
                   icon={<ClipboardPaste className="h-4 w-4" />}
                   label="Paste"
                   shortcut="Ctrl/Cmd + V"
+                  onMouseEnter={closeSubmenu}
                   onClick={doPaste}
                 />
                 <MenuButton
@@ -378,6 +380,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                   label="Delete"
                   shortcut="Del"
                   destructive
+                  onMouseEnter={closeSubmenu}
                   onClick={doDelete}
                 />
               </MenuSection>
@@ -467,7 +470,13 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           document.body,
         )}
 
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          setShowDeleteConfirm(open)
+          if (!open) setPendingDelete([])
+        }}
+      >
         <AlertDialogContent className="bg-zinc-950 border-zinc-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">
