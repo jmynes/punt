@@ -11,6 +11,7 @@ import type { BacklogColumn } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { TicketWithRelations } from '@/types'
+import { TicketContextMenu } from '../board/ticket-context-menu'
 import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
 
@@ -247,7 +248,8 @@ export function BacklogRow({
   }
 
   return (
-    <tr
+    <TicketContextMenu ticket={ticket}>
+      <tr
       ref={setNodeRef}
       style={style}
       data-ticket-row
@@ -285,6 +287,7 @@ export function BacklogRow({
           {renderCell(column)}
         </td>
       ))}
-    </tr>
+      </tr>
+    </TicketContextMenu>
   )
 }

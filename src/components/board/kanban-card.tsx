@@ -13,6 +13,7 @@ import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { IssueType, Priority, TicketWithRelations } from '@/types'
+import { TicketContextMenu } from './ticket-context-menu'
 
 interface KanbanCardProps {
   ticket: TicketWithRelations
@@ -79,21 +80,22 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [], isBeingDragg
   }
 
   return (
-    <Card
-      ref={setNodeRef}
-      style={style}
-      data-ticket-card
-      {...attributes}
-      {...listeners}
-      className={cn(
-        'group relative cursor-grab border-zinc-800 bg-zinc-900/80 p-3 transition-colors select-none active:cursor-grabbing',
-        !selected && 'hover:border-zinc-700 hover:bg-zinc-900',
-        isDragging && 'opacity-50 shadow-lg ring-2 ring-amber-500/50',
-        selected &&
-          'ring-2 ring-amber-500 border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/15',
-      )}
-      onClick={handleClick}
-    >
+    <TicketContextMenu ticket={ticket}>
+      <Card
+        ref={setNodeRef}
+        style={style}
+        data-ticket-card
+        {...attributes}
+        {...listeners}
+        className={cn(
+          'group relative cursor-grab border-zinc-800 bg-zinc-900/80 p-3 transition-colors select-none active:cursor-grabbing',
+          !selected && 'hover:border-zinc-700 hover:bg-zinc-900',
+          isDragging && 'opacity-50 shadow-lg ring-2 ring-amber-500/50',
+          selected &&
+            'ring-2 ring-amber-500 border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/15',
+        )}
+        onClick={handleClick}
+      >
       {/* Drag handle indicator - visible on hover */}
       <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         <GripVertical className="h-4 w-4 text-zinc-600" />
@@ -209,5 +211,6 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [], isBeingDragg
         </div>
       </div>
     </Card>
+    </TicketContextMenu>
   )
 }
