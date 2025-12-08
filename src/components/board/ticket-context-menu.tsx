@@ -197,13 +197,45 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       }
     }
     if (ticketsToDelete.length === 0) return
+
+    if (typeof window !== 'undefined') {
+      const ok = window.confirm(
+        ticketsToDelete.length === 1
+          ? 'Delete this ticket?'
+          : `Delete ${ticketsToDelete.length} tickets?`,
+      )
+      if (!ok) return
+    }
+
     const removeTicket = board.removeTicket || (() => {})
+    const addTicket = board.addTicket || (() => {})
+
+    const deletedBatch = ticketsToDelete.map((t) => ({ ticket: t, columnId: t.columnId }))
+
     ticketsToDelete.forEach((t) => removeTicket(t.id))
-    toast.success(
+    selectionApi.clearSelection?.()
+
+    const toastId = toast.success(
       ticketsToDelete.length === 1
         ? `${formatTicketId(ticketsToDelete[0])} deleted`
         : `${ticketsToDelete.length} tickets deleted`,
+      {
+        duration: 5000,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            deletedBatch.forEach(({ ticket, columnId }) => addTicket(columnId, ticket))
+            useUndoStore.getState?.()?.removeEntry?.(toastId)
+            toast.success('Delete undone', { duration: 1500 })
+          },
+        },
+      },
     )
+
+    const pushDeletedBatch =
+      (useUndoStore as any).getState?.().pushDeletedBatch || useUndoStore.getState().pushDeletedBatch
+    pushDeletedBatch(deletedBatch, toastId)
+
     setOpen(false)
     setSubmenu(null)
   }
@@ -271,7 +303,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             style={{ position: 'fixed', left: coords.x, top: coords.y }}
           >
             <div className="py-1 text-sm text-zinc-200 relative">
-              <div className="px-3 pb-1 text-xs uppercase text-zinc-500">
+              <div className="px-3 pb-1 pt-2 text-xs uppercase text-zinc-500">
                 {multi ? `Modify ${selectedIds.length} Tasks` : 'Modify Task'}
               </div>
               <MenuButton
