@@ -477,7 +477,21 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           if (!open) setPendingDelete([])
         }}
       >
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+        <AlertDialogContent
+          className="bg-zinc-950 border-zinc-800"
+          onPointerDownOutside={() => {
+            setShowDeleteConfirm(false)
+            setPendingDelete([])
+          }}
+          onInteractOutside={() => {
+            setShowDeleteConfirm(false)
+            setPendingDelete([])
+          }}
+          onEscapeKeyDown={() => {
+            setShowDeleteConfirm(false)
+            setPendingDelete([])
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">
               Delete {pendingDelete.length === 1 ? 'ticket' : `${pendingDelete.length} tickets`}?
