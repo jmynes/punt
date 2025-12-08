@@ -12,6 +12,11 @@ interface MovedTicket {
   toColumnId: string
 }
 
+interface PastedTicket {
+  ticket: TicketWithRelations
+  columnId: string
+}
+
 // Different types of undoable actions
 type UndoAction =
   | { type: 'delete'; tickets: DeletedTicket[] }
@@ -23,6 +28,7 @@ type UndoAction =
       originalColumns?: ColumnWithTickets[] // Store original column state for precise undo (before move)
       afterColumns?: ColumnWithTickets[] // Store state after move for precise redo
     }
+  | { type: 'paste'; tickets: PastedTicket[] }
 
 interface UndoEntry {
   action: UndoAction
@@ -39,6 +45,9 @@ interface UndoState {
   // Add a delete action to the undo stack
   pushDeleted: (ticket: TicketWithRelations, columnId: string, toastId: string | number) => void
   pushDeletedBatch: (tickets: DeletedTicket[], toastId: string | number) => void
+
+  // Add a paste action to the undo stack
+  pushPaste: (tickets: PastedTicket[], toastId: string | number) => void
 
   // Add a move action to the undo stack
   pushMove: (
@@ -93,6 +102,19 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         ...state.undoStack,
         {
           action: { type: 'delete', tickets },
+          timestamp: Date.now(),
+          toastId,
+        },
+      ],
+      redoStack: [],
+    })),
+
+  pushPaste: (tickets, toastId) =>
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: { type: 'paste', tickets },
           timestamp: Date.now(),
           toastId,
         },

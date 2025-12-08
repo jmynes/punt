@@ -15,6 +15,9 @@ interface SelectionState {
   // Track original column and position for each selected ticket (for arrow key movement)
   ticketOrigins: Map<string, TicketOrigin>
 
+  // Clipboard: IDs of tickets that have been copied
+  copiedTicketIds: string[]
+
   // Select a single ticket (clear others)
   selectTicket: (ticketId: string) => void
 
@@ -41,12 +44,22 @@ interface SelectionState {
 
   // Get all selected ticket IDs as array
   getSelectedIds: () => string[]
+
+  // Copy selected tickets to clipboard
+  copySelected: () => void
+
+  // Get copied ticket IDs
+  getCopiedIds: () => string[]
+
+  // Clear clipboard
+  clearClipboard: () => void
 }
 
 export const useSelectionStore = create<SelectionState>((set, get) => ({
   selectedTicketIds: new Set(),
   lastSelectedId: null,
   ticketOrigins: new Map(),
+  copiedTicketIds: [],
 
   selectTicket: (ticketId) =>
     set({
@@ -137,4 +150,13 @@ export const useSelectionStore = create<SelectionState>((set, get) => ({
     }),
 
   getSelectedIds: () => Array.from(get().selectedTicketIds),
+
+  copySelected: () =>
+    set((state) => ({
+      copiedTicketIds: Array.from(state.selectedTicketIds),
+    })),
+
+  getCopiedIds: () => get().copiedTicketIds,
+
+  clearClipboard: () => set({ copiedTicketIds: [] }),
 }))
