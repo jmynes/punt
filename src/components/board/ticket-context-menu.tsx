@@ -54,6 +54,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const shortcutsApi = (useUIStore as any).getState?.() || uiStore
   const currentUser = useCurrentUser()
   const members = useProjectMembers()
+  const sortedMembers = useMemo(
+    () => [...members].sort((a, b) => a.name.localeCompare(b.name)),
+    [members],
+  )
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<TicketWithRelations[]>([])
 
@@ -494,7 +498,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           </Avatar>
                           <span>Assign to me</span>
                         </button>
-                        {members.map((m) => (
+                        <div className="my-1 border-t border-zinc-800" />
+                        {sortedMembers.map((m) => (
                           <button
                             key={m.id}
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
@@ -512,13 +517,14 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                             <span>{m.name}</span>
                           </button>
                         ))}
+                        <div className="my-1 border-t border-zinc-800" />
                         <button
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
                           onClick={() => doAssign(null)}
                         >
-                          <Avatar className="h-5 w-5">
-                            <AvatarFallback className="text-[10px] text-zinc-400">–</AvatarFallback>
-                          </Avatar>
+                          <div className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-zinc-700">
+                            <UserIcon className="h-3 w-3 text-zinc-500" />
+                          </div>
                           <span>Unassign</span>
                         </button>
                       </>
