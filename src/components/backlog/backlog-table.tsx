@@ -18,10 +18,10 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { Settings2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
-import { useBacklogStore } from '@/stores/backlog-store'
+import { useBacklogStore, type SortConfig } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { BacklogFilters } from './backlog-filters'
@@ -32,9 +32,15 @@ interface BacklogTableProps {
   tickets: TicketWithRelations[]
   columns: ColumnWithTickets[]
   projectKey: string
+  projectId: string
 }
 
-export function BacklogTable({ tickets, columns: statusColumns, projectKey }: BacklogTableProps) {
+export function BacklogTable({
+  tickets,
+  columns: statusColumns,
+  projectKey,
+  projectId,
+}: BacklogTableProps) {
   const {
     columns,
     reorderColumns,
@@ -46,26 +52,68 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
     searchQuery,
     showSubtasks,
     setColumnConfigOpen,
+    backlogOrder,
+    setBacklogOrder,
+    clearBacklogOrder,
   } = useBacklogStore()
 
-  // Local state for manual ticket ordering
-  const [orderedTickets, setOrderedTickets] = useState<TicketWithRelations[]>(tickets)
-  const [hasManualOrder, setHasManualOrder] = useState(false)
+  // Apply persisted backlog order (per project) while keeping any new tickets appended
+  const applyBacklogOrder = useMemo(
+    () => (ticketList: TicketWithRelations[], order: string[]) => {
+      if (order.length === 0) return ticketList
+      const orderSet = new Set(order)
+      const ordered = order
+        .map((id) => ticketList.find((t) => t.id === id))
+        .filter(Boolean) as TicketWithRelations[]
+      const remaining = ticketList.filter((t) => !orderSet.has(t.id))
+      return [...ordered, ...remaining]
+    },
+    [],
+  )
+
+  const [orderedTickets, setOrderedTickets] = useState<TicketWithRelations[]>(() =>
+    applyBacklogOrder(tickets, backlogOrder[projectId] || []),
+  )
+  const [hasManualOrder, setHasManualOrder] = useState(
+    (backlogOrder[projectId] || []).length > 0,
+  )
+  const sortInitRef = useRef<SortConfig | null>(sort)
+  const sortDidInitRef = useRef(false)
 
   // Sync with incoming tickets prop
   useEffect(() => {
-    if (!hasManualOrder) {
-      setOrderedTickets(tickets)
-    }
-  }, [tickets, hasManualOrder])
+    const projectOrder = backlogOrder[projectId] || []
+    const ordered = applyBacklogOrder(tickets, projectOrder)
+    setOrderedTickets(ordered)
+    setHasManualOrder(projectOrder.length > 0)
+  }, [tickets, backlogOrder, projectId, applyBacklogOrder])
 
   // Reset manual order when sort changes (user clicked a column header to sort)
   useEffect(() => {
-    if (sort) {
-      setHasManualOrder(false)
-      setOrderedTickets(tickets)
+    // Ignore the first run to avoid clobbering persisted order on initial render
+    if (!sortDidInitRef.current) {
+      sortDidInitRef.current = true
+      sortInitRef.current = sort
+      return
     }
-  }, [sort, tickets])
+
+    const prev = sortInitRef.current
+    const changed =
+      prev?.column !== sort?.column || prev?.direction !== sort?.direction
+    sortInitRef.current = sort
+
+    if (!changed) return
+
+    if (sort) {
+      // When a sort is active, defer to sorted view but keep the stored manual order intact
+      setHasManualOrder(false)
+    } else {
+      // Sort cleared: restore the persisted manual order for this project
+      const projectOrder = backlogOrder[projectId] || []
+      setHasManualOrder(projectOrder.length > 0)
+      setOrderedTickets(applyBacklogOrder(tickets, projectOrder))
+    }
+  }, [sort, tickets, projectId, applyBacklogOrder, backlogOrder])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -283,6 +331,7 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
 
         setOrderedTickets(newOrder)
         setHasManualOrder(true)
+        setBacklogOrder(projectId, newOrder.map((t) => t.id))
         clearSelection()
       } else {
         // Single drag
@@ -292,6 +341,7 @@ export function BacklogTable({ tickets, columns: statusColumns, projectKey }: Ba
           const newOrder = arrayMove(filteredTickets, oldIndex, targetIndex)
           setOrderedTickets(newOrder)
           setHasManualOrder(true)
+          setBacklogOrder(projectId, newOrder.map((t) => t.id))
         }
       }
     }
