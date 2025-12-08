@@ -38,8 +38,18 @@ type MenuProps = {
   children: React.ReactElement
 }
 
+const projectKeys: Record<string, string> = {
+  '1': 'PUNT',
+  '2': 'API',
+  '3': 'MOB',
+  'project-1': 'PUNT',
+  'project-2': 'API',
+  'project-3': 'MOB',
+}
+
 function formatTicketId(ticket: TicketWithRelations): string {
-  return ticket.key || `${ticket.number ?? ''}` || ticket.id
+  const projectKey = projectKeys[ticket.projectId] || ticket.projectId || 'TICKET'
+  return `${projectKey}-${ticket.number ?? ''}`.trim()
 }
 
 export function TicketContextMenu({ ticket, children }: MenuProps) {
