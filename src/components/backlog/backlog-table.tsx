@@ -298,35 +298,33 @@ export function BacklogTable({
       }
     } else {
       // Row/ticket reordering
-      const targetIndex = filteredTickets.findIndex((t) => t.id === over.id)
+      const overId = over.id as string
 
-      // Check if we're dragging selected tickets
-      if (selectedTicketIds.size > 1 && isSelected(activeId)) {
-        // Multi-drag: move all selected tickets to the target position
-        const selectedIds = Array.from(selectedTicketIds)
+      // Work with the full orderedTickets (unfiltered) to keep hidden items in place
+      const selectedIds = Array.from(selectedTicketIds)
 
-        // Remove all selected tickets from their current positions
-        const remainingTickets = filteredTickets.filter((t) => !selectedIds.includes(t.id))
+      const baseOrdered = [...orderedTickets]
 
-        // Get the selected tickets in their current order
-        const selectedTickets = filteredTickets.filter((t) => selectedIds.includes(t.id))
+      // Multi-drag
+      if (selectedIds.length > 1 && isSelected(activeId)) {
+        const selectedSet = new Set(selectedIds)
 
-        // Find where to insert (adjust for removed items)
-        const targetTicket = filteredTickets.find((t) => t.id === over.id)
-        let insertIndex = targetTicket
-          ? remainingTickets.findIndex((t) => t.id === over.id)
-          : remainingTickets.length
+        // Remove selected from base order
+        const remaining = baseOrdered.filter((t) => !selectedSet.has(t.id))
+        const selectedInOrder = baseOrdered.filter((t) => selectedSet.has(t.id))
 
-        // If target is one of the selected, insert at end
-        if (selectedIds.includes(over.id as string)) {
-          insertIndex = remainingTickets.length
+        // Determine insertion index in the remaining (unfiltered) list
+        let insertIndex = remaining.findIndex((t) => t.id === overId)
+        if (insertIndex === -1) insertIndex = remaining.length
+        // If over target is one of the selected (can happen in multi-select), put at end
+        if (selectedSet.has(overId)) {
+          insertIndex = remaining.length
         }
 
-        // Insert selected tickets at the target position
         const newOrder = [
-          ...remainingTickets.slice(0, insertIndex),
-          ...selectedTickets,
-          ...remainingTickets.slice(insertIndex),
+          ...remaining.slice(0, insertIndex),
+          ...selectedInOrder,
+          ...remaining.slice(insertIndex),
         ]
 
         setOrderedTickets(newOrder)
@@ -334,11 +332,15 @@ export function BacklogTable({
         setBacklogOrder(projectId, newOrder.map((t) => t.id))
         clearSelection()
       } else {
-        // Single drag
-        const oldIndex = filteredTickets.findIndex((t) => t.id === activeId)
+        // Single drag using base order
+        const oldIndex = baseOrdered.findIndex((t) => t.id === activeId)
+        let targetIndex = baseOrdered.findIndex((t) => t.id === overId)
+        if (targetIndex === -1) {
+          targetIndex = baseOrdered.length - 1
+        }
 
         if (oldIndex !== -1 && targetIndex !== -1) {
-          const newOrder = arrayMove(filteredTickets, oldIndex, targetIndex)
+          const newOrder = arrayMove(baseOrdered, oldIndex, targetIndex)
           setOrderedTickets(newOrder)
           setHasManualOrder(true)
           setBacklogOrder(projectId, newOrder.map((t) => t.id))
