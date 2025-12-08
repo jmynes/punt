@@ -194,16 +194,22 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const moveTickets = board.moveTickets || (() => {})
     const moveTicket = board.moveTicket || (() => {})
 
+    const movableIds = selectedIds.filter((id) => {
+      const current = board.columns.flatMap((c) => c.tickets).find((t) => t.id === id)
+      return current && current.columnId !== toColumnId
+    })
+    if (movableIds.length === 0) return
+
     const beforeColumns = board.columns.map((col) => ({
       ...col,
       tickets: col.tickets.map((t) => ({ ...t })),
     }))
 
-    if (multi) {
-      moveTickets(selectedIds, toColumnId, toOrder)
+    if (movableIds.length > 1) {
+      moveTickets(movableIds, toColumnId, toOrder)
     } else {
       const from = ticket.columnId
-      moveTicket(ticket.id, from, toColumnId, toOrder)
+      moveTicket(movableIds[0], from, toColumnId, toOrder)
     }
 
     const afterColumns = (useBoardStore as any).getState?.().columns.map((col: any) => ({
@@ -211,7 +217,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       tickets: col.tickets.map((t: any) => ({ ...t })),
     })) || board.columns.map((col) => ({ ...col, tickets: col.tickets.map((t) => ({ ...t })) }))
 
-    const moves = selectedIds.map((id) => ({
+    const moves = movableIds.map((id) => ({
       ticketId: id,
       fromColumnId: beforeColumns.find((c) => c.tickets.some((t) => t.id === id))?.id || '',
       toColumnId: toColumnId,
@@ -266,7 +272,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] = []
     for (const id of selectedIds) {
       const current = board.columns.flatMap((c) => c.tickets).find((t) => t.id === id)
-      if (!current) continue
+      if (!current || current.priority === priority) continue
       const after = { ...current, priority }
       updates.push({ ticketId: id, before: current, after })
       updateTicket(id, { priority })
@@ -294,6 +300,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     for (const id of selectedIds) {
       const current = board.columns.flatMap((c) => c.tickets).find((t) => t.id === id)
       if (!current) continue
+      const currentAssignee = current.assigneeId || null
+      if (currentAssignee === userId) continue
       const after: TicketWithRelations = {
         ...current,
         assignee: user ?? undefined,
