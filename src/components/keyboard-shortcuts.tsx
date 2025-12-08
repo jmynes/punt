@@ -26,22 +26,7 @@ import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
-
-// Project ID to key mapping
-const projectKeys: Record<string, string> = {
-  '1': 'PUNT',
-  '2': 'API',
-  '3': 'MOB',
-  'project-1': 'PUNT',
-  'project-2': 'API',
-  'project-3': 'MOB',
-}
-
-// Helper to format ticket ID (e.g., "API-1")
-function formatTicketId(ticket: TicketWithRelations): string {
-  const projectKey = projectKeys[ticket.projectId] || ticket.projectId
-  return `${projectKey}-${ticket.number}`
-}
+import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 
 export function KeyboardShortcuts() {
   // Only subscribe to reactive state we need for re-renders
@@ -459,8 +444,11 @@ export function KeyboardShortcuts() {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && selectedTicketIds.size > 0) {
         e.preventDefault()
         useSelectionStore.getState().copySelected()
+        const columnsSnapshot = useBoardStore.getState().columns
+        const ticketKeys = formatTicketIds(columnsSnapshot, Array.from(selectedTicketIds))
         const count = selectedTicketIds.size
         toast.success(count === 1 ? 'Ticket copied' : `${count} tickets copied`, {
+          description: ticketKeys.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
           duration: 2000,
         })
         return

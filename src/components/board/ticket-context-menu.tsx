@@ -26,6 +26,7 @@ import {
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUndoStore } from '@/stores/undo-store'
@@ -36,20 +37,6 @@ import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 type MenuProps = {
   ticket: TicketWithRelations
   children: React.ReactElement
-}
-
-const projectKeys: Record<string, string> = {
-  '1': 'PUNT',
-  '2': 'API',
-  '3': 'MOB',
-  'project-1': 'PUNT',
-  'project-2': 'API',
-  'project-3': 'MOB',
-}
-
-function formatTicketId(ticket: TicketWithRelations): string {
-  const projectKey = projectKeys[ticket.projectId] || ticket.projectId || 'TICKET'
-  return `${projectKey}-${ticket.number ?? ''}`.trim()
 }
 
 export function TicketContextMenu({ ticket, children }: MenuProps) {
@@ -129,12 +116,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const getIds = selectionApi.getSelectedIds || (() => [])
     copySelected()
     const ids = getIds()
-    const ticketKeys = ids
-      .map((id: string) => {
-        const t = board.columns.flatMap((c) => c.tickets).find((tk) => tk.id === id)
-        return t ? formatTicketId(t) : id
-      })
-      .filter(Boolean)
+    const ticketKeys = formatTicketIds(board.columns, ids)
     const count = ids.length
     toast.success(count === 1 ? 'Ticket copied' : `${count} tickets copied`, {
       description: ticketKeys.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
@@ -240,12 +222,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         : 'Multiple'
     const toColumnName = column.name
 
-    const ticketKeys = moves
-      .map((move) => {
-        const t = afterColumns.flatMap((c: any) => c.tickets).find((tk: any) => tk.id === move.ticketId)
-        return t ? formatTicketId(t) : move.ticketId
-      })
-      .filter(Boolean)
+    const ticketKeys = formatTicketIds(afterColumns, moves.map((m) => m.ticketId))
 
     const toastId = toast.success(
       moves.length === 1 ? 'Ticket moved' : `${moves.length} tickets moved`,
@@ -296,12 +273,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }
     if (updates.length === 0) return
 
-    const ticketKeys = updates
-      .map((u) => {
-        const t = board.columns.flatMap((c) => c.tickets).find((tk) => tk.id === u.ticketId)
-        return t ? formatTicketId(t) : u.ticketId
-      })
-      .filter(Boolean)
+    const ticketKeys = formatTicketIds(board.columns, updates.map((u) => u.ticketId))
 
     const toastId = toast.success(
       updates.length === 1 ? 'Priority updated' : `${updates.length} priorities updated`,
@@ -332,12 +304,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }
     if (updates.length === 0) return
 
-    const ticketKeys = updates
-      .map((u) => {
-        const t = board.columns.flatMap((c) => c.tickets).find((tk) => tk.id === u.ticketId)
-        return t ? formatTicketId(t) : u.ticketId
-      })
-      .filter(Boolean)
+    const ticketKeys = formatTicketIds(board.columns, updates.map((u) => u.ticketId))
 
     const msg =
       updates.length === 1
