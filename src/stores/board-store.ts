@@ -47,6 +47,9 @@ interface BoardState {
   searchQuery: string
   setSearchQuery: (query: string) => void
 
+  // Get the next ticket number (max + 1)
+  getNextTicketNumber: () => number
+
   // Optimistic updates for drag and drop
   moveTicket: (ticketId: string, fromColumnId: string, toColumnId: string, newOrder: number) => void
 
@@ -71,7 +74,7 @@ interface BoardState {
 
 export const useBoardStore = create<BoardState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       columns: DEFAULT_COLUMNS,
       setColumns: (columns) => set({ columns }),
 
@@ -82,6 +85,13 @@ export const useBoardStore = create<BoardState>()(
       // Search/filter
       searchQuery: '',
       setSearchQuery: (query) => set({ searchQuery: query }),
+
+      // Get the next ticket number
+      getNextTicketNumber: () => {
+        const allTickets = get().columns.flatMap((col) => col.tickets)
+        if (allTickets.length === 0) return 1
+        return Math.max(...allTickets.map((t) => t.number)) + 1
+      },
 
       moveTicket: (ticketId, fromColumnId, toColumnId, newOrder) =>
         set((state) => {

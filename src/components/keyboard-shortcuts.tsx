@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
@@ -43,10 +44,11 @@ function formatTicketId(ticket: TicketWithRelations): string {
 }
 
 export function KeyboardShortcuts() {
-  const { columns, addTicket, removeTicket, reorderTicket, reorderTickets, moveTicket, moveTickets } = useBoardStore()
-  const { popUndo, pushRedo, popRedo, pushDeletedBatch } = useUndoStore()
-  const { clearSelection, selectedTicketIds, getSelectedIds, setTicketOrigin, getTicketOrigin } = useSelectionStore()
+  const { columns, addTicket, removeTicket, reorderTicket, reorderTickets, moveTicket, moveTickets, getNextTicketNumber } = useBoardStore()
+  const { popUndo, pushRedo, popRedo, pushDeletedBatch, pushPaste } = useUndoStore()
+  const { clearSelection, selectedTicketIds, getSelectedIds, setTicketOrigin, getTicketOrigin, copySelected, getCopiedIds } = useSelectionStore()
   const { activeTicketId, setActiveTicketId, createTicketOpen, setCreateTicketOpen } = useUIStore()
+  const { openSinglePastedTicket } = useSettingsStore()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [ticketsToDelete, setTicketsToDelete] = useState<TicketWithRelations[]>([])
@@ -443,6 +445,91 @@ export function KeyboardShortcuts() {
         return
       }
 
+      // Ctrl/Cmd + C: Copy selected tickets
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && selectedTicketIds.size > 0) {
+        e.preventDefault()
+        copySelected()
+        const count = selectedTicketIds.size
+        toast.success(count === 1 ? 'Ticket copied' : `${count} tickets copied`, {
+          duration: 2000,
+        })
+        return
+      }
+
+      // Ctrl/Cmd + V: Paste copied tickets
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+        e.preventDefault()
+        const copiedIds = getCopiedIds()
+        if (copiedIds.length === 0) return
+
+        // Find the original tickets and their columns
+        const ticketsToPaste: Array<{ ticket: TicketWithRelations; columnId: string }> = []
+        for (const id of copiedIds) {
+          for (const column of columns) {
+            const ticket = column.tickets.find((t) => t.id === id)
+            if (ticket) {
+              ticketsToPaste.push({ ticket, columnId: column.id })
+              break
+            }
+          }
+        }
+
+        if (ticketsToPaste.length === 0) return
+
+        // Clone each ticket with new ID and number
+        const newTickets: Array<{ ticket: TicketWithRelations; columnId: string }> = []
+        let nextNumber = getNextTicketNumber()
+
+        for (const { ticket, columnId } of ticketsToPaste) {
+          const newTicket: TicketWithRelations = {
+            ...ticket,
+            id: `ticket-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            number: nextNumber++,
+            title: `${ticket.title} (copy)`,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }
+          newTickets.push({ ticket: newTicket, columnId })
+          addTicket(columnId, newTicket)
+        }
+
+        // Show toast with undo option
+        const ticketKeys = newTickets.map(({ ticket }) => formatTicketId(ticket))
+        const toastId = toast.success(
+          newTickets.length === 1 ? 'Ticket pasted' : `${newTickets.length} tickets pasted`,
+          {
+            description: newTickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+            duration: 5000,
+            action: {
+              label: 'Undo',
+              onClick: () => {
+                // Remove all pasted tickets
+                for (const { ticket } of newTickets) {
+                  removeTicket(ticket.id)
+                }
+                toast.success('Paste undone', { duration: 2000 })
+              },
+            },
+          },
+        )
+
+        // Push to undo stack
+        pushPaste(newTickets, toastId)
+
+        // If single ticket and setting enabled, open it
+        if (newTickets.length === 1 && openSinglePastedTicket) {
+          setActiveTicketId(newTickets[0].ticket.id)
+        }
+
+        // Select the newly pasted tickets
+        clearSelection()
+        for (const { ticket } of newTickets) {
+          useSelectionStore.getState().toggleTicket(ticket.id)
+        }
+
+        return
+      }
+
       // Check for Ctrl/Cmd + Z (Undo) - must check before redo to avoid conflicts
       if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
         e.preventDefault()
@@ -508,6 +595,28 @@ export function KeyboardShortcuts() {
               {
                 description:
                   entry.action.moves.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+                duration: 3000,
+              },
+            )
+          } else if (entry.action.type === 'paste') {
+            // Remove all pasted tickets
+            for (const { ticket } of entry.action.tickets) {
+              removeTicket(ticket.id)
+            }
+            // Ensure drawer is closed and selection cleared
+            setActiveTicketId(null)
+            clearSelection()
+            pushRedo(entry)
+
+            // Format ticket IDs for notification
+            const ticketKeys = entry.action.tickets.map(({ ticket }) => formatTicketId(ticket))
+            toast.success(
+              entry.action.tickets.length === 1
+                ? 'Paste undone'
+                : `${entry.action.tickets.length} pastes undone`,
+              {
+                description:
+                  entry.action.tickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
                 duration: 3000,
               },
             )
@@ -600,6 +709,25 @@ export function KeyboardShortcuts() {
               currentStateBeforeRedo, // originalColumns: state to restore to when undoing (A)
               entry.action.afterColumns, // afterColumns: current state after redo (B)
             )
+          } else if (entry.action.type === 'paste') {
+            // Restore all pasted tickets
+            for (const { ticket, columnId } of entry.action.tickets) {
+              addTicket(columnId, ticket)
+            }
+
+            // Format ticket IDs for notification
+            const ticketKeys = entry.action.tickets.map(({ ticket }) => formatTicketId(ticket))
+            const newToastId = toast.success(
+              entry.action.tickets.length === 1
+                ? 'Ticket pasted'
+                : `${entry.action.tickets.length} tickets pasted`,
+              {
+                description:
+                  entry.action.tickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+                duration: 5000,
+              },
+            )
+            pushPaste(entry.action.tickets, newToastId)
           }
         }
       }
@@ -614,15 +742,21 @@ export function KeyboardShortcuts() {
     reorderTickets,
     moveTicket,
     moveTickets,
+    getNextTicketNumber,
     popUndo,
     pushRedo,
     popRedo,
     pushDeletedBatch,
+    pushPaste,
     clearSelection,
     selectedTicketIds,
     getSelectedIds,
     setTicketOrigin,
     getTicketOrigin,
+    copySelected,
+    getCopiedIds,
+    openSinglePastedTicket,
+    setActiveTicketId,
     showDeleteConfirm,
     showShortcuts,
     columns,
@@ -710,6 +844,18 @@ export function KeyboardShortcuts() {
             <div>
               <h3 className="text-sm font-semibold text-zinc-200 mb-2">Actions</h3>
               <div className="space-y-2 text-sm text-zinc-400">
+                <div className="flex items-center justify-between">
+                  <span>Copy selected tickets</span>
+                  <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
+                    Ctrl / Cmd + C
+                  </kbd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Paste copied tickets</span>
+                  <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
+                    Ctrl / Cmd + V
+                  </kbd>
+                </div>
                 <div className="flex items-center justify-between">
                   <span>Delete selected tickets</span>
                   <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
