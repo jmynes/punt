@@ -342,14 +342,12 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                 label="Assign"
                 trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
                 onMouseEnter={openSubmenu('assign')}
-                onMouseLeave={closeSubmenu}
               />
               <MenuButton
                 icon={<UserCheck className="h-4 w-4" />}
                 label="Priority"
                 trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
                 onMouseEnter={openSubmenu('priority')}
-                onMouseLeave={closeSubmenu}
               />
               {!multi && <MenuButton icon={<Pencil className="h-4 w-4" />} label="Edit" onClick={doEdit} />}
 
@@ -359,7 +357,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                   label="Move"
                   trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
                   onMouseEnter={openSubmenu('send')}
-                  onMouseLeave={closeSubmenu}
                 />
               </MenuSection>
 
@@ -389,10 +386,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                 <div
                   className="fixed z-[201] min-w-[200px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
                   style={{
-                    left: submenu.anchor.x + 8,
+                    left: submenu.anchor.x + 2,
                     top: submenu.anchor.y,
                   }}
-                  onMouseLeave={closeSubmenu}
                 >
                   <div className="py-1 text-sm text-zinc-200">
                     {submenu.id === 'priority' &&
