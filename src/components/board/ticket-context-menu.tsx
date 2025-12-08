@@ -60,7 +60,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const [submenu, setSubmenu] = useState<
     | null
     | {
-        id: 'priority' | 'assign'
+        id: 'priority' | 'assign' | 'send'
         anchor: { x: number; y: number; height: number }
       }
   >(null)
@@ -253,7 +253,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     return contextChild
   }
 
-  const openSubmenu = (id: 'priority' | 'assign') => (e: React.MouseEvent) => {
+  const openSubmenu = (id: 'priority' | 'assign' | 'send') => (e: React.MouseEvent) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
     setSubmenu({ id, anchor: { x: rect.right, y: rect.top, height: rect.height } })
   }
@@ -271,40 +271,39 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             style={{ position: 'fixed', left: coords.x, top: coords.y }}
           >
             <div className="py-1 text-sm text-zinc-200 relative">
-              <MenuButton icon={<ClipboardCopy className="h-4 w-4" />} label="Copy" onClick={doCopy} />
-              <MenuButton icon={<ClipboardPaste className="h-4 w-4" />} label="Paste" onClick={doPaste} />
-
-              <MenuSection title="Send to">
-                {columns.map((col) => (
-                  <MenuButton
-                    key={col.id}
-                    icon={<Send className="h-4 w-4" />}
-                    label={col.name}
-                    onClick={() => doSendTo(col.id)}
-                  />
-                ))}
+              <MenuSection title={`Modify ${multi ? `${selectedIds.length} Tasks` : '1 Task'}`}>
+                <MenuButton
+                  icon={<UserIcon className="h-4 w-4" />}
+                  label="Assign"
+                  trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                  onMouseEnter={openSubmenu('assign')}
+                  onMouseLeave={closeSubmenu}
+                />
+                <MenuButton
+                  icon={<UserCheck className="h-4 w-4" />}
+                  label="Priority"
+                  trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                  onMouseEnter={openSubmenu('priority')}
+                  onMouseLeave={closeSubmenu}
+                />
+                {!multi && <MenuButton icon={<Pencil className="h-4 w-4" />} label="Edit" onClick={doEdit} />}
               </MenuSection>
 
-              {!multi && (
-                <MenuButton icon={<Pencil className="h-4 w-4" />} label="Edit" onClick={doEdit} />
-              )}
-              <MenuButton icon={<Trash2 className="h-4 w-4" />} label="Delete" onClick={doDelete} />
+              <MenuSection title="Send To">
+                <MenuButton
+                  icon={<Send className="h-4 w-4" />}
+                  label="Move"
+                  trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                  onMouseEnter={openSubmenu('send')}
+                  onMouseLeave={closeSubmenu}
+                />
+              </MenuSection>
 
-              <MenuButton
-                icon={<UserCheck className="h-4 w-4" />}
-                label="Priority"
-                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-                onMouseEnter={openSubmenu('priority')}
-                onMouseLeave={closeSubmenu}
-              />
-
-              <MenuButton
-                icon={<UserIcon className="h-4 w-4" />}
-                label="Assign"
-                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-                onMouseEnter={openSubmenu('assign')}
-                onMouseLeave={closeSubmenu}
-              />
+              <MenuSection title="Operations">
+                <MenuButton icon={<ClipboardCopy className="h-4 w-4" />} label="Copy (Ctrl/Cmd + C)" onClick={doCopy} />
+                <MenuButton icon={<ClipboardPaste className="h-4 w-4" />} label="Paste (Ctrl/Cmd + V)" onClick={doPaste} />
+                <MenuButton icon={<Trash2 className="h-4 w-4" />} label="Del (Del)" onClick={doDelete} />
+              </MenuSection>
 
               {submenu && (
                 <div
@@ -372,6 +371,18 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                         </button>
                       </>
                     )}
+
+                    {submenu.id === 'send' &&
+                      columns.map((col) => (
+                        <button
+                          key={col.id}
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                          onClick={() => doSendTo(col.id)}
+                        >
+                          <Send className="h-4 w-4 text-zinc-400" />
+                          <span>{col.name}</span>
+                        </button>
+                      ))}
                   </div>
                 </div>
               )}
