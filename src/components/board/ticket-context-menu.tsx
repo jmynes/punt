@@ -324,7 +324,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           onClick={() => doPriority(p)}
                         >
                           <PriorityBadge priority={p} size="xs" />
-                          <span className="capitalize">{p}</span>
                         </button>
                       ))}
 
