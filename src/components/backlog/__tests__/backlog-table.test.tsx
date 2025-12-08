@@ -65,6 +65,9 @@ describe('BacklogTable', () => {
       setGroupByEpic: vi.fn(),
       columnConfigOpen: false,
       setColumnConfigOpen: vi.fn(),
+      backlogOrder: {},
+      setBacklogOrder: vi.fn(),
+      clearBacklogOrder: vi.fn(),
     })
 
     vi.mocked(useBoardStore).mockReturnValue({
@@ -85,15 +88,22 @@ describe('BacklogTable', () => {
   })
 
   it('should render table with tickets', () => {
+    const statusColumns = createMockColumns()
     const { container } = render(
-      <BacklogTable tickets={mockTickets} projectKey="TEST" onRowClick={vi.fn()} />,
+      <BacklogTable
+        tickets={mockTickets}
+        columns={statusColumns}
+        projectKey="TEST"
+        projectId="1"
+      />,
     )
     expect(container).toBeInTheDocument()
   })
 
   it('should handle empty tickets array', () => {
+    const statusColumns = createMockColumns()
     const { container } = render(
-      <BacklogTable tickets={[]} projectKey="TEST" onRowClick={vi.fn()} />,
+      <BacklogTable tickets={[]} columns={statusColumns} projectKey="TEST" projectId="1" />,
     )
     expect(container).toBeInTheDocument()
   })
