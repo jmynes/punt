@@ -349,7 +349,12 @@ export default function BacklogPage() {
 
       {/* Backlog table */}
       <div className="flex-1 overflow-hidden">
-        <BacklogTable tickets={allTickets} columns={columns} projectKey={projectKey} />
+        <BacklogTable
+          tickets={allTickets}
+          columns={columns}
+          projectKey={projectKey}
+          projectId={projectId}
+        />
       </div>
 
       {/* Column config sheet */}

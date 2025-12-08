@@ -100,6 +100,11 @@ interface BacklogState {
   // Column config panel
   columnConfigOpen: boolean
   setColumnConfigOpen: (open: boolean) => void
+
+  // Manual backlog ordering (per project)
+  backlogOrder: Record<string, string[]>
+  setBacklogOrder: (projectId: string, orderedIds: string[]) => void
+  clearBacklogOrder: (projectId: string) => void
 }
 
 export const useBacklogStore = create<BacklogState>()(
@@ -174,6 +179,21 @@ export const useBacklogStore = create<BacklogState>()(
       // Column config panel
       columnConfigOpen: false,
       setColumnConfigOpen: (open) => set({ columnConfigOpen: open }),
+
+      backlogOrder: {},
+      setBacklogOrder: (projectId, orderedIds) =>
+        set((state) => ({
+          backlogOrder: {
+            ...state.backlogOrder,
+            [projectId]: orderedIds,
+          },
+        })),
+      clearBacklogOrder: (projectId) =>
+        set((state) => {
+          if (!state.backlogOrder[projectId]) return state
+          const { [projectId]: _removed, ...rest } = state.backlogOrder
+          return { backlogOrder: rest }
+        }),
     }),
     {
       name: 'punt-backlog-config',
@@ -182,6 +202,7 @@ export const useBacklogStore = create<BacklogState>()(
         sort: state.sort,
         showSubtasks: state.showSubtasks,
         groupByEpic: state.groupByEpic,
+        backlogOrder: state.backlogOrder,
       }),
     },
   ),
