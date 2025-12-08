@@ -161,7 +161,33 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [], isBeingDragg
 
         {/* Footer */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/50">
-          {/* Assignee */}
+          {/* Left side: Story points and metadata */}
+          <div className="flex items-center gap-3">
+            {/* Story points */}
+            {ticket.storyPoints && (
+              <span className="text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+                {ticket.storyPoints} SP
+              </span>
+            )}
+
+            {/* Metadata counts */}
+            <div className="flex items-center gap-2 text-zinc-600">
+              {attachmentCount > 0 && (
+                <div className="flex items-center gap-0.5" title={`${attachmentCount} attachment(s)`}>
+                  <Paperclip className="h-3 w-3" />
+                  <span className="text-[10px]">{attachmentCount}</span>
+                </div>
+              )}
+              {commentCount > 0 && (
+                <div className="flex items-center gap-0.5" title={`${commentCount} comment(s)`}>
+                  <MessageSquare className="h-3 w-3" />
+                  <span className="text-[10px]">{commentCount}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Assignee (right side) */}
           {ticket.assignee ? (
             <Avatar className="h-5 w-5" title={ticket.assignee.name}>
               <AvatarImage src={ticket.assignee.avatar || undefined} />
@@ -177,29 +203,6 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [], isBeingDragg
               <User className="h-2.5 w-2.5 text-zinc-600" />
             </div>
           )}
-
-          {/* Story points */}
-          {ticket.storyPoints && (
-            <span className="text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
-              {ticket.storyPoints} SP
-            </span>
-          )}
-
-          {/* Metadata counts */}
-          <div className="flex items-center gap-2 text-zinc-600">
-            {attachmentCount > 0 && (
-              <div className="flex items-center gap-0.5" title={`${attachmentCount} attachment(s)`}>
-                <Paperclip className="h-3 w-3" />
-                <span className="text-[10px]">{attachmentCount}</span>
-              </div>
-            )}
-            {commentCount > 0 && (
-              <div className="flex items-center gap-0.5" title={`${commentCount} comment(s)`}>
-                <MessageSquare className="h-3 w-3" />
-                <span className="text-[10px]">{commentCount}</span>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </Card>
