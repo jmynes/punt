@@ -573,6 +573,26 @@ export function KeyboardShortcuts() {
                 duration: 3000,
               },
             )
+          } else if (entry.action.type === 'update') {
+            const boardStore = useBoardStore.getState()
+            for (const item of entry.action.tickets) {
+              boardStore.updateTicket(item.ticketId, item.before)
+            }
+            undoStore.pushRedo(entry)
+            const ticketKeys = entry.action.tickets
+              .map((item) => {
+                const t = columns.flatMap((c) => c.tickets).find((tk) => tk.id === item.ticketId)
+                return t ? formatTicketId(t) : item.ticketId
+              })
+              .filter(Boolean)
+            toast.success(
+              entry.action.tickets.length === 1 ? 'Change undone' : `${entry.action.tickets.length} changes undone`,
+              {
+                description:
+                  entry.action.tickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+                duration: 3000,
+              },
+            )
           } else if (entry.action.type === 'move') {
             // Restore the exact column state from before the move
             const moveBoardStore = useBoardStore.getState()
@@ -670,6 +690,31 @@ export function KeyboardShortcuts() {
               },
             )
             redoStore.pushDeletedBatch(entry.action.tickets, newToastId)
+          } else if (entry.action.type === 'update') {
+            const boardStore = useBoardStore.getState()
+            for (const item of entry.action.tickets) {
+              boardStore.updateTicket(item.ticketId, item.after)
+            }
+            // Push back to undo with swapped states
+            const swappedTickets = entry.action.tickets.map((item) => ({
+              ticketId: item.ticketId,
+              before: item.before,
+              after: item.after,
+            }))
+            const ticketKeys = swappedTickets
+              .map((item) => {
+                const t = boardStore.columns.flatMap((c) => c.tickets).find((tk) => tk.id === item.ticketId)
+                return t ? formatTicketId(t) : item.ticketId
+              })
+              .filter(Boolean)
+            const newToastId = toast.success(
+              swappedTickets.length === 1 ? 'Change redone' : `${swappedTickets.length} changes redone`,
+              {
+                description: swappedTickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+                duration: 3000,
+              },
+            )
+            redoStore.pushUpdate(swappedTickets, newToastId)
           } else if (entry.action.type === 'move') {
             // Capture current state before redo (state we want to restore to when undoing again)
             const boardStore = useBoardStore.getState()
