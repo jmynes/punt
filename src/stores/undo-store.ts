@@ -17,6 +17,12 @@ interface PastedTicket {
   columnId: string
 }
 
+interface UpdatedTicket {
+  ticketId: string
+  before: TicketWithRelations
+  after: TicketWithRelations
+}
+
 // Different types of undoable actions
 type UndoAction =
   | { type: 'delete'; tickets: DeletedTicket[] }
@@ -29,6 +35,7 @@ type UndoAction =
       afterColumns?: ColumnWithTickets[] // Store state after move for precise redo
     }
   | { type: 'paste'; tickets: PastedTicket[] }
+  | { type: 'update'; tickets: UpdatedTicket[] }
 
 interface UndoEntry {
   action: UndoAction
@@ -58,6 +65,9 @@ interface UndoState {
     originalColumns?: ColumnWithTickets[], // Optional: store original column state for precise undo (before move)
     afterColumns?: ColumnWithTickets[], // Optional: store state after move for precise redo
   ) => void
+
+  // Add an update action to the undo stack
+  pushUpdate: (tickets: UpdatedTicket[], toastId: string | number) => void
 
   // Pop and return the most recent undo entry
   popUndo: () => UndoEntry | undefined
@@ -144,6 +154,26 @@ export const useUndoStore = create<UndoState>((set, get) => ({
                   tickets: col.tickets.map((t) => ({ ...t })), // Deep copy
                 }))
               : undefined,
+          },
+          timestamp: Date.now(),
+          toastId,
+        },
+      ],
+      redoStack: [],
+    })),
+
+  pushUpdate: (tickets, toastId) =>
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: {
+            type: 'update',
+            tickets: tickets.map((t) => ({
+              ticketId: t.ticketId,
+              before: { ...t.before },
+              after: { ...t.after },
+            })),
           },
           timestamp: Date.now(),
           toastId,

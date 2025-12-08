@@ -202,12 +202,53 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const moveTickets = board.moveTickets || (() => {})
     const moveTicket = board.moveTicket || (() => {})
 
+    const beforeColumns = board.columns.map((col) => ({
+      ...col,
+      tickets: col.tickets.map((t) => ({ ...t })),
+    }))
+
     if (multi) {
       moveTickets(selectedIds, toColumnId, toOrder)
     } else {
       const from = ticket.columnId
       moveTicket(ticket.id, from, toColumnId, toOrder)
     }
+
+    const afterColumns = (useBoardStore as any).getState?.().columns.map((col: any) => ({
+      ...col,
+      tickets: col.tickets.map((t: any) => ({ ...t })),
+    })) || board.columns.map((col) => ({ ...col, tickets: col.tickets.map((t) => ({ ...t })) }))
+
+    const moves = selectedIds.map((id) => ({
+      ticketId: id,
+      fromColumnId: beforeColumns.find((c) => c.tickets.some((t) => t.id === id))?.id || '',
+      toColumnId: toColumnId,
+    }))
+    const fromColumnName =
+      moves.length === 1
+        ? beforeColumns.find((c) => c.id === moves[0].fromColumnId)?.name || 'Source'
+        : 'Multiple'
+    const toColumnName = column.name
+
+    const ticketKeys = moves
+      .map((move) => {
+        const t = afterColumns.flatMap((c: any) => c.tickets).find((tk: any) => tk.id === move.ticketId)
+        return t ? formatTicketId(t) : move.ticketId
+      })
+      .filter(Boolean)
+
+    const toastId = toast.success(
+      moves.length === 1 ? 'Ticket moved' : `${moves.length} tickets moved`,
+      {
+        description: moves.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+        duration: 3000,
+      },
+    )
+
+    const pushMove =
+      (useUndoStore as any).getState?.().pushMove || useUndoStore.getState().pushMove
+    pushMove(moves, fromColumnName, toColumnName, toastId, beforeColumns, afterColumns)
+
     setOpen(false)
     setSubmenu(null)
   }
@@ -235,13 +276,31 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const doPriority = (priority: TicketWithRelations['priority']) => {
     const updateTicket = board.updateTicket || (() => {})
-    selectedIds.forEach((id) => updateTicket(id, { priority }))
-    toast.success(
-      selectedIds.length === 1
-        ? 'Priority updated'
-        : `Priority updated for ${selectedIds.length} tickets`,
-      { duration: 1500 },
+    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] = []
+    for (const id of selectedIds) {
+      const current = board.columns.flatMap((c) => c.tickets).find((t) => t.id === id)
+      if (!current) continue
+      const after = { ...current, priority }
+      updates.push({ ticketId: id, before: current, after })
+      updateTicket(id, { priority })
+    }
+    if (updates.length === 0) return
+
+    const ticketKeys = updates
+      .map((u) => {
+        const t = board.columns.flatMap((c) => c.tickets).find((tk) => tk.id === u.ticketId)
+        return t ? formatTicketId(t) : u.ticketId
+      })
+      .filter(Boolean)
+
+    const toastId = toast.success(
+      updates.length === 1 ? 'Priority updated' : `${updates.length} priorities updated`,
+      { description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '), duration: 3000 },
     )
+    const pushUpdate =
+      (useUndoStore as any).getState?.().pushUpdate || useUndoStore.getState().pushUpdate
+    pushUpdate(updates, toastId)
+
     setOpen(false)
     setSubmenu(null)
   }
@@ -249,15 +308,44 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const doAssign = (userId: string | null) => {
     const user = members.find((m) => m.id === userId) || null
     const updateTicket = board.updateTicket || (() => {})
-    selectedIds.forEach((id) => updateTicket(id, { assignee: user ?? undefined, assigneeId: user?.id }))
-    toast.success(
-      selectedIds.length === 1
-        ? user ? `Assigned to ${user.name}` : 'Unassigned'
+    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] = []
+    for (const id of selectedIds) {
+      const current = board.columns.flatMap((c) => c.tickets).find((t) => t.id === id)
+      if (!current) continue
+      const after: TicketWithRelations = {
+        ...current,
+        assignee: user ?? undefined,
+        assigneeId: user?.id,
+      }
+      updates.push({ ticketId: id, before: current, after })
+      updateTicket(id, { assignee: user ?? undefined, assigneeId: user?.id })
+    }
+    if (updates.length === 0) return
+
+    const ticketKeys = updates
+      .map((u) => {
+        const t = board.columns.flatMap((c) => c.tickets).find((tk) => tk.id === u.ticketId)
+        return t ? formatTicketId(t) : u.ticketId
+      })
+      .filter(Boolean)
+
+    const msg =
+      updates.length === 1
+        ? user
+          ? `Assigned to ${user.name}`
+          : 'Unassigned'
         : user
-          ? `Assigned ${selectedIds.length} tickets to ${user.name}`
-          : `Unassigned ${selectedIds.length} tickets`,
-      { duration: 1500 },
-    )
+          ? `Assigned ${updates.length} tickets to ${user.name}`
+          : `Unassigned ${updates.length} tickets`
+
+    const toastId = toast.success(msg, {
+      description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+      duration: 3000,
+    })
+    const pushUpdate =
+      (useUndoStore as any).getState?.().pushUpdate || useUndoStore.getState().pushUpdate
+    pushUpdate(updates, toastId)
+
     setOpen(false)
     setSubmenu(null)
   }
