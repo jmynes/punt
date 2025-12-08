@@ -341,9 +341,25 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
               </MenuSection>
 
               <MenuSection title="Operations">
-                <MenuButton icon={<ClipboardCopy className="h-4 w-4" />} label="Copy (Ctrl/Cmd + C)" onClick={doCopy} />
-                <MenuButton icon={<ClipboardPaste className="h-4 w-4" />} label="Paste (Ctrl/Cmd + V)" onClick={doPaste} />
-                <MenuButton icon={<Trash2 className="h-4 w-4" />} label="Del (Del)" onClick={doDelete} />
+                <MenuButton
+                  icon={<ClipboardCopy className="h-4 w-4" />}
+                  label="Copy"
+                  shortcut="Ctrl/Cmd + C"
+                  onClick={doCopy}
+                />
+                <MenuButton
+                  icon={<ClipboardPaste className="h-4 w-4" />}
+                  label="Paste"
+                  shortcut="Ctrl/Cmd + V"
+                  onClick={doPaste}
+                />
+                <MenuButton
+                  icon={<Trash2 className="h-4 w-4" />}
+                  label="Delete"
+                  shortcut="Del"
+                  destructive
+                  onClick={doDelete}
+                />
               </MenuSection>
 
               {submenu && (
@@ -439,19 +455,27 @@ interface MenuButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
   icon?: React.ReactNode
   label: string
   trailing?: React.ReactNode
+  shortcut?: string
+  destructive?: boolean
 }
 
-function MenuButton({ icon, label, trailing, className, ...rest }: MenuButtonProps) {
+function MenuButton({ icon, label, trailing, shortcut, destructive, className, ...rest }: MenuButtonProps) {
   return (
     <button
       className={cn(
         'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800',
+        destructive && 'text-red-200 hover:bg-red-900/30',
         className,
       )}
       {...rest}
     >
       {icon && <span className="text-zinc-400">{icon}</span>}
-      <span className="flex-1">{label}</span>
+      <span className={cn('flex-1', destructive && 'text-red-200')}>{label}</span>
+      {shortcut && (
+        <span className={cn('text-[10px] text-zinc-500 ml-3', destructive && 'text-red-300')}>
+          {shortcut}
+        </span>
+      )}
       {trailing && <span className="text-zinc-500">{trailing}</span>}
     </button>
   )
