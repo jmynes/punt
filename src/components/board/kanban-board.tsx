@@ -116,24 +116,36 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
       const overId = over.id as string
       const draggedIds = draggedIdsRef.current
 
-      // Don't do anything if hovering over self or another dragged ticket
-      if (activeId === overId || (draggedIds.length > 1 && draggedIds.includes(overId))) {
-        return
-      }
-
       // Use beforeDragSnapshot for calculations (stable reference)
       const snapshotColumns = beforeDragSnapshot.current
       if (!snapshotColumns) return
 
       // Find which column we're hovering over
       const isOverColumn = over.data.current?.type === 'column'
+      const isOverColumnEnd = over.data.current?.type === 'column-end'
       let targetColumnId: string | undefined
+      let isHoveringOverDraggedTicket = false
+      let forceInsertAtEnd = false
 
       if (isOverColumn) {
         targetColumnId = overId
+      } else if (isOverColumnEnd) {
+        // Hovering over the "drop at end" zone
+        targetColumnId = over.data.current?.columnId
+        forceInsertAtEnd = true
       } else {
-        const targetColumn = snapshotColumns.find((col) => col.tickets.some((t) => t.id === overId))
-        targetColumnId = targetColumn?.id
+        // Check if hovering over a dragged ticket (it's hidden but still in DOM)
+        if (draggedIds.includes(overId)) {
+          isHoveringOverDraggedTicket = true
+          // Find which column the dragged ticket is from
+          const draggedTicketColumn = snapshotColumns.find((col) =>
+            col.tickets.some((t) => t.id === overId),
+          )
+          targetColumnId = draggedTicketColumn?.id
+        } else {
+          const targetColumn = snapshotColumns.find((col) => col.tickets.some((t) => t.id === overId))
+          targetColumnId = targetColumn?.id
+        }
       }
 
       if (!targetColumnId) return
@@ -145,8 +157,16 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
       const visibleTickets = targetColumn.tickets.filter((t) => !draggedIds.includes(t.id))
 
       let insertIndex: number
-      if (isOverColumn) {
+      if (isOverColumn || isOverColumnEnd || forceInsertAtEnd) {
+        // Insert at the end of the column
         insertIndex = visibleTickets.length
+      } else if (isHoveringOverDraggedTicket) {
+        // Hovering over a dragged ticket's original position
+        // Find its original index and use that as the insert position
+        const originalIndex = targetColumn.tickets.findIndex((t) => t.id === overId)
+        // Count how many visible tickets are before this position
+        const ticketsBefore = targetColumn.tickets.slice(0, originalIndex)
+        insertIndex = ticketsBefore.filter((t) => !draggedIds.includes(t.id)).length
       } else {
         const overTicketIndex = visibleTickets.findIndex((t) => t.id === overId)
         insertIndex = overTicketIndex >= 0 ? overTicketIndex : visibleTickets.length

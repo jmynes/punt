@@ -35,6 +35,15 @@ export function KanbanColumn({
     },
   })
 
+  // Dedicated droppable for "drop at end of column"
+  const { setNodeRef: setEndDropRef, isOver: isOverEnd } = useDroppable({
+    id: `${column.id}-end`,
+    data: {
+      type: 'column-end',
+      columnId: column.id,
+    },
+  })
+
   // Exclude dragged tickets from SortableContext items to prevent transform calculation issues
   const ticketIds = column.tickets
     .filter((t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId)
@@ -109,24 +118,34 @@ export function KanbanColumn({
             })}
           </SortableContext>
 
-          {/* Show full-size placeholder at the end if target is beyond last ticket */}
-          {activeDragTarget !== null &&
-            activeDragTarget >=
-              column.tickets.filter(
-                (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
-              ).length &&
-            (dragSelectionIds.length > 0 || activeTicketId) && (
-              <div className="mt-2 rounded-lg border-2 border-amber-500/50 border-dashed bg-amber-500/10 min-h-[120px] flex items-center justify-center pointer-events-none">
-                <span className="text-xs text-amber-500/70">Drop here</span>
+          {/* Drop zone at bottom - droppable area for inserting at end */}
+          <div
+            ref={setEndDropRef}
+            className={cn(
+              'min-h-[80px] flex-1 rounded-lg transition-colors',
+              (dragSelectionIds.length > 0 || activeTicketId) && 'min-h-[100px]',
+              isOverEnd && 'bg-amber-500/10 border-2 border-dashed border-amber-500/50',
+            )}
+          >
+            {/* Show full-size placeholder at the end if target is beyond last ticket */}
+            {activeDragTarget !== null &&
+              activeDragTarget >=
+                column.tickets.filter(
+                  (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
+                ).length &&
+              (dragSelectionIds.length > 0 || activeTicketId) && (
+                <div className="rounded-lg border-2 border-amber-500/50 border-dashed bg-amber-500/10 min-h-[120px] flex items-center justify-center pointer-events-none">
+                  <span className="text-xs text-amber-500/70">Drop here</span>
+                </div>
+              )}
+
+            {/* Drop zone indicator when empty and not dragging */}
+            {column.tickets.length === 0 && !activeTicketId && dragSelectionIds.length === 0 && (
+              <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-lg">
+                <span className="text-xs text-zinc-600">Drop tickets here</span>
               </div>
             )}
-
-          {/* Drop zone indicator when empty */}
-          {column.tickets.length === 0 && (
-            <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-lg">
-              <span className="text-xs text-zinc-600">Drop tickets here</span>
-            </div>
-          )}
+          </div>
         </div>
       </ScrollArea>
 
