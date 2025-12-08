@@ -2,7 +2,20 @@
 
 import { cloneElement, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import {
+  ChevronRight,
+  ClipboardCopy,
+  ClipboardPaste,
+  Pencil,
+  Send,
+  Trash2,
+  User as UserIcon,
+  UserCheck,
+} from 'lucide-react'
 import { toast } from 'sonner'
+import { PriorityBadge } from '@/components/common/priority-badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUndoStore } from '@/stores/undo-store'
@@ -44,6 +57,13 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   }, [selection, ticket.id])
 
   const multi = selectedIds.length > 1
+  const [submenu, setSubmenu] = useState<
+    | null
+    | {
+        id: 'priority' | 'assign'
+        anchor: { x: number; y: number; height: number }
+      }
+  >(null)
 
   // Close on outside click / escape
   useEffect(() => {
@@ -77,6 +97,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     ensureSelection()
     setOpen(true)
     setCoords({ x: e.clientX, y: e.clientY })
+    setSubmenu(null)
     children.props.onContextMenu?.(e)
   }
 
@@ -87,6 +108,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const count = getIds().length
     toast.success(count === 1 ? 'Ticket copied' : `${count} tickets copied`, { duration: 1500 })
     setOpen(false)
+    setSubmenu(null)
   }
 
   const doPaste = () => {
@@ -147,6 +169,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     clearSelection()
     newTickets.forEach(({ ticket }) => toggleTicket(ticket.id))
     setOpen(false)
+    setSubmenu(null)
   }
 
   const doSendTo = (toColumnId: string) => {
@@ -163,6 +186,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       moveTicket(ticket.id, from, toColumnId, toOrder)
     }
     setOpen(false)
+    setSubmenu(null)
   }
 
   const doDelete = () => {
@@ -181,12 +205,14 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         : `${ticketsToDelete.length} tickets deleted`,
     )
     setOpen(false)
+    setSubmenu(null)
   }
 
   const doEdit = () => {
     if (multi) return
     uiStore.setActiveTicketId(ticket.id)
     setOpen(false)
+    setSubmenu(null)
   }
 
   const doPriority = (priority: TicketWithRelations['priority']) => {
@@ -199,6 +225,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       { duration: 1500 },
     )
     setOpen(false)
+    setSubmenu(null)
   }
 
   const doAssign = (userId: string | null) => {
@@ -214,6 +241,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       { duration: 1500 },
     )
     setOpen(false)
+    setSubmenu(null)
   }
 
   const contextChild = useMemo(
@@ -225,6 +253,13 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     return contextChild
   }
 
+  const openSubmenu = (id: 'priority' | 'assign') => (e: React.MouseEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setSubmenu({ id, anchor: { x: rect.right, y: rect.top, height: rect.height } })
+  }
+
+  const closeSubmenu = () => setSubmenu(null)
+
   return (
     <>
       {contextChild}
@@ -235,71 +270,153 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             className="z-[200] min-w-[220px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
             style={{ position: 'fixed', left: coords.x, top: coords.y }}
           >
-            <div className="py-1 text-sm text-zinc-200">
-              <button className="w-full px-3 py-1.5 text-left hover:bg-zinc-800" onClick={doCopy}>
-                Copy
-              </button>
-              <button className="w-full px-3 py-1.5 text-left hover:bg-zinc-800" onClick={doPaste}>
-                Paste
-              </button>
-              <div className="my-1 border-t border-zinc-800" />
-              <div className="px-3 py-1 text-xs uppercase text-zinc-500">Send to</div>
-              {columns.map((col) => (
-                <button
-                  key={col.id}
-                  className="w-full px-3 py-1.5 text-left hover:bg-zinc-800"
-                  onClick={() => doSendTo(col.id)}
-                >
-                  {col.name}
-                </button>
-              ))}
-              <div className="my-1 border-t border-zinc-800" />
+            <div className="py-1 text-sm text-zinc-200 relative">
+              <MenuButton icon={<ClipboardCopy className="h-4 w-4" />} label="Copy" onClick={doCopy} />
+              <MenuButton icon={<ClipboardPaste className="h-4 w-4" />} label="Paste" onClick={doPaste} />
+
+              <MenuSection title="Send to">
+                {columns.map((col) => (
+                  <MenuButton
+                    key={col.id}
+                    icon={<Send className="h-4 w-4" />}
+                    label={col.name}
+                    onClick={() => doSendTo(col.id)}
+                  />
+                ))}
+              </MenuSection>
+
               {!multi && (
-                <button className="w-full px-3 py-1.5 text-left hover:bg-zinc-800" onClick={doEdit}>
-                  Edit
-                </button>
+                <MenuButton icon={<Pencil className="h-4 w-4" />} label="Edit" onClick={doEdit} />
               )}
-              <button className="w-full px-3 py-1.5 text-left hover:bg-zinc-800" onClick={doDelete}>
-                Delete
-              </button>
-              <div className="my-1 border-t border-zinc-800" />
-              <div className="px-3 py-1 text-xs uppercase text-zinc-500">Priority</div>
-              {['critical', 'highest', 'high', 'medium', 'low', 'lowest'].map((p) => (
-                <button
-                  key={p}
-                  className="w-full px-3 py-1.5 text-left capitalize hover:bg-zinc-800"
-                  onClick={() => doPriority(p as TicketWithRelations['priority'])}
+              <MenuButton icon={<Trash2 className="h-4 w-4" />} label="Delete" onClick={doDelete} />
+
+              <MenuButton
+                icon={<UserCheck className="h-4 w-4" />}
+                label="Priority"
+                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                onMouseEnter={openSubmenu('priority')}
+                onMouseLeave={closeSubmenu}
+              />
+
+              <MenuButton
+                icon={<UserIcon className="h-4 w-4" />}
+                label="Assign"
+                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                onMouseEnter={openSubmenu('assign')}
+                onMouseLeave={closeSubmenu}
+              />
+
+              {submenu && (
+                <div
+                  className="absolute z-[201] min-w-[200px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
+                  style={{
+                    left: submenu.anchor.x + 8,
+                    top: submenu.anchor.y,
+                  }}
+                  onMouseLeave={closeSubmenu}
                 >
-                  {p}
-                </button>
-              ))}
-              <div className="my-1 border-t border-zinc-800" />
-              <div className="px-3 py-1 text-xs uppercase text-zinc-500">Assign</div>
-              <button
-                className="w-full px-3 py-1.5 text-left hover:bg-zinc-800"
-                onClick={() => doAssign(currentUser.id)}
-              >
-                Assign to me
-              </button>
-              {members.map((m) => (
-                <button
-                  key={m.id}
-                  className="w-full px-3 py-1.5 text-left hover:bg-zinc-800"
-                  onClick={() => doAssign(m.id)}
-                >
-                  {m.name}
-                </button>
-              ))}
-              <button
-                className="w-full px-3 py-1.5 text-left hover:bg-zinc-800"
-                onClick={() => doAssign(null)}
-              >
-                Unassign
-              </button>
+                  <div className="py-1 text-sm text-zinc-200">
+                    {submenu.id === 'priority' &&
+                      (['critical', 'highest', 'high', 'medium', 'low', 'lowest'] as const).map((p) => (
+                        <button
+                          key={p}
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                          onClick={() => doPriority(p)}
+                        >
+                          <PriorityBadge priority={p} size="xs" />
+                          <span className="capitalize">{p}</span>
+                        </button>
+                      ))}
+
+                    {submenu.id === 'assign' && (
+                      <>
+                        <button
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                          onClick={() => doAssign(currentUser.id)}
+                        >
+                          <Avatar className="h-5 w-5">
+                            <AvatarFallback
+                              className="text-[10px] text-white font-medium"
+                              style={{ backgroundColor: getAvatarColor(currentUser.id) }}
+                            >
+                              {getInitials(currentUser.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>Assign to me</span>
+                        </button>
+                        {members.map((m) => (
+                          <button
+                            key={m.id}
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doAssign(m.id)}
+                          >
+                            <Avatar className="h-5 w-5">
+                              {m.avatar && <AvatarImage src={m.avatar} />}
+                              <AvatarFallback
+                                className="text-[10px] text-white font-medium"
+                                style={{ backgroundColor: getAvatarColor(m.id) }}
+                              >
+                                {getInitials(m.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{m.name}</span>
+                          </button>
+                        ))}
+                        <button
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                          onClick={() => doAssign(null)}
+                        >
+                          <Avatar className="h-5 w-5">
+                            <AvatarFallback className="text-[10px] text-zinc-400">–</AvatarFallback>
+                          </Avatar>
+                          <span>Unassign</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>,
           document.body,
         )}
+    </>
+  )
+}
+
+interface MenuButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  icon?: React.ReactNode
+  label: string
+  trailing?: React.ReactNode
+}
+
+function MenuButton({ icon, label, trailing, className, ...rest }: MenuButtonProps) {
+  return (
+    <button
+      className={cn(
+        'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800',
+        className,
+      )}
+      {...rest}
+    >
+      {icon && <span className="text-zinc-400">{icon}</span>}
+      <span className="flex-1">{label}</span>
+      {trailing && <span className="text-zinc-500">{trailing}</span>}
+    </button>
+  )
+}
+
+interface MenuSectionProps {
+  title: string
+  children: React.ReactNode
+}
+
+function MenuSection({ title, children }: MenuSectionProps) {
+  return (
+    <>
+      <div className="my-1 border-t border-zinc-800" />
+      <div className="px-3 py-1 text-xs uppercase text-zinc-500">{title}</div>
+      {children}
     </>
   )
 }
