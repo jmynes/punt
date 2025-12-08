@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
-import { cn } from '@/lib/utils'
+import { cn, getAvatarColor } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
@@ -806,7 +806,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     {ticket.watchers.map((watcher) => (
                       <Avatar key={watcher.id} className="h-7 w-7 border-2 border-zinc-900">
                         <AvatarImage src={watcher.avatar || undefined} />
-                        <AvatarFallback className="text-xs">
+                        <AvatarFallback 
+                          className="text-xs text-white font-medium"
+                          style={{ backgroundColor: getAvatarColor(watcher.id || watcher.name) }}
+                        >
                           {watcher.name
                             .split(' ')
                             .map((n) => n[0])

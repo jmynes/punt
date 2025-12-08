@@ -13,7 +13,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { cn } from '@/lib/utils'
+import { cn, getAvatarColor } from '@/lib/utils'
 import type { UserSummary } from '@/types'
 
 interface UserSelectProps {
@@ -54,7 +54,10 @@ export function UserSelect({
               <div className="flex items-center gap-2">
                 <Avatar className="h-5 w-5">
                   <AvatarImage src={selectedUser.avatar || undefined} />
-                  <AvatarFallback className="bg-zinc-700 text-xs">
+                  <AvatarFallback 
+                    className="text-xs text-white font-medium"
+                    style={{ backgroundColor: getAvatarColor(selectedUser.id || selectedUser.name) }}
+                  >
                     {selectedUser.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -102,7 +105,10 @@ export function UserSelect({
                   >
                     <Avatar className="mr-2 h-5 w-5">
                       <AvatarImage src={user.avatar || undefined} />
-                      <AvatarFallback className="bg-zinc-700 text-xs">
+                      <AvatarFallback 
+                        className="text-xs text-white font-medium"
+                        style={{ backgroundColor: getAvatarColor(user.id || user.name) }}
+                      >
                         {user.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
