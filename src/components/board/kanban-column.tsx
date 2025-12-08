@@ -52,7 +52,7 @@ export function KanbanColumn({
   return (
     <div
       className={cn(
-        'flex h-full w-72 flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-900/30',
+        'flex w-72 flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-900/30 max-h-full min-h-0',
         isOver && 'border-amber-500/50 bg-amber-500/5',
       )}
     >
@@ -79,9 +79,9 @@ export function KanbanColumn({
         </div>
       </div>
 
-      {/* Column content */}
-      <ScrollArea className="flex-1 p-2">
-        <div ref={setNodeRef} className="flex flex-col gap-2 min-h-[100px]">
+      {/* Column content - scrollable area */}
+      <ScrollArea className="flex-1 min-h-0">
+        <div ref={setNodeRef} className="flex flex-col gap-2 min-h-[100px] p-2">
           <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
             {column.tickets.map((ticket, index) => {
               // Hide ticket if it's in the drag selection OR if it's the active ticket being dragged
