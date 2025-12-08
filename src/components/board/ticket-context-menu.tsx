@@ -128,8 +128,18 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const copySelected = selectionApi.copySelected || (() => {})
     const getIds = selectionApi.getSelectedIds || (() => [])
     copySelected()
-    const count = getIds().length
-    toast.success(count === 1 ? 'Ticket copied' : `${count} tickets copied`, { duration: 1500 })
+    const ids = getIds()
+    const ticketKeys = ids
+      .map((id: string) => {
+        const t = board.columns.flatMap((c) => c.tickets).find((tk) => tk.id === id)
+        return t ? formatTicketId(t) : id
+      })
+      .filter(Boolean)
+    const count = ids.length
+    toast.success(count === 1 ? 'Ticket copied' : `${count} tickets copied`, {
+      description: ticketKeys.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+      duration: 2000,
+    })
     setOpen(false)
     setSubmenu(null)
   }
