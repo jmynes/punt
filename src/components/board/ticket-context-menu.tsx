@@ -211,22 +211,30 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const addTicket = board.addTicket || (() => {})
 
     const deletedBatch = ticketsToDelete.map((t) => ({ ticket: t, columnId: t.columnId }))
+    const ticketKeys = ticketsToDelete.map((t) => formatTicketId(t))
 
     ticketsToDelete.forEach((t) => removeTicket(t.id))
     selectionApi.clearSelection?.()
 
-    const toastId = toast.success(
+    const toastId = toast.error(
       ticketsToDelete.length === 1
         ? `${formatTicketId(ticketsToDelete[0])} deleted`
         : `${ticketsToDelete.length} tickets deleted`,
       {
+        description:
+          ticketsToDelete.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
         duration: 5000,
         action: {
           label: 'Undo',
           onClick: () => {
             deletedBatch.forEach(({ ticket, columnId }) => addTicket(columnId, ticket))
             useUndoStore.getState?.()?.removeEntry?.(toastId)
-            toast.success('Delete undone', { duration: 1500 })
+            toast.success(
+              ticketsToDelete.length === 1
+                ? 'Ticket restored'
+                : `${ticketsToDelete.length} tickets restored`,
+              { duration: 3000 },
+            )
           },
         },
       },
