@@ -83,12 +83,18 @@ interface BacklogState {
   setFilterByType: (types: string[]) => void
   filterByPriority: string[]
   setFilterByPriority: (priorities: string[]) => void
+  filterByStatus: string[]
+  setFilterByStatus: (statusIds: string[]) => void
   filterByAssignee: string[]
   setFilterByAssignee: (assignees: string[]) => void
   filterByLabels: string[]
   setFilterByLabels: (labels: string[]) => void
   filterBySprint: string | null
   setFilterBySprint: (sprintId: string | null) => void
+  filterByPoints: number[]
+  setFilterByPoints: (points: number[]) => void
+  filterByDueDate: string[]
+  setFilterByDueDate: (dates: string[]) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
   clearFilters: () => void
@@ -157,21 +163,30 @@ export const useBacklogStore = create<BacklogState>()(
       setFilterByType: (types) => set({ filterByType: types }),
       filterByPriority: [],
       setFilterByPriority: (priorities) => set({ filterByPriority: priorities }),
+      filterByStatus: [],
+      setFilterByStatus: (statusIds) => set({ filterByStatus: statusIds }),
       filterByAssignee: [],
       setFilterByAssignee: (assignees) => set({ filterByAssignee: assignees }),
       filterByLabels: [],
       setFilterByLabels: (labels) => set({ filterByLabels: labels }),
       filterBySprint: null,
       setFilterBySprint: (sprintId) => set({ filterBySprint: sprintId }),
+      filterByPoints: [],
+      setFilterByPoints: (points) => set({ filterByPoints: points }),
+      filterByDueDate: [],
+      setFilterByDueDate: (dates) => set({ filterByDueDate: dates }),
       searchQuery: '',
       setSearchQuery: (query) => set({ searchQuery: query }),
       clearFilters: () =>
         set({
           filterByType: [],
           filterByPriority: [],
+          filterByStatus: [],
           filterByAssignee: [],
           filterByLabels: [],
           filterBySprint: null,
+          filterByPoints: [],
+          filterByDueDate: [],
           searchQuery: '',
         }),
 
