@@ -105,27 +105,46 @@ export function KeyboardShortcuts() {
     const ticketKeys = ticketsToDelete.map((ticket) => formatTicketId(ticket))
 
     // Show toast with undo option
+    const showUndo = useUIStore.getState().showUndoButtons
     const toastId = toast.error(
       ticketsToDelete.length === 1 ? 'Ticket deleted' : `${ticketsToDelete.length} tickets deleted`,
       {
         description: ticketsToDelete.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
         duration: 5000,
-        action: {
-          label: 'Undo',
-          onClick: () => {
-            // Restore all tickets
-            const { addTicket } = useBoardStore.getState()
-            for (const { ticket, columnId } of batchTickets) {
-              addTicket(columnId, ticket)
+        action: showUndo
+          ? {
+              label: 'Undo',
+              onClick: () => {
+                // Restore all tickets
+                const { addTicket, removeTicket } = useBoardStore.getState()
+                for (const { ticket, columnId } of batchTickets) {
+                  addTicket(columnId, ticket)
+                }
+                toast.success(
+                  ticketsToDelete.length === 1
+                    ? 'Ticket restored'
+                    : `${ticketsToDelete.length} tickets restored`,
+                  {
+                    duration: 3000,
+                    action: {
+                      label: 'Redo',
+                      onClick: () => {
+                        for (const { ticket } of batchTickets) {
+                          removeTicket(ticket.id)
+                        }
+                        toast.success(
+                          ticketsToDelete.length === 1
+                            ? 'Delete redone'
+                            : `${ticketsToDelete.length} deletes redone`,
+                          { duration: 2000 },
+                        )
+                      },
+                    },
+                  },
+                )
+              },
             }
-            toast.success(
-              ticketsToDelete.length === 1
-                ? 'Ticket restored'
-                : `${ticketsToDelete.length} tickets restored`,
-              { duration: 3000 },
-            )
-          },
-        },
+          : undefined,
       },
     )
 
@@ -494,22 +513,35 @@ export function KeyboardShortcuts() {
 
         // Show toast with undo option
         const ticketKeys = newTickets.map(({ ticket }) => formatTicketId(ticket))
+        const showUndo = useUIStore.getState().showUndoButtons
+        const { removeTicket } = useBoardStore.getState()
         const toastId = toast.success(
           newTickets.length === 1 ? 'Ticket pasted' : `${newTickets.length} tickets pasted`,
           {
             description: newTickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
             duration: 5000,
-            action: {
-              label: 'Undo',
-              onClick: () => {
-                // Remove all pasted tickets
-                const { removeTicket } = useBoardStore.getState()
-                for (const { ticket } of newTickets) {
-                  removeTicket(ticket.id)
+            action: showUndo
+              ? {
+                  label: 'Undo',
+                  onClick: () => {
+                    for (const { ticket } of newTickets) {
+                      removeTicket(ticket.id)
+                    }
+                    toast.success('Paste undone', {
+                      duration: 2000,
+                      action: {
+                        label: 'Redo',
+                        onClick: () => {
+                          for (const { ticket, columnId } of newTickets) {
+                            pasteBoard.addTicket(columnId, ticket)
+                          }
+                          toast.success('Paste redone', { duration: 2000 })
+                        },
+                      },
+                    })
+                  },
                 }
-                toast.success('Paste undone', { duration: 2000 })
-              },
-            },
+              : undefined,
           },
         )
 
