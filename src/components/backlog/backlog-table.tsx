@@ -27,6 +27,7 @@ import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { BacklogFilters } from './backlog-filters'
 import { BacklogHeader } from './backlog-header'
 import { BacklogRow } from './backlog-row'
+import { getStatusIcon } from '@/lib/status-icons'
 
 interface BacklogTableProps {
   tickets: TicketWithRelations[]

@@ -6,6 +6,7 @@ import { MoreHorizontal, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
+import { getStatusIcon } from '@/lib/status-icons'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets } from '@/types'
 import { KanbanCard } from './kanban-card'
@@ -49,6 +50,8 @@ export function KanbanColumn({
     .filter((t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId)
     .map((t) => t.id)
 
+  const { icon: StatusIcon, color: statusColor } = getStatusIcon(column.name)
+
   return (
     <div
       className={cn(
@@ -59,6 +62,7 @@ export function KanbanColumn({
       {/* Column header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
         <div className="flex items-center gap-2">
+          <StatusIcon className={cn('h-4 w-4', statusColor)} aria-hidden />
           <h3 className="font-medium text-sm text-zinc-200">{column.name}</h3>
           <span className="flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-zinc-800 text-xs text-zinc-400">
             {column.tickets.length}

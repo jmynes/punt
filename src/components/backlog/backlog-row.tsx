@@ -7,6 +7,7 @@ import { GripVertical, User } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import { getStatusIcon } from '@/lib/status-icons'
 import type { BacklogColumn } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -105,7 +106,12 @@ export function BacklogRow({
 
       case 'status':
         return (
-          <Badge variant="secondary" className="whitespace-nowrap">
+          <Badge variant="secondary" className="whitespace-nowrap flex items-center gap-1">
+            {(() => {
+              const statusName = getStatusName(ticket.columnId)
+              const { icon: StatusIcon, color } = getStatusIcon(statusName)
+              return <StatusIcon className={cn('h-3.5 w-3.5', color)} aria-hidden />
+            })()}
             {getStatusName(ticket.columnId)}
           </Badge>
         )
