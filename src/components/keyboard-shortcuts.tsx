@@ -570,9 +570,11 @@ export function KeyboardShortcuts() {
         if (entry) {
           toast.dismiss(entry.toastId)
 
+          const showUndo = useUIStore.getState().showUndoButtons
+
           if (entry.action.type === 'delete') {
             // Restore all deleted tickets
-            const { addTicket } = useBoardStore.getState()
+            const { addTicket, removeTicket } = useBoardStore.getState()
             for (const { ticket, columnId } of entry.action.tickets) {
               addTicket(columnId, ticket)
             }
@@ -591,6 +593,22 @@ export function KeyboardShortcuts() {
                 description:
                   entry.action.tickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
                 duration: 3000,
+                action: showUndo
+                  ? {
+                      label: 'Redo',
+                      onClick: () => {
+                        for (const { ticket } of entry.action.tickets) {
+                          removeTicket(ticket.id)
+                        }
+                        toast.success(
+                          entry.action.tickets.length === 1
+                            ? 'Delete redone'
+                            : `${entry.action.tickets.length} deletes redone`,
+                          { duration: 2000 },
+                        )
+                      },
+                    }
+                  : undefined,
               },
             )
           } else if (entry.action.type === 'update') {
@@ -611,6 +629,22 @@ export function KeyboardShortcuts() {
                 description:
                   entry.action.tickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
                 duration: 3000,
+                action: showUndo
+                  ? {
+                      label: 'Redo',
+                      onClick: () => {
+                        for (const item of entry.action.tickets) {
+                          boardStore.updateTicket(item.ticketId, item.after)
+                        }
+                        toast.success(
+                          entry.action.tickets.length === 1
+                            ? 'Change redone'
+                            : `${entry.action.tickets.length} changes redone`,
+                          { duration: 2000 },
+                        )
+                      },
+                    }
+                  : undefined,
               },
             )
           } else if (entry.action.type === 'move') {
@@ -650,6 +684,30 @@ export function KeyboardShortcuts() {
                 description:
                   entry.action.moves.length === 1 ? moveTicketKeys[0] : moveTicketKeys.join(', '),
                 duration: 3000,
+                action: showUndo
+                  ? {
+                      label: 'Redo',
+                      onClick: () => {
+                        if (entry.action.afterColumns) {
+                          const restoredColumns = entry.action.afterColumns.map((col) => ({
+                            ...col,
+                            tickets: col.tickets.map((t) => ({ ...t })),
+                          }))
+                          moveBoardStore.setColumns(restoredColumns)
+                        } else {
+                          for (const move of entry.action.moves) {
+                            moveBoardStore.moveTicket(move.ticketId, move.fromColumnId, move.toColumnId, 0)
+                          }
+                        }
+                        toast.success(
+                          entry.action.moves.length === 1
+                            ? 'Move redone'
+                            : `${entry.action.moves.length} moves redone`,
+                          { duration: 2000 },
+                        )
+                      },
+                    }
+                  : undefined,
               },
             )
           } else if (entry.action.type === 'paste') {
@@ -673,6 +731,23 @@ export function KeyboardShortcuts() {
                 description:
                   entry.action.tickets.length === 1 ? pasteTicketKeys[0] : pasteTicketKeys.join(', '),
                 duration: 3000,
+                action: showUndo
+                  ? {
+                      label: 'Redo',
+                      onClick: () => {
+                        const pasteBoard = useBoardStore.getState()
+                        for (const { ticket, columnId } of entry.action.tickets) {
+                          pasteBoard.addTicket(columnId, ticket)
+                        }
+                        toast.success(
+                          entry.action.tickets.length === 1
+                            ? 'Paste redone'
+                            : `${entry.action.tickets.length} pastes redone`,
+                          { duration: 2000 },
+                        )
+                      },
+                    }
+                  : undefined,
               },
             )
           }
@@ -690,14 +765,14 @@ export function KeyboardShortcuts() {
         const redoStore = useUndoStore.getState()
         const entry = redoStore.popRedo()
         if (entry) {
+          const showUndo = useUIStore.getState().showUndoButtons
+
           if (entry.action.type === 'delete') {
-            // Delete tickets again
-            const { removeTicket } = useBoardStore.getState()
+            const { removeTicket, addTicket } = useBoardStore.getState()
             for (const { ticket } of entry.action.tickets) {
               removeTicket(ticket.id)
             }
 
-            // Format ticket IDs for notification
             const delTicketKeys = entry.action.tickets.map(({ ticket }) => formatTicketId(ticket))
             const newToastId = toast.error(
               entry.action.tickets.length === 1
@@ -707,6 +782,23 @@ export function KeyboardShortcuts() {
                 description:
                   entry.action.tickets.length === 1 ? delTicketKeys[0] : delTicketKeys.join(', '),
                 duration: 5000,
+                action: showUndo
+                  ? {
+                      label: 'Undo',
+                      onClick: () => {
+                        for (const { ticket, columnId } of entry.action.tickets) {
+                          addTicket(columnId, ticket)
+                        }
+                        redoStore.pushRedo(entry)
+                        toast.success(
+                          entry.action.tickets.length === 1
+                            ? 'Ticket restored'
+                            : `${entry.action.tickets.length} tickets restored`,
+                          { duration: 3000 },
+                        )
+                      },
+                    }
+                  : undefined,
               },
             )
             redoStore.pushDeletedBatch(entry.action.tickets, newToastId)
@@ -715,7 +807,6 @@ export function KeyboardShortcuts() {
             for (const item of entry.action.tickets) {
               boardStore.updateTicket(item.ticketId, item.after)
             }
-            // Push back to undo with swapped states
             const swappedTickets = entry.action.tickets.map((item) => ({
               ticketId: item.ticketId,
               before: item.before,
@@ -732,33 +823,45 @@ export function KeyboardShortcuts() {
               {
                 description: swappedTickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
                 duration: 3000,
+                action: showUndo
+                  ? {
+                      label: 'Undo',
+                      onClick: () => {
+                        for (const item of swappedTickets) {
+                          boardStore.updateTicket(item.ticketId, item.before)
+                        }
+                        redoStore.pushRedo(entry)
+                        toast.success(
+                          swappedTickets.length === 1
+                            ? 'Change undone'
+                            : `${swappedTickets.length} changes undone`,
+                          { duration: 2000 },
+                        )
+                      },
+                    }
+                  : undefined,
               },
             )
             redoStore.pushUpdate(swappedTickets, newToastId)
           } else if (entry.action.type === 'move') {
-            // Capture current state before redo (state we want to restore to when undoing again)
             const boardStore = useBoardStore.getState()
             const currentStateBeforeRedo = boardStore.columns.map((col) => ({
               ...col,
-              tickets: col.tickets.map((t) => ({ ...t })), // Deep copy
+              tickets: col.tickets.map((t) => ({ ...t })),
             }))
-            
-            // Restore the exact column state after the move (redo)
+
             if (entry.action.afterColumns) {
-              // Use the stored after column state for precise redo
               const restoredColumns = entry.action.afterColumns.map((col) => ({
                 ...col,
-                tickets: col.tickets.map((t) => ({ ...t })), // Deep copy
+                tickets: col.tickets.map((t) => ({ ...t })),
               }))
               boardStore.setColumns(restoredColumns)
             } else {
-              // Fallback: move tickets one by one (legacy behavior)
               for (const move of entry.action.moves) {
                 boardStore.moveTicket(move.ticketId, move.fromColumnId, move.toColumnId, 0)
               }
             }
 
-            // Look up ticket IDs from columns
             const allTickets = columns.flatMap((col) => col.tickets)
             const ticketKeys = entry.action.moves
               .map((move) => {
@@ -777,28 +880,39 @@ export function KeyboardShortcuts() {
                     ? `${ticketKeys[0]} moved to ${entry.action.toColumnName}`
                     : `${ticketKeys.join(', ')} moved to ${entry.action.toColumnName}`,
                 duration: 5000,
+                action: showUndo
+                  ? {
+                      label: 'Undo',
+                      onClick: () => {
+                        const bs = useBoardStore.getState()
+                        bs.setColumns(currentStateBeforeRedo)
+                        redoStore.pushRedo(entry)
+                        toast.success(
+                          entry.action.moves.length === 1
+                            ? 'Move undone'
+                            : `${entry.action.moves.length} moves undone`,
+                          { duration: 2000 },
+                        )
+                      },
+                    }
+                  : undefined,
               },
             )
-            
-            // Push back to undo stack: when undoing again, we want to restore to currentStateBeforeRedo (A)
-            // So: originalColumns = currentStateBeforeRedo (A, restore to this when undoing)
-            //     afterColumns = entry.action.afterColumns (B, current state after redo)
+
             useUndoStore.getState().pushMove(
               entry.action.moves,
               entry.action.toColumnName,
               entry.action.fromColumnName,
               newToastId,
-              currentStateBeforeRedo, // originalColumns: state to restore to when undoing (A)
-              entry.action.afterColumns, // afterColumns: current state after redo (B)
+              currentStateBeforeRedo,
+              entry.action.afterColumns,
             )
           } else if (entry.action.type === 'paste') {
-            // Restore all pasted tickets
-            const { addTicket: redoAddTicket } = useBoardStore.getState()
+            const { addTicket: redoAddTicket, removeTicket: redoRemoveTicket } = useBoardStore.getState()
             for (const { ticket, columnId } of entry.action.tickets) {
               redoAddTicket(columnId, ticket)
             }
 
-            // Format ticket IDs for notification
             const redoPasteTicketKeys = entry.action.tickets.map(({ ticket }) => formatTicketId(ticket))
             const newPasteToastId = toast.success(
               entry.action.tickets.length === 1
@@ -808,6 +922,23 @@ export function KeyboardShortcuts() {
                 description:
                   entry.action.tickets.length === 1 ? redoPasteTicketKeys[0] : redoPasteTicketKeys.join(', '),
                 duration: 5000,
+                action: showUndo
+                  ? {
+                      label: 'Undo',
+                      onClick: () => {
+                        for (const { ticket } of entry.action.tickets) {
+                          redoRemoveTicket(ticket.id)
+                        }
+                        redoStore.pushRedo(entry)
+                        toast.success(
+                          entry.action.tickets.length === 1
+                            ? 'Paste undone'
+                            : `${entry.action.tickets.length} pastes undone`,
+                          { duration: 2000 },
+                        )
+                      },
+                    }
+                  : undefined,
               },
             )
             redoStore.pushPaste(entry.action.tickets, newPasteToastId)
