@@ -54,6 +54,8 @@ describe('BacklogTable', () => {
       setFilterByPriority: vi.fn(),
       filterByAssignee: [],
       setFilterByAssignee: vi.fn(),
+      filterByLabels: [],
+      setFilterByLabels: vi.fn(),
       filterBySprint: null,
       setFilterBySprint: vi.fn(),
       searchQuery: '',

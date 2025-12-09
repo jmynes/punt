@@ -48,6 +48,7 @@ export function BacklogTable({
     filterByType,
     filterByPriority,
     filterByAssignee,
+    filterByLabels,
     filterBySprint,
     searchQuery,
     showSubtasks,
@@ -159,6 +160,14 @@ export function BacklogTable({
     // Assignee filter
     if (filterByAssignee.length > 0) {
       result = result.filter((t) => filterByAssignee.includes(t.assigneeId || 'unassigned'))
+    }
+
+    // Labels filter (any match)
+    if (filterByLabels.length > 0) {
+      result = result.filter((t) => {
+        const ids = t.labels.map((l) => l.id)
+        return ids.some((id) => filterByLabels.includes(id))
+      })
     }
 
     // Sprint filter

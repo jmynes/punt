@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import {
   ArrowUp,
   Bug,
@@ -90,13 +91,32 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
     setFilterByPriority,
     filterByAssignee,
     setFilterByAssignee,
+    filterByLabels,
+    setFilterByLabels,
     clearFilters,
+    columns,
   } = useBacklogStore()
+
+  const visibleColumns = columns.filter((c) => c.visible)
+  const labelsVisible = visibleColumns.some((c) => c.id === 'labels')
+
+  const labelOptions = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; color: string | null }>()
+    for (const col of _statusColumns) {
+      for (const t of col.tickets) {
+        for (const lbl of t.labels) {
+          map.set(lbl.id, { id: lbl.id, name: lbl.name, color: lbl.color ?? null })
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [_statusColumns])
 
   const hasActiveFilters =
     filterByType.length > 0 ||
     filterByPriority.length > 0 ||
     filterByAssignee.length > 0 ||
+    filterByLabels.length > 0 ||
     searchQuery.length > 0
 
   const toggleType = (type: string) => {
@@ -120,6 +140,14 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
       setFilterByAssignee(filterByAssignee.filter((a) => a !== assigneeId))
     } else {
       setFilterByAssignee([...filterByAssignee, assigneeId])
+    }
+  }
+
+  const toggleLabel = (labelId: string) => {
+    if (filterByLabels.includes(labelId)) {
+      setFilterByLabels(filterByLabels.filter((l) => l !== labelId))
+    } else {
+      setFilterByLabels([...filterByLabels, labelId])
     }
   }
 
@@ -199,6 +227,50 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
           })}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Labels filter (visible when labels column is on) */}
+      {labelsVisible && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="shrink-0">
+              <Layers className="mr-2 h-4 w-4 text-purple-400" />
+              Labels
+              {filterByLabels.length > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {filterByLabels.length}
+                </Badge>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel>Filter by labels</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {labelOptions.length === 0 && (
+              <DropdownMenuLabel className="text-xs text-zinc-500">No labels found</DropdownMenuLabel>
+            )}
+            {labelOptions.map((label) => (
+              <DropdownMenuCheckboxItem
+                key={label.id}
+                checked={filterByLabels.includes(label.id)}
+                onCheckedChange={() => toggleLabel(label.id)}
+              >
+                <Badge
+                  variant="outline"
+                  className="mr-2 text-[10px] px-1.5 py-0 border-zinc-700"
+                  style={
+                    label.color
+                      ? { borderColor: label.color, color: label.color, backgroundColor: `${label.color}20` }
+                      : undefined
+                  }
+                >
+                  {label.name}
+                </Badge>
+                <span className="capitalize">{label.name}</span>
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {/* Assignee filter */}
       <DropdownMenu>
