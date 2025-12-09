@@ -682,6 +682,15 @@ export function KeyboardShortcuts() {
               })
               .filter(Boolean)
 
+            const moveTitle =
+              entry.action.moves.length === 1
+                ? 'Ticket moved'
+                : `${entry.action.moves.length} tickets moved`
+            const moveDesc =
+              entry.action.moves.length === 1
+                ? `${moveTicketKeys[0]} moved to ${entry.action.toColumnName}`
+                : `${moveTicketKeys.join(', ')} moved to ${entry.action.toColumnName}`
+
             showUndoRedoToast('success', {
               title:
                 entry.action.moves.length === 1
@@ -715,10 +724,8 @@ export function KeyboardShortcuts() {
                   moveBoardStore.setColumns(restoredColumns)
                 }
               },
-              undoneTitle:
-                entry.action.moves.length === 1
-                  ? 'Move redone'
-                  : `${entry.action.moves.length} moves redone`,
+              undoneTitle: moveTitle,
+              undoneDescription: moveDesc,
               redoneTitle:
                 entry.action.moves.length === 1
                   ? 'Move undone'
