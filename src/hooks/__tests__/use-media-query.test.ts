@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useIsDesktop, useIsMobile, useIsTablet, useMediaQuery } from '../use-media-query'
 
@@ -83,9 +83,11 @@ describe('useMediaQuery', () => {
     const { result } = renderHook(() => useMediaQuery('(max-width: 768px)'))
     expect(result.current).toBe(false)
 
-    matches = true
-    listeners.forEach((listener) => {
-      listener({ matches: true, media: '(max-width: 768px)' } as MediaQueryListEvent)
+    await act(async () => {
+      matches = true
+      listeners.forEach((listener) => {
+        listener({ matches: true, media: '(max-width: 768px)' } as MediaQueryListEvent)
+      })
     })
 
     await waitFor(() => {

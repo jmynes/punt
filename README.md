@@ -8,23 +8,23 @@
 
 ## Features (current WIP)
 
-- 🗂 **Backlog + Kanban** — Jira-like backlog table with filters/search/sort and a drag-and-drop Kanban board
-- 🖱 **Multi-select + bulk actions** — Move, assign, change priority, delete with keyboard shortcuts or context menu
-- ↕ **Keyboard moves** — Arrow keys to move tickets up/down/left/right between columns
-- 📋 **Copy/paste tickets** — Clone selected tickets (with undo/redo)
-- ↩️ **Undo/redo everywhere** — Moves, priority/assign updates, paste, and deletes
-- 🧭 **Context menu** — Right-click tickets in board/backlog for copy/paste/move/assign/priority/delete
-- 🖼 **Avatars + priority emblems** — Consistent initials/avatars and priority badges in menus and cards
-- 🌀 **Column scroll & drop zones** — Scrollable columns with reliable drop-at-end targets
-- 🏠 **Self-hosted** — Local-first by default; keep your data on your machine
-- 🌙 **Dark theme** — Amber-accented dark UI
-- 🚀 **Fast** — Built with Next.js (App Router + Turbopack) and React 19
+- 🗂 **Backlog + Kanban** — Jira-like backlog with filters/search/sort and a drag-and-drop board
+- 🖱 **Multi-select + bulk actions** — Move, assign, change priority, delete via keyboard or context menu
+- ↕ **Keyboard moves** — Arrow keys move tickets up/down and across columns
+- 📋 **Copy/paste tickets** — Clone selected tickets with undo/redo support
+- ↩️ **Undo/redo everywhere** — Moves, updates, pastes, deletes are all reversible
+- 🧭 **Context menu** — Right-click in board/backlog for copy/paste/move/assign/priority/delete
+- 🖼 **Avatars + priority emblems** — Consistent initials/colors and priority badges across UI
+- 🌀 **Scrollable columns + drop-at-end** — Columns scroll when long; reliable drop targets at ends
+- 🏠 **Local-first** — Self-hosted; keep data on your machine
+- 🌙 **Dark UI** — Amber-accented dark theme
+- 🚀 **Fast** — Next.js (App Router + Turbopack) + React 19
 
 ## Status & Limitations
 
-- Not yet mobile responsive — best in a full-size desktop window.
-- No account authentication yet — intended for local usage during development.
-- API/infra still WIP; expect breaking changes.
+- Desktop-focused; **not yet mobile responsive**
+- **No authentication** yet; intended for local/desktop use
+- API/infra still WIP; expect breaking changes
 
 ## Tech Stack
 
@@ -32,7 +32,7 @@
 |----------|------------|
 | Framework | Next.js 14 (App Router) |
 | Language | TypeScript |
-| Styling | Tailwind CSS 4 |
+| Styling | Tailwind CSS |
 | Components | shadcn/ui + Radix UI |
 | Database | SQLite + Prisma |
 | State | Zustand + TanStack Query |

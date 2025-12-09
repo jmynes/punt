@@ -54,10 +54,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const shortcutsApi = (useUIStore as any).getState?.() || uiStore
   const currentUser = useCurrentUser()
   const members = useProjectMembers()
-  const sortedMembers = useMemo(
-    () => [...members].sort((a, b) => a.name.localeCompare(b.name)),
-    [members],
-  )
+  const sortedMembers = useMemo(() => [...members].sort((a, b) => a.name.localeCompare(b.name)), [members])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<TicketWithRelations[]>([])
 
@@ -522,9 +519,11 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
                           onClick={() => doAssign(null)}
                         >
-                          <div className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-zinc-700">
-                            <UserIcon className="h-3 w-3 text-zinc-500" />
-                          </div>
+                          <Avatar className="h-5 w-5">
+                            <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
+                              <UserIcon className="h-3 w-3 text-zinc-500" />
+                            </AvatarFallback>
+                          </Avatar>
                           <span>Unassign</span>
                         </button>
                       </>
