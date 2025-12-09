@@ -1,19 +1,30 @@
 # PUNT
 
-**P**roject **U**nified **N**imble **T**racker - A simple, self-hosted Kanban board and ticket tracker. Jira-like without the bloat.
+**P**roject **U**nified **N**imble **T**racker — an opinionated, WIP ticketing system inspired by Jira’s backlog + Kanban board. Built for fast, local-first workflows without the bloat.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)
 
-## Features
+## Features (current WIP)
 
-- 🎯 **Simple Kanban Board** - Drag and drop tickets between columns
-- 📱 **Mobile-first Responsive** - Works great on phones, tablets, and desktops
-- 🏠 **Self-hosted** - Run on your own server, NAS, or local machine
-- 🌙 **Dark Theme** - Easy on the eyes with amber accents
-- 🚀 **Fast** - Built with Next.js Turbopack and React 19
-- 🔒 **Privacy-focused** - Your data stays on your server
+- 🗂 **Backlog + Kanban** — Jira-like backlog table with filters/search/sort and a drag-and-drop Kanban board
+- 🖱 **Multi-select + bulk actions** — Move, assign, change priority, delete with keyboard shortcuts or context menu
+- ↕ **Keyboard moves** — Arrow keys to move tickets up/down/left/right between columns
+- 📋 **Copy/paste tickets** — Clone selected tickets (with undo/redo)
+- ↩️ **Undo/redo everywhere** — Moves, priority/assign updates, paste, and deletes
+- 🧭 **Context menu** — Right-click tickets in board/backlog for copy/paste/move/assign/priority/delete
+- 🖼 **Avatars + priority emblems** — Consistent initials/avatars and priority badges in menus and cards
+- 🌀 **Column scroll & drop zones** — Scrollable columns with reliable drop-at-end targets
+- 🏠 **Self-hosted** — Local-first by default; keep your data on your machine
+- 🌙 **Dark theme** — Amber-accented dark UI
+- 🚀 **Fast** — Built with Next.js (App Router + Turbopack) and React 19
+
+## Status & Limitations
+
+- Not yet mobile responsive — best in a full-size desktop window.
+- No account authentication yet — intended for local usage during development.
+- API/infra still WIP; expect breaking changes.
 
 ## Tech Stack
 
