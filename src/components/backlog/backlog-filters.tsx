@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { getAvatarColor, getInitials } from '@/lib/utils'
+import { getStatusIcon } from '@/lib/status-icons'
 import { useBacklogStore } from '@/stores/backlog-store'
 import type { ColumnWithTickets, IssueType, Priority, UserSummary } from '@/types'
 import { ISSUE_TYPES, PRIORITIES } from '@/types'
@@ -293,6 +294,10 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     checked={filterByStatus.includes(c.id)}
                     onCheckedChange={() => toggleStatus(c.id)}
                   >
+                    {(() => {
+                      const { icon: StatusIcon, color } = getStatusIcon(c.name)
+                      return <StatusIcon className={`mr-2 h-4 w-4 ${color}`} />
+                    })()}
                     {c.name}
                   </DropdownMenuCheckboxItem>
                 ))}

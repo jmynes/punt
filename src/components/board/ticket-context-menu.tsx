@@ -26,6 +26,7 @@ import {
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -530,16 +531,19 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                     )}
 
                     {submenu.id === 'send' &&
-                      columns.map((col) => (
-                        <button
-                          key={col.id}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                          onClick={() => doSendTo(col.id)}
-                        >
-                          <Send className="h-4 w-4 text-zinc-400" />
-                          <span>{col.name}</span>
-                        </button>
-                      ))}
+                      columns.map((col) => {
+                        const { icon: StatusIcon, color } = getStatusIcon(col.name)
+                        return (
+                          <button
+                            key={col.id}
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendTo(col.id)}
+                          >
+                            <StatusIcon className={`h-4 w-4 ${color}`} />
+                            <span>{col.name}</span>
+                          </button>
+                        )
+                      })}
                   </div>
                 </div>
               )}
