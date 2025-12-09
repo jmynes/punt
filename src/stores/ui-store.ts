@@ -29,6 +29,10 @@ interface UIState {
   // Ticket detail drawer
   activeTicketId: string | null
   setActiveTicketId: (id: string | null) => void
+
+  // Toast undo visibility
+  showUndoButtons: boolean
+  setShowUndoButtons: (show: boolean) => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -60,4 +64,8 @@ export const useUIStore = create<UIState>((set) => ({
   // Ticket detail drawer
   activeTicketId: null,
   setActiveTicketId: (id) => set({ activeTicketId: id }),
+
+  // Toast undo visibility (on by default)
+  showUndoButtons: true,
+  setShowUndoButtons: (show) => set({ showUndoButtons: show }),
 }))

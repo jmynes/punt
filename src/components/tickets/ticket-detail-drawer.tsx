@@ -382,20 +382,30 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     setShowDeleteConfirm(false)
     onClose()
 
+    const showUndo = useUIStore.getState().showUndoButtons
     const toastId = toast.error('Ticket deleted', {
       description: <span className="font-mono">{ticketKey}</span>,
       duration: 5000,
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          addTicket(columnId, deletedTicket)
-          removeDeleted(toastId)
-          toast.success('Ticket restored', {
-            description: deletedTicket.title,
-            duration: 3000,
-          })
-        },
-      },
+      action: showUndo
+        ? {
+            label: 'Undo',
+            onClick: () => {
+              addTicket(columnId, deletedTicket)
+              removeDeleted(toastId)
+              toast.success('Ticket restored', {
+                description: deletedTicket.title,
+                duration: 3000,
+                action: {
+                  label: 'Redo',
+                  onClick: () => {
+                    removeTicket(deletedTicket.id)
+                    toast.success('Delete redone', { duration: 2000 })
+                  },
+                },
+              })
+            },
+          }
+        : undefined,
       onDismiss: () => {
         removeDeleted(toastId)
       },

@@ -235,6 +235,10 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
       // Check for cross-column moves for undo/notification
       if (!isSameColumn) {
         const afterColumns = useBoardStore.getState().columns
+        const afterSnapshot = afterColumns.map((col) => ({
+          ...col,
+          tickets: col.tickets.map((t) => ({ ...t })),
+        }))
         const fromName = sourceColumn.name
         const toColumn = afterColumns.find((col) => col.id === targetColumnId)
         const toName = toColumn?.name || 'Unknown'
@@ -256,6 +260,8 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
         const toastTitle =
           moves.length === 1 ? `Ticket moved from ${fromName}` : `${moves.length} tickets moved from ${fromName}`
         const { icon: StatusIcon, color: statusColor } = getStatusIcon(toName)
+        const showUndo = useUIStore.getState().showUndoButtons
+
         const toastDescription =
           moves.length === 1 ? (
             <div className="flex items-center gap-1.5">
@@ -278,13 +284,24 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
         const toastId = toast.success(toastTitle, {
           description: toastDescription,
           duration: 5000,
-          action: {
-            label: 'Undo',
-            onClick: () => {
-              useBoardStore.getState().setColumns(snapshot)
-              toast.success('Move undone', { duration: 2000 })
-            },
-          },
+          action: showUndo
+            ? {
+                label: 'Undo',
+                onClick: () => {
+                  useBoardStore.getState().setColumns(snapshot)
+                  toast.success('Move undone', {
+                    duration: 2000,
+                    action: {
+                      label: 'Redo',
+                      onClick: () => {
+                        useBoardStore.getState().setColumns(afterSnapshot)
+                        toast.success('Move redone', { duration: 2000 })
+                      },
+                    },
+                  })
+                },
+              }
+            : undefined,
         })
 
         useUndoStore.getState().pushMove(
@@ -293,10 +310,7 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
           toName,
           toastId,
           snapshot,
-          afterColumns.map((col) => ({
-            ...col,
-            tickets: col.tickets.map((t) => ({ ...t })),
-          })),
+          afterSnapshot,
         )
       }
 
