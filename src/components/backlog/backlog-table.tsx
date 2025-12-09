@@ -47,9 +47,12 @@ export function BacklogTable({
     sort,
     filterByType,
     filterByPriority,
+    filterByStatus,
     filterByAssignee,
     filterByLabels,
     filterBySprint,
+    filterByPoints,
+    filterByDueDate,
     searchQuery,
     showSubtasks,
     setColumnConfigOpen,
@@ -157,6 +160,11 @@ export function BacklogTable({
       result = result.filter((t) => filterByPriority.includes(t.priority))
     }
 
+    // Status filter
+    if (filterByStatus.length > 0) {
+      result = result.filter((t) => filterByStatus.includes(t.columnId))
+    }
+
     // Assignee filter
     if (filterByAssignee.length > 0) {
       result = result.filter((t) => filterByAssignee.includes(t.assigneeId || 'unassigned'))
@@ -177,6 +185,21 @@ export function BacklogTable({
       } else {
         result = result.filter((t) => t.sprintId === filterBySprint)
       }
+    }
+
+    // Points filter
+    if (filterByPoints.length > 0) {
+      result = result.filter(
+        (t) => t.storyPoints !== null && t.storyPoints !== undefined && filterByPoints.includes(t.storyPoints),
+      )
+    }
+
+    // Due date filter
+    if (filterByDueDate.length > 0) {
+      result = result.filter((t) => {
+        const dateString = t.dueDate ? t.dueDate.toISOString().slice(0, 10) : 'none'
+        return filterByDueDate.includes(dateString)
+      })
     }
 
     // Sort (skip if using manual order from drag & drop)
