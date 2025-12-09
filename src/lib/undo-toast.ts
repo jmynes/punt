@@ -1,4 +1,3 @@
-import React from 'react'
 import { toast } from 'sonner'
 
 type ToastKind = 'success' | 'error'
@@ -35,6 +34,7 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
   } = opts
 
   const toastFn = kind === 'error' ? toast.error : toast.success
+
   const toastId = toastFn(title, {
     description,
     duration,

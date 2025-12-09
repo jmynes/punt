@@ -290,7 +290,8 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
           onUndo: () => useBoardStore.getState().setColumns(snapshot),
           onRedo: () => useBoardStore.getState().setColumns(afterSnapshot),
           undoneTitle: 'Move undone',
-          redoneTitle: 'Move redone',
+          redoneTitle: toastTitle,
+          redoneDescription: toastDescription,
         })
 
         useUndoStore.getState().pushMove(

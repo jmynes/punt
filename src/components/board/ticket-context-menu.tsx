@@ -274,7 +274,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         setColumns(afterColumns)
       },
       undoneTitle: 'Move undone',
-      redoneTitle: 'Move redone',
+      redoneTitle: toastTitle,
+      redoneDescription: toastDescription,
     })
 
     const pushMove =
