@@ -201,12 +201,11 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [], isBeingDragg
               </AvatarFallback>
             </Avatar>
           ) : (
-            <div
-              className="h-5 w-5 rounded-full border border-dashed border-zinc-700 flex items-center justify-center"
-              title="Unassigned"
-            >
-              <User className="h-2.5 w-2.5 text-zinc-600" />
-            </div>
+            <Avatar className="h-5 w-5" title="Unassigned">
+              <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
+                <User className="h-3 w-3 text-zinc-500" />
+              </AvatarFallback>
+            </Avatar>
           )}
         </div>
       </div>
