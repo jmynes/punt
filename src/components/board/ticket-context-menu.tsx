@@ -232,13 +232,32 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
     const ticketKeys = formatTicketIds(afterColumns, moves.map((m) => m.ticketId))
 
-    const toastId = toast.success(
-      moves.length === 1 ? 'Ticket moved' : `${moves.length} tickets moved`,
-      {
-        description: moves.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
-        duration: 3000,
-      },
-    )
+    const toastTitle =
+      moves.length === 1 ? `Ticket moved from ${fromColumnName}` : `${moves.length} tickets moved from ${fromColumnName}`
+    const { icon: StatusIcon, color: statusColor } = getStatusIcon(toColumnName)
+    const toastDescription =
+      moves.length === 1 ? (
+        <div className="flex items-center gap-1.5">
+          <span>{`${ticketKeys[0]} Moved to`}</span>
+          <StatusIcon className={`h-4 w-4 ${statusColor}`} aria-hidden />
+          <span>{toColumnName}</span>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {ticketKeys.map((k) => (
+            <div key={k} className="flex items-center gap-1.5">
+              <span>{`${k} Moved to`}</span>
+              <StatusIcon className={`h-4 w-4 ${statusColor}`} aria-hidden />
+              <span>{toColumnName}</span>
+            </div>
+          ))}
+        </div>
+      )
+
+    const toastId = toast.success(toastTitle, {
+      description: toastDescription,
+      duration: 3000,
+    })
 
     const pushMove =
       (useUndoStore as any).getState?.().pushMove || useUndoStore.getState().pushMove
@@ -426,10 +445,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
               />
               {!multi && <MenuButton icon={<Pencil className="h-4 w-4" />} label="Edit" onMouseEnter={closeSubmenu} onClick={doEdit} />}
 
-              <MenuSection title="Send To">
+              <MenuSection title="Status">
                 <MenuButton
                   icon={<Send className="h-4 w-4" />}
-                  label="Move"
+                  label="Status"
                   trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
                   onMouseEnter={openSubmenu('send')}
                 />
@@ -530,20 +549,20 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                       </>
                     )}
 
-                    {submenu.id === 'send' &&
-                      columns.map((col) => {
-                        const { icon: StatusIcon, color } = getStatusIcon(col.name)
-                        return (
-                          <button
-                            key={col.id}
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                            onClick={() => doSendTo(col.id)}
-                          >
-                            <StatusIcon className={`h-4 w-4 ${color}`} />
-                            <span>{col.name}</span>
-                          </button>
-                        )
-                      })}
+                {submenu.id === 'send' &&
+                  columns.map((col) => {
+                    const { icon: StatusIcon, color } = getStatusIcon(col.name)
+                    return (
+                      <button
+                        key={col.id}
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                        onClick={() => doSendTo(col.id)}
+                      >
+                        <StatusIcon className={`h-4 w-4 ${color}`} />
+                        <span>{col.name}</span>
+                      </button>
+                    )
+                  })}
                   </div>
                 </div>
               )}

@@ -1,6 +1,8 @@
 'use client'
 
 import { Paperclip } from 'lucide-react'
+import { useBoardStore } from '@/stores/board-store'
+import { getStatusIcon } from '@/lib/status-icons'
 import { Accordion } from '@/components/ui/accordion'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -44,6 +46,7 @@ export function TicketForm({
 }: TicketFormProps) {
   const currentUser = useCurrentUser()
   const members = useProjectMembers()
+  const boardColumns = useBoardStore((s) => s.columns)
 
   const updateField = <K extends keyof TicketFormData>(field: K, value: TicketFormData[K]) => {
     onChange({ ...data, [field]: value })
@@ -168,6 +171,42 @@ export function TicketForm({
           {sprints.map((sprint) => (
             <option key={sprint.id} value={sprint.id}>
               {sprint.name} {sprint.isActive && '(Active)'}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Status (column) */}
+      <div className="space-y-2">
+        <Label className="text-zinc-300">Status</Label>
+        <select
+          value={data.columnId || ''}
+          onChange={(e) => updateField('columnId', e.target.value || undefined)}
+          disabled={disabled}
+          className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+        >
+          <option value="">Use default</option>
+          {boardColumns.map((col) => (
+            <option key={col.id} value={col.id}>
+              {col.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Status (column) */}
+      <div className="space-y-2">
+        <Label className="text-zinc-300">Status</Label>
+        <select
+          value={data.columnId || ''}
+          onChange={(e) => updateField('columnId', e.target.value || undefined)}
+          disabled={disabled}
+          className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+        >
+          <option value="">Use default</option>
+          {boardColumns.map((col) => (
+            <option key={col.id} value={col.id}>
+              {col.name}
             </option>
           ))}
         </select>

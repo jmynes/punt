@@ -138,8 +138,11 @@ export function CreateTicketDialog() {
     // Simulate API call delay
     await new Promise((resolve) => setTimeout(resolve, 300))
 
-    // Find the "To Do" column, or fall back to first column
-    const targetColumn = columns.find((c) => c.name === 'To Do') || columns[0]
+    // Determine target column: user-selected in form, else "To Do", else first column
+    const targetColumn =
+      (formData.columnId && columns.find((c) => c.id === formData.columnId)) ||
+      columns.find((c) => c.name === 'To Do') ||
+      columns[0]
     if (!targetColumn) {
       console.error('No columns available')
       setIsSubmitting(false)

@@ -20,6 +20,7 @@ import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
+import { getStatusIcon } from '@/lib/status-icons'
 import { KanbanCard } from './kanban-card'
 import { KanbanColumn } from './kanban-column'
 
@@ -252,23 +253,39 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
           toColumnId: targetColumnId,
         }))
 
-        const toastId = toast.success(
-          moves.length === 1 ? 'Ticket moved' : `${moves.length} tickets moved`,
-          {
-            description:
-              moves.length === 1
-                ? `${ticketKeys[0]} moved to ${toName}`
-                : `${ticketKeys.join(', ')} moved to ${toName}`,
-            duration: 5000,
-            action: {
-              label: 'Undo',
-              onClick: () => {
-                useBoardStore.getState().setColumns(snapshot)
-                toast.success('Move undone', { duration: 2000 })
-              },
+        const toastTitle =
+          moves.length === 1 ? `Ticket moved from ${fromName}` : `${moves.length} tickets moved from ${fromName}`
+        const { icon: StatusIcon, color: statusColor } = getStatusIcon(toName)
+        const toastDescription =
+          moves.length === 1 ? (
+            <div className="flex items-center gap-1.5">
+              <span>{`${ticketKeys[0]} Moved to`}</span>
+              <StatusIcon className={`h-4 w-4 ${statusColor}`} aria-hidden />
+              <span>{toName}</span>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {ticketKeys.map((k) => (
+                <div key={k} className="flex items-center gap-1.5">
+                  <span>{`${k} Moved to`}</span>
+                  <StatusIcon className={`h-4 w-4 ${statusColor}`} aria-hidden />
+                  <span>{toName}</span>
+                </div>
+              ))}
+            </div>
+          )
+
+        const toastId = toast.success(toastTitle, {
+          description: toastDescription,
+          duration: 5000,
+          action: {
+            label: 'Undo',
+            onClick: () => {
+              useBoardStore.getState().setColumns(snapshot)
+              toast.success('Move undone', { duration: 2000 })
             },
           },
-        )
+        })
 
         useUndoStore.getState().pushMove(
           moves,

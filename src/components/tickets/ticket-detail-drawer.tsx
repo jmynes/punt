@@ -43,6 +43,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
+import { getStatusIcon } from '@/lib/status-icons'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type {
@@ -134,6 +135,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [tempAffectedVersion, setTempAffectedVersion] = useState('')
   const [tempFixVersion, setTempFixVersion] = useState('')
   const [tempParentId, setTempParentId] = useState<string | null>(null)
+  const [tempStatusId, setTempStatusId] = useState<string | null>(null)
   const [tempCreatorId, setTempCreatorId] = useState<string>('')
   const [tempAttachments, setTempAttachments] = useState<UploadedFileInfo[]>([])
 
@@ -336,6 +338,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         // For now, just close the editor
         setEditingField(null)
         return
+      case 'status':
+        updates.columnId = tempStatusId || ticket.columnId
+        break
     }
 
     updateTicket(ticket.id, updates)
@@ -364,6 +369,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setTempAffectedVersion(ticket.affectedVersion || '')
       setTempFixVersion(ticket.fixVersion || '')
       setTempParentId(ticket.parentId)
+      setTempStatusId(ticket.columnId)
     }
     setEditingField(null)
   }
