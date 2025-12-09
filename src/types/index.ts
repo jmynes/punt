@@ -144,6 +144,7 @@ export interface TicketFormData {
   description: string
   type: IssueType
   priority: Priority
+  columnId?: string
   assigneeId: string | null
   sprintId: string | null
   labelIds: string[]
@@ -165,6 +166,7 @@ export const DEFAULT_TICKET_FORM: TicketFormData = {
   description: '',
   type: 'task',
   priority: 'medium',
+  columnId: undefined,
   assigneeId: null,
   sprintId: null,
   labelIds: [],
