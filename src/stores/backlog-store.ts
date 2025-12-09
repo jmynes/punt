@@ -85,6 +85,8 @@ interface BacklogState {
   setFilterByPriority: (priorities: string[]) => void
   filterByAssignee: string[]
   setFilterByAssignee: (assignees: string[]) => void
+  filterByLabels: string[]
+  setFilterByLabels: (labels: string[]) => void
   filterBySprint: string | null
   setFilterBySprint: (sprintId: string | null) => void
   searchQuery: string
@@ -157,6 +159,8 @@ export const useBacklogStore = create<BacklogState>()(
       setFilterByPriority: (priorities) => set({ filterByPriority: priorities }),
       filterByAssignee: [],
       setFilterByAssignee: (assignees) => set({ filterByAssignee: assignees }),
+      filterByLabels: [],
+      setFilterByLabels: (labels) => set({ filterByLabels: labels }),
       filterBySprint: null,
       setFilterBySprint: (sprintId) => set({ filterBySprint: sprintId }),
       searchQuery: '',
@@ -166,6 +170,7 @@ export const useBacklogStore = create<BacklogState>()(
           filterByType: [],
           filterByPriority: [],
           filterByAssignee: [],
+          filterByLabels: [],
           filterBySprint: null,
           searchQuery: '',
         }),
