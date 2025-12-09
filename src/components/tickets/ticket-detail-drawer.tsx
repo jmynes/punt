@@ -399,7 +399,16 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   label: 'Redo',
                   onClick: () => {
                     removeTicket(deletedTicket.id)
-                    toast.success('Delete redone', { duration: 2000 })
+                    toast.success('Delete redone', {
+                      duration: 2000,
+                      action: {
+                        label: 'Undo',
+                        onClick: () => {
+                          addTicket(columnId, deletedTicket)
+                          toast.success('Ticket restored', { duration: 1500 })
+                        },
+                      },
+                    })
                   },
                 },
               })

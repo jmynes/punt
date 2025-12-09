@@ -21,6 +21,7 @@ import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { getStatusIcon } from '@/lib/status-icons'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { KanbanCard } from './kanban-card'
 import { KanbanColumn } from './kanban-column'
 
@@ -281,27 +282,15 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
             </div>
           )
 
-        const toastId = toast.success(toastTitle, {
+        const toastId = showUndoRedoToast('success', {
+          title: toastTitle,
           description: toastDescription,
           duration: 5000,
-          action: showUndo
-            ? {
-                label: 'Undo',
-                onClick: () => {
-                  useBoardStore.getState().setColumns(snapshot)
-                  toast.success('Move undone', {
-                    duration: 2000,
-                    action: {
-                      label: 'Redo',
-                      onClick: () => {
-                        useBoardStore.getState().setColumns(afterSnapshot)
-                        toast.success('Move redone', { duration: 2000 })
-                      },
-                    },
-                  })
-                },
-              }
-            : undefined,
+          showUndoButtons: showUndo,
+          onUndo: () => useBoardStore.getState().setColumns(snapshot),
+          onRedo: () => useBoardStore.getState().setColumns(afterSnapshot),
+          undoneTitle: 'Move undone',
+          redoneTitle: 'Move redone',
         })
 
         useUndoStore.getState().pushMove(
