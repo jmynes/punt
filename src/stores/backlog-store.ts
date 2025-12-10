@@ -93,8 +93,8 @@ interface BacklogState {
   setFilterBySprint: (sprintId: string | null) => void
   filterByPoints: number[]
   setFilterByPoints: (points: number[]) => void
-  filterByDueDate: string[]
-  setFilterByDueDate: (dates: string[]) => void
+  filterByDueDate: { from?: Date; to?: Date; includeNone: boolean }
+  setFilterByDueDate: (filter: { from?: Date; to?: Date; includeNone: boolean }) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
   clearFilters: () => void
@@ -173,8 +173,8 @@ export const useBacklogStore = create<BacklogState>()(
       setFilterBySprint: (sprintId) => set({ filterBySprint: sprintId }),
       filterByPoints: [],
       setFilterByPoints: (points) => set({ filterByPoints: points }),
-      filterByDueDate: [],
-      setFilterByDueDate: (dates) => set({ filterByDueDate: dates }),
+      filterByDueDate: { from: undefined, to: undefined, includeNone: false },
+      setFilterByDueDate: (filter) => set({ filterByDueDate: filter }),
       searchQuery: '',
       setSearchQuery: (query) => set({ searchQuery: query }),
       clearFilters: () =>
@@ -186,7 +186,7 @@ export const useBacklogStore = create<BacklogState>()(
           filterByLabels: [],
           filterBySprint: null,
           filterByPoints: [],
-          filterByDueDate: [],
+          filterByDueDate: { from: undefined, to: undefined, includeNone: false },
           searchQuery: '',
         }),
 

@@ -196,10 +196,39 @@ export function BacklogTable({
     }
 
     // Due date filter
-    if (filterByDueDate.length > 0) {
+    const { from: dueDateFrom, to: dueDateTo, includeNone: includeNoDueDate } = filterByDueDate
+    if (dueDateFrom || dueDateTo || includeNoDueDate) {
       result = result.filter((t) => {
-        const dateString = t.dueDate ? t.dueDate.toISOString().slice(0, 10) : 'none'
-        return filterByDueDate.includes(dateString)
+        // Handle tickets with no due date
+        if (!t.dueDate) {
+          return includeNoDueDate
+        }
+
+        // Handle tickets with due dates
+        const ticketDate = new Date(t.dueDate)
+        const ticketDateOnly = new Date(ticketDate.getFullYear(), ticketDate.getMonth(), ticketDate.getDate())
+
+        // If no from date, only check upper bound
+        if (!dueDateFrom && dueDateTo) {
+          const toDateOnly = new Date(dueDateTo.getFullYear(), dueDateTo.getMonth(), dueDateTo.getDate())
+          return ticketDateOnly <= toDateOnly
+        }
+
+        // If no to date, only check lower bound
+        if (dueDateFrom && !dueDateTo) {
+          const fromDateOnly = new Date(dueDateFrom.getFullYear(), dueDateFrom.getMonth(), dueDateFrom.getDate())
+          return ticketDateOnly >= fromDateOnly
+        }
+
+        // If both from and to dates, check range
+        if (dueDateFrom && dueDateTo) {
+          const fromDateOnly = new Date(dueDateFrom.getFullYear(), dueDateFrom.getMonth(), dueDateFrom.getDate())
+          const toDateOnly = new Date(dueDateTo.getFullYear(), dueDateTo.getMonth(), dueDateTo.getDate())
+          return ticketDateOnly >= fromDateOnly && ticketDateOnly <= toDateOnly
+        }
+
+        // If neither from nor to, and not including no due date, show all (shouldn't happen with current logic)
+        return true
       })
     }
 
