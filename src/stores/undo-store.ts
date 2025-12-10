@@ -115,7 +115,11 @@ export const useUndoStore = create<UndoState>((set, get) => ({
   undoStack: [],
   redoStack: [],
 
-  pushDeleted: (ticket, columnId, toastId, isRedo = false) =>
+  pushDeleted: (ticket, columnId, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Delete ${isRedo ? '(Redo)' : ''}`, {
+      ticketId: ticket.id,
+      ticketTitle: ticket.title,
+    })
     set((state) => ({
       undoStack: [
         ...state.undoStack,
@@ -126,9 +130,14 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         },
       ],
       redoStack: isRedo ? state.redoStack : [],
-    })),
+    }))
+  },
 
-  pushDeletedBatch: (tickets, toastId, isRedo = false) =>
+  pushDeletedBatch: (tickets, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Batch Delete ${isRedo ? '(Redo)' : ''}`, {
+      count: tickets.length,
+      ticketIds: tickets.map((t) => t.ticket.id),
+    })
     set((state) => ({
       undoStack: [
         ...state.undoStack,
@@ -139,9 +148,14 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         },
       ],
       redoStack: isRedo ? state.redoStack : [],
-    })),
+    }))
+  },
 
-  pushPaste: (tickets, toastId, isRedo = false) =>
+  pushPaste: (tickets, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Paste ${isRedo ? '(Redo)' : ''}`, {
+      count: tickets.length,
+      ticketIds: tickets.map((t) => t.ticket.id),
+    })
     set((state) => ({
       undoStack: [
         ...state.undoStack,
@@ -152,7 +166,8 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         },
       ],
       redoStack: isRedo ? state.redoStack : [],
-    })),
+    }))
+  },
 
   pushMove: (
     moves,
@@ -162,7 +177,13 @@ export const useUndoStore = create<UndoState>((set, get) => ({
     originalColumns,
     afterColumns,
     isRedo = false,
-  ) =>
+  ) => {
+    console.debug(`[SessionLog] Action: Move ${isRedo ? '(Redo)' : ''}`, {
+      count: moves.length,
+      from: fromColumnName,
+      to: toColumnName,
+      ticketIds: moves.map((m) => m.ticketId),
+    })
     set((state) => ({
       undoStack: [
         ...state.undoStack,
@@ -190,9 +211,14 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         },
       ],
       redoStack: isRedo ? state.redoStack : [],
-    })),
+    }))
+  },
 
-  pushUpdate: (tickets, toastId, isRedo = false) =>
+  pushUpdate: (tickets, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Update ${isRedo ? '(Redo)' : ''}`, {
+      count: tickets.length,
+      ticketIds: tickets.map((t) => t.ticketId),
+    })
     set((state) => ({
       undoStack: [
         ...state.undoStack,
@@ -210,27 +236,40 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         },
       ],
       redoStack: isRedo ? state.redoStack : [],
-    })),
+    }))
+  },
 
   popUndo: () => {
     const state = get()
     if (state.undoStack.length === 0) return undefined
 
     const item = state.undoStack[state.undoStack.length - 1]
+    console.debug('[SessionLog] Action: Undo (Pop)', {
+      type: item.action.type,
+      timestamp: item.timestamp,
+    })
     set({ undoStack: state.undoStack.slice(0, -1) })
     return item
   },
 
-  pushRedo: (item) =>
+  pushRedo: (item) => {
+    console.debug('[SessionLog] Internal: Pushing to Redo Stack', {
+      type: item.action.type,
+    })
     set((state) => ({
       redoStack: [...state.redoStack, item],
-    })),
+    }))
+  },
 
   popRedo: () => {
     const state = get()
     if (state.redoStack.length === 0) return undefined
 
     const item = state.redoStack[state.redoStack.length - 1]
+    console.debug('[SessionLog] Action: Redo (Pop)', {
+      type: item.action.type,
+      timestamp: item.timestamp,
+    })
     set({ redoStack: state.redoStack.slice(0, -1) })
     return item
   },
@@ -241,6 +280,10 @@ export const useUndoStore = create<UndoState>((set, get) => ({
     if (entryIndex === -1) return undefined
 
     const entry = state.undoStack[entryIndex]
+    console.debug('[SessionLog] Action: Undo by Toast', {
+      type: entry.action.type,
+      toastId,
+    })
     const newUndoStack = [...state.undoStack]
     newUndoStack.splice(entryIndex, 1)
 
@@ -257,6 +300,10 @@ export const useUndoStore = create<UndoState>((set, get) => ({
     if (entryIndex === -1) return undefined
 
     const entry = state.redoStack[entryIndex]
+    console.debug('[SessionLog] Action: Redo by Toast', {
+      type: entry.action.type,
+      toastId,
+    })
     const newRedoStack = [...state.redoStack]
     newRedoStack.splice(entryIndex, 1)
 
