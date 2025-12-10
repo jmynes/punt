@@ -44,6 +44,8 @@ import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { getStatusIcon } from '@/lib/status-icons'
+import { formatTicketId } from '@/lib/ticket-format'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type {
@@ -264,7 +266,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
   if (!ticket) return null
 
-  const ticketKey = `${projectKey}-${ticket.number}`
+  const ticketKey = formatTicketId(ticket)
   const isOverdue =
     ticket.dueDate && new Date(ticket.dueDate) < new Date() && ticket.columnId !== 'col-5'
 
@@ -380,12 +382,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
     removeTicket(ticket.id)
     setShowDeleteConfirm(false)
-    onClose()
 
     const showUndo = useUIStore.getState().showUndoButtons
     const toastId = showUndoRedoToast('error', {
       title: 'Ticket deleted',
-      description: <span className="font-mono">{ticketKey}</span>,
+      description: ticketKey,
       duration: 5000,
       showUndoButtons: showUndo,
       onUndo: () => {
@@ -396,12 +397,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         removeTicket(deletedTicket.id)
       },
       undoneTitle: 'Ticket restored',
-      undoneDescription: deletedTicket.title,
       redoneTitle: 'Delete redone',
-      redoneDescription: deletedTicket.title,
     })
 
     pushDeleted(deletedTicket, columnId, toastId)
+    onClose()
   }
 
   const handleClone = () => {
