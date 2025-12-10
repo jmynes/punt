@@ -292,3 +292,18 @@ export const useUndoStore = create<UndoState>((set, get) => ({
   popDeleted: () => get().popUndo(),
   removeDeleted: (toastId) => get().removeEntry(toastId),
 }))
+
+// Log undo/redo stack changes to the console for debugging
+useUndoStore.subscribe((state, prevState) => {
+  if (state.undoStack !== prevState.undoStack || state.redoStack !== prevState.redoStack) {
+    console.debug('[UndoStore] Stack changed', {
+      undo: state.undoStack,
+      redo: state.redoStack,
+    })
+  }
+})
+
+// Expose the store to the window for debugging
+if (typeof window !== 'undefined') {
+  ;(window as any).undoStore = useUndoStore
+}
