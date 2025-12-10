@@ -120,6 +120,28 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
     columns,
   } = useBacklogStore()
 
+  // Calculate the earliest year from all tickets' due dates
+  const calendarStartYear = useMemo(() => {
+    let earliestYear = Infinity // Start with infinity to find minimum
+    let hasDueDates = false
+
+    // Check all tickets across all columns (including done tickets)
+    _statusColumns.forEach(column => {
+      column.tickets.forEach(ticket => {
+        if (ticket.dueDate) {
+          hasDueDates = true
+          const ticketYear = ticket.dueDate.getFullYear()
+          if (ticketYear < earliestYear) {
+            earliestYear = ticketYear
+          }
+        }
+      })
+    })
+
+    // If we have due dates, use the earliest year found, otherwise use fallback
+    return hasDueDates ? earliestYear : 2020
+  }, [_statusColumns])
+
   const visibleColumns = columns.filter((c) => c.visible)
   const labelsVisible = visibleColumns.some((c) => c.id === 'labels')
   const pointsVisible = visibleColumns.some((c) => c.id === 'storyPoints')
@@ -466,6 +488,8 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   initialFocus
                   numberOfMonths={2}
                   captionLayout="dropdown"
+                  fromYear={calendarStartYear}
+                  toYear={new Date().getFullYear() + 1}
                   className={`rounded-md border-zinc-800 bg-zinc-950 text-zinc-300 ${
                     filterByDueDate.includeNone ? 'opacity-50 pointer-events-none' : ''
                   }`}
