@@ -7,8 +7,10 @@ interface UndoRedoToastOptions {
   description: React.ReactNode
   duration?: number
   showUndoButtons: boolean
-  onUndo: () => void
-  onRedo?: () => void
+  onUndo: (id: string | number) => void
+  onRedo?: (id: string | number) => void
+  onUndoneToast?: (id: string | number) => void
+  onRedoneToast?: (id: string | number) => void
   undoLabel?: string
   redoLabel?: string
   undoneTitle?: string
@@ -25,6 +27,8 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
     showUndoButtons,
     onUndo,
     onRedo,
+    onUndoneToast,
+    onRedoneToast,
     undoLabel = 'Undo',
     redoLabel = 'Redo',
     undoneTitle = 'Action undone',
@@ -35,41 +39,49 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
 
   const toastFn = kind === 'error' ? toast.error : toast.success
 
-  const toastId = toastFn(title, {
+  let toastId: string | number | undefined
+
+  toastId = toastFn(title, {
     description,
     duration,
     action: showUndoButtons
       ? {
           label: undoLabel,
           onClick: () => {
-            onUndo()
+            if (toastId) onUndo(toastId)
             if (onRedo && showUndoButtons) {
-              toastFn(undoneTitle, {
+              const undoneToastId = toastFn(undoneTitle, {
                 description: undoneDescription,
                 duration: 2000,
                 action: {
                   label: redoLabel,
                   onClick: () => {
-                    onRedo()
-                    toastFn(redoneTitle, {
+                    onRedo(undoneToastId)
+                    let redoneToastId: string | number | undefined
+                    redoneToastId = toastFn(redoneTitle, {
                       description: redoneDescription,
                       duration: 2000,
                       action: {
                         label: undoLabel,
                         onClick: () => {
-                          onUndo()
+                          if (redoneToastId) onUndo(redoneToastId)
+                          // We could continue chaining here, but 3 levels is usually enough
+                          // Ideally this would recurse or use a better structure
                         },
                       },
                     })
+                    if (redoneToastId) onRedoneToast?.(redoneToastId)
                   },
                 },
               })
+              onUndoneToast?.(undoneToastId)
             }
           },
         }
       : undefined,
   })
 
-  return toastId
+  // In case synchronous execution happened (unlikely for toast), ensure we return a value
+  return toastId as string | number
 }
 
