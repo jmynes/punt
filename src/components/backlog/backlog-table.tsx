@@ -196,38 +196,54 @@ export function BacklogTable({
     }
 
     // Due date filter
-    const { from: dueDateFrom, to: dueDateTo, includeNone: includeNoDueDate } = filterByDueDate
-    if (dueDateFrom || dueDateTo || includeNoDueDate) {
+    const { from: dueDateFrom, to: dueDateTo, includeNone: includeNoDueDate, includeOverdue: includeOverdue } = filterByDueDate
+    if (dueDateFrom || dueDateTo || includeNoDueDate || includeOverdue) {
       result = result.filter((t) => {
-        // Handle tickets with no due date
+        // If we want to include overdue tickets, check that first
+        if (includeOverdue && t.dueDate) {
+          const ticketDate = new Date(t.dueDate)
+          const now = new Date()
+          // Overdue means due date is before today (end of today)
+          const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+          if (ticketDate.getTime() < todayEnd.getTime()) {
+            return true
+          }
+        }
+
+        // If we want to include tickets with no due date, check that next
+        if (includeNoDueDate && !t.dueDate) {
+          return true
+        }
+
+        // If ticket has no due date but we're not including them, filter it out
         if (!t.dueDate) {
-          return includeNoDueDate
+          return false
         }
 
         // Handle tickets with due dates
         const ticketDate = new Date(t.dueDate)
-        const ticketDateOnly = new Date(ticketDate.getFullYear(), ticketDate.getMonth(), ticketDate.getDate())
+        const ticketTime = ticketDate.getTime()
 
         // If no from date, only check upper bound
         if (!dueDateFrom && dueDateTo) {
-          const toDateOnly = new Date(dueDateTo.getFullYear(), dueDateTo.getMonth(), dueDateTo.getDate())
-          return ticketDateOnly <= toDateOnly
+          const toTime = new Date(dueDateTo).setHours(23, 59, 59, 999)
+          return ticketTime <= toTime
         }
 
         // If no to date, only check lower bound
         if (dueDateFrom && !dueDateTo) {
-          const fromDateOnly = new Date(dueDateFrom.getFullYear(), dueDateFrom.getMonth(), dueDateFrom.getDate())
-          return ticketDateOnly >= fromDateOnly
+          const fromTime = new Date(dueDateFrom).setHours(0, 0, 0, 0)
+          return ticketTime >= fromTime
         }
 
         // If both from and to dates, check range
         if (dueDateFrom && dueDateTo) {
-          const fromDateOnly = new Date(dueDateFrom.getFullYear(), dueDateFrom.getMonth(), dueDateFrom.getDate())
-          const toDateOnly = new Date(dueDateTo.getFullYear(), dueDateTo.getMonth(), dueDateTo.getDate())
-          return ticketDateOnly >= fromDateOnly && ticketDateOnly <= toDateOnly
+          const fromTime = new Date(dueDateFrom).setHours(0, 0, 0, 0)
+          const toTime = new Date(dueDateTo).setHours(23, 59, 59, 999)
+          return ticketTime >= fromTime && ticketTime <= toTime
         }
 
-        // If neither from nor to, and not including no due date, show all (shouldn't happen with current logic)
+        // If neither from nor to, and not including no due date or overdue, show all (shouldn't happen with current logic)
         return true
       })
     }
