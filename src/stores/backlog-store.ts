@@ -109,6 +109,7 @@ interface BacklogState {
   columnConfigOpen: boolean
   setColumnConfigOpen: (open: boolean) => void
 
+
   // Manual backlog ordering (per project)
   backlogOrder: Record<string, string[]>
   setBacklogOrder: (projectId: string, orderedIds: string[]) => void
