@@ -424,6 +424,13 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
           if (!dueVisible) return null
 
           const hasActiveFilter = (filterByDueDate.from || filterByDueDate.to || filterByDueDate.includeNone || filterByDueDate.includeOverdue)
+          const getBadgeText = () => {
+            if (filterByDueDate.from && filterByDueDate.to) return 'Range'
+            if (filterByDueDate.from || filterByDueDate.to) return '1'
+            if (filterByDueDate.includeOverdue) return 'Overdue'
+            if (filterByDueDate.includeNone) return 'No Date'
+            return ''
+          }
 
           return (
             <Popover key="dueDate">
@@ -433,10 +440,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   Due Date
                   {hasActiveFilter && (
                     <Badge variant="secondary" className="ml-2">
-                      {(filterByDueDate.from && filterByDueDate.to) ? 'Range' :
-                       (filterByDueDate.from || filterByDueDate.to) ? '1' :
-                       filterByDueDate.includeOverdue ? 'Overdue' :
-                       filterByDueDate.includeNone ? 'None' : ''}
+                      {getBadgeText()}
                     </Badge>
                   )}
                 </Button>
@@ -468,63 +472,91 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                 />
                 <div className="p-3 border-t border-zinc-800 bg-zinc-950">
                   <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="overdue"
-                        className="rounded border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
-                        checked={filterByDueDate.includeOverdue}
-                        onChange={(e) => {
-                          setFilterByDueDate({
-                            ...filterByDueDate,
-                            includeOverdue: e.target.checked
-                          })
-                        }}
-                      />
-                      <label
-                        htmlFor="overdue"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-zinc-300"
-                      >
-                        Overdue tickets
-                      </label>
-                    </div>
-                    <div className="flex items-center justify-between">
+                    <div className="space-y-2">
                       <div className="flex items-center space-x-2">
                         <input
-                          type="checkbox"
-                          id="no-due-date"
-                          className="rounded border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
-                          checked={filterByDueDate.includeNone}
-                          onChange={(e) => {
+                          type="radio"
+                          id="all-dates"
+                          name="due-date-filter"
+                          className="border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
+                          checked={!filterByDueDate.includeOverdue && !filterByDueDate.includeNone}
+                          onChange={() => {
                             setFilterByDueDate({
                               ...filterByDueDate,
-                              includeNone: e.target.checked
+                              includeOverdue: false,
+                              includeNone: false
                             })
                           }}
                         />
                         <label
-                          htmlFor="no-due-date"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-zinc-300"
+                          htmlFor="all-dates"
+                          className="text-sm font-medium leading-none text-zinc-300"
                         >
-                          No due date
+                          All dates
                         </label>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
-                        onClick={() => {
-                          setFilterByDueDate({
-                            from: undefined,
-                            to: undefined,
-                            includeNone: false,
-                            includeOverdue: false
-                          })
-                        }}
-                        title="Clear date filter"
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                      </Button>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="overdue"
+                          name="due-date-filter"
+                          className="border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
+                          checked={filterByDueDate.includeOverdue}
+                          onChange={() => {
+                            setFilterByDueDate({
+                              ...filterByDueDate,
+                              includeOverdue: true,
+                              includeNone: false
+                            })
+                          }}
+                        />
+                        <label
+                          htmlFor="overdue"
+                          className="text-sm font-medium leading-none text-zinc-300"
+                        >
+                          Overdue tickets
+                        </label>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            id="no-due-date"
+                            name="due-date-filter"
+                            className="border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
+                            checked={filterByDueDate.includeNone}
+                            onChange={() => {
+                              setFilterByDueDate({
+                                ...filterByDueDate,
+                                includeOverdue: false,
+                                includeNone: true
+                              })
+                            }}
+                          />
+                          <label
+                            htmlFor="no-due-date"
+                            className="text-sm font-medium leading-none text-zinc-300"
+                          >
+                            No due date
+                          </label>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
+                          onClick={() => {
+                            setFilterByDueDate({
+                              from: undefined,
+                              to: undefined,
+                              includeNone: false,
+                              includeOverdue: false
+                            })
+                          }}
+                          title="Clear date filter"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
