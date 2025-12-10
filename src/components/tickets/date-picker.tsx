@@ -6,12 +6,17 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import { useBoardStore } from '@/stores/board-store'
+import { useSettingsStore } from '@/stores/settings-store'
+import { useMemo } from 'react'
 
 interface DatePickerProps {
   value: Date | null
   onChange: (value: Date | null) => void
   placeholder?: string
   disabled?: boolean
+  fromYear?: number
+  context?: 'ticket-form' | 'filter'
 }
 
 export function DatePicker({
@@ -19,7 +24,43 @@ export function DatePicker({
   onChange,
   placeholder = 'Pick a date',
   disabled,
+  fromYear,
+  context = 'filter',
 }: DatePickerProps) {
+  // Calculate the earliest year from all tickets' due dates
+  const calendarStartYear = useMemo(() => {
+    if (fromYear !== undefined) {
+      return fromYear // Use prop if provided
+    }
+
+    const columns = useBoardStore.getState().columns
+    let earliestYear = Infinity // Start with infinity to find minimum
+    let hasDueDates = false
+
+    // Check all tickets across all columns (including done tickets)
+    columns.forEach(column => {
+      column.tickets.forEach(ticket => {
+        if (ticket.dueDate) {
+          hasDueDates = true
+          const ticketYear = ticket.dueDate.getFullYear()
+          if (ticketYear < earliestYear) {
+            earliestYear = ticketYear
+          }
+        }
+      })
+    })
+
+    // If we have due dates, use the earliest year found, otherwise use fallback
+    return hasDueDates ? earliestYear : 2020
+  }, [fromYear])
+
+  // Get max year based on context
+  const calendarMaxYear = useMemo(() => {
+    return context === 'ticket-form'
+      ? useSettingsStore.getState().ticketDateMaxYear
+      : new Date().getFullYear() + 1
+  }, [context])
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -60,6 +101,9 @@ export function DatePicker({
           onSelect={(date) => onChange(date || null)}
           numberOfMonths={1}
           initialFocus
+          captionLayout="dropdown"
+          fromYear={calendarStartYear}
+          toYear={calendarMaxYear}
           className="bg-zinc-900"
           classNames={
             value

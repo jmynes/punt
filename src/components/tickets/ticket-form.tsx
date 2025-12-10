@@ -238,6 +238,7 @@ export function TicketForm({
             onChange={(value) => updateField('startDate', value)}
             placeholder="Set start date"
             disabled={disabled}
+            context="ticket-form"
           />
         </div>
         <div className="space-y-2">
@@ -247,6 +248,7 @@ export function TicketForm({
             onChange={(value) => updateField('dueDate', value)}
             placeholder="Set due date"
             disabled={disabled}
+            context="ticket-form"
           />
         </div>
       </div>
