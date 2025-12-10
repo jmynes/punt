@@ -462,7 +462,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     })
                   }}
                   disabled={filterByDueDate.includeNone}
-                  defaultMonth={new Date(2024, 10, 1)}
+                  defaultMonth={new Date()}
                   initialFocus
                   numberOfMonths={2}
                   captionLayout="dropdown-buttons"
@@ -472,8 +472,11 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     filterByDueDate.includeNone ? 'opacity-50 pointer-events-none' : ''
                   }`}
                   classNames={{
-                    caption_label: 'text-zinc-300',
-                    dropdown: 'bg-zinc-800 border-zinc-600 text-zinc-300',
+                    caption_label: 'text-zinc-300 hover:bg-zinc-800',
+                    caption_dropdowns: 'flex justify-center gap-1',
+                    dropdown: 'bg-zinc-900 border-zinc-700 text-zinc-300 rounded px-2 py-1 text-sm focus:border-amber-500',
+                    dropdown_month: 'bg-zinc-900 border-zinc-700 text-zinc-300 rounded px-2 py-1 text-sm focus:border-amber-500',
+                    dropdown_year: 'bg-zinc-900 border-zinc-700 text-zinc-300 rounded px-2 py-1 text-sm focus:border-amber-500',
                     button_previous: 'text-zinc-400 hover:text-zinc-200',
                     button_next: 'text-zinc-400 hover:text-zinc-200'
                   }}
