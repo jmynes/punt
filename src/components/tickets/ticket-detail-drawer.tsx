@@ -16,6 +16,13 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -616,18 +623,28 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
                 {editingField === 'sprint' ? (
                   <div className="flex items-center gap-2">
-                    <select
-                      value={tempSprintId || ''}
-                      onChange={(e) => setTempSprintId(e.target.value || null)}
-                      className="h-8 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 text-sm transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500"
+                    <Select
+                      value={tempSprintId || 'none'}
+                      onValueChange={(v) => setTempSprintId(v === 'none' ? null : v)}
                     >
-                      <option value="">No sprint (Backlog)</option>
-                      {DEMO_SPRINTS.map((sprint) => (
-                        <option key={sprint.id} value={sprint.id}>
-                          {sprint.name} {sprint.isActive && '(Active)'}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="h-8 w-[200px] bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500">
+                        <SelectValue placeholder="No sprint (Backlog)" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-700">
+                        <SelectItem value="none" className="focus:bg-zinc-800 focus:text-zinc-100">
+                          No sprint (Backlog)
+                        </SelectItem>
+                        {DEMO_SPRINTS.map((sprint) => (
+                          <SelectItem
+                            key={sprint.id}
+                            value={sprint.id}
+                            className="focus:bg-zinc-800 focus:text-zinc-100"
+                          >
+                            {sprint.name} {sprint.isActive && '(Active)'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button
                       size="sm"
                       onClick={() => handleSaveField('sprint')}
@@ -758,20 +775,16 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
               {/* Details grid */}
               <div className="grid grid-cols-2 gap-4">
-                {/* Status */}
+                {/* Reporter */}
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">Status</Label>
-                  <select
-                    value={ticket.columnId}
-                    onChange={(e) => handleImmediateChange('status', e.target.value)}
-                    className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 text-sm transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  >
-                    {columns.map((col) => (
-                      <option key={col.id} value={col.id}>
-                        {col.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Label className="text-zinc-400">Reporter</Label>
+                  <UserSelect
+                    value={ticket.creatorId}
+                    onChange={(value) => handleImmediateChange('creator', value)}
+                    users={members}
+                    currentUserId={currentUser.id}
+                    placeholder="Unassigned"
+                  />
                 </div>
 
                 {/* Assignee */}
@@ -787,16 +800,34 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   />
                 </div>
 
-                {/* Reporter */}
+                {/* Status */}
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">Reporter</Label>
-                  <UserSelect
-                    value={ticket.creatorId}
-                    onChange={(value) => handleImmediateChange('creator', value)}
-                    users={members}
-                    currentUserId={currentUser.id}
-                    placeholder="Unassigned"
-                  />
+                  <Label className="text-zinc-400">Status</Label>
+                  <Select
+                    value={ticket.columnId}
+                    onValueChange={(value) => handleImmediateChange('status', value)}
+                  >
+                    <SelectTrigger className="w-full h-10 bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-700">
+                      {columns.map((col) => {
+                        const { icon: StatusIcon, color } = getStatusIcon(col.name)
+                        return (
+                          <SelectItem
+                            key={col.id}
+                            value={col.id}
+                            className="focus:bg-zinc-800 focus:text-zinc-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <StatusIcon className={`h-4 w-4 ${color}`} />
+                              <span>{col.name}</span>
+                            </div>
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Parent Epic/Story */}
@@ -993,7 +1024,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               ref={deleteButtonRef}
               onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
-            >
+              >
               <Trash2 className="h-4 w-4 mr-1" />
               Delete
             </AlertDialogAction>
