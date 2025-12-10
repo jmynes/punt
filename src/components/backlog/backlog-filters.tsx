@@ -18,6 +18,8 @@ import {
   Zap,
   Flag,
   RotateCcw,
+  Check,
+  Clock,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -471,93 +473,88 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   }`}
                 />
                 <div className="p-3 border-t border-zinc-800 bg-zinc-950">
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="all-dates"
-                          name="due-date-filter"
-                          className="border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
-                          checked={!filterByDueDate.includeOverdue && !filterByDueDate.includeNone}
-                          onChange={() => {
-                            setFilterByDueDate({
-                              ...filterByDueDate,
-                              includeOverdue: false,
-                              includeNone: false
-                            })
-                          }}
-                        />
-                        <label
-                          htmlFor="all-dates"
-                          className="text-sm font-medium leading-none text-zinc-300"
-                        >
-                          All dates
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="overdue"
-                          name="due-date-filter"
-                          className="border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
-                          checked={filterByDueDate.includeOverdue}
-                          onChange={() => {
-                            setFilterByDueDate({
-                              ...filterByDueDate,
-                              includeOverdue: true,
-                              includeNone: false
-                            })
-                          }}
-                        />
-                        <label
-                          htmlFor="overdue"
-                          className="text-sm font-medium leading-none text-zinc-300"
-                        >
-                          Overdue tickets
-                        </label>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="radio"
-                            id="no-due-date"
-                            name="due-date-filter"
-                            className="border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
-                            checked={filterByDueDate.includeNone}
-                            onChange={() => {
-                              setFilterByDueDate({
-                                ...filterByDueDate,
-                                includeOverdue: false,
-                                includeNone: true
-                              })
-                            }}
-                          />
-                          <label
-                            htmlFor="no-due-date"
-                            className="text-sm font-medium leading-none text-zinc-300"
-                          >
-                            No due date
-                          </label>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
-                          onClick={() => {
-                            setFilterByDueDate({
-                              from: undefined,
-                              to: undefined,
-                              includeNone: false,
-                              includeOverdue: false
-                            })
-                          }}
-                          title="Clear date filter"
-                        >
-                          <RotateCcw className="h-3 w-3" />
-                        </Button>
-                      </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant={!filterByDueDate.includeOverdue && !filterByDueDate.includeNone ? "default" : "outline"}
+                        size="sm"
+                        className={`h-8 px-3 text-xs ${
+                          !filterByDueDate.includeOverdue && !filterByDueDate.includeNone
+                            ? "bg-amber-600 text-zinc-900 border-amber-600"
+                            : "border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                        }`}
+                        onClick={() => {
+                          setFilterByDueDate({
+                            ...filterByDueDate,
+                            includeOverdue: false,
+                            includeNone: false
+                          })
+                        }}
+                      >
+                        {!filterByDueDate.includeOverdue && !filterByDueDate.includeNone && (
+                          <Check className="h-3 w-3 mr-1" />
+                        )}
+                        All dates
+                      </Button>
+                      <Button
+                        variant={filterByDueDate.includeOverdue ? "default" : "outline"}
+                        size="sm"
+                        className={`h-8 px-3 text-xs ${
+                          filterByDueDate.includeOverdue
+                            ? "bg-amber-600 text-zinc-900 border-amber-600"
+                            : "border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                        }`}
+                        onClick={() => {
+                          setFilterByDueDate({
+                            ...filterByDueDate,
+                            includeOverdue: true,
+                            includeNone: false
+                          })
+                        }}
+                      >
+                        {filterByDueDate.includeOverdue && (
+                          <Clock className="h-3 w-3 mr-1" />
+                        )}
+                        Overdue
+                      </Button>
+                      <Button
+                        variant={filterByDueDate.includeNone ? "default" : "outline"}
+                        size="sm"
+                        className={`h-8 px-3 text-xs ${
+                          filterByDueDate.includeNone
+                            ? "bg-amber-600 text-zinc-900 border-amber-600"
+                            : "border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                        }`}
+                        onClick={() => {
+                          setFilterByDueDate({
+                            ...filterByDueDate,
+                            includeOverdue: false,
+                            includeNone: true
+                          })
+                        }}
+                      >
+                        {filterByDueDate.includeNone && (
+                          <X className="h-3 w-3 mr-1" />
+                        )}
+                        No due date
+                      </Button>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
+                      onClick={() => {
+                        setFilterByDueDate({
+                          from: undefined,
+                          to: undefined,
+                          includeNone: false,
+                          includeOverdue: false
+                        })
+                      }}
+                      title="Clear date filter"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
               </PopoverContent>
