@@ -29,12 +29,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
+import { format } from 'date-fns'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 import { getStatusIcon } from '@/lib/status-icons'
 import { useBacklogStore } from '@/stores/backlog-store'
 import type { ColumnWithTickets, IssueType, Priority, UserSummary } from '@/types'
 import { ISSUE_TYPES, PRIORITIES } from '@/types'
+import type { DateRange } from 'react-day-picker'
 
 // Type icons
 const typeIcons: Record<IssueType, React.ComponentType<{ className?: string }>> = {
@@ -413,39 +421,67 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
           )
         case 'dueDate':
           if (!dueVisible) return null
+
+          const hasActiveFilter = (filterByDueDate.from || filterByDueDate.to || filterByDueDate.includeNone)
+
           return (
-            <DropdownMenu key="dueDate">
-              <DropdownMenuTrigger asChild>
+            <Popover key="dueDate">
+              <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="shrink-0">
                   <Calendar className="mr-2 h-4 w-4 text-pink-400" />
                   Due Date
-                  {filterByDueDate.length > 0 && (
+                  {hasActiveFilter && (
                     <Badge variant="secondary" className="ml-2">
-                      {filterByDueDate.length}
+                      {(filterByDueDate.from && filterByDueDate.to) ? 'Range' :
+                       (filterByDueDate.from || filterByDueDate.to) ? '1' :
+                       filterByDueDate.includeNone ? 'None' : ''}
                     </Badge>
                   )}
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuLabel>Filter by due date</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  checked={filterByDueDate.includes('none')}
-                  onCheckedChange={() => toggleDueDate('none')}
-                >
-                  No due date
-                </DropdownMenuCheckboxItem>
-                {dueDateOptions.map((d) => (
-                  <DropdownMenuCheckboxItem
-                    key={d}
-                    checked={filterByDueDate.includes(d)}
-                    onCheckedChange={() => toggleDueDate(d)}
-                  >
-                    {d}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="range"
+                  selected={{
+                    from: filterByDueDate.from,
+                    to: filterByDueDate.to
+                  }}
+                  onSelect={(range) => {
+                    setFilterByDueDate({
+                      from: range?.from,
+                      to: range?.to,
+                      includeNone: filterByDueDate.includeNone
+                    })
+                  }}
+                  initialFocus
+                  numberOfMonths={2}
+                  className="rounded-md border-zinc-800 bg-zinc-950 text-zinc-300"
+                />
+                <div className="p-3 border-t border-zinc-800 bg-zinc-950">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="no-due-date"
+                      className="rounded border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
+                      checked={filterByDueDate.includeNone}
+                      onChange={(e) => {
+                        setFilterByDueDate({
+                          from: filterByDueDate.from,
+                          to: filterByDueDate.to,
+                          includeNone: e.target.checked
+                        })
+                      }}
+                    />
+                    <label
+                      htmlFor="no-due-date"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-zinc-300"
+                    >
+                      No due date
+                    </label>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           )
         case 'sprint':
           return (
