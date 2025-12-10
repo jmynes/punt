@@ -453,9 +453,12 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                       includeNone: filterByDueDate.includeNone
                     })
                   }}
+                  disabled={filterByDueDate.includeNone}
                   initialFocus
                   numberOfMonths={2}
-                  className="rounded-md border-zinc-800 bg-zinc-950 text-zinc-300"
+                  className={`rounded-md border-zinc-800 bg-zinc-950 text-zinc-300 ${
+                    filterByDueDate.includeNone ? 'opacity-50 pointer-events-none' : ''
+                  }`}
                 />
                 <div className="p-3 border-t border-zinc-800 bg-zinc-950">
                   <div className="flex items-center space-x-2">
@@ -465,9 +468,10 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                       className="rounded border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
                       checked={filterByDueDate.includeNone}
                       onChange={(e) => {
+                        // When checking "No due date", clear any date range
                         setFilterByDueDate({
-                          from: filterByDueDate.from,
-                          to: filterByDueDate.to,
+                          from: e.target.checked ? undefined : filterByDueDate.from,
+                          to: e.target.checked ? undefined : filterByDueDate.to,
                           includeNone: e.target.checked
                         })
                       }}
