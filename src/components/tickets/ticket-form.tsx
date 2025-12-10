@@ -167,9 +167,9 @@ export function TicketForm({
           disabled={disabled}
           className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
         >
-          <option value="">No sprint (Backlog)</option>
+          <option value="" className="bg-zinc-900">No sprint (Backlog)</option>
           {sprints.map((sprint) => (
-            <option key={sprint.id} value={sprint.id}>
+            <option key={sprint.id} value={sprint.id} className="bg-zinc-900">
               {sprint.name} {sprint.isActive && '(Active)'}
             </option>
           ))}
@@ -185,27 +185,9 @@ export function TicketForm({
           disabled={disabled}
           className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
         >
-          <option value="">Use default</option>
+          <option value="" className="bg-zinc-900">Use default</option>
           {boardColumns.map((col) => (
-            <option key={col.id} value={col.id}>
-              {col.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Status (column) */}
-      <div className="space-y-2">
-        <Label className="text-zinc-300">Status</Label>
-        <select
-          value={data.columnId || ''}
-          onChange={(e) => updateField('columnId', e.target.value || undefined)}
-          disabled={disabled}
-          className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-        >
-          <option value="">Use default</option>
-          {boardColumns.map((col) => (
-            <option key={col.id} value={col.id}>
+            <option key={col.id} value={col.id} className="bg-zinc-900">
               {col.name}
             </option>
           ))}
