@@ -190,6 +190,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     }
 
     switch (field) {
+      case 'status': {
+        const columnId = value as string
+        updates.columnId = columnId
+        setTempStatusId(columnId)
+        break
+      }
       case 'assignee': {
         const assigneeId = value as string | null
         updates.assigneeId = assigneeId
@@ -752,6 +758,22 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
               {/* Details grid */}
               <div className="grid grid-cols-2 gap-4">
+                {/* Status */}
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Status</Label>
+                  <select
+                    value={ticket.columnId}
+                    onChange={(e) => handleImmediateChange('status', e.target.value)}
+                    className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 text-sm transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  >
+                    {columns.map((col) => (
+                      <option key={col.id} value={col.id}>
+                        {col.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Assignee */}
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Assignee</Label>
