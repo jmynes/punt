@@ -1111,6 +1111,7 @@ export function KeyboardShortcuts() {
               newToastId,
               currentStateBeforeRedo,
               action.afterColumns,
+              true
             )
           } else if (entry.action.type === 'paste') {
             const action = entry.action
@@ -1147,7 +1148,7 @@ export function KeyboardShortcuts() {
                   : undefined,
               },
             )
-            redoStore.pushPaste(action.tickets, newPasteToastId)
+            redoStore.pushPaste(action.tickets, newPasteToastId, true)
           }
         }
       }
