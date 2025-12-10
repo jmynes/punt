@@ -17,6 +17,7 @@ import {
   X,
   Zap,
   Flag,
+  RotateCcw,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -461,27 +462,42 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   }`}
                 />
                 <div className="p-3 border-t border-zinc-800 bg-zinc-950">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="no-due-date"
-                      className="rounded border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
-                      checked={filterByDueDate.includeNone}
-                      onChange={(e) => {
-                        // When checking "No due date", clear any date range
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="no-due-date"
+                        className="rounded border-zinc-700 bg-zinc-900 text-amber-600 focus:ring-amber-600"
+                        checked={filterByDueDate.includeNone}
+                        onChange={(e) => {
+                          setFilterByDueDate({
+                            ...filterByDueDate,
+                            includeNone: e.target.checked
+                          })
+                        }}
+                      />
+                      <label
+                        htmlFor="no-due-date"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-zinc-300"
+                      >
+                        No due date
+                      </label>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
+                      onClick={() => {
                         setFilterByDueDate({
-                          from: e.target.checked ? undefined : filterByDueDate.from,
-                          to: e.target.checked ? undefined : filterByDueDate.to,
-                          includeNone: e.target.checked
+                          from: undefined,
+                          to: undefined,
+                          includeNone: false
                         })
                       }}
-                    />
-                    <label
-                      htmlFor="no-due-date"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-zinc-300"
+                      title="Clear date filter"
                     >
-                      No due date
-                    </label>
+                      <RotateCcw className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
               </PopoverContent>
