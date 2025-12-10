@@ -10,6 +10,13 @@ import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   DEFAULT_TICKET_FORM,
   type IssueType,
   type LabelSummary,
@@ -161,37 +168,63 @@ export function TicketForm({
       {/* Sprint */}
       <div className="space-y-2">
         <Label className="text-zinc-300">Sprint</Label>
-        <select
-          value={data.sprintId || ''}
-          onChange={(e) => updateField('sprintId', e.target.value || null)}
+        <Select
+          value={data.sprintId || 'none'}
+          onValueChange={(v) => updateField('sprintId', v === 'none' ? null : v)}
           disabled={disabled}
-          className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
         >
-          <option value="" className="bg-zinc-900">No sprint (Backlog)</option>
-          {sprints.map((sprint) => (
-            <option key={sprint.id} value={sprint.id} className="bg-zinc-900">
-              {sprint.name} {sprint.isActive && '(Active)'}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+            <SelectValue placeholder="No sprint (Backlog)" />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-900 border-zinc-700">
+            <SelectItem value="none" className="focus:bg-zinc-800 focus:text-zinc-100">
+              No sprint (Backlog)
+            </SelectItem>
+            {sprints.map((sprint) => (
+              <SelectItem
+                key={sprint.id}
+                value={sprint.id}
+                className="focus:bg-zinc-800 focus:text-zinc-100"
+              >
+                {sprint.name} {sprint.isActive && '(Active)'}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Status (column) */}
       <div className="space-y-2">
         <Label className="text-zinc-300">Status</Label>
-        <select
-          value={data.columnId || ''}
-          onChange={(e) => updateField('columnId', e.target.value || undefined)}
+        <Select
+          value={data.columnId || 'default'}
+          onValueChange={(v) => updateField('columnId', v === 'default' ? undefined : v)}
           disabled={disabled}
-          className="w-full h-10 px-3 rounded-md bg-zinc-900 border border-zinc-700 text-zinc-100 transition-colors hover:bg-amber-500/15 hover:border-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
         >
-          <option value="" className="bg-zinc-900">Use default</option>
-          {boardColumns.map((col) => (
-            <option key={col.id} value={col.id} className="bg-zinc-900">
-              {col.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+            <SelectValue placeholder="Use default" />
+          </SelectTrigger>
+          <SelectContent className="bg-zinc-900 border-zinc-700">
+            <SelectItem value="default" className="focus:bg-zinc-800 focus:text-zinc-100">
+              Use default
+            </SelectItem>
+            {boardColumns.map((col) => {
+              const { icon: StatusIcon, color } = getStatusIcon(col.name)
+              return (
+                <SelectItem
+                  key={col.id}
+                  value={col.id}
+                  className="focus:bg-zinc-800 focus:text-zinc-100"
+                >
+                  <div className="flex items-center gap-2">
+                    <StatusIcon className={`h-4 w-4 ${color}`} />
+                    <span>{col.name}</span>
+                  </div>
+                </SelectItem>
+              )
+            })}
+          </SelectContent>
+        </Select>
       </div>
 
       <Separator className="bg-zinc-800" />
