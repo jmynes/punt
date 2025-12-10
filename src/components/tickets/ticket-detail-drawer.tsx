@@ -840,14 +840,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   />
                 </div>
 
-                {/* Environment */}
+                {/* Due Date */}
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">Environment</Label>
-                  <Input
-                    value={ticket.environment || ''}
-                    onChange={(e) => handleImmediateChange('environment', e.target.value)}
-                    placeholder="e.g., Production, Staging"
-                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
+                  <Label className="text-zinc-400">Due Date</Label>
+                  <DatePicker
+                    value={ticket.dueDate}
+                    onChange={(value) => handleImmediateChange('dueDate', value)}
+                    placeholder="Set due date"
+                    context="ticket-form"
                   />
                 </div>
 
@@ -858,16 +858,18 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     value={ticket.startDate}
                     onChange={(value) => handleImmediateChange('startDate', value)}
                     placeholder="Set start date"
+                    context="ticket-form"
                   />
                 </div>
 
-                {/* Due Date */}
+                {/* Environment */}
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">Due Date</Label>
-                  <DatePicker
-                    value={ticket.dueDate}
-                    onChange={(value) => handleImmediateChange('dueDate', value)}
-                    placeholder="Set due date"
+                  <Label className="text-zinc-400">Environment</Label>
+                  <Input
+                    value={ticket.environment || ''}
+                    onChange={(e) => handleImmediateChange('environment', e.target.value)}
+                    placeholder="e.g., Production, Staging"
+                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
                   />
                 </div>
 
