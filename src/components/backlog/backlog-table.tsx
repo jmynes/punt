@@ -199,6 +199,14 @@ export function BacklogTable({
     const { from: dueDateFrom, to: dueDateTo, includeNone: includeNoDueDate, includeOverdue: includeOverdue } = filterByDueDate
     if (dueDateFrom || dueDateTo || includeNoDueDate || includeOverdue) {
       result = result.filter((t) => {
+        // Check if we're only filtering for "no due date" tickets (no other filters active)
+        const isNoDueDateOnly = includeNoDueDate && !dueDateFrom && !dueDateTo && !includeOverdue
+        if (isNoDueDateOnly) {
+          // Only show tickets without due dates
+          return !t.dueDate
+        }
+
+        // Otherwise, apply full filtering logic
         // If we want to include overdue tickets, check that first
         if (includeOverdue && t.dueDate) {
           const ticketDate = new Date(t.dueDate)
