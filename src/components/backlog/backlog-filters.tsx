@@ -480,7 +480,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                         size="sm"
                         className={`h-8 px-3 text-xs ${
                           !filterByDueDate.includeOverdue && !filterByDueDate.includeNone
-                            ? "bg-amber-600 text-zinc-900 border-amber-600"
+                            ? "bg-amber-600 text-white border-amber-600"
                             : "border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
                         }`}
                         onClick={() => {
@@ -491,9 +491,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                           })
                         }}
                       >
-                        {!filterByDueDate.includeOverdue && !filterByDueDate.includeNone && (
-                          <Check className="h-3 w-3 mr-1" />
-                        )}
+                        <Check className="h-3 w-3 mr-1" />
                         All dates
                       </Button>
                       <Button
@@ -501,7 +499,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                         size="sm"
                         className={`h-8 px-3 text-xs ${
                           filterByDueDate.includeOverdue
-                            ? "bg-amber-600 text-zinc-900 border-amber-600"
+                            ? "bg-amber-600 text-white border-amber-600"
                             : "border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
                         }`}
                         onClick={() => {
@@ -512,9 +510,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                           })
                         }}
                       >
-                        {filterByDueDate.includeOverdue && (
-                          <Clock className="h-3 w-3 mr-1" />
-                        )}
+                        <Clock className="h-3 w-3 mr-1" />
                         Overdue
                       </Button>
                       <Button
@@ -522,7 +518,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                         size="sm"
                         className={`h-8 px-3 text-xs ${
                           filterByDueDate.includeNone
-                            ? "bg-amber-600 text-zinc-900 border-amber-600"
+                            ? "bg-amber-600 text-white border-amber-600"
                             : "border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
                         }`}
                         onClick={() => {
@@ -533,9 +529,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                           })
                         }}
                       >
-                        {filterByDueDate.includeNone && (
-                          <X className="h-3 w-3 mr-1" />
-                        )}
+                        <X className="h-3 w-3 mr-1" />
                         No due date
                       </Button>
                     </div>
