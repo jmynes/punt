@@ -286,6 +286,8 @@ export function BacklogTable({
     filterByPriority,
     filterByAssignee,
     filterBySprint,
+    filterByPoints,
+    filterByDueDate,
     sort,
     hasManualOrder,
     projectKey,
