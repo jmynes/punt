@@ -50,11 +50,20 @@ interface UndoState {
   redoStack: UndoEntry[]
 
   // Add a delete action to the undo stack
-  pushDeleted: (ticket: TicketWithRelations, columnId: string, toastId: string | number) => void
-  pushDeletedBatch: (tickets: DeletedTicket[], toastId: string | number) => void
+  pushDeleted: (
+    ticket: TicketWithRelations,
+    columnId: string,
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
+  pushDeletedBatch: (
+    tickets: DeletedTicket[],
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
 
   // Add a paste action to the undo stack
-  pushPaste: (tickets: PastedTicket[], toastId: string | number) => void
+  pushPaste: (tickets: PastedTicket[], toastId: string | number, isRedo?: boolean) => void
 
   // Add a move action to the undo stack
   pushMove: (
@@ -64,10 +73,11 @@ interface UndoState {
     toastId: string | number,
     originalColumns?: ColumnWithTickets[], // Optional: store original column state for precise undo (before move)
     afterColumns?: ColumnWithTickets[], // Optional: store state after move for precise redo
+    isRedo?: boolean,
   ) => void
 
   // Add an update action to the undo stack
-  pushUpdate: (tickets: UpdatedTicket[], toastId: string | number) => void
+  pushUpdate: (tickets: UpdatedTicket[], toastId: string | number, isRedo?: boolean) => void
 
   // Pop and return the most recent undo entry
   popUndo: () => UndoEntry | undefined
@@ -77,6 +87,18 @@ interface UndoState {
 
   // Pop from redo stack (for redo)
   popRedo: () => UndoEntry | undefined
+
+  // Undo a specific entry by toastId (moves from undoStack to redoStack)
+  undoByToastId: (toastId: string | number) => UndoEntry | undefined
+
+  // Redo a specific entry by toastId (moves from redoStack to undoStack)
+  redoByToastId: (toastId: string | number) => UndoEntry | undefined
+
+  // Update the toastId of an entry in the redo stack (used when a toast is replaced)
+  updateRedoToastId: (oldId: string | number, newId: string | number) => void
+
+  // Update the toastId of an entry in the undo stack (used when a toast is replaced)
+  updateUndoToastId: (oldId: string | number, newId: string | number) => void
 
   // Remove a specific undo entry by toastId
   removeEntry: (toastId: string | number) => void
@@ -93,7 +115,7 @@ export const useUndoStore = create<UndoState>((set, get) => ({
   undoStack: [],
   redoStack: [],
 
-  pushDeleted: (ticket, columnId, toastId) =>
+  pushDeleted: (ticket, columnId, toastId, isRedo = false) =>
     set((state) => ({
       undoStack: [
         ...state.undoStack,
@@ -103,10 +125,10 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           toastId,
         },
       ],
-      redoStack: [],
+      redoStack: isRedo ? state.redoStack : [],
     })),
 
-  pushDeletedBatch: (tickets, toastId) =>
+  pushDeletedBatch: (tickets, toastId, isRedo = false) =>
     set((state) => ({
       undoStack: [
         ...state.undoStack,
@@ -116,10 +138,10 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           toastId,
         },
       ],
-      redoStack: [],
+      redoStack: isRedo ? state.redoStack : [],
     })),
 
-  pushPaste: (tickets, toastId) =>
+  pushPaste: (tickets, toastId, isRedo = false) =>
     set((state) => ({
       undoStack: [
         ...state.undoStack,
@@ -129,10 +151,18 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           toastId,
         },
       ],
-      redoStack: [],
+      redoStack: isRedo ? state.redoStack : [],
     })),
 
-  pushMove: (moves, fromColumnName, toColumnName, toastId, originalColumns, afterColumns) =>
+  pushMove: (
+    moves,
+    fromColumnName,
+    toColumnName,
+    toastId,
+    originalColumns,
+    afterColumns,
+    isRedo = false,
+  ) =>
     set((state) => ({
       undoStack: [
         ...state.undoStack,
@@ -159,10 +189,10 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           toastId,
         },
       ],
-      redoStack: [],
+      redoStack: isRedo ? state.redoStack : [],
     })),
 
-  pushUpdate: (tickets, toastId) =>
+  pushUpdate: (tickets, toastId, isRedo = false) =>
     set((state) => ({
       undoStack: [
         ...state.undoStack,
@@ -179,7 +209,7 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           toastId,
         },
       ],
-      redoStack: [],
+      redoStack: isRedo ? state.redoStack : [],
     })),
 
   popUndo: () => {
@@ -204,6 +234,52 @@ export const useUndoStore = create<UndoState>((set, get) => ({
     set({ redoStack: state.redoStack.slice(0, -1) })
     return item
   },
+
+  undoByToastId: (toastId) => {
+    const state = get()
+    const entryIndex = state.undoStack.findIndex((e) => e.toastId === toastId)
+    if (entryIndex === -1) return undefined
+
+    const entry = state.undoStack[entryIndex]
+    const newUndoStack = [...state.undoStack]
+    newUndoStack.splice(entryIndex, 1)
+
+    set({
+      undoStack: newUndoStack,
+      redoStack: [...state.redoStack, entry],
+    })
+    return entry
+  },
+
+  redoByToastId: (toastId) => {
+    const state = get()
+    const entryIndex = state.redoStack.findIndex((e) => e.toastId === toastId)
+    if (entryIndex === -1) return undefined
+
+    const entry = state.redoStack[entryIndex]
+    const newRedoStack = [...state.redoStack]
+    newRedoStack.splice(entryIndex, 1)
+
+    set({
+      redoStack: newRedoStack,
+      undoStack: [...state.undoStack, entry],
+    })
+    return entry
+  },
+
+  updateRedoToastId: (oldId, newId) =>
+    set((state) => ({
+      redoStack: state.redoStack.map((e) =>
+        e.toastId === oldId ? { ...e, toastId: newId } : e,
+      ),
+    })),
+
+  updateUndoToastId: (oldId, newId) =>
+    set((state) => ({
+      undoStack: state.undoStack.map((e) =>
+        e.toastId === oldId ? { ...e, toastId: newId } : e,
+      ),
+    })),
 
   removeEntry: (toastId) =>
     set((state) => ({

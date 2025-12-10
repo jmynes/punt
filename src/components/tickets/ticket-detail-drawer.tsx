@@ -184,6 +184,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const handleImmediateChange = (field: string, value: unknown) => {
     if (!ticket) return
 
+    const oldTicket = { ...ticket }
     const updates: Partial<TicketWithRelations> = {
       updatedAt: new Date(),
     }
@@ -252,7 +253,31 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         return
     }
 
+    const updatedTicket = { ...oldTicket, ...updates }
     updateTicket(ticket.id, updates)
+    
+    // Add to undo stack
+    const { pushUpdate } = useUndoStore.getState()
+    const showUndo = useUIStore.getState().showUndoButtons
+    
+    const toastId = showUndoRedoToast('success', {
+      title: 'Ticket updated',
+      description: ticketKey,
+      duration: 3000,
+      showUndoButtons: showUndo,
+      onUndo: (id) => {
+        useUndoStore.getState().undoByToastId(id)
+        updateTicket(ticket.id, oldTicket)
+      },
+      onRedo: (id) => {
+        useUndoStore.getState().redoByToastId(id)
+        updateTicket(ticket.id, updates)
+      },
+      undoneTitle: 'Update undone',
+      redoneTitle: 'Update redone',
+    })
+    
+    pushUpdate([{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }], toastId)
   }
 
   // Focus delete button when dialog opens
@@ -273,6 +298,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const handleSaveField = (field: string) => {
     if (!ticket) return
 
+    const oldTicket = { ...ticket }
     const updates: Partial<TicketWithRelations> = {
       updatedAt: new Date(),
     }
@@ -345,12 +371,33 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         break
     }
 
+    const updatedTicket = { ...oldTicket, ...updates }
     updateTicket(ticket.id, updates)
-    setEditingField(null)
-    toast.success('Ticket updated', {
+    
+    // Add to undo stack
+    const { pushUpdate } = useUndoStore.getState()
+    const showUndo = useUIStore.getState().showUndoButtons
+    
+    const toastId = showUndoRedoToast('success', {
+      title: 'Ticket updated',
       description: ticketKey,
       duration: 3000,
+      showUndoButtons: showUndo,
+      onUndo: (id) => {
+        useUndoStore.getState().undoByToastId(id)
+        updateTicket(ticket.id, oldTicket)
+      },
+      onRedo: (id) => {
+        useUndoStore.getState().redoByToastId(id)
+        updateTicket(ticket.id, updates)
+      },
+      undoneTitle: 'Update undone',
+      redoneTitle: 'Update redone',
     })
+    
+    pushUpdate([{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }], toastId)
+
+    setEditingField(null)
   }
 
   const handleCancelEdit = () => {
