@@ -462,7 +462,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     })
                   }}
                   disabled={filterByDueDate.includeNone}
-                  defaultMonth={new Date()}
+                  defaultMonth={new Date(2024, 10, 1)}
                   initialFocus
                   numberOfMonths={2}
                   captionLayout="dropdown-buttons"
@@ -471,6 +471,12 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   className={`rounded-md border-zinc-800 bg-zinc-950 text-zinc-300 ${
                     filterByDueDate.includeNone ? 'opacity-50 pointer-events-none' : ''
                   }`}
+                  classNames={{
+                    caption_label: 'text-zinc-300',
+                    dropdown: 'bg-zinc-800 border-zinc-600 text-zinc-300',
+                    button_previous: 'text-zinc-400 hover:text-zinc-200',
+                    button_next: 'text-zinc-400 hover:text-zinc-200'
+                  }}
                 />
                 <div className="p-3 border-t border-zinc-800 bg-zinc-950">
                   <div className="flex items-center justify-between">
