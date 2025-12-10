@@ -471,9 +471,14 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   className={`rounded-md border-zinc-800 bg-zinc-950 text-zinc-300 ${
                     filterByDueDate.includeNone ? 'opacity-50 pointer-events-none' : ''
                   }`}
+                  formatters={{
+                    formatMonthDropdown: (month) => month.toLocaleString('default', { month: 'long' }),
+                    formatYearDropdown: (year) => year.toString()
+                  }}
                   classNames={{
                     caption_label: 'text-zinc-300 hover:bg-zinc-800',
                     caption_dropdowns: 'flex justify-center gap-1',
+                    vhidden: 'hidden',
                     dropdown: 'bg-zinc-900 border-zinc-700 text-zinc-300 rounded px-2 py-1 text-sm focus:border-amber-500',
                     dropdown_month: 'bg-zinc-900 border-zinc-700 text-zinc-300 rounded px-2 py-1 text-sm focus:border-amber-500',
                     dropdown_year: 'bg-zinc-900 border-zinc-700 text-zinc-300 rounded px-2 py-1 text-sm focus:border-amber-500',
