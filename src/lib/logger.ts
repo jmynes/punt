@@ -128,7 +128,7 @@ class Logger {
     } catch (error) {
       const duration = performance.now() - start
       this.performance(label, duration, {
-        ...data,
+        ...(data && typeof data === 'object' ? data : {}),
         error: error instanceof Error ? error.message : String(error),
       })
       throw error
@@ -146,7 +146,7 @@ class Logger {
     } catch (error) {
       const duration = performance.now() - start
       this.performance(label, duration, {
-        ...data,
+        ...(data && typeof data === 'object' ? data : {}),
         error: error instanceof Error ? error.message : String(error),
       })
       throw error

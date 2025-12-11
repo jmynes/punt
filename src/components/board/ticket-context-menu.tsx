@@ -33,7 +33,7 @@ import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUndoStore } from '@/stores/undo-store'
 import { useUIStore } from '@/stores/ui-store'
-import type { TicketWithRelations } from '@/types'
+import type { TicketWithRelations, ColumnWithTickets } from '@/types'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 
 type MenuProps = {
@@ -111,7 +111,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     setOpen(true)
     setCoords({ x: e.clientX, y: e.clientY })
     setSubmenu(null)
-    children.props.onContextMenu?.(e)
+    ;(children.props as any)?.onContextMenu?.(e)
   }
 
   const doCopy = () => {
@@ -139,7 +139,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const ticketsToPaste: Array<{ ticket: TicketWithRelations; columnId: string }> = []
     for (const id of copiedIds) {
       for (const column of board.columns) {
-        const t = column.tickets.find((tk) => tk.id === id)
+        const t = column.tickets.find((tk: TicketWithRelations) => tk.id === id)
         if (t) {
           ticketsToPaste.push({ ticket: t, columnId: column.id })
           break
@@ -195,19 +195,19 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   }
 
   const doSendTo = (toColumnId: string) => {
-    const column = board.columns.find((c) => c.id === toColumnId)
+    const column = board.columns.find((c: ColumnWithTickets) => c.id === toColumnId)
     if (!column) return
     const toOrder = column.tickets.length
     const moveTickets = board.moveTickets || (() => {})
     const moveTicket = board.moveTicket || (() => {})
 
-    const movableIds = selectedIds.filter((id) => {
-      const current = board.columns.flatMap((c) => c.tickets).find((t) => t.id === id)
+    const movableIds = selectedIds.filter((id: string) => {
+      const current = board.columns.flatMap((c: ColumnWithTickets) => c.tickets).find((t: TicketWithRelations) => t.id === id)
       return current && current.columnId !== toColumnId
     })
     if (movableIds.length === 0) return
 
-    const beforeColumns = board.columns.map((col) => ({
+    const beforeColumns = board.columns.map((col: ColumnWithTickets) => ({
       ...col,
       tickets: col.tickets.map((t) => ({ ...t })),
     }))
@@ -222,20 +222,20 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const afterColumns = (useBoardStore as any).getState?.().columns.map((col: any) => ({
       ...col,
       tickets: col.tickets.map((t: any) => ({ ...t })),
-    })) || board.columns.map((col) => ({ ...col, tickets: col.tickets.map((t) => ({ ...t })) }))
+    })) || board.columns.map((col: ColumnWithTickets) => ({ ...col, tickets: col.tickets.map((t) => ({ ...t })) }))
 
-    const moves = movableIds.map((id) => ({
+    const moves = movableIds.map((id: string) => ({
       ticketId: id,
-      fromColumnId: beforeColumns.find((c) => c.tickets.some((t) => t.id === id))?.id || '',
+      fromColumnId: beforeColumns.find((c: ColumnWithTickets) => c.tickets.some((t) => t.id === id))?.id || '',
       toColumnId: toColumnId,
     }))
     const fromColumnName =
       moves.length === 1
-        ? beforeColumns.find((c) => c.id === moves[0].fromColumnId)?.name || 'Source'
+        ? beforeColumns.find((c: ColumnWithTickets) => c.id === moves[0].fromColumnId)?.name || 'Source'
         : 'Multiple'
     const toColumnName = column.name
 
-    const ticketKeys = formatTicketIds(afterColumns, moves.map((m) => m.ticketId))
+    const ticketKeys = formatTicketIds(afterColumns, moves.map((m: { ticketId: string }) => m.ticketId))
 
     const toastTitle =
       moves.length === 1 ? `Ticket moved from ${fromColumnName}` : `${moves.length} tickets moved from ${fromColumnName}`
@@ -311,7 +311,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const updateTicket = board.updateTicket || (() => {})
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] = []
     for (const id of selectedIds) {
-      const current = board.columns.flatMap((c) => c.tickets).find((t) => t.id === id)
+      const current = board.columns.flatMap((c: ColumnWithTickets) => c.tickets).find((t: TicketWithRelations) => t.id === id)
       if (!current || current.priority === priority) continue
       const after = { ...current, priority }
       updates.push({ ticketId: id, before: current, after })
@@ -338,7 +338,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const updateTicket = board.updateTicket || (() => {})
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] = []
     for (const id of selectedIds) {
-      const current = board.columns.flatMap((c) => c.tickets).find((t) => t.id === id)
+      const current = board.columns.flatMap((c: ColumnWithTickets) => c.tickets).find((t: TicketWithRelations) => t.id === id)
       if (!current) continue
       const currentAssignee = current.assigneeId || null
       if (currentAssignee === userId) continue
@@ -414,7 +414,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   }
 
   const contextChild = useMemo(
-    () => cloneElement(children, { onContextMenu: handleContextMenu }),
+    () => cloneElement(children as React.ReactElement<any>, { onContextMenu: handleContextMenu }),
     [children],
   )
 
@@ -507,7 +507,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
                           onClick={() => doPriority(p)}
                         >
-                          <PriorityBadge priority={p} size="xs" />
+                          <PriorityBadge priority={p} size="sm" />
                         </button>
                       ))}
 
@@ -592,18 +592,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       >
         <AlertDialogContent
           className="bg-zinc-950 border-zinc-800"
-          onPointerDownOutside={() => {
-            setShowDeleteConfirm(false)
-            setPendingDelete([])
-          }}
-          onInteractOutside={() => {
-            setShowDeleteConfirm(false)
-            setPendingDelete([])
-          }}
-          onEscapeKeyDown={() => {
-            setShowDeleteConfirm(false)
-            setPendingDelete([])
-          }}
         >
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">

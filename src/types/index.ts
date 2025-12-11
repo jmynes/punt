@@ -12,7 +12,7 @@ export type {
   TicketLink,
   TicketWatcher,
   User,
-} from '@/generated/prisma'
+} from '@/generated/prisma/client'
 
 // Issue types
 export const ISSUE_TYPES = ['epic', 'story', 'task', 'bug', 'subtask'] as const

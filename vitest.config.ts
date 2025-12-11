@@ -7,10 +7,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    environmentMatchGlobs: [
-      ['src/app/api/**/*.test.ts', 'node'],
-      ['src/app/api/**/*.test.tsx', 'node'],
-    ],
     setupFiles: ['./src/__tests__/setup.ts'],
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'dist', '.next', 'coverage', 'src/generated/**', '**/*.d.ts'],

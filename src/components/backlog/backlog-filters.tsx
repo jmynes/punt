@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import type * as React from 'react'
 import {
   ArrowUp,
   Bug,
@@ -203,7 +204,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
     filterByAssignee.length > 0 ||
     filterByLabels.length > 0 ||
     filterByPoints.length > 0 ||
-    filterByDueDate.length > 0 ||
+    (filterByDueDate.from || filterByDueDate.to || filterByDueDate.includeNone || filterByDueDate.includeOverdue) ||
     (typeof filterBySprint === 'string' && filterBySprint.length > 0) ||
     searchQuery.length > 0
 
@@ -255,13 +256,6 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
     }
   }
 
-  const toggleDueDate = (date: string) => {
-    if (filterByDueDate.includes(date)) {
-      setFilterByDueDate(filterByDueDate.filter((d) => d !== date))
-    } else {
-      setFilterByDueDate([...filterByDueDate, date])
-    }
-  }
 
   const selectSprint = (sprintId: string | null) => {
     setFilterBySprint(sprintId)
@@ -480,7 +474,8 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     setFilterByDueDate({
                       from: range?.from,
                       to: range?.to,
-                      includeNone: filterByDueDate.includeNone
+                      includeNone: filterByDueDate.includeNone,
+                      includeOverdue: filterByDueDate.includeOverdue
                     })
                   }}
                   disabled={filterByDueDate.includeNone}
@@ -673,7 +668,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
           return null
       }
     })
-    .filter((btn): btn is JSX.Element => Boolean(btn))
+    .filter((btn): btn is React.ReactElement => Boolean(btn))
 
   return (
     <div className="flex flex-1 items-center gap-3">
