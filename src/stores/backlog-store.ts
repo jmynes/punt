@@ -94,7 +94,7 @@ interface BacklogState {
   filterByPoints: number[]
   setFilterByPoints: (points: number[]) => void
   filterByDueDate: { from?: Date; to?: Date; includeNone: boolean; includeOverdue: boolean }
-  setFilterByDueDate: (filter: { from?: Date; to?: Date; includeNone: boolean }) => void
+  setFilterByDueDate: (filter: { from?: Date; to?: Date; includeNone: boolean; includeOverdue: boolean }) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
   clearFilters: () => void

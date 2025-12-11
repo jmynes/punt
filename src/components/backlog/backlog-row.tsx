@@ -263,7 +263,6 @@ export function BacklogRow({
       data-ticket-row
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={0}
       className={cn(
         'group border-b border-zinc-800/50 transition-colors focus:outline-none select-none',
         !selected && 'hover:bg-zinc-800/50 focus:bg-zinc-800/50',
