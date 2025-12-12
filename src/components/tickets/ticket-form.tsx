@@ -278,7 +278,7 @@ export function TicketForm({
                 MozAppearance: 'textfield',
                 appearance: 'textfield'
               }}
-              className="w-16 h-9 bg-zinc-900 border-zinc-700 focus:border-amber-500 focus:ring-0 rounded-r-none border-r-0"
+              className="w-20 h-9 bg-zinc-900 border-zinc-700 focus:border-amber-500 focus:ring-0 rounded-r-none border-r-0"
             />
             <div className="flex flex-col">
               <Button
