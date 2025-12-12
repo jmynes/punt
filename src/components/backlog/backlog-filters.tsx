@@ -424,7 +424,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   {filterByPoints && (
                     <div className="flex items-center justify-between p-3 bg-zinc-800 rounded-md">
                       <span className="text-sm font-medium text-zinc-200">
-                        {filterByPoints.operator}{filterByPoints.value} points
+                        Current: {filterByPoints.operator}{filterByPoints.value} points
                       </span>
                       <Button
                         variant="ghost"
@@ -441,81 +441,82 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     </div>
                   )}
 
-                  {!filterByPoints && (
-                    <>
-                      {/* Quick filters */}
-                      <div className="space-y-2">
-                        <div className="text-sm text-zinc-400 uppercase font-medium">Quick Filters</div>
-                        {[
-                          { operator: '<' as const, value: 2, label: 'Small tickets (< 2 pts)' },
-                          { operator: '=' as const, value: 2, label: 'Medium tickets (2 pts)' },
-                          { operator: '>' as const, value: 2, label: 'Large tickets (> 2 pts)' },
-                          { operator: '>=' as const, value: 5, label: 'Epic tickets (≥ 5 pts)' },
-                        ].map(({ operator, value, label }) => (
-                          <Button
-                            key={`${operator}${value}`}
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start text-left h-9 px-3 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
+                  {/* Quick filters - always visible */}
+                  <div className="space-y-2">
+                    <div className="text-sm text-zinc-400 uppercase font-medium">Quick Filters</div>
+                    {[
+                      { operator: '<' as const, value: 2, label: 'Small tickets (< 2 pts)' },
+                      { operator: '=' as const, value: 2, label: 'Medium tickets (2 pts)' },
+                      { operator: '>' as const, value: 2, label: 'Large tickets (> 2 pts)' },
+                      { operator: '>=' as const, value: 5, label: 'Epic tickets (≥ 5 pts)' },
+                    ].map(({ operator, value, label }) => (
+                      <Button
+                        key={`${operator}${value}`}
+                        variant={filterByPoints?.operator === operator && filterByPoints?.value === value ? "default" : "ghost"}
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start text-left h-9 px-3 hover:bg-zinc-800 hover:text-zinc-100",
+                          filterByPoints?.operator === operator && filterByPoints?.value === value
+                            ? "bg-amber-600 text-white border-amber-600"
+                            : "text-zinc-300"
+                        )}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterByPoints({ operator, value })
+                        }}
+                      >
+                        <span className="text-sm">{label}</span>
+                      </Button>
+                    ))}
+                  </div>
+
+                  <DropdownMenuSeparator />
+
+                  {/* Custom filter */}
+                  <div className="space-y-2">
+                    <div className="text-sm text-zinc-400 uppercase font-medium">Custom Filter</div>
+                    <div className="flex gap-2">
+                      <select
+                        className="flex-1 h-9 px-3 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                        defaultValue=""
+                        onChange={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          // Don't do anything on operator change alone - wait for value input
+                        }}
+                      >
+                        <option value="" disabled>Select operator...</option>
+                        <option value="<">Less than (&lt;)</option>
+                        <option value=">">Greater than (&gt;)</option>
+                        <option value="=">Equal to (=)</option>
+                        <option value="<=">Less or equal (≤)</option>
+                        <option value=">=">Greater or equal (≥)</option>
+                      </select>
+                      <Input
+                        type="number"
+                        placeholder="Enter value..."
+                        min="0"
+                        className="w-24 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500"
+                        onChange={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const value = parseInt(e.target.value)
+                          if (!isNaN(value) && value >= 0) {
+                            const selectElement = e.currentTarget.previousElementSibling as HTMLSelectElement
+                            const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
+                            if (operator) {
                               setFilterByPoints({ operator, value })
-                            }}
-                          >
-                            <span className="text-sm">{label}</span>
-                          </Button>
-                        ))}
-                      </div>
-
-                      <DropdownMenuSeparator />
-
-                      {/* Custom filter */}
-                      <div className="space-y-2">
-                        <div className="text-sm text-zinc-400 uppercase font-medium">Custom Filter</div>
-                        <div className="flex gap-2">
-                          <select
-                            className="flex-1 h-9 px-3 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                            onChange={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              const operator = e.target.value as '<' | '>' | '=' | '<=' | '>='
-                              // Reset to first option after selection to avoid confusion
-                              e.target.value = '<'
-                              // For now, just set a placeholder - we'll enhance this
-                              setFilterByPoints({ operator, value: 1 })
-                            }}
-                          >
-                            <option value="<">Less than (&lt;)</option>
-                            <option value=">">Greater than (&gt;)</option>
-                            <option value="=">Equal to (=)</option>
-                            <option value="<=">Less or equal (≤)</option>
-                            <option value=">=">Greater or equal (≥)</option>
-                          </select>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            min="0"
-                            className="w-20 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500"
-                            onChange={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              const value = parseInt(e.target.value) || 0
-                              // This is a simplified approach - in a real implementation,
-                              // you'd want to combine operator + value selection
-                              if (filterByPoints) {
-                                setFilterByPoints({ ...filterByPoints, value })
-                              }
-                            }}
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
+                            }
+                          }
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                        }}
+                      />
+                    </div>
+                  </div>
 
                   {/* Available point values */}
                   <DropdownMenuSeparator />
@@ -525,9 +526,14 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                       {pointsOptions.slice(0, 12).map((pts) => (
                         <Button
                           key={pts}
-                          variant="ghost"
+                          variant={filterByPoints?.operator === '=' && filterByPoints?.value === pts ? "default" : "ghost"}
                           size="sm"
-                          className="h-8 px-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                          className={cn(
+                            "h-8 px-2 text-sm hover:bg-zinc-800 hover:text-zinc-200",
+                            filterByPoints?.operator === '=' && filterByPoints?.value === pts
+                              ? "bg-amber-600 text-white"
+                              : "text-zinc-400"
+                          )}
                           onClick={(e) => {
                             e.preventDefault()
                             e.stopPropagation()
