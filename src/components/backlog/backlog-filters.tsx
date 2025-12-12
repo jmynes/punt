@@ -420,21 +420,29 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                         { operator: '=' as const, value: 2, label: 'Medium (2 pts)' },
                         { operator: '>' as const, value: 2, label: 'Large (> 2 pts)' },
                         { operator: '>=' as const, value: 5, label: 'Epic (≥ 5 pts)' },
-                      ].map(({ operator, value, label }) => (
-                        <Button
-                          key={`${operator}${value}`}
-                          variant="ghost"
-                          size="sm"
-                          className="justify-start text-left h-9 px-3 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            setFilterByPoints({ operator, value })
-                          }}
-                        >
-                          <span className="text-sm">{label}</span>
-                        </Button>
-                      ))}
+                      ].map(({ operator, value, label }) => {
+                        const isSelected = filterByPoints?.operator === operator && filterByPoints?.value === value
+                        return (
+                          <Button
+                            key={`${operator}${value}`}
+                            variant={isSelected ? "default" : "ghost"}
+                            size="sm"
+                            className={cn(
+                              "justify-start text-left h-9 px-3",
+                              isSelected
+                                ? "bg-amber-600 text-white border-amber-600 hover:bg-amber-700"
+                                : "text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                            )}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setFilterByPoints({ operator, value })
+                            }}
+                          >
+                            <span className="text-sm">{label}</span>
+                          </Button>
+                        )
+                      })}
                     </div>
                   </div>
 
