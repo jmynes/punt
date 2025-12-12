@@ -230,6 +230,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         setTempStoryPoints(newStoryPoints)
         break
       }
+      case 'sprint': {
+        const newSprintId = value as string | null
+        updates.sprintId = newSprintId
+        setTempSprintId(newSprintId)
+        break
+      }
       case 'assignee': {
         const assigneeId = value as string | null
         updates.assigneeId = assigneeId
@@ -698,55 +704,51 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 </div>
 
 
-                {editingField === 'sprint' ? (
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={tempSprintId || 'none'}
-                      onValueChange={(v) => setTempSprintId(v === 'none' ? null : v)}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="cursor-pointer">
+                      {ticket.sprint ? (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            ticket.sprint.isActive
+                              ? 'border-green-600 bg-green-900/30 text-green-400'
+                              : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
+                          )}
+                        >
+                          {ticket.sprint.name}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-zinc-600 bg-zinc-800/50 text-zinc-400">
+                          Backlog
+                        </Badge>
+                      )}
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuCheckboxItem
+                      checked={!ticket.sprint}
+                      onCheckedChange={() => {
+                        handleImmediateChange('sprint', null)
+                      }}
+                      className="cursor-pointer"
                     >
-                      <SelectTrigger className="h-8 w-[200px] bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500">
-                        <SelectValue placeholder="No sprint (Backlog)" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-700">
-                        <SelectItem value="none" className="focus:bg-zinc-800 focus:text-zinc-100">
-                          No sprint (Backlog)
-                        </SelectItem>
-                        {DEMO_SPRINTS.map((sprint) => (
-                          <SelectItem
-                            key={sprint.id}
-                            value={sprint.id}
-                            className="focus:bg-zinc-800 focus:text-zinc-100"
-                          >
-                            {sprint.name} {sprint.isActive && '(Active)'}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveField('sprint')}
-                      className="bg-amber-600 hover:bg-amber-700"
-                    >
-                      Save
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                      Cancel
-                    </Button>
-                  </div>
-                ) : ticket.sprint ? (
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'cursor-pointer hover:bg-amber-500/15',
-                      ticket.sprint.isActive
-                        ? 'border-green-600 bg-green-900/30 text-green-400'
-                        : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
-                    )}
-                    onClick={() => startEditing('sprint')}
-                  >
-                    {ticket.sprint.name}
-                  </Badge>
-                ) : null}
+                      No sprint (Backlog)
+                    </DropdownMenuCheckboxItem>
+                    {DEMO_SPRINTS.map((sprint) => (
+                      <DropdownMenuCheckboxItem
+                        key={sprint.id}
+                        checked={ticket.sprint?.id === sprint.id}
+                        onCheckedChange={() => {
+                          handleImmediateChange('sprint', sprint.id)
+                        }}
+                        className="cursor-pointer"
+                      >
+                        {sprint.name} {sprint.isActive && '(Active)'}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
 
                 {editingField === 'estimate' ? (
