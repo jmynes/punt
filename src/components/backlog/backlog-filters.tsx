@@ -436,8 +436,8 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                       {[
                         { operator: '<=' as const, value: 1, label: 'Small (≤ 1 pt)' },
                         { operator: '>' as const, value: 1, label: 'Medium (2-3 pts)' },
-                        { operator: '>' as const, value: 3, label: 'Large (4-10 pts)' },
-                        { operator: '>=' as const, value: 8, label: 'Dayum (≥ 8 pts)' },
+                        { operator: '>' as const, value: 3, label: 'Large (4-9 pts)' },
+                        { operator: '>=' as const, value: 10, label: 'Dayum (≥ 10 pts)' },
                       ].map(({ operator, value, label }) => {
                         const isSelected = filterByPoints?.operator === operator && filterByPoints?.value === value
                         return (
