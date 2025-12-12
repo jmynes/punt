@@ -65,6 +65,7 @@ import type {
   TicketWithRelations,
   UploadedFileInfo,
 } from '@/types'
+import { ISSUE_TYPES } from '@/types'
 import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
 import type { ParentTicketOption } from './create-ticket-dialog'
