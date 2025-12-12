@@ -295,6 +295,51 @@ export const useBoardStore = create<BoardState>()(
       updateTicket: (ticketId, updates) =>
         set((state) => {
           logger.debug('Updating ticket', { ticketId, updates })
+
+          // Check if this is a column change (status change)
+          if (updates.columnId) {
+            const currentColumn = state.columns.find((col) =>
+              col.tickets.some((t) => t.id === ticketId)
+            )
+
+            if (currentColumn && currentColumn.id !== updates.columnId) {
+              // This is a column change - move the ticket
+              const targetColumn = state.columns.find((col) => col.id === updates.columnId)
+              if (!targetColumn) {
+                logger.warn('Target column not found for ticket move', { ticketId, targetColumnId: updates.columnId })
+                return state
+              }
+
+              const ticket = currentColumn.tickets.find((t) => t.id === ticketId)
+              if (!ticket) {
+                logger.warn('Ticket not found in source column', { ticketId, sourceColumnId: currentColumn.id })
+                return state
+              }
+
+              const updatedTicket = { ...ticket, ...updates }
+
+              return {
+                columns: state.columns.map((column) => {
+                  if (column.id === currentColumn.id) {
+                    // Remove from source column
+                    return {
+                      ...column,
+                      tickets: column.tickets.filter((t) => t.id !== ticketId),
+                    }
+                  } else if (column.id === updates.columnId) {
+                    // Add to target column at the end
+                    return {
+                      ...column,
+                      tickets: [...column.tickets, updatedTicket],
+                    }
+                  }
+                  return column
+                }),
+              }
+            }
+          }
+
+          // Regular update (no column change)
           return {
             columns: state.columns.map((column) => ({
               ...column,
