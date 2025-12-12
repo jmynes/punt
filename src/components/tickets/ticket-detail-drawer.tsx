@@ -205,6 +205,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         setTempStatusId(columnId)
         break
       }
+      case 'type': {
+        const newType = value as IssueType
+        updates.type = newType
+        setTempType(newType)
+        break
+      }
       case 'assignee': {
         const assigneeId = value as string | null
         updates.assigneeId = assigneeId
@@ -600,28 +606,30 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   </div>
                 )}
 
-                {editingField === 'type' ? (
-                  <div className="flex items-center gap-2">
-                    <TypeSelect value={tempType} onChange={(value) => setTempType(value)} />
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveField('type')}
-                      className="bg-amber-600 hover:bg-amber-700"
-                    >
-                      Save
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <div
-                    className="cursor-pointer hover:bg-amber-500/15 rounded px-2 py-1 -mx-2"
-                    onClick={() => startEditing('type')}
-                  >
-                    <TypeBadge type={ticket.type} size="sm" />
-                  </div>
-                )}
+                <Select
+                  value={ticket.type}
+                  onValueChange={(value) => {
+                    const newType = value as IssueType
+                    handleImmediateChange('type', newType)
+                  }}
+                >
+                  <SelectTrigger className="w-full h-10 bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-zinc-700">
+                    {ISSUE_TYPES.map((type) => (
+                      <SelectItem
+                        key={type}
+                        value={type}
+                        className="focus:bg-zinc-800 focus:text-zinc-100"
+                      >
+                        <div className="flex items-center gap-2">
+                          <TypeBadge type={type} size="sm" />
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
                 {editingField === 'sprint' ? (
                   <div className="flex items-center gap-2">
