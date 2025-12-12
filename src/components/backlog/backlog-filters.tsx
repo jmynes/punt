@@ -509,7 +509,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                         <div className="flex focus-within:ring-2 focus-within:ring-amber-500 focus-within:ring-offset-0 rounded-md overflow-hidden">
                           <Input
                             type="number"
-                            placeholder="Value..."
+                            placeholder="pts"
                             min="0"
                             value={filterByPoints?.value ?? ""}
                             style={{
