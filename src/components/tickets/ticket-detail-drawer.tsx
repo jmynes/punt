@@ -2,6 +2,8 @@
 
 import { format } from 'date-fns'
 import {
+  ChevronDown,
+  ChevronUp,
   Clock,
   Copy,
   Eye,
@@ -673,16 +675,50 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
                 {editingField === 'storyPoints' ? (
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      value={tempStoryPoints ?? ''}
-                      onChange={(e) => {
-                        const val = e.target.value ? Number.parseInt(e.target.value, 10) : null
-                        setTempStoryPoints(val !== null && val < 0 ? 0 : val)
-                      }}
-                      className="w-20 h-8 bg-zinc-900 border-zinc-700 focus:border-amber-500"
-                    />
+                    <div className="flex focus-within:ring-2 focus-within:ring-amber-500 focus-within:ring-offset-0 rounded-md overflow-hidden">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={tempStoryPoints ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value ? Number.parseInt(e.target.value, 10) : null
+                          setTempStoryPoints(val !== null && val < 0 ? 0 : val)
+                        }}
+                        placeholder="pts"
+                        style={{
+                          WebkitAppearance: 'none',
+                          MozAppearance: 'textfield',
+                          appearance: 'textfield'
+                        }}
+                        className="w-16 h-8 bg-zinc-900 border-zinc-700 focus:border-amber-500 focus:ring-0 rounded-r-none border-r-0"
+                      />
+                      <div className="flex flex-col">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-6 px-0 bg-zinc-900 border border-zinc-700 border-l-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-tr"
+                          onClick={() => {
+                            const currentValue = tempStoryPoints ?? 0
+                            const newValue = currentValue + 1
+                            setTempStoryPoints(newValue)
+                          }}
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-6 px-0 bg-zinc-900 border border-zinc-700 border-l-0 border-t-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-br"
+                          onClick={() => {
+                            const currentValue = tempStoryPoints ?? 0
+                            const newValue = Math.max(0, currentValue - 1)
+                            setTempStoryPoints(newValue)
+                          }}
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
                     <Button
                       size="sm"
                       onClick={() => handleSaveField('storyPoints')}

@@ -1,6 +1,6 @@
 'use client'
 
-import { Paperclip } from 'lucide-react'
+import { ChevronDown, ChevronUp, Paperclip } from 'lucide-react'
 import { useBoardStore } from '@/stores/board-store'
 import { getStatusIcon } from '@/lib/status-icons'
 import { Accordion } from '@/components/ui/accordion'
@@ -259,29 +259,55 @@ export function TicketForm({
           <Label htmlFor="storyPoints" className="text-zinc-300">
             Story Points
           </Label>
-          <Input
-            id="storyPoints"
-            type="number"
-            min={0}
-            step={1}
-            value={data.storyPoints ?? ''}
-            onChange={(e) => {
-              const val = e.target.value ? Number.parseInt(e.target.value, 10) : null
-              updateField('storyPoints', val !== null && val < 0 ? 0 : val)
-            }}
-            onKeyDown={(e) => {
-              // Handle arrow keys for increment/decrement
-              if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                e.preventDefault()
-                const current = data.storyPoints ?? 1
-                const newVal = e.key === 'ArrowUp' ? current + 1 : Math.max(0, current - 1)
-                updateField('storyPoints', newVal)
-              }
-            }}
-            placeholder="1"
-            disabled={disabled}
-            className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
-          />
+          <div className="flex focus-within:ring-2 focus-within:ring-amber-500 focus-within:ring-offset-0 rounded-md overflow-hidden">
+            <Input
+              id="storyPoints"
+              type="number"
+              min={0}
+              step={1}
+              value={data.storyPoints ?? ''}
+              onChange={(e) => {
+                const val = e.target.value ? Number.parseInt(e.target.value, 10) : null
+                updateField('storyPoints', val !== null && val < 0 ? 0 : val)
+              }}
+              placeholder="pts"
+              disabled={disabled}
+              style={{
+                WebkitAppearance: 'none',
+                MozAppearance: 'textfield',
+                appearance: 'textfield'
+              }}
+              className="w-16 h-9 bg-zinc-900 border-zinc-700 focus:border-amber-500 focus:ring-0 rounded-r-none border-r-0"
+            />
+            <div className="flex flex-col">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                className="h-4.5 w-6 px-0 bg-zinc-900 border border-zinc-700 border-l-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-tr disabled:opacity-50"
+                onClick={() => {
+                  const currentValue = data.storyPoints ?? 0
+                  const newValue = currentValue + 1
+                  updateField('storyPoints', newValue)
+                }}
+              >
+                <ChevronUp className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                className="h-4.5 w-6 px-0 bg-zinc-900 border border-zinc-700 border-l-0 border-t-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-br disabled:opacity-50"
+                onClick={() => {
+                  const currentValue = data.storyPoints ?? 0
+                  const newValue = Math.max(0, currentValue - 1)
+                  updateField('storyPoints', newValue)
+                }}
+              >
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
         </div>
         <div className="space-y-2">
           <Label htmlFor="estimate" className="text-zinc-300">
