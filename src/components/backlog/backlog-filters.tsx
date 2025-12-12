@@ -445,12 +445,16 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                           className="flex-1 h-9 px-3 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                           value={filterByPoints?.operator || ""}
                           onChange={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
                             const operator = e.target.value as '<' | '>' | '=' | '<=' | '>=' | ""
-                            if (operator && filterByPoints?.value !== undefined) {
-                              setFilterByPoints({ operator, value: filterByPoints.value })
-                            } else if (!operator) {
+                            if (operator) {
+                              // If we have a value, set the filter
+                              if (filterByPoints?.value !== undefined) {
+                                setFilterByPoints({ operator, value: filterByPoints.value })
+                              } else {
+                                // Set filter with default value of 1 if no value entered yet
+                                setFilterByPoints({ operator, value: 1 })
+                              }
+                            } else {
                               setFilterByPoints(null)
                             }
                           }}
@@ -466,7 +470,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                           type="number"
                           placeholder="Value..."
                           min="0"
-                          value={filterByPoints?.value || ""}
+                          value={filterByPoints?.value ?? ""}
                           className="w-24 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-webkit-appearance:none] [appearance:textfield]"
                           onChange={(e) => {
                             const value = parseInt(e.target.value)
@@ -475,6 +479,9 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                               const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
                               if (operator) {
                                 setFilterByPoints({ operator, value })
+                              } else {
+                                // Set filter with equals operator if no operator selected yet
+                                setFilterByPoints({ operator: '=', value })
                               }
                             } else if (e.target.value === "") {
                               const selectElement = e.currentTarget.previousElementSibling as HTMLSelectElement
