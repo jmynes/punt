@@ -9,6 +9,8 @@ import {
   CheckSquare,
   ChevronsDown,
   ChevronsUp,
+  ChevronUp,
+  ChevronDown,
   Flame,
   Hash,
   Layers,
@@ -466,32 +468,64 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                           <option value="<=">Less or equal (≤)</option>
                           <option value=">=">Greater or equal (≥)</option>
                         </select>
-                        <Input
-                          type="number"
-                          placeholder="Value..."
-                          min="0"
-                          value={filterByPoints?.value ?? ""}
-                          className="w-24 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-webkit-appearance:none] [appearance:textfield]"
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value)
-                            if (!isNaN(value) && value >= 0) {
-                              const selectElement = e.currentTarget.previousElementSibling as HTMLSelectElement
-                              const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
-                              if (operator) {
-                                setFilterByPoints({ operator, value })
-                              } else {
-                                // Set filter with equals operator if no operator selected yet
-                                setFilterByPoints({ operator: '=', value })
+                        <div className="flex">
+                          <Input
+                            type="number"
+                            placeholder="Value..."
+                            min="0"
+                            value={filterByPoints?.value ?? ""}
+                            className="w-20 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-webkit-appearance:none] [appearance:textfield] rounded-r-none border-r-0"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value)
+                              if (!isNaN(value) && value >= 0) {
+                                const selectElement = e.currentTarget.parentElement?.previousElementSibling as HTMLSelectElement
+                                const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
+                                if (operator) {
+                                  setFilterByPoints({ operator, value })
+                                } else {
+                                  // Set filter with equals operator if no operator selected yet
+                                  setFilterByPoints({ operator: '=', value })
+                                }
+                              } else if (e.target.value === "") {
+                                const selectElement = e.currentTarget.parentElement?.previousElementSibling as HTMLSelectElement
+                                const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
+                                if (operator) {
+                                  setFilterByPoints(null)
+                                }
                               }
-                            } else if (e.target.value === "") {
-                              const selectElement = e.currentTarget.previousElementSibling as HTMLSelectElement
-                              const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
-                              if (operator) {
-                                setFilterByPoints(null)
-                              }
-                            }
-                          }}
-                        />
+                            }}
+                          />
+                          <div className="flex flex-col">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-4.5 w-6 px-0 bg-zinc-800 border border-zinc-700 border-l-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-tr"
+                              onClick={() => {
+                                const currentValue = filterByPoints?.value ?? 0
+                                const newValue = currentValue + 1
+                                const selectElement = document.querySelector('select') as HTMLSelectElement
+                                const operator = selectElement?.value as '<' | '>' | '=' | '<=' | '>=' || '='
+                                setFilterByPoints({ operator: operator || '=', value: newValue })
+                              }}
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-4.5 w-6 px-0 bg-zinc-800 border border-zinc-700 border-l-0 border-t-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-br"
+                              onClick={() => {
+                                const currentValue = filterByPoints?.value ?? 0
+                                const newValue = Math.max(0, currentValue - 1)
+                                const selectElement = document.querySelector('select') as HTMLSelectElement
+                                const operator = selectElement?.value as '<' | '>' | '=' | '<=' | '>=' || '='
+                                setFilterByPoints({ operator: operator || '=', value: newValue })
+                              }}
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                       <Button
                         variant="ghost"
