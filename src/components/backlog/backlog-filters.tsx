@@ -416,23 +416,27 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-64">
-                <DropdownMenuLabel>Filter by points</DropdownMenuLabel>
+              <DropdownMenuContent align="start" className="w-72">
+                <DropdownMenuLabel className="text-base">Filter by points</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <div className="p-2 space-y-2">
+                <div className="p-3 space-y-3">
                   {/* Current filter display */}
                   {filterByPoints && (
-                    <div className="flex items-center justify-between p-2 bg-zinc-800 rounded-md">
-                      <span className="text-sm text-zinc-300">
+                    <div className="flex items-center justify-between p-3 bg-zinc-800 rounded-md">
+                      <span className="text-sm font-medium text-zinc-200">
                         {filterByPoints.operator}{filterByPoints.value} points
                       </span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
-                        onClick={() => setFilterByPoints(null)}
+                        className="h-7 w-7 p-0 text-zinc-400 hover:text-zinc-200"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterByPoints(null)
+                        }}
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-4 w-4" />
                       </Button>
                     </div>
                   )}
@@ -440,8 +444,8 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   {!filterByPoints && (
                     <>
                       {/* Quick filters */}
-                      <div className="space-y-1">
-                        <div className="text-xs text-zinc-500 uppercase font-medium">Quick Filters</div>
+                      <div className="space-y-2">
+                        <div className="text-sm text-zinc-400 uppercase font-medium">Quick Filters</div>
                         {[
                           { operator: '<' as const, value: 2, label: 'Small tickets (< 2 pts)' },
                           { operator: '=' as const, value: 2, label: 'Medium tickets (2 pts)' },
@@ -452,10 +456,14 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                             key={`${operator}${value}`}
                             variant="ghost"
                             size="sm"
-                            className="w-full justify-start text-left h-8 px-2 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
-                            onClick={() => setFilterByPoints({ operator, value })}
+                            className="w-full justify-start text-left h-9 px-3 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setFilterByPoints({ operator, value })
+                            }}
                           >
-                            <span className="text-xs">{label}</span>
+                            <span className="text-sm">{label}</span>
                           </Button>
                         ))}
                       </div>
@@ -464,11 +472,13 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
 
                       {/* Custom filter */}
                       <div className="space-y-2">
-                        <div className="text-xs text-zinc-500 uppercase font-medium">Custom Filter</div>
-                        <div className="flex gap-1">
+                        <div className="text-sm text-zinc-400 uppercase font-medium">Custom Filter</div>
+                        <div className="flex gap-2">
                           <select
-                            className="flex-1 h-8 px-2 text-xs bg-zinc-800 border border-zinc-700 rounded text-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                            className="flex-1 h-9 px-3 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                             onChange={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
                               const operator = e.target.value as '<' | '>' | '=' | '<=' | '>='
                               // Reset to first option after selection to avoid confusion
                               e.target.value = '<'
@@ -486,14 +496,20 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                             type="number"
                             placeholder="0"
                             min="0"
-                            className="w-16 h-8 text-xs bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500"
+                            className="w-20 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500"
                             onChange={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
                               const value = parseInt(e.target.value) || 0
                               // This is a simplified approach - in a real implementation,
                               // you'd want to combine operator + value selection
                               if (filterByPoints) {
                                 setFilterByPoints({ ...filterByPoints, value })
                               }
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
                             }}
                           />
                         </div>
@@ -503,23 +519,27 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
 
                   {/* Available point values */}
                   <DropdownMenuSeparator />
-                  <div className="space-y-1">
-                    <div className="text-xs text-zinc-500 uppercase font-medium">Available Values</div>
+                  <div className="space-y-2">
+                    <div className="text-sm text-zinc-400 uppercase font-medium">Available Values</div>
                     <div className="grid grid-cols-4 gap-1">
                       {pointsOptions.slice(0, 12).map((pts) => (
                         <Button
                           key={pts}
                           variant="ghost"
                           size="sm"
-                          className="h-7 px-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-                          onClick={() => setFilterByPoints({ operator: '=', value: pts })}
+                          className="h-8 px-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setFilterByPoints({ operator: '=', value: pts })
+                          }}
                         >
                           {pts}
                         </Button>
                       ))}
                     </div>
                     {pointsOptions.length > 12 && (
-                      <div className="text-xs text-zinc-500 text-center">
+                      <div className="text-sm text-zinc-500 text-center">
                         +{pointsOptions.length - 12} more values
                       </div>
                     )}
