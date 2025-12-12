@@ -173,17 +173,6 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
     return Array.from(set.values()).sort((a, b) => a.name.localeCompare(b.name))
   }, [_statusColumns])
 
-  const pointsOptions = useMemo(() => {
-    const set = new Set<number>()
-    for (const col of _statusColumns) {
-      for (const t of col.tickets) {
-        if (typeof t.storyPoints === 'number') {
-          set.add(t.storyPoints)
-        }
-      }
-    }
-    return Array.from(set).sort((a, b) => a - b)
-  }, [_statusColumns])
 
   const dueDateOptions = useMemo(() => {
     const set = new Set<string>()
@@ -518,38 +507,6 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     </div>
                   </div>
 
-                  {/* Available point values */}
-                  <DropdownMenuSeparator />
-                  <div className="space-y-2">
-                    <div className="text-sm text-zinc-400 uppercase font-medium">Available Values</div>
-                    <div className="grid grid-cols-4 gap-1">
-                      {pointsOptions.slice(0, 12).map((pts) => (
-                        <Button
-                          key={pts}
-                          variant={filterByPoints?.operator === '=' && filterByPoints?.value === pts ? "default" : "ghost"}
-                          size="sm"
-                          className={cn(
-                            "h-8 px-2 text-sm hover:bg-zinc-800 hover:text-zinc-200",
-                            filterByPoints?.operator === '=' && filterByPoints?.value === pts
-                              ? "bg-amber-600 text-white"
-                              : "text-zinc-400"
-                          )}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            setFilterByPoints({ operator: '=', value: pts })
-                          }}
-                        >
-                          {pts}
-                        </Button>
-                      ))}
-                    </div>
-                    {pointsOptions.length > 12 && (
-                      <div className="text-sm text-zinc-500 text-center">
-                        +{pointsOptions.length - 12} more values
-                      </div>
-                    )}
-                  </div>
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
