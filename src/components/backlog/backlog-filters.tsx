@@ -479,7 +479,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                               MozAppearance: 'textfield',
                               appearance: 'textfield'
                             }}
-                            className="w-20 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500 rounded-r-none border-r-0"
+                            className="w-14 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500 rounded-r-none border-r-0"
                             onChange={(e) => {
                               const value = parseInt(e.target.value)
                               if (!isNaN(value) && value >= 0) {
