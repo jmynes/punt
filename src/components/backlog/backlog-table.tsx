@@ -189,10 +189,26 @@ export function BacklogTable({
     }
 
     // Points filter
-    if (filterByPoints.length > 0) {
-      result = result.filter(
-        (t) => t.storyPoints !== null && t.storyPoints !== undefined && filterByPoints.includes(t.storyPoints),
-      )
+    if (filterByPoints) {
+      result = result.filter((t) => {
+        if (t.storyPoints === null || t.storyPoints === undefined) return false
+
+        const { operator, value } = filterByPoints
+        switch (operator) {
+          case '<':
+            return t.storyPoints < value
+          case '>':
+            return t.storyPoints > value
+          case '=':
+            return t.storyPoints === value
+          case '<=':
+            return t.storyPoints <= value
+          case '>=':
+            return t.storyPoints >= value
+          default:
+            return false
+        }
+      })
     }
 
     // Due date filter

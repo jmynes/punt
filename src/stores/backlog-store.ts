@@ -91,8 +91,8 @@ interface BacklogState {
   setFilterByLabels: (labels: string[]) => void
   filterBySprint: string | null
   setFilterBySprint: (sprintId: string | null) => void
-  filterByPoints: number[]
-  setFilterByPoints: (points: number[]) => void
+  filterByPoints: { operator: '<' | '>' | '=' | '<=' | '>='; value: number } | null
+  setFilterByPoints: (filter: { operator: '<' | '>' | '=' | '<=' | '>='; value: number } | null) => void
   filterByDueDate: { from?: Date; to?: Date; includeNone: boolean; includeOverdue: boolean }
   setFilterByDueDate: (filter: { from?: Date; to?: Date; includeNone: boolean; includeOverdue: boolean }) => void
   searchQuery: string
@@ -172,8 +172,8 @@ export const useBacklogStore = create<BacklogState>()(
       setFilterByLabels: (labels) => set({ filterByLabels: labels }),
       filterBySprint: null,
       setFilterBySprint: (sprintId) => set({ filterBySprint: sprintId }),
-      filterByPoints: [],
-      setFilterByPoints: (points) => set({ filterByPoints: points }),
+      filterByPoints: null,
+      setFilterByPoints: (filter) => set({ filterByPoints: filter }),
       filterByDueDate: { from: undefined, to: undefined, includeNone: false, includeOverdue: false },
       setFilterByDueDate: (filter) => set({ filterByDueDate: filter }),
       searchQuery: '',
@@ -186,7 +186,7 @@ export const useBacklogStore = create<BacklogState>()(
           filterByAssignee: [],
           filterByLabels: [],
           filterBySprint: null,
-          filterByPoints: [],
+          filterByPoints: null,
           filterByDueDate: { from: undefined, to: undefined, includeNone: false, includeOverdue: false },
           searchQuery: '',
         }),
