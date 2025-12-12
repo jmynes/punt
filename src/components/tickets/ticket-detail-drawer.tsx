@@ -529,7 +529,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
           </SheetHeader>
 
           {/* Content */}
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 h-full">
             <div className="space-y-6 p-6">
               {/* Title */}
               <div className="space-y-2">
