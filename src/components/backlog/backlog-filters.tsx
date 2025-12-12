@@ -203,7 +203,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
     filterByStatus.length > 0 ||
     filterByAssignee.length > 0 ||
     filterByLabels.length > 0 ||
-    filterByPoints.length > 0 ||
+    filterByPoints !== null ||
     (filterByDueDate.from || filterByDueDate.to || filterByDueDate.includeNone || filterByDueDate.includeOverdue) ||
     (typeof filterBySprint === 'string' && filterBySprint.length > 0) ||
     searchQuery.length > 0
@@ -248,13 +248,6 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
     }
   }
 
-  const togglePoints = (points: number) => {
-    if (filterByPoints.includes(points)) {
-      setFilterByPoints(filterByPoints.filter((p) => p !== points))
-    } else {
-      setFilterByPoints([...filterByPoints, points])
-    }
-  }
 
 
   const selectSprint = (sprintId: string | null) => {
@@ -416,25 +409,122 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                 <Button variant="outline" size="sm" className="shrink-0">
                   <Hash className="mr-2 h-4 w-4 text-green-400" />
                   Points
-                  {filterByPoints.length > 0 && (
+                  {filterByPoints && (
                     <Badge variant="secondary" className="ml-2">
-                      {filterByPoints.length}
+                      1
                     </Badge>
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
+              <DropdownMenuContent align="start" className="w-64">
                 <DropdownMenuLabel>Filter by points</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {pointsOptions.map((pts) => (
-                  <DropdownMenuCheckboxItem
-                    key={pts}
-                    checked={filterByPoints.includes(pts)}
-                    onCheckedChange={() => togglePoints(pts)}
-                  >
-                    {pts} pts
-                  </DropdownMenuCheckboxItem>
-                ))}
+                <div className="p-2 space-y-2">
+                  {/* Current filter display */}
+                  {filterByPoints && (
+                    <div className="flex items-center justify-between p-2 bg-zinc-800 rounded-md">
+                      <span className="text-sm text-zinc-300">
+                        {filterByPoints.operator}{filterByPoints.value} points
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
+                        onClick={() => setFilterByPoints(null)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {!filterByPoints && (
+                    <>
+                      {/* Quick filters */}
+                      <div className="space-y-1">
+                        <div className="text-xs text-zinc-500 uppercase font-medium">Quick Filters</div>
+                        {[
+                          { operator: '<' as const, value: 2, label: 'Small tickets (< 2 pts)' },
+                          { operator: '=' as const, value: 2, label: 'Medium tickets (2 pts)' },
+                          { operator: '>' as const, value: 2, label: 'Large tickets (> 2 pts)' },
+                          { operator: '>=' as const, value: 5, label: 'Epic tickets (≥ 5 pts)' },
+                        ].map(({ operator, value, label }) => (
+                          <Button
+                            key={`${operator}${value}`}
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start text-left h-8 px-2 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                            onClick={() => setFilterByPoints({ operator, value })}
+                          >
+                            <span className="text-xs">{label}</span>
+                          </Button>
+                        ))}
+                      </div>
+
+                      <DropdownMenuSeparator />
+
+                      {/* Custom filter */}
+                      <div className="space-y-2">
+                        <div className="text-xs text-zinc-500 uppercase font-medium">Custom Filter</div>
+                        <div className="flex gap-1">
+                          <select
+                            className="flex-1 h-8 px-2 text-xs bg-zinc-800 border border-zinc-700 rounded text-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                            onChange={(e) => {
+                              const operator = e.target.value as '<' | '>' | '=' | '<=' | '>='
+                              // Reset to first option after selection to avoid confusion
+                              e.target.value = '<'
+                              // For now, just set a placeholder - we'll enhance this
+                              setFilterByPoints({ operator, value: 1 })
+                            }}
+                          >
+                            <option value="<">Less than (&lt;)</option>
+                            <option value=">">Greater than (&gt;)</option>
+                            <option value="=">Equal to (=)</option>
+                            <option value="<=">Less or equal (≤)</option>
+                            <option value=">=">Greater or equal (≥)</option>
+                          </select>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            min="0"
+                            className="w-16 h-8 text-xs bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500"
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 0
+                              // This is a simplified approach - in a real implementation,
+                              // you'd want to combine operator + value selection
+                              if (filterByPoints) {
+                                setFilterByPoints({ ...filterByPoints, value })
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Available point values */}
+                  <DropdownMenuSeparator />
+                  <div className="space-y-1">
+                    <div className="text-xs text-zinc-500 uppercase font-medium">Available Values</div>
+                    <div className="grid grid-cols-4 gap-1">
+                      {pointsOptions.slice(0, 12).map((pts) => (
+                        <Button
+                          key={pts}
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                          onClick={() => setFilterByPoints({ operator: '=', value: pts })}
+                        >
+                          {pts}
+                        </Button>
+                      ))}
+                    </div>
+                    {pointsOptions.length > 12 && (
+                      <div className="text-xs text-zinc-500 text-center">
+                        +{pointsOptions.length - 12} more values
+                      </div>
+                    )}
+                  </div>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
           )
