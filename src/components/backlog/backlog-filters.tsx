@@ -409,46 +409,20 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                 <DropdownMenuLabel className="text-base">Filter by points</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <div className="p-3 space-y-3">
-                  {/* Current filter display */}
-                  {filterByPoints && (
-                    <div className="flex items-center justify-between p-3 bg-zinc-800 rounded-md">
-                      <span className="text-sm font-medium text-zinc-200">
-                        Current: {filterByPoints.operator}{filterByPoints.value} points
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-zinc-400 hover:text-zinc-200"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          setFilterByPoints(null)
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Quick filters - always visible */}
+                  {/* Quick filters */}
                   <div className="space-y-2">
                     <div className="text-sm text-zinc-400 uppercase font-medium">Quick Filters</div>
                     {[
-                      { operator: '<' as const, value: 2, label: 'Small tickets (< 2 pts)' },
-                      { operator: '=' as const, value: 2, label: 'Medium tickets (2 pts)' },
-                      { operator: '>' as const, value: 2, label: 'Large tickets (> 2 pts)' },
-                      { operator: '>=' as const, value: 5, label: 'Epic tickets (≥ 5 pts)' },
+                      { operator: '<' as const, value: 2, label: 'Small (< 2 pts)' },
+                      { operator: '=' as const, value: 2, label: 'Medium (2 pts)' },
+                      { operator: '>' as const, value: 2, label: 'Large (> 2 pts)' },
+                      { operator: '>=' as const, value: 5, label: 'Epic (≥ 5 pts)' },
                     ].map(({ operator, value, label }) => (
                       <Button
                         key={`${operator}${value}`}
-                        variant={filterByPoints?.operator === operator && filterByPoints?.value === value ? "default" : "ghost"}
+                        variant="ghost"
                         size="sm"
-                        className={cn(
-                          "w-full justify-start text-left h-9 px-3 hover:bg-zinc-800 hover:text-zinc-100",
-                          filterByPoints?.operator === operator && filterByPoints?.value === value
-                            ? "bg-amber-600 text-white border-amber-600"
-                            : "text-zinc-300"
-                        )}
+                        className="w-full justify-start text-left h-9 px-3 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
@@ -468,14 +442,19 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     <div className="flex gap-2">
                       <select
                         className="flex-1 h-9 px-3 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                        defaultValue=""
+                        value={filterByPoints?.operator || ""}
                         onChange={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          // Don't do anything on operator change alone - wait for value input
+                          const operator = e.target.value as '<' | '>' | '=' | '<=' | '>=' | ""
+                          if (operator && filterByPoints?.value !== undefined) {
+                            setFilterByPoints({ operator, value: filterByPoints.value })
+                          } else if (!operator) {
+                            setFilterByPoints(null)
+                          }
                         }}
                       >
-                        <option value="" disabled>Select operator...</option>
+                        <option value="">Select operator...</option>
                         <option value="<">Less than (&lt;)</option>
                         <option value=">">Greater than (&gt;)</option>
                         <option value="=">Equal to (=)</option>
@@ -484,8 +463,9 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                       </select>
                       <Input
                         type="number"
-                        placeholder="Enter value..."
+                        placeholder="Value..."
                         min="0"
+                        value={filterByPoints?.value || ""}
                         className="w-24 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500"
                         onChange={(e) => {
                           e.preventDefault()
@@ -497,6 +477,12 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                             if (operator) {
                               setFilterByPoints({ operator, value })
                             }
+                          } else if (e.target.value === "") {
+                            const selectElement = e.currentTarget.previousElementSibling as HTMLSelectElement
+                            const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
+                            if (operator) {
+                              setFilterByPoints(null)
+                            }
                           }
                         }}
                         onClick={(e) => {
@@ -504,6 +490,19 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                           e.stopPropagation()
                         }}
                       />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 w-9 p-0 text-zinc-400 hover:text-zinc-200"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterByPoints(null)
+                        }}
+                        title="Clear filter"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
 
