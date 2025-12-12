@@ -414,26 +414,28 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   {/* Quick filters */}
                   <div className="space-y-2">
                     <div className="text-sm text-zinc-400 uppercase font-medium">Quick Filters</div>
-                    {[
-                      { operator: '<' as const, value: 2, label: 'Small (< 2 pts)' },
-                      { operator: '=' as const, value: 2, label: 'Medium (2 pts)' },
-                      { operator: '>' as const, value: 2, label: 'Large (> 2 pts)' },
-                      { operator: '>=' as const, value: 5, label: 'Epic (≥ 5 pts)' },
-                    ].map(({ operator, value, label }) => (
-                      <Button
-                        key={`${operator}${value}`}
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start text-left h-9 px-3 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          setFilterByPoints({ operator, value })
-                        }}
-                      >
-                        <span className="text-sm">{label}</span>
-                      </Button>
-                    ))}
+                    <div className="grid grid-cols-2 gap-1">
+                      {[
+                        { operator: '<' as const, value: 2, label: 'Small (< 2 pts)' },
+                        { operator: '=' as const, value: 2, label: 'Medium (2 pts)' },
+                        { operator: '>' as const, value: 2, label: 'Large (> 2 pts)' },
+                        { operator: '>=' as const, value: 5, label: 'Epic (≥ 5 pts)' },
+                      ].map(({ operator, value, label }) => (
+                        <Button
+                          key={`${operator}${value}`}
+                          variant="ghost"
+                          size="sm"
+                          className="justify-start text-left h-9 px-3 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setFilterByPoints({ operator, value })
+                          }}
+                        >
+                          <span className="text-sm">{label}</span>
+                        </Button>
+                      ))}
+                    </div>
                   </div>
 
                   <DropdownMenuSeparator />
