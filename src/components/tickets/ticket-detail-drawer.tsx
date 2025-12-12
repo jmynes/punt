@@ -37,6 +37,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -65,7 +71,7 @@ import type {
   TicketWithRelations,
   UploadedFileInfo,
 } from '@/types'
-import { ISSUE_TYPES } from '@/types'
+import { ISSUE_TYPES, PRIORITIES } from '@/types'
 import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
 import type { ParentTicketOption } from './create-ticket-dialog'
@@ -210,6 +216,18 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         const newType = value as IssueType
         updates.type = newType
         setTempType(newType)
+        break
+      }
+      case 'priority': {
+        const newPriority = value as Priority
+        updates.priority = newPriority
+        setTempPriority(newPriority)
+        break
+      }
+      case 'storyPoints': {
+        const newStoryPoints = value as number | null
+        updates.storyPoints = newStoryPoints
+        setTempStoryPoints(newStoryPoints)
         break
       }
       case 'assignee': {
@@ -581,31 +599,27 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
               {/* Meta row */}
               <div className="flex flex-wrap items-center gap-4 text-sm">
-                {editingField === 'priority' ? (
-                  <div className="flex items-center gap-2">
-                    <PrioritySelect
-                      value={tempPriority}
-                      onChange={(value) => setTempPriority(value)}
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveField('priority')}
-                      className="bg-amber-600 hover:bg-amber-700"
-                    >
-                      Save
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <div
-                    className="cursor-pointer hover:bg-amber-500/15 rounded px-2 py-1 -mx-2"
-                    onClick={() => startEditing('priority')}
-                  >
-                    <PriorityBadge priority={ticket.priority} showLabel />
-                  </div>
-                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="cursor-pointer">
+                      <PriorityBadge priority={ticket.priority} showLabel />
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {PRIORITIES.map((priority) => (
+                      <DropdownMenuCheckboxItem
+                        key={priority}
+                        checked={ticket.priority === priority}
+                        onCheckedChange={() => {
+                          handleImmediateChange('priority', priority)
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <PriorityBadge priority={priority} showLabel />
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 <Select
                   value={ticket.type}
@@ -614,7 +628,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     handleImmediateChange('type', newType)
                   }}
                 >
-                  <SelectTrigger className="w-full h-10 bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+                  <SelectTrigger className="w-24 h-8 bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700">
@@ -626,11 +640,63 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       >
                         <div className="flex items-center gap-2">
                           <TypeBadge type={type} size="sm" />
+                          <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+
+                <div className="flex focus-within:ring-2 focus-within:ring-amber-500 focus-within:ring-offset-0 rounded-md overflow-hidden">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={tempStoryPoints ?? ticket.storyPoints ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value ? Number.parseInt(e.target.value, 10) : null
+                      setTempStoryPoints(val !== null && val < 0 ? 0 : val)
+                    }}
+                    onBlur={() => {
+                      if (tempStoryPoints !== ticket.storyPoints) {
+                        handleImmediateChange('storyPoints', tempStoryPoints)
+                      }
+                    }}
+                    placeholder="pts"
+                    style={{
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'textfield',
+                      appearance: 'textfield'
+                    }}
+                    className="w-12 h-8 bg-zinc-900 border-zinc-700 text-zinc-300 focus:border-amber-500 focus:ring-0 rounded-r-none border-r-0"
+                  />
+                  <div className="flex flex-col">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-5 px-0 bg-zinc-900 border border-zinc-700 border-l-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-tr"
+                      onClick={() => {
+                        const currentValue = ticket.storyPoints ?? 0
+                        const newValue = currentValue + 1
+                        handleImmediateChange('storyPoints', newValue)
+                      }}
+                    >
+                      <ChevronUp className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-5 px-0 bg-zinc-900 border border-zinc-700 border-l-0 border-t-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-br"
+                      onClick={() => {
+                        const currentValue = ticket.storyPoints ?? 0
+                        const newValue = Math.max(0, currentValue - 1)
+                        handleImmediateChange('storyPoints', newValue)
+                      }}
+                    >
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+
 
                 {editingField === 'sprint' ? (
                   <div className="flex items-center gap-2">
@@ -682,72 +748,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   </Badge>
                 ) : null}
 
-                {editingField === 'storyPoints' ? (
-                  <div className="flex items-center gap-2">
-                    <div className="flex focus-within:ring-2 focus-within:ring-amber-500 focus-within:ring-offset-0 rounded-md overflow-hidden">
-                      <Input
-                        type="number"
-                        min={0}
-                        value={tempStoryPoints ?? ''}
-                        onChange={(e) => {
-                          const val = e.target.value ? Number.parseInt(e.target.value, 10) : null
-                          setTempStoryPoints(val !== null && val < 0 ? 0 : val)
-                        }}
-                        placeholder="pts"
-                        style={{
-                          WebkitAppearance: 'none',
-                          MozAppearance: 'textfield',
-                          appearance: 'textfield'
-                        }}
-                        className="flex-1 h-8 bg-zinc-900 border-zinc-700 focus:border-amber-500 focus:ring-0 rounded-r-none border-r-0"
-                      />
-                      <div className="flex flex-col">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-4 w-6 px-0 bg-zinc-900 border border-zinc-700 border-l-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-tr"
-                          onClick={() => {
-                            const currentValue = tempStoryPoints ?? 0
-                            const newValue = currentValue + 1
-                            setTempStoryPoints(newValue)
-                          }}
-                        >
-                          <ChevronUp className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-4 w-6 px-0 bg-zinc-900 border border-zinc-700 border-l-0 border-t-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-br"
-                          onClick={() => {
-                            const currentValue = tempStoryPoints ?? 0
-                            const newValue = Math.max(0, currentValue - 1)
-                            setTempStoryPoints(newValue)
-                          }}
-                        >
-                          <ChevronDown className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveField('storyPoints')}
-                      className="bg-amber-600 hover:bg-amber-700"
-                    >
-                      Save
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                      Cancel
-                    </Button>
-                  </div>
-                ) : ticket.storyPoints !== null ? (
-                  <Badge
-                    variant="outline"
-                    className="font-mono cursor-pointer hover:bg-amber-500/15"
-                    onClick={() => startEditing('storyPoints')}
-                  >
-                    {ticket.storyPoints} pts
-                  </Badge>
-                ) : null}
 
                 {editingField === 'estimate' ? (
                   <div className="flex items-center gap-2">
