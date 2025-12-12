@@ -439,69 +439,71 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   {/* Custom filter */}
                   <div className="space-y-2">
                     <div className="text-sm text-zinc-400 uppercase font-medium">Custom Filter</div>
-                    <div className="flex gap-2">
-                      <select
-                        className="flex-1 h-9 px-3 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                        value={filterByPoints?.operator || ""}
-                        onChange={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          const operator = e.target.value as '<' | '>' | '=' | '<=' | '>=' | ""
-                          if (operator && filterByPoints?.value !== undefined) {
-                            setFilterByPoints({ operator, value: filterByPoints.value })
-                          } else if (!operator) {
-                            setFilterByPoints(null)
-                          }
-                        }}
-                      >
-                        <option value="">Select operator...</option>
-                        <option value="<">Less than (&lt;)</option>
-                        <option value=">">Greater than (&gt;)</option>
-                        <option value="=">Equal to (=)</option>
-                        <option value="<=">Less or equal (≤)</option>
-                        <option value=">=">Greater or equal (≥)</option>
-                      </select>
-                      <Input
-                        type="number"
-                        placeholder="Value..."
-                        min="0"
-                        value={filterByPoints?.value || ""}
-                        className="w-24 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500"
-                        onChange={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          const value = parseInt(e.target.value)
-                          if (!isNaN(value) && value >= 0) {
-                            const selectElement = e.currentTarget.previousElementSibling as HTMLSelectElement
-                            const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
-                            if (operator) {
-                              setFilterByPoints({ operator, value })
-                            }
-                          } else if (e.target.value === "") {
-                            const selectElement = e.currentTarget.previousElementSibling as HTMLSelectElement
-                            const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
-                            if (operator) {
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <select
+                          className="flex-1 h-9 px-3 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                          value={filterByPoints?.operator || ""}
+                          onChange={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const operator = e.target.value as '<' | '>' | '=' | '<=' | '>=' | ""
+                            if (operator && filterByPoints?.value !== undefined) {
+                              setFilterByPoints({ operator, value: filterByPoints.value })
+                            } else if (!operator) {
                               setFilterByPoints(null)
                             }
-                          }
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                        }}
-                      />
+                          }}
+                        >
+                          <option value="">Select operator...</option>
+                          <option value="<">Less than (&lt;)</option>
+                          <option value=">">Greater than (&gt;)</option>
+                          <option value="=">Equal to (=)</option>
+                          <option value="<=">Less or equal (≤)</option>
+                          <option value=">=">Greater or equal (≥)</option>
+                        </select>
+                        <Input
+                          type="number"
+                          placeholder="Value..."
+                          min="0"
+                          value={filterByPoints?.value || ""}
+                          className="w-24 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500"
+                          onChange={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const value = parseInt(e.target.value)
+                            if (!isNaN(value) && value >= 0) {
+                              const selectElement = e.currentTarget.previousElementSibling as HTMLSelectElement
+                              const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
+                              if (operator) {
+                                setFilterByPoints({ operator, value })
+                              }
+                            } else if (e.target.value === "") {
+                              const selectElement = e.currentTarget.previousElementSibling as HTMLSelectElement
+                              const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
+                              if (operator) {
+                                setFilterByPoints(null)
+                              }
+                            }
+                          }}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                          }}
+                        />
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-9 w-9 p-0 text-zinc-400 hover:text-zinc-200"
+                        className="w-full h-8 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
                           setFilterByPoints(null)
                         }}
-                        title="Clear filter"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-4 w-4 mr-2" />
+                        Clear Filter
                       </Button>
                     </div>
                   </div>
