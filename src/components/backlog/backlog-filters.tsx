@@ -416,7 +416,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     <div className="text-sm text-zinc-400 uppercase font-medium">Quick Filters</div>
                     <div className="grid grid-cols-2 gap-1">
                       {[
-                        { operator: '<' as const, value: 2, label: 'Small (< 2 pts)' },
+                        { operator: '<=' as const, value: 1, label: 'Small (≤ 1 pt)' },
                         { operator: '=' as const, value: 2, label: 'Medium (2 pts)' },
                         { operator: '>' as const, value: 2, label: 'Large (> 2 pts)' },
                         { operator: '>=' as const, value: 5, label: 'Epic (≥ 5 pts)' },
