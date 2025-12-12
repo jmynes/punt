@@ -474,7 +474,12 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                             placeholder="Value..."
                             min="0"
                             value={filterByPoints?.value ?? ""}
-                            className="w-20 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500 rounded-r-none border-r-0 [&::-webkit-outer-spin-button]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none -webkit-appearance-none appearance-none"
+                            style={{
+                              WebkitAppearance: 'none',
+                              MozAppearance: 'textfield',
+                              appearance: 'textfield'
+                            }}
+                            className="w-20 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500 rounded-r-none border-r-0"
                             onChange={(e) => {
                               const value = parseInt(e.target.value)
                               if (!isNaN(value) && value >= 0) {
