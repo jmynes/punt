@@ -408,7 +408,24 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-72">
-                <DropdownMenuLabel className="text-base">Filter by points</DropdownMenuLabel>
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <DropdownMenuLabel className="text-base p-0">Filter by points</DropdownMenuLabel>
+                  {filterByPoints && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setFilterByPoints(null)
+                      }}
+                      title="Clear filter"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 <DropdownMenuSeparator />
                 <div className="p-3 space-y-3">
                   {/* Quick filters */}
@@ -552,19 +569,6 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                           </div>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full h-8 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          setFilterByPoints(null)
-                        }}
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Clear Filter
-                      </Button>
                     </div>
                   </div>
 
