@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { format } from 'date-fns'
-import { getAvatarColor, getInitials } from '@/lib/utils'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { getStatusIcon } from '@/lib/status-icons'
 import { useBacklogStore } from '@/stores/backlog-store'
 import type { ColumnWithTickets, IssueType, Priority, UserSummary } from '@/types'
