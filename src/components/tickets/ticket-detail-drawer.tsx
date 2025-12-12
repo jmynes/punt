@@ -605,28 +605,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
               {/* Meta row */}
               <div className="flex flex-wrap items-center gap-4 text-sm">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <div className="cursor-pointer">
-                      <PriorityBadge priority={ticket.priority} showLabel />
-                    </div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    {PRIORITIES.map((priority) => (
-                      <DropdownMenuCheckboxItem
-                        key={priority}
-                        checked={ticket.priority === priority}
-                        onCheckedChange={() => {
-                          handleImmediateChange('priority', priority)
-                        }}
-                        className="cursor-pointer"
-                      >
-                        <PriorityBadge priority={priority} showLabel />
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
                 <Select
                   value={ticket.type}
                   onValueChange={(value) => {
@@ -703,6 +681,27 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   </div>
                 </div>
 
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="cursor-pointer">
+                      <PriorityBadge priority={ticket.priority} showLabel />
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {PRIORITIES.map((priority) => (
+                      <DropdownMenuCheckboxItem
+                        key={priority}
+                        checked={ticket.priority === priority}
+                        onCheckedChange={() => {
+                          handleImmediateChange('priority', priority)
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <PriorityBadge priority={priority} showLabel />
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
