@@ -1,7 +1,7 @@
 'use client'
 
 import { FileImage, FileText, FileVideo, Loader2, Upload, X } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -68,6 +68,7 @@ export function FileUpload({ value, onChange, maxFiles = 10, disabled }: FileUpl
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -165,11 +166,17 @@ export function FileUpload({ value, onChange, maxFiles = 10, disabled }: FileUpl
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        onClick={() => {
+          // Trigger file input when clicking anywhere on the drop zone
+          if (!disabled && !isUploading) {
+            fileInputRef.current?.click()
+          }
+        }}
         className={cn(
-          'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors',
+          'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors cursor-pointer',
           isDragging
             ? 'border-amber-500 bg-amber-500/10'
-            : 'border-zinc-700 bg-zinc-900/50 hover:border-zinc-600',
+            : 'border-zinc-700 bg-zinc-900/50 hover:border-zinc-600 hover:bg-zinc-800/30',
           disabled && 'cursor-not-allowed opacity-50',
         )}
       >
@@ -186,6 +193,7 @@ export function FileUpload({ value, onChange, maxFiles = 10, disabled }: FileUpl
               <label className="cursor-pointer text-amber-500 hover:text-amber-400">
                 browse
                 <input
+                  ref={fileInputRef}
                   type="file"
                   multiple
                   accept={ALLOWED_EXTENSIONS.join(',')}
