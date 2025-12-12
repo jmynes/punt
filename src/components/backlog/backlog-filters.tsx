@@ -407,7 +407,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-72">
+              <DropdownMenuContent align="start" className="w-80">
                 <div className="flex items-center justify-between px-2 py-1.5">
                   <DropdownMenuLabel className="text-base p-0">Filter by points</DropdownMenuLabel>
                   {filterByPoints && (
