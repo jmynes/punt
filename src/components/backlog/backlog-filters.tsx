@@ -414,7 +414,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
+                      className="h-6 px-2 text-zinc-400 hover:text-zinc-200"
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -422,7 +422,8 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                       }}
                       title="Clear filter"
                     >
-                      <X className="h-4 w-4" />
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      Clear
                     </Button>
                   )}
                 </div>
