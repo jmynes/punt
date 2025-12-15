@@ -26,6 +26,10 @@
 - **No authentication** yet; intended for local/desktop use
 - API/infra still WIP; expect breaking changes
 
+### Known Issues
+
+- **MDXEditor Code Block Markdown Shortcut**: To create a code block using markdown shortcuts, you must type ``` followed by the language identifier (e.g., `js`) and then press **SPACE** (not Enter). This is a limitation of the underlying Lexical markdown transformer. See [MDXEditor issue #290](https://github.com/mdx-editor/editor/issues/290) and [feature request #716](https://github.com/mdx-editor/editor/issues/716) for more details. The code block button in the toolbar works as expected.
+
 ## Tech Stack
 
 | Category | Technology |

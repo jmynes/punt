@@ -218,7 +218,7 @@ export function CreateTicketDialog() {
 
   return (
     <Dialog open={createTicketOpen} onOpenChange={setCreateTicketOpen}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0 bg-zinc-950 border-zinc-800">
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:!max-w-3xl max-h-[90vh] p-0 bg-zinc-950 border-zinc-800 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-zinc-800">
           <DialogTitle className="text-xl text-zinc-100">Create New Ticket</DialogTitle>
           <DialogDescription className="text-zinc-500">
@@ -227,7 +227,7 @@ export function CreateTicketDialog() {
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-200px)]">
-          <div className="px-6 py-4">
+          <div className="px-6 py-4 w-full min-w-0">
             <TicketForm
               data={formData}
               onChange={setFormData}

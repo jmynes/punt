@@ -72,7 +72,7 @@ export function TicketForm({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0">
       {/* Title - Required */}
       <div className="space-y-2">
         <Label htmlFor="title" className="text-zinc-300">
