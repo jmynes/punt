@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo, useState, useEffect } from 'react'
 import {
   MDXEditor,
   headingsPlugin,
@@ -9,15 +9,19 @@ import {
   linkPlugin,
   linkDialogPlugin,
   markdownShortcutPlugin,
+  codeBlockPlugin,
+  codeMirrorPlugin,
   toolbarPlugin,
   BoldItalicUnderlineToggles,
   CodeToggle,
   ListsToggle,
   UndoRedo,
   CreateLink,
+  InsertCodeBlock,
 } from '@mdxeditor/editor'
 import '@mdxeditor/editor/style.css'
 import { CustomBlockTypeSelect } from './custom-block-type-select'
+import { CustomCodeMirrorEditor } from './custom-codemirror-editor'
 
 interface DescriptionEditorProps {
   markdown: string
@@ -32,6 +36,12 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
   disabled = false,
   placeholder = 'Add a more detailed description...',
 }: DescriptionEditorProps) {
+  // Prevent hydration mismatch by only rendering on client
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
   // Memoize toolbar contents to prevent re-creation
   const toolbarContents = useCallback(
     () => (
@@ -41,6 +51,7 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
         <CodeToggle />
         <ListsToggle />
         <CustomBlockTypeSelect />
+        <InsertCodeBlock />
         <CreateLink />
       </>
     ),
@@ -55,6 +66,48 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
       quotePlugin(),
       linkPlugin(),
       linkDialogPlugin(),
+      codeBlockPlugin({
+        defaultCodeBlockLanguage: 'text',
+        codeBlockEditorDescriptors: [
+          {
+            match: (language, meta) => !meta,
+            priority: 1,
+            Editor: CustomCodeMirrorEditor,
+          },
+        ],
+      }),
+      codeMirrorPlugin({
+        codeBlockLanguages: {
+          '': 'Plain Text',
+          text: 'Plain Text',
+          js: 'JavaScript',
+          javascript: 'JavaScript',
+          ts: 'TypeScript',
+          typescript: 'TypeScript',
+          jsx: 'JSX',
+          tsx: 'TSX',
+          json: 'JSON',
+          css: 'CSS',
+          html: 'HTML',
+          python: 'Python',
+          java: 'Java',
+          c: 'C',
+          cpp: 'C++',
+          csharp: 'C#',
+          php: 'PHP',
+          ruby: 'Ruby',
+          go: 'Go',
+          rust: 'Rust',
+          sql: 'SQL',
+          bash: 'Bash',
+          shell: 'Shell',
+          sh: 'Shell',
+          yaml: 'YAML',
+          yml: 'YAML',
+          markdown: 'Markdown',
+          md: 'Markdown',
+        },
+      }),
       markdownShortcutPlugin(),
       toolbarPlugin({
         toolbarContents,
@@ -62,6 +115,20 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
     ],
     [toolbarContents],
   )
+
+  // Show placeholder during SSR to prevent hydration mismatch
+  if (!isMounted) {
+    return (
+      <div className="space-y-2" style={{ position: 'relative', zIndex: 1 }}>
+        <div
+          className="border border-zinc-700 rounded-md bg-zinc-900 min-h-[150px] p-4 text-sm text-zinc-500"
+          style={{ overflow: 'visible', position: 'relative' }}
+        >
+          {placeholder}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-2" style={{ position: 'relative', zIndex: 1 }}>
