@@ -1,6 +1,6 @@
 'use client'
 
-import { FolderKanban, Home, Layers, Plus, Settings, X } from 'lucide-react'
+import { FileText, FolderKanban, Home, Layers, Plus, Settings, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -78,6 +78,18 @@ export function MobileNav() {
                 >
                   <FolderKanban className="h-4 w-4" />
                   All Projects
+                </Button>
+              </Link>
+              <Link href="/editor-test" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
+                    pathname === '/editor-test' && 'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <FileText className="h-4 w-4" />
+                  Editor Test
                 </Button>
               </Link>
             </div>

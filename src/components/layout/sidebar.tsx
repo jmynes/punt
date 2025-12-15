@@ -1,6 +1,6 @@
 'use client'
 
-import { FolderKanban, Home, Layers, List, Plus, Settings } from 'lucide-react'
+import { FileText, FolderKanban, Home, Layers, List, Plus, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/', icon: Home },
   { title: 'All Projects', href: '/projects', icon: FolderKanban },
+  { title: 'Editor Test', href: '/editor-test', icon: FileText },
 ]
 
 // Demo projects - in real app, these come from API

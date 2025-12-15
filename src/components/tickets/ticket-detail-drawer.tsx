@@ -76,6 +76,7 @@ import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
 import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
+import { DescriptionEditor } from './description-editor'
 import { FileUpload } from './file-upload'
 import { LabelSelect } from './label-select'
 import { ParentSelect } from './parent-select'
@@ -785,12 +786,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <Label className="text-zinc-400">Description</Label>
                 {editingField === 'description' ? (
                   <div className="space-y-2">
-                    <Textarea
-                      value={tempDescription}
-                      onChange={(e) => setTempDescription(e.target.value)}
-                      rows={6}
-                      className="bg-zinc-900 border-zinc-700 focus:border-amber-500 resize-none"
-                      autoFocus
+                    <DescriptionEditor
+                      markdown={tempDescription}
+                      onChange={setTempDescription}
+                      placeholder="Add a more detailed description..."
                     />
                     <div className="flex gap-2">
                       <Button

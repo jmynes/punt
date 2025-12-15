@@ -28,6 +28,7 @@ import {
 } from '@/types'
 import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
+import { DescriptionEditor } from './description-editor'
 import { FileUpload } from './file-upload'
 import { LabelSelect } from './label-select'
 import { ParentSelect } from './parent-select'
@@ -128,14 +129,11 @@ export function TicketForm({
         <Label htmlFor="description" className="text-zinc-300">
           Description
         </Label>
-        <Textarea
-          id="description"
-          value={data.description}
-          onChange={(e) => updateField('description', e.target.value)}
-          placeholder="Add a more detailed description..."
-          rows={4}
+        <DescriptionEditor
+          markdown={data.description || ''}
+          onChange={(value) => updateField('description', value)}
           disabled={disabled}
-          className="bg-zinc-900 border-zinc-700 focus:border-amber-500 resize-none"
+          placeholder="Add a more detailed description..."
         />
       </div>
 
