@@ -150,10 +150,10 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
   }
 
   return (
-    <div className="space-y-2" style={{ position: 'relative', zIndex: 1 }}>
+    <div className="space-y-2 w-full min-w-0" style={{ position: 'relative', zIndex: 1 }}>
       {/* Container with border and dark theme styling - overflow visible for dropdowns */}
       <div
-        className="border border-zinc-700 rounded-md bg-zinc-900"
+        className="border border-zinc-700 rounded-md bg-zinc-900 w-full min-w-0 max-w-full"
         style={{ overflow: 'visible', position: 'relative' }}
       >
         <MDXEditor
