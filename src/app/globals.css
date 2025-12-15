@@ -126,10 +126,6 @@
   }
 }
 
-
-
-
-
 /* Selected + Highlighted (when navigating to selected item) */
 [data-radix-select-item][aria-selected='true'][data-highlighted],
 [data-radix-select-item][aria-selected='true'][data-highlighted="true"] {
@@ -192,10 +188,3 @@
   background: rgb(24 24 27) !important; /* zinc-900 */
   color: rgb(244 244 245) !important; /* zinc-100 */
 }
-
-
-
-
-
-
-
