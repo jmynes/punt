@@ -8,6 +8,18 @@ importers:
 
   .:
     dependencies:
+      '@codemirror/commands':
+        specifier: ^6.10.0
+        version: 6.10.0
+      '@codemirror/language-data':
+        specifier: ^6.5.2
+        version: 6.5.2
+      '@codemirror/state':
+        specifier: ^6.5.2
+        version: 6.5.2
+      '@codemirror/view':
+        specifier: ^6.39.4
+        version: 6.39.4
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -80,9 +92,15 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      cm6-theme-basic-light:
+        specifier: ^0.2.0
+        version: 0.2.0(@codemirror/language@6.11.3)(@codemirror/state@6.5.2)(@codemirror/view@6.39.4)(@lezer/highlight@1.2.3)
       cmdk:
         specifier: ^1.1.1
         version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      codemirror:
+        specifier: ^6.0.2
+        version: 6.0.2
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
