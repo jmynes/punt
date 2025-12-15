@@ -9,7 +9,7 @@ import { languages } from '@codemirror/language-data'
 import { EditorState } from '@codemirror/state'
 import { lineNumbers, keymap, EditorView } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
-import { basicLight } from 'cm6-theme-basic-light'
+import { oneDark } from '@codemirror/theme-one-dark'
 import { basicSetup } from 'codemirror'
 import { $setSelection } from 'lexical'
 import { useTranslation } from '@mdxeditor/editor'
@@ -61,7 +61,7 @@ export function CustomCodeMirrorEditor({ language, nodeKey, code, meta, focusEmi
       const extensions = [
         ...codeMirrorExtensions,
         basicSetup,
-        basicLight,
+        oneDark,
         lineNumbers(),
         keymap.of([indentWithTab]),
         EditorView.lineWrapping,
@@ -106,6 +106,28 @@ export function CustomCodeMirrorEditor({ language, nodeKey, code, meta, focusEmi
           }
         }
       }
+
+      // Add theme overrides AFTER language support to customize oneDark theme
+      // This must come after all other extensions to take precedence
+      extensions.push(
+        EditorView.theme(
+          {
+            // Active line highlighting - light grey for entire row
+            '.cm-activeLine': {
+              backgroundColor: 'rgb(24 24 27)', // zinc-900
+            },
+            // Active line gutter - orange highlight
+            '.cm-activeLineGutter': {
+              backgroundColor: 'rgb(217 119 6 / 0.2)', // amber-600 with opacity
+            },
+            // Override selection color to match our design
+            '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
+              backgroundColor: 'rgb(217 119 6 / 0.4)', // amber-600 with opacity
+            },
+          },
+          { dark: true },
+        ),
+      )
 
       el.innerHTML = ''
       editorViewRef.current = new EditorView({
@@ -240,7 +262,7 @@ export function CustomCodeMirrorEditor({ language, nodeKey, code, meta, focusEmi
       </div>
 
       {/* CodeMirror editor */}
-      <div ref={elRef} className="min-h-[100px]" />
+      <div ref={elRef} />
     </div>
   )
 }
