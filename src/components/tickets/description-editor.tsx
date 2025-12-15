@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useMemo, useState, useEffect } from 'react'
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react'
 import {
   MDXEditor,
   headingsPlugin,
@@ -41,10 +41,20 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
 }: DescriptionEditorProps) {
   // Prevent hydration mismatch by only rendering on client
   const [isMounted, setIsMounted] = useState(false)
+  // Store original markdown for diff view (left side)
+  // Use the markdown prop as the baseline - it represents the ticket's current description
+  // When user edits, the right side will show changes, left side shows original
+  const originalMarkdownRef = useRef(markdown)
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  // Update original markdown when markdown prop changes (e.g., when switching tickets)
+  // This ensures diff view shows the correct original when editing different tickets
+  useEffect(() => {
+    originalMarkdownRef.current = markdown
+  }, [markdown])
   // Memoize toolbar contents to prevent re-creation
   const toolbarContents = useCallback(
     () => (
@@ -62,6 +72,7 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
   )
 
   // Memoize plugins to prevent re-creation on every render
+  // Recreate plugins when markdown changes (switching tickets) to update diffMarkdown
   const plugins = useMemo(
     () => [
       headingsPlugin({ allowedHeadingLevels: [1, 2, 3, 4, 5, 6] }),
@@ -71,7 +82,7 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
       linkDialogPlugin(),
       diffSourcePlugin({
         viewMode: 'rich-text',
-        diffMarkdown: '',
+        diffMarkdown: originalMarkdownRef.current,
         codeMirrorExtensions: [oneDark],
       }),
       codeBlockPlugin({
@@ -121,7 +132,7 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
         toolbarContents,
       }),
     ],
-    [toolbarContents],
+    [toolbarContents, markdown], // Recreate plugins when markdown changes to update diffMarkdown
   )
 
   // Show placeholder during SSR to prevent hydration mismatch
