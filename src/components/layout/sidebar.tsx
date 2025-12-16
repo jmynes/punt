@@ -18,6 +18,7 @@ const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/', icon: Home },
   { title: 'All Projects', href: '/projects', icon: FolderKanban },
   { title: 'Editor Test', href: '/editor-test', icon: FileText },
+  { title: 'Settings', href: '/settings', icon: Settings },
 ]
 
 // Demo projects - in real app, these come from API
