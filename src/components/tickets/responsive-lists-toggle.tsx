@@ -10,7 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, List, ListOrdered, CheckSquare } from 'lucide-react'
+import { ChevronDown, List, ListOrdered, CheckSquare, Table } from 'lucide-react'
+import { InsertTable } from '@mdxeditor/editor'
 
 export function ResponsiveListsToggle() {
   const isSmallScreen = useMediaQuery('(max-width: 1024px)')
@@ -56,6 +57,9 @@ export function ResponsiveListsToggle() {
             <CheckSquare className="h-4 w-4 mr-2" />
             Checklist
           </DropdownMenuItem>
+          <div className="flex flex-col gap-0 p-1">
+            <InsertTable />
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     )
