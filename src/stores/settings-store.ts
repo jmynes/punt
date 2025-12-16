@@ -7,6 +7,8 @@ interface SettingsState {
   setOpenSinglePastedTicket: (value: boolean) => void
 
   // Date picker max year for ticket forms
+  ticketDateMaxYearMode: 'default' | 'custom'
+  setTicketDateMaxYearMode: (value: 'default' | 'custom') => void
   ticketDateMaxYear: number
   setTicketDateMaxYear: (value: number) => void
 
@@ -22,7 +24,9 @@ export const useSettingsStore = create<SettingsState>()(
       openSinglePastedTicket: true,
       setOpenSinglePastedTicket: (value) => set({ openSinglePastedTicket: value }),
 
-      // Default: allow dates up to current year + 5 for ticket forms
+      // Default: use default max year (current year + 5)
+      ticketDateMaxYearMode: 'default',
+      setTicketDateMaxYearMode: (value) => set({ ticketDateMaxYearMode: value }),
       ticketDateMaxYear: new Date().getFullYear() + 5,
       setTicketDateMaxYear: (value) => set({ ticketDateMaxYear: value }),
 
