@@ -83,6 +83,16 @@ function CommandList({ className, ...props }: React.ComponentProps<typeof Comman
     <CommandPrimitive.List
       data-slot="command-list"
       className={cn('max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto', className)}
+      onWheel={(e) => {
+        // Ensure wheel events scroll the list when it's scrollable
+        const target = e.currentTarget as HTMLElement
+        if (target.scrollHeight > target.clientHeight) {
+          // The list is scrollable, handle the wheel event
+          target.scrollTop += e.deltaY
+          e.preventDefault()
+          e.stopPropagation()
+        }
+      }}
       {...props}
     />
   )
