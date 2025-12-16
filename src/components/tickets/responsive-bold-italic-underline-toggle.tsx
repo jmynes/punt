@@ -1,16 +1,24 @@
 'use client'
 
-import React from 'react'
-import { BoldItalicUnderlineToggles, usePublisher, useCellValue, applyFormat$, currentFormat$, IS_BOLD, IS_ITALIC, IS_UNDERLINE } from '@mdxeditor/editor'
-import { useMediaQuery } from '@/hooks/use-media-query'
+import {
+  applyFormat$,
+  BoldItalicUnderlineToggles,
+  currentFormat$,
+  IS_BOLD,
+  IS_ITALIC,
+  IS_UNDERLINE,
+  useCellValue,
+  usePublisher,
+} from '@mdxeditor/editor'
+import { Bold, ChevronDown, Italic, Underline } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
-import { ChevronDown, Bold, Italic, Underline } from 'lucide-react'
+import { useMediaQuery } from '@/hooks/use-media-query'
 
 export function ResponsiveBoldItalicUnderlineToggle() {
   const isSmallScreen = useMediaQuery('(max-width: 1024px)')
@@ -25,9 +33,9 @@ export function ResponsiveBoldItalicUnderlineToggle() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="h-8 w-8 p-0 border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 relative flex items-center justify-center"
           >
             <Bold className="h-4 w-4 shrink-0 text-current" />
@@ -37,21 +45,27 @@ export function ResponsiveBoldItalicUnderlineToggle() {
         <DropdownMenuContent className="bg-zinc-900 border-zinc-700" align="start">
           <DropdownMenuItem
             onClick={() => applyFormat('bold')}
-            className={isBoldActive ? 'bg-zinc-800 text-amber-400' : 'text-zinc-300 focus:bg-zinc-800'}
+            className={
+              isBoldActive ? 'bg-zinc-800 text-amber-400' : 'text-zinc-300 focus:bg-zinc-800'
+            }
           >
             <Bold className="h-4 w-4 mr-2" />
             Bold
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => applyFormat('italic')}
-            className={isItalicActive ? 'bg-zinc-800 text-amber-400' : 'text-zinc-300 focus:bg-zinc-800'}
+            className={
+              isItalicActive ? 'bg-zinc-800 text-amber-400' : 'text-zinc-300 focus:bg-zinc-800'
+            }
           >
             <Italic className="h-4 w-4 mr-2" />
             Italic
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => applyFormat('underline')}
-            className={isUnderlineActive ? 'bg-zinc-800 text-amber-400' : 'text-zinc-300 focus:bg-zinc-800'}
+            className={
+              isUnderlineActive ? 'bg-zinc-800 text-amber-400' : 'text-zinc-300 focus:bg-zinc-800'
+            }
           >
             <Underline className="h-4 w-4 mr-2" />
             Underline
@@ -64,4 +78,3 @@ export function ResponsiveBoldItalicUnderlineToggle() {
   // Show as toggle buttons on larger screens
   return <BoldItalicUnderlineToggles />
 }
-

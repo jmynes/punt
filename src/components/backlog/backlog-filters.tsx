@@ -1,32 +1,33 @@
 'use client'
 
-import { useMemo } from 'react'
-import type * as React from 'react'
 import {
   ArrowUp,
   Bug,
   Calendar,
+  Check,
   CheckSquare,
+  ChevronDown,
   ChevronsDown,
   ChevronsUp,
   ChevronUp,
-  ChevronDown,
+  Clock,
+  Flag,
   Flame,
   Hash,
   Layers,
   Lightbulb,
+  RotateCcw,
   Search,
   User,
   X,
   Zap,
-  Flag,
-  RotateCcw,
-  Check,
-  Clock,
 } from 'lucide-react'
+import type * as React from 'react'
+import { useMemo } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -35,20 +36,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Calendar as CalendarComponent } from '@/components/ui/calendar'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
-import { format } from 'date-fns'
-import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { getStatusIcon } from '@/lib/status-icons'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
 import type { ColumnWithTickets, IssueType, Priority, UserSummary } from '@/types'
-import { ISSUE_TYPES, PRIORITIES } from '@/types'
-import type { DateRange } from 'react-day-picker'
+import { ISSUE_TYPES } from '@/types'
 
 // Type icons
 const typeIcons: Record<IssueType, React.ComponentType<{ className?: string }>> = {
@@ -129,8 +123,8 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
     let hasDueDates = false
 
     // Check all tickets across all columns (including done tickets)
-    _statusColumns.forEach(column => {
-      column.tickets.forEach(ticket => {
+    _statusColumns.forEach((column) => {
+      column.tickets.forEach((ticket) => {
         if (ticket.dueDate) {
           hasDueDates = true
           const ticketYear = ticket.dueDate.getFullYear()
@@ -175,8 +169,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
     return Array.from(set.values()).sort((a, b) => a.name.localeCompare(b.name))
   }, [_statusColumns])
 
-
-  const dueDateOptions = useMemo(() => {
+  const _dueDateOptions = useMemo(() => {
     const set = new Set<string>()
     for (const col of _statusColumns) {
       for (const t of col.tickets) {
@@ -195,7 +188,10 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
     filterByAssignee.length > 0 ||
     filterByLabels.length > 0 ||
     filterByPoints !== null ||
-    (filterByDueDate.from || filterByDueDate.to || filterByDueDate.includeNone || filterByDueDate.includeOverdue) ||
+    filterByDueDate.from ||
+    filterByDueDate.to ||
+    filterByDueDate.includeNone ||
+    filterByDueDate.includeOverdue ||
     (typeof filterBySprint === 'string' && filterBySprint.length > 0) ||
     searchQuery.length > 0
 
@@ -238,8 +234,6 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
       setFilterByLabels([...filterByLabels, labelId])
     }
   }
-
-
 
   const selectSprint = (sprintId: string | null) => {
     setFilterBySprint(sprintId)
@@ -367,7 +361,9 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                 <DropdownMenuLabel>Filter by labels</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {labelOptions.length === 0 && (
-                  <DropdownMenuLabel className="text-xs text-zinc-500">No labels found</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs text-zinc-500">
+                    No labels found
+                  </DropdownMenuLabel>
                 )}
                 {labelOptions.map((label) => (
                   <DropdownMenuCheckboxItem
@@ -380,7 +376,11 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                       className="mr-2 text-[10px] px-1.5 py-0 border-zinc-700"
                       style={
                         label.color
-                          ? { borderColor: label.color, color: label.color, backgroundColor: `${label.color}20` }
+                          ? {
+                              borderColor: label.color,
+                              color: label.color,
+                              backgroundColor: `${label.color}20`,
+                            }
                           : undefined
                       }
                     >
@@ -439,17 +439,18 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                         { operator: '>' as const, value: 3, label: 'Large (4-9 pts)' },
                         { operator: '>=' as const, value: 10, label: 'Dayum (≥ 10 pts)' },
                       ].map(({ operator, value, label }) => {
-                        const isSelected = filterByPoints?.operator === operator && filterByPoints?.value === value
+                        const isSelected =
+                          filterByPoints?.operator === operator && filterByPoints?.value === value
                         return (
                           <Button
                             key={`${operator}${value}`}
-                            variant={isSelected ? "default" : "ghost"}
+                            variant={isSelected ? 'default' : 'ghost'}
                             size="sm"
                             className={cn(
-                              "justify-start text-left h-9 px-3",
+                              'justify-start text-left h-9 px-3',
                               isSelected
-                                ? "bg-amber-600 text-white border-amber-600 hover:bg-amber-700"
-                                : "text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                                ? 'bg-amber-600 text-white border-amber-600 hover:bg-amber-700'
+                                : 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100',
                             )}
                             onClick={(e) => {
                               e.preventDefault()
@@ -460,12 +461,15 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                             <span className="text-sm">
                               {label.split(/([≤≥])/).map((part, index) =>
                                 /[≤≥]/.test(part) ? (
-                                  <span key={index} className="font-semibold text-base leading-none">
+                                  <span
+                                    key={index}
+                                    className="font-semibold text-base leading-none"
+                                  >
                                     {part}
                                   </span>
                                 ) : (
                                   part
-                                )
+                                ),
                               )}
                             </span>
                           </Button>
@@ -483,9 +487,9 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                       <div className="flex gap-2">
                         <select
                           className="flex-1 h-9 px-3 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                          value={filterByPoints?.operator || ""}
+                          value={filterByPoints?.operator || ''}
                           onChange={(e) => {
-                            const operator = e.target.value as '<' | '>' | '=' | '<=' | '>=' | ""
+                            const operator = e.target.value as '<' | '>' | '=' | '<=' | '>=' | ''
                             if (operator) {
                               // If we have a value, set the filter
                               if (filterByPoints?.value !== undefined) {
@@ -511,27 +515,39 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                             type="number"
                             placeholder="pts"
                             min="0"
-                            value={filterByPoints?.value ?? ""}
+                            value={filterByPoints?.value ?? ''}
                             style={{
                               WebkitAppearance: 'none',
                               MozAppearance: 'textfield',
-                              appearance: 'textfield'
+                              appearance: 'textfield',
                             }}
                             className="w-14 h-9 text-sm bg-zinc-800 border-zinc-700 text-zinc-300 focus:border-amber-500 focus:ring-0 rounded-r-none border-r-0"
                             onChange={(e) => {
-                              const value = parseInt(e.target.value)
-                              if (!isNaN(value) && value >= 0) {
-                                const selectElement = e.currentTarget.parentElement?.previousElementSibling as HTMLSelectElement
-                                const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
+                              const value = parseInt(e.target.value, 10)
+                              if (!Number.isNaN(value) && value >= 0) {
+                                const selectElement = e.currentTarget.parentElement
+                                  ?.previousElementSibling as HTMLSelectElement
+                                const operator = selectElement.value as
+                                  | '<'
+                                  | '>'
+                                  | '='
+                                  | '<='
+                                  | '>='
                                 if (operator) {
                                   setFilterByPoints({ operator, value })
                                 } else {
                                   // Set filter with equals operator if no operator selected yet
                                   setFilterByPoints({ operator: '=', value })
                                 }
-                              } else if (e.target.value === "") {
-                                const selectElement = e.currentTarget.parentElement?.previousElementSibling as HTMLSelectElement
-                                const operator = selectElement.value as '<' | '>' | '=' | '<=' | '>='
+                              } else if (e.target.value === '') {
+                                const selectElement = e.currentTarget.parentElement
+                                  ?.previousElementSibling as HTMLSelectElement
+                                const operator = selectElement.value as
+                                  | '<'
+                                  | '>'
+                                  | '='
+                                  | '<='
+                                  | '>='
                                 if (operator) {
                                   setFilterByPoints(null)
                                 }
@@ -546,8 +562,11 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                               onClick={() => {
                                 const currentValue = filterByPoints?.value ?? 0
                                 const newValue = currentValue + 1
-                                const selectElement = document.querySelector('select') as HTMLSelectElement
-                                const operator = selectElement?.value as '<' | '>' | '=' | '<=' | '>=' || '='
+                                const selectElement = document.querySelector(
+                                  'select',
+                                ) as HTMLSelectElement
+                                const operator =
+                                  (selectElement?.value as '<' | '>' | '=' | '<=' | '>=') || '='
                                 setFilterByPoints({ operator: operator || '=', value: newValue })
                               }}
                             >
@@ -560,8 +579,11 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                               onClick={() => {
                                 const currentValue = filterByPoints?.value ?? 0
                                 const newValue = Math.max(0, currentValue - 1)
-                                const selectElement = document.querySelector('select') as HTMLSelectElement
-                                const operator = selectElement?.value as '<' | '>' | '=' | '<=' | '>=' || '='
+                                const selectElement = document.querySelector(
+                                  'select',
+                                ) as HTMLSelectElement
+                                const operator =
+                                  (selectElement?.value as '<' | '>' | '=' | '<=' | '>=') || '='
                                 setFilterByPoints({ operator: operator || '=', value: newValue })
                               }}
                             >
@@ -572,15 +594,18 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                       </div>
                     </div>
                   </div>
-
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
           )
-        case 'dueDate':
+        case 'dueDate': {
           if (!dueVisible) return null
 
-          const hasActiveFilter = (filterByDueDate.from || filterByDueDate.to || filterByDueDate.includeNone || filterByDueDate.includeOverdue)
+          const hasActiveFilter =
+            filterByDueDate.from ||
+            filterByDueDate.to ||
+            filterByDueDate.includeNone ||
+            filterByDueDate.includeOverdue
           const getBadgeText = () => {
             if (filterByDueDate.from && filterByDueDate.to) return 'Range'
             if (filterByDueDate.from || filterByDueDate.to) return '1'
@@ -607,14 +632,14 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   mode="range"
                   selected={{
                     from: filterByDueDate.from,
-                    to: filterByDueDate.to
+                    to: filterByDueDate.to,
                   }}
                   onSelect={(range) => {
                     setFilterByDueDate({
                       from: range?.from,
                       to: range?.to,
                       includeNone: filterByDueDate.includeNone,
-                      includeOverdue: filterByDueDate.includeOverdue
+                      includeOverdue: filterByDueDate.includeOverdue,
                     })
                   }}
                   disabled={filterByDueDate.includeNone}
@@ -629,25 +654,29 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   }`}
                   classNames={{
                     button_previous: 'text-zinc-400 hover:text-zinc-200',
-                    button_next: 'text-zinc-400 hover:text-zinc-200'
+                    button_next: 'text-zinc-400 hover:text-zinc-200',
                   }}
                 />
                 <div className="p-3 border-t border-zinc-800 bg-zinc-950">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
                       <Button
-                        variant={!filterByDueDate.includeOverdue && !filterByDueDate.includeNone ? "default" : "outline"}
+                        variant={
+                          !filterByDueDate.includeOverdue && !filterByDueDate.includeNone
+                            ? 'default'
+                            : 'outline'
+                        }
                         size="sm"
                         className={`h-8 px-3 text-xs ${
                           !filterByDueDate.includeOverdue && !filterByDueDate.includeNone
-                            ? "bg-amber-600 text-white border-amber-600"
-                            : "border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                            ? 'bg-amber-600 text-white border-amber-600'
+                            : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
                         }`}
                         onClick={() => {
                           setFilterByDueDate({
                             ...filterByDueDate,
                             includeOverdue: false,
-                            includeNone: false
+                            includeNone: false,
                           })
                         }}
                       >
@@ -655,18 +684,18 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                         All dates
                       </Button>
                       <Button
-                        variant={filterByDueDate.includeOverdue ? "default" : "outline"}
+                        variant={filterByDueDate.includeOverdue ? 'default' : 'outline'}
                         size="sm"
                         className={`h-8 px-3 text-xs ${
                           filterByDueDate.includeOverdue
-                            ? "bg-amber-600 text-white border-amber-600"
-                            : "border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                            ? 'bg-amber-600 text-white border-amber-600'
+                            : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
                         }`}
                         onClick={() => {
                           setFilterByDueDate({
                             ...filterByDueDate,
                             includeOverdue: true,
-                            includeNone: false
+                            includeNone: false,
                           })
                         }}
                       >
@@ -674,18 +703,18 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                         Overdue
                       </Button>
                       <Button
-                        variant={filterByDueDate.includeNone ? "default" : "outline"}
+                        variant={filterByDueDate.includeNone ? 'default' : 'outline'}
                         size="sm"
                         className={`h-8 px-3 text-xs ${
                           filterByDueDate.includeNone
-                            ? "bg-amber-600 text-white border-amber-600"
-                            : "border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                            ? 'bg-amber-600 text-white border-amber-600'
+                            : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
                         }`}
                         onClick={() => {
                           setFilterByDueDate({
                             ...filterByDueDate,
                             includeOverdue: false,
-                            includeNone: true
+                            includeNone: true,
                           })
                         }}
                       >
@@ -702,7 +731,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                           from: undefined,
                           to: undefined,
                           includeNone: false,
-                          includeOverdue: false
+                          includeOverdue: false,
                         })
                       }}
                       title="Clear date filter"
@@ -714,6 +743,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
               </PopoverContent>
             </Popover>
           )
+        }
         case 'sprint':
           return (
             <DropdownMenu key="sprint">
@@ -733,7 +763,9 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
                   checked={filterBySprint === 'backlog'}
-                  onCheckedChange={() => selectSprint(filterBySprint === 'backlog' ? null : 'backlog')}
+                  onCheckedChange={() =>
+                    selectSprint(filterBySprint === 'backlog' ? null : 'backlog')
+                  }
                 >
                   Backlog (no sprint)
                 </DropdownMenuCheckboxItem>
@@ -741,7 +773,9 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                   <DropdownMenuCheckboxItem
                     key={sprint.id}
                     checked={filterBySprint === sprint.id}
-                    onCheckedChange={() => selectSprint(filterBySprint === sprint.id ? null : sprint.id)}
+                    onCheckedChange={() =>
+                      selectSprint(filterBySprint === sprint.id ? null : sprint.id)
+                    }
                   >
                     {sprint.name}
                   </DropdownMenuCheckboxItem>

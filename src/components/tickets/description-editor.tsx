@@ -1,37 +1,36 @@
 'use client'
 
-import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react'
 import {
-  MDXEditor,
-  headingsPlugin,
-  listsPlugin,
-  quotePlugin,
-  linkPlugin,
-  linkDialogPlugin,
-  markdownShortcutPlugin,
   codeBlockPlugin,
   codeMirrorPlugin,
-  toolbarPlugin,
   diffSourcePlugin,
+  headingsPlugin,
+  InsertThematicBreak,
   imagePlugin,
+  linkDialogPlugin,
+  linkPlugin,
+  listsPlugin,
+  MDXEditor,
+  markdownShortcutPlugin,
+  quotePlugin,
+  Separator,
   tablePlugin,
   thematicBreakPlugin,
-  HighlightToggle,
-  InsertThematicBreak,
-  Separator,
+  toolbarPlugin,
 } from '@mdxeditor/editor'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@mdxeditor/editor/style.css'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { CustomBlockTypeSelect } from './custom-block-type-select'
 import { CustomCodeMirrorEditor } from './custom-codemirror-editor'
 import { CustomImageDialog } from './custom-image-dialog'
-import { ResponsiveViewModeToggle } from './responsive-view-mode-toggle'
-import { ResponsiveUndoRedoToggle } from './responsive-undo-redo-toggle'
 import { ResponsiveBoldItalicUnderlineToggle } from './responsive-bold-italic-underline-toggle'
-import { ResponsiveStrikeSupSubToggle } from './responsive-strike-sup-sub-toggle'
-import { ResponsiveListsToggle } from './responsive-lists-toggle'
 import { ResponsiveCodeToggle } from './responsive-code-toggle'
 import { ResponsiveLinkImageToggle } from './responsive-link-image-toggle'
+import { ResponsiveListsToggle } from './responsive-lists-toggle'
+import { ResponsiveStrikeSupSubToggle } from './responsive-strike-sup-sub-toggle'
+import { ResponsiveUndoRedoToggle } from './responsive-undo-redo-toggle'
+import { ResponsiveViewModeToggle } from './responsive-view-mode-toggle'
 
 interface DescriptionEditorProps {
   markdown: string
@@ -62,7 +61,8 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
   // We detect this by checking if the markdown is substantially different from what we captured as original
   // This happens when switching tickets, not during normal editing
   useEffect(() => {
-    const currentHash = markdown.length > 0 ? `${markdown.length}-${markdown.substring(0, 50)}` : 'empty'
+    const currentHash =
+      markdown.length > 0 ? `${markdown.length}-${markdown.substring(0, 50)}` : 'empty'
     const originalHash = originalHashRef.current
 
     // If we don't have an original hash yet, or the current markdown is substantially different
@@ -75,10 +75,12 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
       // The markdown is different from what we captured as original
       // Check if it's a substantial difference (likely a ticket switch, not just editing)
       const original = originalMarkdownRef.current
-      const isSubstantialChange = 
+      const isSubstantialChange =
         Math.abs(markdown.length - original.length) > 50 ||
-        (markdown.length > 0 && original.length > 0 && markdown.substring(0, 100) !== original.substring(0, 100))
-      
+        (markdown.length > 0 &&
+          original.length > 0 &&
+          markdown.substring(0, 100) !== original.substring(0, 100))
+
       if (isSubstantialChange) {
         // This is likely a ticket switch - update the original
         originalMarkdownRef.current = markdown
@@ -129,7 +131,7 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
         defaultCodeBlockLanguage: 'text',
         codeBlockEditorDescriptors: [
           {
-            match: (language, meta) => !meta,
+            match: (_language, meta) => !meta,
             priority: 1,
             Editor: CustomCodeMirrorEditor,
           },
@@ -172,7 +174,7 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
         toolbarContents,
       }),
     ],
-    [toolbarContents, markdown], // Recreate plugins when markdown changes to update diffMarkdown
+    [toolbarContents], // Recreate plugins when markdown changes to update diffMarkdown
   )
 
   // Show placeholder during SSR to prevent hydration mismatch
@@ -209,4 +211,3 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
     </div>
   )
 })
-

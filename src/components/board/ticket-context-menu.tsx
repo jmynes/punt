@@ -1,7 +1,5 @@
 'use client'
 
-import { cloneElement, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import {
   ChevronRight,
   ClipboardCopy,
@@ -9,10 +7,13 @@ import {
   Pencil,
   Send,
   Trash2,
-  User as UserIcon,
   UserCheck,
+  User as UserIcon,
 } from 'lucide-react'
+import { cloneElement, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
+import { PriorityBadge } from '@/components/common/priority-badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,18 +24,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { PriorityBadge } from '@/components/common/priority-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
-import { useUndoStore } from '@/stores/undo-store'
 import { useUIStore } from '@/stores/ui-store'
-import type { TicketWithRelations, ColumnWithTickets } from '@/types'
-import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { useUndoStore } from '@/stores/undo-store'
+import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
 type MenuProps = {
   ticket: TicketWithRelations
@@ -52,11 +52,16 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const undoStore = useUndoStore.getState ? useUndoStore.getState() : useUndoStore()
   const uiStore = useUIStore.getState ? useUIStore.getState() : useUIStore()
   const selection = useSelectionStore()
-  const selectionApi = (useSelectionStore as any).getState ? (useSelectionStore as any).getState() : selection
-  const shortcutsApi = (useUIStore as any).getState?.() || uiStore
+  const selectionApi = (useSelectionStore as any).getState
+    ? (useSelectionStore as any).getState()
+    : selection
+  const _shortcutsApi = (useUIStore as any).getState?.() || uiStore
   const currentUser = useCurrentUser()
   const members = useProjectMembers()
-  const sortedMembers = useMemo(() => [...members].sort((a, b) => a.name.localeCompare(b.name)), [members])
+  const sortedMembers = useMemo(
+    () => [...members].sort((a, b) => a.name.localeCompare(b.name)),
+    [members],
+  )
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<TicketWithRelations[]>([])
 
@@ -70,13 +75,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   }, [selection, ticket.id])
 
   const multi = selectedIds.length > 1
-  const [submenu, setSubmenu] = useState<
-    | null
-    | {
-        id: 'priority' | 'assign' | 'send'
-        anchor: { x: number; y: number; height: number }
-      }
-  >(null)
+  const [submenu, setSubmenu] = useState<null | {
+    id: 'priority' | 'assign' | 'send'
+    anchor: { x: number; y: number; height: number }
+  }>(null)
 
   // Close on outside click / escape
   useEffect(() => {
@@ -202,7 +204,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const moveTicket = board.moveTicket || (() => {})
 
     const movableIds = selectedIds.filter((id: string) => {
-      const current = board.columns.flatMap((c: ColumnWithTickets) => c.tickets).find((t: TicketWithRelations) => t.id === id)
+      const current = board.columns
+        .flatMap((c: ColumnWithTickets) => c.tickets)
+        .find((t: TicketWithRelations) => t.id === id)
       return current && current.columnId !== toColumnId
     })
     if (movableIds.length === 0) return
@@ -219,26 +223,38 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       moveTicket(movableIds[0], from, toColumnId, toOrder)
     }
 
-    const afterColumns = (useBoardStore as any).getState?.().columns.map((col: any) => ({
-      ...col,
-      tickets: col.tickets.map((t: any) => ({ ...t })),
-    })) || board.columns.map((col: ColumnWithTickets) => ({ ...col, tickets: col.tickets.map((t) => ({ ...t })) }))
+    const afterColumns =
+      (useBoardStore as any).getState?.().columns.map((col: any) => ({
+        ...col,
+        tickets: col.tickets.map((t: any) => ({ ...t })),
+      })) ||
+      board.columns.map((col: ColumnWithTickets) => ({
+        ...col,
+        tickets: col.tickets.map((t) => ({ ...t })),
+      }))
 
     const moves = movableIds.map((id: string) => ({
       ticketId: id,
-      fromColumnId: beforeColumns.find((c: ColumnWithTickets) => c.tickets.some((t) => t.id === id))?.id || '',
+      fromColumnId:
+        beforeColumns.find((c: ColumnWithTickets) => c.tickets.some((t) => t.id === id))?.id || '',
       toColumnId: toColumnId,
     }))
     const fromColumnName =
       moves.length === 1
-        ? beforeColumns.find((c: ColumnWithTickets) => c.id === moves[0].fromColumnId)?.name || 'Source'
+        ? beforeColumns.find((c: ColumnWithTickets) => c.id === moves[0].fromColumnId)?.name ||
+          'Source'
         : 'Multiple'
     const toColumnName = column.name
 
-    const ticketKeys = formatTicketIds(afterColumns, moves.map((m: { ticketId: string }) => m.ticketId))
+    const ticketKeys = formatTicketIds(
+      afterColumns,
+      moves.map((m: { ticketId: string }) => m.ticketId),
+    )
 
     const toastTitle =
-      moves.length === 1 ? `Ticket moved from ${fromColumnName}` : `${moves.length} tickets moved from ${fromColumnName}`
+      moves.length === 1
+        ? `Ticket moved from ${fromColumnName}`
+        : `${moves.length} tickets moved from ${fromColumnName}`
     const { icon: StatusIcon, color: statusColor } = getStatusIcon(toColumnName)
     const toastDescription =
       moves.length === 1 ? (
@@ -259,7 +275,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         </div>
       )
 
-    const showUndo = (useUIStore as any).getState?.().showUndoButtons ?? uiStore.showUndoButtons ?? true
+    const showUndo =
+      (useUIStore as any).getState?.().showUndoButtons ?? uiStore.showUndoButtons ?? true
     const toastId = showUndoRedoToast('success', {
       title: toastTitle,
       description: toastDescription,
@@ -278,8 +295,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       redoneDescription: toastDescription,
     })
 
-    const pushMove =
-      (useUndoStore as any).getState?.().pushMove || useUndoStore.getState().pushMove
+    const pushMove = (useUndoStore as any).getState?.().pushMove || useUndoStore.getState().pushMove
     pushMove(moves, fromColumnName, toColumnName, toastId, beforeColumns, afterColumns)
 
     setOpen(false)
@@ -309,9 +325,12 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const doPriority = (priority: TicketWithRelations['priority']) => {
     const updateTicket = board.updateTicket || (() => {})
-    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] = []
+    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
+      []
     for (const id of selectedIds) {
-      const current = board.columns.flatMap((c: ColumnWithTickets) => c.tickets).find((t: TicketWithRelations) => t.id === id)
+      const current = board.columns
+        .flatMap((c: ColumnWithTickets) => c.tickets)
+        .find((t: TicketWithRelations) => t.id === id)
       if (!current || current.priority === priority) continue
       const after = { ...current, priority }
       updates.push({ ticketId: id, before: current, after })
@@ -319,7 +338,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }
     if (updates.length === 0) return
 
-    const ticketKeys = formatTicketIds(board.columns, updates.map((u) => u.ticketId))
+    const ticketKeys = formatTicketIds(
+      board.columns,
+      updates.map((u) => u.ticketId),
+    )
 
     const toastId = toast.success(
       updates.length === 1 ? 'Priority updated' : `${updates.length} priorities updated`,
@@ -336,9 +358,12 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const doAssign = (userId: string | null) => {
     const user = members.find((m) => m.id === userId) || null
     const updateTicket = board.updateTicket || (() => {})
-    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] = []
+    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
+      []
     for (const id of selectedIds) {
-      const current = board.columns.flatMap((c: ColumnWithTickets) => c.tickets).find((t: TicketWithRelations) => t.id === id)
+      const current = board.columns
+        .flatMap((c: ColumnWithTickets) => c.tickets)
+        .find((t: TicketWithRelations) => t.id === id)
       if (!current) continue
       const currentAssignee = current.assigneeId || null
       if (currentAssignee === userId) continue
@@ -352,7 +377,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }
     if (updates.length === 0) return
 
-    const ticketKeys = formatTicketIds(board.columns, updates.map((u) => u.ticketId))
+    const ticketKeys = formatTicketIds(
+      board.columns,
+      updates.map((u) => u.ticketId),
+    )
 
     const msg =
       updates.length === 1
@@ -390,7 +418,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
     const showUndo = (useUIStore as any).getState?.().showUndoButtons ?? true
     const toastId = showUndoRedoToast('error', {
-      title: ticketsToDelete.length === 1 ? 'Ticket deleted' : `${ticketsToDelete.length} tickets deleted`,
+      title:
+        ticketsToDelete.length === 1
+          ? 'Ticket deleted'
+          : `${ticketsToDelete.length} tickets deleted`,
       description: ticketsToDelete.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: 5000,
       showUndoButtons: showUndo,
@@ -401,12 +432,17 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       onRedo: () => {
         deletedBatch.forEach(({ ticket }) => removeTicket(ticket.id))
       },
-      undoneTitle: ticketsToDelete.length === 1 ? 'Ticket restored' : `${ticketsToDelete.length} tickets restored`,
-      redoneTitle: ticketsToDelete.length === 1 ? 'Delete redone' : `${ticketsToDelete.length} deletes redone`,
+      undoneTitle:
+        ticketsToDelete.length === 1
+          ? 'Ticket restored'
+          : `${ticketsToDelete.length} tickets restored`,
+      redoneTitle:
+        ticketsToDelete.length === 1 ? 'Delete redone' : `${ticketsToDelete.length} deletes redone`,
     })
 
     const pushDeletedBatch =
-      (useUndoStore as any).getState?.().pushDeletedBatch || useUndoStore.getState().pushDeletedBatch
+      (useUndoStore as any).getState?.().pushDeletedBatch ||
+      useUndoStore.getState().pushDeletedBatch
     pushDeletedBatch(deletedBatch, toastId)
 
     setPendingDelete([])
@@ -415,7 +451,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const contextChild = useMemo(
     () => cloneElement(children as React.ReactElement<any>, { onContextMenu: handleContextMenu }),
-    [children],
+    [children, handleContextMenu],
   )
 
   if (typeof document === 'undefined') {
@@ -455,7 +491,14 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                 trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
                 onMouseEnter={openSubmenu('priority')}
               />
-              {!multi && <MenuButton icon={<Pencil className="h-4 w-4" />} label="Edit" onMouseEnter={closeSubmenu} onClick={doEdit} />}
+              {!multi && (
+                <MenuButton
+                  icon={<Pencil className="h-4 w-4" />}
+                  label="Edit"
+                  onMouseEnter={closeSubmenu}
+                  onClick={doEdit}
+                />
+              )}
 
               <MenuSection title="Status">
                 <MenuButton
@@ -501,15 +544,17 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                 >
                   <div className="py-1 text-sm text-zinc-200">
                     {submenu.id === 'priority' &&
-                      (['critical', 'highest', 'high', 'medium', 'low', 'lowest'] as const).map((p) => (
-                        <button
-                          key={p}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                          onClick={() => doPriority(p)}
-                        >
-                          <PriorityBadge priority={p} size="sm" />
-                        </button>
-                      ))}
+                      (['critical', 'highest', 'high', 'medium', 'low', 'lowest'] as const).map(
+                        (p) => (
+                          <button
+                            key={p}
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doPriority(p)}
+                          >
+                            <PriorityBadge priority={p} size="sm" />
+                          </button>
+                        ),
+                      )}
 
                     {submenu.id === 'assign' && (
                       <>
@@ -561,20 +606,20 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                       </>
                     )}
 
-                {submenu.id === 'send' &&
-                  columns.map((col) => {
-                    const { icon: StatusIcon, color } = getStatusIcon(col.name)
-                    return (
-                      <button
-                        key={col.id}
-                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                        onClick={() => doSendTo(col.id)}
-                      >
-                        <StatusIcon className={`h-4 w-4 ${color}`} />
-                        <span>{col.name}</span>
-                      </button>
-                    )
-                  })}
+                    {submenu.id === 'send' &&
+                      columns.map((col) => {
+                        const { icon: StatusIcon, color } = getStatusIcon(col.name)
+                        return (
+                          <button
+                            key={col.id}
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendTo(col.id)}
+                          >
+                            <StatusIcon className={`h-4 w-4 ${color}`} />
+                            <span>{col.name}</span>
+                          </button>
+                        )
+                      })}
                   </div>
                 </div>
               )}
@@ -590,9 +635,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           if (!open) setPendingDelete([])
         }}
       >
-        <AlertDialogContent
-          className="bg-zinc-950 border-zinc-800"
-        >
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">
               Delete {pendingDelete.length === 1 ? 'ticket' : `${pendingDelete.length} tickets`}?
@@ -605,8 +648,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                 </>
               ) : (
                 <>
-                  Are you sure you want to delete these {pendingDelete.length} tickets? This action can be
-                  undone with Ctrl+Z.
+                  Are you sure you want to delete these {pendingDelete.length} tickets? This action
+                  can be undone with Ctrl+Z.
                 </>
               )}
             </AlertDialogDescription>
@@ -637,7 +680,15 @@ interface MenuButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
   destructive?: boolean
 }
 
-function MenuButton({ icon, label, trailing, shortcut, destructive, className, ...rest }: MenuButtonProps) {
+function MenuButton({
+  icon,
+  label,
+  trailing,
+  shortcut,
+  destructive,
+  className,
+  ...rest
+}: MenuButtonProps) {
   return (
     <button
       className={cn(
@@ -673,4 +724,3 @@ function MenuSection({ title, children }: MenuSectionProps) {
     </>
   )
 }
-

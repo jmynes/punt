@@ -1,17 +1,32 @@
 'use client'
 
-import { Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, Quote, Type } from 'lucide-react'
-import { useCellValue, usePublisher } from '@mdxeditor/editor'
-import { convertSelectionToNode$, currentBlockType$, activePlugins$, allowedHeadingLevels$ } from '@mdxeditor/editor'
 import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text'
+import {
+  activePlugins$,
+  allowedHeadingLevels$,
+  convertSelectionToNode$,
+  currentBlockType$,
+  useCellValue,
+  usePublisher,
+} from '@mdxeditor/editor'
 import { $createParagraphNode } from 'lexical'
+import {
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
+  Quote,
+  Type,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export function CustomBlockTypeSelect() {
@@ -19,7 +34,7 @@ export function CustomBlockTypeSelect() {
   const currentBlockType = useCellValue(currentBlockType$)
   const activePlugins = useCellValue(activePlugins$)
   const allowedHeadingLevels = useCellValue(allowedHeadingLevels$)
-  
+
   const hasQuote = activePlugins.includes('quote')
   const hasHeadings = activePlugins.includes('headings')
 
@@ -29,9 +44,11 @@ export function CustomBlockTypeSelect() {
   }
 
   // Build block types list based on available plugins
-  const blockTypes: Array<{ value: string; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-    { value: 'paragraph', label: 'Paragraph', icon: Type },
-  ]
+  const blockTypes: Array<{
+    value: string
+    label: string
+    icon: React.ComponentType<{ className?: string }>
+  }> = [{ value: 'paragraph', label: 'Paragraph', icon: Type }]
 
   if (hasQuote) {
     blockTypes.push({ value: 'quote', label: 'Quote', icon: Quote })
@@ -80,10 +97,7 @@ export function CustomBlockTypeSelect() {
           <span className="sr-only">Block type</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        className="w-48 bg-zinc-900 border-zinc-700 text-zinc-100"
-      >
+      <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-zinc-700 text-zinc-100">
         {blockTypes.map((type) => {
           const Icon = type.icon
           const isSelected = currentBlockType === type.value
@@ -105,4 +119,3 @@ export function CustomBlockTypeSelect() {
     </DropdownMenu>
   )
 }
-

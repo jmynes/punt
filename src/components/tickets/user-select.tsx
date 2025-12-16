@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, ChevronsUpDown, User, UserMinus, UserPlus } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -45,7 +45,7 @@ export function UserSelect({
     if (triggerRef.current) {
       setPopoverWidth(triggerRef.current.offsetWidth)
     }
-  }, [open])
+  }, [])
 
   return (
     <div className="flex gap-2">
@@ -63,9 +63,11 @@ export function UserSelect({
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <Avatar className="h-5 w-5 shrink-0">
                   <AvatarImage src={selectedUser.avatar || undefined} />
-                  <AvatarFallback 
+                  <AvatarFallback
                     className="text-xs text-white font-medium"
-                    style={{ backgroundColor: getAvatarColor(selectedUser.id || selectedUser.name) }}
+                    style={{
+                      backgroundColor: getAvatarColor(selectedUser.id || selectedUser.name),
+                    }}
                   >
                     {getInitials(selectedUser.name)}
                   </AvatarFallback>
@@ -78,7 +80,7 @@ export function UserSelect({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent 
+        <PopoverContent
           className="p-0 bg-zinc-900 border-zinc-700"
           align="start"
           style={popoverWidth ? { width: `${popoverWidth}px` } : undefined}
@@ -120,7 +122,7 @@ export function UserSelect({
                   >
                     <Avatar className="mr-2 h-5 w-5">
                       <AvatarImage src={user.avatar || undefined} />
-                      <AvatarFallback 
+                      <AvatarFallback
                         className="text-xs text-white font-medium"
                         style={{ backgroundColor: getAvatarColor(user.id || user.name) }}
                       >

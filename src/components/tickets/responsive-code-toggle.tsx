@@ -1,16 +1,24 @@
 'use client'
 
-import React from 'react'
-import { CodeToggle, InsertCodeBlock, usePublisher, useCellValue, applyFormat$, currentFormat$, insertCodeBlock$, IS_CODE } from '@mdxeditor/editor'
-import { useMediaQuery } from '@/hooks/use-media-query'
+import {
+  applyFormat$,
+  CodeToggle,
+  currentFormat$,
+  InsertCodeBlock,
+  IS_CODE,
+  insertCodeBlock$,
+  useCellValue,
+  usePublisher,
+} from '@mdxeditor/editor'
+import { ChevronDown, Code, Code2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
-import { ChevronDown, Code, Code2 } from 'lucide-react'
+import { useMediaQuery } from '@/hooks/use-media-query'
 
 export function ResponsiveCodeToggle() {
   const isSmallScreen = useMediaQuery('(max-width: 1024px)')
@@ -23,9 +31,9 @@ export function ResponsiveCodeToggle() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="h-8 w-8 p-0 border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 relative flex items-center justify-center"
           >
             <Code className="h-4 w-4 shrink-0 text-current" />
@@ -35,7 +43,9 @@ export function ResponsiveCodeToggle() {
         <DropdownMenuContent className="bg-zinc-900 border-zinc-700" align="start">
           <DropdownMenuItem
             onClick={() => applyFormat('code')}
-            className={isCodeActive ? 'bg-zinc-800 text-amber-400' : 'text-zinc-300 focus:bg-zinc-800'}
+            className={
+              isCodeActive ? 'bg-zinc-800 text-amber-400' : 'text-zinc-300 focus:bg-zinc-800'
+            }
           >
             <Code className="h-4 w-4 mr-2" />
             Inline Code
@@ -60,4 +70,3 @@ export function ResponsiveCodeToggle() {
     </>
   )
 }
-

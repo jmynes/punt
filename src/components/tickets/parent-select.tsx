@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, ChevronsUpDown, Lightbulb, X, Zap } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -36,7 +36,7 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
     if (triggerRef.current) {
       setPopoverWidth(triggerRef.current.offsetWidth)
     }
-  }, [open])
+  }, [])
 
   return (
     <div className="flex gap-2">
@@ -68,7 +68,7 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent 
+        <PopoverContent
           className="p-0 bg-zinc-900 border-zinc-700"
           align="start"
           style={popoverWidth ? { width: `${popoverWidth}px` } : undefined}

@@ -1,15 +1,10 @@
 'use client'
 
 import { ChevronDown, ChevronUp, Paperclip } from 'lucide-react'
-import { useBoardStore } from '@/stores/board-store'
-import { getStatusIcon } from '@/lib/status-icons'
 import { Accordion } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
-import { Textarea } from '@/components/ui/textarea'
-import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import {
   Select,
   SelectContent,
@@ -17,6 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { getStatusIcon } from '@/lib/status-icons'
+import { useBoardStore } from '@/stores/board-store'
 import {
   DEFAULT_TICKET_FORM,
   type IssueType,
@@ -274,7 +273,7 @@ export function TicketForm({
               style={{
                 WebkitAppearance: 'none',
                 MozAppearance: 'textfield',
-                appearance: 'textfield'
+                appearance: 'textfield',
               }}
               className="flex-1 h-9 bg-zinc-900 border-zinc-700 focus:border-amber-500 focus:ring-0 rounded-r-none border-r-0"
             />

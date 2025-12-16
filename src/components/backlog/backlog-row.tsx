@@ -6,8 +6,8 @@ import { format, isBefore, isToday } from 'date-fns'
 import { GripVertical, User } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { getStatusIcon } from '@/lib/status-icons'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import type { BacklogColumn } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -124,9 +124,11 @@ export function BacklogRow({
           <div className="flex items-center gap-2">
             <Avatar className="h-5 w-5">
               <AvatarImage src={ticket.assignee.avatar || undefined} />
-              <AvatarFallback 
+              <AvatarFallback
                 className="text-[10px] text-white font-medium"
-                style={{ backgroundColor: getAvatarColor(ticket.assignee.id || ticket.assignee.name) }}
+                style={{
+                  backgroundColor: getAvatarColor(ticket.assignee.id || ticket.assignee.name),
+                }}
               >
                 {getInitials(ticket.assignee.name)}
               </AvatarFallback>
@@ -149,9 +151,11 @@ export function BacklogRow({
           <div className="flex items-center gap-2">
             <Avatar className="h-5 w-5">
               <AvatarImage src={ticket.creator.avatar || undefined} />
-              <AvatarFallback 
+              <AvatarFallback
                 className="text-[10px] text-white font-medium"
-                style={{ backgroundColor: getAvatarColor(ticket.creator.id || ticket.creator.name) }}
+                style={{
+                  backgroundColor: getAvatarColor(ticket.creator.id || ticket.creator.name),
+                }}
               >
                 {getInitials(ticket.creator.name)}
               </AvatarFallback>
@@ -258,42 +262,42 @@ export function BacklogRow({
   return (
     <TicketContextMenu ticket={ticket}>
       <tr
-      ref={setNodeRef}
-      style={style}
-      data-ticket-row
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      className={cn(
-        'group border-b border-zinc-800/50 transition-colors focus:outline-none select-none',
-        !selected && 'hover:bg-zinc-800/50 focus:bg-zinc-800/50',
-        isDragging && 'opacity-50 bg-zinc-800 shadow-lg',
-        isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
-        selected &&
-          'bg-amber-500/20 hover:bg-amber-500/25 focus:bg-amber-500/25 border-amber-500/50',
-      )}
-      {...(isDraggable ? attributes : {})}
-      {...(isDraggable ? listeners : {})}
-    >
-      {/* Drag handle cell - always render to maintain table alignment */}
-      <td className="w-8 px-1 py-2">
-        {isDraggable && (
-          <div className="flex h-6 w-6 items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            <GripVertical className="h-4 w-4 text-zinc-500" />
-          </div>
+        ref={setNodeRef}
+        style={style}
+        data-ticket-row
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        className={cn(
+          'group border-b border-zinc-800/50 transition-colors focus:outline-none select-none',
+          !selected && 'hover:bg-zinc-800/50 focus:bg-zinc-800/50',
+          isDragging && 'opacity-50 bg-zinc-800 shadow-lg',
+          isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
+          selected &&
+            'bg-amber-500/20 hover:bg-amber-500/25 focus:bg-amber-500/25 border-amber-500/50',
         )}
-      </td>
-      {columns.map((column) => (
-        <td
-          key={column.id}
-          style={{
-            width: column.width || undefined,
-            minWidth: column.minWidth,
-          }}
-          className="px-3 py-2"
-        >
-          {renderCell(column)}
+        {...(isDraggable ? attributes : {})}
+        {...(isDraggable ? listeners : {})}
+      >
+        {/* Drag handle cell - always render to maintain table alignment */}
+        <td className="w-8 px-1 py-2">
+          {isDraggable && (
+            <div className="flex h-6 w-6 items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              <GripVertical className="h-4 w-4 text-zinc-500" />
+            </div>
+          )}
         </td>
-      ))}
+        {columns.map((column) => (
+          <td
+            key={column.id}
+            style={{
+              width: column.width || undefined,
+              minWidth: column.minWidth,
+            }}
+            className="px-3 py-2"
+          >
+            {renderCell(column)}
+          </td>
+        ))}
       </tr>
     </TicketContextMenu>
   )

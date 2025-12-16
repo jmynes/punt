@@ -1,6 +1,5 @@
 'use client'
 
-import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -31,9 +30,7 @@ export function TestDrawer({ open, onClose }: TestDrawerProps) {
         <div className="flex h-full flex-col">
           {/* Header */}
           <SheetHeader className="border-b border-zinc-800 px-6 pr-14 py-4">
-            <SheetTitle className="text-base font-mono text-zinc-400">
-              Test Drawer
-            </SheetTitle>
+            <SheetTitle className="text-base font-mono text-zinc-400">Test Drawer</SheetTitle>
             <SheetDescription className="sr-only">
               Empty test drawer for animation testing
             </SheetDescription>
@@ -46,13 +43,11 @@ export function TestDrawer({ open, onClose }: TestDrawerProps) {
                 Animation Test Drawer
               </h2>
               <p className="text-zinc-400 opacity-0 translate-y-1 transition-all duration-200 ease-out delay-400 data-[state=open]:opacity-100 data-[state=open]:translate-y-0">
-                This is an empty, stateless drawer for testing animation performance.
-                It contains minimal content and no state management.
+                This is an empty, stateless drawer for testing animation performance. It contains
+                minimal content and no state management.
               </p>
               <div className="rounded-lg border border-zinc-700 p-4 opacity-0 translate-y-2 transition-all duration-200 ease-out delay-500 data-[state=open]:opacity-100 data-[state=open]:translate-y-0">
-                <h3 className="text-sm font-medium text-zinc-300 mb-2">
-                  Performance Notes
-                </h3>
+                <h3 className="text-sm font-medium text-zinc-300 mb-2">Performance Notes</h3>
                 <ul className="text-sm text-zinc-400 space-y-1">
                   <li>• Hardware accelerated animations</li>
                   <li>• Optimized CSS transitions</li>

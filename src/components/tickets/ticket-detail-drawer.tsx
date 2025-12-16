@@ -16,14 +16,6 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +38,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
@@ -56,11 +55,11 @@ import {
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
-import { cn, getAvatarColor, getInitials } from '@/lib/utils'
-import { useBoardStore } from '@/stores/board-store'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type {
@@ -80,8 +79,6 @@ import { DescriptionEditor } from './description-editor'
 import { FileUpload } from './file-upload'
 import { LabelSelect } from './label-select'
 import { ParentSelect } from './parent-select'
-import { PrioritySelect } from './priority-select'
-import { TypeSelect } from './type-select'
 import { UserSelect } from './user-select'
 
 interface TicketDetailDrawerProps {
@@ -155,7 +152,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [tempFixVersion, setTempFixVersion] = useState('')
   const [tempParentId, setTempParentId] = useState<string | null>(null)
   const [tempStatusId, setTempStatusId] = useState<string | null>(null)
-  const [tempCreatorId, setTempCreatorId] = useState<string>('')
+  const [_tempCreatorId, setTempCreatorId] = useState<string>('')
   const [tempAttachments, setTempAttachments] = useState<UploadedFileInfo[]>([])
 
   // Get all tickets for parent selection (exclude current ticket)
@@ -302,11 +299,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
     const updatedTicket = { ...oldTicket, ...updates }
     updateTicket(ticket.id, updates)
-    
+
     // Add to undo stack
     const { pushUpdate } = useUndoStore.getState()
     const showUndo = useUIStore.getState().showUndoButtons
-    
+
     const toastId = showUndoRedoToast('success', {
       title: 'Ticket updated',
       description: ticketKey,
@@ -323,7 +320,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       undoneTitle: 'Update undone',
       redoneTitle: 'Update redone',
     })
-    
+
     pushUpdate([{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }], toastId)
   }
 
@@ -339,7 +336,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   if (!ticket) return null
 
   const ticketKey = formatTicketId(ticket)
-  const isOverdue =
+  const _isOverdue =
     ticket.dueDate && new Date(ticket.dueDate) < new Date() && ticket.columnId !== 'col-5'
 
   const handleSaveField = (field: string) => {
@@ -420,11 +417,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
     const updatedTicket = { ...oldTicket, ...updates }
     updateTicket(ticket.id, updates)
-    
+
     // Add to undo stack
     const { pushUpdate } = useUndoStore.getState()
     const showUndo = useUIStore.getState().showUndoButtons
-    
+
     const toastId = showUndoRedoToast('success', {
       title: 'Ticket updated',
       description: ticketKey,
@@ -441,7 +438,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       undoneTitle: 'Update undone',
       redoneTitle: 'Update redone',
     })
-    
+
     pushUpdate([{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }], toastId)
 
     setEditingField(null)
@@ -526,7 +523,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     setEditingField(field)
   }
 
-  const selectedSprint = ticket.sprint ? DEMO_SPRINTS.find((s) => s.id === ticket.sprintId) : null
+  const _selectedSprint = ticket.sprint ? DEMO_SPRINTS.find((s) => s.id === ticket.sprintId) : null
 
   return (
     <Sheet open={!!ticket} onOpenChange={(open) => !open && onClose()}>
@@ -650,7 +647,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     style={{
                       WebkitAppearance: 'none',
                       MozAppearance: 'textfield',
-                      appearance: 'textfield'
+                      appearance: 'textfield',
                     }}
                     className="w-12 h-8 bg-zinc-900 border-zinc-700 text-zinc-300 focus:border-amber-500 focus:ring-0 rounded-r-none border-r-0"
                   />
@@ -719,7 +716,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                           {ticket.sprint.name}
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="border-zinc-600 bg-zinc-800/50 text-zinc-400">
+                        <Badge
+                          variant="outline"
+                          className="border-zinc-600 bg-zinc-800/50 text-zinc-400"
+                        >
                           Backlog
                         </Badge>
                       )}
@@ -749,7 +749,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
-
 
                 {editingField === 'estimate' ? (
                   <div className="flex items-center gap-2">
@@ -959,7 +958,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     {ticket.watchers.map((watcher) => (
                       <Avatar key={watcher.id} className="h-7 w-7 border-2 border-zinc-900">
                         <AvatarImage src={watcher.avatar || undefined} />
-                        <AvatarFallback 
+                        <AvatarFallback
                           className="text-xs text-white font-medium"
                           style={{ backgroundColor: getAvatarColor(watcher.id || watcher.name) }}
                         >
@@ -1071,7 +1070,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               ref={deleteButtonRef}
               onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
-              >
+            >
               <Trash2 className="h-4 w-4 mr-1" />
               Delete
             </AlertDialogAction>

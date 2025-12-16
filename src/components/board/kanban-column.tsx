@@ -5,8 +5,8 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { MoreHorizontal, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { cn } from '@/lib/utils'
 import { getStatusIcon } from '@/lib/status-icons'
+import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets } from '@/types'
 import { KanbanCard } from './kanban-card'
@@ -87,15 +87,16 @@ export function KanbanColumn({
       <ScrollArea className="flex-1 min-h-0">
         <div ref={setNodeRef} className="flex flex-col gap-2 min-h-[100px] p-2">
           <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
-            {column.tickets.map((ticket, index) => {
+            {column.tickets.map((ticket, _index) => {
               // Hide ticket if it's in the drag selection OR if it's the active ticket being dragged
-              const isBeingDragged = dragSelectionIds.includes(ticket.id) || ticket.id === activeTicketId
+              const isBeingDragged =
+                dragSelectionIds.includes(ticket.id) || ticket.id === activeTicketId
               // Calculate the visual index (excluding dragged tickets)
               const visibleTickets = column.tickets.filter(
                 (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
               )
               const visualIndex = visibleTickets.findIndex((t) => t.id === ticket.id)
-              
+
               // Show insertion point before this ticket if it's the target
               const showInsertionPoint =
                 activeDragTarget !== null &&

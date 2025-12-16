@@ -1,16 +1,21 @@
 'use client'
 
+import {
+  $isCodeBlockNode,
+  activeEditor$,
+  type CodeBlockNode,
+  codeBlockLanguages$,
+  editorInFocus$,
+  useCellValues,
+} from '@mdxeditor/editor'
 import { Code, FileCode } from 'lucide-react'
-import { useCellValues } from '@mdxeditor/editor'
-import { codeBlockLanguages$, $isCodeBlockNode, type CodeBlockNode } from '@mdxeditor/editor'
-import { editorInFocus$, activeEditor$ } from '@mdxeditor/editor'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const EMPTY_VALUE = '__EMPTY_VALUE__'
@@ -99,4 +104,3 @@ export function CustomCodeLanguageSelect() {
     </DropdownMenu>
   )
 }
-

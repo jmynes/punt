@@ -20,14 +20,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
-import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
-import { showUndoRedoToast } from '@/lib/undo-toast'
 
 export function KeyboardShortcuts() {
   // Only subscribe to reactive state we need for re-renders
@@ -107,18 +107,21 @@ export function KeyboardShortcuts() {
 
     // Show toast with undo option
     const showUndo = useUIStore.getState().showUndoButtons
-    
+
     let currentId: string | number | undefined
 
     const toastId = showUndoRedoToast('error', {
-      title: ticketsToDelete.length === 1 ? 'Ticket deleted' : `${ticketsToDelete.length} tickets deleted`,
+      title:
+        ticketsToDelete.length === 1
+          ? 'Ticket deleted'
+          : `${ticketsToDelete.length} tickets deleted`,
       description: ticketsToDelete.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: 5000,
       showUndoButtons: showUndo,
       onUndo: (id) => {
         // Undo from stack (move to redo)
         useUndoStore.getState().undoByToastId(id)
-        
+
         // Restore all tickets
         const { addTicket } = useBoardStore.getState()
         for (const { ticket, columnId } of batchTickets) {
@@ -134,7 +137,7 @@ export function KeyboardShortcuts() {
       onRedo: (id) => {
         // Redo from stack (move to undo)
         useUndoStore.getState().redoByToastId(id)
-        
+
         // Re-delete tickets
         const { removeTicket } = useBoardStore.getState()
         for (const { ticket } of batchTickets) {
@@ -150,7 +153,7 @@ export function KeyboardShortcuts() {
       undoneTitle: 'Ticket restored',
       redoneTitle: 'Delete redone',
     })
-    
+
     currentId = toastId
 
     // Push as a single batch entry
@@ -198,7 +201,7 @@ export function KeyboardShortcuts() {
       // Arrow keys: move selected tickets up/down within their column
       if (selectedTicketIds.size > 0 && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault()
-        
+
         // Get all selected ticket IDs
         const selectedIds = useSelectionStore.getState().getSelectedIds()
         if (selectedIds.length === 0) return
@@ -209,7 +212,7 @@ export function KeyboardShortcuts() {
           columnId: string
           currentIndex: number
         }> = []
-        
+
         for (const column of columns) {
           for (let i = 0; i < column.tickets.length; i++) {
             const ticket = column.tickets[i]
@@ -240,20 +243,20 @@ export function KeyboardShortcuts() {
 
           // Sort tickets by their current index to preserve relative order
           columnTickets.sort((a, b) => a.currentIndex - b.currentIndex)
-          
+
           const ticketIds = columnTickets.map((item) => item.ticket.id)
           const firstTicketIndex = columnTickets[0].currentIndex
           const lastTicketIndex = columnTickets[columnTickets.length - 1].currentIndex
 
           const { reorderTicket, reorderTickets } = useBoardStore.getState()
-          
+
           if (e.key === 'ArrowUp') {
             // Move up: move to position before the first selected ticket
             if (firstTicketIndex === 0) {
               // Already at top, can't move up
               continue
             }
-            
+
             if (ticketIds.length === 1) {
               // Single ticket: move up by 1 position
               reorderTicket(columnId, ticketIds[0], firstTicketIndex - 1)
@@ -267,7 +270,7 @@ export function KeyboardShortcuts() {
               // Already at bottom, can't move down
               continue
             }
-            
+
             if (ticketIds.length === 1) {
               // Single ticket: move down by 1 position
               reorderTicket(columnId, ticketIds[0], lastTicketIndex + 1)
@@ -277,14 +280,14 @@ export function KeyboardShortcuts() {
             }
           }
         }
-        
+
         return
       }
 
       // Arrow keys: move selected tickets left/right between columns
       if (selectedTicketIds.size > 0 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         e.preventDefault()
-        
+
         // Get all selected ticket IDs
         const selectionStore = useSelectionStore.getState()
         const selectedIds = selectionStore.getSelectedIds()
@@ -296,7 +299,7 @@ export function KeyboardShortcuts() {
           columnId: string
           currentIndex: number
         }> = []
-        
+
         for (const column of columns) {
           for (let i = 0; i < column.tickets.length; i++) {
             const ticket = column.tickets[i]
@@ -306,7 +309,7 @@ export function KeyboardShortcuts() {
               if (!origin) {
                 selectionStore.setTicketOrigin(ticket.id, { columnId: column.id, position: i })
               }
-              
+
               selectedTicketsWithColumns.push({
                 ticket,
                 columnId: column.id,
@@ -342,7 +345,7 @@ export function KeyboardShortcuts() {
 
           // Sort tickets by their current index to preserve relative order
           columnTickets.sort((a, b) => a.currentIndex - b.currentIndex)
-          
+
           const ticketIds = columnTickets.map((item) => item.ticket.id)
           const sortedColumns = [...columns].sort((a, b) => a.order - b.order)
           const currentColumnIndex = sortedColumns.findIndex((c) => c.id === columnId)
@@ -353,9 +356,9 @@ export function KeyboardShortcuts() {
               // Already at leftmost column, can't move left
               continue
             }
-            
+
             const targetColumn = sortedColumns[currentColumnIndex - 1]
-            
+
             // Check if all tickets have this as their origin column
             const allHaveOriginInTarget = ticketIds.every((id) => {
               const origin = selectionStore.getTicketOrigin(id)
@@ -374,10 +377,14 @@ export function KeyboardShortcuts() {
             }
 
             const { moveTicket, moveTickets } = boardStore
-            
+
             if (ticketIds.length === 1) {
               moveTicket(ticketIds[0], columnId, targetColumn.id, targetPosition)
-              moves.push({ ticketId: ticketIds[0], fromColumnId: columnId, toColumnId: targetColumn.id })
+              moves.push({
+                ticketId: ticketIds[0],
+                fromColumnId: columnId,
+                toColumnId: targetColumn.id,
+              })
             } else {
               moveTickets(ticketIds, targetColumn.id, targetPosition)
               for (const ticketId of ticketIds) {
@@ -390,9 +397,9 @@ export function KeyboardShortcuts() {
               // Already at rightmost column, can't move right
               continue
             }
-            
+
             const targetColumn = sortedColumns[currentColumnIndex + 1]
-            
+
             // Check if all tickets have this as their origin column
             const allHaveOriginInTarget = ticketIds.every((id) => {
               const origin = selectionStore.getTicketOrigin(id)
@@ -411,10 +418,14 @@ export function KeyboardShortcuts() {
             }
 
             const { moveTicket, moveTickets } = boardStore
-            
+
             if (ticketIds.length === 1) {
               moveTicket(ticketIds[0], columnId, targetColumn.id, targetPosition)
-              moves.push({ ticketId: ticketIds[0], fromColumnId: columnId, toColumnId: targetColumn.id })
+              moves.push({
+                ticketId: ticketIds[0],
+                fromColumnId: columnId,
+                toColumnId: targetColumn.id,
+              })
             } else {
               moveTickets(ticketIds, targetColumn.id, targetPosition)
               for (const ticketId of ticketIds) {
@@ -449,8 +460,7 @@ export function KeyboardShortcuts() {
           let currentId: string | number | undefined
 
           const toastId = showUndoRedoToast('success', {
-            title:
-              moves.length === 1 ? 'Ticket moved' : `${moves.length} tickets moved`,
+            title: moves.length === 1 ? 'Ticket moved' : `${moves.length} tickets moved`,
             description:
               moves.length === 1
                 ? `${ticketKeys[0]} moved to ${toName}`
@@ -482,25 +492,30 @@ export function KeyboardShortcuts() {
               }
             },
             undoneTitle: 'Move undone',
-            redoneTitle:
-              moves.length === 1 ? 'Ticket moved' : `${moves.length} tickets moved`,
+            redoneTitle: moves.length === 1 ? 'Ticket moved' : `${moves.length} tickets moved`,
             redoneDescription:
               moves.length === 1
                 ? `${ticketKeys[0]} moved to ${toName}`
                 : `${ticketKeys.join(', ')} moved to ${toName}`,
           })
-          
+
           currentId = toastId
 
           // Push to undo stack
-          useUndoStore.getState().pushMove(moves, fromName, toName, toastId, originalColumns, afterColumns)
+          useUndoStore
+            .getState()
+            .pushMove(moves, fromName, toName, toastId, originalColumns, afterColumns)
         }
 
         return
       }
 
       // Ctrl/Cmd + C: Copy selected tickets
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && selectedTicketIds.size > 0) {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === 'c' || e.key === 'C') &&
+        selectedTicketIds.size > 0
+      ) {
         e.preventDefault()
         useSelectionStore.getState().copySelected()
         const columnsSnapshot = useBoardStore.getState().columns
@@ -555,7 +570,7 @@ export function KeyboardShortcuts() {
         const ticketKeys = newTickets.map(({ ticket }) => formatTicketId(ticket))
         const showUndo = useUIStore.getState().showUndoButtons
         const { removeTicket } = useBoardStore.getState()
-        
+
         let currentId: string | number | undefined
 
         const toastId = showUndoRedoToast('success', {
@@ -582,7 +597,7 @@ export function KeyboardShortcuts() {
             }
           },
           onRedoneToast: (newId) => {
-             if (currentId) {
+            if (currentId) {
               useUndoStore.getState().updateUndoToastId(currentId, newId)
               currentId = newId
             }
@@ -590,7 +605,7 @@ export function KeyboardShortcuts() {
           undoneTitle: 'Paste undone',
           redoneTitle: 'Paste redone',
         })
-        
+
         currentId = toastId
 
         // Push to undo stack
@@ -632,7 +647,7 @@ export function KeyboardShortcuts() {
             undoStore.pushRedo(entry)
 
             const ticketKeys = action.tickets.map(({ ticket }) => formatTicketId(ticket))
-            
+
             let currentId = entry.toastId
 
             const toastId = showUndoRedoToast('success', {
@@ -673,18 +688,20 @@ export function KeyboardShortcuts() {
                 }
               },
               undoneTitle:
-                action.tickets.length === 1 ? 'Delete redone' : `${action.tickets.length} deletes redone`,
+                action.tickets.length === 1
+                  ? 'Delete redone'
+                  : `${action.tickets.length} deletes redone`,
               redoneTitle:
                 action.tickets.length === 1
                   ? 'Ticket restored'
                   : `${action.tickets.length} tickets restored`,
-              redoneDescription: action.tickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+              redoneDescription:
+                action.tickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
             })
-            
+
             // Update the entry we just pushed to Redo with the new toast ID
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
-            
           } else if (entry.action.type === 'update') {
             const action = entry.action
             const boardStore = useBoardStore.getState()
@@ -698,7 +715,7 @@ export function KeyboardShortcuts() {
                 return t ? formatTicketId(t) : item.ticketId
               })
               .filter(Boolean)
-              
+
             let currentId = entry.toastId
 
             const toastId = showUndoRedoToast('success', {
@@ -730,23 +747,25 @@ export function KeyboardShortcuts() {
                 }
               },
               onRedoneToast: (newId) => {
-                 if (currentId) {
+                if (currentId) {
                   useUndoStore.getState().updateRedoToastId(currentId, newId)
                   currentId = newId
                 }
               },
               undoneTitle:
-                action.tickets.length === 1 ? 'Change redone' : `${action.tickets.length} changes redone`,
+                action.tickets.length === 1
+                  ? 'Change redone'
+                  : `${action.tickets.length} changes redone`,
               redoneTitle:
                 action.tickets.length === 1
                   ? 'Change undone'
                   : `${action.tickets.length} changes undone`,
-              redoneDescription: action.tickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+              redoneDescription:
+                action.tickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
             })
-            
+
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
-
           } else if (entry.action.type === 'move') {
             const action = entry.action
             // Restore the exact column state from before the move
@@ -764,7 +783,7 @@ export function KeyboardShortcuts() {
                 moveBoardStore.moveTicket(move.ticketId, move.toColumnId, move.fromColumnId, 0)
               }
             }
-            
+
             // Push to redo stack (same entry, will restore to afterColumns when redoing)
             undoStore.pushRedo(entry)
 
@@ -778,9 +797,7 @@ export function KeyboardShortcuts() {
               .filter(Boolean)
 
             const moveTitle =
-              action.moves.length === 1
-                ? 'Ticket moved'
-                : `${action.moves.length} tickets moved`
+              action.moves.length === 1 ? 'Ticket moved' : `${action.moves.length} tickets moved`
             const moveDesc =
               action.moves.length === 1
                 ? `${moveTicketKeys[0]} moved to ${action.toColumnName}`
@@ -790,9 +807,7 @@ export function KeyboardShortcuts() {
 
             const toastId = showUndoRedoToast('success', {
               title:
-                action.moves.length === 1
-                  ? 'Move undone'
-                  : `${action.moves.length} moves undone`,
+                action.moves.length === 1 ? 'Move undone' : `${action.moves.length} moves undone`,
               description:
                 action.moves.length === 1 ? moveTicketKeys[0] : moveTicketKeys.join(', '),
               duration: 3000,
@@ -815,8 +830,8 @@ export function KeyboardShortcuts() {
               },
               onUndoneToast: (newId) => {
                 if (currentId) {
-                   useUndoStore.getState().updateUndoToastId(currentId, newId)
-                   currentId = newId
+                  useUndoStore.getState().updateUndoToastId(currentId, newId)
+                  currentId = newId
                 }
               },
               onRedo: (id) => {
@@ -838,16 +853,13 @@ export function KeyboardShortcuts() {
               undoneTitle: moveTitle,
               undoneDescription: moveDesc,
               redoneTitle:
-                action.moves.length === 1
-                  ? 'Move undone'
-                  : `${action.moves.length} moves undone`,
+                action.moves.length === 1 ? 'Move undone' : `${action.moves.length} moves undone`,
               redoneDescription:
                 action.moves.length === 1 ? moveTicketKeys[0] : moveTicketKeys.join(', '),
             })
-            
+
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
-
           } else if (entry.action.type === 'paste') {
             const action = entry.action
             // Remove all pasted tickets
@@ -862,7 +874,7 @@ export function KeyboardShortcuts() {
 
             // Format ticket IDs for notification
             const pasteTicketKeys = action.tickets.map(({ ticket }) => formatTicketId(ticket))
-            
+
             let currentId = entry.toastId
 
             const toastId = showUndoRedoToast('success', {
@@ -885,8 +897,8 @@ export function KeyboardShortcuts() {
               },
               onUndoneToast: (newId) => {
                 if (currentId) {
-                   useUndoStore.getState().updateUndoToastId(currentId, newId)
-                   currentId = newId
+                  useUndoStore.getState().updateUndoToastId(currentId, newId)
+                  currentId = newId
                 }
               },
               onRedo: (id) => {
@@ -897,7 +909,7 @@ export function KeyboardShortcuts() {
                 }
               },
               onRedoneToast: (newId) => {
-                 if (currentId) {
+                if (currentId) {
                   useUndoStore.getState().updateRedoToastId(currentId, newId)
                   currentId = newId
                 }
@@ -913,7 +925,7 @@ export function KeyboardShortcuts() {
               redoneDescription:
                 action.tickets.length === 1 ? pasteTicketKeys[0] : pasteTicketKeys.join(', '),
             })
-            
+
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
           }
@@ -941,7 +953,7 @@ export function KeyboardShortcuts() {
             }
 
             const delTicketKeys = action.tickets.map(({ ticket }) => formatTicketId(ticket))
-            
+
             let currentId: string | number | undefined
 
             const newToastId = showUndoRedoToast('error', {
@@ -980,9 +992,9 @@ export function KeyboardShortcuts() {
               undoneTitle: 'Ticket restored',
               redoneTitle: 'Delete redone',
             })
-            
+
             currentId = newToastId
-            
+
             redoStore.pushDeletedBatch(action.tickets, newToastId, true)
           } else if (entry.action.type === 'update') {
             const action = entry.action
@@ -997,16 +1009,20 @@ export function KeyboardShortcuts() {
             }))
             const ticketKeys = swappedTickets
               .map((item) => {
-                const t = boardStore.columns.flatMap((c) => c.tickets).find((tk) => tk.id === item.ticketId)
+                const t = boardStore.columns
+                  .flatMap((c) => c.tickets)
+                  .find((tk) => tk.id === item.ticketId)
                 return t ? formatTicketId(t) : item.ticketId
               })
               .filter(Boolean)
-              
+
             let currentId: string | number | undefined
 
             const newToastId = showUndoRedoToast('success', {
               title:
-                swappedTickets.length === 1 ? 'Change redone' : `${swappedTickets.length} changes redone`,
+                swappedTickets.length === 1
+                  ? 'Change redone'
+                  : `${swappedTickets.length} changes redone`,
               description: swappedTickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
               duration: 3000,
               showUndoButtons: showUndo,
@@ -1040,12 +1056,15 @@ export function KeyboardShortcuts() {
                   ? 'Change undone'
                   : `${swappedTickets.length} changes undone`,
               redoneTitle:
-                swappedTickets.length === 1 ? 'Change redone' : `${swappedTickets.length} changes redone`,
-              redoneDescription: swappedTickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+                swappedTickets.length === 1
+                  ? 'Change redone'
+                  : `${swappedTickets.length} changes redone`,
+              redoneDescription:
+                swappedTickets.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
             })
-            
+
             currentId = newToastId
-            
+
             redoStore.pushUpdate(swappedTickets, newToastId, true)
           } else if (entry.action.type === 'move') {
             const action = entry.action
@@ -1076,9 +1095,7 @@ export function KeyboardShortcuts() {
               .filter(Boolean)
 
             const newToastId = toast.success(
-              action.moves.length === 1
-                ? 'Ticket moved'
-                : `${action.moves.length} tickets moved`,
+              action.moves.length === 1 ? 'Ticket moved' : `${action.moves.length} tickets moved`,
               {
                 description:
                   action.moves.length === 1
@@ -1104,18 +1121,21 @@ export function KeyboardShortcuts() {
               },
             )
 
-            useUndoStore.getState().pushMove(
-              action.moves,
-              action.toColumnName,
-              action.fromColumnName,
-              newToastId,
-              currentStateBeforeRedo,
-              action.afterColumns,
-              true
-            )
+            useUndoStore
+              .getState()
+              .pushMove(
+                action.moves,
+                action.toColumnName,
+                action.fromColumnName,
+                newToastId,
+                currentStateBeforeRedo,
+                action.afterColumns,
+                true,
+              )
           } else if (entry.action.type === 'paste') {
             const action = entry.action
-            const { addTicket: redoAddTicket, removeTicket: redoRemoveTicket } = useBoardStore.getState()
+            const { addTicket: redoAddTicket, removeTicket: redoRemoveTicket } =
+              useBoardStore.getState()
             for (const { ticket, columnId } of action.tickets) {
               redoAddTicket(columnId, ticket)
             }
@@ -1127,7 +1147,9 @@ export function KeyboardShortcuts() {
                 : `${action.tickets.length} tickets pasted`,
               {
                 description:
-                  action.tickets.length === 1 ? redoPasteTicketKeys[0] : redoPasteTicketKeys.join(', '),
+                  action.tickets.length === 1
+                    ? redoPasteTicketKeys[0]
+                    : redoPasteTicketKeys.join(', '),
                 duration: 5000,
                 action: showUndo
                   ? {
@@ -1156,13 +1178,7 @@ export function KeyboardShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [
-    selectedTicketIds,
-    openSinglePastedTicket,
-    showDeleteConfirm,
-    showShortcuts,
-    columns,
-  ])
+  }, [selectedTicketIds, openSinglePastedTicket, showDeleteConfirm, columns, handleDeleteSelected])
 
   return (
     <>

@@ -92,9 +92,16 @@ interface BacklogState {
   filterBySprint: string | null
   setFilterBySprint: (sprintId: string | null) => void
   filterByPoints: { operator: '<' | '>' | '=' | '<=' | '>='; value: number } | null
-  setFilterByPoints: (filter: { operator: '<' | '>' | '=' | '<=' | '>='; value: number } | null) => void
+  setFilterByPoints: (
+    filter: { operator: '<' | '>' | '=' | '<=' | '>='; value: number } | null,
+  ) => void
   filterByDueDate: { from?: Date; to?: Date; includeNone: boolean; includeOverdue: boolean }
-  setFilterByDueDate: (filter: { from?: Date; to?: Date; includeNone: boolean; includeOverdue: boolean }) => void
+  setFilterByDueDate: (filter: {
+    from?: Date
+    to?: Date
+    includeNone: boolean
+    includeOverdue: boolean
+  }) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
   clearFilters: () => void
@@ -108,7 +115,6 @@ interface BacklogState {
   // Column config panel
   columnConfigOpen: boolean
   setColumnConfigOpen: (open: boolean) => void
-
 
   // Manual backlog ordering (per project)
   backlogOrder: Record<string, string[]>
@@ -174,7 +180,12 @@ export const useBacklogStore = create<BacklogState>()(
       setFilterBySprint: (sprintId) => set({ filterBySprint: sprintId }),
       filterByPoints: null,
       setFilterByPoints: (filter) => set({ filterByPoints: filter }),
-      filterByDueDate: { from: undefined, to: undefined, includeNone: false, includeOverdue: false },
+      filterByDueDate: {
+        from: undefined,
+        to: undefined,
+        includeNone: false,
+        includeOverdue: false,
+      },
       setFilterByDueDate: (filter) => set({ filterByDueDate: filter }),
       searchQuery: '',
       setSearchQuery: (query) => set({ searchQuery: query }),
@@ -187,7 +198,12 @@ export const useBacklogStore = create<BacklogState>()(
           filterByLabels: [],
           filterBySprint: null,
           filterByPoints: null,
-          filterByDueDate: { from: undefined, to: undefined, includeNone: false, includeOverdue: false },
+          filterByDueDate: {
+            from: undefined,
+            to: undefined,
+            includeNone: false,
+            includeOverdue: false,
+          },
           searchQuery: '',
         }),
 

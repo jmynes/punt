@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, ChevronsUpDown, X } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -45,7 +45,7 @@ export function LabelSelect({ value, onChange, labels, disabled }: LabelSelectPr
     if (triggerRef.current) {
       setPopoverWidth(triggerRef.current.offsetWidth)
     }
-  }, [open])
+  }, [])
 
   return (
     <div className="space-y-2">
@@ -67,7 +67,7 @@ export function LabelSelect({ value, onChange, labels, disabled }: LabelSelectPr
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent 
+        <PopoverContent
           className="p-0 bg-zinc-900 border-zinc-700"
           align="start"
           style={popoverWidth ? { width: `${popoverWidth}px` } : undefined}

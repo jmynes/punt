@@ -22,7 +22,12 @@ interface KanbanCardProps {
   isBeingDragged?: boolean
 }
 
-export function KanbanCard({ ticket, projectKey, allTicketIds = [], isBeingDragged = false }: KanbanCardProps) {
+export function KanbanCard({
+  ticket,
+  projectKey,
+  allTicketIds = [],
+  isBeingDragged = false,
+}: KanbanCardProps) {
   const { setActiveTicketId } = useUIStore()
   const { isSelected, selectTicket, toggleTicket, selectRange } = useSelectionStore()
   const selected = isSelected(ticket.id)
@@ -96,120 +101,125 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [], isBeingDragg
         )}
         onClick={handleClick}
       >
-      {/* Drag handle indicator - visible on hover */}
-      <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-        <GripVertical className="h-4 w-4 text-zinc-600" />
-      </div>
-
-      <div className="pl-4">
-        {/* Header row: Type, Key, Priority */}
-        <div className="flex items-center gap-2 mb-2">
-          <TypeBadge type={ticket.type as IssueType} size="sm" />
-          <span className="text-xs font-mono text-zinc-500">
-            {projectKey}-{ticket.number}
-          </span>
-          <div className="ml-auto">
-            <PriorityBadge priority={ticket.priority as Priority} size="sm" />
-          </div>
+        {/* Drag handle indicator - visible on hover */}
+        <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          <GripVertical className="h-4 w-4 text-zinc-600" />
         </div>
 
-        {/* Title */}
-        <h4 className="text-sm font-medium text-zinc-200 mb-2 line-clamp-2">{ticket.title}</h4>
-
-        {/* Labels */}
-        {ticket.labels.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {ticket.labels.slice(0, 3).map((label) => (
-              <Badge
-                key={label.id}
-                variant="outline"
-                className="text-[10px] px-1.5 py-0"
-                style={{
-                  borderColor: label.color,
-                  color: label.color,
-                  backgroundColor: `${label.color}20`,
-                }}
-              >
-                {label.name}
-              </Badge>
-            ))}
-            {ticket.labels.length > 3 && (
-              <Badge
-                variant="outline"
-                className="text-[10px] px-1.5 py-0 border-zinc-700 text-zinc-500"
-              >
-                +{ticket.labels.length - 3}
-              </Badge>
-            )}
-          </div>
-        )}
-
-        {/* Due date if set */}
-        {ticket.dueDate && (
-          <div
-            className={cn(
-              'flex items-center gap-1 text-[10px] mb-2',
-              isOverdue && 'text-red-400',
-              isDueToday && 'text-amber-400',
-              !isOverdue && !isDueToday && 'text-zinc-500',
-            )}
-          >
-            <Calendar className="h-3 w-3" />
-            <span>{format(ticket.dueDate, 'MMM d')}</span>
-            {isOverdue && <span className="font-medium">(Overdue)</span>}
-            {isDueToday && <span className="font-medium">(Today)</span>}
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/50">
-          {/* Left side: Story points and metadata */}
-          <div className="flex items-center gap-3">
-            {/* Story points */}
-            {ticket.storyPoints && (
-              <span className="text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
-                {ticket.storyPoints} SP
-              </span>
-            )}
-
-            {/* Metadata counts */}
-            <div className="flex items-center gap-2 text-zinc-600">
-              {attachmentCount > 0 && (
-                <div className="flex items-center gap-0.5" title={`${attachmentCount} attachment(s)`}>
-                  <Paperclip className="h-3 w-3" />
-                  <span className="text-[10px]">{attachmentCount}</span>
-                </div>
-              )}
-              {commentCount > 0 && (
-                <div className="flex items-center gap-0.5" title={`${commentCount} comment(s)`}>
-                  <MessageSquare className="h-3 w-3" />
-                  <span className="text-[10px]">{commentCount}</span>
-                </div>
-              )}
+        <div className="pl-4">
+          {/* Header row: Type, Key, Priority */}
+          <div className="flex items-center gap-2 mb-2">
+            <TypeBadge type={ticket.type as IssueType} size="sm" />
+            <span className="text-xs font-mono text-zinc-500">
+              {projectKey}-{ticket.number}
+            </span>
+            <div className="ml-auto">
+              <PriorityBadge priority={ticket.priority as Priority} size="sm" />
             </div>
           </div>
 
-          {/* Assignee (right side) */}
-          {ticket.assignee ? (
-            <Avatar className="h-5 w-5" title={ticket.assignee.name}>
-              <AvatarImage src={ticket.assignee.avatar || undefined} />
-              <AvatarFallback 
-                className="text-white text-[10px] font-medium"
-                style={{ backgroundColor: getAvatarColor(ticket.assignee.id || ticket.assignee.name) }}
-              >
-                {getInitials(ticket.assignee.name)}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <Avatar className="h-5 w-5" title="Unassigned">
-              <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
-                <User className="h-3 w-3 text-zinc-500" />
-              </AvatarFallback>
-            </Avatar>
+          {/* Title */}
+          <h4 className="text-sm font-medium text-zinc-200 mb-2 line-clamp-2">{ticket.title}</h4>
+
+          {/* Labels */}
+          {ticket.labels.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {ticket.labels.slice(0, 3).map((label) => (
+                <Badge
+                  key={label.id}
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0"
+                  style={{
+                    borderColor: label.color,
+                    color: label.color,
+                    backgroundColor: `${label.color}20`,
+                  }}
+                >
+                  {label.name}
+                </Badge>
+              ))}
+              {ticket.labels.length > 3 && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 border-zinc-700 text-zinc-500"
+                >
+                  +{ticket.labels.length - 3}
+                </Badge>
+              )}
+            </div>
           )}
+
+          {/* Due date if set */}
+          {ticket.dueDate && (
+            <div
+              className={cn(
+                'flex items-center gap-1 text-[10px] mb-2',
+                isOverdue && 'text-red-400',
+                isDueToday && 'text-amber-400',
+                !isOverdue && !isDueToday && 'text-zinc-500',
+              )}
+            >
+              <Calendar className="h-3 w-3" />
+              <span>{format(ticket.dueDate, 'MMM d')}</span>
+              {isOverdue && <span className="font-medium">(Overdue)</span>}
+              {isDueToday && <span className="font-medium">(Today)</span>}
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/50">
+            {/* Left side: Story points and metadata */}
+            <div className="flex items-center gap-3">
+              {/* Story points */}
+              {ticket.storyPoints && (
+                <span className="text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+                  {ticket.storyPoints} SP
+                </span>
+              )}
+
+              {/* Metadata counts */}
+              <div className="flex items-center gap-2 text-zinc-600">
+                {attachmentCount > 0 && (
+                  <div
+                    className="flex items-center gap-0.5"
+                    title={`${attachmentCount} attachment(s)`}
+                  >
+                    <Paperclip className="h-3 w-3" />
+                    <span className="text-[10px]">{attachmentCount}</span>
+                  </div>
+                )}
+                {commentCount > 0 && (
+                  <div className="flex items-center gap-0.5" title={`${commentCount} comment(s)`}>
+                    <MessageSquare className="h-3 w-3" />
+                    <span className="text-[10px]">{commentCount}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Assignee (right side) */}
+            {ticket.assignee ? (
+              <Avatar className="h-5 w-5" title={ticket.assignee.name}>
+                <AvatarImage src={ticket.assignee.avatar || undefined} />
+                <AvatarFallback
+                  className="text-white text-[10px] font-medium"
+                  style={{
+                    backgroundColor: getAvatarColor(ticket.assignee.id || ticket.assignee.name),
+                  }}
+                >
+                  {getInitials(ticket.assignee.name)}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <Avatar className="h-5 w-5" title="Unassigned">
+                <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
+                  <User className="h-3 w-3 text-zinc-500" />
+                </AvatarFallback>
+              </Avatar>
+            )}
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
     </TicketContextMenu>
   )
 }

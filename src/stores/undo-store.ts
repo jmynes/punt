@@ -56,11 +56,7 @@ interface UndoState {
     toastId: string | number,
     isRedo?: boolean,
   ) => void
-  pushDeletedBatch: (
-    tickets: DeletedTicket[],
-    toastId: string | number,
-    isRedo?: boolean,
-  ) => void
+  pushDeletedBatch: (tickets: DeletedTicket[], toastId: string | number, isRedo?: boolean) => void
 
   // Add a paste action to the undo stack
   pushPaste: (tickets: PastedTicket[], toastId: string | number, isRedo?: boolean) => void
@@ -316,16 +312,12 @@ export const useUndoStore = create<UndoState>((set, get) => ({
 
   updateRedoToastId: (oldId, newId) =>
     set((state) => ({
-      redoStack: state.redoStack.map((e) =>
-        e.toastId === oldId ? { ...e, toastId: newId } : e,
-      ),
+      redoStack: state.redoStack.map((e) => (e.toastId === oldId ? { ...e, toastId: newId } : e)),
     })),
 
   updateUndoToastId: (oldId, newId) =>
     set((state) => ({
-      undoStack: state.undoStack.map((e) =>
-        e.toastId === oldId ? { ...e, toastId: newId } : e,
-      ),
+      undoStack: state.undoStack.map((e) => (e.toastId === oldId ? { ...e, toastId: newId } : e)),
     })),
 
   removeEntry: (toastId) =>
@@ -352,5 +344,5 @@ useUndoStore.subscribe((state, prevState) => {
 
 // Expose the store to the window for debugging
 if (typeof window !== 'undefined') {
-  ;(window as any).undoStore = useUndoStore
+  ;(window as Window & { undoStore?: typeof useUndoStore }).undoStore = useUndoStore
 }

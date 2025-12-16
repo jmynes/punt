@@ -301,7 +301,7 @@ export default function BacklogPage() {
       }))
       setColumns(columnsWithTickets)
     }
-  }, [_hasHydrated]) // Run when hydration completes
+  }, [_hasHydrated, columns.map, columns.some, setColumns]) // Run when hydration completes
 
   // Set active project on mount
   useEffect(() => {

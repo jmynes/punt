@@ -40,12 +40,12 @@ function hello() {
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-zinc-300">Description Editor</label>
+          <div className="text-sm font-medium text-zinc-300">Description Editor</div>
           <DescriptionEditor markdown={markdown} onChange={setMarkdown} />
         </div>
 
         <div className="mt-8 space-y-2">
-          <label className="text-sm font-medium text-zinc-300">Markdown Output</label>
+          <div className="text-sm font-medium text-zinc-300">Markdown Output</div>
           <pre className="bg-zinc-900 border border-zinc-700 rounded-md p-4 text-xs text-zinc-300 overflow-auto">
             {markdown}
           </pre>
@@ -54,5 +54,3 @@ function hello() {
     </div>
   )
 }
-
-
