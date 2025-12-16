@@ -258,6 +258,7 @@
   background: rgb(24 24 27) !important; /* zinc-900 - also override background shorthand */
   border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
   color: rgb(244 244 245) !important; /* zinc-100 */
+  z-index: 60 !important; /* Higher than modal (z-50) to appear above dialogs */
 }
 
 /* Override text-popover-foreground class everywhere - maximum specificity */
@@ -290,6 +291,7 @@
   background-color: rgb(24 24 27) !important; /* zinc-900 */
   border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
   color: rgb(244 244 245) !important; /* zinc-100 */
+  z-index: 60 !important; /* Higher than modal (z-50) to appear above dialogs */
 }
 
 /* Table column editor popover (MDXEditor) */
@@ -297,6 +299,7 @@
   background-color: rgb(24 24 27) !important; /* zinc-900 */
   border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
   color: rgb(244 244 245) !important; /* zinc-100 */
+  z-index: 60 !important; /* Higher than modal (z-50) to appear above dialogs */
 }
 
 /* Table column editor toolbar */
@@ -349,6 +352,7 @@
   background-color: rgb(24 24 27) !important; /* zinc-900 */
   border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
   color: rgb(244 244 245) !important; /* zinc-100 */
+  z-index: 60 !important; /* Higher than modal (z-50) to appear above dialogs */
 }
 
 /* All buttons inside popup container (table editor) */
