@@ -21,7 +21,7 @@ import {
   Zap,
 } from 'lucide-react'
 import type * as React from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -211,113 +211,195 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setTempAffectedVersion(ticket.affectedVersion || '')
       setTempFixVersion(ticket.fixVersion || '')
       setTempParentId(ticket.parentId)
+      setTempStatusId(ticket.columnId)
       setTempCreatorId(ticket.creatorId)
       // Attachments would need to be loaded from the ticket's attachment array
       setTempAttachments([])
     }
   }, [ticket])
 
-  // Handler for immediate save on change (for always-visible fields)
-  const handleImmediateChange = (field: string, value: unknown) => {
+  // Handler for updating temp state (no immediate save)
+  const handleChange = (field: string, value: unknown) => {
     if (!ticket) return
-
-    const oldTicket = { ...ticket }
-    const updates: Partial<TicketWithRelations> = {
-      updatedAt: new Date(),
-    }
 
     switch (field) {
       case 'status': {
         const columnId = value as string
-        updates.columnId = columnId
         setTempStatusId(columnId)
         break
       }
       case 'type': {
         const newType = value as IssueType
-        updates.type = newType
         setTempType(newType)
         break
       }
       case 'priority': {
         const newPriority = value as Priority
-        updates.priority = newPriority
         setTempPriority(newPriority)
         break
       }
       case 'storyPoints': {
         const newStoryPoints = value as number | null
-        updates.storyPoints = newStoryPoints
         setTempStoryPoints(newStoryPoints)
         break
       }
       case 'sprint': {
         const newSprintId = value as string | null
-        updates.sprintId = newSprintId
         setTempSprintId(newSprintId)
         break
       }
       case 'assignee': {
         const assigneeId = value as string | null
-        updates.assigneeId = assigneeId
-        updates.assignee = assigneeId ? members.find((m) => m.id === assigneeId) || null : null
         setTempAssigneeId(assigneeId)
         break
       }
       case 'creator': {
         const creatorId = value as string
-        updates.creatorId = creatorId
-        updates.creator = members.find((m) => m.id === creatorId) || ticket.creator
         setTempCreatorId(creatorId)
         break
       }
       case 'startDate': {
         const date = value as Date | null
-        updates.startDate = date
         setTempStartDate(date)
         break
       }
       case 'dueDate': {
         const date = value as Date | null
-        updates.dueDate = date
         setTempDueDate(date)
         break
       }
       case 'labels': {
         const labelIds = value as string[]
-        updates.labels = labelIds
-          .map((id: string) => DEMO_LABELS.find((l) => l.id === id))
-          .filter((l): l is LabelSummary => l !== undefined)
         setTempLabelIds(labelIds)
         break
       }
       case 'parent': {
         const parentId = value as string | null
-        updates.parentId = parentId
         setTempParentId(parentId)
         break
       }
       case 'environment': {
         const env = value as string
-        updates.environment = env || null
         setTempEnvironment(env)
         break
       }
       case 'affectedVersion': {
         const version = value as string
-        updates.affectedVersion = version || null
         setTempAffectedVersion(version)
         break
       }
       case 'fixVersion': {
         const version = value as string
-        updates.fixVersion = version || null
         setTempFixVersion(version)
         break
       }
       case 'attachments':
         // Attachments would be handled separately in a real implementation
         return
+    }
+  }
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!ticket) return false
+    return (
+      tempTitle !== ticket.title ||
+      tempDescription !== (ticket.description || '') ||
+      tempType !== ticket.type ||
+      tempPriority !== ticket.priority ||
+      tempAssigneeId !== ticket.assigneeId ||
+      tempStatusId !== ticket.columnId ||
+      tempStoryPoints !== ticket.storyPoints ||
+      tempSprintId !== ticket.sprintId ||
+      tempEstimate !== (ticket.estimate || '') ||
+      tempStartDate?.getTime() !== ticket.startDate?.getTime() ||
+      tempDueDate?.getTime() !== ticket.dueDate?.getTime() ||
+      tempParentId !== ticket.parentId ||
+      tempEnvironment !== (ticket.environment || '') ||
+      tempAffectedVersion !== (ticket.affectedVersion || '') ||
+      tempFixVersion !== (ticket.fixVersion || '') ||
+      JSON.stringify(tempLabelIds.sort()) !== JSON.stringify(ticket.labels.map((l) => l.id).sort())
+    )
+  }, [
+    ticket,
+    tempTitle,
+    tempDescription,
+    tempType,
+    tempPriority,
+    tempAssigneeId,
+    tempStatusId,
+    tempStoryPoints,
+    tempSprintId,
+    tempEstimate,
+    tempStartDate,
+    tempDueDate,
+    tempParentId,
+    tempEnvironment,
+    tempAffectedVersion,
+    tempFixVersion,
+    tempLabelIds,
+  ])
+
+  // Save all pending changes
+  const handleSave = useCallback(() => {
+    if (!ticket || !hasUnsavedChanges) return
+
+    const oldTicket = { ...ticket }
+    const updates: Partial<TicketWithRelations> = {
+      updatedAt: new Date(),
+    }
+
+    // Apply all temp values to updates
+    if (tempTitle.trim() && tempTitle !== ticket.title) {
+      updates.title = tempTitle.trim()
+    }
+    if (tempDescription !== (ticket.description || '')) {
+      updates.description = tempDescription || null
+    }
+    if (tempType !== ticket.type) {
+      updates.type = tempType
+    }
+    if (tempPriority !== ticket.priority) {
+      updates.priority = tempPriority
+    }
+    if (tempAssigneeId !== ticket.assigneeId) {
+      updates.assigneeId = tempAssigneeId
+      updates.assignee = tempAssigneeId ? members.find((m) => m.id === tempAssigneeId) || null : null
+    }
+    if (tempStatusId !== ticket.columnId) {
+      updates.columnId = tempStatusId || ticket.columnId
+    }
+    if (tempStoryPoints !== ticket.storyPoints) {
+      updates.storyPoints = tempStoryPoints
+    }
+    if (tempSprintId !== ticket.sprintId) {
+      updates.sprintId = tempSprintId
+    }
+    if (tempEstimate !== (ticket.estimate || '')) {
+      updates.estimate = tempEstimate || null
+    }
+    if (tempStartDate?.getTime() !== ticket.startDate?.getTime()) {
+      updates.startDate = tempStartDate
+    }
+    if (tempDueDate?.getTime() !== ticket.dueDate?.getTime()) {
+      updates.dueDate = tempDueDate
+    }
+    if (tempParentId !== ticket.parentId) {
+      updates.parentId = tempParentId
+    }
+    if (tempEnvironment !== (ticket.environment || '')) {
+      updates.environment = tempEnvironment || null
+    }
+    if (tempAffectedVersion !== (ticket.affectedVersion || '')) {
+      updates.affectedVersion = tempAffectedVersion || null
+    }
+    if (tempFixVersion !== (ticket.fixVersion || '')) {
+      updates.fixVersion = tempFixVersion || null
+    }
+    if (JSON.stringify(tempLabelIds.sort()) !== JSON.stringify(ticket.labels.map((l) => l.id).sort())) {
+      updates.labels = tempLabelIds
+        .map((id: string) => DEMO_LABELS.find((l) => l.id === id))
+        .filter((l): l is LabelSummary => l !== undefined)
     }
 
     const updatedTicket = { ...oldTicket, ...updates }
@@ -326,9 +408,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     // Add to undo stack
     const { pushUpdate } = useUndoStore.getState()
     const showUndo = useUIStore.getState().showUndoButtons
+    const ticketKey = formatTicketId(ticket)
 
     const toastId = showUndoRedoToast('success', {
-      title: 'Ticket updated',
+      title: 'Ticket details updated',
       description: ticketKey,
       duration: 3000,
       showUndoButtons: showUndo,
@@ -345,7 +428,28 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     })
 
     pushUpdate([{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }], toastId)
-  }
+  }, [
+    ticket,
+    hasUnsavedChanges,
+    tempTitle,
+    tempDescription,
+    tempType,
+    tempPriority,
+    tempAssigneeId,
+    tempStatusId,
+    tempStoryPoints,
+    tempSprintId,
+    tempEstimate,
+    tempStartDate,
+    tempDueDate,
+    tempParentId,
+    tempEnvironment,
+    tempAffectedVersion,
+    tempFixVersion,
+    tempLabelIds,
+    members,
+    updateTicket,
+  ])
 
   // Focus delete button when dialog opens
   useEffect(() => {
@@ -549,7 +653,18 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const _selectedSprint = ticket.sprint ? DEMO_SPRINTS.find((s) => s.id === ticket.sprintId) : null
 
   return (
-    <Sheet open={!!ticket} onOpenChange={(open) => !open && onClose()}>
+    <Sheet
+      open={!!ticket}
+      onOpenChange={(open) => {
+        if (!open) {
+          // Save changes before closing
+          if (hasUnsavedChanges) {
+            handleSave()
+          }
+          onClose()
+        }
+      }}
+    >
       <SheetContent
         side="right"
         className="w-full border-zinc-800 bg-zinc-950 p-0 sm:max-w-2xl md:max-w-3xl lg:max-w-4xl"
@@ -642,7 +757,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                           checked={ticket.type === type}
                           onCheckedChange={() => {
                             const newType = type as IssueType
-                            handleImmediateChange('type', newType)
+                            handleChange('type', newType)
                           }}
                           className="focus:bg-zinc-800 focus:text-zinc-100"
                         >
@@ -665,7 +780,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     }}
                     onBlur={() => {
                       if (tempStoryPoints !== ticket.storyPoints) {
-                        handleImmediateChange('storyPoints', tempStoryPoints)
+                        handleChange('storyPoints', tempStoryPoints)
                       }
                     }}
                     placeholder="pts"
@@ -684,7 +799,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       onClick={() => {
                         const currentValue = ticket.storyPoints ?? 0
                         const newValue = currentValue + 1
-                        handleImmediateChange('storyPoints', newValue)
+                        handleChange('storyPoints', newValue)
                       }}
                     >
                       <ChevronUp className="h-3 w-3" />
@@ -696,7 +811,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       onClick={() => {
                         const currentValue = ticket.storyPoints ?? 0
                         const newValue = Math.max(0, currentValue - 1)
-                        handleImmediateChange('storyPoints', newValue)
+                        handleChange('storyPoints', newValue)
                       }}
                     >
                       <ChevronDown className="h-3 w-3" />
@@ -716,7 +831,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                         key={priority}
                         checked={ticket.priority === priority}
                         onCheckedChange={() => {
-                          handleImmediateChange('priority', priority)
+                          handleChange('priority', priority)
                         }}
                         className="cursor-pointer"
                       >
@@ -754,7 +869,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     <DropdownMenuCheckboxItem
                       checked={!ticket.sprint}
                       onCheckedChange={() => {
-                        handleImmediateChange('sprint', null)
+                        handleChange('sprint', null)
                       }}
                       className="cursor-pointer"
                     >
@@ -765,7 +880,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                         key={sprint.id}
                         checked={ticket.sprint?.id === sprint.id}
                         onCheckedChange={() => {
-                          handleImmediateChange('sprint', sprint.id)
+                          handleChange('sprint', sprint.id)
                         }}
                         className="cursor-pointer"
                       >
@@ -851,7 +966,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <Label className="text-zinc-400">Reporter</Label>
                   <UserSelect
                     value={ticket.creatorId}
-                    onChange={(value) => handleImmediateChange('creator', value)}
+                    onChange={(value) => handleChange('creator', value)}
                     users={members}
                     currentUserId={currentUser.id}
                     placeholder="Unassigned"
@@ -863,7 +978,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <Label className="text-zinc-400">Assignee</Label>
                   <UserSelect
                     value={ticket.assigneeId}
-                    onChange={(value) => handleImmediateChange('assignee', value)}
+                    onChange={(value) => handleChange('assignee', value)}
                     users={members}
                     currentUserId={currentUser.id}
                     placeholder="Unassigned"
@@ -876,7 +991,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <Label className="text-zinc-400">Status</Label>
                   <Select
                     value={ticket.columnId}
-                    onValueChange={(value) => handleImmediateChange('status', value)}
+                    onValueChange={(value) => handleChange('status', value)}
                   >
                     <SelectTrigger className="w-full h-10 bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
                       <SelectValue placeholder="Select status" />
@@ -906,7 +1021,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <Label className="text-zinc-400">Parent Epic / Story</Label>
                   <ParentSelect
                     value={ticket.parentId}
-                    onChange={(value) => handleImmediateChange('parent', value)}
+                    onChange={(value) => handleChange('parent', value)}
                     parentTickets={parentTickets}
                   />
                 </div>
@@ -916,7 +1031,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <Label className="text-zinc-400">Due Date</Label>
                   <DatePicker
                     value={ticket.dueDate}
-                    onChange={(value) => handleImmediateChange('dueDate', value)}
+                    onChange={(value) => handleChange('dueDate', value)}
                     placeholder="Set due date"
                     context="ticket-form"
                   />
@@ -927,7 +1042,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <Label className="text-zinc-400">Start Date</Label>
                   <DatePicker
                     value={ticket.startDate}
-                    onChange={(value) => handleImmediateChange('startDate', value)}
+                    onChange={(value) => handleChange('startDate', value)}
                     placeholder="Set start date"
                     context="ticket-form"
                   />
@@ -938,7 +1053,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <Label className="text-zinc-400">Environment</Label>
                   <Input
                     value={ticket.environment || ''}
-                    onChange={(e) => handleImmediateChange('environment', e.target.value)}
+                    onChange={(e) => handleChange('environment', e.target.value)}
                     placeholder="e.g., Production, Staging"
                     className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
                   />
@@ -949,7 +1064,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <Label className="text-zinc-400">Affected Version</Label>
                   <Input
                     value={ticket.affectedVersion || ''}
-                    onChange={(e) => handleImmediateChange('affectedVersion', e.target.value)}
+                    onChange={(e) => handleChange('affectedVersion', e.target.value)}
                     placeholder="e.g., 1.0.0"
                     className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
                   />
@@ -960,7 +1075,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <Label className="text-zinc-400">Fix Version</Label>
                   <Input
                     value={ticket.fixVersion || ''}
-                    onChange={(e) => handleImmediateChange('fixVersion', e.target.value)}
+                    onChange={(e) => handleChange('fixVersion', e.target.value)}
                     placeholder="e.g., 1.0.1"
                     className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
                   />
@@ -972,7 +1087,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <Label className="text-zinc-400">Labels</Label>
                 <LabelSelect
                   value={ticket.labels.map((l) => l.id)}
-                  onChange={(value) => handleImmediateChange('labels', value)}
+                  onChange={(value) => handleChange('labels', value)}
                   labels={DEMO_LABELS}
                 />
               </div>
@@ -1056,6 +1171,15 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               <p>Updated {format(ticket.updatedAt, "MMM d, yyyy 'at' h:mm a")}</p>
             </div>
             <div className="flex items-center gap-2">
+              {hasUnsavedChanges && (
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  Save Changes
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={handleClone}>
                 <Copy className="h-4 w-4 mr-1" />
                 Clone
