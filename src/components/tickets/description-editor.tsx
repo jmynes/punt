@@ -48,18 +48,42 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
   // Prevent hydration mismatch by only rendering on client
   const [isMounted, setIsMounted] = useState(false)
   // Store original markdown for diff view (left side)
-  // Use the markdown prop as the baseline - it represents the ticket's current description
-  // When user edits, the right side will show changes, left side shows original
+  // This should be the "saved" version when the editor was first opened, not the current edited version
   const originalMarkdownRef = useRef(markdown)
+  // Track a hash of the original to detect when we've switched to a completely different ticket
+  const originalHashRef = useRef<string | null>(null)
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
-  // Update original markdown when markdown prop changes (e.g., when switching tickets)
-  // This ensures diff view shows the correct original when editing different tickets
+  // Update original markdown only when we detect a ticket switch
+  // We detect this by checking if the markdown is substantially different from what we captured as original
+  // This happens when switching tickets, not during normal editing
   useEffect(() => {
-    originalMarkdownRef.current = markdown
+    const currentHash = markdown.length > 0 ? `${markdown.length}-${markdown.substring(0, 50)}` : 'empty'
+    const originalHash = originalHashRef.current
+
+    // If we don't have an original hash yet, or the current markdown is substantially different
+    // from what we captured as original, it means we've switched tickets
+    if (originalHash === null) {
+      // First time - capture as original
+      originalMarkdownRef.current = markdown
+      originalHashRef.current = currentHash
+    } else if (currentHash !== originalHash) {
+      // The markdown is different from what we captured as original
+      // Check if it's a substantial difference (likely a ticket switch, not just editing)
+      const original = originalMarkdownRef.current
+      const isSubstantialChange = 
+        Math.abs(markdown.length - original.length) > 50 ||
+        (markdown.length > 0 && original.length > 0 && markdown.substring(0, 100) !== original.substring(0, 100))
+      
+      if (isSubstantialChange) {
+        // This is likely a ticket switch - update the original
+        originalMarkdownRef.current = markdown
+        originalHashRef.current = currentHash
+      }
+    }
   }, [markdown])
   // Memoize toolbar contents to prevent re-creation
   const toolbarContents = useCallback(
