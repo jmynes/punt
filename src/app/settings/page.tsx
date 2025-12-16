@@ -1,6 +1,7 @@
 'use client'
 
 import { Settings } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -24,6 +25,14 @@ export default function SettingsPage() {
 
   const defaultMaxYear = new Date().getFullYear() + 5
   const currentMaxYear = ticketDateMaxYearMode === 'default' ? defaultMaxYear : ticketDateMaxYear
+  const customInputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-focus input when switching to custom mode
+  useEffect(() => {
+    if (ticketDateMaxYearMode === 'custom' && customInputRef.current) {
+      customInputRef.current.focus()
+    }
+  }, [ticketDateMaxYearMode])
 
   return (
     <div className="h-full overflow-auto p-6">
@@ -143,6 +152,7 @@ export default function SettingsPage() {
                     )}
                   >
                     <Input
+                      ref={customInputRef}
                       id="date-max-year"
                       type="number"
                       min={new Date().getFullYear()}
