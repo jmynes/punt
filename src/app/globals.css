@@ -188,3 +188,170 @@
   background: rgb(24 24 27) !important; /* zinc-900 */
   color: rgb(244 244 245) !important; /* zinc-100 */
 }
+
+/* MDXEditor Dialog Dark Mode Styling */
+/* Dialog overlay */
+[class*="_dialogOverlay_"] {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Dialog content container */
+[class*="_dialogContent_"],
+[class*="_largeDialogContent_"] {
+  background-color: rgb(24 24 27) !important; /* zinc-900 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+/* Dialog title */
+[class*="_dialogTitle_"] {
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+/* Dialog close button */
+[class*="_dialogCloseButton_"] {
+  color: rgb(161 161 170) !important; /* zinc-400 */
+}
+
+[class*="_dialogCloseButton_"]:hover {
+  color: rgb(244 244 245) !important; /* zinc-100 */
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+}
+
+/* Form fields and inputs */
+[class*="_formField_"] label {
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+[class*="_textInput_"],
+[class*="_dialogInput_"],
+[class*="_linkDialogInput_"] {
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+[class*="_textInput_"]:focus,
+[class*="_dialogInput_"]:focus,
+[class*="_linkDialogInput_"]:focus {
+  border-color: rgb(217 119 6) !important; /* amber-600 */
+  outline: none !important;
+}
+
+[class*="_textInput_"]::placeholder,
+[class*="_dialogInput_"]::placeholder,
+[class*="_linkDialogInput_"]::placeholder {
+  color: rgb(113 113 122) !important; /* zinc-500 */
+}
+
+/* Link dialog popover */
+[class*="_linkDialogPopoverContent_"] {
+  background-color: rgb(24 24 27) !important; /* zinc-900 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+[class*="_linkDialogInputWrapper_"] {
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+}
+
+/* Buttons */
+[class*="_primaryButton_"] {
+  background-color: rgb(217 119 6) !important; /* amber-600 */
+  color: white !important;
+  border: none !important;
+}
+
+[class*="_primaryButton_"]:hover {
+  background-color: rgb(180 83 9) !important; /* amber-700 */
+}
+
+[class*="_secondaryButton_"] {
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+  color: rgb(244 244 245) !important; /* zinc-100 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+}
+
+[class*="_secondaryButton_"]:hover {
+  background-color: rgb(63 63 70) !important; /* zinc-700 */
+}
+
+/* File input styling */
+[class*="_formField_"] input[type="file"] {
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+[class*="_formField_"] input[type="file"]::file-selector-button {
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+  color: rgb(244 244 245) !important; /* zinc-100 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+[class*="_formField_"] input[type="file"]::file-selector-button:hover {
+  background-color: rgb(63 63 70) !important; /* zinc-700 */
+}
+
+/* Autocomplete dropdown */
+[class*="_downshiftAutocompleteContainer_"] {
+  position: relative;
+}
+
+[class*="_downshiftInputWrapper_"] {
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+}
+
+[class*="_downshiftInput_"] {
+  background-color: transparent !important;
+  color: rgb(244 244 245) !important; /* zinc-100 */
+  border: none !important;
+}
+
+[class*="_downshiftInput_"]:focus {
+  outline: none !important;
+}
+
+[class*="_downshiftInput_"]::placeholder {
+  color: rgb(113 113 122) !important; /* zinc-500 */
+}
+
+/* Autocomplete dropdown menu */
+[class*="_downshiftAutocompleteContainer_"] ul[data-visible="true"] {
+  background-color: rgb(24 24 27) !important; /* zinc-900 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+  border-top: none !important;
+  color: rgb(244 244 245) !important; /* zinc-100 */
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+[class*="_downshiftAutocompleteContainer_"] ul li {
+  color: rgb(244 244 245) !important; /* zinc-100 */
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+[class*="_downshiftAutocompleteContainer_"] ul li[data-highlighted="true"] {
+  background-color: rgb(217 119 6) !important; /* amber-600 */
+  color: white !important;
+}
+
+[class*="_downshiftAutocompleteContainer_"] ul li[data-selected="true"] {
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+}
+
+/* Autocomplete toggle button */
+[class*="_downshiftInputWrapper_"] button {
+  color: rgb(161 161 170) !important; /* zinc-400 */
+  background-color: transparent !important;
+  border: none !important;
+}
+
+[class*="_downshiftInputWrapper_"] button:hover {
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
