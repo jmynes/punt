@@ -9,6 +9,10 @@ interface SettingsState {
   // Date picker max year for ticket forms
   ticketDateMaxYear: number
   setTicketDateMaxYear: (value: number) => void
+
+  // Ticket drawer unsaved changes behavior
+  autoSaveOnDrawerClose: boolean
+  setAutoSaveOnDrawerClose: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -21,6 +25,10 @@ export const useSettingsStore = create<SettingsState>()(
       // Default: allow dates up to current year + 5 for ticket forms
       ticketDateMaxYear: new Date().getFullYear() + 5,
       setTicketDateMaxYear: (value) => set({ ticketDateMaxYear: value }),
+
+      // Default: show confirmation dialog for unsaved changes
+      autoSaveOnDrawerClose: false,
+      setAutoSaveOnDrawerClose: (value) => set({ autoSaveOnDrawerClose: value }),
     }),
     {
       name: 'punt-settings',
