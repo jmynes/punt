@@ -58,7 +58,7 @@ export function BacklogTable({
     setColumnConfigOpen,
     backlogOrder,
     setBacklogOrder,
-    clearBacklogOrder,
+    clearBacklogOrder: _clearBacklogOrder,
   } = useBacklogStore()
 
   // Apply persisted backlog order (per project) while keeping any new tickets appended

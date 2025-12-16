@@ -74,9 +74,9 @@ export function DatePicker({
             {value ? format(value, 'MMM d, yyyy') : placeholder}
           </span>
           {value && (
-            <span
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
+              className="ml-2 rounded p-0.5 text-zinc-400 hover:bg-red-900/50 hover:text-red-400 transition-colors"
               onClick={(e) => {
                 e.stopPropagation()
                 onChange(null)
@@ -87,10 +87,9 @@ export function DatePicker({
                   onChange(null)
                 }
               }}
-              className="ml-2 rounded p-0.5 hover:bg-red-900/50 hover:text-red-400 transition-colors"
             >
               <X className="h-4 w-4" />
-            </span>
+            </button>
           )}
         </Button>
       </PopoverTrigger>

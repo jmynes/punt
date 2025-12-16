@@ -32,7 +32,7 @@ describe('TicketForm', () => {
 
   it('should call onChange when title is updated', async () => {
     const user = userEvent.setup()
-    const { rerender } = render(
+    const { rerender: _rerender } = render(
       <TicketForm
         data={DEFAULT_TICKET_FORM}
         onChange={mockOnChange}

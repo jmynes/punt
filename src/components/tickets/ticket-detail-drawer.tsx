@@ -770,13 +770,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     </Button>
                   </div>
                 ) : ticket.estimate ? (
-                  <span
+                  <button
+                    type="button"
                     className="flex items-center gap-1 text-zinc-400 cursor-pointer hover:bg-amber-500/15 rounded px-2 py-1 -mx-2"
                     onClick={() => startEditing('estimate')}
                   >
                     <Clock className="h-3.5 w-3.5" />
                     {ticket.estimate}
-                  </span>
+                  </button>
                 ) : null}
               </div>
 
@@ -804,14 +805,15 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     </div>
                   </div>
                 ) : (
-                  <div
-                    className="rounded-md bg-zinc-900/50 p-4 text-sm text-zinc-300 whitespace-pre-wrap cursor-pointer hover:bg-amber-500/15 min-h-[60px]"
+                  <button
+                    type="button"
+                    className="w-full text-left rounded-md bg-zinc-900/50 p-4 text-sm text-zinc-300 whitespace-pre-wrap cursor-pointer hover:bg-amber-500/15 min-h-[60px]"
                     onClick={() => startEditing('description')}
                   >
                     {ticket.description || (
                       <span className="text-zinc-500 italic">No description provided</span>
                     )}
-                  </div>
+                  </button>
                 )}
               </div>
 

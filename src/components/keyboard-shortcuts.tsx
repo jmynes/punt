@@ -1,7 +1,7 @@
 'use client'
 
 import { Trash2, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -79,7 +79,7 @@ export function KeyboardShortcuts() {
   // Get all tickets flat from columns
   const allTickets = columns.flatMap((col) => col.tickets)
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = useCallback(() => {
     const selectedIds = useSelectionStore.getState().getSelectedIds()
     const tickets = allTickets.filter((t) => selectedIds.includes(t.id))
 
@@ -87,7 +87,7 @@ export function KeyboardShortcuts() {
 
     setTicketsToDelete(tickets)
     setShowDeleteConfirm(true)
-  }
+  }, [allTickets])
 
   const confirmDelete = () => {
     // Remove all tickets
