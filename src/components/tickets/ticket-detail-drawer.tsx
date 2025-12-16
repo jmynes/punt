@@ -797,7 +797,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       size="sm"
                       className="h-4 w-5 px-0 bg-zinc-900 border border-zinc-700 border-l-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-tr"
                       onClick={() => {
-                        const currentValue = ticket.storyPoints ?? 0
+                        const currentValue = tempStoryPoints ?? 0
                         const newValue = currentValue + 1
                         handleChange('storyPoints', newValue)
                       }}
@@ -809,7 +809,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       size="sm"
                       className="h-4 w-5 px-0 bg-zinc-900 border border-zinc-700 border-l-0 border-t-0 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 rounded-none rounded-br"
                       onClick={() => {
-                        const currentValue = ticket.storyPoints ?? 0
+                        const currentValue = tempStoryPoints ?? 0
                         const newValue = Math.max(0, currentValue - 1)
                         handleChange('storyPoints', newValue)
                       }}
