@@ -26,12 +26,17 @@ import { KanbanColumn } from './kanban-column'
 
 interface KanbanBoardProps {
   projectKey: string
+  projectId: string
 }
 
-export function KanbanBoard({ projectKey }: KanbanBoardProps) {
-  const { columns, moveTicket, moveTickets, reorderTicket, reorderTickets, searchQuery } =
+export function KanbanBoard({ projectKey, projectId }: KanbanBoardProps) {
+  const { getColumns, moveTicket, moveTickets, reorderTicket, reorderTickets, getSearchQuery } =
     useBoardStore()
   const { setCreateTicketOpen } = useUIStore()
+
+  // Get columns and search query for this project
+  const columns = getColumns(projectId)
+  const searchQuery = getSearchQuery(projectId)
 
   // Drag state - only for visual feedback, no store updates during drag
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
@@ -217,24 +222,24 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
       // Apply the move NOW (only on drop)
       if (isSingleDrag) {
         if (isSameColumn) {
-          reorderTicket(targetColumnId, draggedIds[0], insertIndex)
+          reorderTicket(projectId, targetColumnId, draggedIds[0], insertIndex)
         } else {
-          moveTicket(draggedIds[0], sourceColumn.id, targetColumnId, insertIndex)
+          moveTicket(projectId, draggedIds[0], sourceColumn.id, targetColumnId, insertIndex)
         }
       } else {
         const allFromSameColumn = draggedIds.every((id) =>
           sourceColumn.tickets.some((t) => t.id === id),
         )
         if (allFromSameColumn && isSameColumn) {
-          reorderTickets(targetColumnId, draggedIds, insertIndex)
+          reorderTickets(projectId, targetColumnId, draggedIds, insertIndex)
         } else {
-          moveTickets(draggedIds, targetColumnId, insertIndex)
+          moveTickets(projectId, draggedIds, targetColumnId, insertIndex)
         }
       }
 
       // Check for cross-column moves for undo/notification
       if (!isSameColumn) {
-        const afterColumns = useBoardStore.getState().columns
+        const afterColumns = useBoardStore.getState().getColumns(projectId)
         const afterSnapshot = afterColumns.map((col) => ({
           ...col,
           tickets: col.tickets.map((t) => ({ ...t })),
@@ -288,8 +293,8 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
           description: toastDescription,
           duration: 5000,
           showUndoButtons: showUndo,
-          onUndo: () => useBoardStore.getState().setColumns(snapshot),
-          onRedo: () => useBoardStore.getState().setColumns(afterSnapshot),
+          onUndo: () => useBoardStore.getState().setColumns(projectId, snapshot),
+          onRedo: () => useBoardStore.getState().setColumns(projectId, afterSnapshot),
           undoneTitle: 'Move undone',
           redoneTitle: toastTitle,
           redoneDescription: toastDescription,
@@ -310,7 +315,7 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
         useSelectionStore.getState().clearSelection()
       }
     },
-    [insertPosition, moveTicket, moveTickets, projectKey, reorderTicket, reorderTickets],
+    [insertPosition, moveTicket, moveTickets, projectId, projectKey, reorderTicket, reorderTickets],
   )
 
   const handleBoardClick = useCallback((e: React.MouseEvent) => {

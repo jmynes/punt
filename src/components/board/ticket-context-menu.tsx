@@ -46,7 +46,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const [coords, setCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const menuRef = useRef<HTMLDivElement | null>(null)
 
-  const columns = useBoardStore((s) => s.columns)
+  const { getColumns } = useBoardStore()
+  const { activeProjectId } = useUIStore()
+  const projectId = activeProjectId || '1'
+  const columns = getColumns(projectId)
   const boardState = useBoardStore()
   const board = (useBoardStore as typeof useBoardStore & { getState?: () => ReturnType<typeof useBoardStore> }).getState?.() ?? boardState
   const undoStore = (useUndoStore as typeof useUndoStore & { getState?: () => ReturnType<typeof useUndoStore> }).getState?.() ?? useUndoStore()
@@ -120,7 +123,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const getIds = selectionApi.getSelectedIds || (() => [])
     copySelected()
     const ids = getIds()
-    const ticketKeys = formatTicketIds(board.columns, ids)
+    const ticketKeys = formatTicketIds(columns, ids)
     const count = ids.length
     toast.success(count === 1 ? 'Ticket copied' : `${count} tickets copied`, {
       description: ticketKeys.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
@@ -139,7 +142,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
     const ticketsToPaste: Array<{ ticket: TicketWithRelations; columnId: string }> = []
     for (const id of copiedIds) {
-      for (const column of board.columns) {
+      for (const column of columns) {
         const t = column.tickets.find((tk: TicketWithRelations) => tk.id === id)
         if (t) {
           ticketsToPaste.push({ ticket: t, columnId: column.id })
@@ -152,7 +155,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const newTickets: Array<{ ticket: TicketWithRelations; columnId: string }> = []
     const getNext = board.getNextTicketNumber || (() => Date.now())
     const addTicket = board.addTicket || (() => {})
-    let nextNumber = getNext()
+    let nextNumber = getNext(projectId)
 
     for (const { ticket: t, columnId } of ticketsToPaste) {
       const newTicket: TicketWithRelations = {
@@ -164,7 +167,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         updatedAt: new Date(),
       }
       newTickets.push({ ticket: newTicket, columnId })
-      addTicket(columnId, newTicket)
+      addTicket(projectId, columnId, newTicket)
     }
 
     const uiState = useUIStore.getState ? useUIStore.getState() : uiStore
@@ -179,10 +182,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       duration: 5000,
       showUndoButtons: showUndo,
       onUndo: () => {
-        for (const { ticket: t } of newTickets) removeTicket(t.id)
+        for (const { ticket: t } of newTickets) removeTicket(projectId, t.id)
       },
       onRedo: () => {
-        for (const { ticket: t, columnId } of newTickets) addTicketAgain(columnId, t)
+        for (const { ticket: t, columnId } of newTickets) addTicketAgain(projectId, columnId, t)
       },
       undoneTitle: 'Paste undone',
       redoneTitle: 'Paste redone',
@@ -198,34 +201,34 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   }
 
   const doSendTo = (toColumnId: string) => {
-    const column = board.columns.find((c: ColumnWithTickets) => c.id === toColumnId)
+    const column = columns.find((c: ColumnWithTickets) => c.id === toColumnId)
     if (!column) return
     const toOrder = column.tickets.length
     const moveTickets = board.moveTickets || (() => {})
     const moveTicket = board.moveTicket || (() => {})
 
     const movableIds = selectedIds.filter((id: string) => {
-      const current = board.columns
+      const current = columns
         .flatMap((c: ColumnWithTickets) => c.tickets)
         .find((t: TicketWithRelations) => t.id === id)
       return current && current.columnId !== toColumnId
     })
     if (movableIds.length === 0) return
 
-    const beforeColumns = board.columns.map((col: ColumnWithTickets) => ({
+    const beforeColumns = columns.map((col: ColumnWithTickets) => ({
       ...col,
       tickets: col.tickets.map((t) => ({ ...t })),
     }))
 
     if (movableIds.length > 1) {
-      moveTickets(movableIds, toColumnId, toOrder)
+      moveTickets(projectId, movableIds, toColumnId, toOrder)
     } else {
       const from = ticket.columnId
-      moveTicket(movableIds[0], from, toColumnId, toOrder)
+      moveTicket(projectId, movableIds[0], from, toColumnId, toOrder)
     }
 
     const boardStateAfter = useBoardStore.getState ? useBoardStore.getState() : board
-    const afterColumns = boardStateAfter.columns.map((col: ColumnWithTickets) => ({
+    const afterColumns = boardStateAfter.getColumns(projectId).map((col: ColumnWithTickets) => ({
       ...col,
       tickets: col.tickets.map((t: TicketWithRelations) => ({ ...t })),
     }))
@@ -281,10 +284,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       duration: 3000,
       showUndoButtons: showUndo,
       onUndo: () => {
-        boardStateMove.setColumns(beforeColumns)
+        boardStateMove.setColumns(projectId, beforeColumns)
       },
       onRedo: () => {
-        boardStateMove.setColumns(afterColumns)
+        boardStateMove.setColumns(projectId, afterColumns)
       },
       undoneTitle: 'Move undone',
       redoneTitle: toastTitle,
@@ -300,7 +303,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const doDelete = () => {
     const ticketsToDelete: TicketWithRelations[] = []
-    for (const col of board.columns) {
+    for (const col of columns) {
       for (const t of col.tickets) {
         if (selectedIds.includes(t.id)) ticketsToDelete.push(t)
       }
@@ -324,18 +327,18 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
       []
     for (const id of selectedIds) {
-      const current = board.columns
+      const current = columns
         .flatMap((c: ColumnWithTickets) => c.tickets)
         .find((t: TicketWithRelations) => t.id === id)
       if (!current || current.priority === priority) continue
       const after = { ...current, priority }
       updates.push({ ticketId: id, before: current, after })
-      updateTicket(id, { priority })
+      updateTicket(projectId, id, { priority })
     }
     if (updates.length === 0) return
 
     const ticketKeys = formatTicketIds(
-      board.columns,
+      columns,
       updates.map((u) => u.ticketId),
     )
 
@@ -356,7 +359,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
       []
     for (const id of selectedIds) {
-      const current = board.columns
+      const current = columns
         .flatMap((c: ColumnWithTickets) => c.tickets)
         .find((t: TicketWithRelations) => t.id === id)
       if (!current) continue
@@ -368,12 +371,12 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         assigneeId: user?.id ?? null,
       }
       updates.push({ ticketId: id, before: current, after })
-      updateTicket(id, { assignee: user ?? null, assigneeId: user?.id ?? null })
+      updateTicket(projectId, id, { assignee: user ?? null, assigneeId: user?.id ?? null })
     }
     if (updates.length === 0) return
 
     const ticketKeys = formatTicketIds(
-      board.columns,
+      columns,
       updates.map((u) => u.ticketId),
     )
 
@@ -408,7 +411,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const ticketKeys = ticketsToDelete.map((t) => formatTicketId(t))
 
     for (const t of ticketsToDelete) {
-      removeTicket(t.id)
+      removeTicket(projectId, t.id)
     }
     selectionApi.clearSelection?.()
 
@@ -424,13 +427,13 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       showUndoButtons: showUndo,
       onUndo: () => {
         for (const { ticket, columnId } of deletedBatch) {
-          addTicket(columnId, ticket)
+          addTicket(projectId, columnId, ticket)
         }
         useUndoStore.getState?.()?.removeEntry?.(toastId)
       },
       onRedo: () => {
         for (const { ticket } of deletedBatch) {
-          removeTicket(ticket.id)
+          removeTicket(projectId, ticket.id)
         }
       },
       undoneTitle:

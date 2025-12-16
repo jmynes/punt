@@ -3,14 +3,16 @@ import { persist } from 'zustand/middleware'
 import { logger } from '@/lib/logger'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
-// Default columns for a new project
-const DEFAULT_COLUMNS: ColumnWithTickets[] = [
-  { id: 'col-1', name: 'Backlog', order: 0, projectId: 'project-1', tickets: [] },
-  { id: 'col-2', name: 'To Do', order: 1, projectId: 'project-1', tickets: [] },
-  { id: 'col-3', name: 'In Progress', order: 2, projectId: 'project-1', tickets: [] },
-  { id: 'col-4', name: 'In Review', order: 3, projectId: 'project-1', tickets: [] },
-  { id: 'col-5', name: 'Done', order: 4, projectId: 'project-1', tickets: [] },
-]
+// Helper to create default columns for a project
+function createDefaultColumns(projectId: string): ColumnWithTickets[] {
+  return [
+    { id: `${projectId}-col-1`, name: 'Backlog', order: 0, projectId, tickets: [] },
+    { id: `${projectId}-col-2`, name: 'To Do', order: 1, projectId, tickets: [] },
+    { id: `${projectId}-col-3`, name: 'In Progress', order: 2, projectId, tickets: [] },
+    { id: `${projectId}-col-4`, name: 'In Review', order: 3, projectId, tickets: [] },
+    { id: `${projectId}-col-5`, name: 'Done', order: 4, projectId, tickets: [] },
+  ]
+}
 
 // Helper to revive Date objects from JSON
 function reviveDates(obj: unknown): unknown {
@@ -36,69 +38,94 @@ function reviveDates(obj: unknown): unknown {
 }
 
 interface BoardState {
-  columns: ColumnWithTickets[]
-  setColumns: (columns: ColumnWithTickets[]) => void
+  // Store columns per project: Record<projectId, ColumnWithTickets[]>
+  projects: Record<string, ColumnWithTickets[]>
+  
+  // Get columns for a specific project (with default fallback)
+  getColumns: (projectId: string) => ColumnWithTickets[]
+  setColumns: (projectId: string, columns: ColumnWithTickets[]) => void
 
   // Hydration state
   _hasHydrated: boolean
   setHasHydrated: (value: boolean) => void
 
-  // Search/filter
-  searchQuery: string
-  setSearchQuery: (query: string) => void
+  // Search/filter (per project)
+  searchQueries: Record<string, string>
+  getSearchQuery: (projectId: string) => string
+  setSearchQuery: (projectId: string, query: string) => void
 
-  // Get the next ticket number (max + 1)
-  getNextTicketNumber: () => number
+  // Get the next ticket number (max + 1) for a project
+  getNextTicketNumber: (projectId: string) => number
 
   // Optimistic updates for drag and drop
-  moveTicket: (ticketId: string, fromColumnId: string, toColumnId: string, newOrder: number) => void
+  moveTicket: (projectId: string, ticketId: string, fromColumnId: string, toColumnId: string, newOrder: number) => void
 
   // Move multiple tickets to a column (from any source columns)
-  moveTickets: (ticketIds: string[], toColumnId: string, newOrder: number) => void
+  moveTickets: (projectId: string, ticketIds: string[], toColumnId: string, newOrder: number) => void
 
   // Reorder ticket within the same column
-  reorderTicket: (columnId: string, ticketId: string, newIndex: number) => void
+  reorderTicket: (projectId: string, columnId: string, ticketId: string, newIndex: number) => void
 
   // Reorder multiple tickets within the same column (for multi-select drag)
-  reorderTickets: (columnId: string, ticketIds: string[], targetIndex: number) => void
+  reorderTickets: (projectId: string, columnId: string, ticketIds: string[], targetIndex: number) => void
 
   // Update a single ticket
-  updateTicket: (ticketId: string, updates: Partial<TicketWithRelations>) => void
+  updateTicket: (projectId: string, ticketId: string, updates: Partial<TicketWithRelations>) => void
 
   // Add a new ticket
-  addTicket: (columnId: string, ticket: TicketWithRelations) => void
+  addTicket: (projectId: string, columnId: string, ticket: TicketWithRelations) => void
 
   // Remove a ticket
-  removeTicket: (ticketId: string) => void
+  removeTicket: (projectId: string, ticketId: string) => void
 }
 
 export const useBoardStore = create<BoardState>()(
   persist(
     (set, get) => ({
-      columns: DEFAULT_COLUMNS,
-      setColumns: (columns) => set({ columns }),
+      projects: {},
+      
+      getColumns: (projectId: string) => {
+        const state = get()
+        if (!state.projects[projectId]) {
+          return createDefaultColumns(projectId)
+        }
+        return state.projects[projectId]
+      },
+      
+      setColumns: (projectId: string, columns: ColumnWithTickets[]) => 
+        set((state) => ({
+          projects: { ...state.projects, [projectId]: columns },
+        })),
 
       // Hydration state
       _hasHydrated: false,
       setHasHydrated: (value) => set({ _hasHydrated: value }),
 
-      // Search/filter
-      searchQuery: '',
-      setSearchQuery: (query) => set({ searchQuery: query }),
+      // Search/filter (per project)
+      searchQueries: {},
+      getSearchQuery: (projectId: string) => {
+        return get().searchQueries[projectId] || ''
+      },
+      setSearchQuery: (projectId: string, query: string) =>
+        set((state) => ({
+          searchQueries: { ...state.searchQueries, [projectId]: query },
+        })),
 
-      // Get the next ticket number
-      getNextTicketNumber: () => {
-        const allTickets = get().columns.flatMap((col) => col.tickets)
+      // Get the next ticket number for a project
+      getNextTicketNumber: (projectId: string) => {
+        const columns = get().getColumns(projectId)
+        const allTickets = columns.flatMap((col) => col.tickets)
         if (allTickets.length === 0) return 1
         return Math.max(...allTickets.map((t) => t.number)) + 1
       },
 
-      moveTicket: (ticketId, fromColumnId, toColumnId, newOrder) =>
+      moveTicket: (projectId, ticketId, fromColumnId, toColumnId, newOrder) =>
         set((state) => {
-          logger.debug('Moving ticket', { ticketId, fromColumnId, toColumnId, newOrder })
+          logger.debug('Moving ticket', { projectId, ticketId, fromColumnId, toColumnId, newOrder })
           const _startTime = performance.now()
 
-          const newColumns = state.columns.map((column) => {
+          const columns = state.getColumns(projectId)
+          const newColumns = columns.map((column) => {
             // Remove from source column
             if (column.id === fromColumnId) {
               return {
@@ -109,7 +136,7 @@ export const useBoardStore = create<BoardState>()(
 
             // Add to target column
             if (column.id === toColumnId) {
-              const ticket = state.columns
+              const ticket = columns
                 .find((c) => c.id === fromColumnId)
                 ?.tickets.find((t) => t.id === ticketId)
 
@@ -134,12 +161,15 @@ export const useBoardStore = create<BoardState>()(
             return column
           })
 
-          return { columns: newColumns }
+          return {
+            projects: { ...state.projects, [projectId]: newColumns },
+          }
         }),
 
-      moveTickets: (ticketIds, toColumnId, newOrder) =>
+      moveTickets: (projectId, ticketIds, toColumnId, newOrder) =>
         set((state) => {
           logger.debug('Moving multiple tickets', {
+            projectId,
             ticketIds,
             toColumnId,
             newOrder,
@@ -147,6 +177,8 @@ export const useBoardStore = create<BoardState>()(
           })
           const startTime = performance.now()
 
+          const columns = state.getColumns(projectId)
+          
           // Collect all tickets being moved from ALL columns
           // Sort by: 1) column order (leftmost first), 2) ticket order within column
           const ticketsToMove: Array<{
@@ -154,7 +186,7 @@ export const useBoardStore = create<BoardState>()(
             columnOrder: number
             ticketOrder: number
           }> = []
-          for (const column of state.columns) {
+          for (const column of columns) {
             for (const ticket of column.tickets) {
               if (ticketIds.includes(ticket.id)) {
                 const ticketIndex = column.tickets.findIndex((t) => t.id === ticket.id)
@@ -180,7 +212,7 @@ export const useBoardStore = create<BoardState>()(
 
           if (sortedTickets.length === 0) return state
 
-          const newColumns = state.columns.map((column) => {
+          const newColumns = columns.map((column) => {
             // Remove selected tickets from any column they're in
             const remainingTickets = column.tickets.filter((t) => !ticketIds.includes(t.id))
 
@@ -210,13 +242,16 @@ export const useBoardStore = create<BoardState>()(
 
           const duration = performance.now() - startTime
           logger.performance('moveTickets', duration, { count: ticketIds.length, toColumnId })
-          return { columns: newColumns }
+          return {
+            projects: { ...state.projects, [projectId]: newColumns },
+          }
         }),
 
-      reorderTicket: (columnId, ticketId, newIndex) =>
+      reorderTicket: (projectId, columnId, ticketId, newIndex) =>
         set((state) => {
-          logger.debug('Reordering ticket', { columnId, ticketId, newIndex })
-          const newColumns = state.columns.map((column) => {
+          logger.debug('Reordering ticket', { projectId, columnId, ticketId, newIndex })
+          const columns = state.getColumns(projectId)
+          const newColumns = columns.map((column) => {
             if (column.id !== columnId) return column
 
             const tickets = [...column.tickets]
@@ -246,18 +281,22 @@ export const useBoardStore = create<BoardState>()(
             }
           })
 
-          return { columns: newColumns }
+          return {
+            projects: { ...state.projects, [projectId]: newColumns },
+          }
         }),
 
-      reorderTickets: (columnId, ticketIds, targetIndex) =>
+      reorderTickets: (projectId, columnId, ticketIds, targetIndex) =>
         set((state) => {
           logger.debug('Reordering multiple tickets', {
+            projectId,
             columnId,
             ticketIds,
             targetIndex,
             count: ticketIds.length,
           })
-          const newColumns = state.columns.map((column) => {
+          const columns = state.getColumns(projectId)
+          const newColumns = columns.map((column) => {
             if (column.id !== columnId) return column
 
             // Get all tickets not being moved
@@ -293,24 +332,29 @@ export const useBoardStore = create<BoardState>()(
             }
           })
 
-          return { columns: newColumns }
+          return {
+            projects: { ...state.projects, [projectId]: newColumns },
+          }
         }),
 
-      updateTicket: (ticketId, updates) =>
+      updateTicket: (projectId, ticketId, updates) =>
         set((state) => {
-          logger.debug('Updating ticket', { ticketId, updates })
+          logger.debug('Updating ticket', { projectId, ticketId, updates })
+
+          const columns = state.getColumns(projectId)
 
           // Check if this is a column change (status change)
           if (updates.columnId) {
-            const currentColumn = state.columns.find((col) =>
+            const currentColumn = columns.find((col) =>
               col.tickets.some((t) => t.id === ticketId),
             )
 
             if (currentColumn && currentColumn.id !== updates.columnId) {
               // This is a column change - move the ticket
-              const targetColumn = state.columns.find((col) => col.id === updates.columnId)
+              const targetColumn = columns.find((col) => col.id === updates.columnId)
               if (!targetColumn) {
                 logger.warn('Target column not found for ticket move', {
+                  projectId,
                   ticketId,
                   targetColumnId: updates.columnId,
                 })
@@ -320,6 +364,7 @@ export const useBoardStore = create<BoardState>()(
               const ticket = currentColumn.tickets.find((t) => t.id === ticketId)
               if (!ticket) {
                 logger.warn('Ticket not found in source column', {
+                  projectId,
                   ticketId,
                   sourceColumnId: currentColumn.id,
                 })
@@ -328,70 +373,83 @@ export const useBoardStore = create<BoardState>()(
 
               const updatedTicket = { ...ticket, ...updates }
 
-              return {
-                columns: state.columns.map((column) => {
-                  if (column.id === currentColumn.id) {
-                    // Remove from source column
-                    return {
-                      ...column,
-                      tickets: column.tickets.filter((t) => t.id !== ticketId),
-                    }
-                  } else if (column.id === updates.columnId) {
-                    // Add to target column at the end
-                    return {
-                      ...column,
-                      tickets: [...column.tickets, updatedTicket],
-                    }
+              const newColumns = columns.map((column) => {
+                if (column.id === currentColumn.id) {
+                  // Remove from source column
+                  return {
+                    ...column,
+                    tickets: column.tickets.filter((t) => t.id !== ticketId),
                   }
-                  return column
-                }),
+                } else if (column.id === updates.columnId) {
+                  // Add to target column at the end
+                  return {
+                    ...column,
+                    tickets: [...column.tickets, updatedTicket],
+                  }
+                }
+                return column
+              })
+
+              return {
+                projects: { ...state.projects, [projectId]: newColumns },
               }
             }
           }
 
           // Regular update (no column change)
-          return {
-            columns: state.columns.map((column) => ({
-              ...column,
-              tickets: column.tickets.map((ticket) =>
-                ticket.id === ticketId ? { ...ticket, ...updates } : ticket,
-              ),
-            })),
-          }
-        }),
-
-      addTicket: (columnId, ticket) =>
-        set((state) => {
-          logger.info('Adding ticket', { ticketId: ticket.id, columnId, title: ticket.title })
-          return {
-            columns: state.columns.map((column) =>
-              column.id === columnId ? { ...column, tickets: [...column.tickets, ticket] } : column,
+          const newColumns = columns.map((column) => ({
+            ...column,
+            tickets: column.tickets.map((ticket) =>
+              ticket.id === ticketId ? { ...ticket, ...updates } : ticket,
             ),
+          }))
+
+          return {
+            projects: { ...state.projects, [projectId]: newColumns },
           }
         }),
 
-      removeTicket: (ticketId) =>
+      addTicket: (projectId, columnId, ticket) =>
         set((state) => {
-          logger.info('Removing ticket', { ticketId })
+          logger.info('Adding ticket', { projectId, ticketId: ticket.id, columnId, title: ticket.title })
+          const columns = state.getColumns(projectId)
+          const newColumns = columns.map((column) =>
+            column.id === columnId ? { ...column, tickets: [...column.tickets, ticket] } : column,
+          )
           return {
-            columns: state.columns.map((column) => ({
-              ...column,
-              tickets: column.tickets.filter((t) => t.id !== ticketId),
-            })),
+            projects: { ...state.projects, [projectId]: newColumns },
+          }
+        }),
+
+      removeTicket: (projectId, ticketId) =>
+        set((state) => {
+          logger.info('Removing ticket', { projectId, ticketId })
+          const columns = state.getColumns(projectId)
+          const newColumns = columns.map((column) => ({
+            ...column,
+            tickets: column.tickets.filter((t) => t.id !== ticketId),
+          }))
+          return {
+            projects: { ...state.projects, [projectId]: newColumns },
           }
         }),
     }),
     {
       name: 'punt-board-storage',
-      // Don't persist searchQuery or hydration state
-      partialize: (state) => ({ columns: state.columns }),
+      // Don't persist searchQueries or hydration state
+      partialize: (state) => ({ projects: state.projects }),
       // Revive Date objects when loading from storage and mark as hydrated
       onRehydrateStorage: () => (state) => {
         if (state) {
           logger.debug('Rehydrating board store from localStorage')
-          state.columns = reviveDates(state.columns) as ColumnWithTickets[]
+          // Revive dates in all projects
+          const revivedProjects: Record<string, ColumnWithTickets[]> = {}
+          for (const [projectId, columns] of Object.entries(state.projects)) {
+            revivedProjects[projectId] = reviveDates(columns) as ColumnWithTickets[]
+          }
+          state.projects = revivedProjects
           state.setHasHydrated(true)
-          logger.info('Board store rehydrated', { columnCount: state.columns.length })
+          logger.info('Board store rehydrated', { projectCount: Object.keys(state.projects).length })
         }
       },
     },

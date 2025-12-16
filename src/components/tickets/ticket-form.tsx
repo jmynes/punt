@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { getStatusIcon } from '@/lib/status-icons'
 import { useBoardStore } from '@/stores/board-store'
+import { useUIStore } from '@/stores/ui-store'
 import {
   DEFAULT_TICKET_FORM,
   type IssueType,
@@ -54,7 +55,10 @@ export function TicketForm({
 }: TicketFormProps) {
   const currentUser = useCurrentUser()
   const members = useProjectMembers()
-  const boardColumns = useBoardStore((s) => s.columns)
+  const { getColumns } = useBoardStore()
+  const { activeProjectId } = useUIStore()
+  const projectId = activeProjectId || '1'
+  const boardColumns = getColumns(projectId)
 
   const updateField = <K extends keyof TicketFormData>(field: K, value: TicketFormData[K]) => {
     onChange({ ...data, [field]: value })

@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
+import { useUIStore } from '@/stores/ui-store'
 
 interface DatePickerProps {
   value: Date | null
@@ -33,7 +34,10 @@ export function DatePicker({
       return fromYear // Use prop if provided
     }
 
-    const columns = useBoardStore.getState().columns
+    const { getColumns } = useBoardStore.getState()
+    const { activeProjectId } = useUIStore.getState()
+    const projectId = activeProjectId || '1'
+    const columns = getColumns(projectId)
     let earliestYear = Infinity // Start with infinity to find minimum
     let hasDueDates = false
 

@@ -106,13 +106,17 @@ const DEMO_PARENT_TICKETS: ParentTicketOption[] = [
 let ticketCounter = 200
 
 export function CreateTicketDialog() {
-  const { createTicketOpen, setCreateTicketOpen, prefillTicketData, clearPrefillData } =
+  const { createTicketOpen, setCreateTicketOpen, prefillTicketData, clearPrefillData, activeProjectId } =
     useUIStore()
-  const { columns, addTicket } = useBoardStore()
+  const { getColumns, getNextTicketNumber, addTicket } = useBoardStore()
   const currentUser = useCurrentUser()
   const members = useProjectMembers()
   const [formData, setFormData] = useState<TicketFormData>(DEFAULT_TICKET_FORM)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Get columns for the active project
+  const projectId = activeProjectId || '1' // Fallback to '1' if no project is active
+  const columns = getColumns(projectId)
 
   // Apply prefill data when dialog opens with clone data
   useEffect(() => {
@@ -151,7 +155,7 @@ export function CreateTicketDialog() {
 
     // Generate unique ID and ticket number
     const ticketId = `ticket-${Date.now()}`
-    const ticketNumber = ++ticketCounter
+    const ticketNumber = getNextTicketNumber(projectId)
 
     // Build the labels array from selected label IDs
     const selectedLabels = formData.labelIds
@@ -181,7 +185,7 @@ export function CreateTicketDialog() {
       fixVersion: formData.fixVersion || null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      projectId: 'project-1', // Demo project
+      projectId,
       columnId: targetColumn.id,
       assigneeId: formData.assigneeId,
       creatorId: currentUser.id,
@@ -202,7 +206,7 @@ export function CreateTicketDialog() {
     }
 
     // Add ticket to the board store
-    addTicket(targetColumn.id, newTicket)
+    addTicket(projectId, targetColumn.id, newTicket)
 
     // Show success toast
     toast.success('Ticket created', {
@@ -212,7 +216,7 @@ export function CreateTicketDialog() {
 
     setIsSubmitting(false)
     handleClose()
-  }, [formData, currentUser, members, columns, addTicket, handleClose])
+  }, [formData, currentUser, members, columns, addTicket, handleClose, projectId, getNextTicketNumber])
 
   const isValid = formData.title.trim().length > 0
 
