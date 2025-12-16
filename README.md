@@ -6,7 +6,9 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)
 
-## Features (current WIP)
+## Features
+
+### Core Functionality
 
 - 🗂 **Backlog + Kanban** — Jira-like backlog with filters/search/sort and a drag-and-drop board
 - 🖱 **Multi-select + bulk actions** — Move, assign, change priority, delete via keyboard or context menu
@@ -20,9 +22,24 @@
 - 🌙 **Dark UI** — Amber-accented dark theme
 - 🚀 **Fast** — Next.js (App Router + Turbopack) + React 19
 
+### Rich Text Editor
+
+- ✍️ **MDXEditor Integration** — Full-featured WYSIWYG markdown editor with live preview
+- 📝 **Rich Text Formatting** — Bold, italic, underline, strikethrough, subscript, superscript, highlight
+- 📋 **Lists** — Bullet lists, numbered lists, and checklists
+- 🔗 **Links & Images** — Insert hyperlinks and images with custom upload dialog
+- 📊 **Tables** — Insert and edit tables with column/row controls
+- 💻 **Code Blocks** — Syntax-highlighted code blocks with language selection (CodeMirror 6 with oneDark theme)
+- 📐 **Block Types** — Headings (H1-H6), quotes, paragraphs
+- ➖ **Thematic Breaks** — Horizontal rules
+- 👁️ **Multiple Views** — Switch between rich text, source (markdown), and diff views
+- 📱 **Responsive Toolbar** — Toolbar buttons automatically group into dropdowns on smaller screens
+- 🎨 **Dark Mode Theming** — All editor dialogs, popovers, and UI elements styled for dark mode
+- 🖼️ **Custom Image Upload** — Modern drag-and-drop image upload with preview and URL support
+
 ## Status & Limitations
 
-- Desktop-focused; **not yet mobile responsive**
+- Desktop-focused; **mobile responsive improvements in progress**
 - **No authentication** yet; intended for local/desktop use
 - API/infra still WIP; expect breaking changes
 
@@ -34,10 +51,12 @@
 
 | Category | Technology |
 |----------|------------|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 16 (App Router + Turbopack) |
 | Language | TypeScript |
 | Styling | Tailwind CSS |
 | Components | shadcn/ui + Radix UI |
+| Rich Text Editor | MDXEditor (Lexical-based) |
+| Code Editor | CodeMirror 6 (oneDark theme) |
 | Database | SQLite + Prisma |
 | State | Zustand + TanStack Query |
 | Drag & Drop | dnd-kit |
