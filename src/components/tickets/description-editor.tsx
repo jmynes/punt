@@ -18,11 +18,9 @@ import {
   thematicBreakPlugin,
   BoldItalicUnderlineToggles,
   CodeToggle,
-  ListsToggle,
   UndoRedo,
   CreateLink,
   InsertCodeBlock,
-  StrikeThroughSupSubToggles,
   HighlightToggle,
   InsertImage,
   InsertTable,
@@ -33,7 +31,9 @@ import '@mdxeditor/editor/style.css'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { CustomBlockTypeSelect } from './custom-block-type-select'
 import { CustomCodeMirrorEditor } from './custom-codemirror-editor'
-import { CustomDiffSourceToggleWrapper } from './custom-diff-source-toggle-wrapper'
+import { ResponsiveViewModeToggle } from './responsive-view-mode-toggle'
+import { ResponsiveStrikeSupSubToggle } from './responsive-strike-sup-sub-toggle'
+import { ResponsiveListsToggle } from './responsive-lists-toggle'
 
 interface DescriptionEditorProps {
   markdown: string
@@ -67,15 +67,15 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
   // Memoize toolbar contents to prevent re-creation
   const toolbarContents = useCallback(
     () => (
-      <CustomDiffSourceToggleWrapper options={['rich-text', 'source', 'diff']}>
+      <ResponsiveViewModeToggle options={['rich-text', 'source', 'diff']}>
         <UndoRedo />
         <Separator />
         <BoldItalicUnderlineToggles />
-        <StrikeThroughSupSubToggles />
+        <ResponsiveStrikeSupSubToggle />
         <HighlightToggle />
         <CodeToggle />
         <Separator />
-        <ListsToggle />
+        <ResponsiveListsToggle />
         <CustomBlockTypeSelect />
         <Separator />
         <InsertCodeBlock />
@@ -83,7 +83,7 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
         <InsertImage />
         <InsertTable />
         <InsertThematicBreak />
-      </CustomDiffSourceToggleWrapper>
+      </ResponsiveViewModeToggle>
     ),
     [],
   )
