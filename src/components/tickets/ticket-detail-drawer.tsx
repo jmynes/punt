@@ -2,11 +2,15 @@
 
 import { format } from 'date-fns'
 import {
+  Bug,
+  CheckSquare,
   ChevronDown,
   ChevronUp,
   Clock,
   Copy,
   Eye,
+  Layers,
+  Lightbulb,
   Link2,
   MessageSquare,
   MoreHorizontal,
@@ -14,7 +18,9 @@ import {
   Share2,
   Trash2,
   X,
+  Zap,
 } from 'lucide-react'
+import type * as React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertDialog,
@@ -80,6 +86,23 @@ import { FileUpload } from './file-upload'
 import { LabelSelect } from './label-select'
 import { ParentSelect } from './parent-select'
 import { UserSelect } from './user-select'
+
+// Type icons and colors (matching backlog filters)
+const typeIcons: Record<IssueType, React.ComponentType<{ className?: string }>> = {
+  epic: Zap,
+  story: Lightbulb,
+  task: CheckSquare,
+  bug: Bug,
+  subtask: Layers,
+}
+
+const typeColors: Record<IssueType, string> = {
+  epic: 'text-purple-400',
+  story: 'text-green-400',
+  task: 'text-blue-400',
+  bug: 'text-red-400',
+  subtask: 'text-cyan-400',
+}
 
 interface TicketDetailDrawerProps {
   ticket: TicketWithRelations | null
@@ -529,7 +552,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     <Sheet open={!!ticket} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="right"
-        className="w-full border-zinc-800 bg-zinc-950 p-0 sm:max-w-xl md:max-w-2xl"
+        className="w-full border-zinc-800 bg-zinc-950 p-0 sm:max-w-2xl md:max-w-3xl lg:max-w-4xl"
       >
         <div className="flex h-full flex-col overflow-hidden">
           {/* Header - pr-14 gives space for the close button */}
@@ -603,31 +626,33 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
               {/* Meta row */}
               <div className="flex flex-wrap items-center gap-4 text-sm">
-                <Select
-                  value={ticket.type}
-                  onValueChange={(value) => {
-                    const newType = value as IssueType
-                    handleImmediateChange('type', newType)
-                  }}
-                >
-                  <SelectTrigger className="w-24 h-8 bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
-                    {ISSUE_TYPES.map((type) => (
-                      <SelectItem
-                        key={type}
-                        value={type}
-                        className="focus:bg-zinc-800 focus:text-zinc-100"
-                      >
-                        <div className="flex items-center gap-2">
-                          <TypeBadge type={type} size="sm" />
-                          <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 shrink-0">
+                      <TypeBadge type={ticket.type} size="sm" />
+                      <span className="ml-2 capitalize">{ticket.type}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="bg-zinc-900 border-zinc-700">
+                    {ISSUE_TYPES.map((type) => {
+                      const TypeIcon = typeIcons[type]
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={type}
+                          checked={ticket.type === type}
+                          onCheckedChange={() => {
+                            const newType = type as IssueType
+                            handleImmediateChange('type', newType)
+                          }}
+                          className="focus:bg-zinc-800 focus:text-zinc-100"
+                        >
+                          <TypeIcon className={`mr-2 h-4 w-4 ${typeColors[type]}`} />
+                          <span className="capitalize">{type}</span>
+                        </DropdownMenuCheckboxItem>
+                      )
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 <div className="flex focus-within:ring-2 focus-within:ring-amber-500 focus-within:ring-offset-0 rounded-md overflow-hidden">
                   <Input
