@@ -2,7 +2,7 @@
 
 import { Code, FileCode } from 'lucide-react'
 import { useCellValues } from '@mdxeditor/editor'
-import { codeBlockLanguages$ } from '@mdxeditor/editor'
+import { codeBlockLanguages$, $isCodeBlockNode, type CodeBlockNode } from '@mdxeditor/editor'
 import { editorInFocus$, activeEditor$ } from '@mdxeditor/editor'
 import {
   DropdownMenu,
@@ -23,11 +23,11 @@ export function CustomCodeLanguageSelect() {
   )
 
   // Only show when editing a code block
-  if (!editorInFocus?.rootNode || editorInFocus.rootNode.getType() !== 'codeblock') {
+  if (!editorInFocus?.rootNode || !$isCodeBlockNode(editorInFocus.rootNode)) {
     return null
   }
 
-  const codeBlockNode = editorInFocus.rootNode
+  const codeBlockNode = editorInFocus.rootNode as CodeBlockNode
   let currentLanguage = codeBlockNode.getLanguage() || ''
   if (currentLanguage === '') {
     currentLanguage = EMPTY_VALUE
