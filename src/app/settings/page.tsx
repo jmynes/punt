@@ -3,19 +3,27 @@
 import { Settings } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
 
 export default function SettingsPage() {
   const {
     openSinglePastedTicket,
     setOpenSinglePastedTicket,
+    ticketDateMaxYearMode,
+    setTicketDateMaxYearMode,
     ticketDateMaxYear,
     setTicketDateMaxYear,
     autoSaveOnDrawerClose,
     setAutoSaveOnDrawerClose,
   } = useSettingsStore()
+
+  const defaultMaxYear = new Date().getFullYear() + 5
+  const currentMaxYear = ticketDateMaxYearMode === 'default' ? defaultMaxYear : ticketDateMaxYear
 
   return (
     <div className="h-full overflow-auto p-6">
@@ -83,22 +91,73 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="date-max-year" className="text-zinc-300">
-                Maximum year
-              </Label>
-              <p className="text-sm text-zinc-500">
-                The maximum year available in date pickers (default: current year + 5)
-              </p>
-              <input
-                id="date-max-year"
-                type="number"
-                min={new Date().getFullYear()}
-                max={new Date().getFullYear() + 100}
-                value={ticketDateMaxYear}
-                onChange={(e) => setTicketDateMaxYear(Number.parseInt(e.target.value, 10))}
-                className="w-32 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-              />
+            <div className="space-y-3">
+              <Label className="text-zinc-300">Maximum year</Label>
+              <RadioGroup
+                value={ticketDateMaxYearMode}
+                onValueChange={(value) => {
+                  setTicketDateMaxYearMode(value as 'default' | 'custom')
+                  if (value === 'custom' && ticketDateMaxYear === defaultMaxYear) {
+                    // Prefill with default value when switching to custom
+                    setTicketDateMaxYear(defaultMaxYear)
+                  }
+                }}
+                className="space-y-3"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="default"
+                    id="date-max-year-default"
+                    className="border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                  />
+                  <Label
+                    htmlFor="date-max-year-default"
+                    className="text-sm text-zinc-300 cursor-pointer font-normal"
+                  >
+                    Default (current year + 5, i.e. {defaultMaxYear})
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="custom"
+                    id="date-max-year-custom"
+                    className="border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                  />
+                  <Label
+                    htmlFor="date-max-year-custom"
+                    className="text-sm text-zinc-300 cursor-pointer font-normal"
+                  >
+                    Custom
+                  </Label>
+                  <div
+                    onClick={() => {
+                      if (ticketDateMaxYearMode !== 'custom') {
+                        setTicketDateMaxYearMode('custom')
+                        if (ticketDateMaxYear === defaultMaxYear) {
+                          setTicketDateMaxYear(defaultMaxYear)
+                        }
+                      }
+                    }}
+                    className={cn(
+                      ticketDateMaxYearMode !== 'custom' && 'cursor-pointer',
+                    )}
+                  >
+                    <Input
+                      id="date-max-year"
+                      type="number"
+                      min={new Date().getFullYear()}
+                      max={new Date().getFullYear() + 100}
+                      value={ticketDateMaxYear}
+                      onChange={(e) => setTicketDateMaxYear(Number.parseInt(e.target.value, 10))}
+                      disabled={ticketDateMaxYearMode !== 'custom'}
+                      className={cn(
+                        'w-32 border-zinc-700 bg-zinc-900 text-zinc-100 focus:border-amber-500',
+                        ticketDateMaxYearMode !== 'custom' && 'opacity-50',
+                      )}
+                    />
+                  </div>
+                </div>
+              </RadioGroup>
             </div>
           </CardContent>
         </Card>

@@ -56,9 +56,12 @@ export function DatePicker({
 
   // Get max year based on context
   const calendarMaxYear = useMemo(() => {
-    return context === 'ticket-form'
-      ? useSettingsStore.getState().ticketDateMaxYear
-      : new Date().getFullYear() + 1
+    if (context === 'ticket-form') {
+      const { ticketDateMaxYearMode, ticketDateMaxYear } = useSettingsStore.getState()
+      const defaultMaxYear = new Date().getFullYear() + 5
+      return ticketDateMaxYearMode === 'default' ? defaultMaxYear : ticketDateMaxYear
+    }
+    return new Date().getFullYear() + 1
   }, [context])
 
   return (
