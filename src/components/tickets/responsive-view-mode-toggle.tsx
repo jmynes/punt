@@ -57,8 +57,7 @@ export function ResponsiveViewModeToggle({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-8 border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
-              {iconComponentFor(viewMode === 'rich-text' ? 'rich_text' : viewMode === 'diff' ? 'difference' : 'markdown')}
-              <span className="ml-2">{viewModeLabels[viewMode]}</span>
+              <span>{viewModeLabels[viewMode]}</span>
               <ChevronDown className="ml-1 h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>
