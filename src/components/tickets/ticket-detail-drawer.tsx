@@ -531,9 +531,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         side="right"
         className="w-full border-zinc-800 bg-zinc-950 p-0 sm:max-w-xl md:max-w-2xl"
       >
-        <div className="flex h-full flex-col">
+        <div className="flex h-full flex-col overflow-hidden">
           {/* Header - pr-14 gives space for the close button */}
-          <SheetHeader className="border-b border-zinc-800 px-6 pr-14 py-4">
+          <SheetHeader className="border-b border-zinc-800 px-6 pr-14 py-4 flex-shrink-0">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 <TypeBadge type={ticket.type} size="md" />
@@ -558,7 +558,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
           </SheetHeader>
 
           {/* Content */}
-          <ScrollArea className="flex-1 h-full">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-6 p-6">
               {/* Title */}
               <div className="space-y-2">
@@ -1021,18 +1021,15 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   </div>
                 </div>
               </div>
-
-              {/* Timestamps */}
-              <div className="pt-4 border-t border-zinc-800 text-xs text-zinc-500 space-y-1">
-                <p>Created {format(ticket.createdAt, "MMM d, yyyy 'at' h:mm a")}</p>
-                <p>Updated {format(ticket.updatedAt, "MMM d, yyyy 'at' h:mm a")}</p>
-              </div>
             </div>
           </ScrollArea>
 
           {/* Footer actions */}
-          <div className="flex items-center justify-between border-t border-zinc-800 px-6 py-4">
-            <div />
+          <div className="flex items-center justify-between border-t border-zinc-800 px-6 py-4 flex-shrink-0">
+            <div className="text-xs text-zinc-500 space-y-1">
+              <p>Created {format(ticket.createdAt, "MMM d, yyyy 'at' h:mm a")}</p>
+              <p>Updated {format(ticket.updatedAt, "MMM d, yyyy 'at' h:mm a")}</p>
+            </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={handleClone}>
                 <Copy className="h-4 w-4 mr-1" />
