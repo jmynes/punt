@@ -244,11 +244,205 @@
   color: rgb(113 113 122) !important; /* zinc-500 */
 }
 
-/* Link dialog popover */
+/* Radix UI Popover Dark Mode Styling (similar to select dropdowns) */
+/* Popover content container - override Tailwind classes with maximum specificity */
+[data-radix-popover-content],
+[data-slot="popover-content"],
+[data-radix-popover-content].bg-popover,
+[data-radix-popover-content][class*="bg-popover"],
+[data-radix-popover-content][class*="text-popover-foreground"],
+/* Target by attribute and class combination */
+[data-radix-popover-content][data-state="open"].bg-popover,
+[data-radix-popover-content][data-state="open"][class*="bg-popover"] {
+  background-color: rgb(24 24 27) !important; /* zinc-900 */
+  background: rgb(24 24 27) !important; /* zinc-900 - also override background shorthand */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+/* Override text-popover-foreground class everywhere - maximum specificity */
+[data-radix-popover-content].text-popover-foreground,
+[data-radix-popover-content][class*="text-popover-foreground"],
+[data-radix-popover-content] *,
+[data-radix-popover-content] span,
+[data-radix-popover-content] div,
+[data-radix-popover-content] p,
+[data-radix-popover-content] button,
+[data-radix-popover-content] input,
+[data-radix-popover-content] label {
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+/* Override muted-foreground text color in popover */
+[data-radix-popover-content] [class*="text-muted-foreground"],
+[data-radix-popover-content] [class*="text-muted"] {
+  color: rgb(161 161 170) !important; /* zinc-400 */
+}
+
+/* Popover arrow */
+[data-radix-popover-content] [data-radix-popover-arrow],
+[data-radix-popover-content] [data-slot="popover-arrow"] {
+  fill: rgb(24 24 27) !important; /* zinc-900 */
+}
+
+/* Link dialog popover (MDXEditor specific) */
 [class*="_linkDialogPopoverContent_"] {
   background-color: rgb(24 24 27) !important; /* zinc-900 */
   border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
   color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+/* Table column editor popover (MDXEditor) */
+[class*="_tableColumnEditorPopoverContent_"] {
+  background-color: rgb(24 24 27) !important; /* zinc-900 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+/* Table column editor toolbar */
+[class*="_tableColumnEditorToolbar_"] {
+  background-color: rgb(24 24 27) !important; /* zinc-900 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+/* Table column editor trigger button */
+[class*="_tableColumnEditorTrigger_"] {
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+[class*="_tableColumnEditorTrigger_"]:hover {
+  background-color: rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(217 119 6) !important; /* amber-600 */
+}
+
+/* All buttons in table column editor toolbar */
+[class*="_tableColumnEditorToolbar_"] button {
+  background-color: transparent !important;
+  color: rgb(244 244 245) !important; /* zinc-100 */
+  border: none !important;
+}
+
+[class*="_tableColumnEditorToolbar_"] button:hover {
+  background-color: rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(217 119 6) !important; /* amber-600 */
+}
+
+[class*="_tableColumnEditorToolbar_"] button[data-state="on"],
+[class*="_tableColumnEditorToolbar_"] button[aria-checked="true"],
+[class*="_tableColumnEditorToolbar_"] button[aria-pressed="true"] {
+  background-color: rgb(217 119 6) !important; /* amber-600 */
+  color: rgb(24 24 27) !important; /* zinc-900 */
+}
+
+[class*="_tableColumnEditorToolbar_"] button[data-state="on"]:hover,
+[class*="_tableColumnEditorToolbar_"] button[aria-checked="true"]:hover,
+[class*="_tableColumnEditorToolbar_"] button[aria-pressed="true"]:hover {
+  background-color: rgb(245 158 11) !important; /* amber-500 */
+  color: rgb(24 24 27) !important; /* zinc-900 */
+}
+
+/* Popup container (MDXEditor) */
+[class*="_popupContainer_"] {
+  background-color: rgb(24 24 27) !important; /* zinc-900 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+/* All buttons inside popup container (table editor) */
+[class*="_popupContainer_"] button {
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+[class*="_popupContainer_"] button:hover {
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+}
+
+[class*="_popupContainer_"] button[data-state="on"],
+[class*="_popupContainer_"] button[aria-checked="true"],
+[class*="_popupContainer_"] button[aria-pressed="true"] {
+  background-color: rgb(217 119 6) !important; /* amber-600 */
+  color: rgb(24 24 27) !important; /* zinc-900 */
+}
+
+[class*="_popupContainer_"] button[data-state="on"]:hover,
+[class*="_popupContainer_"] button[aria-checked="true"]:hover,
+[class*="_popupContainer_"] button[aria-pressed="true"]:hover {
+  background-color: rgb(245 158 11) !important; /* amber-500 */
+  color: rgb(24 24 27) !important; /* zinc-900 */
+}
+
+/* Buttons inside popovers */
+[data-radix-popover-content] button,
+[class*="_popupContainer_"] button,
+[class*="_tableColumnEditorPopoverContent_"] button {
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+[data-radix-popover-content] button:hover,
+[class*="_popupContainer_"] button:hover,
+[class*="_tableColumnEditorPopoverContent_"] button:hover {
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+}
+
+/* Inputs inside popovers */
+[data-radix-popover-content] input,
+[class*="_popupContainer_"] input,
+[class*="_tableColumnEditorPopoverContent_"] input {
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+[data-radix-popover-content] input:focus,
+[class*="_popupContainer_"] input:focus,
+[class*="_tableColumnEditorPopoverContent_"] input:focus {
+  border-color: rgb(217 119 6) !important; /* amber-600 */
+  outline: none !important;
+}
+
+/* Toggle Group inside popovers (table column editor) */
+[class*="_toggleGroupRoot_"] {
+  background-color: rgb(39 39 42) !important; /* zinc-800 */
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+}
+
+/* Toggle Group buttons (Radix UI toggle group items) - comprehensive targeting */
+[class*="_toggleGroupRoot_"] button,
+[class*="_toggleGroupRoot_"] button[role="radio"],
+[class*="_toggleGroupRoot_"] button[data-radix-collection-item],
+[data-radix-toggle-group-item] {
+  background-color: transparent !important;
+  color: rgb(244 244 245) !important; /* zinc-100 */
+  border: none !important;
+}
+
+[class*="_toggleGroupRoot_"] button:hover,
+[class*="_toggleGroupRoot_"] button[role="radio"]:hover,
+[class*="_toggleGroupRoot_"] button[data-radix-collection-item]:hover,
+[data-radix-toggle-group-item]:hover {
+  background-color: rgb(63 63 70) !important; /* zinc-700 */
+  color: rgb(217 119 6) !important; /* amber-600 */
+}
+
+[class*="_toggleGroupRoot_"] button[data-state="on"],
+[class*="_toggleGroupRoot_"] button[role="radio"][data-state="on"],
+[class*="_toggleGroupRoot_"] button[role="radio"][aria-checked="true"],
+[class*="_toggleGroupRoot_"] button[data-radix-collection-item][data-state="on"],
+[data-radix-toggle-group-item][data-state="on"] {
+  background-color: rgb(217 119 6) !important; /* amber-600 */
+  color: rgb(24 24 27) !important; /* zinc-900 */
+}
+
+[class*="_toggleGroupRoot_"] button[data-state="on"]:hover,
+[class*="_toggleGroupRoot_"] button[role="radio"][data-state="on"]:hover,
+[class*="_toggleGroupRoot_"] button[role="radio"][aria-checked="true"]:hover,
+[class*="_toggleGroupRoot_"] button[data-radix-collection-item][data-state="on"]:hover,
+[data-radix-toggle-group-item][data-state="on"]:hover {
+  background-color: rgb(245 158 11) !important; /* amber-500 */
+  color: rgb(24 24 27) !important; /* zinc-900 */
 }
 
 [class*="_linkDialogInputWrapper_"] {
