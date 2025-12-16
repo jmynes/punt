@@ -7,269 +7,10 @@ import { KanbanBoard } from '@/components/board'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { getDemoData } from '@/lib/demo-data'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
-import type { ColumnWithTickets, IssueType, Priority } from '@/types'
-
-// Demo data for the board
-const demoColumns: ColumnWithTickets[] = [
-  {
-    id: 'col-1',
-    name: 'Backlog',
-    order: 0,
-    projectId: '1',
-    tickets: [
-      {
-        id: 'ticket-1',
-        number: 1,
-        title: 'Set up project infrastructure',
-        description: 'Initialize the project with Next.js, TypeScript, and Tailwind',
-        type: 'task' as IssueType,
-        priority: 'high' as Priority,
-        order: 0,
-        storyPoints: 5,
-        estimate: '1d',
-        startDate: null,
-        dueDate: new Date('2024-12-15'),
-        environment: null,
-        affectedVersion: null,
-        fixVersion: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        projectId: '1',
-        columnId: 'col-1',
-        assigneeId: null,
-        creatorId: 'user-1',
-        sprintId: 'sprint-2',
-        parentId: null,
-        assignee: null,
-        creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
-        sprint: {
-          id: 'sprint-2',
-          name: 'Sprint 2',
-          isActive: true,
-          startDate: null,
-          endDate: null,
-        },
-        labels: [{ id: 'label-1', name: 'infrastructure', color: '#10b981' }],
-        watchers: [],
-        _count: { comments: 0, subtasks: 0, attachments: 0 },
-      },
-      {
-        id: 'ticket-2',
-        number: 2,
-        title: 'Design the database schema',
-        description: 'Create Prisma schema for users, projects, tickets, and columns',
-        type: 'task' as IssueType,
-        priority: 'medium' as Priority,
-        order: 1,
-        storyPoints: 3,
-        estimate: '4h',
-        startDate: null,
-        dueDate: null,
-        environment: null,
-        affectedVersion: null,
-        fixVersion: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        projectId: '1',
-        columnId: 'col-1',
-        assigneeId: 'user-1',
-        creatorId: 'user-1',
-        sprintId: null,
-        parentId: null,
-        assignee: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
-        creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
-        sprint: null,
-        labels: [
-          { id: 'label-2', name: 'database', color: '#8b5cf6' },
-          { id: 'label-3', name: 'backend', color: '#f59e0b' },
-        ],
-        watchers: [],
-        _count: { comments: 2, subtasks: 0, attachments: 0 },
-      },
-    ],
-  },
-  {
-    id: 'col-2',
-    name: 'To Do',
-    order: 1,
-    projectId: '1',
-    tickets: [
-      {
-        id: 'ticket-3',
-        number: 3,
-        title: 'Implement authentication flow',
-        description: 'Add login and registration with session management',
-        type: 'story' as IssueType,
-        priority: 'high' as Priority,
-        order: 0,
-        storyPoints: 8,
-        estimate: '2d',
-        startDate: null,
-        dueDate: new Date('2024-12-20'),
-        environment: null,
-        affectedVersion: null,
-        fixVersion: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        projectId: '1',
-        columnId: 'col-2',
-        assigneeId: null,
-        creatorId: 'user-1',
-        sprintId: 'sprint-2',
-        parentId: null,
-        assignee: null,
-        creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
-        sprint: {
-          id: 'sprint-2',
-          name: 'Sprint 2',
-          isActive: true,
-          startDate: null,
-          endDate: null,
-        },
-        labels: [{ id: 'label-4', name: 'auth', color: '#ef4444' }],
-        watchers: [{ id: 'user-2', name: 'Alice Smith', email: 'alice@punt.local', avatar: null }],
-        _count: { comments: 0, subtasks: 3, attachments: 0 },
-      },
-    ],
-  },
-  {
-    id: 'col-3',
-    name: 'In Progress',
-    order: 2,
-    projectId: '1',
-    tickets: [
-      {
-        id: 'ticket-4',
-        number: 4,
-        title: 'Build Kanban board components',
-        description: 'Create draggable columns and cards with dnd-kit',
-        type: 'task' as IssueType,
-        priority: 'critical' as Priority,
-        order: 0,
-        storyPoints: 5,
-        estimate: '1d',
-        startDate: new Date(),
-        dueDate: new Date('2024-12-10'),
-        environment: 'Development',
-        affectedVersion: null,
-        fixVersion: 'v0.1.0',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        projectId: '1',
-        columnId: 'col-3',
-        assigneeId: 'user-1',
-        creatorId: 'user-1',
-        sprintId: 'sprint-2',
-        parentId: null,
-        assignee: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
-        creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
-        sprint: {
-          id: 'sprint-2',
-          name: 'Sprint 2',
-          isActive: true,
-          startDate: null,
-          endDate: null,
-        },
-        labels: [
-          { id: 'label-5', name: 'frontend', color: '#06b6d4' },
-          { id: 'label-6', name: 'ui/ux', color: '#ec4899' },
-        ],
-        watchers: [],
-        _count: { comments: 5, subtasks: 0, attachments: 1 },
-      },
-    ],
-  },
-  {
-    id: 'col-4',
-    name: 'Review',
-    order: 3,
-    projectId: '1',
-    tickets: [],
-  },
-  {
-    id: 'col-5',
-    name: 'Done',
-    order: 4,
-    projectId: '1',
-    tickets: [
-      {
-        id: 'ticket-5',
-        number: 5,
-        title: 'Initialize repository',
-        description: 'Set up Git repository with proper .gitignore',
-        type: 'task' as IssueType,
-        priority: 'low' as Priority,
-        order: 0,
-        storyPoints: 1,
-        estimate: '30m',
-        startDate: new Date('2024-12-01'),
-        dueDate: new Date('2024-12-01'),
-        environment: null,
-        affectedVersion: null,
-        fixVersion: 'v0.1.0',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        projectId: '1',
-        columnId: 'col-5',
-        assigneeId: 'user-1',
-        creatorId: 'user-1',
-        sprintId: 'sprint-1',
-        parentId: null,
-        assignee: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
-        creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
-        sprint: {
-          id: 'sprint-1',
-          name: 'Sprint 1',
-          isActive: false,
-          startDate: null,
-          endDate: null,
-        },
-        labels: [],
-        watchers: [],
-        _count: { comments: 0, subtasks: 0, attachments: 0 },
-      },
-      {
-        id: 'ticket-6',
-        number: 6,
-        title: 'Fix login button not responding on mobile',
-        description: 'The login button does not trigger on iOS Safari due to touch event handling',
-        type: 'bug' as IssueType,
-        priority: 'highest' as Priority,
-        order: 1,
-        storyPoints: 2,
-        estimate: '2h',
-        startDate: null,
-        dueDate: null,
-        environment: 'Production',
-        affectedVersion: 'v0.0.9',
-        fixVersion: 'v0.1.0',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        projectId: '1',
-        columnId: 'col-5',
-        assigneeId: 'user-2',
-        creatorId: 'user-3',
-        sprintId: 'sprint-1',
-        parentId: null,
-        assignee: { id: 'user-2', name: 'Alice Smith', email: 'alice@punt.local', avatar: null },
-        creator: { id: 'user-3', name: 'Bob Johnson', email: 'bob@punt.local', avatar: null },
-        sprint: {
-          id: 'sprint-1',
-          name: 'Sprint 1',
-          isActive: false,
-          startDate: null,
-          endDate: null,
-        },
-        labels: [{ id: 'label-7', name: 'mobile', color: '#f97316' }],
-        watchers: [],
-        _count: { comments: 3, subtasks: 0, attachments: 2 },
-      },
-    ],
-  },
-]
 
 // Project key lookup
 const projectKeys: Record<string, string> = {
@@ -283,10 +24,14 @@ export default function BoardPage() {
   const projectId = params.projectId as string
   const projectKey = projectKeys[projectId] || 'PROJ'
 
-  const { columns, setColumns, searchQuery, setSearchQuery, _hasHydrated } = useBoardStore()
+  const { getColumns, setColumns, getSearchQuery, setSearchQuery, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
     useUIStore()
   const { clearSelection } = useSelectionStore()
+
+  // Get columns for this project
+  const columns = getColumns(projectId)
+  const searchQuery = getSearchQuery(projectId)
 
   // Clear selection and active ticket when entering this page
   useEffect(() => {
@@ -307,15 +52,16 @@ export default function BoardPage() {
 
     const hasTickets = columns.some((col) => col.tickets.length > 0)
     if (!hasTickets) {
-      setColumns(demoColumns)
+      const demoColumns = getDemoData(projectId)
+      setColumns(projectId, demoColumns)
     }
     setActiveProjectId(projectId)
-  }, [_hasHydrated, columns.some, projectId, setActiveProjectId, setColumns]) // Run when hydration completes
+  }, [_hasHydrated, projectId, setActiveProjectId, setColumns, columns])
 
   // Clear search when leaving page
   useEffect(() => {
-    return () => setSearchQuery('')
-  }, [setSearchQuery])
+    return () => setSearchQuery(projectId, '')
+  }, [projectId, setSearchQuery])
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
@@ -334,7 +80,7 @@ export default function BoardPage() {
               type="search"
               placeholder="Filter tickets..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(projectId, e.target.value)}
               className="pl-10"
             />
           </div>
@@ -372,7 +118,7 @@ export default function BoardPage() {
       {/* Board content */}
       <div className="flex-1 min-h-0 overflow-hidden p-4 lg:p-6">
         <div className="h-full">
-          <KanbanBoard projectKey={projectKey} />
+          <KanbanBoard projectKey={projectKey} projectId={projectId} />
         </div>
       </div>
 

@@ -150,7 +150,12 @@ const DEMO_SPRINTS: SprintSummary[] = [
 ]
 
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
-  const { removeTicket, addTicket, updateTicket, columns } = useBoardStore()
+  const { removeTicket, addTicket, updateTicket, getColumns } = useBoardStore()
+  const { activeProjectId } = useUIStore()
+  
+  // Get columns for the active project
+  const projectId = activeProjectId || ticket?.projectId || '1' // Fallback to ticket's projectId or '1'
+  const columns = getColumns(projectId)
   const { pushDeleted, removeDeleted } = useUndoStore()
   const { openCreateTicketWithData } = useUIStore()
   const currentUser = useCurrentUser()
@@ -410,7 +415,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     }
 
     const updatedTicket = { ...oldTicket, ...updates }
-    updateTicket(ticket.id, updates)
+    updateTicket(projectId, ticket.id, updates)
 
     // Add to undo stack
     const { pushUpdate } = useUndoStore.getState()
@@ -424,11 +429,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       showUndoButtons: showUndo,
       onUndo: (id) => {
         useUndoStore.getState().undoByToastId(id)
-        updateTicket(ticket.id, oldTicket)
+        updateTicket(projectId, ticket.id, oldTicket)
       },
       onRedo: (id) => {
         useUndoStore.getState().redoByToastId(id)
-        updateTicket(ticket.id, updates)
+        updateTicket(projectId, ticket.id, updates)
       },
       undoneTitle: 'Update undone',
       redoneTitle: 'Update redone',
@@ -550,7 +555,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     }
 
     const updatedTicket = { ...oldTicket, ...updates }
-    updateTicket(ticket.id, updates)
+    updateTicket(projectId, ticket.id, updates)
 
     // Add to undo stack
     const { pushUpdate } = useUndoStore.getState()
@@ -563,11 +568,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       showUndoButtons: showUndo,
       onUndo: (id) => {
         useUndoStore.getState().undoByToastId(id)
-        updateTicket(ticket.id, oldTicket)
+        updateTicket(projectId, ticket.id, oldTicket)
       },
       onRedo: (id) => {
         useUndoStore.getState().redoByToastId(id)
-        updateTicket(ticket.id, updates)
+        updateTicket(projectId, ticket.id, updates)
       },
       undoneTitle: 'Update undone',
       redoneTitle: 'Update redone',
@@ -605,7 +610,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     const columnId = ticket.columnId
     const deletedTicket = { ...ticket }
 
-    removeTicket(ticket.id)
+    removeTicket(projectId, ticket.id)
     setShowDeleteConfirm(false)
 
     const showUndo = useUIStore.getState().showUndoButtons
@@ -615,11 +620,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       duration: 5000,
       showUndoButtons: showUndo,
       onUndo: () => {
-        addTicket(columnId, deletedTicket)
+        addTicket(projectId, columnId, deletedTicket)
         removeDeleted(toastId)
       },
       onRedo: () => {
-        removeTicket(deletedTicket.id)
+        removeTicket(projectId, deletedTicket.id)
       },
       undoneTitle: 'Ticket restored',
       redoneTitle: 'Delete redone',
