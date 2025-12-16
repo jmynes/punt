@@ -511,10 +511,12 @@ export function KeyboardShortcuts() {
       }
 
       // Ctrl/Cmd + C: Copy selected tickets
+      // Skip if drawer is open to allow normal text selection/copying in the drawer
       if (
         (e.ctrlKey || e.metaKey) &&
         (e.key === 'c' || e.key === 'C') &&
-        selectedTicketIds.size > 0
+        selectedTicketIds.size > 0 &&
+        !activeTicketId // Don't copy tickets if drawer is open
       ) {
         e.preventDefault()
         useSelectionStore.getState().copySelected()
