@@ -92,6 +92,18 @@ export function MobileNav() {
                   Editor Test
                 </Button>
               </Link>
+              <Link href="/settings" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
+                    pathname === '/settings' && 'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Button>
+              </Link>
             </div>
 
             {/* Projects section */}

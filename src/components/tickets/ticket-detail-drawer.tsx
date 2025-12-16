@@ -1268,20 +1268,17 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 id="remember-preference"
                 checked={rememberPreference}
                 onCheckedChange={(checked) => {
+                  // Only update local state, don't save preference until "Save and Close" is clicked
                   setRememberPreference(checked === true)
-                  if (checked) {
-                    setAutoSaveOnDrawerClose(true)
-                  }
                 }}
                 className="border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
               />
-              <label
+              <Label
                 htmlFor="remember-preference"
                 className="text-sm text-zinc-300 cursor-pointer select-none"
-                onClick={() => setRememberPreference(!rememberPreference)}
               >
                 Remember my preference to save and close
-              </label>
+              </Label>
             </div>
           </div>
           <AlertDialogFooter>
@@ -1297,6 +1294,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
+                // Only save preference if checkbox is checked when "Save and Close" is clicked
                 if (rememberPreference) {
                   setAutoSaveOnDrawerClose(true)
                 }
