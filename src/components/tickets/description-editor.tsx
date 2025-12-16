@@ -24,6 +24,7 @@ import '@mdxeditor/editor/style.css'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { CustomBlockTypeSelect } from './custom-block-type-select'
 import { CustomCodeMirrorEditor } from './custom-codemirror-editor'
+import { CustomImageDialog } from './custom-image-dialog'
 import { ResponsiveViewModeToggle } from './responsive-view-mode-toggle'
 import { ResponsiveUndoRedoToggle } from './responsive-undo-redo-toggle'
 import { ResponsiveBoldItalicUnderlineToggle } from './responsive-bold-italic-underline-toggle'
@@ -114,7 +115,9 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
       quotePlugin(),
       linkPlugin(),
       linkDialogPlugin(),
-      imagePlugin(),
+      imagePlugin({
+        ImageDialog: CustomImageDialog,
+      }),
       tablePlugin(),
       thematicBreakPlugin(),
       diffSourcePlugin({
