@@ -17,12 +17,8 @@ import {
   tablePlugin,
   thematicBreakPlugin,
   BoldItalicUnderlineToggles,
-  CodeToggle,
   UndoRedo,
-  CreateLink,
-  InsertCodeBlock,
   HighlightToggle,
-  InsertImage,
   InsertTable,
   InsertThematicBreak,
   Separator,
@@ -34,6 +30,8 @@ import { CustomCodeMirrorEditor } from './custom-codemirror-editor'
 import { ResponsiveViewModeToggle } from './responsive-view-mode-toggle'
 import { ResponsiveStrikeSupSubToggle } from './responsive-strike-sup-sub-toggle'
 import { ResponsiveListsToggle } from './responsive-lists-toggle'
+import { ResponsiveCodeToggle } from './responsive-code-toggle'
+import { ResponsiveLinkImageToggle } from './responsive-link-image-toggle'
 
 interface DescriptionEditorProps {
   markdown: string
@@ -72,15 +70,12 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
         <Separator />
         <BoldItalicUnderlineToggles />
         <ResponsiveStrikeSupSubToggle />
-        <HighlightToggle />
-        <CodeToggle />
+        <ResponsiveCodeToggle />
         <Separator />
         <ResponsiveListsToggle />
         <CustomBlockTypeSelect />
         <Separator />
-        <InsertCodeBlock />
-        <CreateLink />
-        <InsertImage />
+        <ResponsiveLinkImageToggle />
         <InsertTable />
         <InsertThematicBreak />
       </ResponsiveViewModeToggle>
