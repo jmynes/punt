@@ -13,12 +13,21 @@ import {
   codeMirrorPlugin,
   toolbarPlugin,
   diffSourcePlugin,
+  imagePlugin,
+  tablePlugin,
+  thematicBreakPlugin,
   BoldItalicUnderlineToggles,
   CodeToggle,
   ListsToggle,
   UndoRedo,
   CreateLink,
   InsertCodeBlock,
+  StrikeThroughSupSubToggles,
+  HighlightToggle,
+  InsertImage,
+  InsertTable,
+  InsertThematicBreak,
+  Separator,
 } from '@mdxeditor/editor'
 import '@mdxeditor/editor/style.css'
 import { oneDark } from '@codemirror/theme-one-dark'
@@ -60,12 +69,20 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
     () => (
       <CustomDiffSourceToggleWrapper options={['rich-text', 'source', 'diff']}>
         <UndoRedo />
+        <Separator />
         <BoldItalicUnderlineToggles />
+        <StrikeThroughSupSubToggles />
+        <HighlightToggle />
         <CodeToggle />
+        <Separator />
         <ListsToggle />
         <CustomBlockTypeSelect />
+        <Separator />
         <InsertCodeBlock />
         <CreateLink />
+        <InsertImage />
+        <InsertTable />
+        <InsertThematicBreak />
       </CustomDiffSourceToggleWrapper>
     ),
     [],
@@ -80,6 +97,9 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
       quotePlugin(),
       linkPlugin(),
       linkDialogPlugin(),
+      imagePlugin(),
+      tablePlugin(),
+      thematicBreakPlugin(),
       diffSourcePlugin({
         viewMode: 'rich-text',
         diffMarkdown: originalMarkdownRef.current,

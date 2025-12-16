@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { useCellValues, usePublisher, viewMode$, iconComponentFor$, useTranslation, SingleChoiceToggleGroup } from '@mdxeditor/editor'
+import { useCellValues, usePublisher, viewMode$, iconComponentFor$, useTranslation, SingleChoiceToggleGroup, type ViewMode } from '@mdxeditor/editor'
 
 // MDXEditor CSS module class names (styles are loaded globally via @mdxeditor/editor/style.css)
 const styles = {
@@ -70,7 +70,7 @@ export function CustomDiffSourceToggleWrapper({
           value={viewMode}
           items={toggleGroupItems}
           onChange={(value) => {
-            changeViewMode(value === '' ? 'rich-text' : value)
+            changeViewMode((value === '' ? 'rich-text' : value) as ViewMode)
           }}
         />
       </div>
