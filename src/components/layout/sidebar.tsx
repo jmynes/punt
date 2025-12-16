@@ -134,13 +134,13 @@ export function Sidebar() {
                 Backlog
               </Button>
             </Link>
-            <Link href={`/projects/${activeProjectId}/settings`}>
+            <Link href="/settings">
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100',
-                  pathname.includes('/settings') && 'bg-zinc-800/50 text-zinc-100',
+                  pathname === '/settings' && 'bg-zinc-800/50 text-zinc-100',
                 )}
               >
                 <Settings className="h-3.5 w-3.5" />
@@ -153,13 +153,18 @@ export function Sidebar() {
 
       {/* Bottom section */}
       <div className="border-t border-zinc-800 p-3">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50"
-        >
-          <Settings className="h-4 w-4" />
-          Settings
-        </Button>
+        <Link href="/settings">
+          <Button
+            variant="ghost"
+            className={cn(
+              'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
+              pathname === '/settings' && 'bg-zinc-800/50 text-zinc-100',
+            )}
+          >
+            <Settings className="h-4 w-4" />
+            Settings
+          </Button>
+        </Link>
       </div>
     </aside>
   )
