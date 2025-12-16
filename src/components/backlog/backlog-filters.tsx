@@ -462,7 +462,7 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                               {label.split(/([≤≥])/).map((part, index) =>
                                 /[≤≥]/.test(part) ? (
                                   <span
-                                    key={index}
+                                    key={`${part}-${index}`}
                                     className="font-semibold text-base leading-none"
                                   >
                                     {part}
