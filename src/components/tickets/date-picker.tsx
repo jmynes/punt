@@ -63,36 +63,38 @@ export function DatePicker({
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          disabled={disabled}
-          className={cn('w-full justify-start text-left font-normal', !value && 'text-zinc-500')}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-          <span className="flex-1 truncate">
-            {value ? format(value, 'MMM d, yyyy') : placeholder}
-          </span>
-          {value && (
-            <button
-              type="button"
-              className="ml-2 rounded p-0.5 text-zinc-400 hover:bg-red-900/50 hover:text-red-400 transition-colors"
-              onClick={(e) => {
+      <div className="relative w-full">
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            disabled={disabled}
+            className={cn('w-full justify-start text-left font-normal', !value && 'text-zinc-500')}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+            <span className="flex-1 truncate">
+              {value ? format(value, 'MMM d, yyyy') : placeholder}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        {value && (
+          <button
+            type="button"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-zinc-400 hover:bg-red-900/50 hover:text-red-400 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation()
+              onChange(null)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
                 e.stopPropagation()
                 onChange(null)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.stopPropagation()
-                  onChange(null)
-                }
-              }}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </Button>
-      </PopoverTrigger>
+              }
+            }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
       <PopoverContent className="w-auto p-0 bg-zinc-900 border-zinc-700" align="start">
         <Calendar
           mode="single"
