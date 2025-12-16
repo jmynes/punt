@@ -16,7 +16,6 @@ import {
   imagePlugin,
   tablePlugin,
   thematicBreakPlugin,
-  UndoRedo,
   HighlightToggle,
   InsertThematicBreak,
   Separator,
@@ -26,6 +25,7 @@ import { oneDark } from '@codemirror/theme-one-dark'
 import { CustomBlockTypeSelect } from './custom-block-type-select'
 import { CustomCodeMirrorEditor } from './custom-codemirror-editor'
 import { ResponsiveViewModeToggle } from './responsive-view-mode-toggle'
+import { ResponsiveUndoRedoToggle } from './responsive-undo-redo-toggle'
 import { ResponsiveBoldItalicUnderlineToggle } from './responsive-bold-italic-underline-toggle'
 import { ResponsiveStrikeSupSubToggle } from './responsive-strike-sup-sub-toggle'
 import { ResponsiveListsToggle } from './responsive-lists-toggle'
@@ -65,7 +65,7 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
   const toolbarContents = useCallback(
     () => (
       <ResponsiveViewModeToggle options={['rich-text', 'source', 'diff']}>
-        <UndoRedo />
+        <ResponsiveUndoRedoToggle />
         <Separator />
         <ResponsiveBoldItalicUnderlineToggle />
         <ResponsiveStrikeSupSubToggle />

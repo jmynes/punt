@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ListsToggle, usePublisher, useCellValue, applyListType$, currentListType$ } from '@mdxeditor/editor'
+import { ListsToggle, usePublisher, useCellValue, applyListType$, currentListType$, insertTable$ } from '@mdxeditor/editor'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import {
   DropdownMenu,
@@ -11,11 +11,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, List, ListOrdered, CheckSquare, Table } from 'lucide-react'
-import { InsertTable } from '@mdxeditor/editor'
 
 export function ResponsiveListsToggle() {
   const isSmallScreen = useMediaQuery('(max-width: 1024px)')
   const applyListType = usePublisher(applyListType$)
+  const insertTable = usePublisher(insertTable$)
   const currentListType = useCellValue(currentListType$)
 
   if (isSmallScreen) {
@@ -57,9 +57,13 @@ export function ResponsiveListsToggle() {
             <CheckSquare className="h-4 w-4 mr-2" />
             Checklist
           </DropdownMenuItem>
-          <div className="flex flex-col gap-0 p-1">
-            <InsertTable />
-          </div>
+          <DropdownMenuItem
+            onClick={() => insertTable({})}
+            className="text-zinc-300 focus:bg-zinc-800"
+          >
+            <Table className="h-4 w-4 mr-2" />
+            Table
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     )
