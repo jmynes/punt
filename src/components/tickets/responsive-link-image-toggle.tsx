@@ -1,11 +1,12 @@
 'use client'
 
 import React from 'react'
-import { CreateLink, InsertImage } from '@mdxeditor/editor'
+import { CreateLink, InsertImage, usePublisher, insertImage$, openLinkEditDialog$ } from '@mdxeditor/editor'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,8 @@ import { ChevronDown, Link, Image } from 'lucide-react'
 
 export function ResponsiveLinkImageToggle() {
   const isSmallScreen = useMediaQuery('(max-width: 1024px)')
+  const openLinkDialog = usePublisher(openLinkEditDialog$)
+  const insertImage = usePublisher(insertImage$)
 
   if (isSmallScreen) {
     return (
@@ -27,9 +30,15 @@ export function ResponsiveLinkImageToggle() {
             <ChevronDown className="h-2.5 w-2.5 absolute bottom-0.5 right-0.5 shrink-0 pointer-events-none text-current opacity-60" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="bg-zinc-900 border-zinc-700 p-1" align="start">
-          <div className="flex flex-col gap-0">
-            <CreateLink />
+        <DropdownMenuContent className="bg-zinc-900 border-zinc-700" align="start">
+          <DropdownMenuItem
+            onClick={() => openLinkDialog()}
+            className="text-zinc-300 focus:bg-zinc-800"
+          >
+            <Link className="h-4 w-4 mr-2" />
+            Link
+          </DropdownMenuItem>
+          <div className="flex flex-col gap-0 p-1">
             <InsertImage />
           </div>
         </DropdownMenuContent>
