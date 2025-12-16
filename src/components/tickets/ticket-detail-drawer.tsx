@@ -35,6 +35,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -66,6 +67,7 @@ import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type {
@@ -155,7 +157,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const members = useProjectMembers()
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showUnsavedChangesConfirm, setShowUnsavedChangesConfirm] = useState(false)
+  const [pendingClose, setPendingClose] = useState(false)
+  const [rememberPreference, setRememberPreference] = useState(false)
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
+
+  const { autoSaveOnDrawerClose, setAutoSaveOnDrawerClose } = useSettingsStore()
 
   // State for editing fields
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -657,11 +664,22 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       open={!!ticket}
       onOpenChange={(open) => {
         if (!open) {
-          // Save changes before closing
+          // Check for unsaved changes
           if (hasUnsavedChanges) {
-            handleSave()
+            // If auto-save is enabled, save and close
+            if (autoSaveOnDrawerClose) {
+              handleSave()
+              onClose()
+            } else {
+              // Otherwise, show confirmation dialog
+              // Don't call onClose() - keep Sheet open until user confirms
+              setRememberPreference(false) // Reset checkbox when dialog opens
+              setShowUnsavedChangesConfirm(true)
+            }
+          } else {
+            // No unsaved changes, close normally
+            onClose()
           }
-          onClose()
         }
       }}
     >
@@ -1221,6 +1239,76 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             >
               <Trash2 className="h-4 w-4 mr-1" />
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unsaved changes confirmation dialog */}
+      <AlertDialog
+        open={showUnsavedChangesConfirm}
+        onOpenChange={(open) => {
+          if (!open) {
+            // If dialog is being closed (e.g., clicking outside), just close it and keep drawer open
+            setShowUnsavedChangesConfirm(false)
+            setPendingClose(false)
+          }
+        }}
+      >
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              You have unsaved changes to this ticket. What would you like to do?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember-preference"
+                checked={rememberPreference}
+                onCheckedChange={(checked) => {
+                  setRememberPreference(checked === true)
+                  if (checked) {
+                    setAutoSaveOnDrawerClose(true)
+                  }
+                }}
+                className="border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+              />
+              <label
+                htmlFor="remember-preference"
+                className="text-sm text-zinc-300 cursor-pointer select-none"
+                onClick={() => setRememberPreference(!rememberPreference)}
+              >
+                Remember my preference to save and close
+              </label>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+              onClick={() => {
+                setShowUnsavedChangesConfirm(false)
+                setPendingClose(false)
+                setRememberPreference(false)
+              }}
+            >
+              Go Back
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (rememberPreference) {
+                  setAutoSaveOnDrawerClose(true)
+                }
+                handleSave()
+                setShowUnsavedChangesConfirm(false)
+                setPendingClose(false)
+                setRememberPreference(false)
+                onClose()
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Save and Close
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

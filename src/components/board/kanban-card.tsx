@@ -171,7 +171,7 @@ export function KanbanCard({
             {/* Left side: Story points and metadata */}
             <div className="flex items-center gap-3">
               {/* Story points */}
-              {ticket.storyPoints && (
+              {ticket.storyPoints !== null && ticket.storyPoints !== undefined && (
                 <span className="text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
                   {ticket.storyPoints} SP
                 </span>
