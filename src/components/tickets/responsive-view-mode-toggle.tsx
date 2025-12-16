@@ -38,9 +38,9 @@ export function ResponsiveViewModeToggle({
   const isSmallScreen = useMediaQuery('(max-width: 1024px)')
 
   const viewModeLabels: Record<ViewMode, string> = {
-    'rich-text': t('toolbar.richText', 'Rich text'),
-    'source': t('toolbar.source', 'Source mode'),
-    'diff': t('toolbar.diffMode', 'Diff mode'),
+    'rich-text': 'Rich',
+    'source': 'Source',
+    'diff': 'Diff',
   }
 
   if (isSmallScreen) {
@@ -58,7 +58,7 @@ export function ResponsiveViewModeToggle({
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-8 border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
               {iconComponentFor(viewMode === 'rich-text' ? 'rich_text' : viewMode === 'diff' ? 'difference' : 'markdown')}
-              <span className="ml-2 hidden sm:inline">{viewModeLabels[viewMode]}</span>
+              <span className="ml-2">{viewModeLabels[viewMode]}</span>
               <ChevronDown className="ml-1 h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>
