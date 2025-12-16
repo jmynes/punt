@@ -84,4 +84,3 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
   // In case synchronous execution happened (unlikely for toast), ensure we return a value
   return toastId as string | number
 }
-

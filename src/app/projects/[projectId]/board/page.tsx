@@ -310,7 +310,7 @@ export default function BoardPage() {
       setColumns(demoColumns)
     }
     setActiveProjectId(projectId)
-  }, [_hasHydrated]) // Run when hydration completes
+  }, [_hasHydrated, columns.some, projectId, setActiveProjectId, setColumns]) // Run when hydration completes
 
   // Clear search when leaving page
   useEffect(() => {

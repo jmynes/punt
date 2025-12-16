@@ -1,16 +1,21 @@
 'use client'
 
-import React from 'react'
-import { CreateLink, InsertImage, usePublisher, openLinkEditDialog$, openNewImageDialog$ } from '@mdxeditor/editor'
-import { useMediaQuery } from '@/hooks/use-media-query'
+import {
+  CreateLink,
+  InsertImage,
+  openLinkEditDialog$,
+  openNewImageDialog$,
+  usePublisher,
+} from '@mdxeditor/editor'
+import { ChevronDown, Image, Link } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
-import { ChevronDown, Link, Image } from 'lucide-react'
+import { useMediaQuery } from '@/hooks/use-media-query'
 
 export function ResponsiveLinkImageToggle() {
   const isSmallScreen = useMediaQuery('(max-width: 1024px)')
@@ -21,9 +26,9 @@ export function ResponsiveLinkImageToggle() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="h-8 w-8 p-0 border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 relative flex items-center justify-center"
           >
             <Link className="h-4 w-4 shrink-0 text-current" />
@@ -58,4 +63,3 @@ export function ResponsiveLinkImageToggle() {
     </>
   )
 }
-

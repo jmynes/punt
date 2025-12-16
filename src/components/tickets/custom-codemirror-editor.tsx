@@ -1,26 +1,32 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
-import { useCellValues } from '@mdxeditor/editor'
-import { useCodeBlockEditorContext } from '@mdxeditor/editor'
-import { readOnly$, iconComponentFor$ } from '@mdxeditor/editor'
-import { codeMirrorExtensions$, codeMirrorAutoLoadLanguageSupport$, codeBlockLanguages$ } from '@mdxeditor/editor'
+import { indentWithTab } from '@codemirror/commands'
 import { languages } from '@codemirror/language-data'
 import { EditorState } from '@codemirror/state'
-import { lineNumbers, keymap, EditorView } from '@codemirror/view'
-import { indentWithTab } from '@codemirror/commands'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { EditorView, keymap, lineNumbers } from '@codemirror/view'
+import {
+  codeBlockLanguages$,
+  codeMirrorAutoLoadLanguageSupport$,
+  codeMirrorExtensions$,
+  iconComponentFor$,
+  readOnly$,
+  useCellValues,
+  useCodeBlockEditorContext,
+  useTranslation,
+} from '@mdxeditor/editor'
 import { basicSetup } from 'codemirror'
 import { $setSelection } from 'lexical'
-import { useTranslation } from '@mdxeditor/editor'
 import { Code, Trash2 } from 'lucide-react'
+import type React from 'react'
+import { useEffect, useRef } from 'react'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 const EMPTY_VALUE = '__EMPTY_VALUE__'
@@ -33,10 +39,22 @@ interface CustomCodeMirrorEditorProps {
   focusEmitter: any
 }
 
-export function CustomCodeMirrorEditor({ language, nodeKey, code, meta, focusEmitter }: CustomCodeMirrorEditorProps) {
+export function CustomCodeMirrorEditor({
+  language,
+  nodeKey,
+  code,
+  meta,
+  focusEmitter,
+}: CustomCodeMirrorEditorProps) {
   const t = useTranslation()
   const { parentEditor, lexicalNode, setCode } = useCodeBlockEditorContext()
-  const [readOnly, codeMirrorExtensions, autoLoadLanguageSupport, iconComponentFor, codeBlockLanguages] = useCellValues(
+  const [
+    readOnly,
+    codeMirrorExtensions,
+    autoLoadLanguageSupport,
+    _iconComponentFor,
+    codeBlockLanguages,
+  ] = useCellValues(
     readOnly$,
     codeMirrorExtensions$,
     codeMirrorAutoLoadLanguageSupport$,
@@ -95,13 +113,15 @@ export function CustomCodeMirrorEditor({ language, nodeKey, code, meta, focusEmi
 
       if (language !== '' && autoLoadLanguageSupport) {
         const languageData = languages.find((l) => {
-          return l.name === language || l.alias.includes(language) || l.extensions.includes(language)
+          return (
+            l.name === language || l.alias.includes(language) || l.extensions.includes(language)
+          )
         })
         if (languageData) {
           try {
             const languageSupport = await languageData.load()
             extensions.push(languageSupport.extension)
-          } catch (e) {
+          } catch (_e) {
             console.warn('failed to load language support for', language)
           }
         }
@@ -151,7 +171,7 @@ export function CustomCodeMirrorEditor({ language, nodeKey, code, meta, focusEmi
     })()
 
     return cleanup
-  }, [readOnly, language, codeMirrorExtensions, autoLoadLanguageSupport, parentEditor])
+  }, [readOnly, language, codeMirrorExtensions, autoLoadLanguageSupport, parentEditor, code])
 
   // Update code content when it changes externally (but don't recreate editor)
   // Only update if the code is actually different to avoid unnecessary updates
@@ -205,7 +225,8 @@ export function CustomCodeMirrorEditor({ language, nodeKey, code, meta, focusEmi
   })
 
   const currentLanguage = language || EMPTY_VALUE
-  const currentLang = languagesList.find((lang) => lang.value === currentLanguage) || languagesList[0]
+  const currentLang =
+    languagesList.find((lang) => lang.value === currentLanguage) || languagesList[0]
   const displayLabel = currentLang?.label || 'Plain Text'
 
   return (
@@ -266,4 +287,3 @@ export function CustomCodeMirrorEditor({ language, nodeKey, code, meta, focusEmi
     </div>
   )
 }
-

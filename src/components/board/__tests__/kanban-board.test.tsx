@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockColumns } from '@/__tests__/utils/mocks'
-import { render, screen } from '@/__tests__/utils/test-utils'
+import { render } from '@/__tests__/utils/test-utils'
 import { useBoardStore } from '@/stores/board-store'
 import { KanbanBoard } from '../kanban-board'
 

@@ -13,15 +13,14 @@ import {
 } from '@dnd-kit/core'
 import { Layers } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { EmptyState } from '@/components/common/empty-state'
+import { getStatusIcon } from '@/lib/status-icons'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
-import { getStatusIcon } from '@/lib/status-icons'
-import { showUndoRedoToast } from '@/lib/undo-toast'
 import { KanbanCard } from './kanban-card'
 import { KanbanColumn } from './kanban-column'
 
@@ -33,7 +32,7 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
   const { columns, moveTicket, moveTickets, reorderTicket, reorderTickets, searchQuery } =
     useBoardStore()
   const { setCreateTicketOpen } = useUIStore()
-  
+
   // Drag state - only for visual feedback, no store updates during drag
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
   const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
@@ -114,7 +113,7 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
         return
       }
 
-      const activeId = active.id as string
+      const _activeId = active.id as string
       const overId = over.id as string
       const draggedIds = draggedIdsRef.current
 
@@ -145,7 +144,9 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
           )
           targetColumnId = draggedTicketColumn?.id
         } else {
-          const targetColumn = snapshotColumns.find((col) => col.tickets.some((t) => t.id === overId))
+          const targetColumn = snapshotColumns.find((col) =>
+            col.tickets.some((t) => t.id === overId),
+          )
           targetColumnId = targetColumn?.id
         }
       }
@@ -181,7 +182,7 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
   )
 
   const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
+    (_event: DragEndEvent) => {
       const draggedIds = draggedIdsRef.current
       const snapshot = beforeDragSnapshot.current
 
@@ -196,9 +197,7 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
       }
 
       // Find source column from snapshot
-      const sourceColumn = snapshot.find((col) =>
-        col.tickets.some((t) => t.id === draggedIds[0]),
-      )
+      const sourceColumn = snapshot.find((col) => col.tickets.some((t) => t.id === draggedIds[0]))
 
       if (!sourceColumn) {
         // Cleanup
@@ -259,7 +258,9 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
         }))
 
         const toastTitle =
-          moves.length === 1 ? `Ticket moved from ${fromName}` : `${moves.length} tickets moved from ${fromName}`
+          moves.length === 1
+            ? `Ticket moved from ${fromName}`
+            : `${moves.length} tickets moved from ${fromName}`
         const { icon: StatusIcon, color: statusColor } = getStatusIcon(toName)
         const showUndo = useUIStore.getState().showUndoButtons
 
@@ -294,14 +295,7 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
           redoneDescription: toastDescription,
         })
 
-        useUndoStore.getState().pushMove(
-          moves,
-          fromName,
-          toName,
-          toastId,
-          snapshot,
-          afterSnapshot,
-        )
+        useUndoStore.getState().pushMove(moves, fromName, toName, toastId, snapshot, afterSnapshot)
       }
 
       // Cleanup
@@ -318,20 +312,6 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
     },
     [insertPosition, moveTicket, moveTickets, projectKey, reorderTicket, reorderTickets],
   )
-
-  if (columns.length === 0) {
-    return (
-      <EmptyState
-        icon={Layers}
-        title="No columns yet"
-        description="Create columns to organize your tickets on the board."
-        action={{
-          label: 'Create First Ticket',
-          onClick: () => setCreateTicketOpen(true),
-        }}
-      />
-    )
-  }
 
   const handleBoardClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement
@@ -352,20 +332,41 @@ export function KanbanBoard({ projectKey }: KanbanBoardProps) {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 h-full min-h-0 overflow-x-auto pb-4" onClick={handleBoardClick}>
-        {filteredColumns.map((column) => (
-          <KanbanColumn
-            key={column.id}
-            column={column}
-            projectKey={projectKey}
-            dragSelectionIds={draggingTicketIds}
-            activeTicketId={activeTicket?.id || null}
-            activeDragTarget={
-              insertPosition?.columnId === column.id ? insertPosition.index : null
-            }
-          />
-        ))}
-      </div>
+      {columns.length === 0 ? (
+        <EmptyState
+          icon={Layers}
+          title="No columns yet"
+          description="Create columns to organize your tickets on the board."
+          action={{
+            label: 'Create First Ticket',
+            onClick: () => setCreateTicketOpen(true),
+          }}
+        />
+      ) : (
+        <div
+          className="flex gap-4 h-full min-h-0 overflow-x-auto pb-4"
+          onClick={handleBoardClick}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ')
+              handleBoardClick(e as unknown as React.MouseEvent)
+          }}
+        >
+          {filteredColumns.map((column) => (
+            <KanbanColumn
+              key={column.id}
+              column={column}
+              projectKey={projectKey}
+              dragSelectionIds={draggingTicketIds}
+              activeTicketId={activeTicket?.id || null}
+              activeDragTarget={
+                insertPosition?.columnId === column.id ? insertPosition.index : null
+              }
+            />
+          ))}
+        </div>
+      )}
 
       <DragOverlay>
         {activeTicket ? (

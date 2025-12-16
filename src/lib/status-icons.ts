@@ -5,9 +5,9 @@ import {
   Clock3,
   Flag,
   Loader2,
+  type LucideIcon,
   PauseCircle,
   TrendingUp,
-  type LucideIcon,
 } from 'lucide-react'
 
 type StatusIconEntry = { icon: LucideIcon; color: string }
@@ -36,4 +36,3 @@ export function getStatusIcon(statusName: string): StatusIconEntry {
   const key = statusName.trim().toLowerCase()
   return STATUS_ICON_MAP[key] ?? { icon: Circle, color: 'text-zinc-400' }
 }
-

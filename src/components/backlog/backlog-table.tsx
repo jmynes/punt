@@ -21,13 +21,12 @@ import { Settings2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
-import { useBacklogStore, type SortConfig } from '@/stores/backlog-store'
+import { type SortConfig, useBacklogStore } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { BacklogFilters } from './backlog-filters'
 import { BacklogHeader } from './backlog-header'
 import { BacklogRow } from './backlog-row'
-import { getStatusIcon } from '@/lib/status-icons'
 
 interface BacklogTableProps {
   tickets: TicketWithRelations[]
@@ -79,9 +78,7 @@ export function BacklogTable({
   const [orderedTickets, setOrderedTickets] = useState<TicketWithRelations[]>(() =>
     applyBacklogOrder(tickets, backlogOrder[projectId] || []),
   )
-  const [hasManualOrder, setHasManualOrder] = useState(
-    (backlogOrder[projectId] || []).length > 0,
-  )
+  const [hasManualOrder, setHasManualOrder] = useState((backlogOrder[projectId] || []).length > 0)
   const sortInitRef = useRef<SortConfig | null>(sort)
   const sortDidInitRef = useRef(false)
 
@@ -103,8 +100,7 @@ export function BacklogTable({
     }
 
     const prev = sortInitRef.current
-    const changed =
-      prev?.column !== sort?.column || prev?.direction !== sort?.direction
+    const changed = prev?.column !== sort?.column || prev?.direction !== sort?.direction
     sortInitRef.current = sort
 
     if (!changed) return
@@ -212,7 +208,12 @@ export function BacklogTable({
     }
 
     // Due date filter
-    const { from: dueDateFrom, to: dueDateTo, includeNone: includeNoDueDate, includeOverdue: includeOverdue } = filterByDueDate
+    const {
+      from: dueDateFrom,
+      to: dueDateTo,
+      includeNone: includeNoDueDate,
+      includeOverdue,
+    } = filterByDueDate
     if (dueDateFrom || dueDateTo || includeNoDueDate || includeOverdue) {
       result = result.filter((t) => {
         // Check if we're only filtering for "no due date" tickets (no other filters active)
@@ -228,7 +229,15 @@ export function BacklogTable({
           const ticketDate = new Date(t.dueDate)
           const now = new Date()
           // Overdue means due date is before today (end of today)
-          const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+          const todayEnd = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+            23,
+            59,
+            59,
+            999,
+          )
           if (ticketDate.getTime() < todayEnd.getTime()) {
             return true
           }
@@ -360,6 +369,10 @@ export function BacklogTable({
     sort,
     hasManualOrder,
     projectKey,
+    filterByLabels.includes,
+    filterByLabels.length,
+    filterByStatus.includes,
+    filterByStatus.length,
   ])
 
   const visibleColumns = columns.filter((c) => c.visible)
@@ -433,7 +446,10 @@ export function BacklogTable({
 
         setOrderedTickets(newOrder)
         setHasManualOrder(true)
-        setBacklogOrder(projectId, newOrder.map((t) => t.id))
+        setBacklogOrder(
+          projectId,
+          newOrder.map((t) => t.id),
+        )
         clearSelection()
       } else {
         // Single drag using base order
@@ -447,7 +463,10 @@ export function BacklogTable({
           const newOrder = arrayMove(baseOrdered, oldIndex, targetIndex)
           setOrderedTickets(newOrder)
           setHasManualOrder(true)
-          setBacklogOrder(projectId, newOrder.map((t) => t.id))
+          setBacklogOrder(
+            projectId,
+            newOrder.map((t) => t.id),
+          )
         }
       }
     }

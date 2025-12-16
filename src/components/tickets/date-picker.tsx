@@ -2,13 +2,13 @@
 
 import { format } from 'date-fns'
 import { CalendarIcon, X } from 'lucide-react'
+import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
-import { useMemo } from 'react'
 
 interface DatePickerProps {
   value: Date | null
@@ -38,8 +38,8 @@ export function DatePicker({
     let hasDueDates = false
 
     // Check all tickets across all columns (including done tickets)
-    columns.forEach(column => {
-      column.tickets.forEach(ticket => {
+    columns.forEach((column) => {
+      column.tickets.forEach((ticket) => {
         if (ticket.dueDate) {
           hasDueDates = true
           const ticketYear = ticket.dueDate.getFullYear()

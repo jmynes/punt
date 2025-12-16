@@ -25,4 +25,3 @@ export function formatTicketIds(columns: ColumnWithTickets[], ids: string[]): st
     })
     .filter(Boolean)
 }
-

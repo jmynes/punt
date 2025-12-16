@@ -1,12 +1,25 @@
 'use client'
 
-import React, { useState, useCallback, useRef } from 'react'
-import { useCellValue, usePublisher, imageDialogState$, closeImageDialog$, insertImage$, saveImage$ } from '@mdxeditor/editor'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import {
+  closeImageDialog$,
+  imageDialogState$,
+  insertImage$,
+  saveImage$,
+  useCellValue,
+  usePublisher,
+} from '@mdxeditor/editor'
+import { Link2, Loader2, Upload } from 'lucide-react'
+import React, { useCallback, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { X, Upload, Image as ImageIcon, Link2, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function CustomImageDialog() {
@@ -14,7 +27,7 @@ export function CustomImageDialog() {
   const closeDialog = usePublisher(closeImageDialog$)
   const insertImage = usePublisher(insertImage$)
   const saveImage = usePublisher(saveImage$)
-  
+
   const [src, setSrc] = useState('')
   const [alt, setAlt] = useState('')
   const [title, setTitle] = useState('')
@@ -77,7 +90,7 @@ export function CustomImageDialog() {
 
       const data = await response.json()
       const uploadedFile = data.files[0]
-      
+
       setSrc(uploadedFile.url)
       setIsUploading(false)
     } catch (error) {
@@ -126,7 +139,9 @@ export function CustomImageDialog() {
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md bg-zinc-900 border-zinc-700">
         <DialogHeader>
-          <DialogTitle className="text-zinc-100">{isEditing ? 'Edit Image' : 'Insert Image'}</DialogTitle>
+          <DialogTitle className="text-zinc-100">
+            {isEditing ? 'Edit Image' : 'Insert Image'}
+          </DialogTitle>
           <DialogDescription className="text-zinc-400">
             {isEditing ? 'Update the image properties' : 'Upload an image or provide an image URL'}
           </DialogDescription>
@@ -140,6 +155,14 @@ export function CustomImageDialog() {
             </Label>
             <div
               onClick={() => !isUploading && fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if ((e.key === 'Enter' || e.key === ' ') && !isUploading) {
+                  e.preventDefault()
+                  fileInputRef.current?.click()
+                }
+              }}
+              role="button"
+              tabIndex={0}
               className={cn(
                 'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors cursor-pointer',
                 isUploading
@@ -276,4 +299,3 @@ export function CustomImageDialog() {
     </Dialog>
   )
 }
-

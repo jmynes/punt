@@ -1,7 +1,15 @@
 'use client'
 
-import React from 'react'
-import { useCellValues, usePublisher, viewMode$, iconComponentFor$, useTranslation, SingleChoiceToggleGroup, type ViewMode } from '@mdxeditor/editor'
+import {
+  iconComponentFor$,
+  SingleChoiceToggleGroup,
+  useCellValues,
+  usePublisher,
+  useTranslation,
+  type ViewMode,
+  viewMode$,
+} from '@mdxeditor/editor'
+import type React from 'react'
 
 // MDXEditor CSS module class names (styles are loaded globally via @mdxeditor/editor/style.css)
 const styles = {
@@ -61,7 +69,9 @@ export function CustomDiffSourceToggleWrapper({
       ) : viewMode === 'diff' ? (
         <span className={styles.toolbarTitleMode}>{t('toolbar.diffMode', 'Diff mode')}</span>
       ) : (
-        SourceToolbar ?? <span className={styles.toolbarTitleMode}>{t('toolbar.source', 'Source mode')}</span>
+        (SourceToolbar ?? (
+          <span className={styles.toolbarTitleMode}>{t('toolbar.source', 'Source mode')}</span>
+        ))
       )}
       <div className={styles.diffSourceToggleWrapper}>
         <SingleChoiceToggleGroup
@@ -77,4 +87,3 @@ export function CustomDiffSourceToggleWrapper({
     </>
   )
 }
-

@@ -33,7 +33,7 @@ export function getAvatarColor(identifier: string): string {
   let hash = 0
   for (let i = 0; i < identifier.length; i++) {
     const char = identifier.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
+    hash = (hash << 5) - hash + char
     hash = hash & hash // Convert to 32-bit integer
   }
   const index = Math.abs(hash) % AVATAR_COLORS.length

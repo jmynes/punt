@@ -1,4 +1,4 @@
-import { renderHook, waitFor, act } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useIsDesktop, useIsMobile, useIsTablet, useMediaQuery } from '../use-media-query'
 
@@ -68,7 +68,7 @@ describe('useMediaQuery', () => {
         onchange: null,
         addListener: vi.fn(),
         removeListener: vi.fn(),
-        addEventListener: vi.fn((event: string, listener: (e: MediaQueryListEvent) => void) => {
+        addEventListener: vi.fn((_event: string, listener: (e: MediaQueryListEvent) => void) => {
           listeners.push(listener)
         }),
         removeEventListener: vi.fn(),

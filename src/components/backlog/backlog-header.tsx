@@ -38,7 +38,7 @@ export function BacklogHeader({ column }: BacklogHeaderProps) {
       )}
       onClick={handleSortClick}
       role={column.sortable ? 'button' : undefined}
-      aria-pressed={column.sortable ? isSorted : undefined}
+      aria-pressed={column.sortable && isSorted ? 'true' : column.sortable ? 'false' : undefined}
     >
       <div className="flex items-center gap-1">
         {/* Drag handle */}

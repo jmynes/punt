@@ -1,17 +1,24 @@
 'use client'
 
-import React from 'react'
-import { useCellValues, usePublisher, viewMode$, iconComponentFor$, useTranslation, type ViewMode } from '@mdxeditor/editor'
-import { useMediaQuery } from '@/hooks/use-media-query'
+import {
+  iconComponentFor$,
+  SingleChoiceToggleGroup,
+  useCellValues,
+  usePublisher,
+  useTranslation,
+  type ViewMode,
+  viewMode$,
+} from '@mdxeditor/editor'
+import { ChevronDown } from 'lucide-react'
+import type React from 'react'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
-import { ChevronDown } from 'lucide-react'
-import { SingleChoiceToggleGroup } from '@mdxeditor/editor'
+import { useMediaQuery } from '@/hooks/use-media-query'
 
 // MDXEditor CSS module class names
 const styles = {
@@ -39,8 +46,8 @@ export function ResponsiveViewModeToggle({
 
   const viewModeLabels: Record<ViewMode, string> = {
     'rich-text': 'Rich',
-    'source': 'Source',
-    'diff': 'Diff',
+    source: 'Source',
+    diff: 'Diff',
   }
 
   if (isSmallScreen) {
@@ -52,11 +59,17 @@ export function ResponsiveViewModeToggle({
         ) : viewMode === 'diff' ? (
           <span className={styles.toolbarTitleMode}>{t('toolbar.diffMode', 'Diff mode')}</span>
         ) : (
-          SourceToolbar ?? <span className={styles.toolbarTitleMode}>{t('toolbar.source', 'Source mode')}</span>
+          (SourceToolbar ?? (
+            <span className={styles.toolbarTitleMode}>{t('toolbar.source', 'Source mode')}</span>
+          ))
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+            >
               <span>{viewModeLabels[viewMode]}</span>
               <ChevronDown className="ml-1 h-3 w-3" />
             </Button>
@@ -66,9 +79,19 @@ export function ResponsiveViewModeToggle({
               <DropdownMenuItem
                 key={option}
                 onClick={() => changeViewMode(option)}
-                className={viewMode === option ? 'bg-zinc-800 text-amber-400' : 'text-zinc-300 focus:bg-zinc-800'}
+                className={
+                  viewMode === option
+                    ? 'bg-zinc-800 text-amber-400'
+                    : 'text-zinc-300 focus:bg-zinc-800'
+                }
               >
-                {iconComponentFor(option === 'rich-text' ? 'rich_text' : option === 'diff' ? 'difference' : 'markdown')}
+                {iconComponentFor(
+                  option === 'rich-text'
+                    ? 'rich_text'
+                    : option === 'diff'
+                      ? 'difference'
+                      : 'markdown',
+                )}
                 <span className="ml-2">{viewModeLabels[option]}</span>
               </DropdownMenuItem>
             ))}
@@ -90,13 +113,13 @@ export function ResponsiveViewModeToggle({
           }
         case 'diff':
           return {
-            title: viewModeLabels['diff'],
+            title: viewModeLabels.diff,
             contents: iconComponentFor('difference'),
             value: 'diff',
           }
         case 'source':
           return {
-            title: viewModeLabels['source'],
+            title: viewModeLabels.source,
             contents: iconComponentFor('markdown'),
             value: 'source',
           }
@@ -113,7 +136,9 @@ export function ResponsiveViewModeToggle({
       ) : viewMode === 'diff' ? (
         <span className={styles.toolbarTitleMode}>{t('toolbar.diffMode', 'Diff mode')}</span>
       ) : (
-        SourceToolbar ?? <span className={styles.toolbarTitleMode}>{t('toolbar.source', 'Source mode')}</span>
+        (SourceToolbar ?? (
+          <span className={styles.toolbarTitleMode}>{t('toolbar.source', 'Source mode')}</span>
+        ))
       )}
       <div className={styles.diffSourceToggleWrapper}>
         <SingleChoiceToggleGroup
@@ -129,4 +154,3 @@ export function ResponsiveViewModeToggle({
     </>
   )
 }
-

@@ -96,7 +96,7 @@ export const useBoardStore = create<BoardState>()(
       moveTicket: (ticketId, fromColumnId, toColumnId, newOrder) =>
         set((state) => {
           logger.debug('Moving ticket', { ticketId, fromColumnId, toColumnId, newOrder })
-          const startTime = performance.now()
+          const _startTime = performance.now()
 
           const newColumns = state.columns.map((column) => {
             // Remove from source column
@@ -149,7 +149,11 @@ export const useBoardStore = create<BoardState>()(
 
           // Collect all tickets being moved from ALL columns
           // Sort by: 1) column order (leftmost first), 2) ticket order within column
-          const ticketsToMove: Array<{ ticket: TicketWithRelations; columnOrder: number; ticketOrder: number }> = []
+          const ticketsToMove: Array<{
+            ticket: TicketWithRelations
+            columnOrder: number
+            ticketOrder: number
+          }> = []
           for (const column of state.columns) {
             for (const ticket of column.tickets) {
               if (ticketIds.includes(ticket.id)) {
@@ -162,7 +166,7 @@ export const useBoardStore = create<BoardState>()(
               }
             }
           }
-          
+
           // Sort by column order first (leftmost first), then by ticket order within column
           ticketsToMove.sort((a, b) => {
             if (a.columnOrder !== b.columnOrder) {
@@ -170,7 +174,7 @@ export const useBoardStore = create<BoardState>()(
             }
             return a.ticketOrder - b.ticketOrder
           })
-          
+
           // Extract just the tickets in the correct order
           const sortedTickets = ticketsToMove.map((item) => item.ticket)
 
@@ -221,7 +225,7 @@ export const useBoardStore = create<BoardState>()(
 
             // Remove from current position
             const [ticket] = tickets.splice(currentIndex, 1)
-            
+
             // Insert at the target position
             // When moving down (currentIndex < newIndex), use newIndex directly
             // because we want to insert at the position that corresponds to newIndex in the original array
@@ -299,20 +303,26 @@ export const useBoardStore = create<BoardState>()(
           // Check if this is a column change (status change)
           if (updates.columnId) {
             const currentColumn = state.columns.find((col) =>
-              col.tickets.some((t) => t.id === ticketId)
+              col.tickets.some((t) => t.id === ticketId),
             )
 
             if (currentColumn && currentColumn.id !== updates.columnId) {
               // This is a column change - move the ticket
               const targetColumn = state.columns.find((col) => col.id === updates.columnId)
               if (!targetColumn) {
-                logger.warn('Target column not found for ticket move', { ticketId, targetColumnId: updates.columnId })
+                logger.warn('Target column not found for ticket move', {
+                  ticketId,
+                  targetColumnId: updates.columnId,
+                })
                 return state
               }
 
               const ticket = currentColumn.tickets.find((t) => t.id === ticketId)
               if (!ticket) {
-                logger.warn('Ticket not found in source column', { ticketId, sourceColumnId: currentColumn.id })
+                logger.warn('Ticket not found in source column', {
+                  ticketId,
+                  sourceColumnId: currentColumn.id,
+                })
                 return state
               }
 
