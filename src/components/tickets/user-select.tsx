@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, ChevronsUpDown, User, UserMinus, UserPlus } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,23 +36,32 @@ export function UserSelect({
   showAssignToMe = true,
 }: UserSelectProps) {
   const [open, setOpen] = useState(false)
+  const [popoverWidth, setPopoverWidth] = useState<number | undefined>(undefined)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const selectedUser = users.find((u) => u.id === value)
   const isAssignedToMe = value === currentUserId
+
+  useEffect(() => {
+    if (triggerRef.current) {
+      setPopoverWidth(triggerRef.current.offsetWidth)
+    }
+  }, [open])
 
   return (
     <div className="flex gap-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             variant="outline"
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="flex-1 justify-between"
+            className="flex-1 justify-between text-left"
           >
             {selectedUser ? (
-              <div className="flex items-center gap-2">
-                <Avatar className="h-5 w-5">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <Avatar className="h-5 w-5 shrink-0">
                   <AvatarImage src={selectedUser.avatar || undefined} />
                   <AvatarFallback 
                     className="text-xs text-white font-medium"
@@ -61,15 +70,19 @@ export function UserSelect({
                     {getInitials(selectedUser.name)}
                   </AvatarFallback>
                 </Avatar>
-                <span className="truncate">{selectedUser.name}</span>
+                <span className="truncate text-left">{selectedUser.name}</span>
               </div>
             ) : (
-              <span className="text-zinc-500">{placeholder}</span>
+              <span className="text-zinc-500 text-left">{placeholder}</span>
             )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700">
+        <PopoverContent 
+          className="p-0 bg-zinc-900 border-zinc-700"
+          align="start"
+          style={popoverWidth ? { width: `${popoverWidth}px` } : undefined}
+        >
           <Command className="bg-transparent">
             <CommandInput placeholder="Search users..." className="border-zinc-700" />
             <CommandList>

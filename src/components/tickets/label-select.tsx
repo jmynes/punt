@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, ChevronsUpDown, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,6 +25,8 @@ interface LabelSelectProps {
 
 export function LabelSelect({ value, onChange, labels, disabled }: LabelSelectProps) {
   const [open, setOpen] = useState(false)
+  const [popoverWidth, setPopoverWidth] = useState<number | undefined>(undefined)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const selectedLabels = labels.filter((l) => value.includes(l.id))
 
   const toggleLabel = (labelId: string) => {
@@ -39,18 +41,25 @@ export function LabelSelect({ value, onChange, labels, disabled }: LabelSelectPr
     onChange(value.filter((id) => id !== labelId))
   }
 
+  useEffect(() => {
+    if (triggerRef.current) {
+      setPopoverWidth(triggerRef.current.offsetWidth)
+    }
+  }, [open])
+
   return (
     <div className="space-y-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             variant="outline"
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="w-full justify-between"
+            className="w-full justify-between text-left"
           >
-            <span className="text-zinc-500">
+            <span className="text-zinc-500 text-left">
               {selectedLabels.length > 0
                 ? `${selectedLabels.length} label(s) selected`
                 : 'Select labels...'}
@@ -58,7 +67,11 @@ export function LabelSelect({ value, onChange, labels, disabled }: LabelSelectPr
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700">
+        <PopoverContent 
+          className="p-0 bg-zinc-900 border-zinc-700"
+          align="start"
+          style={popoverWidth ? { width: `${popoverWidth}px` } : undefined}
+        >
           <Command className="bg-transparent">
             <CommandInput placeholder="Search labels..." className="border-zinc-700" />
             <CommandList>

@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, ChevronsUpDown, Lightbulb, X, Zap } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -24,25 +24,34 @@ interface ParentSelectProps {
 
 export function ParentSelect({ value, onChange, parentTickets, disabled }: ParentSelectProps) {
   const [open, setOpen] = useState(false)
+  const [popoverWidth, setPopoverWidth] = useState<number | undefined>(undefined)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const selectedParent = parentTickets.find((t) => t.id === value)
 
   // Group by type
   const epics = parentTickets.filter((t) => t.type === 'epic')
   const stories = parentTickets.filter((t) => t.type === 'story')
 
+  useEffect(() => {
+    if (triggerRef.current) {
+      setPopoverWidth(triggerRef.current.offsetWidth)
+    }
+  }, [open])
+
   return (
     <div className="flex gap-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             variant="outline"
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="flex-1 justify-between"
+            className="flex-1 justify-between text-left"
           >
             {selectedParent ? (
-              <div className="flex items-center gap-2 truncate">
+              <div className="flex items-center gap-2 truncate min-w-0 flex-1">
                 {selectedParent.type === 'epic' ? (
                   <Zap className="h-4 w-4 text-purple-400 shrink-0" />
                 ) : (
@@ -51,15 +60,19 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
                 <span className="font-mono text-zinc-500 shrink-0">
                   {selectedParent.projectKey}-{selectedParent.number}
                 </span>
-                <span className="truncate">{selectedParent.title}</span>
+                <span className="truncate text-left">{selectedParent.title}</span>
               </div>
             ) : (
-              <span className="text-zinc-500">No parent (standalone ticket)</span>
+              <span className="text-zinc-500 text-left">No parent (standalone ticket)</span>
             )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-96 p-0 bg-zinc-900 border-zinc-700">
+        <PopoverContent 
+          className="p-0 bg-zinc-900 border-zinc-700"
+          align="start"
+          style={popoverWidth ? { width: `${popoverWidth}px` } : undefined}
+        >
           <Command className="bg-transparent">
             <CommandInput placeholder="Search epics and stories..." className="border-zinc-700" />
             <CommandList>
