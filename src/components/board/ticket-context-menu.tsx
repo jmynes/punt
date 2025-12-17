@@ -190,7 +190,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       undoneTitle: 'Paste undone',
       redoneTitle: 'Paste redone',
     })
-    undoStore.pushPaste(newTickets, toastId)
+    undoStore.pushPaste(projectId, newTickets, toastId)
 
     clearSelection()
     for (const { ticket } of newTickets) {
@@ -295,7 +295,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     })
 
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushMove(moves, fromColumnName, toColumnName, toastId, beforeColumns, afterColumns)
+    undoState.pushMove(projectId, moves, fromColumnName, toColumnName, toastId, beforeColumns, afterColumns)
 
     setOpen(false)
     setSubmenu(null)
@@ -347,7 +347,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       { description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '), duration: 3000 },
     )
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(updates, toastId)
+    undoState.pushUpdate(projectId, updates, toastId)
 
     setOpen(false)
     setSubmenu(null)
@@ -394,7 +394,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       duration: 3000,
     })
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(updates, toastId)
+    undoState.pushUpdate(projectId, updates, toastId)
 
     setOpen(false)
     setSubmenu(null)
@@ -445,7 +445,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     })
 
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushDeletedBatch(deletedBatch, toastId)
+    undoState.pushDeletedBatch(projectId, deletedBatch, toastId)
 
     setPendingDelete([])
     setShowDeleteConfirm(false)

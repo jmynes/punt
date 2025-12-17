@@ -162,7 +162,7 @@ export function KeyboardShortcuts() {
     currentId = toastId
 
     // Push as a single batch entry
-    useUndoStore.getState().pushDeletedBatch(batchTickets, toastId)
+    useUndoStore.getState().pushDeletedBatch(projectId, batchTickets, toastId)
 
     useSelectionStore.getState().clearSelection()
     setShowDeleteConfirm(false)
@@ -473,10 +473,12 @@ export function KeyboardShortcuts() {
             duration: 5000,
             showUndoButtons: useUIStore.getState().showUndoButtons,
             onUndo: (id) => {
-              useUndoStore.getState().undoByToastId(id)
-              // Restore state
-              const board = useBoardStore.getState()
-              board.setColumns(projectId, originalColumns)
+              const undoEntry = useUndoStore.getState().undoByToastId(id)
+              if (undoEntry) {
+                // Restore state
+                const board = useBoardStore.getState()
+                board.setColumns(undoEntry.projectId, originalColumns)
+              }
             },
             onUndoneToast: (newId) => {
               if (currentId) {
@@ -485,10 +487,12 @@ export function KeyboardShortcuts() {
               }
             },
             onRedo: (id) => {
-              useUndoStore.getState().redoByToastId(id)
-              // Redo state
-              const board = useBoardStore.getState()
-              board.setColumns(projectId, afterColumns)
+              const undoEntry = useUndoStore.getState().redoByToastId(id)
+              if (undoEntry) {
+                // Redo state
+                const board = useBoardStore.getState()
+                board.setColumns(undoEntry.projectId, afterColumns)
+              }
             },
             onRedoneToast: (newId) => {
               if (currentId) {
@@ -509,7 +513,7 @@ export function KeyboardShortcuts() {
           // Push to undo stack
           useUndoStore
             .getState()
-            .pushMove(moves, fromName, toName, toastId, originalColumns, afterColumns)
+            .pushMove(projectId, moves, fromName, toName, toastId, originalColumns, afterColumns)
         }
 
         return
@@ -586,9 +590,11 @@ export function KeyboardShortcuts() {
           duration: 5000,
           showUndoButtons: showUndo,
           onUndo: (id) => {
-            useUndoStore.getState().undoByToastId(id)
-            for (const { ticket } of newTickets) {
-              removeTicket(projectId, ticket.id)
+            const undoEntry = useUndoStore.getState().undoByToastId(id)
+            if (undoEntry) {
+              for (const { ticket } of newTickets) {
+                removeTicket(undoEntry.projectId, ticket.id)
+              }
             }
           },
           onUndoneToast: (newId) => {
@@ -598,9 +604,11 @@ export function KeyboardShortcuts() {
             }
           },
           onRedo: (id) => {
-            useUndoStore.getState().redoByToastId(id)
-            for (const { ticket, columnId } of newTickets) {
-              pasteBoard.addTicket(projectId, columnId, ticket)
+            const undoEntry = useUndoStore.getState().redoByToastId(id)
+            if (undoEntry) {
+              for (const { ticket, columnId } of newTickets) {
+                pasteBoard.addTicket(undoEntry.projectId, columnId, ticket)
+              }
             }
           },
           onRedoneToast: (newId) => {
@@ -616,7 +624,7 @@ export function KeyboardShortcuts() {
         currentId = toastId
 
         // Push to undo stack
-        useUndoStore.getState().pushPaste(newTickets, toastId)
+        useUndoStore.getState().pushPaste(projectId, newTickets, toastId)
 
         // If single ticket and setting enabled, open it
         if (newTickets.length === 1 && openSinglePastedTicket) {
@@ -647,7 +655,7 @@ export function KeyboardShortcuts() {
             // Restore all deleted tickets
             const { addTicket, removeTicket } = useBoardStore.getState()
             for (const { ticket, columnId } of action.tickets) {
-              addTicket(projectId, columnId, ticket)
+              addTicket(entry.projectId, columnId, ticket)
             }
             useUIStore.getState().setActiveTicketId(null)
             useSelectionStore.getState().clearSelection()
@@ -670,9 +678,11 @@ export function KeyboardShortcuts() {
               redoLabel: 'Undo',
               onUndo: (id) => {
                 // Redo (delete)
-                useUndoStore.getState().redoByToastId(id)
-                for (const { ticket } of action.tickets) {
-                  removeTicket(projectId, ticket.id)
+                const undoEntry = useUndoStore.getState().redoByToastId(id)
+                if (undoEntry) {
+                  for (const { ticket } of action.tickets) {
+                    removeTicket(undoEntry.projectId, ticket.id)
+                  }
                 }
               },
               onUndoneToast: (newId) => {
@@ -683,9 +693,11 @@ export function KeyboardShortcuts() {
               },
               onRedo: (id) => {
                 // Undo (restore)
-                useUndoStore.getState().undoByToastId(id)
-                for (const { ticket, columnId } of action.tickets) {
-                  addTicket(projectId, columnId, ticket)
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (undoEntry) {
+                  for (const { ticket, columnId } of action.tickets) {
+                    addTicket(undoEntry.projectId, columnId, ticket)
+                  }
                 }
               },
               onRedoneToast: (newId) => {
@@ -713,12 +725,15 @@ export function KeyboardShortcuts() {
             const action = entry.action
             const boardStore = useBoardStore.getState()
             for (const item of action.tickets) {
-              boardStore.updateTicket(projectId, item.ticketId, item.before)
+              boardStore.updateTicket(entry.projectId, item.ticketId, item.before)
             }
             undoStore.pushRedo(entry)
             const ticketKeys = action.tickets
               .map((item) => {
-                const t = columns.flatMap((c) => c.tickets).find((tk) => tk.id === item.ticketId)
+                const t = boardStore
+                  .getColumns(entry.projectId)
+                  .flatMap((c) => c.tickets)
+                  .find((tk) => tk.id === item.ticketId)
                 return t ? formatTicketId(t) : item.ticketId
               })
               .filter(Boolean)
@@ -736,9 +751,11 @@ export function KeyboardShortcuts() {
               undoLabel: 'Redo',
               redoLabel: 'Undo',
               onUndo: (id) => {
-                useUndoStore.getState().redoByToastId(id)
-                for (const item of action.tickets) {
-                  boardStore.updateTicket(projectId, item.ticketId, item.after)
+                const undoEntry = useUndoStore.getState().redoByToastId(id)
+                if (undoEntry) {
+                  for (const item of action.tickets) {
+                    boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.after)
+                  }
                 }
               },
               onUndoneToast: (newId) => {
@@ -748,9 +765,11 @@ export function KeyboardShortcuts() {
                 }
               },
               onRedo: (id) => {
-                useUndoStore.getState().undoByToastId(id)
-                for (const item of action.tickets) {
-                  boardStore.updateTicket(projectId, item.ticketId, item.before)
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (undoEntry) {
+                  for (const item of action.tickets) {
+                    boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.before)
+                  }
                 }
               },
               onRedoneToast: (newId) => {
@@ -783,11 +802,11 @@ export function KeyboardShortcuts() {
                 ...col,
                 tickets: col.tickets.map((t) => ({ ...t })), // Deep copy
               }))
-              moveBoardStore.setColumns(projectId, restoredColumns)
+              moveBoardStore.setColumns(entry.projectId, restoredColumns)
             } else {
               // Fallback: move tickets back one by one (legacy behavior)
               for (const move of action.moves) {
-                moveBoardStore.moveTicket(projectId, move.ticketId, move.toColumnId, move.fromColumnId, 0)
+                moveBoardStore.moveTicket(entry.projectId, move.ticketId, move.toColumnId, move.fromColumnId, 0)
               }
             }
 
@@ -795,7 +814,7 @@ export function KeyboardShortcuts() {
             undoStore.pushRedo(entry)
 
             // Look up ticket IDs from columns
-            const moveAllTickets = columns.flatMap((col) => col.tickets)
+            const moveAllTickets = moveBoardStore.getColumns(entry.projectId).flatMap((col) => col.tickets)
             const moveTicketKeys = action.moves
               .map((move) => {
                 const ticket = moveAllTickets.find((t) => t.id === move.ticketId)
@@ -822,16 +841,18 @@ export function KeyboardShortcuts() {
               undoLabel: 'Redo',
               redoLabel: 'Undo',
               onUndo: (id) => {
-                useUndoStore.getState().redoByToastId(id)
-                if (action.afterColumns) {
-                  const restoredColumns = action.afterColumns.map((col) => ({
-                    ...col,
-                    tickets: col.tickets.map((t) => ({ ...t })),
-                  }))
-                  moveBoardStore.setColumns(projectId, restoredColumns)
-                } else {
-                  for (const move of action.moves) {
-                    moveBoardStore.moveTicket(projectId, move.ticketId, move.fromColumnId, move.toColumnId, 0)
+                const undoEntry = useUndoStore.getState().redoByToastId(id)
+                if (undoEntry) {
+                  if (action.afterColumns) {
+                    const restoredColumns = action.afterColumns.map((col) => ({
+                      ...col,
+                      tickets: col.tickets.map((t) => ({ ...t })),
+                    }))
+                    moveBoardStore.setColumns(undoEntry.projectId, restoredColumns)
+                  } else {
+                    for (const move of action.moves) {
+                      moveBoardStore.moveTicket(undoEntry.projectId, move.ticketId, move.fromColumnId, move.toColumnId, 0)
+                    }
                   }
                 }
               },
@@ -842,13 +863,15 @@ export function KeyboardShortcuts() {
                 }
               },
               onRedo: (id) => {
-                useUndoStore.getState().undoByToastId(id)
-                if (action.originalColumns) {
-                  const restoredColumns = action.originalColumns.map((col) => ({
-                    ...col,
-                    tickets: col.tickets.map((t) => ({ ...t })),
-                  }))
-                  moveBoardStore.setColumns(projectId, restoredColumns)
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (undoEntry) {
+                  if (action.originalColumns) {
+                    const restoredColumns = action.originalColumns.map((col) => ({
+                      ...col,
+                      tickets: col.tickets.map((t) => ({ ...t })),
+                    }))
+                    moveBoardStore.setColumns(undoEntry.projectId, restoredColumns)
+                  }
                 }
               },
               onRedoneToast: (newId) => {
@@ -872,7 +895,7 @@ export function KeyboardShortcuts() {
             // Remove all pasted tickets
             const { removeTicket } = useBoardStore.getState()
             for (const { ticket } of action.tickets) {
-              removeTicket(projectId, ticket.id)
+              removeTicket(entry.projectId, ticket.id)
             }
             // Ensure drawer is closed and selection cleared
             useUIStore.getState().setActiveTicketId(null)
@@ -896,10 +919,12 @@ export function KeyboardShortcuts() {
               undoLabel: 'Redo',
               redoLabel: 'Undo',
               onUndo: (id) => {
-                useUndoStore.getState().redoByToastId(id)
-                const pasteBoard = useBoardStore.getState()
-                for (const { ticket, columnId } of action.tickets) {
-                  pasteBoard.addTicket(projectId, columnId, ticket)
+                const undoEntry = useUndoStore.getState().redoByToastId(id)
+                if (undoEntry) {
+                  const pasteBoard = useBoardStore.getState()
+                  for (const { ticket, columnId } of action.tickets) {
+                    pasteBoard.addTicket(undoEntry.projectId, columnId, ticket)
+                  }
                 }
               },
               onUndoneToast: (newId) => {
@@ -909,10 +934,12 @@ export function KeyboardShortcuts() {
                 }
               },
               onRedo: (id) => {
-                useUndoStore.getState().undoByToastId(id)
-                const pasteBoard = useBoardStore.getState()
-                for (const { ticket } of action.tickets) {
-                  pasteBoard.removeTicket(projectId, ticket.id)
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (undoEntry) {
+                  const pasteBoard = useBoardStore.getState()
+                  for (const { ticket } of action.tickets) {
+                    pasteBoard.removeTicket(undoEntry.projectId, ticket.id)
+                  }
                 }
               },
               onRedoneToast: (newId) => {
@@ -956,7 +983,7 @@ export function KeyboardShortcuts() {
             const action = entry.action
             const { removeTicket, addTicket } = useBoardStore.getState()
             for (const { ticket } of action.tickets) {
-              removeTicket(projectId, ticket.id)
+              removeTicket(entry.projectId, ticket.id)
             }
 
             const delTicketKeys = action.tickets.map(({ ticket }) => formatTicketId(ticket))
@@ -973,9 +1000,11 @@ export function KeyboardShortcuts() {
               duration: 5000,
               showUndoButtons: showUndo,
               onUndo: (id) => {
-                useUndoStore.getState().undoByToastId(id)
-                for (const { ticket, columnId } of action.tickets) {
-                  addTicket(projectId, columnId, ticket)
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (undoEntry) {
+                  for (const { ticket, columnId } of action.tickets) {
+                    addTicket(undoEntry.projectId, columnId, ticket)
+                  }
                 }
               },
               onUndoneToast: (newId) => {
@@ -985,9 +1014,11 @@ export function KeyboardShortcuts() {
                 }
               },
               onRedo: (id) => {
-                useUndoStore.getState().redoByToastId(id)
-                for (const { ticket } of action.tickets) {
-                  removeTicket(projectId, ticket.id)
+                const undoEntry = useUndoStore.getState().redoByToastId(id)
+                if (undoEntry) {
+                  for (const { ticket } of action.tickets) {
+                    removeTicket(undoEntry.projectId, ticket.id)
+                  }
                 }
               },
               onRedoneToast: (newId) => {
@@ -1002,12 +1033,12 @@ export function KeyboardShortcuts() {
 
             currentId = newToastId
 
-            redoStore.pushDeletedBatch(action.tickets, newToastId, true)
+            redoStore.pushDeletedBatch(entry.projectId, action.tickets, newToastId, true)
           } else if (entry.action.type === 'update') {
             const action = entry.action
             const boardStore = useBoardStore.getState()
             for (const item of action.tickets) {
-              boardStore.updateTicket(projectId, item.ticketId, item.after)
+              boardStore.updateTicket(entry.projectId, item.ticketId, item.after)
             }
             const swappedTickets = action.tickets.map((item) => ({
               ticketId: item.ticketId,
@@ -1016,7 +1047,8 @@ export function KeyboardShortcuts() {
             }))
             const ticketKeys = swappedTickets
               .map((item) => {
-                const t = boardStore.getColumns(projectId)
+                const t = boardStore
+                  .getColumns(entry.projectId)
                   .flatMap((c) => c.tickets)
                   .find((tk) => tk.id === item.ticketId)
                 return t ? formatTicketId(t) : item.ticketId
@@ -1035,9 +1067,11 @@ export function KeyboardShortcuts() {
               showUndoButtons: showUndo,
               undoLabel: 'Undo', // Normal Undo
               onUndo: (id) => {
-                useUndoStore.getState().undoByToastId(id)
-                for (const item of swappedTickets) {
-                  boardStore.updateTicket(projectId, item.ticketId, item.before)
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (undoEntry) {
+                  for (const item of swappedTickets) {
+                    boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.before)
+                  }
                 }
               },
               onUndoneToast: (newId) => {
@@ -1047,9 +1081,11 @@ export function KeyboardShortcuts() {
                 }
               },
               onRedo: (id) => {
-                useUndoStore.getState().redoByToastId(id)
-                for (const item of swappedTickets) {
-                  boardStore.updateTicket(projectId, item.ticketId, item.after)
+                const undoEntry = useUndoStore.getState().redoByToastId(id)
+                if (undoEntry) {
+                  for (const item of swappedTickets) {
+                    boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.after)
+                  }
                 }
               },
               onRedoneToast: (newId) => {
@@ -1072,11 +1108,11 @@ export function KeyboardShortcuts() {
 
             currentId = newToastId
 
-            redoStore.pushUpdate(swappedTickets, newToastId, true)
+            redoStore.pushUpdate(entry.projectId, swappedTickets, newToastId, true)
           } else if (entry.action.type === 'move') {
             const action = entry.action
             const boardStore = useBoardStore.getState()
-            const currentStateBeforeRedo = boardStore.getColumns(projectId).map((col) => ({
+            const currentStateBeforeRedo = boardStore.getColumns(entry.projectId).map((col) => ({
               ...col,
               tickets: col.tickets.map((t) => ({ ...t })),
             }))
@@ -1086,14 +1122,14 @@ export function KeyboardShortcuts() {
                 ...col,
                 tickets: col.tickets.map((t) => ({ ...t })),
               }))
-              boardStore.setColumns(projectId, restoredColumns)
+              boardStore.setColumns(entry.projectId, restoredColumns)
             } else {
               for (const move of action.moves) {
-                boardStore.moveTicket(projectId, move.ticketId, move.fromColumnId, move.toColumnId, 0)
+                boardStore.moveTicket(entry.projectId, move.ticketId, move.fromColumnId, move.toColumnId, 0)
               }
             }
 
-            const allTickets = columns.flatMap((col) => col.tickets)
+            const allTickets = boardStore.getColumns(entry.projectId).flatMap((col) => col.tickets)
             const ticketKeys = action.moves
               .map((move) => {
                 const ticket = allTickets.find((t) => t.id === move.ticketId)
@@ -1114,7 +1150,7 @@ export function KeyboardShortcuts() {
                       label: 'Undo',
                       onClick: () => {
                         const bs = useBoardStore.getState()
-                        bs.setColumns(projectId, currentStateBeforeRedo)
+                        bs.setColumns(entry.projectId, currentStateBeforeRedo)
                         redoStore.pushRedo(entry)
                         toast.success(
                           action.moves.length === 1
@@ -1131,6 +1167,7 @@ export function KeyboardShortcuts() {
             useUndoStore
               .getState()
               .pushMove(
+                entry.projectId,
                 action.moves,
                 action.toColumnName,
                 action.fromColumnName,
@@ -1144,7 +1181,7 @@ export function KeyboardShortcuts() {
             const { addTicket: redoAddTicket, removeTicket: redoRemoveTicket } =
               useBoardStore.getState()
             for (const { ticket, columnId } of action.tickets) {
-              redoAddTicket(projectId, columnId, ticket)
+              redoAddTicket(entry.projectId, columnId, ticket)
             }
 
             const redoPasteTicketKeys = action.tickets.map(({ ticket }) => formatTicketId(ticket))
@@ -1163,7 +1200,7 @@ export function KeyboardShortcuts() {
                       label: 'Undo',
                       onClick: () => {
                         for (const { ticket } of action.tickets) {
-                          redoRemoveTicket(projectId, ticket.id)
+                          redoRemoveTicket(entry.projectId, ticket.id)
                         }
                         redoStore.pushRedo(entry)
                         toast.success(
@@ -1177,7 +1214,7 @@ export function KeyboardShortcuts() {
                   : undefined,
               },
             )
-            redoStore.pushPaste(action.tickets, newPasteToastId, true)
+            redoStore.pushPaste(entry.projectId, action.tickets, newPasteToastId, true)
           }
         }
       }
