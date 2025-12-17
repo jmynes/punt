@@ -80,30 +80,11 @@ cd punt
 # Install dependencies
 pnpm install
 
-# Set up the database
-pnpm db:push
-
 # Start the development server
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see the app.
-
-### Database Commands
-
-```bash
-# Push schema changes to database
-pnpm db:push
-
-# Create a migration
-pnpm db:migrate
-
-# Generate Prisma client
-pnpm db:generate
-
-# Open Prisma Studio (database GUI)
-pnpm db:studio
-```
 
 ### Linting & Formatting
 
