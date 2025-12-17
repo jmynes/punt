@@ -300,7 +300,7 @@ export function KanbanBoard({ projectKey, projectId }: KanbanBoardProps) {
           redoneDescription: toastDescription,
         })
 
-        useUndoStore.getState().pushMove(moves, fromName, toName, toastId, snapshot, afterSnapshot)
+        useUndoStore.getState().pushMove(projectId, moves, fromName, toName, toastId, snapshot, afterSnapshot)
       }
 
       // Cleanup
