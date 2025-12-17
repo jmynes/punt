@@ -439,7 +439,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       redoneTitle: 'Update redone',
     })
 
-    pushUpdate([{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }], toastId)
+    pushUpdate(projectId, [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }], toastId)
   }, [
     ticket,
     hasUnsavedChanges,
@@ -578,7 +578,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       redoneTitle: 'Update redone',
     })
 
-    pushUpdate([{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }], toastId)
+    pushUpdate(projectId, [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }], toastId)
 
     setEditingField(null)
   }
@@ -630,7 +630,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       redoneTitle: 'Delete redone',
     })
 
-    pushDeleted(deletedTicket, columnId, toastId)
+    pushDeleted(projectId, deletedTicket, columnId, toastId)
     onClose()
   }
 

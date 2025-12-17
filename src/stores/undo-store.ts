@@ -41,6 +41,7 @@ interface UndoEntry {
   action: UndoAction
   timestamp: number
   toastId: string | number
+  projectId: string // Store which project this action belongs to
 }
 
 interface UndoState {
@@ -51,18 +52,25 @@ interface UndoState {
 
   // Add a delete action to the undo stack
   pushDeleted: (
+    projectId: string,
     ticket: TicketWithRelations,
     columnId: string,
     toastId: string | number,
     isRedo?: boolean,
   ) => void
-  pushDeletedBatch: (tickets: DeletedTicket[], toastId: string | number, isRedo?: boolean) => void
+  pushDeletedBatch: (
+    projectId: string,
+    tickets: DeletedTicket[],
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
 
   // Add a paste action to the undo stack
-  pushPaste: (tickets: PastedTicket[], toastId: string | number, isRedo?: boolean) => void
+  pushPaste: (projectId: string, tickets: PastedTicket[], toastId: string | number, isRedo?: boolean) => void
 
   // Add a move action to the undo stack
   pushMove: (
+    projectId: string,
     moves: MovedTicket[],
     fromColumnName: string,
     toColumnName: string,
@@ -73,7 +81,12 @@ interface UndoState {
   ) => void
 
   // Add an update action to the undo stack
-  pushUpdate: (tickets: UpdatedTicket[], toastId: string | number, isRedo?: boolean) => void
+  pushUpdate: (
+    projectId: string,
+    tickets: UpdatedTicket[],
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
 
   // Pop and return the most recent undo entry
   popUndo: () => UndoEntry | undefined
@@ -111,10 +124,11 @@ export const useUndoStore = create<UndoState>((set, get) => ({
   undoStack: [],
   redoStack: [],
 
-  pushDeleted: (ticket, columnId, toastId, isRedo = false) => {
+  pushDeleted: (projectId, ticket, columnId, toastId, isRedo = false) => {
     console.debug(`[SessionLog] Action: Delete ${isRedo ? '(Redo)' : ''}`, {
       ticketId: ticket.id,
       ticketTitle: ticket.title,
+      projectId,
     })
     set((state) => ({
       undoStack: [
@@ -123,16 +137,18 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           action: { type: 'delete', tickets: [{ ticket, columnId }] },
           timestamp: Date.now(),
           toastId,
+          projectId,
         },
       ],
       redoStack: isRedo ? state.redoStack : [],
     }))
   },
 
-  pushDeletedBatch: (tickets, toastId, isRedo = false) => {
+  pushDeletedBatch: (projectId, tickets, toastId, isRedo = false) => {
     console.debug(`[SessionLog] Action: Batch Delete ${isRedo ? '(Redo)' : ''}`, {
       count: tickets.length,
       ticketIds: tickets.map((t) => t.ticket.id),
+      projectId,
     })
     set((state) => ({
       undoStack: [
@@ -141,16 +157,18 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           action: { type: 'delete', tickets },
           timestamp: Date.now(),
           toastId,
+          projectId,
         },
       ],
       redoStack: isRedo ? state.redoStack : [],
     }))
   },
 
-  pushPaste: (tickets, toastId, isRedo = false) => {
+  pushPaste: (projectId, tickets, toastId, isRedo = false) => {
     console.debug(`[SessionLog] Action: Paste ${isRedo ? '(Redo)' : ''}`, {
       count: tickets.length,
       ticketIds: tickets.map((t) => t.ticket.id),
+      projectId,
     })
     set((state) => ({
       undoStack: [
@@ -159,6 +177,7 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           action: { type: 'paste', tickets },
           timestamp: Date.now(),
           toastId,
+          projectId,
         },
       ],
       redoStack: isRedo ? state.redoStack : [],
@@ -166,6 +185,7 @@ export const useUndoStore = create<UndoState>((set, get) => ({
   },
 
   pushMove: (
+    projectId,
     moves,
     fromColumnName,
     toColumnName,
@@ -179,6 +199,7 @@ export const useUndoStore = create<UndoState>((set, get) => ({
       from: fromColumnName,
       to: toColumnName,
       ticketIds: moves.map((m) => m.ticketId),
+      projectId,
     })
     set((state) => ({
       undoStack: [
@@ -204,16 +225,18 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           },
           timestamp: Date.now(),
           toastId,
+          projectId,
         },
       ],
       redoStack: isRedo ? state.redoStack : [],
     }))
   },
 
-  pushUpdate: (tickets, toastId, isRedo = false) => {
+  pushUpdate: (projectId, tickets, toastId, isRedo = false) => {
     console.debug(`[SessionLog] Action: Update ${isRedo ? '(Redo)' : ''}`, {
       count: tickets.length,
       ticketIds: tickets.map((t) => t.ticketId),
+      projectId,
     })
     set((state) => ({
       undoStack: [
@@ -229,6 +252,7 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           },
           timestamp: Date.now(),
           toastId,
+          projectId,
         },
       ],
       redoStack: isRedo ? state.redoStack : [],
