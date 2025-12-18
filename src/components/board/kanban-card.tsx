@@ -4,6 +4,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { format, isPast, isToday } from 'date-fns'
 import { Calendar, GripVertical, MessageSquare, Paperclip, User } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -31,6 +32,12 @@ export function KanbanCard({
   const { setActiveTicketId } = useUIStore()
   const { isSelected, selectTicket, toggleTicket, selectRange } = useSelectionStore()
   const selected = isSelected(ticket.id)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Only apply drag-and-drop attributes after mount to prevent hydration mismatch
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: ticket.id,
@@ -90,8 +97,8 @@ export function KanbanCard({
         ref={setNodeRef}
         style={style}
         data-ticket-card
-        {...attributes}
-        {...listeners}
+        {...(isMounted ? attributes : {})}
+        {...(isMounted ? listeners : {})}
         className={cn(
           'group relative cursor-grab border-zinc-800 bg-zinc-900/80 p-3 transition-colors select-none active:cursor-grabbing',
           !selected && 'hover:border-zinc-700 hover:bg-zinc-900',
