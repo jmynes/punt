@@ -151,7 +151,7 @@ const DEMO_SPRINTS: SprintSummary[] = [
 
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
   const { removeTicket, addTicket, updateTicket, getColumns } = useBoardStore()
-  const { activeProjectId } = useUIStore()
+  const { activeProjectId, setActiveTicketId } = useUIStore()
   
   // Get columns for the active project
   const projectId = activeProjectId || ticket?.projectId || '1' // Fallback to ticket's projectId or '1'
@@ -203,6 +203,20 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         projectKey,
       }))
   }, [columns, ticket?.id, projectKey])
+
+  // Find parent ticket if this ticket has a parent
+  const parentTicket = useMemo(() => {
+    if (!ticket?.parentId) return null
+    const allTickets = columns.flatMap((col) => col.tickets)
+    return allTickets.find((t) => t.id === ticket.parentId) || null
+  }, [columns, ticket?.parentId])
+
+  // Find all child tickets (tickets that have this ticket as parent)
+  const childTickets = useMemo(() => {
+    if (!ticket) return []
+    const allTickets = columns.flatMap((col) => col.tickets)
+    return allTickets.filter((t) => t.parentId === ticket.id)
+  }, [columns, ticket?.id])
 
   // Reset editing state when ticket changes
   useEffect(() => {
@@ -1114,6 +1128,63 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   labels={DEMO_LABELS}
                 />
               </div>
+
+              {/* Parent Ticket */}
+              {parentTicket && (
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Parent</Label>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left h-auto py-2 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 hover:border-amber-500"
+                    onClick={() => {
+                      setActiveTicketId(parentTicket.id)
+                    }}
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      {parentTicket.type === 'epic' ? (
+                        <Zap className="h-4 w-4 text-purple-400 shrink-0" />
+                      ) : (
+                        <Lightbulb className="h-4 w-4 text-green-400 shrink-0" />
+                      )}
+                      <span className="font-mono text-zinc-500 shrink-0">
+                        {projectKey}-{parentTicket.number}
+                      </span>
+                      <span className="truncate text-zinc-300">{parentTicket.title}</span>
+                      <Link2 className="h-3.5 w-3.5 text-zinc-500 ml-auto shrink-0" />
+                    </div>
+                  </Button>
+                </div>
+              )}
+
+              {/* Child Tickets */}
+              {childTickets.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">
+                    Children ({childTickets.length})
+                  </Label>
+                  <div className="space-y-1">
+                    {childTickets.map((child) => (
+                      <Button
+                        key={child.id}
+                        variant="outline"
+                        className="w-full justify-start text-left h-auto py-2 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 hover:border-amber-500"
+                        onClick={() => {
+                          setActiveTicketId(child.id)
+                        }}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <TypeBadge type={child.type} size="sm" />
+                          <span className="font-mono text-zinc-500 shrink-0">
+                            {projectKey}-{child.number}
+                          </span>
+                          <span className="truncate text-zinc-300">{child.title}</span>
+                          <Link2 className="h-3.5 w-3.5 text-zinc-500 ml-auto shrink-0" />
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Watchers */}
               {ticket.watchers.length > 0 && (
