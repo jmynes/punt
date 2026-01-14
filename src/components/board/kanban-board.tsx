@@ -30,7 +30,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ projectKey, projectId }: KanbanBoardProps) {
-  const { getColumns, moveTicket, moveTickets, reorderTicket, reorderTickets, getSearchQuery } =
+  const { getColumns, moveTicket, moveTickets, reorderTicket, reorderTickets, getSearchQuery, _hasHydrated } =
     useBoardStore()
   const { setCreateTicketOpen } = useUIStore()
 
@@ -327,6 +327,33 @@ export function KanbanBoard({ projectKey, projectId }: KanbanBoardProps) {
       useSelectionStore.getState().clearSelection()
     }
   }, [])
+
+  // Show loading skeleton until Zustand hydrates from localStorage
+  if (!_hasHydrated) {
+    return (
+      <div className="flex gap-4 h-full min-h-0 overflow-x-auto pb-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex w-72 flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-900/30 max-h-full min-h-0"
+          >
+            <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 rounded bg-zinc-800 animate-pulse" />
+                <div className="h-4 w-16 rounded bg-zinc-800 animate-pulse" />
+                <div className="h-5 w-5 rounded-full bg-zinc-800 animate-pulse" />
+              </div>
+            </div>
+            <div className="flex-1 p-2">
+              <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-lg">
+                <span className="text-xs text-zinc-600">Loading...</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <DndContext
