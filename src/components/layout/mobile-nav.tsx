@@ -1,8 +1,9 @@
 'use client'
 
-import { FileText, FolderKanban, Home, Layers, Plus, Settings, X } from 'lucide-react'
+import { FileText, FolderKanban, Home, Layers, Pencil, Plus, Settings, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -19,8 +20,10 @@ export function MobileNav() {
     activeProjectId,
     setActiveProjectId,
     setCreateProjectOpen,
+    openEditProject,
   } = useUIStore()
   const { projects, _hasHydrated } = useProjectsStore()
+  const [editMode, setEditMode] = useState(false)
 
   const handleLinkClick = () => {
     setMobileNavOpen(false)
@@ -108,17 +111,30 @@ export function MobileNav() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
                   Projects
                 </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 text-zinc-500 hover:text-zinc-300"
-                  onClick={() => {
-                    setCreateProjectOpen(true)
-                    setMobileNavOpen(false)
-                  }}
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      'h-5 w-5 text-zinc-500 hover:text-zinc-300',
+                      editMode && 'text-amber-500 hover:text-amber-400',
+                    )}
+                    onClick={() => setEditMode(!editMode)}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 text-zinc-500 hover:text-zinc-300"
+                    onClick={() => {
+                      setCreateProjectOpen(true)
+                      setMobileNavOpen(false)
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -131,29 +147,48 @@ export function MobileNav() {
                   </>
                 ) : (
                   projects.map((project) => (
-                    <Link
-                      key={project.id}
-                      href={`/projects/${project.id}/board`}
-                      onClick={() => {
-                        setActiveProjectId(project.id)
-                        handleLinkClick()
-                      }}
-                    >
-                      <Button
-                        variant="ghost"
-                        className={cn(
-                          'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
-                          activeProjectId === project.id && 'bg-zinc-800/50 text-zinc-100',
-                        )}
+                    <div key={project.id} className="relative flex items-center">
+                      <Link
+                        href={`/projects/${project.id}/board`}
+                        onClick={() => {
+                          setActiveProjectId(project.id)
+                          handleLinkClick()
+                        }}
+                        className="flex-1"
                       >
-                        <div
-                          className="h-3 w-3 rounded-sm"
-                          style={{ backgroundColor: project.color }}
-                        />
-                        <span className="truncate">{project.name}</span>
-                        <span className="ml-auto text-xs text-zinc-600">{project.key}</span>
-                      </Button>
-                    </Link>
+                        <Button
+                          variant="ghost"
+                          className={cn(
+                            'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
+                            activeProjectId === project.id && 'bg-zinc-800/50 text-zinc-100',
+                          )}
+                        >
+                          <div
+                            className="h-3 w-3 rounded-sm"
+                            style={{ backgroundColor: project.color }}
+                          />
+                          <span className="truncate">{project.name}</span>
+                          {!editMode && (
+                            <span className="ml-auto text-xs text-zinc-600">{project.key}</span>
+                          )}
+                        </Button>
+                      </Link>
+                      {editMode && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 h-6 w-6 text-zinc-500 hover:text-zinc-300"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            openEditProject(project.id)
+                            setMobileNavOpen(false)
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   ))
                 )}
               </div>

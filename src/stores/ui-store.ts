@@ -20,6 +20,10 @@ interface UIState {
   setCreateTicketOpen: (open: boolean) => void
   createProjectOpen: boolean
   setCreateProjectOpen: (open: boolean) => void
+  editProjectOpen: boolean
+  editProjectId: string | null
+  openEditProject: (projectId: string) => void
+  closeEditProject: () => void
 
   // Pre-filled data for creating a ticket (e.g., when cloning)
   prefillTicketData: Partial<TicketFormData> | null
@@ -55,6 +59,10 @@ export const useUIStore = create<UIState>((set) => ({
     set({ createTicketOpen: open, prefillTicketData: open ? null : null }),
   createProjectOpen: false,
   setCreateProjectOpen: (open) => set({ createProjectOpen: open }),
+  editProjectOpen: false,
+  editProjectId: null,
+  openEditProject: (projectId) => set({ editProjectOpen: true, editProjectId: projectId }),
+  closeEditProject: () => set({ editProjectOpen: false, editProjectId: null }),
 
   // Pre-filled data for creating a ticket (e.g., when cloning)
   prefillTicketData: null,
