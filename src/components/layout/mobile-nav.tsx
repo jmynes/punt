@@ -1,6 +1,6 @@
 'use client'
 
-import { FileText, FolderKanban, Home, Layers, Pencil, Plus, Settings, X } from 'lucide-react'
+import { Check, FileText, FolderKanban, Home, Layers, Pencil, Plus, Settings, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
@@ -116,12 +116,18 @@ export function MobileNav() {
                     variant="ghost"
                     size="icon"
                     className={cn(
-                      'h-5 w-5 text-zinc-500 hover:text-zinc-300',
-                      editMode && 'text-amber-500 hover:text-amber-400',
+                      'h-5 w-5 transition-all duration-200',
+                      editMode
+                        ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:text-emerald-300 rounded-sm'
+                        : 'text-zinc-500 hover:text-zinc-300',
                     )}
                     onClick={() => setEditMode(!editMode)}
                   >
-                    <Pencil className="h-3 w-3" />
+                    {editMode ? (
+                      <Check className="h-3 w-3" />
+                    ) : (
+                      <Pencil className="h-3 w-3" />
+                    )}
                   </Button>
                   <Button
                     variant="ghost"
