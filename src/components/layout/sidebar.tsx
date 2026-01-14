@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
 
 interface NavItem {
@@ -21,16 +23,10 @@ const mainNavItems: NavItem[] = [
   { title: 'Settings', href: '/settings', icon: Settings },
 ]
 
-// Demo projects - in real app, these come from API
-const demoProjects = [
-  { id: '1', name: 'PUNT', key: 'PUNT', color: '#f59e0b' },
-  { id: '2', name: 'Backend API', key: 'API', color: '#10b981' },
-  { id: '3', name: 'Mobile App', key: 'MOB', color: '#8b5cf6' },
-]
-
 export function Sidebar() {
   const pathname = usePathname()
   const { sidebarOpen, setCreateProjectOpen, activeProjectId, setActiveProjectId } = useUIStore()
+  const { projects, _hasHydrated } = useProjectsStore()
 
   if (!sidebarOpen) {
     return null
@@ -77,31 +73,40 @@ export function Sidebar() {
           </div>
 
           <div className="space-y-1">
-            {demoProjects.map((project) => {
-              const isActive = activeProjectId === project.id
-              return (
-                <Link
-                  key={project.id}
-                  href={`/projects/${project.id}/board`}
-                  onClick={() => setActiveProjectId(project.id)}
-                >
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
-                      isActive && 'bg-zinc-800/50 text-zinc-100',
-                    )}
+            {!_hasHydrated ? (
+              // Show skeleton while hydrating to avoid SSR mismatch
+              <>
+                <Skeleton className="h-9 w-full bg-zinc-800" />
+                <Skeleton className="h-9 w-full bg-zinc-800" />
+                <Skeleton className="h-9 w-full bg-zinc-800" />
+              </>
+            ) : (
+              projects.map((project) => {
+                const isActive = activeProjectId === project.id
+                return (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}/board`}
+                    onClick={() => setActiveProjectId(project.id)}
                   >
-                    <div
-                      className="h-3 w-3 rounded-sm"
-                      style={{ backgroundColor: project.color }}
-                    />
-                    <span className="truncate">{project.name}</span>
-                    <span className="ml-auto text-xs text-zinc-600">{project.key}</span>
-                  </Button>
-                </Link>
-              )
-            })}
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
+                        isActive && 'bg-zinc-800/50 text-zinc-100',
+                      )}
+                    >
+                      <div
+                        className="h-3 w-3 rounded-sm"
+                        style={{ backgroundColor: project.color }}
+                      />
+                      <span className="truncate">{project.name}</span>
+                      <span className="ml-auto text-xs text-zinc-600">{project.key}</span>
+                    </Button>
+                  </Link>
+                )
+              })
+            )}
           </div>
         </div>
 
