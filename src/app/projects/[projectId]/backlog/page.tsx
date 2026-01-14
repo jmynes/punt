@@ -2,26 +2,22 @@
 
 import { List, Plus } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { BacklogTable, ColumnConfig } from '@/components/backlog'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { getDemoData } from '@/lib/demo-data'
 import { useBoardStore } from '@/stores/board-store'
+import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
-
-// Project key lookup
-const projectKeys: Record<string, string> = {
-  '1': 'PUNT',
-  '2': 'API',
-  '3': 'MOB',
-}
 
 export default function BacklogPage() {
   const params = useParams()
   const projectId = params.projectId as string
-  const projectKey = projectKeys[projectId] || 'PROJ'
+  const { getProject } = useProjectsStore()
+  const project = getProject(projectId)
+  const projectKey = project?.key || 'PROJ'
 
   const { getColumns, setColumns, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
@@ -31,23 +27,42 @@ export default function BacklogPage() {
   // Get columns for this project
   const columns = getColumns(projectId)
 
+  // Demo project IDs that should get demo data
+  const DEMO_PROJECT_IDS = ['1', '2', '3']
+
+  // Track which projects have been initialized to prevent re-running
+  const initializedProjectsRef = useRef<Set<string>>(new Set())
+
   // Clear selection and active ticket when entering this page
   useEffect(() => {
     clearSelection()
     setActiveTicketId(null)
   }, [clearSelection, setActiveTicketId])
 
-  // Initialize with demo data after hydration (only if columns are empty of tickets)
+  // Initialize with demo data after hydration (only for demo projects that have no tickets)
   useEffect(() => {
     if (!_hasHydrated) return // Wait for hydration
-
-    const hasTickets = columns.some((col) => col.tickets.length > 0)
-    if (!hasTickets) {
-      const demoColumns = getDemoData(projectId)
-      setColumns(projectId, demoColumns)
+    if (initializedProjectsRef.current.has(projectId)) {
+      // Already initialized this project, just set active
+      setActiveProjectId(projectId)
+      return
     }
+
+    // Only load demo data for the original demo projects, not user-created ones
+    if (DEMO_PROJECT_IDS.includes(projectId)) {
+      // Get columns fresh inside effect to avoid dependency issues
+      const currentColumns = getColumns(projectId)
+      const hasTickets = currentColumns.some((col) => col.tickets.length > 0)
+      if (!hasTickets) {
+        const demoColumns = getDemoData(projectId)
+        setColumns(projectId, demoColumns)
+      }
+    }
+    initializedProjectsRef.current.add(projectId)
     setActiveProjectId(projectId)
-  }, [_hasHydrated, projectId, setActiveProjectId, setColumns, columns])
+    // Note: getColumns is intentionally not in deps - we check fresh data inside
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_hasHydrated, projectId, setActiveProjectId, setColumns])
 
   // Extract all tickets from columns (flattened for backlog view)
   const allTickets = useMemo(() => {
