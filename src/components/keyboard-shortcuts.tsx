@@ -23,6 +23,7 @@ import {
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
+import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -962,6 +963,106 @@ export function KeyboardShortcuts() {
 
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
+          } else if (entry.action.type === 'projectCreate') {
+            const action = entry.action
+            // Undo project creation = delete the project
+            const projectsStore = useProjectsStore.getState()
+            projectsStore.removeProject(action.project.id)
+            undoStore.pushRedo(entry)
+
+            let currentId = entry.toastId
+
+            const toastId = showUndoRedoToast('success', {
+              title: 'Project creation undone',
+              description: action.project.name,
+              duration: 3000,
+              showUndoButtons: showUndo,
+              undoLabel: 'Redo',
+              redoLabel: 'Undo',
+              onUndo: (id) => {
+                // Redo (re-create)
+                const undoEntry = useUndoStore.getState().redoByToastId(id)
+                if (undoEntry) {
+                  useProjectsStore.getState().restoreProject(action.project)
+                }
+              },
+              onUndoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateUndoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              onRedo: (id) => {
+                // Undo (delete again)
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (undoEntry) {
+                  useProjectsStore.getState().removeProject(action.project.id)
+                }
+              },
+              onRedoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateRedoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              undoneTitle: 'Project created',
+              undoneDescription: action.project.name,
+              redoneTitle: 'Project creation undone',
+              redoneDescription: action.project.name,
+            })
+
+            undoStore.updateRedoToastId(currentId, toastId)
+            currentId = toastId
+          } else if (entry.action.type === 'projectDelete') {
+            const action = entry.action
+            // Undo project deletion = restore the project
+            const projectsStore = useProjectsStore.getState()
+            projectsStore.restoreProject(action.project)
+            undoStore.pushRedo(entry)
+
+            let currentId = entry.toastId
+
+            const toastId = showUndoRedoToast('success', {
+              title: 'Project restored',
+              description: action.project.name,
+              duration: 3000,
+              showUndoButtons: showUndo,
+              undoLabel: 'Redo',
+              redoLabel: 'Undo',
+              onUndo: (id) => {
+                // Redo (delete again)
+                const undoEntry = useUndoStore.getState().redoByToastId(id)
+                if (undoEntry) {
+                  useProjectsStore.getState().removeProject(action.project.id)
+                }
+              },
+              onUndoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateUndoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              onRedo: (id) => {
+                // Undo (restore again)
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (undoEntry) {
+                  useProjectsStore.getState().restoreProject(action.project)
+                }
+              },
+              onRedoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateRedoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              undoneTitle: 'Project deleted',
+              undoneDescription: action.project.name,
+              redoneTitle: 'Project restored',
+              redoneDescription: action.project.name,
+            })
+
+            undoStore.updateRedoToastId(currentId, toastId)
+            currentId = toastId
           }
         }
       }
@@ -1215,6 +1316,48 @@ export function KeyboardShortcuts() {
               },
             )
             redoStore.pushPaste(entry.projectId, action.tickets, newPasteToastId, true)
+          } else if (entry.action.type === 'projectCreate') {
+            const action = entry.action
+            // Redo project creation = restore the project
+            useProjectsStore.getState().restoreProject(action.project)
+
+            const newToastId = toast.success('Project created', {
+              description: action.project.name,
+              duration: 5000,
+              action: showUndo
+                ? {
+                    label: 'Undo',
+                    onClick: () => {
+                      useProjectsStore.getState().removeProject(action.project.id)
+                      redoStore.pushRedo(entry)
+                      toast.success('Project creation undone', { duration: 2000 })
+                    },
+                  }
+                : undefined,
+            })
+
+            redoStore.pushProjectCreate(action.project, newToastId, true)
+          } else if (entry.action.type === 'projectDelete') {
+            const action = entry.action
+            // Redo project deletion = delete the project again
+            useProjectsStore.getState().removeProject(action.project.id)
+
+            const newToastId = toast.error('Project deleted', {
+              description: action.project.name,
+              duration: 5000,
+              action: showUndo
+                ? {
+                    label: 'Undo',
+                    onClick: () => {
+                      useProjectsStore.getState().restoreProject(action.project)
+                      redoStore.pushRedo(entry)
+                      toast.success('Project restored', { duration: 2000 })
+                    },
+                  }
+                : undefined,
+            })
+
+            redoStore.pushProjectDelete(action.project, newToastId, true)
           }
         }
       }
