@@ -12,7 +12,7 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { Layers } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { EmptyState } from '@/components/common/empty-state'
 import { getStatusIcon } from '@/lib/status-icons'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -27,16 +27,16 @@ import { KanbanColumn } from './kanban-column'
 interface KanbanBoardProps {
   projectKey: string
   projectId: string
+  filteredColumns: ColumnWithTickets[]
 }
 
-export function KanbanBoard({ projectKey, projectId }: KanbanBoardProps) {
-  const { getColumns, moveTicket, moveTickets, reorderTicket, reorderTickets, getSearchQuery, _hasHydrated } =
+export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBoardProps) {
+  const { getColumns, moveTicket, moveTickets, reorderTicket, reorderTickets, _hasHydrated } =
     useBoardStore()
   const { setCreateTicketOpen } = useUIStore()
 
-  // Get columns and search query for this project
+  // Get unfiltered columns for drag/drop operations (need full data for snapshots)
   const columns = getColumns(projectId)
-  const searchQuery = getSearchQuery(projectId)
 
   // Drag state - only for visual feedback, no store updates during drag
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
@@ -49,23 +49,6 @@ export function KanbanBoard({ projectKey, projectId }: KanbanBoardProps) {
   // Refs for drag operation (no re-renders)
   const beforeDragSnapshot = useRef<ColumnWithTickets[] | null>(null)
   const draggedIdsRef = useRef<string[]>([])
-
-  // Filter tickets based on search query
-  const filteredColumns = useMemo(() => {
-    if (!searchQuery.trim()) return columns
-
-    const query = searchQuery.toLowerCase()
-    return columns.map((column) => ({
-      ...column,
-      tickets: column.tickets.filter(
-        (ticket) =>
-          ticket.title.toLowerCase().includes(query) ||
-          `${projectKey}-${ticket.number}`.toLowerCase().includes(query) ||
-          ticket.description?.toLowerCase().includes(query) ||
-          ticket.labels.some((label) => label.name.toLowerCase().includes(query)),
-      ),
-    }))
-  }, [columns, searchQuery, projectKey])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

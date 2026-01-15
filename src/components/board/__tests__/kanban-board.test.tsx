@@ -33,14 +33,15 @@ vi.mock('@/stores/undo-store', () => ({
 }))
 
 describe('KanbanBoard', () => {
+  const mockColumns = createMockColumns()
+
   beforeEach(() => {
     vi.mocked(useBoardStore).mockReturnValue({
-      columns: createMockColumns(),
+      getColumns: vi.fn(() => mockColumns),
       moveTicket: vi.fn(),
       moveTickets: vi.fn(),
       reorderTicket: vi.fn(),
       reorderTickets: vi.fn(),
-      searchQuery: '',
       setSearchQuery: vi.fn(),
       setColumns: vi.fn(),
       _hasHydrated: true,
@@ -52,30 +53,22 @@ describe('KanbanBoard', () => {
   })
 
   it('should render board with columns', () => {
-    const { container } = render(<KanbanBoard projectKey="TEST" />)
+    const { container } = render(
+      <KanbanBoard projectKey="TEST" projectId="1" filteredColumns={mockColumns} />,
+    )
     // The board should render (exact content depends on implementation)
     expect(container).toBeInTheDocument()
   })
 
-  it('should filter tickets based on search query', () => {
-    const columns = createMockColumns()
-    vi.mocked(useBoardStore).mockReturnValue({
-      columns,
-      moveTicket: vi.fn(),
-      moveTickets: vi.fn(),
-      reorderTicket: vi.fn(),
-      reorderTickets: vi.fn(),
-      searchQuery: 'test',
-      setSearchQuery: vi.fn(),
-      setColumns: vi.fn(),
-      _hasHydrated: true,
-      setHasHydrated: vi.fn(),
-      updateTicket: vi.fn(),
-      addTicket: vi.fn(),
-      removeTicket: vi.fn(),
-    })
+  it('should render with filtered columns', () => {
+    const filteredColumns = mockColumns.map((col) => ({
+      ...col,
+      tickets: col.tickets.filter((t) => t.title.toLowerCase().includes('test')),
+    }))
 
-    render(<KanbanBoard projectKey="TEST" />)
+    render(
+      <KanbanBoard projectKey="TEST" projectId="1" filteredColumns={filteredColumns} />,
+    )
     // Board should render with filtered results
     expect(document.body).toBeInTheDocument()
   })
