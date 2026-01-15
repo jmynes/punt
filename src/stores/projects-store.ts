@@ -31,6 +31,7 @@ interface ProjectsState {
 
   // CRUD operations
   addProject: (project: Omit<ProjectSummary, 'id'>) => ProjectSummary
+  restoreProject: (project: ProjectSummary) => void // For undo/redo - restores project with original ID
   updateProject: (id: string, updates: Partial<Omit<ProjectSummary, 'id'>>) => void
   removeProject: (id: string) => void
 
@@ -62,6 +63,14 @@ export const useProjectsStore = create<ProjectsState>()(
         }))
 
         return newProject
+      },
+
+      restoreProject: (project) => {
+        logger.info('Restoring project', { projectId: project.id, name: project.name })
+
+        set((state) => ({
+          projects: [...state.projects, { ...project }],
+        }))
       },
 
       updateProject: (id, updates) => {

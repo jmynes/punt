@@ -3,7 +3,6 @@
 import { Loader2 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,8 +15,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
 
 // Preset colors for projects
 const PROJECT_COLORS = [
@@ -132,11 +133,45 @@ export function CreateProjectDialog() {
       color: formData.color,
     })
 
-    // Show success toast
-    toast.success('Project created', {
+    // Show success toast with undo option
+    const showUndo = useUIStore.getState().showUndoButtons
+    const { removeProject, restoreProject } = useProjectsStore.getState()
+
+    let currentId: string | number | undefined
+
+    const toastId = showUndoRedoToast('success', {
+      title: 'Project created',
       description: `${newProject.name} (${newProject.key})`,
-      duration: 4000,
+      duration: 5000,
+      showUndoButtons: showUndo,
+      onUndo: (id) => {
+        useUndoStore.getState().undoByToastId(id)
+        removeProject(newProject.id)
+      },
+      onUndoneToast: (newId) => {
+        if (currentId) {
+          useUndoStore.getState().updateRedoToastId(currentId, newId)
+          currentId = newId
+        }
+      },
+      onRedo: (id) => {
+        useUndoStore.getState().redoByToastId(id)
+        restoreProject(newProject)
+      },
+      onRedoneToast: (newId) => {
+        if (currentId) {
+          useUndoStore.getState().updateUndoToastId(currentId, newId)
+          currentId = newId
+        }
+      },
+      undoneTitle: 'Project creation undone',
+      redoneTitle: 'Project created',
     })
+
+    currentId = toastId
+
+    // Push to undo stack
+    useUndoStore.getState().pushProjectCreate(newProject, toastId)
 
     setIsSubmitting(false)
     handleClose()

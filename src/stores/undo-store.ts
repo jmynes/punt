@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
+import type { ProjectSummary } from '@/stores/projects-store'
 
 interface DeletedTicket {
   ticket: TicketWithRelations
@@ -36,6 +37,8 @@ type UndoAction =
     }
   | { type: 'paste'; tickets: PastedTicket[] }
   | { type: 'update'; tickets: UpdatedTicket[] }
+  | { type: 'projectCreate'; project: ProjectSummary }
+  | { type: 'projectDelete'; project: ProjectSummary }
 
 interface UndoEntry {
   action: UndoAction
@@ -87,6 +90,12 @@ interface UndoState {
     toastId: string | number,
     isRedo?: boolean,
   ) => void
+
+  // Add a project create action to the undo stack
+  pushProjectCreate: (project: ProjectSummary, toastId: string | number, isRedo?: boolean) => void
+
+  // Add a project delete action to the undo stack
+  pushProjectDelete: (project: ProjectSummary, toastId: string | number, isRedo?: boolean) => void
 
   // Pop and return the most recent undo entry
   popUndo: () => UndoEntry | undefined
@@ -253,6 +262,44 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           timestamp: Date.now(),
           toastId,
           projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushProjectCreate: (project, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Project Create ${isRedo ? '(Redo)' : ''}`, {
+      projectId: project.id,
+      projectName: project.name,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: { type: 'projectCreate', project: { ...project } },
+          timestamp: Date.now(),
+          toastId,
+          projectId: project.id,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushProjectDelete: (project, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Project Delete ${isRedo ? '(Redo)' : ''}`, {
+      projectId: project.id,
+      projectName: project.name,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: { type: 'projectDelete', project: { ...project } },
+          timestamp: Date.now(),
+          toastId,
+          projectId: project.id,
         },
       ],
       redoStack: isRedo ? state.redoStack : [],

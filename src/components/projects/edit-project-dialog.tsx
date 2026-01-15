@@ -25,8 +25,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
 
 // Preset colors for projects
 const PROJECT_COLORS = [
@@ -122,23 +124,62 @@ export function EditProjectDialog() {
   const handleDelete = useCallback(async () => {
     if (!editProjectId) return
 
+    // Get the full project data before deleting
+    const project = getProject(editProjectId)
+    if (!project) return
+
+    // Store the project data before deleting
+    const deletedProject = { ...project }
+
     // Simulate API call delay
     await new Promise((resolve) => setTimeout(resolve, 300))
-
-    const projectName = formData.name
 
     // Remove project from the store
     removeProject(editProjectId)
 
-    // Show success toast
-    toast.success('Project deleted', {
-      description: projectName,
-      duration: 4000,
+    // Show toast with undo option
+    const showUndo = useUIStore.getState().showUndoButtons
+    const { restoreProject } = useProjectsStore.getState()
+
+    let currentId: string | number | undefined
+
+    const toastId = showUndoRedoToast('error', {
+      title: 'Project deleted',
+      description: deletedProject.name,
+      duration: 5000,
+      showUndoButtons: showUndo,
+      onUndo: (id) => {
+        useUndoStore.getState().undoByToastId(id)
+        restoreProject(deletedProject)
+      },
+      onUndoneToast: (newId) => {
+        if (currentId) {
+          useUndoStore.getState().updateRedoToastId(currentId, newId)
+          currentId = newId
+        }
+      },
+      onRedo: (id) => {
+        useUndoStore.getState().redoByToastId(id)
+        useProjectsStore.getState().removeProject(deletedProject.id)
+      },
+      onRedoneToast: (newId) => {
+        if (currentId) {
+          useUndoStore.getState().updateUndoToastId(currentId, newId)
+          currentId = newId
+        }
+      },
+      undoneTitle: 'Project restored',
+      redoneTitle: 'Project deleted',
     })
+
+    currentId = toastId
+
+    // Push to undo stack
+    useUndoStore.getState().pushProjectDelete(deletedProject, toastId)
 
     setShowDeleteConfirm(false)
     handleClose()
-  }, [editProjectId, formData.name, removeProject, handleClose])
+  }, [editProjectId, getProject, removeProject, handleClose])
 
   const isValid = formData.name.trim().length > 0
 
