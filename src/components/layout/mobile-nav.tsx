@@ -1,9 +1,20 @@
 'use client'
 
-import { Check, FileText, FolderKanban, Home, Layers, Pencil, Plus, Settings, X } from 'lucide-react'
+import { Check, FileText, FolderKanban, Home, Layers, Pencil, Plus, Settings, Trash2, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -22,14 +33,27 @@ export function MobileNav() {
     setCreateProjectOpen,
     openEditProject,
   } = useUIStore()
-  const { projects, _hasHydrated } = useProjectsStore()
+  const { projects, _hasHydrated, removeProject } = useProjectsStore()
   const [editMode, setEditMode] = useState(false)
+  const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
+
+  const projectToDelete = deleteProjectId ? projects.find((p) => p.id === deleteProjectId) : null
+
+  const handleDeleteProject = () => {
+    if (!deleteProjectId || !projectToDelete) return
+    removeProject(deleteProjectId)
+    toast.success('Project deleted', {
+      description: projectToDelete.name,
+    })
+    setDeleteProjectId(null)
+  }
 
   const handleLinkClick = () => {
     setMobileNavOpen(false)
   }
 
   return (
+    <>
     <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
       <SheetContent side="left" className="w-80 border-zinc-800 bg-zinc-950 p-0">
         <SheetHeader className="border-b border-zinc-800 px-4 py-3">
@@ -180,19 +204,33 @@ export function MobileNav() {
                         </Button>
                       </Link>
                       {editMode && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 h-6 w-6 text-zinc-500 hover:text-zinc-300"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            openEditProject(project.id)
-                            setMobileNavOpen(false)
-                          }}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
+                        <div className="absolute right-1 flex items-center gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              openEditProject(project.id)
+                              setMobileNavOpen(false)
+                            }}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-zinc-500 hover:text-red-400"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setDeleteProjectId(project.id)
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       )}
                     </div>
                   ))
@@ -232,5 +270,30 @@ export function MobileNav() {
         </ScrollArea>
       </SheetContent>
     </Sheet>
+
+    {/* Delete confirmation dialog */}
+    <AlertDialog open={!!deleteProjectId} onOpenChange={(open) => !open && setDeleteProjectId(null)}>
+      <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
+          <AlertDialogDescription className="text-zinc-400">
+            Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This will remove
+            the project and all its tickets. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDeleteProject}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            Delete Project
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }
