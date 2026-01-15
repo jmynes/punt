@@ -1,6 +1,7 @@
 'use client'
 
-import { Filter, Plus, Search, SlidersHorizontal } from 'lucide-react'
+import { AlertTriangle, Filter, Plus, Search, SlidersHorizontal } from 'lucide-react'
+import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useRef } from 'react'
 import { KanbanBoard } from '@/components/board'
@@ -16,7 +17,7 @@ import { useUIStore } from '@/stores/ui-store'
 export default function BoardPage() {
   const params = useParams()
   const projectId = params.projectId as string
-  const { getProject } = useProjectsStore()
+  const { getProject, _hasHydrated: projectsHydrated } = useProjectsStore()
   const project = getProject(projectId)
   const projectKey = project?.key || 'PROJ'
 
@@ -77,6 +78,22 @@ export default function BoardPage() {
   useEffect(() => {
     return () => setSearchQuery(projectId, '')
   }, [projectId, setSearchQuery])
+
+  // Show not found if project doesn't exist after hydration
+  if (projectsHydrated && !project) {
+    return (
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-4">
+        <AlertTriangle className="h-12 w-12 text-amber-500" />
+        <h1 className="text-xl font-semibold text-zinc-100">Project not found</h1>
+        <p className="text-zinc-500">The project you&apos;re looking for doesn&apos;t exist.</p>
+        <Link href="/projects">
+          <Button className="bg-amber-600 hover:bg-amber-700 text-white">
+            View all projects
+          </Button>
+        </Link>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
