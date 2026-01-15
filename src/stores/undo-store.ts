@@ -37,6 +37,7 @@ type UndoAction =
     }
   | { type: 'paste'; tickets: PastedTicket[] }
   | { type: 'update'; tickets: UpdatedTicket[] }
+  | { type: 'ticketCreate'; ticket: TicketWithRelations; columnId: string }
   | { type: 'projectCreate'; project: ProjectSummary }
   | { type: 'projectDelete'; project: ProjectSummary }
 
@@ -87,6 +88,15 @@ interface UndoState {
   pushUpdate: (
     projectId: string,
     tickets: UpdatedTicket[],
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
+
+  // Add a ticket create action to the undo stack
+  pushTicketCreate: (
+    projectId: string,
+    ticket: TicketWithRelations,
+    columnId: string,
     toastId: string | number,
     isRedo?: boolean,
   ) => void
@@ -259,6 +269,26 @@ export const useUndoStore = create<UndoState>((set, get) => ({
               after: { ...t.after },
             })),
           },
+          timestamp: Date.now(),
+          toastId,
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushTicketCreate: (projectId, ticket, columnId, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Ticket Create ${isRedo ? '(Redo)' : ''}`, {
+      ticketId: ticket.id,
+      ticketTitle: ticket.title,
+      projectId,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: { type: 'ticketCreate', ticket: { ...ticket }, columnId },
           timestamp: Date.now(),
           toastId,
           projectId,
