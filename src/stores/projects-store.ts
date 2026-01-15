@@ -17,9 +17,13 @@ const defaultProjects: ProjectSummary[] = [
   { id: '3', name: 'Mobile App', key: 'MOB', color: '#8b5cf6' },
 ]
 
-// Generate a unique ID
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+// Generate next numeric ID based on existing projects
+function getNextId(projects: ProjectSummary[]): string {
+  const numericIds = projects
+    .map((p) => parseInt(p.id, 10))
+    .filter((id) => !isNaN(id))
+  const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0
+  return String(maxId + 1)
 }
 
 interface ProjectsState {
@@ -51,9 +55,10 @@ export const useProjectsStore = create<ProjectsState>()(
       setHasHydrated: (value) => set({ _hasHydrated: value }),
 
       addProject: (projectData) => {
+        const currentProjects = get().projects
         const newProject: ProjectSummary = {
           ...projectData,
-          id: generateId(),
+          id: getNextId(currentProjects),
         }
 
         logger.info('Adding project', { projectId: newProject.id, name: newProject.name })
