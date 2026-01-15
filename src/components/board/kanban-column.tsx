@@ -26,7 +26,7 @@ export function KanbanColumn({
   activeTicketId = null,
   activeDragTarget = null,
 }: KanbanColumnProps) {
-  const { setCreateTicketOpen } = useUIStore()
+  const { openCreateTicketWithData } = useUIStore()
 
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
@@ -73,7 +73,7 @@ export function KanbanColumn({
             variant="ghost"
             size="icon"
             className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
-            onClick={() => setCreateTicketOpen(true)}
+            onClick={() => openCreateTicketWithData({ columnId: column.id })}
           >
             <Plus className="h-3.5 w-3.5" />
           </Button>
@@ -159,7 +159,7 @@ export function KanbanColumn({
         <Button
           variant="ghost"
           className="w-full justify-start gap-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
-          onClick={() => setCreateTicketOpen(true)}
+          onClick={() => openCreateTicketWithData({ columnId: column.id })}
         >
           <Plus className="h-4 w-4" />
           Add ticket
