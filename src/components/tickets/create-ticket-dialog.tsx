@@ -2,7 +2,6 @@
 
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -14,8 +13,11 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { formatTicketId } from '@/lib/ticket-format'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
 import {
   DEFAULT_TICKET_FORM,
   type LabelSummary,
@@ -208,11 +210,46 @@ export function CreateTicketDialog() {
     // Add ticket to the board store
     addTicket(projectId, targetColumn.id, newTicket)
 
-    // Show success toast
-    toast.success('Ticket created', {
-      description: `PUNT-${ticketNumber}: ${newTicket.title}`,
-      duration: 4000,
+    // Show success toast with undo option
+    const showUndo = useUIStore.getState().showUndoButtons
+    const { removeTicket } = useBoardStore.getState()
+    const ticketKey = formatTicketId(newTicket)
+
+    let currentId: string | number | undefined
+
+    const toastId = showUndoRedoToast('success', {
+      title: 'Ticket created',
+      description: ticketKey,
+      duration: 5000,
+      showUndoButtons: showUndo,
+      onUndo: (id) => {
+        useUndoStore.getState().undoByToastId(id)
+        removeTicket(projectId, newTicket.id)
+      },
+      onUndoneToast: (newId) => {
+        if (currentId) {
+          useUndoStore.getState().updateRedoToastId(currentId, newId)
+          currentId = newId
+        }
+      },
+      onRedo: (id) => {
+        useUndoStore.getState().redoByToastId(id)
+        useBoardStore.getState().addTicket(projectId, targetColumn.id, newTicket)
+      },
+      onRedoneToast: (newId) => {
+        if (currentId) {
+          useUndoStore.getState().updateUndoToastId(currentId, newId)
+          currentId = newId
+        }
+      },
+      undoneTitle: 'Ticket creation undone',
+      redoneTitle: 'Ticket created',
     })
+
+    currentId = toastId
+
+    // Push to undo stack
+    useUndoStore.getState().pushTicketCreate(projectId, newTicket, targetColumn.id, toastId)
 
     setIsSubmitting(false)
     handleClose()

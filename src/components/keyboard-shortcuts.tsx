@@ -963,6 +963,57 @@ export function KeyboardShortcuts() {
 
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
+          } else if (entry.action.type === 'ticketCreate') {
+            const action = entry.action
+            // Undo ticket creation = delete the ticket
+            const { removeTicket, addTicket } = useBoardStore.getState()
+            removeTicket(entry.projectId, action.ticket.id)
+            undoStore.pushRedo(entry)
+
+            const ticketKey = formatTicketId(action.ticket)
+            let currentId = entry.toastId
+
+            const toastId = showUndoRedoToast('success', {
+              title: 'Ticket creation undone',
+              description: ticketKey,
+              duration: 3000,
+              showUndoButtons: showUndo,
+              undoLabel: 'Redo',
+              redoLabel: 'Undo',
+              onUndo: (id) => {
+                // Redo (re-create)
+                const undoEntry = useUndoStore.getState().redoByToastId(id)
+                if (undoEntry) {
+                  addTicket(undoEntry.projectId, action.columnId, action.ticket)
+                }
+              },
+              onUndoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateUndoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              onRedo: (id) => {
+                // Undo (delete again)
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (undoEntry) {
+                  removeTicket(undoEntry.projectId, action.ticket.id)
+                }
+              },
+              onRedoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateRedoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              undoneTitle: 'Ticket created',
+              undoneDescription: ticketKey,
+              redoneTitle: 'Ticket creation undone',
+              redoneDescription: ticketKey,
+            })
+
+            undoStore.updateRedoToastId(currentId, toastId)
+            currentId = toastId
           } else if (entry.action.type === 'projectCreate') {
             const action = entry.action
             // Undo project creation = delete the project
@@ -1316,6 +1367,29 @@ export function KeyboardShortcuts() {
               },
             )
             redoStore.pushPaste(entry.projectId, action.tickets, newPasteToastId, true)
+          } else if (entry.action.type === 'ticketCreate') {
+            const action = entry.action
+            // Redo ticket creation = add the ticket back
+            const { addTicket, removeTicket } = useBoardStore.getState()
+            addTicket(entry.projectId, action.columnId, action.ticket)
+
+            const ticketKey = formatTicketId(action.ticket)
+            const newToastId = toast.success('Ticket created', {
+              description: ticketKey,
+              duration: 5000,
+              action: showUndo
+                ? {
+                    label: 'Undo',
+                    onClick: () => {
+                      removeTicket(entry.projectId, action.ticket.id)
+                      redoStore.pushRedo(entry)
+                      toast.success('Ticket creation undone', { duration: 2000 })
+                    },
+                  }
+                : undefined,
+            })
+
+            redoStore.pushTicketCreate(entry.projectId, action.ticket, action.columnId, newToastId, true)
           } else if (entry.action.type === 'projectCreate') {
             const action = entry.action
             // Redo project creation = restore the project
