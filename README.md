@@ -175,18 +175,28 @@ See [docs/TESTING.md](docs/TESTING.md) for detailed testing guidelines.
 ```
 punt/
 ├── prisma/
-│   └── schema.prisma        # Database schema
+│   ├── schema.prisma         # Database schema
+│   └── seed.ts               # Admin user seeding script
 ├── src/
 │   ├── app/                  # Next.js App Router pages
-│   │   ├── projects/[id]/    # Project pages
+│   │   ├── (auth)/           # Login/register pages
+│   │   ├── admin/            # Admin pages
+│   │   ├── profile/          # User profile page
+│   │   ├── projects/[projectId]/  # Project board & backlog
 │   │   └── api/              # API routes
 │   ├── components/
-│   │   ├── board/            # Kanban board components
+│   │   ├── admin/            # User management
+│   │   ├── auth/             # Login/register forms
+│   │   ├── backlog/          # Table view
+│   │   ├── board/            # Kanban board (dnd-kit)
 │   │   ├── common/           # Shared components
 │   │   ├── layout/           # Layout components
+│   │   ├── profile/          # Profile editing
+│   │   ├── projects/         # Project management
+│   │   ├── tickets/          # Ticket components
 │   │   └── ui/               # shadcn/ui components
 │   ├── hooks/                # React hooks
-│   ├── lib/                  # Utilities and database
+│   ├── lib/                  # Utilities, auth, database
 │   ├── stores/               # Zustand stores
 │   └── types/                # TypeScript types
 └── public/                   # Static assets

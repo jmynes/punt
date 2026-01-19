@@ -132,20 +132,30 @@ SessionProvider (NextAuth)
 ```
 src/
 ├── app/                    # Next.js pages + API routes
+│   ├── (auth)/             # Login/register pages (route group)
+│   ├── admin/users/        # Admin user management page
+│   ├── profile/            # User profile page
 │   ├── projects/[projectId]/{board,backlog}/
+│   ├── settings/           # Settings page
 │   ├── api/auth/           # NextAuth + register
 │   ├── api/me/             # User profile endpoints
 │   ├── api/admin/          # Admin endpoints
+│   ├── api/projects/       # Project CRUD endpoints
 │   └── api/upload/         # File upload
 ├── components/
-│   ├── auth/               # Login/register forms
 │   ├── admin/              # User management
-│   ├── profile/            # Profile editing
-│   ├── board/              # Kanban (dnd-kit)
+│   ├── auth/               # Login/register forms
 │   ├── backlog/            # Table view
+│   ├── board/              # Kanban (dnd-kit)
+│   ├── common/             # Shared components (avatars, badges, etc.)
+│   ├── layout/             # Sidebar, header, navigation
+│   ├── profile/            # Profile editing
+│   ├── projects/           # Project cards, forms
+│   ├── tickets/            # Ticket dialogs, forms
 │   └── ui/                 # shadcn/ui
+├── generated/              # Prisma-generated client (auto-generated)
 ├── stores/                 # Zustand stores
-├── hooks/                  # useCurrentUser, useMediaQuery
+├── hooks/                  # useCurrentUser, useMediaQuery, queries/
 ├── lib/                    # auth.ts, password.ts, rate-limit.ts, db.ts, logger.ts
 └── types/                  # Prisma re-exports + custom types
 ```
