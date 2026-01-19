@@ -11,40 +11,44 @@ const createProjectSchema = z.object({
 })
 
 /**
- * GET /api/projects - List all projects for the current user
+ * GET /api/projects - List all projects
+ * All authenticated users can see all projects (no per-user visibility restrictions yet)
  */
 export async function GET() {
   try {
     const user = await requireAuth()
 
-    // Get projects where user is a member
-    const memberships = await db.projectMember.findMany({
-      where: { userId: user.id },
-      include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
-            key: true,
-            color: true,
-            description: true,
-            createdAt: true,
-            updatedAt: true,
-            _count: {
-              select: { tickets: true, members: true },
-            },
-          },
+    // Get all projects
+    const projects = await db.project.findMany({
+      select: {
+        id: true,
+        name: true,
+        key: true,
+        color: true,
+        description: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: { tickets: true, members: true },
+        },
+        members: {
+          where: { userId: user.id },
+          select: { role: true },
         },
       },
-      orderBy: { project: { name: 'asc' } },
+      orderBy: { name: 'asc' },
     })
 
-    const projects = memberships.map((m) => ({
-      ...m.project,
-      role: m.role,
-    }))
+    // Add role to response (user's role if member, otherwise 'member' as default)
+    const projectsWithRole = projects.map((p) => {
+      const { members, ...project } = p
+      return {
+        ...project,
+        role: members[0]?.role ?? 'member',
+      }
+    })
 
-    return NextResponse.json(projects)
+    return NextResponse.json(projectsWithRole)
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {

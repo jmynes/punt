@@ -10,14 +10,9 @@ const updateProjectSchema = z.object({
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
 })
 
-async function getProjectMembership(userId: string, projectId: string) {
-  return db.projectMember.findUnique({
-    where: { userId_projectId: { userId, projectId } },
-  })
-}
-
 /**
  * GET /api/projects/[projectId] - Get a single project
+ * All authenticated users can view any project (no per-user visibility restrictions yet)
  */
 export async function GET(
   request: Request,
@@ -26,11 +21,6 @@ export async function GET(
   try {
     const user = await requireAuth()
     const { projectId } = await params
-
-    const membership = await getProjectMembership(user.id, projectId)
-    if (!membership) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-    }
 
     const project = await db.project.findUnique({
       where: { id: projectId },
@@ -45,6 +35,10 @@ export async function GET(
         _count: {
           select: { tickets: true, members: true },
         },
+        members: {
+          where: { userId: user.id },
+          select: { role: true },
+        },
       },
     })
 
@@ -52,7 +46,10 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ ...project, role: membership.role })
+    const { members, ...projectData } = project
+    const role = members[0]?.role ?? 'member'
+
+    return NextResponse.json({ ...projectData, role })
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
@@ -66,6 +63,7 @@ export async function GET(
 
 /**
  * PATCH /api/projects/[projectId] - Update a project
+ * All authenticated users can update any project (no per-user restrictions yet)
  */
 export async function PATCH(
   request: Request,
@@ -75,14 +73,14 @@ export async function PATCH(
     const user = await requireAuth()
     const { projectId } = await params
 
-    const membership = await getProjectMembership(user.id, projectId)
-    if (!membership) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-    }
+    // Check if project exists
+    const existingProject = await db.project.findUnique({
+      where: { id: projectId },
+      select: { id: true },
+    })
 
-    // Only owner and admin can update project
-    if (membership.role !== 'owner' && membership.role !== 'admin') {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
+    if (!existingProject) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
     const body = await request.json()
@@ -124,10 +122,17 @@ export async function PATCH(
         description: true,
         createdAt: true,
         updatedAt: true,
+        members: {
+          where: { userId: user.id },
+          select: { role: true },
+        },
       },
     })
 
-    return NextResponse.json({ ...project, role: membership.role })
+    const { members, ...projectData } = project
+    const role = members[0]?.role ?? 'member'
+
+    return NextResponse.json({ ...projectData, role })
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
@@ -141,26 +146,24 @@ export async function PATCH(
 
 /**
  * DELETE /api/projects/[projectId] - Delete a project
+ * All authenticated users can delete any project (no per-user restrictions yet)
  */
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    const user = await requireAuth()
+    await requireAuth()
     const { projectId } = await params
 
-    const membership = await getProjectMembership(user.id, projectId)
-    if (!membership) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-    }
+    // Check if project exists
+    const project = await db.project.findUnique({
+      where: { id: projectId },
+      select: { id: true },
+    })
 
-    // Only owner can delete project
-    if (membership.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'Only the project owner can delete the project' },
-        { status: 403 }
-      )
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
     // Delete project (cascades to tickets, columns, members, etc.)
