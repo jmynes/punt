@@ -1,7 +1,7 @@
-import { Suspense } from 'react'
 import { Users } from 'lucide-react'
-import { UserList } from '@/components/admin/user-list'
+import { Suspense } from 'react'
 import { CreateUserDialog } from '@/components/admin/create-user-dialog'
+import { UserList } from '@/components/admin/user-list'
 
 // Force dynamic rendering - child components fetch from database
 export const dynamic = 'force-dynamic'

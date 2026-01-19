@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { Check, Eye, EyeOff, Loader2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { Eye, EyeOff, Loader2, Check, X } from 'lucide-react'
+import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,14 +38,23 @@ export function RegisterForm() {
   const isValidEmail = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0
   const allRequirementsMet = passwordRequirements.every((req) => req.test(password))
-  const canSubmit = username && isValidUsername && name && password && passwordsMatch && allRequirementsMet && isValidEmail
+  const canSubmit =
+    username &&
+    isValidUsername &&
+    name &&
+    password &&
+    passwordsMatch &&
+    allRequirementsMet &&
+    isValidEmail
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
     if (!isValidUsername) {
-      setError('Username must be 3-30 characters and can only contain letters, numbers, underscores, and hyphens')
+      setError(
+        'Username must be 3-30 characters and can only contain letters, numbers, underscores, and hyphens',
+      )
       return
     }
 
@@ -156,10 +165,7 @@ export function RegisterForm() {
             </div>
 
             <div className="space-y-2">
-              <Label
-                htmlFor="email"
-                className="text-sm font-medium text-zinc-300 tracking-wide"
-              >
+              <Label htmlFor="email" className="text-sm font-medium text-zinc-300 tracking-wide">
                 Email
                 <span className="ml-2 text-xs font-normal text-zinc-500">(optional)</span>
               </Label>
@@ -266,7 +272,11 @@ export function RegisterForm() {
                   className="absolute right-0 top-0 h-11 w-11 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
               {confirmPassword && !passwordsMatch && (

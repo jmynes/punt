@@ -1,10 +1,9 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { z } from 'zod'
-
+import { authConfig } from '@/lib/auth.config'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
-import { authConfig } from '@/lib/auth.config'
 
 const loginSchema = z.object({
   username: z.string().min(1),

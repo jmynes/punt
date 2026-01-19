@@ -3,6 +3,7 @@
 import { LogOut, Search, Settings, Shield, User } from 'lucide-react'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
+import { AnimatedMenuIcon } from '@/components/ui/animated-menu-icon'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,9 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { AnimatedMenuIcon } from '@/components/ui/animated-menu-icon'
-import { SidebarToggleIcon } from '@/components/ui/sidebar-toggle-icon'
 import { Input } from '@/components/ui/input'
+import { SidebarToggleIcon } from '@/components/ui/sidebar-toggle-icon'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useIsMobile } from '@/hooks/use-media-query'
 import { getAvatarColor, getInitials } from '@/lib/utils'
@@ -86,7 +86,11 @@ export function Header() {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-zinc-900 border-zinc-800" align="end" forceMount>
+            <DropdownMenuContent
+              className="w-56 bg-zinc-900 border-zinc-800"
+              align="end"
+              forceMount
+            >
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium text-zinc-100">{currentUser.name}</p>
@@ -94,20 +98,29 @@ export function Header() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-zinc-800" />
-              <DropdownMenuItem asChild className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer">
+              <DropdownMenuItem
+                asChild
+                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+              >
                 <Link href="/profile">
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer">
+              <DropdownMenuItem
+                asChild
+                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+              >
                 <Link href="/settings">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </Link>
               </DropdownMenuItem>
               {currentUser.isSystemAdmin && (
-                <DropdownMenuItem asChild className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer">
+                <DropdownMenuItem
+                  asChild
+                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+                >
                   <Link href="/admin">
                     <Shield className="mr-2 h-4 w-4" />
                     <span>Admin</span>

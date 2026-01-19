@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth-helpers'
-import { hashPassword, verifyPassword, validatePasswordStrength } from '@/lib/password'
+import { db } from '@/lib/db'
+import { hashPassword, validatePasswordStrength, verifyPassword } from '@/lib/password'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const changePasswordSchema = z.object({
@@ -27,7 +27,7 @@ export async function PATCH(request: Request) {
             'X-RateLimit-Remaining': String(rateLimit.remaining),
             'X-RateLimit-Reset': rateLimit.resetAt.toISOString(),
           },
-        }
+        },
       )
     }
 
@@ -37,7 +37,7 @@ export async function PATCH(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -52,7 +52,7 @@ export async function PATCH(request: Request) {
     if (!user?.passwordHash) {
       return NextResponse.json(
         { error: 'Cannot change password for this account type' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -67,7 +67,7 @@ export async function PATCH(request: Request) {
     if (!passwordValidation.valid) {
       return NextResponse.json(
         { error: 'Password does not meet requirements', details: passwordValidation.errors },
-        { status: 400 }
+        { status: 400 },
       )
     }
 

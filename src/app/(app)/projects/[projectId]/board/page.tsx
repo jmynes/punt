@@ -223,7 +223,11 @@ export default function BoardPage() {
       {/* Board content */}
       <div className="flex-1 min-h-0 overflow-hidden p-4 lg:p-6">
         <div className="h-full">
-          <KanbanBoard projectKey={projectKey} projectId={projectId} filteredColumns={filteredColumns} />
+          <KanbanBoard
+            projectKey={projectKey}
+            projectId={projectId}
+            filteredColumns={filteredColumns}
+          />
         </div>
       </div>
 

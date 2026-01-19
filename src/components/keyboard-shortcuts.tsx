@@ -37,7 +37,7 @@ export function KeyboardShortcuts() {
   const activeTicketId = useUIStore((state) => state.activeTicketId)
   const createTicketOpen = useUIStore((state) => state.createTicketOpen)
   const openSinglePastedTicket = useSettingsStore((state) => state.openSinglePastedTicket)
-  
+
   // Get columns for the active project
   const projectId = activeProjectId || '1' // Fallback to '1' if no project is active
   const columns = getColumns(projectId)
@@ -806,7 +806,13 @@ export function KeyboardShortcuts() {
             } else {
               // Fallback: move tickets back one by one (legacy behavior)
               for (const move of action.moves) {
-                moveBoardStore.moveTicket(entry.projectId, move.ticketId, move.toColumnId, move.fromColumnId, 0)
+                moveBoardStore.moveTicket(
+                  entry.projectId,
+                  move.ticketId,
+                  move.toColumnId,
+                  move.fromColumnId,
+                  0,
+                )
               }
             }
 
@@ -814,7 +820,9 @@ export function KeyboardShortcuts() {
             undoStore.pushRedo(entry)
 
             // Look up ticket IDs from columns
-            const moveAllTickets = moveBoardStore.getColumns(entry.projectId).flatMap((col) => col.tickets)
+            const moveAllTickets = moveBoardStore
+              .getColumns(entry.projectId)
+              .flatMap((col) => col.tickets)
             const moveTicketKeys = action.moves
               .map((move) => {
                 const ticket = moveAllTickets.find((t) => t.id === move.ticketId)
@@ -851,7 +859,13 @@ export function KeyboardShortcuts() {
                     moveBoardStore.setColumns(undoEntry.projectId, restoredColumns)
                   } else {
                     for (const move of action.moves) {
-                      moveBoardStore.moveTicket(undoEntry.projectId, move.ticketId, move.fromColumnId, move.toColumnId, 0)
+                      moveBoardStore.moveTicket(
+                        undoEntry.projectId,
+                        move.ticketId,
+                        move.fromColumnId,
+                        move.toColumnId,
+                        0,
+                      )
                     }
                   }
                 }
@@ -1178,7 +1192,13 @@ export function KeyboardShortcuts() {
               boardStore.setColumns(entry.projectId, restoredColumns)
             } else {
               for (const move of action.moves) {
-                boardStore.moveTicket(entry.projectId, move.ticketId, move.fromColumnId, move.toColumnId, 0)
+                boardStore.moveTicket(
+                  entry.projectId,
+                  move.ticketId,
+                  move.fromColumnId,
+                  move.toColumnId,
+                  0,
+                )
               }
             }
 
@@ -1290,7 +1310,13 @@ export function KeyboardShortcuts() {
                 : undefined,
             })
 
-            redoStore.pushTicketCreate(entry.projectId, action.ticket, action.columnId, newToastId, true)
+            redoStore.pushTicketCreate(
+              entry.projectId,
+              action.ticket,
+              action.columnId,
+              newToastId,
+              true,
+            )
           }
           // Note: projectCreate and projectDelete redo are not supported
           // since projects are now server-backed and require API calls

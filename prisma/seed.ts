@@ -1,5 +1,5 @@
-import { PrismaClient } from '../src/generated/prisma'
 import bcrypt from 'bcryptjs'
+import { PrismaClient } from '../src/generated/prisma'
 
 const prisma = new PrismaClient()
 
@@ -29,7 +29,10 @@ function validateUsername(username: string): { valid: boolean; error?: string } 
     return { valid: false, error: 'Username must be between 3 and 30 characters' }
   }
   if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-    return { valid: false, error: 'Username can only contain letters, numbers, underscores, and hyphens' }
+    return {
+      valid: false,
+      error: 'Username can only contain letters, numbers, underscores, and hyphens',
+    }
   }
   return { valid: true }
 }
@@ -61,12 +64,16 @@ async function main() {
 
   // Validate required arguments
   if (!username || !password || !name) {
-    console.error('Usage: pnpm db:seed --username <username> --password <password> --name <name> [--email <email>]')
+    console.error(
+      'Usage: pnpm db:seed --username <username> --password <password> --name <name> [--email <email>]',
+    )
     console.error('')
     console.error('Creates the first system administrator user.')
     console.error('')
     console.error('Required:')
-    console.error('  --username    Username for login (3-30 characters, letters/numbers/underscores/hyphens)')
+    console.error(
+      '  --username    Username for login (3-30 characters, letters/numbers/underscores/hyphens)',
+    )
     console.error('  --password    Password (see requirements below)')
     console.error('  --name        Display name')
     console.error('')

@@ -1,13 +1,11 @@
 'use client'
 
-import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { UserPlus, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, UserPlus } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -18,6 +16,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false)

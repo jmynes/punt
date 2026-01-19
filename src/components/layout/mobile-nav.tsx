@@ -18,8 +18,8 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useCurrentUser } from '@/hooks/use-current-user'
 import { useDeleteProject } from '@/hooks/queries/use-projects'
+import { useCurrentUser } from '@/hooks/use-current-user'
 import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -60,238 +60,237 @@ export function MobileNav() {
 
   return (
     <>
-    <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-      <SheetContent side="left" className="w-80 border-zinc-800 bg-zinc-950 p-0">
-        <SheetHeader className="border-b border-zinc-800 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white">
-                <span className="text-sm font-bold">P</span>
-              </div>
-              <SheetTitle className="text-lg text-white">PUNT</SheetTitle>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-zinc-400"
-              onClick={() => setMobileNavOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </SheetHeader>
-
-        <ScrollArea className="h-[calc(100vh-4rem)]">
-          <div className="px-3 py-4">
-            {/* Main navigation */}
-            <div className="space-y-1">
-              <Link href="/" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
-                    pathname === '/' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Home className="h-4 w-4" />
-                  Dashboard
-                </Button>
-              </Link>
-              <Link href="/editor-test" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
-                    pathname === '/editor-test' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <FileText className="h-4 w-4" />
-                  Editor Test
-                </Button>
-              </Link>
-              <Link href="/settings" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
-                    pathname === '/settings' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Button>
-              </Link>
-            </div>
-
-            {/* Projects section */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between px-3 mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Projects
-                </span>
-                <div className="flex items-center gap-1">
-                  {projects.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        'h-5 w-5 transition-all duration-200',
-                        editMode
-                          ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:text-emerald-300 rounded-sm'
-                          : 'text-zinc-500 hover:text-zinc-300',
-                      )}
-                      onClick={() => setEditMode(!editMode)}
-                    >
-                      {editMode ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <Pencil className="h-3 w-3" />
-                      )}
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5 text-zinc-500 hover:text-zinc-300"
-                    onClick={() => {
-                      setCreateProjectOpen(true)
-                      setMobileNavOpen(false)
-                    }}
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <SheetContent side="left" className="w-80 border-zinc-800 bg-zinc-950 p-0">
+          <SheetHeader className="border-b border-zinc-800 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+                  <span className="text-sm font-bold">P</span>
                 </div>
+                <SheetTitle className="text-lg text-white">PUNT</SheetTitle>
               </div>
-
-              <div className="space-y-1">
-                {isLoading ? (
-                  // Show skeleton while loading from API
-                  <>
-                    <Skeleton className="h-9 w-full bg-zinc-800" />
-                    <Skeleton className="h-9 w-full bg-zinc-800" />
-                    <Skeleton className="h-9 w-full bg-zinc-800" />
-                  </>
-                ) : projects.length === 0 ? (
-                  <p className="px-3 py-2 text-xs text-zinc-500">No projects yet</p>
-                ) : (
-                  projects.map((project) => (
-                    <div key={project.id} className="relative flex items-center">
-                      <Link
-                        href={`/projects/${project.id}/board`}
-                        onClick={() => {
-                          setActiveProjectId(project.id)
-                          handleLinkClick()
-                        }}
-                        className="flex-1"
-                      >
-                        <Button
-                          variant="ghost"
-                          className={cn(
-                            'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
-                            activeProjectId === project.id && 'bg-zinc-800/50 text-zinc-100',
-                          )}
-                        >
-                          <div
-                            className="h-3 w-3 rounded-sm"
-                            style={{ backgroundColor: project.color }}
-                          />
-                          <span className="truncate">{project.name}</span>
-                          {!editMode && (
-                            <span className="ml-auto text-xs text-zinc-600">{project.key}</span>
-                          )}
-                        </Button>
-                      </Link>
-                      {editMode && (
-                        <div className="absolute right-1 flex items-center gap-0.5">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              openEditProject(project.id)
-                              setMobileNavOpen(false)
-                            }}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-zinc-500 hover:text-red-400"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              setDeleteProjectId(project.id)
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-zinc-400"
+                onClick={() => setMobileNavOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
             </div>
+          </SheetHeader>
 
-            {/* Quick access when project selected */}
-            {activeProjectId && projects.some(p => p.id === activeProjectId) && (
-              <div className="mt-4 ml-4 space-y-1 border-l border-zinc-800 pl-3">
-                <Link href={`/projects/${activeProjectId}/board`} onClick={handleLinkClick}>
+          <ScrollArea className="h-[calc(100vh-4rem)]">
+            <div className="px-3 py-4">
+              {/* Main navigation */}
+              <div className="space-y-1">
+                <Link href="/" onClick={handleLinkClick}>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100"
+                    className={cn(
+                      'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
+                      pathname === '/' && 'bg-zinc-800/50 text-zinc-100',
+                    )}
                   >
-                    <Layers className="h-3.5 w-3.5" />
-                    Board
+                    <Home className="h-4 w-4" />
+                    Dashboard
+                  </Button>
+                </Link>
+                <Link href="/editor-test" onClick={handleLinkClick}>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
+                      pathname === '/editor-test' && 'bg-zinc-800/50 text-zinc-100',
+                    )}
+                  >
+                    <FileText className="h-4 w-4" />
+                    Editor Test
                   </Button>
                 </Link>
                 <Link href="/settings" onClick={handleLinkClick}>
                   <Button
                     variant="ghost"
-                    size="sm"
                     className={cn(
-                      'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100',
+                      'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
                       pathname === '/settings' && 'bg-zinc-800/50 text-zinc-100',
                     )}
                   >
-                    <Settings className="h-3.5 w-3.5" />
+                    <Settings className="h-4 w-4" />
                     Settings
                   </Button>
                 </Link>
               </div>
-            )}
-          </div>
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
 
-    {/* Delete confirmation dialog */}
-    <AlertDialog open={!!deleteProjectId} onOpenChange={(open) => !open && setDeleteProjectId(null)}>
-      <AlertDialogContent className="bg-zinc-950 border-zinc-800">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
-          <AlertDialogDescription className="text-zinc-400">
-            Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This will remove
-            the project and all its tickets. This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleDeleteProject}
-            className="bg-red-600 hover:bg-red-700 text-white"
-          >
-            Delete Project
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+              {/* Projects section */}
+              <div className="mt-6">
+                <div className="flex items-center justify-between px-3 mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    Projects
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {projects.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          'h-5 w-5 transition-all duration-200',
+                          editMode
+                            ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:text-emerald-300 rounded-sm'
+                            : 'text-zinc-500 hover:text-zinc-300',
+                        )}
+                        onClick={() => setEditMode(!editMode)}
+                      >
+                        {editMode ? <Check className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 text-zinc-500 hover:text-zinc-300"
+                      onClick={() => {
+                        setCreateProjectOpen(true)
+                        setMobileNavOpen(false)
+                      }}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  {isLoading ? (
+                    // Show skeleton while loading from API
+                    <>
+                      <Skeleton className="h-9 w-full bg-zinc-800" />
+                      <Skeleton className="h-9 w-full bg-zinc-800" />
+                      <Skeleton className="h-9 w-full bg-zinc-800" />
+                    </>
+                  ) : projects.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-zinc-500">No projects yet</p>
+                  ) : (
+                    projects.map((project) => (
+                      <div key={project.id} className="relative flex items-center">
+                        <Link
+                          href={`/projects/${project.id}/board`}
+                          onClick={() => {
+                            setActiveProjectId(project.id)
+                            handleLinkClick()
+                          }}
+                          className="flex-1"
+                        >
+                          <Button
+                            variant="ghost"
+                            className={cn(
+                              'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
+                              activeProjectId === project.id && 'bg-zinc-800/50 text-zinc-100',
+                            )}
+                          >
+                            <div
+                              className="h-3 w-3 rounded-sm"
+                              style={{ backgroundColor: project.color }}
+                            />
+                            <span className="truncate">{project.name}</span>
+                            {!editMode && (
+                              <span className="ml-auto text-xs text-zinc-600">{project.key}</span>
+                            )}
+                          </Button>
+                        </Link>
+                        {editMode && (
+                          <div className="absolute right-1 flex items-center gap-0.5">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                openEditProject(project.id)
+                                setMobileNavOpen(false)
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-zinc-500 hover:text-red-400"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setDeleteProjectId(project.id)
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Quick access when project selected */}
+              {activeProjectId && projects.some((p) => p.id === activeProjectId) && (
+                <div className="mt-4 ml-4 space-y-1 border-l border-zinc-800 pl-3">
+                  <Link href={`/projects/${activeProjectId}/board`} onClick={handleLinkClick}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100"
+                    >
+                      <Layers className="h-3.5 w-3.5" />
+                      Board
+                    </Button>
+                  </Link>
+                  <Link href="/settings" onClick={handleLinkClick}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100',
+                        pathname === '/settings' && 'bg-zinc-800/50 text-zinc-100',
+                      )}
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                      Settings
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        open={!!deleteProjectId}
+        onOpenChange={(open) => !open && setDeleteProjectId(null)}
+      >
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This will remove
+              the project and all its tickets. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProject}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete Project
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

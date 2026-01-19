@@ -1,6 +1,12 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEMO_MEMBERS, useCurrentUser, useIsAuthenticated, useIsSystemAdmin, useProjectMembers } from '../use-current-user'
+import {
+  DEMO_MEMBERS,
+  useCurrentUser,
+  useIsAuthenticated,
+  useIsSystemAdmin,
+  useProjectMembers,
+} from '../use-current-user'
 
 // Mock next-auth/react
 vi.mock('next-auth/react', () => ({

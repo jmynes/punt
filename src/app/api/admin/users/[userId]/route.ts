@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-
-import { db } from '@/lib/db'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
+import { db } from '@/lib/db'
 import { hashPassword, validatePasswordStrength } from '@/lib/password'
 
 const updateUserSchema = z.object({
@@ -16,10 +15,7 @@ const updateUserSchema = z.object({
 /**
  * GET /api/admin/users/[userId] - Get a specific user
  */
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ userId: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
     await requireSystemAdmin()
 
@@ -63,10 +59,7 @@ export async function GET(
 /**
  * PATCH /api/admin/users/[userId] - Update a user
  */
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ userId: string }> }
-) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
     const currentUser = await requireSystemAdmin()
     const { userId } = await params
@@ -77,7 +70,7 @@ export async function PATCH(
       if (body.isSystemAdmin === false || body.isActive === false) {
         return NextResponse.json(
           { error: 'Cannot remove your own admin privileges or disable your own account' },
-          { status: 400 }
+          { status: 400 },
         )
       }
     }
@@ -88,7 +81,7 @@ export async function PATCH(
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -120,7 +113,7 @@ export async function PATCH(
       if (!passwordValidation.valid) {
         return NextResponse.json(
           { error: 'Password does not meet requirements', details: passwordValidation.errors },
-          { status: 400 }
+          { status: 400 },
         )
       }
       passwordHash = await hashPassword(updates.password)
@@ -171,7 +164,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ userId: string }> }
+  { params }: { params: Promise<{ userId: string }> },
 ) {
   try {
     const currentUser = await requireSystemAdmin()
@@ -181,10 +174,7 @@ export async function DELETE(
 
     // Prevent self-deletion
     if (userId === currentUser.id) {
-      return NextResponse.json(
-        { error: 'Cannot delete your own account' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
     }
 
     // Check if user exists

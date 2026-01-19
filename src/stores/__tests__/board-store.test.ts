@@ -80,7 +80,13 @@ describe('Board Store', () => {
       const ticket1 = createMockTicket({ id: 'ticket-1', columnId: 'col-1', order: 0 })
       const ticket2 = createMockTicket({ id: 'ticket-2', columnId: 'col-1', order: 1 })
       useBoardStore.getState().setColumns(PROJECT_ID, [
-        { id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [ticket1, ticket2] },
+        {
+          id: 'col-1',
+          name: 'To Do',
+          order: 0,
+          projectId: PROJECT_ID,
+          tickets: [ticket1, ticket2],
+        },
         { id: 'col-2', name: 'Done', order: 1, projectId: PROJECT_ID, tickets: [] },
       ])
 
@@ -98,7 +104,13 @@ describe('Board Store', () => {
       const ticket1 = createMockTicket({ id: 'ticket-1', columnId: 'col-1', order: 0 })
       const ticket2 = createMockTicket({ id: 'ticket-2', columnId: 'col-1', order: 1 })
       useBoardStore.getState().setColumns(PROJECT_ID, [
-        { id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [ticket1, ticket2] },
+        {
+          id: 'col-1',
+          name: 'To Do',
+          order: 0,
+          projectId: PROJECT_ID,
+          tickets: [ticket1, ticket2],
+        },
         { id: 'col-2', name: 'Done', order: 1, projectId: PROJECT_ID, tickets: [] },
       ])
 
@@ -157,7 +169,9 @@ describe('Board Store', () => {
       const ticket1 = createMockTicket({ id: 'ticket-1', columnId: 'col-1', order: 0 })
       useBoardStore
         .getState()
-        .setColumns(PROJECT_ID, [{ id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [ticket1] }])
+        .setColumns(PROJECT_ID, [
+          { id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [ticket1] },
+        ])
 
       const before = useBoardStore.getState().getColumns(PROJECT_ID)[0].tickets
       useBoardStore.getState().reorderTicket(PROJECT_ID, 'col-1', 'ticket-1', 0)
@@ -196,7 +210,9 @@ describe('Board Store', () => {
       const ticket = createMockTicket({ id: 'ticket-1', title: 'Old Title' })
       useBoardStore
         .getState()
-        .setColumns(PROJECT_ID, [{ id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [ticket] }])
+        .setColumns(PROJECT_ID, [
+          { id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [ticket] },
+        ])
 
       useBoardStore.getState().updateTicket(PROJECT_ID, 'ticket-1', { title: 'New Title' })
 
@@ -230,7 +246,9 @@ describe('Board Store', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
       useBoardStore
         .getState()
-        .setColumns(PROJECT_ID, [{ id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [] }])
+        .setColumns(PROJECT_ID, [
+          { id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [] },
+        ])
 
       useBoardStore.getState().addTicket(PROJECT_ID, 'col-1', ticket)
 
@@ -278,9 +296,11 @@ describe('Board Store', () => {
 
   describe('getNextTicketNumber', () => {
     it('should return 1 for empty project', () => {
-      useBoardStore.getState().setColumns(PROJECT_ID, [
-        { id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [] },
-      ])
+      useBoardStore
+        .getState()
+        .setColumns(PROJECT_ID, [
+          { id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [] },
+        ])
 
       const nextNumber = useBoardStore.getState().getNextTicketNumber(PROJECT_ID)
       expect(nextNumber).toBe(1)
@@ -290,7 +310,13 @@ describe('Board Store', () => {
       const ticket1 = createMockTicket({ id: 'ticket-1', number: 5 })
       const ticket2 = createMockTicket({ id: 'ticket-2', number: 3 })
       useBoardStore.getState().setColumns(PROJECT_ID, [
-        { id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [ticket1, ticket2] },
+        {
+          id: 'col-1',
+          name: 'To Do',
+          order: 0,
+          projectId: PROJECT_ID,
+          tickets: [ticket1, ticket2],
+        },
       ])
 
       const nextNumber = useBoardStore.getState().getNextTicketNumber(PROJECT_ID)

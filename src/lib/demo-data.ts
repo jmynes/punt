@@ -47,7 +47,13 @@ export function createPUNTDemoTickets(): Array<{
     parentId: string | null
     assignee: { id: string; name: string; email: string; avatar: string | null } | null
     creator: { id: string; name: string; email: string; avatar: string | null }
-    sprint: { id: string; name: string; isActive: boolean; startDate: Date | null; endDate: Date | null } | null
+    sprint: {
+      id: string
+      name: string
+      isActive: boolean
+      startDate: Date | null
+      endDate: Date | null
+    } | null
     labels: Array<{ id: string; name: string; color: string }>
     watchers: Array<{ id: string; name: string; email: string; avatar: string | null }>
     _count: { comments: number; subtasks: number; attachments: number }
@@ -320,7 +326,13 @@ export function createAPIDemoTickets(): Array<{
     parentId: string | null
     assignee: { id: string; name: string; email: string; avatar: string | null } | null
     creator: { id: string; name: string; email: string; avatar: string | null }
-    sprint: { id: string; name: string; isActive: boolean; startDate: Date | null; endDate: Date | null } | null
+    sprint: {
+      id: string
+      name: string
+      isActive: boolean
+      startDate: Date | null
+      endDate: Date | null
+    } | null
     labels: Array<{ id: string; name: string; color: string }>
     watchers: Array<{ id: string; name: string; email: string; avatar: string | null }>
     _count: { comments: number; subtasks: number; attachments: number }
@@ -461,7 +473,13 @@ export function createMOBDemoTickets(): Array<{
     parentId: string | null
     assignee: { id: string; name: string; email: string; avatar: string | null } | null
     creator: { id: string; name: string; email: string; avatar: string | null }
-    sprint: { id: string; name: string; isActive: boolean; startDate: Date | null; endDate: Date | null } | null
+    sprint: {
+      id: string
+      name: string
+      isActive: boolean
+      startDate: Date | null
+      endDate: Date | null
+    } | null
     labels: Array<{ id: string; name: string; color: string }>
     watchers: Array<{ id: string; name: string; email: string; avatar: string | null }>
     _count: { comments: number; subtasks: number; attachments: number }
@@ -599,4 +617,3 @@ export function getDemoData(projectId: string): ColumnWithTickets[] {
       .sort((a, b) => a.order - b.order),
   }))
 }
-

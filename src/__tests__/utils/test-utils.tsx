@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { type RenderOptions, render } from '@testing-library/react'
-import type { ReactElement, ReactNode } from 'react'
 import { SessionProvider } from 'next-auth/react'
+import type { ReactElement, ReactNode } from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 // Create a test query client with default options

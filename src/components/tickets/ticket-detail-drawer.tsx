@@ -152,7 +152,7 @@ const DEMO_SPRINTS: SprintSummary[] = [
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
   const { removeTicket, addTicket, updateTicket, getColumns } = useBoardStore()
   const { activeProjectId, setActiveTicketId } = useUIStore()
-  
+
   // Get columns for the active project
   const projectId = activeProjectId || ticket?.projectId || '1' // Fallback to ticket's projectId or '1'
   const columns = getColumns(projectId)
@@ -390,7 +390,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     }
     if (tempAssigneeId !== ticket.assigneeId) {
       updates.assigneeId = tempAssigneeId
-      updates.assignee = tempAssigneeId ? members.find((m) => m.id === tempAssigneeId) || null : null
+      updates.assignee = tempAssigneeId
+        ? members.find((m) => m.id === tempAssigneeId) || null
+        : null
     }
     if (tempStatusId !== ticket.columnId) {
       updates.columnId = tempStatusId || ticket.columnId
@@ -422,7 +424,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     if (tempFixVersion !== (ticket.fixVersion || '')) {
       updates.fixVersion = tempFixVersion || null
     }
-    if (JSON.stringify(tempLabelIds.sort()) !== JSON.stringify(ticket.labels.map((l) => l.id).sort())) {
+    if (
+      JSON.stringify(tempLabelIds.sort()) !== JSON.stringify(ticket.labels.map((l) => l.id).sort())
+    ) {
       updates.labels = tempLabelIds
         .map((id: string) => DEMO_LABELS.find((l) => l.id === id))
         .filter((l): l is LabelSummary => l !== undefined)
@@ -453,7 +457,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       redoneTitle: 'Update redone',
     })
 
-    pushUpdate(projectId, [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }], toastId)
+    pushUpdate(
+      projectId,
+      [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }],
+      toastId,
+    )
   }, [
     ticket,
     hasUnsavedChanges,
@@ -592,7 +600,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       redoneTitle: 'Update redone',
     })
 
-    pushUpdate(projectId, [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }], toastId)
+    pushUpdate(
+      projectId,
+      [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }],
+      toastId,
+    )
 
     setEditingField(null)
   }
@@ -1159,9 +1171,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               {/* Child Tickets */}
               {childTickets.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">
-                    Children ({childTickets.length})
-                  </Label>
+                  <Label className="text-zinc-400">Children ({childTickets.length})</Label>
                   <div className="space-y-1">
                     {childTickets.map((child) => (
                       <Button

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from '../register/route'
 
 // Mock dependencies
@@ -32,34 +32,38 @@ describe('Registration API - Username Validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDb.user.findUnique.mockResolvedValue(null)
-    mockDb.user.create.mockImplementation(({ data }) => Promise.resolve({
-      id: 'test-id',
-      username: data.username,
-      name: data.name,
-      email: data.email,
-    }))
+    mockDb.user.create.mockImplementation(({ data }) =>
+      Promise.resolve({
+        id: 'test-id',
+        username: data.username,
+        name: data.name,
+        email: data.email,
+      }),
+    )
   })
 
   describe('valid usernames', () => {
     const validUsernames = [
-      'abc',           // minimum length
-      'user123',       // alphanumeric
-      'user_name',     // with underscore
-      'user-name',     // with hyphen
-      'User123',       // mixed case
-      'a'.repeat(30),  // maximum length
-      '___',           // only underscores
-      '---',           // only hyphens
-      'a_b-c_d-e',     // mixed separators
+      'abc', // minimum length
+      'user123', // alphanumeric
+      'user_name', // with underscore
+      'user-name', // with hyphen
+      'User123', // mixed case
+      'a'.repeat(30), // maximum length
+      '___', // only underscores
+      '---', // only hyphens
+      'a_b-c_d-e', // mixed separators
     ]
 
-    validUsernames.forEach(username => {
+    validUsernames.forEach((username) => {
       it(`should accept username: "${username}"`, async () => {
-        const response = await POST(createRequest({
-          username,
-          name: 'Test User',
-          password: 'ValidPassword1',
-        }))
+        const response = await POST(
+          createRequest({
+            username,
+            name: 'Test User',
+            password: 'ValidPassword1',
+          }),
+        )
 
         const data = await response.json()
         if (response.status !== 200) {
@@ -88,11 +92,13 @@ describe('Registration API - Username Validation', () => {
 
     invalidUsernames.forEach(({ username, reason }) => {
       it(`should reject username with ${reason}`, async () => {
-        const response = await POST(createRequest({
-          username,
-          name: 'Test User',
-          password: 'ValidPassword1',
-        }))
+        const response = await POST(
+          createRequest({
+            username,
+            name: 'Test User',
+            password: 'ValidPassword1',
+          }),
+        )
 
         expect(response.status).toBe(400)
         const data = await response.json()
@@ -103,31 +109,37 @@ describe('Registration API - Username Validation', () => {
 
   describe('edge cases', () => {
     it('should reject empty username', async () => {
-      const response = await POST(createRequest({
-        username: '',
-        name: 'Test User',
-        password: 'ValidPassword1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: '',
+          name: 'Test User',
+          password: 'ValidPassword1',
+        }),
+      )
 
       expect(response.status).toBe(400)
     })
 
     it('should reject username with only whitespace', async () => {
-      const response = await POST(createRequest({
-        username: '   ',
-        name: 'Test User',
-        password: 'ValidPassword1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: '   ',
+          name: 'Test User',
+          password: 'ValidPassword1',
+        }),
+      )
 
       expect(response.status).toBe(400)
     })
 
     it('should handle SQL injection attempt in username', async () => {
-      const response = await POST(createRequest({
-        username: "'; DROP TABLE users; --",
-        name: 'Test User',
-        password: 'ValidPassword1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: "'; DROP TABLE users; --",
+          name: 'Test User',
+          password: 'ValidPassword1',
+        }),
+      )
 
       // Should be rejected due to invalid characters, not cause SQL error
       expect(response.status).toBe(400)
@@ -136,21 +148,25 @@ describe('Registration API - Username Validation', () => {
     })
 
     it('should handle XSS attempt in username', async () => {
-      const response = await POST(createRequest({
-        username: '<script>alert(1)</script>',
-        name: 'Test User',
-        password: 'ValidPassword1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: '<script>alert(1)</script>',
+          name: 'Test User',
+          password: 'ValidPassword1',
+        }),
+      )
 
       expect(response.status).toBe(400)
     })
 
     it('should handle null byte in username', async () => {
-      const response = await POST(createRequest({
-        username: 'user\0name',
-        name: 'Test User',
-        password: 'ValidPassword1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: 'user\0name',
+          name: 'Test User',
+          password: 'ValidPassword1',
+        }),
+      )
 
       expect(response.status).toBe(400)
     })
@@ -161,29 +177,63 @@ describe('Registration API - Password Validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDb.user.findUnique.mockResolvedValue(null)
-    mockDb.user.create.mockImplementation(({ data }) => Promise.resolve({
-      id: 'test-id',
-      username: data.username,
-      name: data.name,
-      email: data.email,
-    }))
+    mockDb.user.create.mockImplementation(({ data }) =>
+      Promise.resolve({
+        id: 'test-id',
+        username: data.username,
+        name: data.name,
+        email: data.email,
+      }),
+    )
   })
 
   describe('valid passwords with special characters', () => {
     const specialChars = [
-      '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+',
-      '[', ']', '{', '}', '|', '\\', ':', ';', '"', "'", '<', '>', ',', '.',
-      '?', '/', '`', '~', ' ',
+      '!',
+      '@',
+      '#',
+      '$',
+      '%',
+      '^',
+      '&',
+      '*',
+      '(',
+      ')',
+      '-',
+      '_',
+      '=',
+      '+',
+      '[',
+      ']',
+      '{',
+      '}',
+      '|',
+      '\\',
+      ':',
+      ';',
+      '"',
+      "'",
+      '<',
+      '>',
+      ',',
+      '.',
+      '?',
+      '/',
+      '`',
+      '~',
+      ' ',
     ]
 
-    specialChars.forEach(char => {
+    specialChars.forEach((char) => {
       it(`should accept password with special character: ${char === ' ' ? 'space' : char}`, async () => {
         const password = `Abcdefghi1${char}k`
-        const response = await POST(createRequest({
-          username: 'testuser',
-          name: 'Test User',
-          password,
-        }))
+        const response = await POST(
+          createRequest({
+            username: 'testuser',
+            name: 'Test User',
+            password,
+          }),
+        )
 
         // Should either succeed or fail for reasons unrelated to the special char
         const data = await response.json()
@@ -206,11 +256,13 @@ describe('Registration API - Password Validation', () => {
 
     unicodePasswords.forEach(({ password, desc }) => {
       it(`should accept password ${desc}`, async () => {
-        const response = await POST(createRequest({
-          username: 'testuser',
-          name: 'Test User',
-          password,
-        }))
+        const response = await POST(
+          createRequest({
+            username: 'testuser',
+            name: 'Test User',
+            password,
+          }),
+        )
 
         if (response.status === 200) {
           expect(response.status).toBe(200)
@@ -221,11 +273,13 @@ describe('Registration API - Password Validation', () => {
 
   describe('password strength requirements', () => {
     it('should reject password without uppercase', async () => {
-      const response = await POST(createRequest({
-        username: 'testuser',
-        name: 'Test User',
-        password: 'abcdefghijk1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: 'testuser',
+          name: 'Test User',
+          password: 'abcdefghijk1',
+        }),
+      )
 
       expect(response.status).toBe(400)
       const data = await response.json()
@@ -233,11 +287,13 @@ describe('Registration API - Password Validation', () => {
     })
 
     it('should reject password without lowercase', async () => {
-      const response = await POST(createRequest({
-        username: 'testuser',
-        name: 'Test User',
-        password: 'ABCDEFGHIJK1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: 'testuser',
+          name: 'Test User',
+          password: 'ABCDEFGHIJK1',
+        }),
+      )
 
       expect(response.status).toBe(400)
       const data = await response.json()
@@ -245,11 +301,13 @@ describe('Registration API - Password Validation', () => {
     })
 
     it('should reject password without number', async () => {
-      const response = await POST(createRequest({
-        username: 'testuser',
-        name: 'Test User',
-        password: 'Abcdefghijkl',
-      }))
+      const response = await POST(
+        createRequest({
+          username: 'testuser',
+          name: 'Test User',
+          password: 'Abcdefghijkl',
+        }),
+      )
 
       expect(response.status).toBe(400)
       const data = await response.json()
@@ -257,11 +315,13 @@ describe('Registration API - Password Validation', () => {
     })
 
     it('should reject password shorter than 12 chars', async () => {
-      const response = await POST(createRequest({
-        username: 'testuser',
-        name: 'Test User',
-        password: 'Abcdefgh1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: 'testuser',
+          name: 'Test User',
+          password: 'Abcdefgh1',
+        }),
+      )
 
       expect(response.status).toBe(400)
       const data = await response.json()
@@ -274,12 +334,14 @@ describe('Registration API - Input Sanitization', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDb.user.findUnique.mockResolvedValue(null)
-    mockDb.user.create.mockImplementation(({ data }) => Promise.resolve({
-      id: 'test-id',
-      username: data.username,
-      name: data.name,
-      email: data.email,
-    }))
+    mockDb.user.create.mockImplementation(({ data }) =>
+      Promise.resolve({
+        id: 'test-id',
+        username: data.username,
+        name: data.name,
+        email: data.email,
+      }),
+    )
   })
 
   describe('SQL injection attempts', () => {
@@ -287,18 +349,20 @@ describe('Registration API - Input Sanitization', () => {
       "'; DROP TABLE users; --",
       "1' OR '1'='1",
       "admin'--",
-      "1; SELECT * FROM users",
+      '1; SELECT * FROM users',
       "' UNION SELECT * FROM passwords--",
       "1'; EXEC xp_cmdshell('dir'); --",
     ]
 
-    sqlInjections.forEach(injection => {
+    sqlInjections.forEach((injection) => {
       it(`should safely handle SQL injection in name: ${injection.substring(0, 20)}...`, async () => {
-        const response = await POST(createRequest({
-          username: 'testuser',
-          name: injection,
-          password: 'ValidPassword1',
-        }))
+        const response = await POST(
+          createRequest({
+            username: 'testuser',
+            name: injection,
+            password: 'ValidPassword1',
+          }),
+        )
 
         // Should either succeed (name is stored safely) or fail gracefully
         expect([200, 400, 500]).toContain(response.status)
@@ -319,13 +383,15 @@ describe('Registration API - Input Sanitization', () => {
       '{{constructor.constructor("alert(1)")()}}',
     ]
 
-    xssAttempts.forEach(xss => {
+    xssAttempts.forEach((xss) => {
       it(`should safely handle XSS in name: ${xss.substring(0, 20)}...`, async () => {
-        const response = await POST(createRequest({
-          username: 'testuser',
-          name: xss,
-          password: 'ValidPassword1',
-        }))
+        const response = await POST(
+          createRequest({
+            username: 'testuser',
+            name: xss,
+            password: 'ValidPassword1',
+          }),
+        )
 
         // Name field should accept any string
         if (response.status === 200) {
@@ -371,60 +437,72 @@ describe('Registration API - Input Sanitization', () => {
 
   describe('type coercion attacks', () => {
     it('should handle array instead of string for username', async () => {
-      const response = await POST(createRequest({
-        username: ['admin', 'user'],
-        name: 'Test User',
-        password: 'ValidPassword1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: ['admin', 'user'],
+          name: 'Test User',
+          password: 'ValidPassword1',
+        }),
+      )
 
       expect(response.status).toBe(400)
     })
 
     it('should handle object instead of string for username', async () => {
-      const response = await POST(createRequest({
-        username: { $ne: '' },
-        name: 'Test User',
-        password: 'ValidPassword1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: { $ne: '' },
+          name: 'Test User',
+          password: 'ValidPassword1',
+        }),
+      )
 
       expect(response.status).toBe(400)
     })
 
     it('should handle number instead of string for password', async () => {
-      const response = await POST(createRequest({
-        username: 'testuser',
-        name: 'Test User',
-        password: 123456789012,
-      }))
+      const response = await POST(
+        createRequest({
+          username: 'testuser',
+          name: 'Test User',
+          password: 123456789012,
+        }),
+      )
 
       expect(response.status).toBe(400)
     })
 
     it('should handle boolean instead of string', async () => {
-      const response = await POST(createRequest({
-        username: true,
-        name: 'Test User',
-        password: 'ValidPassword1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: true,
+          name: 'Test User',
+          password: 'ValidPassword1',
+        }),
+      )
 
       expect(response.status).toBe(400)
     })
 
     it('should handle null values', async () => {
-      const response = await POST(createRequest({
-        username: null,
-        name: 'Test User',
-        password: 'ValidPassword1',
-      }))
+      const response = await POST(
+        createRequest({
+          username: null,
+          name: 'Test User',
+          password: 'ValidPassword1',
+        }),
+      )
 
       expect(response.status).toBe(400)
     })
 
     it('should handle undefined values', async () => {
-      const response = await POST(createRequest({
-        name: 'Test User',
-        password: 'ValidPassword1',
-      }))
+      const response = await POST(
+        createRequest({
+          name: 'Test User',
+          password: 'ValidPassword1',
+        }),
+      )
 
       expect(response.status).toBe(400)
     })

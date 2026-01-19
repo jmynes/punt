@@ -1,5 +1,5 @@
-import { forwardRef } from 'react'
 import type * as React from 'react'
+import { forwardRef } from 'react'
 
 import { cn } from '@/lib/utils'
 
@@ -20,7 +20,7 @@ const Input = forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
         {...props}
       />
     )
-  }
+  },
 )
 Input.displayName = 'Input'
 

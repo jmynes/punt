@@ -1,7 +1,7 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
 import { useQuery } from '@tanstack/react-query'
+import { useSession } from 'next-auth/react'
 import type { UserSummary } from '@/types'
 
 /**

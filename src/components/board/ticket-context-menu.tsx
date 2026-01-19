@@ -51,11 +51,25 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const projectId = activeProjectId || '1'
   const columns = getColumns(projectId)
   const boardState = useBoardStore()
-  const board = (useBoardStore as typeof useBoardStore & { getState?: () => ReturnType<typeof useBoardStore> }).getState?.() ?? boardState
-  const undoStore = (useUndoStore as typeof useUndoStore & { getState?: () => ReturnType<typeof useUndoStore> }).getState?.() ?? useUndoStore()
-  const uiStore = (useUIStore as typeof useUIStore & { getState?: () => ReturnType<typeof useUIStore> }).getState?.() ?? useUIStore()
+  const board =
+    (
+      useBoardStore as typeof useBoardStore & { getState?: () => ReturnType<typeof useBoardStore> }
+    ).getState?.() ?? boardState
+  const undoStore =
+    (
+      useUndoStore as typeof useUndoStore & { getState?: () => ReturnType<typeof useUndoStore> }
+    ).getState?.() ?? useUndoStore()
+  const uiStore =
+    (
+      useUIStore as typeof useUIStore & { getState?: () => ReturnType<typeof useUIStore> }
+    ).getState?.() ?? useUIStore()
   const selection = useSelectionStore()
-  const selectionApi = (useSelectionStore as typeof useSelectionStore & { getState?: () => ReturnType<typeof useSelectionStore> }).getState?.() ?? selection
+  const selectionApi =
+    (
+      useSelectionStore as typeof useSelectionStore & {
+        getState?: () => ReturnType<typeof useSelectionStore>
+      }
+    ).getState?.() ?? selection
   const _shortcutsApi = uiStore
   const currentUser = useCurrentUser()
   const members = useProjectMembers()
@@ -68,7 +82,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const selectedIds = useMemo(() => {
     const selectionState = useSelectionStore.getState ? useSelectionStore.getState() : selection
-    const getIds = (selectionState as { getSelectedIds?: () => string[] }).getSelectedIds || (() => [])
+    const getIds =
+      (selectionState as { getSelectedIds?: () => string[] }).getSelectedIds || (() => [])
     const ids = getIds()
     return ids.length > 0 ? ids : [ticket.id]
   }, [selection, ticket.id])
@@ -295,7 +310,15 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     })
 
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushMove(projectId, moves, fromColumnName, toColumnName, toastId, beforeColumns, afterColumns)
+    undoState.pushMove(
+      projectId,
+      moves,
+      fromColumnName,
+      toColumnName,
+      toastId,
+      beforeColumns,
+      afterColumns,
+    )
 
     setOpen(false)
     setSubmenu(null)
@@ -452,7 +475,11 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   }
 
   const contextChild = useMemo(
-    () => cloneElement(children as React.ReactElement<{ onContextMenu?: (e: React.MouseEvent) => void }>, { onContextMenu: handleContextMenu }),
+    () =>
+      cloneElement(
+        children as React.ReactElement<{ onContextMenu?: (e: React.MouseEvent) => void }>,
+        { onContextMenu: handleContextMenu },
+      ),
     [children, handleContextMenu],
   )
 

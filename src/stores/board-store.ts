@@ -46,14 +46,14 @@ function isValidColumns(columns: unknown): columns is ColumnWithTickets[] {
       typeof col === 'object' &&
       'id' in col &&
       'tickets' in col &&
-      Array.isArray(col.tickets)
+      Array.isArray(col.tickets),
   )
 }
 
 interface BoardState {
   // Store columns per project: Record<projectId, ColumnWithTickets[]>
   projects: Record<string, ColumnWithTickets[]>
-  
+
   // Get columns for a specific project (with default fallback)
   getColumns: (projectId: string) => ColumnWithTickets[]
   setColumns: (projectId: string, columns: ColumnWithTickets[]) => void
@@ -71,16 +71,32 @@ interface BoardState {
   getNextTicketNumber: (projectId: string) => number
 
   // Optimistic updates for drag and drop
-  moveTicket: (projectId: string, ticketId: string, fromColumnId: string, toColumnId: string, newOrder: number) => void
+  moveTicket: (
+    projectId: string,
+    ticketId: string,
+    fromColumnId: string,
+    toColumnId: string,
+    newOrder: number,
+  ) => void
 
   // Move multiple tickets to a column (from any source columns)
-  moveTickets: (projectId: string, ticketIds: string[], toColumnId: string, newOrder: number) => void
+  moveTickets: (
+    projectId: string,
+    ticketIds: string[],
+    toColumnId: string,
+    newOrder: number,
+  ) => void
 
   // Reorder ticket within the same column
   reorderTicket: (projectId: string, columnId: string, ticketId: string, newIndex: number) => void
 
   // Reorder multiple tickets within the same column (for multi-select drag)
-  reorderTickets: (projectId: string, columnId: string, ticketIds: string[], targetIndex: number) => void
+  reorderTickets: (
+    projectId: string,
+    columnId: string,
+    ticketIds: string[],
+    targetIndex: number,
+  ) => void
 
   // Update a single ticket
   updateTicket: (projectId: string, ticketId: string, updates: Partial<TicketWithRelations>) => void
@@ -96,7 +112,7 @@ export const useBoardStore = create<BoardState>()(
   persist(
     (set, get) => ({
       projects: {},
-      
+
       getColumns: (projectId: string) => {
         const state = get()
         const columns = state.projects[projectId]
@@ -106,8 +122,8 @@ export const useBoardStore = create<BoardState>()(
         }
         return columns
       },
-      
-      setColumns: (projectId: string, columns: ColumnWithTickets[]) => 
+
+      setColumns: (projectId: string, columns: ColumnWithTickets[]) =>
         set((state) => ({
           projects: { ...state.projects, [projectId]: columns },
         })),
@@ -193,7 +209,7 @@ export const useBoardStore = create<BoardState>()(
           const startTime = performance.now()
 
           const columns = state.getColumns(projectId)
-          
+
           // Collect all tickets being moved from ALL columns
           // Sort by: 1) column order (leftmost first), 2) ticket order within column
           const ticketsToMove: Array<{
@@ -360,9 +376,7 @@ export const useBoardStore = create<BoardState>()(
 
           // Check if this is a column change (status change)
           if (updates.columnId) {
-            const currentColumn = columns.find((col) =>
-              col.tickets.some((t) => t.id === ticketId),
-            )
+            const currentColumn = columns.find((col) => col.tickets.some((t) => t.id === ticketId))
 
             if (currentColumn && currentColumn.id !== updates.columnId) {
               // This is a column change - move the ticket
@@ -426,7 +440,12 @@ export const useBoardStore = create<BoardState>()(
 
       addTicket: (projectId, columnId, ticket) =>
         set((state) => {
-          logger.info('Adding ticket', { projectId, ticketId: ticket.id, columnId, title: ticket.title })
+          logger.info('Adding ticket', {
+            projectId,
+            ticketId: ticket.id,
+            columnId,
+            title: ticket.title,
+          })
           const columns = state.getColumns(projectId)
           const newColumns = columns.map((column) =>
             column.id === columnId ? { ...column, tickets: [...column.tickets, ticket] } : column,
@@ -469,7 +488,9 @@ export const useBoardStore = create<BoardState>()(
           }
           state.projects = revivedProjects
           state.setHasHydrated(true)
-          logger.info('Board store rehydrated', { projectCount: Object.keys(state.projects).length })
+          logger.info('Board store rehydrated', {
+            projectCount: Object.keys(state.projects).length,
+          })
         }
       },
     },

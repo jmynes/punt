@@ -147,9 +147,7 @@ export default function SettingsPage() {
                         }
                       }
                     }}
-                    className={cn(
-                      ticketDateMaxYearMode !== 'custom' && 'cursor-pointer',
-                    )}
+                    className={cn(ticketDateMaxYearMode !== 'custom' && 'cursor-pointer')}
                   >
                     <Input
                       ref={customInputRef}
@@ -175,4 +173,3 @@ export default function SettingsPage() {
     </div>
   )
 }
-

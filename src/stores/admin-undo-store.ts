@@ -100,5 +100,6 @@ export const useAdminUndoStore = create<AdminUndoState>((set, get) => ({
 
 // Expose for debugging
 if (typeof window !== 'undefined') {
-  ;(window as Window & { adminUndoStore?: typeof useAdminUndoStore }).adminUndoStore = useAdminUndoStore
+  ;(window as Window & { adminUndoStore?: typeof useAdminUndoStore }).adminUndoStore =
+    useAdminUndoStore
 }

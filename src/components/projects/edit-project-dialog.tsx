@@ -25,7 +25,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { useUpdateProject, useDeleteProject } from '@/hooks/queries/use-projects'
+import { useDeleteProject, useUpdateProject } from '@/hooks/queries/use-projects'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -119,7 +119,7 @@ export function EditProjectDialog() {
             description: error.message,
           })
         },
-      }
+      },
     )
   }, [editProjectId, formData, updateProject, handleClose])
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth-helpers'
+import { db } from '@/lib/db'
 
 const updateProfileSchema = z.object({
   name: z.string().min(1, 'Name is required').optional(),
@@ -62,7 +62,7 @@ export async function PATCH(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       )
     }
 

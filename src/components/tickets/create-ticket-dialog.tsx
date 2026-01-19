@@ -105,11 +105,16 @@ const DEMO_PARENT_TICKETS: ParentTicketOption[] = [
 ]
 
 // Simple counter for generating ticket numbers (in production, this comes from the database)
-let ticketCounter = 200
+const ticketCounter = 200
 
 export function CreateTicketDialog() {
-  const { createTicketOpen, setCreateTicketOpen, prefillTicketData, clearPrefillData, activeProjectId } =
-    useUIStore()
+  const {
+    createTicketOpen,
+    setCreateTicketOpen,
+    prefillTicketData,
+    clearPrefillData,
+    activeProjectId,
+  } = useUIStore()
   const { getColumns, getNextTicketNumber, addTicket } = useBoardStore()
   const currentUser = useCurrentUser()
   const members = useProjectMembers()
@@ -257,7 +262,16 @@ export function CreateTicketDialog() {
 
     setIsSubmitting(false)
     handleClose()
-  }, [formData, currentUser, members, columns, addTicket, handleClose, projectId, getNextTicketNumber])
+  }, [
+    formData,
+    currentUser,
+    members,
+    columns,
+    addTicket,
+    handleClose,
+    projectId,
+    getNextTicketNumber,
+  ])
 
   const isValid = formData.title.trim().length > 0
 

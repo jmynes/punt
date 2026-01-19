@@ -1,9 +1,9 @@
 'use client'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
-import { useProjectsStore, type ProjectSummary } from '@/stores/projects-store'
+import { type ProjectSummary, useProjectsStore } from '@/stores/projects-store'
 
 export const projectKeys = {
   all: ['projects'] as const,
@@ -57,7 +57,12 @@ export function useCreateProject() {
   const { addProject, removeProject } = useProjectsStore()
 
   return useMutation({
-    mutationFn: async (data: { name: string; key: string; color: string; description?: string }) => {
+    mutationFn: async (data: {
+      name: string
+      key: string
+      color: string
+      description?: string
+    }) => {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,7 +120,16 @@ export function useUpdateProject() {
   const { updateProject: updateProjectInStore } = useProjectsStore()
 
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; name?: string; key?: string; color?: string; description?: string | null }) => {
+    mutationFn: async ({
+      id,
+      ...data
+    }: {
+      id: string
+      name?: string
+      key?: string
+      color?: string
+      description?: string | null
+    }) => {
       const res = await fetch(`/api/projects/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -174,7 +188,7 @@ export function useDeleteProject() {
       await queryClient.cancelQueries({ queryKey: projectKeys.all })
 
       const previousProjects = queryClient.getQueryData<ProjectSummary[]>(projectKeys.all)
-      const deletedProject = previousProjects?.find(p => p.id === id)
+      const deletedProject = previousProjects?.find((p) => p.id === id)
 
       // Optimistic update
       removeProject(id)

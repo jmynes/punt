@@ -1,8 +1,8 @@
 'use client'
 
 import { Camera, KeyRound, Mail, Shield, Trash2, User } from 'lucide-react'
-import { signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { signOut, useSession } from 'next-auth/react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -457,8 +457,8 @@ export default function ProfilePage() {
                       Are you absolutely sure?
                     </AlertDialogTitle>
                     <AlertDialogDescription className="text-zinc-400">
-                      This action cannot be undone. Your account will be permanently deactivated
-                      and you will lose access to all your data.
+                      This action cannot be undone. Your account will be permanently deactivated and
+                      you will lose access to all your data.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <div className="space-y-4 py-4">

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { hashPassword, verifyPassword, validatePasswordStrength } from '../password'
+import { describe, expect, it } from 'vitest'
+import { hashPassword, validatePasswordStrength, verifyPassword } from '../password'
 
 describe('Password Validation', () => {
   describe('validatePasswordStrength', () => {
@@ -37,12 +37,43 @@ describe('Password Validation', () => {
     // Special characters - ALL should be allowed
     describe('special characters', () => {
       const specialChars = [
-        '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+',
-        '[', ']', '{', '}', '|', '\\', ':', ';', '"', "'", '<', '>', ',', '.',
-        '?', '/', '`', '~', ' ', '\t',
+        '!',
+        '@',
+        '#',
+        '$',
+        '%',
+        '^',
+        '&',
+        '*',
+        '(',
+        ')',
+        '-',
+        '_',
+        '=',
+        '+',
+        '[',
+        ']',
+        '{',
+        '}',
+        '|',
+        '\\',
+        ':',
+        ';',
+        '"',
+        "'",
+        '<',
+        '>',
+        ',',
+        '.',
+        '?',
+        '/',
+        '`',
+        '~',
+        ' ',
+        '\t',
       ]
 
-      specialChars.forEach(char => {
+      specialChars.forEach((char) => {
         it(`should allow special character: ${char === ' ' ? 'space' : char === '\t' ? 'tab' : char}`, () => {
           const password = `Abcdefghi1${char}k`
           const result = validatePasswordStrength(password)
@@ -55,16 +86,40 @@ describe('Password Validation', () => {
     // Unicode characters
     describe('unicode characters', () => {
       const unicodeChars = [
-        'é', 'ñ', 'ü', 'ß', 'ç', 'ø', 'å', 'æ',  // European
-        '中', '文', '日', '本', '語',              // CJK
-        'א', 'ב', 'ג',                            // Hebrew
-        'α', 'β', 'γ', 'δ',                       // Greek
-        '😀', '🔐', '🎉',                         // Emoji
-        '→', '←', '↑', '↓',                       // Arrows
-        '•', '★', '♠', '♣',                       // Symbols
+        'é',
+        'ñ',
+        'ü',
+        'ß',
+        'ç',
+        'ø',
+        'å',
+        'æ', // European
+        '中',
+        '文',
+        '日',
+        '本',
+        '語', // CJK
+        'א',
+        'ב',
+        'ג', // Hebrew
+        'α',
+        'β',
+        'γ',
+        'δ', // Greek
+        '😀',
+        '🔐',
+        '🎉', // Emoji
+        '→',
+        '←',
+        '↑',
+        '↓', // Arrows
+        '•',
+        '★',
+        '♠',
+        '♣', // Symbols
       ]
 
-      unicodeChars.forEach(char => {
+      unicodeChars.forEach((char) => {
         it(`should allow unicode character: ${char}`, () => {
           const password = `Abcdefghi1${char}k`
           const result = validatePasswordStrength(password)
@@ -88,7 +143,7 @@ describe('Password Validation', () => {
       })
 
       it('should handle password with only whitespace plus requirements', () => {
-        const password = 'Aa1         '  // 12 chars with spaces
+        const password = 'Aa1         ' // 12 chars with spaces
         const result = validatePasswordStrength(password)
         expect(result.valid).toBe(true)
       })
@@ -118,18 +173,23 @@ describe('Password Validation', () => {
         "'; DROP TABLE users; --",
         "1' OR '1'='1",
         "admin'--",
-        "1; SELECT * FROM users",
+        '1; SELECT * FROM users',
         "' UNION SELECT * FROM passwords--",
       ]
 
-      sqlInjections.forEach(injection => {
+      sqlInjections.forEach((injection) => {
         it(`should allow SQL-like string in password: ${injection.substring(0, 20)}...`, () => {
           // Add uppercase and number to meet requirements
           const password = `A1${injection}`.padEnd(12, 'x')
           const result = validatePasswordStrength(password)
           // Should be valid (or invalid only due to length/case/number requirements)
           // The SQL string itself should not cause rejection
-          if (password.length >= 12 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password)) {
+          if (
+            password.length >= 12 &&
+            /[A-Z]/.test(password) &&
+            /[a-z]/.test(password) &&
+            /[0-9]/.test(password)
+          ) {
             expect(result.valid).toBe(true)
           }
         })
@@ -145,11 +205,16 @@ describe('Password Validation', () => {
         '<svg onload=alert(1)>',
       ]
 
-      xssStrings.forEach(xss => {
+      xssStrings.forEach((xss) => {
         it(`should allow XSS-like string in password: ${xss.substring(0, 20)}...`, () => {
           const password = `A1${xss}`.padEnd(12, 'x')
           const result = validatePasswordStrength(password)
-          if (password.length >= 12 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password)) {
+          if (
+            password.length >= 12 &&
+            /[A-Z]/.test(password) &&
+            /[a-z]/.test(password) &&
+            /[0-9]/.test(password)
+          ) {
             expect(result.valid).toBe(true)
           }
         })
@@ -169,12 +234,38 @@ describe('Password Validation', () => {
     // Test that all special characters work with bcrypt
     describe('special characters with bcrypt', () => {
       const specialChars = [
-        '!', '@', '#', '$', '%', '^', '&', '*', '(', ')',
-        '[', ']', '{', '}', '|', '\\', ':', ';', '"', "'",
-        '<', '>', ',', '.', '?', '/', '`', '~', ' ',
+        '!',
+        '@',
+        '#',
+        '$',
+        '%',
+        '^',
+        '&',
+        '*',
+        '(',
+        ')',
+        '[',
+        ']',
+        '{',
+        '}',
+        '|',
+        '\\',
+        ':',
+        ';',
+        '"',
+        "'",
+        '<',
+        '>',
+        ',',
+        '.',
+        '?',
+        '/',
+        '`',
+        '~',
+        ' ',
       ]
 
-      specialChars.forEach(char => {
+      specialChars.forEach((char) => {
         it(`should hash and verify password with special char: ${char === ' ' ? 'space' : char}`, async () => {
           const password = `Abcdefghi1${char}k`
           const hash = await hashPassword(password)
@@ -188,7 +279,7 @@ describe('Password Validation', () => {
     describe('unicode characters with bcrypt', () => {
       const unicodeChars = ['é', 'ñ', '中', '文', '😀', '🔐']
 
-      unicodeChars.forEach(char => {
+      unicodeChars.forEach((char) => {
         it(`should hash and verify password with unicode: ${char}`, async () => {
           const password = `Abcdefghi1${char}k`
           const hash = await hashPassword(password)

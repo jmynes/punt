@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth-helpers'
+import { db } from '@/lib/db'
 
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -88,10 +88,7 @@ export async function POST(request: Request) {
     })
 
     if (existingProject) {
-      return NextResponse.json(
-        { error: 'Project key already exists' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Project key already exists' }, { status: 400 })
     }
 
     // Create project with default columns and make the creator an owner

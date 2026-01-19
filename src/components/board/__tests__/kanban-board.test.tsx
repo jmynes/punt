@@ -66,9 +66,7 @@ describe('KanbanBoard', () => {
       tickets: col.tickets.filter((t) => t.title.toLowerCase().includes('test')),
     }))
 
-    render(
-      <KanbanBoard projectKey="TEST" projectId="1" filteredColumns={filteredColumns} />,
-    )
+    render(<KanbanBoard projectKey="TEST" projectId="1" filteredColumns={filteredColumns} />)
     // Board should render with filtered results
     expect(document.body).toBeInTheDocument()
   })

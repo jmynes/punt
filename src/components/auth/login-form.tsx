@@ -1,9 +1,9 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,10 +66,7 @@ export function LoginForm() {
           )}
 
           <div className="space-y-2">
-            <Label
-              htmlFor="username"
-              className="text-sm font-medium text-zinc-300 tracking-wide"
-            >
+            <Label htmlFor="username" className="text-sm font-medium text-zinc-300 tracking-wide">
               Username
             </Label>
             <Input
@@ -88,10 +85,7 @@ export function LoginForm() {
           </div>
 
           <div className="space-y-2">
-            <Label
-              htmlFor="password"
-              className="text-sm font-medium text-zinc-300 tracking-wide"
-            >
+            <Label htmlFor="password" className="text-sm font-medium text-zinc-300 tracking-wide">
               Password
             </Label>
             <div className="relative">

@@ -283,7 +283,9 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
           redoneDescription: toastDescription,
         })
 
-        useUndoStore.getState().pushMove(projectId, moves, fromName, toName, toastId, snapshot, afterSnapshot)
+        useUndoStore
+          .getState()
+          .pushMove(projectId, moves, fromName, toName, toastId, snapshot, afterSnapshot)
       }
 
       // Cleanup

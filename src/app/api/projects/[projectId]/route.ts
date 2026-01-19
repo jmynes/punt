@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import {
+  requireAuth,
+  requireProjectAdmin,
+  requireProjectMember,
+  requireProjectOwner,
+} from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
-import { requireAuth, requireProjectMember, requireProjectAdmin, requireProjectOwner } from '@/lib/auth-helpers'
 
 const updateProjectSchema = z.object({
   name: z.string().min(1).optional(),
   key: z.string().min(1).max(10).toUpperCase().optional(),
   description: z.string().nullable().optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
 })
 
 /**
@@ -16,7 +24,7 @@ const updateProjectSchema = z.object({
  */
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ projectId: string }> }
+  { params }: { params: Promise<{ projectId: string }> },
 ) {
   try {
     const user = await requireAuth()
@@ -73,7 +81,7 @@ export async function GET(
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ projectId: string }> }
+  { params }: { params: Promise<{ projectId: string }> },
 ) {
   try {
     const user = await requireAuth()
@@ -98,7 +106,7 @@ export async function PATCH(
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -113,10 +121,7 @@ export async function PATCH(
         },
       })
       if (existingProject) {
-        return NextResponse.json(
-          { error: 'Project key already exists' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'Project key already exists' }, { status: 400 })
       }
     }
 
@@ -162,7 +167,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ projectId: string }> }
+  { params }: { params: Promise<{ projectId: string }> },
 ) {
   try {
     const user = await requireAuth()

@@ -68,7 +68,12 @@ interface UndoState {
   ) => void
 
   // Add a paste action to the undo stack
-  pushPaste: (projectId: string, tickets: PastedTicket[], toastId: string | number, isRedo?: boolean) => void
+  pushPaste: (
+    projectId: string,
+    tickets: PastedTicket[],
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
 
   // Add a move action to the undo stack
   pushMove: (

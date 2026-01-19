@@ -6,7 +6,5 @@ export { proxy }
 
 export const config = {
   // Match all routes except static files, _next, and uploads
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|uploads/).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|uploads/).*)'],
 }

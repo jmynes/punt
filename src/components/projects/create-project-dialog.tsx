@@ -1,8 +1,8 @@
 'use client'
 
 import { Loader2 } from 'lucide-react'
-import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useCallback, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -63,35 +63,35 @@ export function CreateProjectDialog() {
   }, [setCreateProjectOpen])
 
   // Auto-generate key from name
-  const handleNameChange = useCallback(
-    (name: string) => {
-      setFormData((prev) => {
-        // Only auto-generate key if it hasn't been manually edited
-        // or if it matches the auto-generated pattern from the previous name
-        const autoKey = name
-          .toUpperCase()
-          .replace(/[^A-Z0-9]/g, '')
-          .slice(0, 6)
+  const handleNameChange = useCallback((name: string) => {
+    setFormData((prev) => {
+      // Only auto-generate key if it hasn't been manually edited
+      // or if it matches the auto-generated pattern from the previous name
+      const autoKey = name
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 6)
 
-        const prevAutoKey = prev.name
-          .toUpperCase()
-          .replace(/[^A-Z0-9]/g, '')
-          .slice(0, 6)
+      const prevAutoKey = prev.name
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 6)
 
-        const shouldAutoUpdate = prev.key === '' || prev.key === prevAutoKey
+      const shouldAutoUpdate = prev.key === '' || prev.key === prevAutoKey
 
-        return {
-          ...prev,
-          name,
-          key: shouldAutoUpdate ? autoKey : prev.key,
-        }
-      })
-    },
-    [],
-  )
+      return {
+        ...prev,
+        name,
+        key: shouldAutoUpdate ? autoKey : prev.key,
+      }
+    })
+  }, [])
 
   const handleKeyChange = useCallback((key: string) => {
-    const sanitizedKey = key.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)
+    const sanitizedKey = key
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 10)
     setFormData((prev) => ({ ...prev, key: sanitizedKey }))
     setKeyError(null)
   }, [])
@@ -131,7 +131,7 @@ export function CreateProjectDialog() {
             setKeyError('This key is already in use')
           }
         },
-      }
+      },
     )
   }, [formData, createProject, handleClose, setActiveProjectId, router])
 

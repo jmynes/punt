@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
 import { unlink } from 'node:fs/promises'
-import { db } from '@/lib/db'
+import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-helpers'
+import { db } from '@/lib/db'
 import { FilesystemStorage } from '@/lib/file-storage'
 
 const fileStorage = new FilesystemStorage()
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
       return NextResponse.json(
         { error: `Invalid file type. Allowed: ${ALLOWED_AVATAR_TYPES.join(', ')}` },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     if (file.size > MAX_AVATAR_SIZE) {
       return NextResponse.json(
         { error: `File too large. Maximum size is ${MAX_AVATAR_SIZE / 1024 / 1024}MB` },
-        { status: 400 }
+        { status: 400 },
       )
     }
 

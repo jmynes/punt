@@ -9,7 +9,10 @@ const registerSchema = z.object({
     .string()
     .min(3, 'Username must be at least 3 characters')
     .max(30, 'Username must be at most 30 characters')
-    .regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and hyphens'),
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      'Username can only contain letters, numbers, underscores, and hyphens',
+    ),
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
   password: z.string().min(1, 'Password is required'),
@@ -29,7 +32,7 @@ export async function POST(request: Request) {
             'X-RateLimit-Remaining': String(rateLimit.remaining),
             'X-RateLimit-Reset': rateLimit.resetAt.toISOString(),
           },
-        }
+        },
       )
     }
 
@@ -39,7 +42,7 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -51,10 +54,7 @@ export async function POST(request: Request) {
     })
 
     if (existingUsername) {
-      return NextResponse.json(
-        { error: 'This username is already taken' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'This username is already taken' }, { status: 400 })
     }
 
     // Check if email already exists (if provided)
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       if (existingEmail) {
         return NextResponse.json(
           { error: 'An account with this email already exists' },
-          { status: 400 }
+          { status: 400 },
         )
       }
     }
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     if (!passwordValidation.valid) {
       return NextResponse.json(
         { error: 'Password does not meet requirements', details: passwordValidation.errors },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -108,15 +108,10 @@ export async function POST(request: Request) {
       })
     } catch (dbError) {
       // Handle Prisma unique constraint violation (race condition on duplicate username/email)
-      if (
-        dbError &&
-        typeof dbError === 'object' &&
-        'code' in dbError &&
-        dbError.code === 'P2002'
-      ) {
+      if (dbError && typeof dbError === 'object' && 'code' in dbError && dbError.code === 'P2002') {
         return NextResponse.json(
           { error: 'This username or email is already taken' },
-          { status: 400 }
+          { status: 400 },
         )
       }
       throw dbError

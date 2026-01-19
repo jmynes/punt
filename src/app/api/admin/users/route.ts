@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-
-import { db } from '@/lib/db'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
+import { db } from '@/lib/db'
 import { hashPassword, validatePasswordStrength } from '@/lib/password'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const createUserSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters').max(30).regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and hyphens'),
+  username: z
+    .string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(30)
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      'Username can only contain letters, numbers, underscores, and hyphens',
+    ),
   email: z.string().email(),
   name: z.string().min(1, 'Name is required'),
   password: z.string().min(1, 'Password is required'),
@@ -38,19 +44,13 @@ export async function GET(request: Request) {
 
     // Build where clause
     type WhereClause = {
-      OR?: Array<
-        | { name: { contains: string } }
-        | { email: { contains: string } }
-      >
+      OR?: Array<{ name: { contains: string } } | { email: { contains: string } }>
       isSystemAdmin?: boolean
     }
     const where: WhereClause = {}
 
     if (search) {
-      where.OR = [
-        { name: { contains: search } },
-        { email: { contains: search } },
-      ]
+      where.OR = [{ name: { contains: search } }, { email: { contains: search } }]
     }
 
     if (role === 'admin') {
@@ -90,13 +90,13 @@ export async function GET(request: Request) {
     if (minProjects !== null && minProjects !== '') {
       const min = parseInt(minProjects, 10)
       if (!Number.isNaN(min)) {
-        filteredUsers = filteredUsers.filter(u => u._count.projects >= min)
+        filteredUsers = filteredUsers.filter((u) => u._count.projects >= min)
       }
     }
     if (maxProjects !== null && maxProjects !== '') {
       const max = parseInt(maxProjects, 10)
       if (!Number.isNaN(max)) {
-        filteredUsers = filteredUsers.filter(u => u._count.projects <= max)
+        filteredUsers = filteredUsers.filter((u) => u._count.projects <= max)
       }
     }
 
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
             'X-RateLimit-Remaining': String(rateLimit.remaining),
             'X-RateLimit-Reset': rateLimit.resetAt.toISOString(),
           },
-        }
+        },
       )
     }
 
@@ -143,7 +143,7 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
     if (!passwordValidation.valid) {
       return NextResponse.json(
         { error: 'Password does not meet requirements', details: passwordValidation.errors },
-        { status: 400 }
+        { status: 400 },
       )
     }
 

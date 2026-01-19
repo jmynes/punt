@@ -1,13 +1,6 @@
 'use client'
 
-import {
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  FolderKanban,
-  Layers,
-  Plus,
-} from 'lucide-react'
+import { ArrowRight, CheckCircle2, Clock, FolderKanban, Layers, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'

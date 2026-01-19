@@ -18,17 +18,13 @@ export function SidebarToggleIcon({ isOpen, className }: SidebarToggleIconProps)
       <PanelLeftClose
         className={cn(
           'absolute h-5 w-5 transition-all duration-200',
-          isOpen
-            ? 'opacity-100 rotate-0 scale-100'
-            : 'opacity-0 -rotate-90 scale-75'
+          isOpen ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-75',
         )}
       />
       <PanelLeftOpen
         className={cn(
           'absolute h-5 w-5 transition-all duration-200',
-          isOpen
-            ? 'opacity-0 rotate-90 scale-75'
-            : 'opacity-100 rotate-0 scale-100'
+          isOpen ? 'opacity-0 rotate-90 scale-75' : 'opacity-100 rotate-0 scale-100',
         )}
       />
     </div>

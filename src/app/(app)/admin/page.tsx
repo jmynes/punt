@@ -1,8 +1,7 @@
+import { Shield, Users } from 'lucide-react'
 import Link from 'next/link'
-import { Users, Shield } from 'lucide-react'
-
-import { db } from '@/lib/db'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { db } from '@/lib/db'
 
 // Force dynamic rendering - this page fetches from database
 export const dynamic = 'force-dynamic'

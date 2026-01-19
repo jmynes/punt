@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth-helpers'
+import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
@@ -21,7 +21,7 @@ export async function DELETE(request: Request) {
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
-        { status: 429 }
+        { status: 429 },
       )
     }
 
@@ -31,7 +31,7 @@ export async function DELETE(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -61,7 +61,7 @@ export async function DELETE(request: Request) {
       if (adminCount <= 1) {
         return NextResponse.json(
           { error: 'Cannot delete the only system administrator account' },
-          { status: 400 }
+          { status: 400 },
         )
       }
     }

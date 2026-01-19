@@ -6,7 +6,10 @@ import type * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
-function RadioGroup({ className, ...props }: React.ComponentProps<typeof RadioGroupPrimitive.Root>) {
+function RadioGroup({
+  className,
+  ...props
+}: React.ComponentProps<typeof RadioGroupPrimitive.Root>) {
   return (
     <RadioGroupPrimitive.Root
       data-slot="radio-group"
@@ -40,4 +43,3 @@ function RadioGroupItem({
 }
 
 export { RadioGroup, RadioGroupItem }
-
