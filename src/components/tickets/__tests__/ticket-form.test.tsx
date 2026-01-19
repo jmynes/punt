@@ -1,5 +1,5 @@
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockLabel, createMockSprint } from '@/__tests__/utils/mocks'
 import { render, screen } from '@/__tests__/utils/test-utils'
 import { DEFAULT_TICKET_FORM } from '@/types'

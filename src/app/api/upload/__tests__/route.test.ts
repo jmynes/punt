@@ -88,9 +88,7 @@ describe('Upload API Route', () => {
       // File name might be 'blob' in test environment, so we check that it's set
       expect(data.files[0].originalName).toBeTruthy()
       // Verify file was written to storage
-      // Access private files map for testing purposes
-      const storageWithFiles = mockStorage as InMemoryStorage & { files: Map<string, Buffer> }
-      const storedFiles = Array.from(storageWithFiles.files.keys())
+      const storedFiles = Array.from(mockStorage.files.keys())
       expect(storedFiles.length).toBeGreaterThan(0)
     })
 

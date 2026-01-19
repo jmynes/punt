@@ -33,19 +33,24 @@ export class FilesystemStorage implements FileStorage {
  * In-memory storage implementation (for testing)
  */
 export class InMemoryStorage implements FileStorage {
-  private files: Map<string, Buffer> = new Map()
-  private directories: Set<string> = new Set()
+  private _files: Map<string, Buffer> = new Map()
+  private _directories: Set<string> = new Set()
+
+  // Expose files for testing
+  get files(): Map<string, Buffer> {
+    return this._files
+  }
 
   async ensureDirectoryExists(path: string): Promise<void> {
-    this.directories.add(path)
+    this._directories.add(path)
   }
 
   async writeFile(filepath: string, buffer: Buffer): Promise<void> {
-    this.files.set(filepath, buffer)
+    this._files.set(filepath, buffer)
     // Also ensure parent directory exists
     const parentDir = filepath.substring(0, filepath.lastIndexOf('/'))
     if (parentDir) {
-      this.directories.add(parentDir)
+      this._directories.add(parentDir)
     }
   }
 
@@ -55,15 +60,15 @@ export class InMemoryStorage implements FileStorage {
 
   // Test helpers
   getFile(filepath: string): Buffer | undefined {
-    return this.files.get(filepath)
+    return this._files.get(filepath)
   }
 
   hasFile(filepath: string): boolean {
-    return this.files.has(filepath)
+    return this._files.has(filepath)
   }
 
   clear(): void {
-    this.files.clear()
-    this.directories.clear()
+    this._files.clear()
+    this._directories.clear()
   }
 }

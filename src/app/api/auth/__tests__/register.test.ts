@@ -18,12 +18,7 @@ vi.mock('@/lib/rate-limit', () => ({
 
 import { db } from '@/lib/db'
 
-const mockDb = db as {
-  user: {
-    findUnique: ReturnType<typeof vi.fn>
-    create: ReturnType<typeof vi.fn>
-  }
-}
+const mockDb = vi.mocked(db)
 
 function createRequest(body: unknown): Request {
   return new Request('http://localhost:3000/api/auth/register', {

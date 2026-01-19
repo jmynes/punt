@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server'
-import { FilesystemStorage } from '@/lib/file-storage'
+import { type FileStorage, FilesystemStorage } from '@/lib/file-storage'
 import { logger } from '@/lib/logger'
 
-// Use filesystem storage
-const fileStorage = new FilesystemStorage()
+// Use filesystem storage by default, can be swapped for testing
+let fileStorage: FileStorage = new FilesystemStorage()
+
+// Export for testing - allows injection of mock storage
+export function setFileStorage(storage: FileStorage): void {
+  fileStorage = storage
+}
 
 // Allowed file types
 // Note: SVG intentionally excluded due to XSS risk (embedded scripts)
