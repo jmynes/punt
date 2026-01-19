@@ -114,7 +114,7 @@ export function RegisterForm() {
                 htmlFor="username"
                 className="text-sm font-medium text-zinc-300 tracking-wide"
               >
-                Username<span className="text-amber-500 ml-0.5">*</span>
+                Username<span className="text-amber-500 ml-0.5 align-top text-xs">*</span>
               </Label>
               <Input
                 id="username"
@@ -141,7 +141,7 @@ export function RegisterForm() {
                 htmlFor="name"
                 className="text-sm font-medium text-zinc-300 tracking-wide"
               >
-                Display Name<span className="text-amber-500 ml-0.5">*</span>
+                Display Name<span className="text-amber-500 ml-0.5 align-top text-xs">*</span>
               </Label>
               <Input
                 id="name"
@@ -190,7 +190,7 @@ export function RegisterForm() {
                 htmlFor="password"
                 className="text-sm font-medium text-zinc-300 tracking-wide"
               >
-                Password<span className="text-amber-500 ml-0.5">*</span>
+                Password<span className="text-amber-500 ml-0.5 align-top text-xs">*</span>
               </Label>
               <div className="relative">
                 <Input
@@ -244,7 +244,7 @@ export function RegisterForm() {
                 htmlFor="confirmPassword"
                 className="text-sm font-medium text-zinc-300 tracking-wide"
               >
-                Confirm Password<span className="text-amber-500 ml-0.5">*</span>
+                Confirm Password<span className="text-amber-500 ml-0.5 align-top text-xs">*</span>
               </Label>
               <div className="relative">
                 <Input
