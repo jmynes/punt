@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
-import { requireAuth } from '@/lib/auth-helpers'
+import { requireAuth, requireProjectMember, requireProjectAdmin, requireProjectOwner } from '@/lib/auth-helpers'
 
 const updateProjectSchema = z.object({
   name: z.string().min(1).optional(),
@@ -12,7 +12,7 @@ const updateProjectSchema = z.object({
 
 /**
  * GET /api/projects/[projectId] - Get a single project
- * All authenticated users can view any project (no per-user visibility restrictions yet)
+ * Requires project membership
  */
 export async function GET(
   request: Request,
@@ -21,6 +21,9 @@ export async function GET(
   try {
     const user = await requireAuth()
     const { projectId } = await params
+
+    // Check project membership
+    await requireProjectMember(user.id, projectId)
 
     const project = await db.project.findUnique({
       where: { id: projectId },
@@ -55,6 +58,9 @@ export async function GET(
       if (error.message === 'Unauthorized') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
+      if (error.message.startsWith('Forbidden:')) {
+        return NextResponse.json({ error: error.message }, { status: 403 })
+      }
     }
     console.error('Failed to fetch project:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -63,7 +69,7 @@ export async function GET(
 
 /**
  * PATCH /api/projects/[projectId] - Update a project
- * All authenticated users can update any project (no per-user restrictions yet)
+ * Requires admin or owner role
  */
 export async function PATCH(
   request: Request,
@@ -72,6 +78,9 @@ export async function PATCH(
   try {
     const user = await requireAuth()
     const { projectId } = await params
+
+    // Check project admin permission
+    await requireProjectAdmin(user.id, projectId)
 
     // Check if project exists
     const existingProject = await db.project.findUnique({
@@ -138,6 +147,9 @@ export async function PATCH(
       if (error.message === 'Unauthorized') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
+      if (error.message.startsWith('Forbidden:')) {
+        return NextResponse.json({ error: error.message }, { status: 403 })
+      }
     }
     console.error('Failed to update project:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -146,15 +158,18 @@ export async function PATCH(
 
 /**
  * DELETE /api/projects/[projectId] - Delete a project
- * All authenticated users can delete any project (no per-user restrictions yet)
+ * Requires owner role
  */
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    await requireAuth()
+    const user = await requireAuth()
     const { projectId } = await params
+
+    // Check project owner permission
+    await requireProjectOwner(user.id, projectId)
 
     // Check if project exists
     const project = await db.project.findUnique({
@@ -176,6 +191,9 @@ export async function DELETE(
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      if (error.message.startsWith('Forbidden:')) {
+        return NextResponse.json({ error: error.message }, { status: 403 })
       }
     }
     console.error('Failed to delete project:', error)

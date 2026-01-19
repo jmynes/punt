@@ -8,11 +8,12 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getSafeRedirectUrl } from '@/lib/url-validation'
 
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/'
+  const callbackUrl = getSafeRedirectUrl(searchParams.get('callbackUrl'))
 
   // Use refs to capture autofilled values that don't trigger onChange
   const usernameRef = useRef<HTMLInputElement>(null)

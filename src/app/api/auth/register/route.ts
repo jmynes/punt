@@ -82,28 +82,45 @@ export async function POST(request: Request) {
 
     // Hash password and create user
     const passwordHash = await hashPassword(password)
-    const user = await db.user.create({
-      data: {
-        username,
-        name,
-        email: email || null,
-        passwordHash,
-        isActive: true,
-        isSystemAdmin: false,
-      },
-      select: {
-        id: true,
-        username: true,
-        name: true,
-        email: true,
-      },
-    })
 
-    return NextResponse.json({
-      success: true,
-      message: 'Account created successfully',
-      user,
-    })
+    try {
+      const user = await db.user.create({
+        data: {
+          username,
+          name,
+          email: email || null,
+          passwordHash,
+          isActive: true,
+          isSystemAdmin: false,
+        },
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          email: true,
+        },
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: 'Account created successfully',
+        user,
+      })
+    } catch (dbError) {
+      // Handle Prisma unique constraint violation (race condition on duplicate username/email)
+      if (
+        dbError &&
+        typeof dbError === 'object' &&
+        'code' in dbError &&
+        dbError.code === 'P2002'
+      ) {
+        return NextResponse.json(
+          { error: 'This username or email is already taken' },
+          { status: 400 }
+        )
+      }
+      throw dbError
+    }
   } catch (error) {
     console.error('Registration error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -6,7 +6,8 @@ import { logger } from '@/lib/logger'
 const fileStorage = new FilesystemStorage()
 
 // Allowed file types
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+// Note: SVG intentionally excluded due to XSS risk (embedded scripts)
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']
 const ALLOWED_DOCUMENT_TYPES = [
   'application/pdf',

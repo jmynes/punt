@@ -56,3 +56,47 @@ export async function requireSystemAdmin() {
 
   return user
 }
+
+/**
+ * Get a user's project membership
+ * Returns null if user is not a member
+ */
+export async function getProjectMembership(userId: string, projectId: string) {
+  return db.projectMember.findUnique({
+    where: { userId_projectId: { userId, projectId } },
+    select: { role: true },
+  })
+}
+
+/**
+ * Require project membership - throws if not a member
+ */
+export async function requireProjectMember(userId: string, projectId: string) {
+  const membership = await getProjectMembership(userId, projectId)
+  if (!membership) {
+    throw new Error('Forbidden: Not a project member')
+  }
+  return membership
+}
+
+/**
+ * Require project admin role - throws if not admin or owner
+ */
+export async function requireProjectAdmin(userId: string, projectId: string) {
+  const membership = await requireProjectMember(userId, projectId)
+  if (membership.role !== 'owner' && membership.role !== 'admin') {
+    throw new Error('Forbidden: Admin role required')
+  }
+  return membership
+}
+
+/**
+ * Require project owner role - throws if not owner
+ */
+export async function requireProjectOwner(userId: string, projectId: string) {
+  const membership = await requireProjectMember(userId, projectId)
+  if (membership.role !== 'owner') {
+    throw new Error('Forbidden: Owner role required')
+  }
+  return membership
+}

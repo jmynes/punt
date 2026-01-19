@@ -72,18 +72,40 @@ export async function checkRateLimit(
 }
 
 /**
+ * Simple string hash for fingerprinting
+ */
+function hashString(str: string): string {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0 // Convert to 32-bit integer
+  }
+  return hash.toString(16)
+}
+
+/**
  * Get client IP from request headers
+ * Only trusts proxy headers if TRUST_PROXY environment variable is set to 'true'
  */
 export function getClientIp(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for')
-  if (forwarded) {
-    return forwarded.split(',')[0].trim()
+  // Only trust proxy headers if explicitly configured
+  const trustProxy = process.env.TRUST_PROXY === 'true'
+
+  if (trustProxy) {
+    const forwarded = request.headers.get('x-forwarded-for')
+    if (forwarded) {
+      return forwarded.split(',')[0].trim()
+    }
+
+    const realIp = request.headers.get('x-real-ip')
+    if (realIp) {
+      return realIp
+    }
   }
 
-  const realIp = request.headers.get('x-real-ip')
-  if (realIp) {
-    return realIp
-  }
-
-  return 'unknown'
+  // Fallback: use a hash of user-agent + accept-language as identifier
+  // This prevents trivial rate limit bypasses via header spoofing
+  const userAgent = request.headers.get('user-agent') || ''
+  const acceptLang = request.headers.get('accept-language') || ''
+  return `fingerprint:${hashString(userAgent + acceptLang)}`
 }

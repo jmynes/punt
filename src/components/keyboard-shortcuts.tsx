@@ -81,8 +81,8 @@ export function KeyboardShortcuts() {
     return () => window.removeEventListener('click', handleClick)
   }, [activeTicketId, createTicketOpen])
 
-  // Get all tickets flat from columns
-  const allTickets = columns.flatMap((col) => col.tickets)
+  // Get all tickets flat from columns (with defensive checks for corrupted data)
+  const allTickets = columns?.flatMap((col) => col?.tickets ?? []) ?? []
 
   const handleDeleteSelected = useCallback(() => {
     const selectedIds = useSelectionStore.getState().getSelectedIds()

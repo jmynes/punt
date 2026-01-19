@@ -37,6 +37,19 @@ function reviveDates(obj: unknown): unknown {
   return obj
 }
 
+// Helper to validate columns structure from localStorage
+function isValidColumns(columns: unknown): columns is ColumnWithTickets[] {
+  if (!Array.isArray(columns)) return false
+  return columns.every(
+    (col) =>
+      col &&
+      typeof col === 'object' &&
+      'id' in col &&
+      'tickets' in col &&
+      Array.isArray(col.tickets)
+  )
+}
+
 interface BoardState {
   // Store columns per project: Record<projectId, ColumnWithTickets[]>
   projects: Record<string, ColumnWithTickets[]>
@@ -86,10 +99,12 @@ export const useBoardStore = create<BoardState>()(
       
       getColumns: (projectId: string) => {
         const state = get()
-        if (!state.projects[projectId]) {
+        const columns = state.projects[projectId]
+        // Validate columns structure to prevent crashes from corrupted localStorage
+        if (!columns || !isValidColumns(columns)) {
           return createDefaultColumns(projectId)
         }
-        return state.projects[projectId]
+        return columns
       },
       
       setColumns: (projectId: string, columns: ColumnWithTickets[]) => 
@@ -442,9 +457,14 @@ export const useBoardStore = create<BoardState>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           logger.debug('Rehydrating board store from localStorage')
-          // Revive dates in all projects
+          // Revive dates in all projects, skipping invalid entries
           const revivedProjects: Record<string, ColumnWithTickets[]> = {}
           for (const [projectId, columns] of Object.entries(state.projects)) {
+            // Validate columns structure before processing
+            if (!isValidColumns(columns)) {
+              logger.warn('Invalid columns structure in localStorage, skipping', { projectId })
+              continue
+            }
             revivedProjects[projectId] = reviveDates(columns) as ColumnWithTickets[]
           }
           state.projects = revivedProjects
