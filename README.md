@@ -40,7 +40,6 @@
 ## Status & Limitations
 
 - Desktop-focused; **mobile responsive improvements in progress**
-- **No authentication** yet; intended for local/desktop use
 - API/infra still WIP; expect breaking changes
 
 ### Known Issues
@@ -67,8 +66,8 @@
 
 ### Prerequisites
 
-- Node.js 22+
-- pnpm 9+
+- **Node.js 22+** — [Download](https://nodejs.org/)
+- **pnpm 9+** — Install via `npm install -g pnpm` or see [pnpm.io](https://pnpm.io/installation)
 
 ### Installation
 
@@ -79,12 +78,63 @@ cd punt
 
 # Install dependencies
 pnpm install
+```
 
-# Start the development server
+### Environment Setup
+
+Create a `.env` file in the project root:
+
+```env
+# Database (SQLite)
+DATABASE_URL="file:./punt.db"
+
+# NextAuth.js - Generate a secure secret with: openssl rand -base64 32
+AUTH_SECRET="your-secret-key-here"
+
+# Optional: Enable debug logging
+NEXT_PUBLIC_DEBUG=false
+```
+
+### Database Setup
+
+```bash
+# Generate the Prisma client
+pnpm db:generate
+
+# Create the database and apply the schema
+pnpm db:push
+```
+
+### Create Admin User
+
+Run the seed command to create your first system administrator:
+
+```bash
+pnpm db:seed --username <username> --password <password> --name "<display name>" [--email <email>]
+```
+
+**Example:**
+```bash
+pnpm db:seed --username admin --password "MySecurePass123" --name "Admin User" --email "admin@example.com"
+```
+
+**Password requirements:**
+- At least 12 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+
+**Username requirements:**
+- 3-30 characters
+- Letters, numbers, underscores, and hyphens only
+
+### Start the Development Server
+
+```bash
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the app.
+Open [http://localhost:3000](http://localhost:3000) and log in with the admin credentials you created.
 
 ### Linting & Formatting
 
@@ -169,7 +219,8 @@ Create a `.env` file:
 
 ```env
 DATABASE_URL="file:./punt.db"
-NEXT_PUBLIC_DEBUG=true  # Enable debug logging (disabled in production)
+AUTH_SECRET="your-production-secret-here"  # Generate with: openssl rand -base64 32
+NEXT_PUBLIC_DEBUG=false
 ```
 
 ## Contributing
