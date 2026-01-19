@@ -5,8 +5,13 @@ import { hashPassword, validatePasswordStrength } from '@/lib/password'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const registerSchema = z.object({
+  username: z
+    .string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(30, 'Username must be at most 30 characters')
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and hyphens'),
   name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
   password: z.string().min(1, 'Password is required'),
 })
 
@@ -38,18 +43,32 @@ export async function POST(request: Request) {
       )
     }
 
-    const { name, email, password } = parsed.data
+    const { username, name, email, password } = parsed.data
 
-    // Check if email already exists
-    const existingUser = await db.user.findUnique({
-      where: { email },
+    // Check if username already exists
+    const existingUsername = await db.user.findUnique({
+      where: { username },
     })
 
-    if (existingUser) {
+    if (existingUsername) {
       return NextResponse.json(
-        { error: 'An account with this email already exists' },
+        { error: 'This username is already taken' },
         { status: 400 }
       )
+    }
+
+    // Check if email already exists (if provided)
+    if (email) {
+      const existingEmail = await db.user.findUnique({
+        where: { email },
+      })
+
+      if (existingEmail) {
+        return NextResponse.json(
+          { error: 'An account with this email already exists' },
+          { status: 400 }
+        )
+      }
     }
 
     // Validate password strength
@@ -65,14 +84,16 @@ export async function POST(request: Request) {
     const passwordHash = await hashPassword(password)
     const user = await db.user.create({
       data: {
+        username,
         name,
-        email,
+        email: email || null,
         passwordHash,
         isActive: true,
         isSystemAdmin: false,
       },
       select: {
         id: true,
+        username: true,
         name: true,
         email: true,
       },

@@ -8,7 +8,7 @@ import { verifyPassword } from '@/lib/password'
 import { authConfig } from '@/lib/auth.config'
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  username: z.string().min(1),
   password: z.string().min(1),
 })
 
@@ -20,7 +20,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Credentials({
       name: 'credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
@@ -30,10 +30,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
-        const { email, password } = parsed.data
+        const { username, password } = parsed.data
 
         const user = await db.user.findUnique({
-          where: { email },
+          where: { username },
         })
 
         if (!user || !user.passwordHash) {
@@ -73,6 +73,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { id: token.id as string },
           select: {
             id: true,
+            username: true,
             email: true,
             name: true,
             avatar: true,
@@ -82,6 +83,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         })
 
         if (dbUser && dbUser.isActive) {
+          token.username = dbUser.username
           token.isSystemAdmin = dbUser.isSystemAdmin
           token.avatar = dbUser.avatar
         }
@@ -92,6 +94,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string
+        session.user.username = token.username as string
         session.user.isSystemAdmin = token.isSystemAdmin as boolean
         session.user.avatar = token.avatar as string | null
       }
@@ -106,7 +109,8 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string
-      email: string
+      username: string
+      email: string | null
       name: string
       image?: string | null
       isSystemAdmin: boolean
@@ -115,8 +119,8 @@ declare module 'next-auth' {
   }
 
   interface User {
+    username?: string
     isSystemAdmin?: boolean
     avatar?: string | null
   }
 }
-

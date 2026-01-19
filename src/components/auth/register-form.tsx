@@ -25,6 +25,7 @@ const passwordRequirements: PasswordRequirement[] = [
 export function RegisterForm() {
   const router = useRouter()
 
+  const [username, setUsername] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -34,13 +35,20 @@ export function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const isValidUsername = /^[a-zA-Z0-9_-]{3,30}$/.test(username)
+  const isValidEmail = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0
   const allRequirementsMet = passwordRequirements.every((req) => req.test(password))
-  const canSubmit = name && email && password && passwordsMatch && allRequirementsMet
+  const canSubmit = username && isValidUsername && name && password && passwordsMatch && allRequirementsMet && isValidEmail
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+
+    if (!isValidUsername) {
+      setError('Username must be 3-30 characters and can only contain letters, numbers, underscores, and hyphens')
+      return
+    }
 
     if (!passwordsMatch) {
       setError('Passwords do not match')
@@ -58,7 +66,7 @@ export function RegisterForm() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ username, name, email: email || undefined, password }),
       })
 
       const data = await res.json()
@@ -71,7 +79,7 @@ export function RegisterForm() {
 
       // Auto sign in after successful registration
       const signInResult = await signIn('credentials', {
-        email,
+        username,
         password,
         redirect: false,
       })
@@ -101,25 +109,48 @@ export function RegisterForm() {
           )}
 
           <div className="space-y-2">
+            <Label htmlFor="username" className="text-zinc-300">
+              Username
+            </Label>
+            <Input
+              id="username"
+              type="text"
+              placeholder="johndoe"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase())}
+              required
+              autoComplete="username"
+              autoFocus
+              className={`border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500 ${
+                username && !isValidUsername ? 'border-red-600' : ''
+              }`}
+            />
+            {username && !isValidUsername && (
+              <p className="text-xs text-red-400">
+                3-30 characters, letters, numbers, underscores, and hyphens only
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="name" className="text-zinc-300">
-              Full Name
+              Display Name
             </Label>
             <Input
               id="name"
               type="text"
-              placeholder="Your name"
+              placeholder="John Doe"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               autoComplete="name"
-              autoFocus
               className="border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500"
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="email" className="text-zinc-300">
-              Email
+              Email <span className="text-zinc-500">(optional)</span>
             </Label>
             <Input
               id="email"
@@ -127,10 +158,14 @@ export function RegisterForm() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
               autoComplete="email"
-              className="border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500"
+              className={`border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500 ${
+                email && !isValidEmail ? 'border-red-600' : ''
+              }`}
             />
+            {email && !isValidEmail && (
+              <p className="text-xs text-red-400">Please enter a valid email address</p>
+            )}
           </div>
 
           <div className="space-y-2">
