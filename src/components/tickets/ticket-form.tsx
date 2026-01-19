@@ -149,7 +149,7 @@ export function TicketForm({
           value={data.assigneeId}
           onChange={(value) => updateField('assigneeId', value)}
           users={members}
-          currentUserId={currentUser.id}
+          currentUserId={currentUser?.id}
           placeholder="Unassigned"
           disabled={disabled}
           showAssignToMe

@@ -139,6 +139,10 @@ export function CreateTicketDialog() {
       return // TODO: show validation error
     }
 
+    if (!currentUser) {
+      return // Not authenticated
+    }
+
     setIsSubmitting(true)
 
     // Simulate API call delay

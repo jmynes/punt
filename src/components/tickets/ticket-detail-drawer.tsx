@@ -1005,7 +1005,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     value={ticket.creatorId}
                     onChange={(value) => handleChange('creator', value)}
                     users={members}
-                    currentUserId={currentUser.id}
+                    currentUserId={currentUser?.id}
                     placeholder="Unassigned"
                   />
                 </div>
@@ -1017,7 +1017,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     value={ticket.assigneeId}
                     onChange={(value) => handleChange('assignee', value)}
                     users={members}
-                    currentUserId={currentUser.id}
+                    currentUserId={currentUser?.id}
                     placeholder="Unassigned"
                     showAssignToMe
                   />

@@ -20,7 +20,7 @@ interface UserSelectProps {
   value: string | null
   onChange: (value: string | null) => void
   users: UserSummary[]
-  currentUserId: string
+  currentUserId?: string
   placeholder?: string
   disabled?: boolean
   showAssignToMe?: boolean
@@ -160,7 +160,7 @@ export function UserSelect({
               ? 'bg-amber-600/20 border-amber-600/50 hover:bg-amber-600/30 text-amber-400'
               : 'bg-zinc-900 hover:bg-zinc-800',
           )}
-          onClick={() => onChange(isAssignedToMe ? null : currentUserId)}
+          onClick={() => onChange(isAssignedToMe ? null : currentUserId || null)}
           title={isAssignedToMe ? 'Unassign from me' : 'Assign to me'}
         >
           {isAssignedToMe ? <UserMinus className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}

@@ -561,22 +561,26 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
                     {submenu.id === 'assign' && (
                       <>
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                          onClick={() => doAssign(currentUser.id)}
-                        >
-                          <Avatar className="h-5 w-5">
-                            <AvatarFallback
-                              className="text-[10px] text-white font-medium"
-                              style={{ backgroundColor: getAvatarColor(currentUser.id) }}
+                        {currentUser && (
+                          <>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                              onClick={() => doAssign(currentUser.id)}
                             >
-                              {getInitials(currentUser.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>Assign to me</span>
-                        </button>
-                        <div className="my-1 border-t border-zinc-800" />
+                              <Avatar className="h-5 w-5">
+                                <AvatarFallback
+                                  className="text-[10px] text-white font-medium"
+                                  style={{ backgroundColor: getAvatarColor(currentUser.id) }}
+                                >
+                                  {getInitials(currentUser.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>Assign to me</span>
+                            </button>
+                            <div className="my-1 border-t border-zinc-800" />
+                          </>
+                        )}
                         {sortedMembers.map((m) => (
                           <button
                             key={m.id}
