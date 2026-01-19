@@ -17,6 +17,7 @@ import {
   Square,
   Trash2,
   UserCheck,
+  Users,
   UserX,
   X,
 } from 'lucide-react'
@@ -67,6 +68,7 @@ import {
 } from '@/components/ui/select'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useAdminUndoStore } from '@/stores/admin-undo-store'
+import { CreateUserDialog } from './create-user-dialog'
 
 interface User {
   id: string
@@ -543,7 +545,8 @@ export function UserList() {
 
   const selectAll = () => {
     if (users) {
-      setSelectedIds(new Set(users.map((u) => u.id)))
+      // Exclude current user from select all
+      setSelectedIds(new Set(users.filter((u) => u.id !== currentUser?.id).map((u) => u.id)))
     }
   }
 
@@ -551,7 +554,9 @@ export function UserList() {
     setSelectedIds(new Set())
   }
 
-  const allSelected = users && users.length > 0 && selectedIds.size === users.length
+  // Check if all "other" users are selected (excluding current user)
+  const selectableUsers = users?.filter((u) => u.id !== currentUser?.id) || []
+  const allSelected = selectableUsers.length > 0 && selectedIds.size >= selectableUsers.length
   const someSelected = selectedIds.size > 0 && !allSelected
 
   // Render a user card
@@ -743,6 +748,17 @@ export function UserList() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+      {/* Header */}
+      <div className="flex items-center justify-between py-6 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <Users className="h-6 w-6 text-amber-500" />
+          <h1 className="text-2xl font-semibold text-zinc-100">
+            Users {users && <span className="text-zinc-500">– {users.length}</span>}
+          </h1>
+        </div>
+        <CreateUserDialog />
+      </div>
+
       {/* Search and filters toolbar - fixed */}
       <div className="flex flex-col gap-3 mb-4 flex-shrink-0">
         <div className="flex flex-wrap gap-3">
