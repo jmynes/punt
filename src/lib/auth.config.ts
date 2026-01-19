@@ -12,8 +12,7 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
-      const isOnLogin = nextUrl.pathname === '/login'
-      const isOnApi = nextUrl.pathname.startsWith('/api')
+      const isOnAuthPage = nextUrl.pathname === '/login' || nextUrl.pathname === '/register'
       const isOnAuthApi = nextUrl.pathname.startsWith('/api/auth')
       const isOnInvite = nextUrl.pathname.startsWith('/invite')
 
@@ -27,13 +26,13 @@ export const authConfig: NextAuthConfig = {
         return true
       }
 
-      // Redirect logged-in users away from login page
-      if (isLoggedIn && isOnLogin) {
+      // Redirect logged-in users away from auth pages
+      if (isLoggedIn && isOnAuthPage) {
         return Response.redirect(new URL('/', nextUrl))
       }
 
-      // Protect all other routes
-      if (!isLoggedIn && !isOnLogin) {
+      // Protect all other routes - redirect to login if not authenticated
+      if (!isLoggedIn && !isOnAuthPage) {
         const loginUrl = new URL('/login', nextUrl)
         loginUrl.searchParams.set('callbackUrl', nextUrl.pathname)
         return Response.redirect(loginUrl)
