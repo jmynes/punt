@@ -237,7 +237,7 @@ export function MobileNav() {
             </div>
 
             {/* Quick access when project selected */}
-            {activeProjectId && (
+            {activeProjectId && projects.some(p => p.id === activeProjectId) && (
               <div className="mt-4 ml-4 space-y-1 border-l border-zinc-800 pl-3">
                 <Link href={`/projects/${activeProjectId}/board`} onClick={handleLinkClick}>
                   <Button
