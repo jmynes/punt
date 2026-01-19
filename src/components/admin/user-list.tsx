@@ -269,6 +269,39 @@ export function UserList() {
     },
   })
 
+  // Bulk delete (permanent) - NOT undoable
+  const bulkDeleteUsers = useMutation({
+    mutationFn: async (userIds: string[]) => {
+      const results = await Promise.allSettled(
+        userIds.map(userId =>
+          fetch(`/api/admin/users/${userId}?permanent=true`, {
+            method: 'DELETE',
+          }).then(res => {
+            if (!res.ok) throw new Error('Failed')
+            return res.json()
+          })
+        )
+      )
+      const succeeded = results.filter(r => r.status === 'fulfilled').length
+      const failed = results.filter(r => r.status === 'rejected').length
+      return { succeeded, failed }
+    },
+    onSuccess: ({ succeeded, failed }) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      if (failed === 0) {
+        toast.success(`Permanently deleted ${succeeded} user${succeeded !== 1 ? 's' : ''}`)
+      } else {
+        toast.warning(`Deleted ${succeeded}, failed ${failed}`)
+      }
+      setSelectedIds(new Set())
+      setBulkAction(null)
+    },
+    onError: () => {
+      toast.error('Bulk delete failed')
+      setBulkAction(null)
+    },
+  })
+
   // Handle undo - re-enable disabled users
   const handleUndo = useCallback(async () => {
     const action = undo()
@@ -403,8 +436,7 @@ export function UserList() {
         bulkUpdateUsers.mutate({ userIds: ids, updates: { isSystemAdmin: false } })
         break
       case 'delete':
-        // For permanent delete, we'll do it one by one with confirmation
-        setBulkAction(null)
+        bulkDeleteUsers.mutate(ids)
         break
     }
   }
@@ -420,6 +452,8 @@ export function UserList() {
         return `Grant admin privileges to ${count} user${count !== 1 ? 's' : ''}?`
       case 'removeAdmin':
         return `Remove admin privileges from ${count} user${count !== 1 ? 's' : ''}?`
+      case 'delete':
+        return `Permanently delete ${count} user${count !== 1 ? 's' : ''}? This action CANNOT be undone and will remove all their data.`
       default:
         return ''
     }
@@ -817,6 +851,16 @@ export function UserList() {
               Disable
             </Button>
 
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleBulkAction('delete')}
+              className="text-zinc-300 hover:text-red-400 hover:bg-red-500/10"
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Delete
+            </Button>
+
             <div className="w-px h-6 bg-zinc-700" />
 
             <Button
@@ -864,6 +908,7 @@ export function UserList() {
               {bulkAction === 'enable' && 'Enable Users'}
               {bulkAction === 'makeAdmin' && 'Grant Admin Privileges'}
               {bulkAction === 'removeAdmin' && 'Remove Admin Privileges'}
+              {bulkAction === 'delete' && 'Delete Users Permanently'}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
               {getBulkActionDescription()}
@@ -885,14 +930,16 @@ export function UserList() {
             <AlertDialogAction
               onClick={confirmBulkAction}
               className={
-                bulkAction === 'disable'
+                bulkAction === 'delete'
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : bulkAction === 'disable'
                   ? 'bg-red-600 hover:bg-red-700 text-white'
                   : bulkAction === 'makeAdmin'
                   ? 'bg-amber-600 hover:bg-amber-700 text-white'
                   : 'bg-zinc-600 hover:bg-zinc-700 text-white'
               }
             >
-              Confirm
+              {bulkAction === 'delete' ? 'Delete Permanently' : 'Confirm'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
