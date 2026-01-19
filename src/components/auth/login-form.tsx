@@ -102,6 +102,14 @@ export function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
+                onCut={(e) => {
+                  // When password is hidden, copy empty string but still clear the field
+                  if (!showPassword) {
+                    e.preventDefault()
+                    e.clipboardData?.setData('text/plain', '')
+                    setPassword('')
+                  }
+                }}
                 required
                 autoComplete="current-password"
                 className="h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 pr-11 focus:border-amber-600 focus:ring-amber-600/20 transition-colors"
