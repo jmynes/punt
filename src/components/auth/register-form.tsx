@@ -8,7 +8,6 @@ import { Eye, EyeOff, Loader2, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
 
 interface PasswordRequirement {
   label: string
@@ -99,169 +98,194 @@ export function RegisterForm() {
   }
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900/50">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
       <form onSubmit={handleSubmit}>
-        <CardContent className="pt-6 space-y-4">
+        <div className="p-6 space-y-6">
           {error && (
-            <div className="p-3 rounded-md bg-red-900/20 border border-red-800 text-red-400 text-sm">
+            <div className="px-4 py-3 rounded-md bg-red-950/50 border border-red-900/50 text-red-400 text-sm font-medium">
               {error}
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="username" className="text-zinc-300">
-              Username
-            </Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="johndoe"
-              value={username}
-              onChange={(e) => setUsername(e.target.value.toLowerCase())}
-              required
-              autoComplete="username"
-              autoFocus
-              className={`border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500 ${
-                username && !isValidUsername ? 'border-red-600' : ''
-              }`}
-            />
-            {username && !isValidUsername && (
-              <p className="text-xs text-red-400">
-                3-30 characters, letters, numbers, underscores, and hyphens only
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-zinc-300">
-              Display Name
-            </Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="John Doe"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              autoComplete="name"
-              className="border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-zinc-300">
-              Email <span className="text-zinc-500">(optional)</span>
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              className={`border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500 ${
-                email && !isValidEmail ? 'border-red-600' : ''
-              }`}
-            />
-            {email && !isValidEmail && (
-              <p className="text-xs text-red-400">Please enter a valid email address</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-zinc-300">
-              Password
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Create a password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="new-password"
-                className="border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500 pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full px-3 text-zinc-500 hover:text-zinc-300"
-                onClick={() => setShowPassword(!showPassword)}
+          {/* Account Information */}
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <Label
+                htmlFor="username"
+                className="text-sm font-medium text-zinc-300 tracking-wide"
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-
-            {/* Password requirements */}
-            {password && (
-              <div className="mt-2 space-y-1">
-                {passwordRequirements.map((req, index) => {
-                  const met = req.test(password)
-                  return (
-                    <div
-                      key={index}
-                      className={`flex items-center gap-2 text-xs ${
-                        met ? 'text-green-400' : 'text-zinc-500'
-                      }`}
-                    >
-                      {met ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <X className="h-3 w-3" />
-                      )}
-                      <span>{req.label}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword" className="text-zinc-300">
-              Confirm Password
-            </Label>
-            <div className="relative">
+                Username
+              </Label>
               <Input
-                id="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                placeholder="Confirm your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="johndoe"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
                 required
-                autoComplete="new-password"
-                className={`border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500 pr-10 ${
-                  confirmPassword && !passwordsMatch ? 'border-red-600' : ''
+                autoComplete="username"
+                autoFocus
+                className={`h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-600 focus:ring-amber-600/20 transition-colors ${
+                  username && !isValidUsername ? 'border-red-600 focus:border-red-600' : ''
                 }`}
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full px-3 text-zinc-500 hover:text-zinc-300"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
+              {username && !isValidUsername && (
+                <p className="text-xs text-red-400 mt-1.5">
+                  3-30 characters, letters, numbers, underscores, and hyphens only
+                </p>
+              )}
             </div>
-            {confirmPassword && !passwordsMatch && (
-              <p className="text-xs text-red-400">Passwords do not match</p>
-            )}
-            {passwordsMatch && confirmPassword && (
-              <p className="text-xs text-green-400 flex items-center gap-1">
-                <Check className="h-3 w-3" />
-                Passwords match
-              </p>
-            )}
-          </div>
-        </CardContent>
 
-        <CardFooter>
+            <div className="space-y-2">
+              <Label
+                htmlFor="name"
+                className="text-sm font-medium text-zinc-300 tracking-wide"
+              >
+                Display Name
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                autoComplete="name"
+                className="h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-600 focus:ring-amber-600/20 transition-colors"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="email"
+                className="text-sm font-medium text-zinc-300 tracking-wide"
+              >
+                Email
+                <span className="ml-2 text-xs font-normal text-zinc-500">(optional)</span>
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                className={`h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-600 focus:ring-amber-600/20 transition-colors ${
+                  email && !isValidEmail ? 'border-red-600 focus:border-red-600' : ''
+                }`}
+              />
+              {email && !isValidEmail && (
+                <p className="text-xs text-red-400 mt-1.5">Please enter a valid email address</p>
+              )}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-zinc-800" />
+
+          {/* Security */}
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <Label
+                htmlFor="password"
+                className="text-sm font-medium text-zinc-300 tracking-wide"
+              >
+                Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  className="h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 pr-11 focus:border-amber-600 focus:ring-amber-600/20 transition-colors"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-11 w-11 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              {/* Password requirements */}
+              {password && (
+                <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                  {passwordRequirements.map((req, index) => {
+                    const met = req.test(password)
+                    return (
+                      <div
+                        key={index}
+                        className={`flex items-center gap-1.5 text-xs transition-colors ${
+                          met ? 'text-emerald-400' : 'text-zinc-500'
+                        }`}
+                      >
+                        {met ? (
+                          <Check className="h-3 w-3 shrink-0" />
+                        ) : (
+                          <X className="h-3 w-3 shrink-0" />
+                        )}
+                        <span>{req.label}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="confirmPassword"
+                className="text-sm font-medium text-zinc-300 tracking-wide"
+              >
+                Confirm Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  className={`h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 pr-11 focus:border-amber-600 focus:ring-amber-600/20 transition-colors ${
+                    confirmPassword && !passwordsMatch ? 'border-red-600 focus:border-red-600' : ''
+                  }`}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-11 w-11 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {confirmPassword && !passwordsMatch && (
+                <p className="text-xs text-red-400 mt-1.5">Passwords do not match</p>
+              )}
+              {passwordsMatch && confirmPassword && (
+                <p className="text-xs text-emerald-400 flex items-center gap-1.5 mt-1.5">
+                  <Check className="h-3 w-3" />
+                  Passwords match
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 pb-6 pt-2">
           <Button
             type="submit"
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+            className="w-full h-11 bg-amber-600 hover:bg-amber-500 text-white font-medium tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isLoading || !canSubmit}
           >
             {isLoading ? (
@@ -273,8 +297,8 @@ export function RegisterForm() {
               'Create account'
             )}
           </Button>
-        </CardFooter>
+        </div>
       </form>
-    </Card>
+    </div>
   )
 }

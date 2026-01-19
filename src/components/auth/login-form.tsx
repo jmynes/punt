@@ -8,7 +8,6 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
 
 export function LoginForm() {
   const router = useRouter()
@@ -48,17 +47,20 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900/50">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
       <form onSubmit={handleSubmit}>
-        <CardContent className="pt-6 space-y-4">
+        <div className="p-6 space-y-5">
           {error && (
-            <div className="p-3 rounded-md bg-red-900/20 border border-red-800 text-red-400 text-sm">
+            <div className="px-4 py-3 rounded-md bg-red-950/50 border border-red-900/50 text-red-400 text-sm font-medium">
               {error}
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-zinc-300">
+            <Label
+              htmlFor="username"
+              className="text-sm font-medium text-zinc-300 tracking-wide"
+            >
               Username
             </Label>
             <Input
@@ -70,12 +72,15 @@ export function LoginForm() {
               required
               autoComplete="username"
               autoFocus
-              className="border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500"
+              className="h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-600 focus:ring-amber-600/20 transition-colors"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-zinc-300">
+            <Label
+              htmlFor="password"
+              className="text-sm font-medium text-zinc-300 tracking-wide"
+            >
               Password
             </Label>
             <div className="relative">
@@ -87,25 +92,25 @@ export function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500 pr-10"
+                className="h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 pr-11 focus:border-amber-600 focus:ring-amber-600/20 transition-colors"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute right-0 top-0 h-full px-3 text-zinc-500 hover:text-zinc-300"
+                className="absolute right-0 top-0 h-11 w-11 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
           </div>
-        </CardContent>
+        </div>
 
-        <CardFooter>
+        <div className="px-6 pb-6 pt-2">
           <Button
             type="submit"
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+            className="w-full h-11 bg-amber-600 hover:bg-amber-500 text-white font-medium tracking-wide transition-colors"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -117,8 +122,8 @@ export function LoginForm() {
               'Sign in'
             )}
           </Button>
-        </CardFooter>
+        </div>
       </form>
-    </Card>
+    </div>
   )
 }
