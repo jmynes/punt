@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-interface DeletedUser {
+interface UserSnapshot {
   id: string
   name: string
   email: string
@@ -9,8 +9,8 @@ interface DeletedUser {
 }
 
 interface AdminUndoAction {
-  type: 'userDelete'
-  users: DeletedUser[]
+  type: 'userDisable' | 'userEnable'
+  users: UserSnapshot[]
   timestamp: number
 }
 
@@ -18,8 +18,9 @@ interface AdminUndoState {
   undoStack: AdminUndoAction[]
   redoStack: AdminUndoAction[]
 
-  // Push a user delete action (soft delete - can be restored)
-  pushUserDelete: (users: DeletedUser[]) => void
+  // Push a user status change action
+  pushUserDisable: (users: UserSnapshot[]) => void
+  pushUserEnable: (users: UserSnapshot[]) => void
 
   // Undo the most recent action
   undo: () => AdminUndoAction | undefined
@@ -39,17 +40,30 @@ export const useAdminUndoStore = create<AdminUndoState>((set, get) => ({
   undoStack: [],
   redoStack: [],
 
-  pushUserDelete: (users) => {
+  pushUserDisable: (users) => {
     set((state) => ({
       undoStack: [
         ...state.undoStack,
         {
-          type: 'userDelete',
+          type: 'userDisable',
           users,
           timestamp: Date.now(),
         },
       ],
-      // Clear redo stack when new action is performed
+      redoStack: [],
+    }))
+  },
+
+  pushUserEnable: (users) => {
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          type: 'userEnable',
+          users,
+          timestamp: Date.now(),
+        },
+      ],
       redoStack: [],
     }))
   },

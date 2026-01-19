@@ -18,6 +18,10 @@ import {
   Minus,
   Undo2,
   Redo2,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -31,6 +35,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -55,6 +68,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useAdminUndoStore } from '@/stores/admin-undo-store'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 interface User {
   id: string
@@ -71,7 +85,7 @@ interface User {
 type SortField = 'name' | 'lastLoginAt' | 'createdAt'
 type SortDir = 'asc' | 'desc'
 type RoleFilter = 'all' | 'admin' | 'standard'
-type BulkAction = 'delete' | 'disable' | 'enable' | 'makeAdmin' | 'removeAdmin' | null
+type BulkAction = 'disable' | 'enable' | 'makeAdmin' | 'removeAdmin' | null
 
 const sortLabels: Record<SortField, string> = {
   name: 'Name',
@@ -81,12 +95,20 @@ const sortLabels: Record<SortField, string> = {
 
 export function UserList() {
   const queryClient = useQueryClient()
+  const currentUser = useCurrentUser()
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkAction, setBulkAction] = useState<BulkAction>(null)
 
+  // Bulk delete confirmation state (requires credentials)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [deleteEmail, setDeleteEmail] = useState('')
+  const [deletePassword, setDeletePassword] = useState('')
+  const [showDeletePassword, setShowDeletePassword] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
   // Undo store
-  const { pushUserDelete, undo, redo, canUndo, canRedo } = useAdminUndoStore()
+  const { pushUserDisable, pushUserEnable, undo, redo, canUndo, canRedo } = useAdminUndoStore()
 
   // Filter and sort state
   const [search, setSearch] = useState('')
@@ -221,7 +243,7 @@ export function UserList() {
     },
   })
 
-  // Bulk disable (soft delete) - undoable
+  // Bulk disable - undoable
   const bulkDisableUsers = useMutation({
     mutationFn: async (userIds: string[]) => {
       const results = await Promise.allSettled(
@@ -246,7 +268,7 @@ export function UserList() {
       // Store for undo
       const disabledUsers = users?.filter(u => userIds.includes(u.id)) || []
       if (disabledUsers.length > 0) {
-        pushUserDelete(disabledUsers.map(u => ({
+        pushUserDisable(disabledUsers.map(u => ({
           id: u.id,
           name: u.name,
           email: u.email,
@@ -269,15 +291,15 @@ export function UserList() {
     },
   })
 
-  // Bulk delete (soft delete) - undoable
-  const bulkSoftDeleteUsers = useMutation({
+  // Bulk enable - undoable
+  const bulkEnableUsers = useMutation({
     mutationFn: async (userIds: string[]) => {
       const results = await Promise.allSettled(
         userIds.map(userId =>
           fetch(`/api/admin/users/${userId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isActive: false }),
+            body: JSON.stringify({ isActive: true }),
           }).then(res => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -292,70 +314,139 @@ export function UserList() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
       // Store for undo
-      const deletedUsers = users?.filter(u => userIds.includes(u.id)) || []
-      if (deletedUsers.length > 0) {
-        pushUserDelete(deletedUsers.map(u => ({
+      const enabledUsers = users?.filter(u => userIds.includes(u.id)) || []
+      if (enabledUsers.length > 0) {
+        pushUserEnable(enabledUsers.map(u => ({
           id: u.id,
           name: u.name,
           email: u.email,
           isSystemAdmin: u.isSystemAdmin,
-          isActive: true,
+          isActive: false, // They were disabled before
         })))
       }
 
       if (failed === 0) {
-        toast.success(`Deleted ${succeeded} user${succeeded !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
+        toast.success(`Enabled ${succeeded} user${succeeded !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
       } else {
-        toast.warning(`Deleted ${succeeded}, failed ${failed}`)
+        toast.warning(`Enabled ${succeeded}, failed ${failed}`)
       }
       setSelectedIds(new Set())
       setBulkAction(null)
     },
     onError: () => {
-      toast.error('Bulk delete failed')
+      toast.error('Bulk enable failed')
       setBulkAction(null)
     },
   })
 
-  // Handle undo - re-enable disabled users
+  // Bulk permanent delete - requires credential verification
+  const bulkPermanentDeleteUsers = useMutation({
+    mutationFn: async ({ userIds, email, password }: { userIds: string[]; email: string; password: string }) => {
+      // First verify credentials
+      const verifyRes = await fetch('/api/auth/verify-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+
+      if (!verifyRes.ok) {
+        const error = await verifyRes.json()
+        throw new Error(error.error || 'Invalid credentials')
+      }
+
+      // Now delete users permanently
+      const results = await Promise.allSettled(
+        userIds.map(userId =>
+          fetch(`/api/admin/users/${userId}?permanent=true`, {
+            method: 'DELETE',
+          }).then(res => {
+            if (!res.ok) throw new Error('Failed')
+            return res.json()
+          })
+        )
+      )
+      const succeeded = results.filter(r => r.status === 'fulfilled').length
+      const failed = results.filter(r => r.status === 'rejected').length
+      return { succeeded, failed }
+    },
+    onSuccess: ({ succeeded, failed }) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+
+      if (failed === 0) {
+        toast.success(`Permanently deleted ${succeeded} user${succeeded !== 1 ? 's' : ''}`)
+      } else {
+        toast.warning(`Deleted ${succeeded}, failed ${failed}`)
+      }
+      setSelectedIds(new Set())
+      closeBulkDeleteDialog()
+    },
+    onError: (error) => {
+      setDeleteError(error.message)
+    },
+  })
+
+  const closeBulkDeleteDialog = () => {
+    setBulkDeleteOpen(false)
+    setDeleteEmail('')
+    setDeletePassword('')
+    setShowDeletePassword(false)
+    setDeleteError('')
+  }
+
+  const openBulkDeleteDialog = () => {
+    setDeleteError('')
+    setBulkDeleteOpen(true)
+  }
+
+  // Handle undo - reverse the last action
   const handleUndo = useCallback(async () => {
     const action = undo()
-    if (!action || action.type !== 'userDelete') return
+    if (!action) return
 
     try {
+      // Undo disable -> re-enable, Undo enable -> re-disable
+      const newIsActive = action.type === 'userDisable'
+
       await Promise.all(
         action.users.map(user =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isActive: true }),
+            body: JSON.stringify({ isActive: newIsActive }),
           })
         )
       )
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      toast.success(`Restored ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Y to redo)`)
+
+      const verb = action.type === 'userDisable' ? 'Re-enabled' : 'Re-disabled'
+      toast.success(`${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Y to redo)`)
     } catch {
       toast.error('Failed to undo')
     }
   }, [undo, queryClient])
 
-  // Handle redo - disable users again
+  // Handle redo - repeat the action
   const handleRedo = useCallback(async () => {
     const action = redo()
-    if (!action || action.type !== 'userDelete') return
+    if (!action) return
 
     try {
+      // Redo disable -> disable again, Redo enable -> enable again
+      const newIsActive = action.type === 'userEnable'
+
       await Promise.all(
         action.users.map(user =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isActive: false }),
+            body: JSON.stringify({ isActive: newIsActive }),
           })
         )
       )
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      toast.success(`Re-disabled ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
+
+      const verb = action.type === 'userDisable' ? 'Re-disabled' : 'Re-enabled'
+      toast.success(`${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
     } catch {
       toast.error('Failed to redo')
     }
@@ -442,7 +533,7 @@ export function UserList() {
         bulkDisableUsers.mutate(ids)
         break
       case 'enable':
-        bulkUpdateUsers.mutate({ userIds: ids, updates: { isActive: true } })
+        bulkEnableUsers.mutate(ids)
         break
       case 'makeAdmin':
         bulkUpdateUsers.mutate({ userIds: ids, updates: { isSystemAdmin: true } })
@@ -450,10 +541,23 @@ export function UserList() {
       case 'removeAdmin':
         bulkUpdateUsers.mutate({ userIds: ids, updates: { isSystemAdmin: false } })
         break
-      case 'delete':
-        bulkSoftDeleteUsers.mutate(ids)
-        break
     }
+  }
+
+  const handleBulkDelete = () => {
+    if (!deleteEmail || !deletePassword) {
+      setDeleteError('Please enter your email and password')
+      return
+    }
+    if (deleteEmail !== currentUser?.email) {
+      setDeleteError('Email does not match your account')
+      return
+    }
+    bulkPermanentDeleteUsers.mutate({
+      userIds: [...selectedIds],
+      email: deleteEmail,
+      password: deletePassword,
+    })
   }
 
   const getBulkActionDescription = () => {
@@ -467,8 +571,6 @@ export function UserList() {
         return `Grant admin privileges to ${count} user${count !== 1 ? 's' : ''}?`
       case 'removeAdmin':
         return `Remove admin privileges from ${count} user${count !== 1 ? 's' : ''}?`
-      case 'delete':
-        return `Delete ${count} user${count !== 1 ? 's' : ''}? They will be disabled and won't be able to log in. This action can be undone with Ctrl+Z.`
       default:
         return ''
     }
@@ -869,7 +971,7 @@ export function UserList() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleBulkAction('delete')}
+              onClick={openBulkDeleteDialog}
               className="text-zinc-300 hover:text-red-400 hover:bg-red-500/10"
             >
               <Trash2 className="h-4 w-4 mr-1.5" />
@@ -923,7 +1025,6 @@ export function UserList() {
               {bulkAction === 'enable' && 'Enable Users'}
               {bulkAction === 'makeAdmin' && 'Grant Admin Privileges'}
               {bulkAction === 'removeAdmin' && 'Remove Admin Privileges'}
-              {bulkAction === 'delete' && 'Delete Users'}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
               {getBulkActionDescription()}
@@ -942,21 +1043,130 @@ export function UserList() {
             <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
+            <Button
               onClick={confirmBulkAction}
               className={
-                bulkAction === 'delete' || bulkAction === 'disable'
+                bulkAction === 'disable'
                   ? 'bg-red-600 hover:bg-red-700 text-white'
                   : bulkAction === 'makeAdmin'
                   ? 'bg-amber-600 hover:bg-amber-700 text-white'
                   : 'bg-zinc-600 hover:bg-zinc-700 text-white'
               }
             >
-              {bulkAction === 'delete' ? 'Delete' : 'Confirm'}
-            </AlertDialogAction>
+              Confirm
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk delete confirmation dialog with credential verification */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={(open) => !open && closeBulkDeleteDialog()}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-100 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Permanently Delete {selectedIds.size} User{selectedIds.size !== 1 ? 's' : ''}
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              This action <strong className="text-red-400">cannot be undone</strong>. All user data will be permanently removed from the system.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUsers.length <= 6 && (
+            <div className="flex flex-wrap gap-2 py-2">
+              {selectedUsers.map(user => (
+                <Badge key={user.id} variant="outline" className="border-red-500/30 text-red-300 bg-red-500/10">
+                  {user.name}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-zinc-400">
+              To confirm deletion, enter your admin credentials:
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="delete-email" className="text-zinc-300">
+                Your Email
+              </Label>
+              <Input
+                id="delete-email"
+                type="email"
+                value={deleteEmail}
+                onChange={(e) => {
+                  setDeleteEmail(e.target.value)
+                  setDeleteError('')
+                }}
+                placeholder={currentUser?.email || 'admin@example.com'}
+                autoComplete="off"
+                className="border-zinc-700 bg-zinc-800 text-zinc-100"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delete-password" className="text-zinc-300">
+                Your Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="delete-password"
+                  type={showDeletePassword ? 'text' : 'password'}
+                  value={deletePassword}
+                  onChange={(e) => {
+                    setDeletePassword(e.target.value)
+                    setDeleteError('')
+                  }}
+                  placeholder="Enter your password"
+                  autoComplete="off"
+                  className="border-zinc-700 bg-zinc-800 text-zinc-100 pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 text-zinc-500 hover:text-zinc-300"
+                  onClick={() => setShowDeletePassword(!showDeletePassword)}
+                >
+                  {showDeletePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            {deleteError && (
+              <p className="text-sm text-red-400 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                {deleteError}
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={closeBulkDeleteDialog}
+              className="text-zinc-300 hover:bg-zinc-800"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkDelete}
+              disabled={bulkPermanentDeleteUsers.isPending || !deleteEmail || !deletePassword}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {bulkPermanentDeleteUsers.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Permanently'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
