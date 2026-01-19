@@ -7,6 +7,7 @@ import { hashPassword, validatePasswordStrength } from '@/lib/password'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const createUserSchema = z.object({
+  username: z.string().min(3, 'Username must be at least 3 characters').max(30).regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and hyphens'),
   email: z.string().email(),
   name: z.string().min(1, 'Name is required'),
   password: z.string().min(1, 'Password is required'),
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { email, name, password, isSystemAdmin } = parsed.data
+    const { username, email, name, password, isSystemAdmin } = parsed.data
 
     // Validate password strength
     const passwordValidation = validatePasswordStrength(password)
@@ -94,12 +95,21 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check if username already exists
+    const existingUsername = await db.user.findUnique({
+      where: { username },
+    })
+
+    if (existingUsername) {
+      return NextResponse.json({ error: 'Username already exists' }, { status: 400 })
+    }
+
     // Check if email already exists
-    const existing = await db.user.findUnique({
+    const existingEmail = await db.user.findUnique({
       where: { email },
     })
 
-    if (existing) {
+    if (existingEmail) {
       return NextResponse.json({ error: 'Email already exists' }, { status: 400 })
     }
 
@@ -108,6 +118,7 @@ export async function POST(request: Request) {
 
     const user = await db.user.create({
       data: {
+        username,
         email,
         name,
         passwordHash,

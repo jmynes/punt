@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
@@ -14,6 +14,10 @@ export function LoginForm() {
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/'
 
+  // Use refs to capture autofilled values that don't trigger onChange
+  const usernameRef = useRef<HTMLInputElement>(null)
+  const passwordRef = useRef<HTMLInputElement>(null)
+
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -25,10 +29,14 @@ export function LoginForm() {
     setError(null)
     setIsLoading(true)
 
+    // Read from refs to capture autofilled values that bypass onChange
+    const submittedUsername = usernameRef.current?.value || username
+    const submittedPassword = passwordRef.current?.value || password
+
     try {
       const result = await signIn('credentials', {
-        username,
-        password,
+        username: submittedUsername,
+        password: submittedPassword,
         redirect: false,
       })
 
@@ -64,11 +72,13 @@ export function LoginForm() {
               Username
             </Label>
             <Input
+              ref={usernameRef}
               id="username"
               type="text"
               placeholder="Enter your username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
               required
               autoComplete="username"
               autoFocus
@@ -85,11 +95,13 @@ export function LoginForm() {
             </Label>
             <div className="relative">
               <Input
+                ref={passwordRef}
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
                 required
                 autoComplete="current-password"
                 className="h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 pr-11 focus:border-amber-600 focus:ring-amber-600/20 transition-colors"
@@ -99,7 +111,13 @@ export function LoginForm() {
                 variant="ghost"
                 size="icon"
                 className="absolute right-0 top-0 h-11 w-11 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => {
+                  // Sync autofilled value to state before toggling visibility
+                  if (passwordRef.current) {
+                    setPassword(passwordRef.current.value)
+                  }
+                  setShowPassword(!showPassword)
+                }}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
