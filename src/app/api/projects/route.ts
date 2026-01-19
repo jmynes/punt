@@ -1,0 +1,138 @@
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
+
+const createProjectSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  key: z.string().min(1, 'Key is required').max(10).toUpperCase(),
+  description: z.string().optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format'),
+})
+
+/**
+ * GET /api/projects - List all projects for the current user
+ */
+export async function GET() {
+  try {
+    const user = await requireAuth()
+
+    // Get projects where user is a member
+    const memberships = await db.projectMember.findMany({
+      where: { userId: user.id },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            key: true,
+            color: true,
+            description: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: {
+              select: { tickets: true, members: true },
+            },
+          },
+        },
+      },
+      orderBy: { project: { name: 'asc' } },
+    })
+
+    const projects = memberships.map((m) => ({
+      ...m.project,
+      role: m.role,
+    }))
+
+    return NextResponse.json(projects)
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      if (error.message === 'Account disabled') {
+        return NextResponse.json({ error: 'Account disabled' }, { status: 403 })
+      }
+    }
+    console.error('Failed to fetch projects:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+/**
+ * POST /api/projects - Create a new project
+ */
+export async function POST(request: Request) {
+  try {
+    const user = await requireAuth()
+
+    const body = await request.json()
+    const parsed = createProjectSchema.safeParse(body)
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const { name, key, description, color } = parsed.data
+
+    // Check if key is already taken
+    const existingProject = await db.project.findUnique({
+      where: { key },
+    })
+
+    if (existingProject) {
+      return NextResponse.json(
+        { error: 'Project key already exists' },
+        { status: 400 }
+      )
+    }
+
+    // Create project with default columns and make the creator an owner
+    const project = await db.project.create({
+      data: {
+        name,
+        key,
+        description,
+        color,
+        columns: {
+          create: [
+            { name: 'To Do', order: 0 },
+            { name: 'In Progress', order: 1 },
+            { name: 'Done', order: 2 },
+          ],
+        },
+        members: {
+          create: {
+            userId: user.id,
+            role: 'owner',
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        key: true,
+        color: true,
+        description: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    })
+
+    return NextResponse.json({ ...project, role: 'owner' }, { status: 201 })
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      if (error.message === 'Account disabled') {
+        return NextResponse.json({ error: 'Account disabled' }, { status: 403 })
+      }
+    }
+    console.error('Failed to create project:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

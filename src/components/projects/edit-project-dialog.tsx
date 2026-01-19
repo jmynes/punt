@@ -25,10 +25,9 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { showUndoRedoToast } from '@/lib/undo-toast'
+import { useUpdateProject, useDeleteProject } from '@/hooks/queries/use-projects'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
-import { useUndoStore } from '@/stores/undo-store'
 
 // Preset colors for projects
 const PROJECT_COLORS = [
@@ -53,14 +52,15 @@ interface FormData {
 
 export function EditProjectDialog() {
   const { editProjectOpen, editProjectId, closeEditProject } = useUIStore()
-  const { getProject, updateProject, removeProject } = useProjectsStore()
+  const { getProject } = useProjectsStore()
+  const updateProject = useUpdateProject()
+  const deleteProject = useDeleteProject()
   const [formData, setFormData] = useState<FormData>({
     name: '',
     key: '',
     description: '',
     color: PROJECT_COLORS[0],
   })
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Load project data when dialog opens
@@ -99,26 +99,28 @@ export function EditProjectDialog() {
       return
     }
 
-    setIsSubmitting(true)
-
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
-    // Update project in the store
-    updateProject(editProjectId, {
-      name: formData.name.trim(),
-      description: formData.description.trim() || undefined,
-      color: formData.color,
-    })
-
-    // Show success toast
-    toast.success('Project updated', {
-      description: `${formData.name.trim()} (${formData.key})`,
-      duration: 4000,
-    })
-
-    setIsSubmitting(false)
-    handleClose()
+    updateProject.mutate(
+      {
+        id: editProjectId,
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
+        color: formData.color,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Project updated', {
+            description: `${formData.name.trim()} (${formData.key})`,
+            duration: 4000,
+          })
+          handleClose()
+        },
+        onError: (error) => {
+          toast.error('Failed to update project', {
+            description: error.message,
+          })
+        },
+      }
+    )
   }, [editProjectId, formData, updateProject, handleClose])
 
   const handleDelete = useCallback(async () => {
@@ -128,60 +130,26 @@ export function EditProjectDialog() {
     const project = getProject(editProjectId)
     if (!project) return
 
-    // Store the project data before deleting
-    const deletedProject = { ...project }
-
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
-    // Remove project from the store
-    removeProject(editProjectId)
-
-    // Show toast with undo option
-    const showUndo = useUIStore.getState().showUndoButtons
-    const { restoreProject } = useProjectsStore.getState()
-
-    let currentId: string | number | undefined
-
-    const toastId = showUndoRedoToast('error', {
-      title: 'Project deleted',
-      description: deletedProject.name,
-      duration: 5000,
-      showUndoButtons: showUndo,
-      onUndo: (id) => {
-        useUndoStore.getState().undoByToastId(id)
-        restoreProject(deletedProject)
+    deleteProject.mutate(editProjectId, {
+      onSuccess: () => {
+        toast.success('Project deleted', {
+          description: project.name,
+          duration: 4000,
+        })
+        setShowDeleteConfirm(false)
+        handleClose()
       },
-      onUndoneToast: (newId) => {
-        if (currentId) {
-          useUndoStore.getState().updateRedoToastId(currentId, newId)
-          currentId = newId
-        }
+      onError: (error) => {
+        toast.error('Failed to delete project', {
+          description: error.message,
+        })
+        setShowDeleteConfirm(false)
       },
-      onRedo: (id) => {
-        useUndoStore.getState().redoByToastId(id)
-        useProjectsStore.getState().removeProject(deletedProject.id)
-      },
-      onRedoneToast: (newId) => {
-        if (currentId) {
-          useUndoStore.getState().updateUndoToastId(currentId, newId)
-          currentId = newId
-        }
-      },
-      undoneTitle: 'Project restored',
-      redoneTitle: 'Project deleted',
     })
-
-    currentId = toastId
-
-    // Push to undo stack
-    useUndoStore.getState().pushProjectDelete(deletedProject, toastId)
-
-    setShowDeleteConfirm(false)
-    handleClose()
-  }, [editProjectId, getProject, removeProject, handleClose])
+  }, [editProjectId, getProject, deleteProject, handleClose])
 
   const isValid = formData.name.trim().length > 0
+  const isPending = updateProject.isPending || deleteProject.isPending
 
   return (
     <>
@@ -206,7 +174,7 @@ export function EditProjectDialog() {
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="My Awesome Project"
                 className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-                disabled={isSubmitting}
+                disabled={isPending}
                 autoFocus
               />
             </div>
@@ -240,7 +208,7 @@ export function EditProjectDialog() {
                 placeholder="Brief description of this project..."
                 className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
                 rows={3}
-                disabled={isSubmitting}
+                disabled={isPending}
               />
             </div>
 
@@ -259,7 +227,7 @@ export function EditProjectDialog() {
                         : 'hover:scale-110'
                     }`}
                     style={{ backgroundColor: color }}
-                    disabled={isSubmitting}
+                    disabled={isPending}
                   />
                 ))}
               </div>
@@ -270,7 +238,7 @@ export function EditProjectDialog() {
             <Button
               variant="outline"
               onClick={() => setShowDeleteConfirm(true)}
-              disabled={isSubmitting}
+              disabled={isPending}
               className="border-red-900 text-red-500 hover:bg-red-950 hover:text-red-400 sm:mr-auto"
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -279,17 +247,17 @@ export function EditProjectDialog() {
             <Button
               variant="outline"
               onClick={handleClose}
-              disabled={isSubmitting}
+              disabled={isPending}
               className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!isValid || isSubmitting}
+              disabled={!isValid || isPending}
               className="bg-amber-600 hover:bg-amber-700 text-white"
             >
-              {isSubmitting ? (
+              {updateProject.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Saving...
@@ -313,14 +281,25 @@ export function EditProjectDialog() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+            <AlertDialogCancel
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              disabled={deleteProject.isPending}
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={deleteProject.isPending}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              Delete Project
+              {deleteProject.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Project'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

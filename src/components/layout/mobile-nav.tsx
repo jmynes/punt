@@ -19,11 +19,10 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { useDeleteProject } from '@/hooks/queries/use-projects'
 import { cn } from '@/lib/utils'
-import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
-import { useUndoStore } from '@/stores/undo-store'
 
 export function MobileNav() {
   const pathname = usePathname()
@@ -36,9 +35,11 @@ export function MobileNav() {
     setCreateProjectOpen,
     openEditProject,
   } = useUIStore()
-  const { projects, _hasHydrated, removeProject } = useProjectsStore()
+  const { projects, isLoading } = useProjectsStore()
   const [editMode, setEditMode] = useState(false)
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
+
+  const deleteProject = useDeleteProject()
 
   // Don't render mobile nav when not logged in
   if (!currentUser) {
@@ -48,53 +49,8 @@ export function MobileNav() {
   const projectToDelete = deleteProjectId ? projects.find((p) => p.id === deleteProjectId) : null
 
   const handleDeleteProject = () => {
-    if (!deleteProjectId || !projectToDelete) return
-
-    // Store the project data before deleting
-    const deletedProject = { ...projectToDelete }
-
-    removeProject(deleteProjectId)
-
-    // Show toast with undo option
-    const showUndo = useUIStore.getState().showUndoButtons
-    const { restoreProject } = useProjectsStore.getState()
-
-    let currentId: string | number | undefined
-
-    const toastId = showUndoRedoToast('error', {
-      title: 'Project deleted',
-      description: deletedProject.name,
-      duration: 5000,
-      showUndoButtons: showUndo,
-      onUndo: (id) => {
-        useUndoStore.getState().undoByToastId(id)
-        restoreProject(deletedProject)
-      },
-      onUndoneToast: (newId) => {
-        if (currentId) {
-          useUndoStore.getState().updateRedoToastId(currentId, newId)
-          currentId = newId
-        }
-      },
-      onRedo: (id) => {
-        useUndoStore.getState().redoByToastId(id)
-        useProjectsStore.getState().removeProject(deletedProject.id)
-      },
-      onRedoneToast: (newId) => {
-        if (currentId) {
-          useUndoStore.getState().updateUndoToastId(currentId, newId)
-          currentId = newId
-        }
-      },
-      undoneTitle: 'Project restored',
-      redoneTitle: 'Project deleted',
-    })
-
-    currentId = toastId
-
-    // Push to undo stack
-    useUndoStore.getState().pushProjectDelete(deletedProject, toastId)
-
+    if (!deleteProjectId) return
+    deleteProject.mutate(deleteProjectId)
     setDeleteProjectId(null)
   }
 
@@ -218,13 +174,15 @@ export function MobileNav() {
               </div>
 
               <div className="space-y-1">
-                {!_hasHydrated ? (
-                  // Show skeleton while hydrating to avoid SSR mismatch
+                {isLoading ? (
+                  // Show skeleton while loading from API
                   <>
                     <Skeleton className="h-9 w-full bg-zinc-800" />
                     <Skeleton className="h-9 w-full bg-zinc-800" />
                     <Skeleton className="h-9 w-full bg-zinc-800" />
                   </>
+                ) : projects.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-zinc-500">No projects yet</p>
                 ) : (
                   projects.map((project) => (
                     <div key={project.id} className="relative flex items-center">

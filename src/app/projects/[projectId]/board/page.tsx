@@ -19,7 +19,7 @@ import type { ColumnWithTickets } from '@/types'
 export default function BoardPage() {
   const params = useParams()
   const projectId = params.projectId as string
-  const { getProject, _hasHydrated: projectsHydrated } = useProjectsStore()
+  const { getProject, isLoading: projectsLoading } = useProjectsStore()
   const project = getProject(projectId)
   const projectKey = project?.key || 'PROJ'
 
@@ -182,7 +182,7 @@ export default function BoardPage() {
   }, [_hasHydrated, projectId, setActiveProjectId, setColumns])
 
   // Show not found if project doesn't exist after hydration
-  if (projectsHydrated && !project) {
+  if (!projectsLoading && !project) {
     return (
       <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-4">
         <AlertTriangle className="h-12 w-12 text-amber-500" />

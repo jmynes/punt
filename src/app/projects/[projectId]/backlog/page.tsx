@@ -16,7 +16,7 @@ import { useUIStore } from '@/stores/ui-store'
 export default function BacklogPage() {
   const params = useParams()
   const projectId = params.projectId as string
-  const { getProject, _hasHydrated: projectsHydrated } = useProjectsStore()
+  const { getProject, isLoading: projectsLoading } = useProjectsStore()
   const project = getProject(projectId)
   const projectKey = project?.key || 'PROJ'
 
@@ -76,8 +76,8 @@ export default function BacklogPage() {
     [activeTicketId, allTickets],
   )
 
-  // Show not found if project doesn't exist after hydration
-  if (projectsHydrated && !project) {
+  // Show not found if project doesn't exist after loading
+  if (!projectsLoading && !project) {
     return (
       <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-4">
         <AlertTriangle className="h-12 w-12 text-amber-500" />

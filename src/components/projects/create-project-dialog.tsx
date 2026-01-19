@@ -15,10 +15,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { showUndoRedoToast } from '@/lib/undo-toast'
-import { useProjectsStore } from '@/stores/projects-store'
+import { useCreateProject } from '@/hooks/queries/use-projects'
 import { useUIStore } from '@/stores/ui-store'
-import { useUndoStore } from '@/stores/undo-store'
 
 // Preset colors for projects
 const PROJECT_COLORS = [
@@ -51,9 +49,8 @@ const DEFAULT_FORM: FormData = {
 export function CreateProjectDialog() {
   const router = useRouter()
   const { createProjectOpen, setCreateProjectOpen, setActiveProjectId } = useUIStore()
-  const { addProject, isKeyTaken } = useProjectsStore()
+  const createProject = useCreateProject()
   const [formData, setFormData] = useState<FormData>(DEFAULT_FORM)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [keyError, setKeyError] = useState<string | null>(null)
 
   const handleClose = useCallback(() => {
@@ -115,71 +112,28 @@ export function CreateProjectDialog() {
       return
     }
 
-    if (isKeyTaken(formData.key)) {
-      setKeyError('This key is already in use')
-      return
-    }
-
-    setIsSubmitting(true)
-
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
-    // Add project to the store
-    const newProject = addProject({
-      name: formData.name.trim(),
-      key: formData.key.trim(),
-      description: formData.description.trim() || undefined,
-      color: formData.color,
-    })
-
-    // Show success toast with undo option
-    const showUndo = useUIStore.getState().showUndoButtons
-    const { removeProject, restoreProject } = useProjectsStore.getState()
-
-    let currentId: string | number | undefined
-
-    const toastId = showUndoRedoToast('success', {
-      title: 'Project created',
-      description: `${newProject.name} (${newProject.key})`,
-      duration: 5000,
-      showUndoButtons: showUndo,
-      onUndo: (id) => {
-        useUndoStore.getState().undoByToastId(id)
-        removeProject(newProject.id)
+    createProject.mutate(
+      {
+        name: formData.name.trim(),
+        key: formData.key.trim(),
+        description: formData.description.trim() || undefined,
+        color: formData.color,
       },
-      onUndoneToast: (newId) => {
-        if (currentId) {
-          useUndoStore.getState().updateRedoToastId(currentId, newId)
-          currentId = newId
-        }
-      },
-      onRedo: (id) => {
-        useUndoStore.getState().redoByToastId(id)
-        restoreProject(newProject)
-      },
-      onRedoneToast: (newId) => {
-        if (currentId) {
-          useUndoStore.getState().updateUndoToastId(currentId, newId)
-          currentId = newId
-        }
-      },
-      undoneTitle: 'Project creation undone',
-      redoneTitle: 'Project created',
-    })
-
-    currentId = toastId
-
-    // Push to undo stack
-    useUndoStore.getState().pushProjectCreate(newProject, toastId)
-
-    setIsSubmitting(false)
-    handleClose()
-
-    // Navigate to the new project and set it as active
-    setActiveProjectId(newProject.id)
-    router.push(`/projects/${newProject.id}/board`)
-  }, [formData, isKeyTaken, addProject, handleClose, setActiveProjectId, router])
+      {
+        onSuccess: (newProject) => {
+          handleClose()
+          // Navigate to the new project and set it as active
+          setActiveProjectId(newProject.id)
+          router.push(`/projects/${newProject.id}/board`)
+        },
+        onError: (error) => {
+          if (error.message.includes('key already exists')) {
+            setKeyError('This key is already in use')
+          }
+        },
+      }
+    )
+  }, [formData, createProject, handleClose, setActiveProjectId, router])
 
   const isValid = formData.name.trim().length > 0 && formData.key.trim().length >= 2
 
@@ -205,7 +159,7 @@ export function CreateProjectDialog() {
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="My Awesome Project"
               className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              disabled={isSubmitting}
+              disabled={createProject.isPending}
               autoFocus
             />
           </div>
@@ -221,7 +175,7 @@ export function CreateProjectDialog() {
               onChange={(e) => handleKeyChange(e.target.value)}
               placeholder="PROJ"
               className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 uppercase"
-              disabled={isSubmitting}
+              disabled={createProject.isPending}
               maxLength={10}
             />
             <p className="text-xs text-zinc-500">
@@ -242,7 +196,7 @@ export function CreateProjectDialog() {
               placeholder="Brief description of this project..."
               className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
               rows={3}
-              disabled={isSubmitting}
+              disabled={createProject.isPending}
             />
           </div>
 
@@ -261,7 +215,7 @@ export function CreateProjectDialog() {
                       : 'hover:scale-110'
                   }`}
                   style={{ backgroundColor: color }}
-                  disabled={isSubmitting}
+                  disabled={createProject.isPending}
                 />
               ))}
             </div>
@@ -272,17 +226,17 @@ export function CreateProjectDialog() {
           <Button
             variant="outline"
             onClick={handleClose}
-            disabled={isSubmitting}
+            disabled={createProject.isPending}
             className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!isValid || isSubmitting}
+            disabled={!isValid || createProject.isPending}
             className="bg-amber-600 hover:bg-amber-700 text-white"
           >
-            {isSubmitting ? (
+            {createProject.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Creating...
