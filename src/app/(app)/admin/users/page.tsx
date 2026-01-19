@@ -8,10 +8,10 @@ export const dynamic = 'force-dynamic'
 
 export default function UsersPage() {
   return (
-    <div className="h-full overflow-auto p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6">
+        {/* Header - fixed */}
+        <div className="flex items-center justify-between py-6 flex-shrink-0">
           <div className="flex items-center gap-3">
             <Users className="h-6 w-6 text-amber-500" />
             <h1 className="text-2xl font-semibold text-zinc-100">Users</h1>
@@ -19,7 +19,7 @@ export default function UsersPage() {
           <CreateUserDialog />
         </div>
 
-        {/* User List */}
+        {/* User List - scrollable */}
         <Suspense
           fallback={
             <div className="space-y-3">
@@ -31,6 +31,9 @@ export default function UsersPage() {
         >
           <UserList />
         </Suspense>
+
+        {/* Footer spacer */}
+        <div className="h-8 flex-shrink-0" />
       </div>
     </div>
   )

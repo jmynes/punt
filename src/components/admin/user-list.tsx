@@ -182,9 +182,9 @@ export function UserList() {
   }
 
   return (
-    <>
-      {/* Search and filters toolbar */}
-      <div className="flex flex-col gap-3 mb-4">
+    <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+      {/* Search and filters toolbar - fixed */}
+      <div className="flex flex-col gap-3 mb-4 flex-shrink-0">
         <div className="flex flex-wrap gap-3">
           {/* Search */}
           <div className="relative flex-1 min-w-[200px]">
@@ -320,25 +320,26 @@ export function UserList() {
       </div>
 
       {/* User list - scrollable container */}
-      {isLoading ? (
-        <div className="space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-20 bg-zinc-800/50 rounded-lg animate-pulse" />
-          ))}
-        </div>
-      ) : error ? (
-        <div className="text-center py-8 text-red-400">
-          Failed to load users. Please try again.
-        </div>
-      ) : !users?.length ? (
-        <div className="text-center py-8 text-zinc-500">
-          {hasActiveFilters
-            ? 'No users match your filters.'
-            : 'No users found. Create your first user above.'}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {users.map((user) => (
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {isLoading ? (
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-20 bg-zinc-800/50 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-red-400">
+            Failed to load users. Please try again.
+          </div>
+        ) : !users?.length ? (
+          <div className="text-center py-8 text-zinc-500">
+            {hasActiveFilters
+              ? 'No users match your filters.'
+              : 'No users found. Create your first user above.'}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {users.map((user) => (
             <Card key={user.id} className="border-zinc-800 bg-zinc-900/50">
               <CardContent className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
@@ -446,9 +447,10 @@ export function UserList() {
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
@@ -473,6 +475,6 @@ export function UserList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   )
 }
