@@ -37,7 +37,8 @@ pnpm format           # Format code
 - `src/lib/auth.ts` - Main NextAuth config with credentials provider
 - `src/lib/auth.config.ts` - Edge-compatible config for middleware
 - `src/middleware.ts` - Route protection (redirects to `/login`)
-- `src/lib/auth-helpers.ts` - Server-side utilities: `getCurrentUser()`, `requireAuth()`, `requireSystemAdmin()`
+- `src/lib/auth-helpers.ts` - Server-side utilities: `getCurrentUser()`, `requireAuth()`, `requireSystemAdmin()`, `requireProjectMember()`, `requireProjectAdmin()`, `requireProjectOwner()`
+- `src/lib/url-validation.ts` - Safe redirect URL validation (`isValidRedirectUrl()`, `getSafeRedirectUrl()`)
 
 **Flow:**
 - Credentials provider with Zod validation (email + password)
@@ -54,6 +55,12 @@ pnpm format           # Format code
 - `useIsSystemAdmin()` - Returns `{ isSystemAdmin, isLoading }`
 
 **Password requirements:** Min 12 chars, 1 uppercase, 1 lowercase, 1 number.
+
+**Project authorization** (`src/lib/auth-helpers.ts`):
+- `requireProjectMember(userId, projectId)` - Requires any project membership
+- `requireProjectAdmin(userId, projectId)` - Requires admin or owner role
+- `requireProjectOwner(userId, projectId)` - Requires owner role only
+- Used in `/api/projects/[projectId]` routes: GET requires member, PATCH requires admin, DELETE requires owner
 
 ### API Routes
 
@@ -72,13 +79,15 @@ pnpm format           # Format code
 - `POST /api/admin/users` - Create user
 - `GET/PATCH/DELETE /api/admin/users/[userId]` - Manage user (self-demotion prevented)
 
-**Rate limiting** (`src/lib/rate-limit.ts`): Database-backed per IP. Limits: login 10/15min, register 5/hour, password change 5/15min.
+**Rate limiting** (`src/lib/rate-limit.ts`): Database-backed per client identifier. Limits: login 10/15min, register 5/hour, password change 5/15min.
+- Client identification: Uses `TRUST_PROXY=true` env var to trust `X-Forwarded-For` headers (only enable behind trusted reverse proxy)
+- Without `TRUST_PROXY`, uses browser fingerprint hash (user-agent + accept-language) to prevent header spoofing bypasses
 
 ### State Management (Zustand)
 
 All client-side state lives in Zustand stores with localStorage persistence:
 
-- **board-store**: Kanban columns/tickets per project. Key pattern: `projects: Record<projectId, ColumnWithTickets[]>`. Use `getColumns(projectId)` to access. Custom date revival on hydration.
+- **board-store**: Kanban columns/tickets per project. Key pattern: `projects: Record<projectId, ColumnWithTickets[]>`. Use `getColumns(projectId)` to access. Custom date revival on hydration. Validates localStorage data structure during rehydration to prevent crashes from corrupted data.
 - **backlog-store**: Backlog view config (15 columns, multi-filter support, sorting). Filters by type/priority/status/assignee/labels/sprint/story-points/due-date.
 - **undo-store**: Undo/redo stack for all reversible actions (delete, move, paste, update, ticketCreate, projectCreate/Delete). Each action has `toastId` for UI feedback.
 - **selection-store**: Multi-select with `selectedTicketIds: Set<string>`, clipboard via `copiedTicketIds`, and `ticketOrigins` map for arrow key navigation.
@@ -125,7 +134,8 @@ SessionProvider (NextAuth)
 - **Multi-select**: Click=single, Shift+Click=range, Ctrl/Cmd+Click=toggle. `lastSelectedId` tracks range anchor.
 - **Undo/Redo**: Action-centric with project-scoped entries. Toast buttons trigger undo.
 - **Soft deletes**: Users have `isActive` flag instead of hard deletion.
-- **File storage abstraction**: `FileStorage` interface with `FilesystemStorage` (production) and `InMemoryStorage` (testing).
+- **File storage abstraction**: `FileStorage` interface (`src/lib/file-storage.ts`) with `FilesystemStorage` (production) and `InMemoryStorage` (testing). Storage instance managed via `src/lib/upload-storage.ts` with `getFileStorage()`/`setFileStorage()` for test injection.
+- **Upload security**: SVG files blocked (XSS risk via embedded scripts). Allowed types: JPEG, PNG, GIF, WebP, MP4, WebM, OGG, QuickTime, PDF, Word, Excel, TXT, CSV.
 
 ### File Organization
 
@@ -163,6 +173,27 @@ src/
 ### Testing
 
 Vitest + React Testing Library + MSW for API mocking. Tests colocated in `__tests__/` subdirectories. Use custom render from `@/__tests__/utils/test-utils`. `InMemoryStorage` for file upload tests. Coverage target: 80% minimum, 90% for stores/API/utils.
+
+### Security
+
+**Authentication & Authorization:**
+- Project IDOR protection: All `/api/projects/[projectId]` routes verify membership via `requireProjectMember/Admin/Owner()`
+- Password hashing: bcryptjs with 12 salt rounds
+- JWT sessions in HTTP-only cookies
+- Soft delete with `isActive` flag (disabled users can't login)
+
+**Input Validation:**
+- Open redirect prevention: `callbackUrl` validated via `getSafeRedirectUrl()` - only relative paths allowed
+- Rate limiting: Database-backed, client fingerprinting when `TRUST_PROXY=false`
+- Registration race condition handling: Prisma P2002 unique constraint errors return 400 (not 500)
+
+**File Upload:**
+- SVG blocked (XSS via embedded scripts)
+- File type whitelist + size limits per type
+- Unique filenames generated server-side
+
+**Client-side:**
+- localStorage validation during hydration prevents crashes from corrupted data
 
 ### Debugging
 

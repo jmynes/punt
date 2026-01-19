@@ -4,7 +4,7 @@
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)
-![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)
+![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)
 
 ## Features
 
@@ -99,9 +99,15 @@ AUTH_SECRET="your-generated-secret-here"
 
 # Optional: Enable debug logging
 NEXT_PUBLIC_DEBUG=false
+
+# Optional: Trust reverse proxy headers for rate limiting
+# Only set to true if behind a trusted reverse proxy (nginx, cloudflare, etc.)
+TRUST_PROXY=false
 ```
 
 > **Important:** The `DATABASE_URL` must use a relative path starting with `./`. This path is relative to the `prisma/` directory, so `file:./punt.db` creates the database at `prisma/punt.db`.
+
+> **Security Note:** Only set `TRUST_PROXY=true` if you're running behind a trusted reverse proxy. Without a proxy, enabling this allows rate limit bypass via header spoofing.
 
 ### Database Setup
 
