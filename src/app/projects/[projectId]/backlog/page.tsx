@@ -1,8 +1,7 @@
 'use client'
 
-import { AlertTriangle, List, Plus } from 'lucide-react'
-import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { List, Plus } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef } from 'react'
 import { BacklogTable, ColumnConfig } from '@/components/backlog'
 import { TicketDetailDrawer } from '@/components/tickets'
@@ -15,6 +14,7 @@ import { useUIStore } from '@/stores/ui-store'
 
 export default function BacklogPage() {
   const params = useParams()
+  const router = useRouter()
   const projectId = params.projectId as string
   const { getProject, isLoading: projectsLoading } = useProjectsStore()
   const project = getProject(projectId)
@@ -76,20 +76,16 @@ export default function BacklogPage() {
     [activeTicketId, allTickets],
   )
 
-  // Show not found if project doesn't exist after loading
+  // Redirect to dashboard if project doesn't exist after loading
+  useEffect(() => {
+    if (!projectsLoading && !project) {
+      router.replace('/')
+    }
+  }, [projectsLoading, project, router])
+
+  // Show nothing while redirecting
   if (!projectsLoading && !project) {
-    return (
-      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-4">
-        <AlertTriangle className="h-12 w-12 text-amber-500" />
-        <h1 className="text-xl font-semibold text-zinc-100">Project not found</h1>
-        <p className="text-zinc-500">The project you&apos;re looking for doesn&apos;t exist.</p>
-        <Link href="/projects">
-          <Button className="bg-amber-600 hover:bg-amber-700 text-white">
-            View all projects
-          </Button>
-        </Link>
-      </div>
-    )
+    return null
   }
 
   return (
