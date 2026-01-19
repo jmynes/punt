@@ -82,18 +82,26 @@ pnpm install
 
 ### Environment Setup
 
-Create a `.env` file in the project root:
+Copy the example environment file and configure it:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` to set your auth secret:
 
 ```env
-# Database (SQLite)
+# Database (SQLite) - path is relative to the prisma/ directory
 DATABASE_URL="file:./punt.db"
 
 # NextAuth.js - Generate a secure secret with: openssl rand -base64 32
-AUTH_SECRET="your-secret-key-here"
+AUTH_SECRET="your-generated-secret-here"
 
 # Optional: Enable debug logging
 NEXT_PUBLIC_DEBUG=false
 ```
+
+> **Important:** The `DATABASE_URL` must use a relative path starting with `./`. This path is relative to the `prisma/` directory, so `file:./punt.db` creates the database at `prisma/punt.db`.
 
 ### Database Setup
 
@@ -225,13 +233,14 @@ pnpm start
 
 ### Environment Variables
 
-Create a `.env` file:
+Copy and configure the environment file:
 
-```env
-DATABASE_URL="file:./punt.db"
-AUTH_SECRET="your-production-secret-here"  # Generate with: openssl rand -base64 32
-NEXT_PUBLIC_DEBUG=false
+```bash
+cp .env.example .env
+# Edit .env and set AUTH_SECRET to a secure value
 ```
+
+See [Environment Setup](#environment-setup) for details on the database path.
 
 ## Contributing
 
