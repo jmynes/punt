@@ -1,9 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
-import { Dialogs } from '@/components/dialogs'
-import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
-import { Header, MobileNav, Sidebar } from '@/components/layout'
 import { Providers } from '@/components/providers'
 import { Toaster } from '@/components/ui/sonner'
 
@@ -33,19 +30,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-zinc-950`}>
         <Providers>
-          <div className="relative min-h-screen bg-zinc-950">
-            <Header />
-            <div className="flex">
-              <Sidebar />
-              <main className="flex-1 overflow-hidden">{children}</main>
-            </div>
-            <MobileNav />
-            <Dialogs />
-            <KeyboardShortcuts />
-            <Toaster position="top-right" />
-          </div>
+          {children}
+          <Toaster position="top-right" />
         </Providers>
       </body>
     </html>

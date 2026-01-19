@@ -337,7 +337,7 @@ export function UserList() {
             : 'No users found. Create your first user above.'}
         </div>
       ) : (
-        <div className="overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] space-y-3 pr-1">
+        <div className="space-y-3">
           {users.map((user) => (
             <Card key={user.id} className="border-zinc-800 bg-zinc-900/50">
               <CardContent className="flex items-center justify-between p-4">

@@ -14,9 +14,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="h-screen flex flex-col overflow-hidden bg-zinc-950">
       {/* Admin header */}
-      <header className="border-b border-zinc-800 bg-zinc-900/50">
+      <header className="flex-shrink-0 border-b border-zinc-800 bg-zinc-900/50">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/">
@@ -40,7 +40,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </header>
 
       {/* Admin content */}
-      <main>{children}</main>
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   )
 }
