@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PUNT (Project Unified Nimble Tracker) is a local-first ticketing system with Jira-like backlog + Kanban board. Built with Next.js 16 (App Router), React 19, TypeScript, SQLite/Prisma, and Zustand for state management.
+PUNT (Project Unified Nimble Tracker) is a local-first ticketing system with Jira-like backlog + Kanban board. Built with Next.js 16 (App Router), React 19, TypeScript, SQLite/Prisma, Zustand for state management, and NextAuth.js v5 for authentication.
 
 ## Commands
 
@@ -31,6 +31,49 @@ pnpm format           # Format code
 
 ## Architecture
 
+### Authentication (NextAuth.js v5)
+
+**Key files:**
+- `src/lib/auth.ts` - Main NextAuth config with credentials provider
+- `src/lib/auth.config.ts` - Edge-compatible config for middleware
+- `src/middleware.ts` - Route protection (redirects to `/login`)
+- `src/lib/auth-helpers.ts` - Server-side utilities: `getCurrentUser()`, `requireAuth()`, `requireSystemAdmin()`
+
+**Flow:**
+- Credentials provider with Zod validation (email + password)
+- bcryptjs hashing (12 salt rounds) via `src/lib/password.ts`
+- JWT session strategy with tokens in HTTP-only cookies
+- Session/Account models in database via `@auth/prisma-adapter`
+- `isActive` flag checked before login (soft delete mechanism)
+
+**Protected routes:** All routes except `/api/auth/*`, `/login`, `/register`, `/invite`. Middleware redirects unauthenticated users to `/login?callbackUrl={path}`.
+
+**Client hooks** (`src/hooks/use-current-user.ts`):
+- `useCurrentUser()` - Returns `UserSummary | null`
+- `useIsAuthenticated()` - Returns `{ isAuthenticated, isLoading }`
+- `useIsSystemAdmin()` - Returns `{ isSystemAdmin, isLoading }`
+
+**Password requirements:** Min 12 chars, 1 uppercase, 1 lowercase, 1 number.
+
+### API Routes
+
+**Auth:**
+- `POST /api/auth/[...nextauth]` - NextAuth handlers
+- `POST /api/auth/register` - Public registration (rate limited)
+
+**User profile (`/api/me`):**
+- `GET/PATCH /api/me` - Get/update profile
+- `PATCH /api/me/password` - Change password (requires old password)
+- `POST/DELETE /api/me/avatar` - Upload/delete avatar
+- `DELETE /api/me/account` - Soft delete account
+
+**Admin (`/api/admin/users`) - requires `isSystemAdmin`:**
+- `GET /api/admin/users` - List all users
+- `POST /api/admin/users` - Create user
+- `GET/PATCH/DELETE /api/admin/users/[userId]` - Manage user (self-demotion prevented)
+
+**Rate limiting** (`src/lib/rate-limit.ts`): Database-backed per IP. Limits: login 10/15min, register 5/hour, password change 5/15min.
+
 ### State Management (Zustand)
 
 All client-side state lives in Zustand stores with localStorage persistence:
@@ -47,24 +90,42 @@ Stores use `_hasHydrated` flag to prevent render before localStorage loads.
 ### Database (Prisma + SQLite)
 
 Schema in `prisma/schema.prisma`. Key models:
+
+- **User**: email (unique), name, avatar, passwordHash, isSystemAdmin, isActive (soft delete). Related: Session, Account, Invitation.
+- **Session**: Server-side session storage with userAgent, ipAddress, lastActive.
+- **Account**: OAuth provider linkage (future-proofed for Google, GitHub).
+- **RateLimit**: Tracks rate limits per IP/endpoint.
 - **Ticket**: 25+ fields including type/priority/order/storyPoints. Unique constraint on `[projectId, number]` for ticket keys (e.g., PUNT-1).
 - **Column**: Board columns with order field.
 - **Project**: Has key (unique), color, and relations to columns/tickets/members/labels/sprints.
+- **ProjectMember**: User-project relationship with role (owner, admin, member).
 
 Types generated to `@/generated/prisma/client`, re-exported with relations from `@/types/index.ts`.
 
 ### Component Patterns
 
-- **Board**: `KanbanBoard` orchestrates dnd-kit with `KanbanColumn` and `KanbanCard`. Multi-select drag shows overlay; dragged tickets hidden from columns during drag.
+- **Auth**: `LoginForm` uses `signIn('credentials')`, `RegisterForm` calls `/api/auth/register` then auto-signs in.
+- **Admin**: `UserList` with React Query, admin toggle (self-prevention), enable/disable users.
+- **Profile**: `AvatarUpload`, `ProfileForm`, `PasswordChange` components.
+- **Board**: `KanbanBoard` orchestrates dnd-kit with `KanbanColumn` and `KanbanCard`. Multi-select drag shows overlay.
 - **Backlog**: `BacklogTable` with configurable columns, sorting headers, filtering dropdowns.
 - **UI**: shadcn/ui components in `src/components/ui/`.
+
+### Provider Stack (`src/components/providers.tsx`)
+
+```
+SessionProvider (NextAuth)
+  └─ QueryClientProvider (React Query - 1min stale time)
+       └─ TooltipProvider (Radix)
+```
 
 ### Key Patterns
 
 - **Optimistic updates**: Store updates happen immediately; before-drag snapshots saved for undo.
 - **Multi-select**: Click=single, Shift+Click=range, Ctrl/Cmd+Click=toggle. `lastSelectedId` tracks range anchor.
-- **Undo/Redo**: Action-centric with project-scoped entries. Toast buttons trigger undo, support undo→redo→undo chains.
-- **Arrow key navigation**: Selected tickets track origin column/position for cross-column movement.
+- **Undo/Redo**: Action-centric with project-scoped entries. Toast buttons trigger undo.
+- **Soft deletes**: Users have `isActive` flag instead of hard deletion.
+- **File storage abstraction**: `FileStorage` interface with `FilesystemStorage` (production) and `InMemoryStorage` (testing).
 
 ### File Organization
 
@@ -72,21 +133,26 @@ Types generated to `@/generated/prisma/client`, re-exported with relations from 
 src/
 ├── app/                    # Next.js pages + API routes
 │   ├── projects/[projectId]/{board,backlog}/
-│   └── api/upload/         # File upload endpoint (only API route)
+│   ├── api/auth/           # NextAuth + register
+│   ├── api/me/             # User profile endpoints
+│   ├── api/admin/          # Admin endpoints
+│   └── api/upload/         # File upload
 ├── components/
-│   ├── board/              # Kanban (dnd-kit integration)
+│   ├── auth/               # Login/register forms
+│   ├── admin/              # User management
+│   ├── profile/            # Profile editing
+│   ├── board/              # Kanban (dnd-kit)
 │   ├── backlog/            # Table view
-│   ├── tickets/            # Cards, forms, modals
 │   └── ui/                 # shadcn/ui
 ├── stores/                 # Zustand stores
-├── hooks/                  # useCurrentUser (hardcoded demo), useMediaQuery
-├── lib/                    # db.ts, logger.ts, file-storage.ts, undo-toast.ts
+├── hooks/                  # useCurrentUser, useMediaQuery
+├── lib/                    # auth.ts, password.ts, rate-limit.ts, db.ts, logger.ts
 └── types/                  # Prisma re-exports + custom types
 ```
 
 ### Testing
 
-Vitest + React Testing Library. Tests colocated in `__tests__/` subdirectories. Use custom render from `@/__tests__/utils/test-utils`. Reset store state in `beforeEach`. Coverage target: 80% minimum, 90% for stores/API/utils.
+Vitest + React Testing Library + MSW for API mocking. Tests colocated in `__tests__/` subdirectories. Use custom render from `@/__tests__/utils/test-utils`. `InMemoryStorage` for file upload tests. Coverage target: 80% minimum, 90% for stores/API/utils.
 
 ### Debugging
 
