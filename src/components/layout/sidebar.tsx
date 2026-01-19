@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, FileText, Home, Layers, List, Pencil, Plus, Settings, Trash2 } from 'lucide-react'
+import { Check, FileText, Home, Layers, List, Pencil, Plus, Settings, Shield, Trash2, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
@@ -89,6 +89,43 @@ export function Sidebar() {
             )
           })}
         </div>
+
+        {/* Admin section - only visible to system admins */}
+        {currentUser.isSystemAdmin && (
+          <div className="mt-6">
+            <div className="flex items-center px-3 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Admin
+              </span>
+            </div>
+            <div className="space-y-1">
+              <Link href="/admin">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
+                    pathname === '/admin' && 'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Shield className="h-4 w-4" />
+                  Dashboard
+                </Button>
+              </Link>
+              <Link href="/admin/users">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
+                    pathname === '/admin/users' && 'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Users className="h-4 w-4" />
+                  Users
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Projects section */}
         <div className="mt-6">
