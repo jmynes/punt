@@ -98,23 +98,25 @@ export function Sidebar() {
               Projects
             </span>
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  'h-5 w-5 transition-all duration-200',
-                  editMode
-                    ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:text-emerald-300 rounded-sm'
-                    : 'text-zinc-500 hover:text-zinc-300',
-                )}
-                onClick={() => setEditMode(!editMode)}
-              >
-                {editMode ? (
-                  <Check className="h-3 w-3" />
-                ) : (
-                  <Pencil className="h-3 w-3" />
-                )}
-              </Button>
+              {projects.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    'h-5 w-5 transition-all duration-200',
+                    editMode
+                      ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:text-emerald-300 rounded-sm'
+                      : 'text-zinc-500 hover:text-zinc-300',
+                  )}
+                  onClick={() => setEditMode(!editMode)}
+                >
+                  {editMode ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    <Pencil className="h-3 w-3" />
+                  )}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"

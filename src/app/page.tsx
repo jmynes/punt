@@ -111,14 +111,15 @@ export default function DashboardPage() {
 
       {/* Quick actions */}
       <div className="flex flex-wrap gap-3 mb-8">
-        <Button
-          className="bg-amber-600 hover:bg-amber-700 text-white"
-          onClick={() => setCreateTicketOpen(true)}
-          disabled={projects.length === 0}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Ticket
-        </Button>
+        {projects.length > 0 && (
+          <Button
+            className="bg-amber-600 hover:bg-amber-700 text-white"
+            onClick={() => setCreateTicketOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Ticket
+          </Button>
+        )}
         <Button
           variant="outline"
           className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"

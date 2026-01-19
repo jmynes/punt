@@ -1,6 +1,6 @@
 'use client'
 
-import { LogOut, Menu, Plus, Search, Settings, Shield, User } from 'lucide-react'
+import { LogOut, Menu, Search, Settings, Shield, User } from 'lucide-react'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -21,7 +21,7 @@ import { useUIStore } from '@/stores/ui-store'
 
 export function Header() {
   const isMobile = useIsMobile()
-  const { toggleSidebar, setMobileNavOpen, setCreateTicketOpen } = useUIStore()
+  const { toggleSidebar, setMobileNavOpen } = useUIStore()
   const currentUser = useCurrentUser()
 
   const handleLogout = async () => {
@@ -68,18 +68,6 @@ export function Header() {
 
       {/* Actions */}
       <div className="flex items-center gap-2 ml-auto">
-        {/* Quick create button - only show when logged in */}
-        {currentUser && (
-          <Button
-            size="sm"
-            className="bg-amber-600 hover:bg-amber-700 text-white"
-            onClick={() => setCreateTicketOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">New Ticket</span>
-          </Button>
-        )}
-
         {/* User menu - only show when logged in */}
         {currentUser && (
           <DropdownMenu>
