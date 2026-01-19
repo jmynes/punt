@@ -1,28 +1,28 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  MoreHorizontal,
-  Shield,
-  ShieldOff,
-  UserX,
-  UserCheck,
-  Trash2,
-  Search,
-  ArrowUpDown,
-  Filter,
-  X,
-  CheckSquare,
-  Square,
-  Minus,
-  Undo2,
-  Redo2,
   AlertTriangle,
+  ArrowUpDown,
+  CheckSquare,
   Eye,
   EyeOff,
+  Filter,
   Loader2,
+  Minus,
+  MoreHorizontal,
+  Redo2,
+  Search,
+  Shield,
+  ShieldOff,
+  Square,
+  Trash2,
+  Undo2,
+  UserCheck,
+  UserX,
+  X,
 } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -35,6 +35,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -43,23 +48,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -67,8 +67,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useAdminUndoStore } from '@/stores/admin-undo-store'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { useAdminUndoStore } from '@/stores/admin-undo-store'
 
 interface User {
   id: string
@@ -130,7 +130,11 @@ export function UserList() {
     return params.toString()
   }
 
-  const { data: users, isLoading, error } = useQuery<User[]>({
+  const {
+    data: users,
+    isLoading,
+    error,
+  } = useQuery<User[]>({
     queryKey: ['admin', 'users', search, sort, sortDir, roleFilter, minProjects, maxProjects],
     queryFn: async () => {
       const queryString = buildQueryString()
@@ -145,22 +149,16 @@ export function UserList() {
   // Clear selection when users change (e.g., after delete)
   useEffect(() => {
     if (users) {
-      const validIds = new Set(users.map(u => u.id))
-      setSelectedIds(prev => {
-        const newSelection = new Set([...prev].filter(id => validIds.has(id)))
+      const validIds = new Set(users.map((u) => u.id))
+      setSelectedIds((prev) => {
+        const newSelection = new Set([...prev].filter((id) => validIds.has(id)))
         return newSelection.size !== prev.size ? newSelection : prev
       })
     }
   }, [users])
 
   const updateUser = useMutation({
-    mutationFn: async ({
-      userId,
-      updates,
-    }: {
-      userId: string
-      updates: Partial<User>
-    }) => {
+    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<User> }) => {
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -204,27 +202,21 @@ export function UserList() {
 
   // Bulk update mutation
   const bulkUpdateUsers = useMutation({
-    mutationFn: async ({
-      userIds,
-      updates,
-    }: {
-      userIds: string[]
-      updates: Partial<User>
-    }) => {
+    mutationFn: async ({ userIds, updates }: { userIds: string[]; updates: Partial<User> }) => {
       const results = await Promise.allSettled(
-        userIds.map(userId =>
+        userIds.map((userId) =>
           fetch(`/api/admin/users/${userId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updates),
-          }).then(res => {
+          }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
-          })
-        )
+          }),
+        ),
       )
-      const succeeded = results.filter(r => r.status === 'fulfilled').length
-      const failed = results.filter(r => r.status === 'rejected').length
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length
+      const failed = results.filter((r) => r.status === 'rejected').length
       return { succeeded, failed }
     },
     onSuccess: ({ succeeded, failed }) => {
@@ -243,42 +235,56 @@ export function UserList() {
     },
   })
 
-  // Bulk disable - undoable
+  // Bulk disable - undoable (only affects currently active users)
   const bulkDisableUsers = useMutation({
     mutationFn: async (userIds: string[]) => {
+      // Filter to only users who are currently active
+      const usersToDisable = users?.filter((u) => userIds.includes(u.id) && u.isActive) || []
+      if (usersToDisable.length === 0) {
+        return { succeeded: 0, failed: 0, skipped: userIds.length, actualUsers: [] }
+      }
+
       const results = await Promise.allSettled(
-        userIds.map(userId =>
-          fetch(`/api/admin/users/${userId}`, {
+        usersToDisable.map((user) =>
+          fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ isActive: false }),
-          }).then(res => {
+          }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
-          })
-        )
+          }),
+        ),
       )
-      const succeeded = results.filter(r => r.status === 'fulfilled').length
-      const failed = results.filter(r => r.status === 'rejected').length
-      return { succeeded, failed, userIds }
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length
+      const failed = results.filter((r) => r.status === 'rejected').length
+      const skipped = userIds.length - usersToDisable.length
+      return { succeeded, failed, skipped, actualUsers: usersToDisable }
     },
-    onSuccess: ({ succeeded, failed, userIds }) => {
+    onSuccess: ({ succeeded, failed, skipped, actualUsers }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
-      // Store for undo
-      const disabledUsers = users?.filter(u => userIds.includes(u.id)) || []
-      if (disabledUsers.length > 0) {
-        pushUserDisable(disabledUsers.map(u => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          isSystemAdmin: u.isSystemAdmin,
-          isActive: true, // They were active before
-        })))
+      // Store for undo - only the users that were actually disabled
+      if (actualUsers.length > 0 && succeeded > 0) {
+        pushUserDisable(
+          actualUsers.slice(0, succeeded).map((u) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            isSystemAdmin: u.isSystemAdmin,
+            isActive: true, // They were active before
+          })),
+        )
       }
 
-      if (failed === 0) {
-        toast.success(`Disabled ${succeeded} user${succeeded !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
+      if (succeeded === 0 && skipped > 0) {
+        toast.info(
+          `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already disabled`,
+        )
+      } else if (failed === 0) {
+        const msg = `Disabled ${succeeded} user${succeeded !== 1 ? 's' : ''}`
+        const extra = skipped > 0 ? ` (${skipped} already disabled)` : ''
+        toast.success(`${msg}${extra} (Ctrl+Z to undo)`)
       } else {
         toast.warning(`Disabled ${succeeded}, failed ${failed}`)
       }
@@ -291,42 +297,56 @@ export function UserList() {
     },
   })
 
-  // Bulk enable - undoable
+  // Bulk enable - undoable (only affects currently disabled users)
   const bulkEnableUsers = useMutation({
     mutationFn: async (userIds: string[]) => {
+      // Filter to only users who are currently disabled
+      const usersToEnable = users?.filter((u) => userIds.includes(u.id) && !u.isActive) || []
+      if (usersToEnable.length === 0) {
+        return { succeeded: 0, failed: 0, skipped: userIds.length, actualUsers: [] }
+      }
+
       const results = await Promise.allSettled(
-        userIds.map(userId =>
-          fetch(`/api/admin/users/${userId}`, {
+        usersToEnable.map((user) =>
+          fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ isActive: true }),
-          }).then(res => {
+          }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
-          })
-        )
+          }),
+        ),
       )
-      const succeeded = results.filter(r => r.status === 'fulfilled').length
-      const failed = results.filter(r => r.status === 'rejected').length
-      return { succeeded, failed, userIds }
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length
+      const failed = results.filter((r) => r.status === 'rejected').length
+      const skipped = userIds.length - usersToEnable.length
+      return { succeeded, failed, skipped, actualUsers: usersToEnable }
     },
-    onSuccess: ({ succeeded, failed, userIds }) => {
+    onSuccess: ({ succeeded, failed, skipped, actualUsers }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
-      // Store for undo
-      const enabledUsers = users?.filter(u => userIds.includes(u.id)) || []
-      if (enabledUsers.length > 0) {
-        pushUserEnable(enabledUsers.map(u => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          isSystemAdmin: u.isSystemAdmin,
-          isActive: false, // They were disabled before
-        })))
+      // Store for undo - only the users that were actually enabled
+      if (actualUsers.length > 0 && succeeded > 0) {
+        pushUserEnable(
+          actualUsers.slice(0, succeeded).map((u) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            isSystemAdmin: u.isSystemAdmin,
+            isActive: false, // They were disabled before
+          })),
+        )
       }
 
-      if (failed === 0) {
-        toast.success(`Enabled ${succeeded} user${succeeded !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
+      if (succeeded === 0 && skipped > 0) {
+        toast.info(
+          `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already enabled`,
+        )
+      } else if (failed === 0) {
+        const msg = `Enabled ${succeeded} user${succeeded !== 1 ? 's' : ''}`
+        const extra = skipped > 0 ? ` (${skipped} already enabled)` : ''
+        toast.success(`${msg}${extra} (Ctrl+Z to undo)`)
       } else {
         toast.warning(`Enabled ${succeeded}, failed ${failed}`)
       }
@@ -341,7 +361,15 @@ export function UserList() {
 
   // Bulk permanent delete - requires credential verification
   const bulkPermanentDeleteUsers = useMutation({
-    mutationFn: async ({ userIds, email, password }: { userIds: string[]; email: string; password: string }) => {
+    mutationFn: async ({
+      userIds,
+      email,
+      password,
+    }: {
+      userIds: string[]
+      email: string
+      password: string
+    }) => {
       // First verify credentials
       const verifyRes = await fetch('/api/auth/verify-credentials', {
         method: 'POST',
@@ -356,17 +384,17 @@ export function UserList() {
 
       // Now delete users permanently
       const results = await Promise.allSettled(
-        userIds.map(userId =>
+        userIds.map((userId) =>
           fetch(`/api/admin/users/${userId}?permanent=true`, {
             method: 'DELETE',
-          }).then(res => {
+          }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
-          })
-        )
+          }),
+        ),
       )
-      const succeeded = results.filter(r => r.status === 'fulfilled').length
-      const failed = results.filter(r => r.status === 'rejected').length
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length
+      const failed = results.filter((r) => r.status === 'rejected').length
       return { succeeded, failed }
     },
     onSuccess: ({ succeeded, failed }) => {
@@ -408,18 +436,20 @@ export function UserList() {
       const newIsActive = action.type === 'userDisable'
 
       await Promise.all(
-        action.users.map(user =>
+        action.users.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ isActive: newIsActive }),
-          })
-        )
+          }),
+        ),
       )
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
       const verb = action.type === 'userDisable' ? 'Re-enabled' : 'Re-disabled'
-      toast.success(`${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Y to redo)`)
+      toast.success(
+        `${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Y to redo)`,
+      )
     } catch {
       toast.error('Failed to undo')
     }
@@ -435,18 +465,20 @@ export function UserList() {
       const newIsActive = action.type === 'userEnable'
 
       await Promise.all(
-        action.users.map(user =>
+        action.users.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ isActive: newIsActive }),
-          })
-        )
+          }),
+        ),
       )
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
       const verb = action.type === 'userDisable' ? 'Re-disabled' : 'Re-enabled'
-      toast.success(`${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
+      toast.success(
+        `${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Z to undo)`,
+      )
     } catch {
       toast.error('Failed to redo')
     }
@@ -469,8 +501,8 @@ export function UserList() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleUndo, handleRedo, canUndo, canRedo])
 
-  const userToDelete = deleteUserId ? users?.find(u => u.id === deleteUserId) : null
-  const selectedUsers = users?.filter(u => selectedIds.has(u.id)) || []
+  const userToDelete = deleteUserId ? users?.find((u) => u.id === deleteUserId) : null
+  const selectedUsers = users?.filter((u) => selectedIds.has(u.id)) || []
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never'
@@ -496,7 +528,7 @@ export function UserList() {
 
   // Selection helpers
   const toggleSelect = (userId: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev)
       if (next.has(userId)) {
         next.delete(userId)
@@ -509,7 +541,7 @@ export function UserList() {
 
   const selectAll = () => {
     if (users) {
-      setSelectedIds(new Set(users.map(u => u.id)))
+      setSelectedIds(new Set(users.map((u) => u.id)))
     }
   }
 
@@ -595,7 +627,10 @@ export function UserList() {
           {/* Sort dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+              <Button
+                variant="outline"
+                className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+              >
                 <ArrowUpDown className="h-4 w-4 mr-2" />
                 {sortLabels[sort]}
                 <span className="ml-1 text-zinc-500">({sortDir === 'asc' ? 'A-Z' : 'Z-A'})</span>
@@ -604,18 +639,30 @@ export function UserList() {
             <DropdownMenuContent className="bg-zinc-900 border-zinc-800">
               <DropdownMenuLabel className="text-zinc-400">Sort by</DropdownMenuLabel>
               <DropdownMenuRadioGroup value={sort} onValueChange={(v) => setSort(v as SortField)}>
-                <DropdownMenuRadioItem value="name" className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800">
+                <DropdownMenuRadioItem
+                  value="name"
+                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                >
                   Name
                 </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="lastLoginAt" className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800">
+                <DropdownMenuRadioItem
+                  value="lastLoginAt"
+                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                >
                   Last Login
                 </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="createdAt" className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800">
+                <DropdownMenuRadioItem
+                  value="createdAt"
+                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                >
                   Date Created
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
               <DropdownMenuSeparator className="bg-zinc-800" />
-              <DropdownMenuItem onClick={toggleSortDirection} className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800">
+              <DropdownMenuItem
+                onClick={toggleSortDirection}
+                className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+              >
                 {sortDir === 'asc' ? 'Sort Descending' : 'Sort Ascending'}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -627,13 +674,22 @@ export function UserList() {
               <SelectValue placeholder="All roles" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-zinc-800">
-              <SelectItem value="all" className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800">
+              <SelectItem
+                value="all"
+                className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+              >
                 All Users
               </SelectItem>
-              <SelectItem value="admin" className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800">
+              <SelectItem
+                value="admin"
+                className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+              >
                 Admins
               </SelectItem>
-              <SelectItem value="standard" className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800">
+              <SelectItem
+                value="standard"
+                className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+              >
                 Standard
               </SelectItem>
             </SelectContent>
@@ -727,8 +783,16 @@ export function UserList() {
         {hasActiveFilters && (
           <div className="flex items-center gap-2 text-sm text-zinc-500">
             <span>Showing {users?.length ?? 0} users</span>
-            {search && <Badge variant="outline" className="border-zinc-700 text-zinc-400">Search: {search}</Badge>}
-            {roleFilter !== 'all' && <Badge variant="outline" className="border-zinc-700 text-zinc-400">{roleFilter === 'admin' ? 'Admins only' : 'Standard only'}</Badge>}
+            {search && (
+              <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+                Search: {search}
+              </Badge>
+            )}
+            {roleFilter !== 'all' && (
+              <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+                {roleFilter === 'admin' ? 'Admins only' : 'Standard only'}
+              </Badge>
+            )}
             {(minProjects || maxProjects) && (
               <Badge variant="outline" className="border-zinc-700 text-zinc-400">
                 Projects: {minProjects || '0'} - {maxProjects || 'any'}
@@ -752,11 +816,7 @@ export function UserList() {
             ) : (
               <Square className="h-4 w-4" />
             )}
-            <span>
-              {selectedIds.size > 0
-                ? `${selectedIds.size} selected`
-                : 'Select all'}
-            </span>
+            <span>{selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all'}</span>
           </button>
           {selectedIds.size > 0 && (
             <button
@@ -818,12 +878,18 @@ export function UserList() {
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-zinc-100">{user.name}</span>
                           {user.isSystemAdmin && (
-                            <Badge variant="outline" className="border-amber-500 text-amber-500 text-xs">
+                            <Badge
+                              variant="outline"
+                              className="border-amber-500 text-amber-500 text-xs"
+                            >
                               Admin
                             </Badge>
                           )}
                           {!user.isActive && (
-                            <Badge variant="outline" className="border-red-500 text-red-500 text-xs">
+                            <Badge
+                              variant="outline"
+                              className="border-red-500 text-red-500 text-xs"
+                            >
                               Disabled
                             </Badge>
                           )}
@@ -847,7 +913,11 @@ export function UserList() {
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-100">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-zinc-400 hover:text-zinc-100"
+                          >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -998,8 +1068,9 @@ export function UserList() {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">Delete User Permanently?</AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to permanently delete <strong className="text-zinc-200">{userToDelete?.name}</strong> ({userToDelete?.email})?
-              This action cannot be undone and will remove all their data.
+              Are you sure you want to permanently delete{' '}
+              <strong className="text-zinc-200">{userToDelete?.name}</strong> ({userToDelete?.email}
+              )? This action cannot be undone and will remove all their data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1007,7 +1078,9 @@ export function UserList() {
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteUserId && deleteUser.mutate({ userId: deleteUserId, permanent: true })}
+              onClick={() =>
+                deleteUserId && deleteUser.mutate({ userId: deleteUserId, permanent: true })
+              }
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Delete Permanently
@@ -1031,7 +1104,7 @@ export function UserList() {
             </AlertDialogDescription>
             {selectedUsers.length <= 8 && (
               <div className="mt-3 flex flex-wrap gap-2">
-                {selectedUsers.map(user => (
+                {selectedUsers.map((user) => (
                   <Badge key={user.id} variant="outline" className="border-zinc-700 text-zinc-300">
                     {user.name}
                   </Badge>
@@ -1049,8 +1122,8 @@ export function UserList() {
                 bulkAction === 'disable'
                   ? 'bg-red-600 hover:bg-red-700 text-white'
                   : bulkAction === 'makeAdmin'
-                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                  : 'bg-zinc-600 hover:bg-zinc-700 text-white'
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                    : 'bg-zinc-600 hover:bg-zinc-700 text-white'
               }
             >
               Confirm
@@ -1068,14 +1141,19 @@ export function UserList() {
               Permanently Delete {selectedIds.size} User{selectedIds.size !== 1 ? 's' : ''}
             </DialogTitle>
             <DialogDescription className="text-zinc-400">
-              This action <strong className="text-red-400">cannot be undone</strong>. All user data will be permanently removed from the system.
+              This action <strong className="text-red-400">cannot be undone</strong>. All user data
+              will be permanently removed from the system.
             </DialogDescription>
           </DialogHeader>
 
           {selectedUsers.length <= 6 && (
             <div className="flex flex-wrap gap-2 py-2">
-              {selectedUsers.map(user => (
-                <Badge key={user.id} variant="outline" className="border-red-500/30 text-red-300 bg-red-500/10">
+              {selectedUsers.map((user) => (
+                <Badge
+                  key={user.id}
+                  variant="outline"
+                  className="border-red-500/30 text-red-300 bg-red-500/10"
+                >
                   {user.name}
                 </Badge>
               ))}
@@ -1129,7 +1207,11 @@ export function UserList() {
                   className="absolute right-0 top-0 h-full px-3 text-zinc-500 hover:text-zinc-300"
                   onClick={() => setShowDeletePassword(!showDeletePassword)}
                 >
-                  {showDeletePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showDeletePassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
