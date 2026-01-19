@@ -274,11 +274,6 @@ export function TicketForm({
               }}
               placeholder="pts"
               disabled={disabled}
-              style={{
-                WebkitAppearance: 'none',
-                MozAppearance: 'textfield',
-                appearance: 'textfield',
-              }}
               className="flex-1 h-9 bg-zinc-900 border-zinc-700 focus:border-amber-500 focus:ring-0 rounded-r-none border-r-0"
             />
             <div className="flex flex-col">
