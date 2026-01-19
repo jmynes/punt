@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useCurrentUser } from '@/hooks/use-current-user'
 import { cn } from '@/lib/utils'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -26,6 +27,7 @@ import { useUndoStore } from '@/stores/undo-store'
 
 export function MobileNav() {
   const pathname = usePathname()
+  const currentUser = useCurrentUser()
   const {
     mobileNavOpen,
     setMobileNavOpen,
@@ -37,6 +39,11 @@ export function MobileNav() {
   const { projects, _hasHydrated, removeProject } = useProjectsStore()
   const [editMode, setEditMode] = useState(false)
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
+
+  // Don't render mobile nav when not logged in
+  if (!currentUser) {
+    return null
+  }
 
   const projectToDelete = deleteProjectId ? projects.find((p) => p.id === deleteProjectId) : null
 

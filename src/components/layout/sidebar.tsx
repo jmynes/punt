@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useCurrentUser } from '@/hooks/use-current-user'
 import { cn } from '@/lib/utils'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -38,10 +39,16 @@ const mainNavItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const currentUser = useCurrentUser()
   const { sidebarOpen, setCreateProjectOpen, activeProjectId, setActiveProjectId, openEditProject } = useUIStore()
   const { projects, _hasHydrated, removeProject } = useProjectsStore()
   const [editMode, setEditMode] = useState(false)
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
+
+  // Don't render sidebar when not logged in
+  if (!currentUser) {
+    return null
+  }
 
   const projectToDelete = deleteProjectId ? projects.find((p) => p.id === deleteProjectId) : null
 
