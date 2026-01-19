@@ -1378,6 +1378,18 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             >
               Go Back
             </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowUnsavedChangesConfirm(false)
+                setPendingClose(false)
+                setRememberPreference(false)
+                onClose()
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Discard
+            </Button>
             <AlertDialogAction
               onClick={() => {
                 // Only save preference if checkbox is checked when "Save and Close" is clicked
