@@ -63,7 +63,7 @@ export function CreateUserDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-amber-600 hover:bg-amber-700">
+        <Button className="bg-amber-600 hover:bg-amber-700 text-white">
           <UserPlus className="h-4 w-4 mr-2" />
           Create User
         </Button>
@@ -82,6 +82,7 @@ export function CreateUserDialog() {
             createUser.mutate()
           }}
           className="space-y-4 py-4"
+          autoComplete="off"
         >
           <div className="space-y-2">
             <Label htmlFor="name" className="text-zinc-300">
@@ -93,6 +94,7 @@ export function CreateUserDialog() {
               onChange={(e) => setName(e.target.value)}
               placeholder="John Doe"
               required
+              autoComplete="off"
               className="border-zinc-700 bg-zinc-800 text-zinc-100"
             />
           </div>
@@ -108,6 +110,7 @@ export function CreateUserDialog() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="john@example.com"
               required
+              autoComplete="off"
               className="border-zinc-700 bg-zinc-800 text-zinc-100"
             />
           </div>
@@ -125,6 +128,7 @@ export function CreateUserDialog() {
                 placeholder="At least 12 characters"
                 required
                 minLength={12}
+                autoComplete="new-password"
                 className="border-zinc-700 bg-zinc-800 text-zinc-100 pr-10"
               />
               <Button
@@ -142,11 +146,12 @@ export function CreateUserDialog() {
             </p>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <Checkbox
               id="isSystemAdmin"
               checked={isSystemAdmin}
               onCheckedChange={(checked) => setIsSystemAdmin(checked === true)}
+              className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
             />
             <Label htmlFor="isSystemAdmin" className="text-zinc-300 cursor-pointer">
               Make this user a system administrator
@@ -160,7 +165,7 @@ export function CreateUserDialog() {
             <Button
               type="submit"
               disabled={createUser.isPending}
-              className="bg-amber-600 hover:bg-amber-700"
+              className="bg-amber-600 hover:bg-amber-700 text-white"
             >
               {createUser.isPending ? (
                 <>
