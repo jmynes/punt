@@ -2,12 +2,13 @@
 // Learn more: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -18,17 +19,99 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Auth fields
+  passwordHash  String?
+  emailVerified DateTime?
+  isSystemAdmin Boolean  @default(false)
+  isActive      Boolean  @default(true)
+
   // Ticket relations
   assignedTickets  Ticket[]        @relation("Assignee")
   createdTickets   Ticket[]        @relation("Creator")
   watchingTickets  TicketWatcher[]
-  
+
   // Project relations
   projects         ProjectMember[]
-  
+
   // Activity
   comments         Comment[]
   ticketEdits      TicketEdit[]
+
+  // Auth relations
+  sessions         Session[]
+  accounts         Account[]
+  sentInvitations  Invitation[]
+}
+
+// Auth.js Account model for OAuth providers (future-proofing)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+// Server-side session storage
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  userAgent    String?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+  lastActive   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expires])
+}
+
+// Rate limiting for auth endpoints
+model RateLimit {
+  id          String   @id @default(cuid())
+  identifier  String   // IP address or user ID
+  endpoint    String   // e.g., "auth/login", "auth/register"
+  count       Int      @default(1)
+  windowStart DateTime @default(now())
+
+  @@unique([identifier, endpoint])
+  @@index([windowStart])
+}
+
+// Project invitation tokens (link-based)
+model Invitation {
+  id        String   @id @default(cuid())
+  email     String
+  role      String   @default("member") // Role they'll receive: admin, member
+  token     String   @unique @default(cuid())
+  expiresAt DateTime
+  status    String   @default("pending") // pending, accepted, expired, revoked
+  createdAt DateTime @default(now())
+
+  senderId  String
+  sender    User    @relation(fields: [senderId], references: [id])
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([email, projectId])
+  @@index([projectId])
+  @@index([token])
+  @@index([email])
 }
 
 model Project {
@@ -40,11 +123,12 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  columns  Column[]
-  tickets  Ticket[]
-  members  ProjectMember[]
-  labels   Label[]
-  sprints  Sprint[]
+  columns     Column[]
+  tickets     Ticket[]
+  members     ProjectMember[]
+  labels      Label[]
+  sprints     Sprint[]
+  invitations Invitation[]
 }
 
 model ProjectMember {

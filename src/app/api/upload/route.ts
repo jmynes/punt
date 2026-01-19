@@ -1,17 +1,9 @@
 import { NextResponse } from 'next/server'
-import { type FileStorage, FilesystemStorage } from '@/lib/file-storage'
+import { FilesystemStorage } from '@/lib/file-storage'
 import { logger } from '@/lib/logger'
 
-// Default to filesystem storage (can be overridden for testing)
-let fileStorage: FileStorage = new FilesystemStorage()
-
-/**
- * Set the file storage implementation (for testing)
- * @internal - Only used in tests
- */
-export function setFileStorage(storage: FileStorage) {
-  fileStorage = storage
-}
+// Use filesystem storage
+const fileStorage = new FilesystemStorage()
 
 // Allowed file types
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
