@@ -269,13 +269,15 @@ export function UserList() {
     },
   })
 
-  // Bulk delete (permanent) - NOT undoable
-  const bulkDeleteUsers = useMutation({
+  // Bulk delete (soft delete) - undoable
+  const bulkSoftDeleteUsers = useMutation({
     mutationFn: async (userIds: string[]) => {
       const results = await Promise.allSettled(
         userIds.map(userId =>
-          fetch(`/api/admin/users/${userId}?permanent=true`, {
-            method: 'DELETE',
+          fetch(`/api/admin/users/${userId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isActive: false }),
           }).then(res => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -284,12 +286,25 @@ export function UserList() {
       )
       const succeeded = results.filter(r => r.status === 'fulfilled').length
       const failed = results.filter(r => r.status === 'rejected').length
-      return { succeeded, failed }
+      return { succeeded, failed, userIds }
     },
-    onSuccess: ({ succeeded, failed }) => {
+    onSuccess: ({ succeeded, failed, userIds }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+
+      // Store for undo
+      const deletedUsers = users?.filter(u => userIds.includes(u.id)) || []
+      if (deletedUsers.length > 0) {
+        pushUserDelete(deletedUsers.map(u => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          isSystemAdmin: u.isSystemAdmin,
+          isActive: true,
+        })))
+      }
+
       if (failed === 0) {
-        toast.success(`Permanently deleted ${succeeded} user${succeeded !== 1 ? 's' : ''}`)
+        toast.success(`Deleted ${succeeded} user${succeeded !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
       } else {
         toast.warning(`Deleted ${succeeded}, failed ${failed}`)
       }
@@ -436,7 +451,7 @@ export function UserList() {
         bulkUpdateUsers.mutate({ userIds: ids, updates: { isSystemAdmin: false } })
         break
       case 'delete':
-        bulkDeleteUsers.mutate(ids)
+        bulkSoftDeleteUsers.mutate(ids)
         break
     }
   }
@@ -453,7 +468,7 @@ export function UserList() {
       case 'removeAdmin':
         return `Remove admin privileges from ${count} user${count !== 1 ? 's' : ''}?`
       case 'delete':
-        return `Permanently delete ${count} user${count !== 1 ? 's' : ''}? This action CANNOT be undone and will remove all their data.`
+        return `Delete ${count} user${count !== 1 ? 's' : ''}? They will be disabled and won't be able to log in. This action can be undone with Ctrl+Z.`
       default:
         return ''
     }
@@ -908,7 +923,7 @@ export function UserList() {
               {bulkAction === 'enable' && 'Enable Users'}
               {bulkAction === 'makeAdmin' && 'Grant Admin Privileges'}
               {bulkAction === 'removeAdmin' && 'Remove Admin Privileges'}
-              {bulkAction === 'delete' && 'Delete Users Permanently'}
+              {bulkAction === 'delete' && 'Delete Users'}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
               {getBulkActionDescription()}
@@ -930,16 +945,14 @@ export function UserList() {
             <AlertDialogAction
               onClick={confirmBulkAction}
               className={
-                bulkAction === 'delete'
-                  ? 'bg-red-600 hover:bg-red-700 text-white'
-                  : bulkAction === 'disable'
+                bulkAction === 'delete' || bulkAction === 'disable'
                   ? 'bg-red-600 hover:bg-red-700 text-white'
                   : bulkAction === 'makeAdmin'
                   ? 'bg-amber-600 hover:bg-amber-700 text-white'
                   : 'bg-zinc-600 hover:bg-zinc-700 text-white'
               }
             >
-              {bulkAction === 'delete' ? 'Delete Permanently' : 'Confirm'}
+              {bulkAction === 'delete' ? 'Delete' : 'Confirm'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
