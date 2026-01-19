@@ -502,6 +502,10 @@ export function UserList() {
   const userToDelete = deleteUserId ? users?.find((u) => u.id === deleteUserId) : null
   const selectedUsers = users?.filter((u) => selectedIds.has(u.id)) || []
 
+  // Separate current user from other users
+  const currentUserData = users?.find((u) => u.id === currentUser?.id)
+  const otherUsers = users?.filter((u) => u.id !== currentUser?.id) || []
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never'
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -549,6 +553,137 @@ export function UserList() {
 
   const allSelected = users && users.length > 0 && selectedIds.size === users.length
   const someSelected = selectedIds.size > 0 && !allSelected
+
+  // Render a user card
+  const renderUserCard = (user: User, isCurrentUser: boolean) => {
+    const isSelected = selectedIds.has(user.id)
+    return (
+      <Card
+        key={user.id}
+        className={`border-zinc-800 bg-zinc-900/50 transition-all duration-150 ${
+          isSelected
+            ? 'ring-1 ring-amber-500/50 bg-amber-500/5 border-amber-500/30'
+            : 'hover:bg-zinc-900/80'
+        }`}
+      >
+        <CardContent className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => toggleSelect(user.id)}
+              className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
+            />
+            <Avatar>
+              <AvatarImage src={user.avatar || undefined} />
+              <AvatarFallback className="bg-zinc-700 text-zinc-300">
+                {user.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-zinc-100">{user.name}</span>
+                {isCurrentUser && (
+                  <Badge variant="outline" className="border-zinc-500 text-zinc-400 text-xs">
+                    You
+                  </Badge>
+                )}
+                {user.isSystemAdmin && (
+                  <Badge variant="outline" className="border-amber-500 text-amber-500 text-xs">
+                    Admin
+                  </Badge>
+                )}
+                {!user.isActive && (
+                  <Badge variant="outline" className="border-red-500 text-red-500 text-xs">
+                    Disabled
+                  </Badge>
+                )}
+              </div>
+              <span className="text-sm text-zinc-500">{user.email}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="text-right hidden sm:block">
+              <div className="text-xs text-zinc-500">Last login</div>
+              <div className="text-sm text-zinc-400">{formatDate(user.lastLoginAt)}</div>
+            </div>
+            <div className="text-right hidden md:block">
+              <div className="text-xs text-zinc-500">Created</div>
+              <div className="text-sm text-zinc-400">{formatDate(user.createdAt)}</div>
+            </div>
+            <span className="text-sm text-zinc-500 min-w-[80px] text-right">
+              {user._count.projects} project{user._count.projects !== 1 ? 's' : ''}
+            </span>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-100">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+                <DropdownMenuItem
+                  onClick={() =>
+                    updateUser.mutate({
+                      userId: user.id,
+                      updates: { isSystemAdmin: !user.isSystemAdmin },
+                    })
+                  }
+                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                >
+                  {user.isSystemAdmin ? (
+                    <>
+                      <ShieldOff className="h-4 w-4 mr-2" />
+                      Remove admin
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="h-4 w-4 mr-2" />
+                      Make admin
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-zinc-800" />
+                <DropdownMenuItem
+                  onClick={() =>
+                    updateUser.mutate({
+                      userId: user.id,
+                      updates: { isActive: !user.isActive },
+                    })
+                  }
+                  className={
+                    user.isActive
+                      ? 'text-red-400 focus:text-red-300 focus:bg-zinc-800'
+                      : 'text-green-400 focus:text-green-300 focus:bg-zinc-800'
+                  }
+                >
+                  {user.isActive ? (
+                    <>
+                      <UserX className="h-4 w-4 mr-2" />
+                      Disable user
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck className="h-4 w-4 mr-2" />
+                      Enable user
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-zinc-800" />
+                <DropdownMenuItem
+                  onClick={() => setDeleteUserId(user.id)}
+                  className="text-red-400 focus:text-red-300 focus:bg-zinc-800"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete permanently
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   // Bulk action handlers
   const handleBulkAction = (action: BulkAction) => {
@@ -823,141 +958,23 @@ export function UserList() {
           </div>
         ) : (
           <div className="space-y-2">
-            {users.map((user) => {
-              const isSelected = selectedIds.has(user.id)
-              return (
-                <Card
-                  key={user.id}
-                  className={`border-zinc-800 bg-zinc-900/50 transition-all duration-150 ${
-                    isSelected
-                      ? 'ring-1 ring-amber-500/50 bg-amber-500/5 border-amber-500/30'
-                      : 'hover:bg-zinc-900/80'
-                  }`}
-                >
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-3">
-                      {/* Checkbox */}
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelect(user.id)}
-                        className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
-                      />
-                      <Avatar>
-                        <AvatarImage src={user.avatar || undefined} />
-                        <AvatarFallback className="bg-zinc-700 text-zinc-300">
-                          {user.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-zinc-100">{user.name}</span>
-                          {user.isSystemAdmin && (
-                            <Badge
-                              variant="outline"
-                              className="border-amber-500 text-amber-500 text-xs"
-                            >
-                              Admin
-                            </Badge>
-                          )}
-                          {!user.isActive && (
-                            <Badge
-                              variant="outline"
-                              className="border-red-500 text-red-500 text-xs"
-                            >
-                              Disabled
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-sm text-zinc-500">{user.email}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-6">
-                      <div className="text-right hidden sm:block">
-                        <div className="text-xs text-zinc-500">Last login</div>
-                        <div className="text-sm text-zinc-400">{formatDate(user.lastLoginAt)}</div>
-                      </div>
-                      <div className="text-right hidden md:block">
-                        <div className="text-xs text-zinc-500">Created</div>
-                        <div className="text-sm text-zinc-400">{formatDate(user.createdAt)}</div>
-                      </div>
-                      <span className="text-sm text-zinc-500 min-w-[80px] text-right">
-                        {user._count.projects} project{user._count.projects !== 1 ? 's' : ''}
-                      </span>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-zinc-400 hover:text-zinc-100"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              updateUser.mutate({
-                                userId: user.id,
-                                updates: { isSystemAdmin: !user.isSystemAdmin },
-                              })
-                            }
-                            className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
-                          >
-                            {user.isSystemAdmin ? (
-                              <>
-                                <ShieldOff className="h-4 w-4 mr-2" />
-                                Remove admin
-                              </>
-                            ) : (
-                              <>
-                                <Shield className="h-4 w-4 mr-2" />
-                                Make admin
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-zinc-800" />
-                          <DropdownMenuItem
-                            onClick={() =>
-                              updateUser.mutate({
-                                userId: user.id,
-                                updates: { isActive: !user.isActive },
-                              })
-                            }
-                            className={
-                              user.isActive
-                                ? 'text-red-400 focus:text-red-300 focus:bg-zinc-800'
-                                : 'text-green-400 focus:text-green-300 focus:bg-zinc-800'
-                            }
-                          >
-                            {user.isActive ? (
-                              <>
-                                <UserX className="h-4 w-4 mr-2" />
-                                Disable user
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck className="h-4 w-4 mr-2" />
-                                Enable user
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-zinc-800" />
-                          <DropdownMenuItem
-                            onClick={() => setDeleteUserId(user.id)}
-                            className="text-red-400 focus:text-red-300 focus:bg-zinc-800"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete permanently
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
+            {/* Current user section */}
+            {currentUserData && (
+              <>
+                {renderUserCard(currentUserData, true)}
+                {otherUsers.length > 0 && (
+                  <div className="flex items-center gap-3 py-3">
+                    <div className="flex-1 h-px bg-zinc-800" />
+                    <span className="text-xs text-zinc-600 uppercase tracking-wider">
+                      Other Users
+                    </span>
+                    <div className="flex-1 h-px bg-zinc-800" />
+                  </div>
+                )}
+              </>
+            )}
+            {/* Other users */}
+            {otherUsers.map((user) => renderUserCard(user, false))}
           </div>
         )}
       </div>
