@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server'
-import { type FileStorage, FilesystemStorage } from '@/lib/file-storage'
+import { getFileStorage } from '@/lib/upload-storage'
 import { logger } from '@/lib/logger'
-
-// Use filesystem storage by default, can be swapped for testing
-let fileStorage: FileStorage = new FilesystemStorage()
-
-// Export for testing - allows injection of mock storage
-export function setFileStorage(storage: FileStorage): void {
-  fileStorage = storage
-}
 
 // Allowed file types
 // Note: SVG intentionally excluded due to XSS risk (embedded scripts)
@@ -75,8 +67,8 @@ export async function POST(request: Request) {
     }> = []
 
     // Ensure upload directory exists
-    const uploadDir = fileStorage.join(process.cwd(), 'public', 'uploads')
-    await fileStorage.ensureDirectoryExists(uploadDir)
+    const uploadDir = getFileStorage().join(process.cwd(), 'public', 'uploads')
+    await getFileStorage().ensureDirectoryExists(uploadDir)
 
     for (const file of files) {
       logger.debug('Validating file', { name: file.name, type: file.type, size: file.size })
@@ -101,12 +93,12 @@ export async function POST(request: Request) {
 
       // Generate unique filename
       const filename = generateFilename(file.name)
-      const filepath = fileStorage.join(uploadDir, filename)
+      const filepath = getFileStorage().join(uploadDir, filename)
 
       // Write file to disk
       const bytes = await file.arrayBuffer()
       const buffer = Buffer.from(bytes)
-      await fileStorage.writeFile(filepath, buffer)
+      await getFileStorage().writeFile(filepath, buffer)
 
       // Add to uploaded files list
       const fileInfo = {

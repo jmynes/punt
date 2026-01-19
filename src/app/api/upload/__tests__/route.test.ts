@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockFile, createMockFormData } from '@/__tests__/utils/mocks'
 import { FilesystemStorage, InMemoryStorage } from '@/lib/file-storage'
-import { GET, POST, setFileStorage } from '../route'
+import { setFileStorage } from '@/lib/upload-storage'
+import { GET, POST } from '../route'
 
 describe('Upload API Route', () => {
   let mockStorage: InMemoryStorage
