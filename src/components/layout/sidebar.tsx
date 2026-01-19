@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, FileText, FolderKanban, Home, Layers, List, Pencil, Plus, Settings, Trash2 } from 'lucide-react'
+import { Check, FileText, Home, Layers, List, Pencil, Plus, Settings, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
@@ -31,7 +31,6 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/', icon: Home },
-  { title: 'All Projects', href: '/projects', icon: FolderKanban },
   { title: 'Editor Test', href: '/editor-test', icon: FileText },
   { title: 'Settings', href: '/settings', icon: Settings },
 ]
