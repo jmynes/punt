@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   MoreHorizontal,
@@ -13,6 +13,11 @@ import {
   ArrowUpDown,
   Filter,
   X,
+  CheckSquare,
+  Square,
+  Minus,
+  Undo2,
+  Redo2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -31,6 +36,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +54,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useAdminUndoStore } from '@/stores/admin-undo-store'
 
 interface User {
   id: string
@@ -64,6 +71,7 @@ interface User {
 type SortField = 'name' | 'lastLoginAt' | 'createdAt'
 type SortDir = 'asc' | 'desc'
 type RoleFilter = 'all' | 'admin' | 'standard'
+type BulkAction = 'delete' | 'disable' | 'enable' | 'makeAdmin' | 'removeAdmin' | null
 
 const sortLabels: Record<SortField, string> = {
   name: 'Name',
@@ -74,6 +82,11 @@ const sortLabels: Record<SortField, string> = {
 export function UserList() {
   const queryClient = useQueryClient()
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkAction, setBulkAction] = useState<BulkAction>(null)
+
+  // Undo store
+  const { pushUserDelete, undo, redo, canUndo, canRedo } = useAdminUndoStore()
 
   // Filter and sort state
   const [search, setSearch] = useState('')
@@ -107,6 +120,17 @@ export function UserList() {
     },
   })
 
+  // Clear selection when users change (e.g., after delete)
+  useEffect(() => {
+    if (users) {
+      const validIds = new Set(users.map(u => u.id))
+      setSelectedIds(prev => {
+        const newSelection = new Set([...prev].filter(id => validIds.has(id)))
+        return newSelection.size !== prev.size ? newSelection : prev
+      })
+    }
+  }, [users])
+
   const updateUser = useMutation({
     mutationFn: async ({
       userId,
@@ -128,7 +152,6 @@ export function UserList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      toast.success('User updated')
     },
     onError: (error) => {
       toast.error(error.message)
@@ -157,7 +180,158 @@ export function UserList() {
     },
   })
 
+  // Bulk update mutation
+  const bulkUpdateUsers = useMutation({
+    mutationFn: async ({
+      userIds,
+      updates,
+    }: {
+      userIds: string[]
+      updates: Partial<User>
+    }) => {
+      const results = await Promise.allSettled(
+        userIds.map(userId =>
+          fetch(`/api/admin/users/${userId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates),
+          }).then(res => {
+            if (!res.ok) throw new Error('Failed')
+            return res.json()
+          })
+        )
+      )
+      const succeeded = results.filter(r => r.status === 'fulfilled').length
+      const failed = results.filter(r => r.status === 'rejected').length
+      return { succeeded, failed }
+    },
+    onSuccess: ({ succeeded, failed }) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      if (failed === 0) {
+        toast.success(`Updated ${succeeded} user${succeeded !== 1 ? 's' : ''}`)
+      } else {
+        toast.warning(`Updated ${succeeded}, failed ${failed}`)
+      }
+      setSelectedIds(new Set())
+      setBulkAction(null)
+    },
+    onError: () => {
+      toast.error('Bulk update failed')
+      setBulkAction(null)
+    },
+  })
+
+  // Bulk disable (soft delete) - undoable
+  const bulkDisableUsers = useMutation({
+    mutationFn: async (userIds: string[]) => {
+      const results = await Promise.allSettled(
+        userIds.map(userId =>
+          fetch(`/api/admin/users/${userId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isActive: false }),
+          }).then(res => {
+            if (!res.ok) throw new Error('Failed')
+            return res.json()
+          })
+        )
+      )
+      const succeeded = results.filter(r => r.status === 'fulfilled').length
+      const failed = results.filter(r => r.status === 'rejected').length
+      return { succeeded, failed, userIds }
+    },
+    onSuccess: ({ succeeded, failed, userIds }) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+
+      // Store for undo
+      const disabledUsers = users?.filter(u => userIds.includes(u.id)) || []
+      if (disabledUsers.length > 0) {
+        pushUserDelete(disabledUsers.map(u => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          isSystemAdmin: u.isSystemAdmin,
+          isActive: true, // They were active before
+        })))
+      }
+
+      if (failed === 0) {
+        toast.success(`Disabled ${succeeded} user${succeeded !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
+      } else {
+        toast.warning(`Disabled ${succeeded}, failed ${failed}`)
+      }
+      setSelectedIds(new Set())
+      setBulkAction(null)
+    },
+    onError: () => {
+      toast.error('Bulk disable failed')
+      setBulkAction(null)
+    },
+  })
+
+  // Handle undo - re-enable disabled users
+  const handleUndo = useCallback(async () => {
+    const action = undo()
+    if (!action || action.type !== 'userDelete') return
+
+    try {
+      await Promise.all(
+        action.users.map(user =>
+          fetch(`/api/admin/users/${user.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isActive: true }),
+          })
+        )
+      )
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      toast.success(`Restored ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Y to redo)`)
+    } catch {
+      toast.error('Failed to undo')
+    }
+  }, [undo, queryClient])
+
+  // Handle redo - disable users again
+  const handleRedo = useCallback(async () => {
+    const action = redo()
+    if (!action || action.type !== 'userDelete') return
+
+    try {
+      await Promise.all(
+        action.users.map(user =>
+          fetch(`/api/admin/users/${user.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isActive: false }),
+          })
+        )
+      )
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      toast.success(`Re-disabled ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
+    } catch {
+      toast.error('Failed to redo')
+    }
+  }, [redo, queryClient])
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        if (canUndo()) handleUndo()
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault()
+        if (canRedo()) handleRedo()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleUndo, handleRedo, canUndo, canRedo])
+
   const userToDelete = deleteUserId ? users?.find(u => u.id === deleteUserId) : null
+  const selectedUsers = users?.filter(u => selectedIds.has(u.id)) || []
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never'
@@ -179,6 +353,76 @@ export function UserList() {
 
   const toggleSortDirection = () => {
     setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+  }
+
+  // Selection helpers
+  const toggleSelect = (userId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(userId)) {
+        next.delete(userId)
+      } else {
+        next.add(userId)
+      }
+      return next
+    })
+  }
+
+  const selectAll = () => {
+    if (users) {
+      setSelectedIds(new Set(users.map(u => u.id)))
+    }
+  }
+
+  const selectNone = () => {
+    setSelectedIds(new Set())
+  }
+
+  const allSelected = users && users.length > 0 && selectedIds.size === users.length
+  const someSelected = selectedIds.size > 0 && !allSelected
+
+  // Bulk action handlers
+  const handleBulkAction = (action: BulkAction) => {
+    if (!action || selectedIds.size === 0) return
+    setBulkAction(action)
+  }
+
+  const confirmBulkAction = () => {
+    const ids = [...selectedIds]
+    switch (bulkAction) {
+      case 'disable':
+        bulkDisableUsers.mutate(ids)
+        break
+      case 'enable':
+        bulkUpdateUsers.mutate({ userIds: ids, updates: { isActive: true } })
+        break
+      case 'makeAdmin':
+        bulkUpdateUsers.mutate({ userIds: ids, updates: { isSystemAdmin: true } })
+        break
+      case 'removeAdmin':
+        bulkUpdateUsers.mutate({ userIds: ids, updates: { isSystemAdmin: false } })
+        break
+      case 'delete':
+        // For permanent delete, we'll do it one by one with confirmation
+        setBulkAction(null)
+        break
+    }
+  }
+
+  const getBulkActionDescription = () => {
+    const count = selectedIds.size
+    switch (bulkAction) {
+      case 'disable':
+        return `Disable ${count} user${count !== 1 ? 's' : ''}? They won't be able to log in. This action can be undone.`
+      case 'enable':
+        return `Enable ${count} user${count !== 1 ? 's' : ''}? They will be able to log in again.`
+      case 'makeAdmin':
+        return `Grant admin privileges to ${count} user${count !== 1 ? 's' : ''}?`
+      case 'removeAdmin':
+        return `Remove admin privileges from ${count} user${count !== 1 ? 's' : ''}?`
+      default:
+        return ''
+    }
   }
 
   return (
@@ -290,6 +534,30 @@ export function UserList() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Undo/Redo buttons */}
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleUndo}
+              disabled={!canUndo()}
+              className="text-zinc-400 hover:text-zinc-100 disabled:opacity-30"
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRedo}
+              disabled={!canRedo()}
+              className="text-zinc-400 hover:text-zinc-100 disabled:opacity-30"
+              title="Redo (Ctrl+Y)"
+            >
+              <Redo2 className="h-4 w-4" />
+            </Button>
+          </div>
+
           {/* Clear filters */}
           {hasActiveFilters && (
             <Button
@@ -319,6 +587,37 @@ export function UserList() {
         )}
       </div>
 
+      {/* Select all row */}
+      {users && users.length > 0 && (
+        <div className="flex items-center gap-3 mb-3 px-1 flex-shrink-0">
+          <button
+            onClick={allSelected ? selectNone : selectAll}
+            className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+          >
+            {allSelected ? (
+              <CheckSquare className="h-4 w-4 text-amber-500" />
+            ) : someSelected ? (
+              <Minus className="h-4 w-4 text-amber-500" />
+            ) : (
+              <Square className="h-4 w-4" />
+            )}
+            <span>
+              {selectedIds.size > 0
+                ? `${selectedIds.size} selected`
+                : 'Select all'}
+            </span>
+          </button>
+          {selectedIds.size > 0 && (
+            <button
+              onClick={selectNone}
+              className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {/* User list - scrollable container */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading ? (
@@ -338,119 +637,199 @@ export function UserList() {
               : 'No users found. Create your first user above.'}
           </div>
         ) : (
-          <div className="space-y-3">
-            {users.map((user) => (
-            <Card key={user.id} className="border-zinc-800 bg-zinc-900/50">
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src={user.avatar || undefined} />
-                    <AvatarFallback className="bg-zinc-700 text-zinc-300">
-                      {user.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-zinc-100">{user.name}</span>
-                      {user.isSystemAdmin && (
-                        <Badge variant="outline" className="border-amber-500 text-amber-500 text-xs">
-                          Admin
-                        </Badge>
-                      )}
-                      {!user.isActive && (
-                        <Badge variant="outline" className="border-red-500 text-red-500 text-xs">
-                          Disabled
-                        </Badge>
-                      )}
+          <div className="space-y-2">
+            {users.map((user) => {
+              const isSelected = selectedIds.has(user.id)
+              return (
+                <Card
+                  key={user.id}
+                  className={`border-zinc-800 bg-zinc-900/50 transition-all duration-150 ${
+                    isSelected
+                      ? 'ring-1 ring-amber-500/50 bg-amber-500/5 border-amber-500/30'
+                      : 'hover:bg-zinc-900/80'
+                  }`}
+                >
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3">
+                      {/* Checkbox */}
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelect(user.id)}
+                        className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
+                      />
+                      <Avatar>
+                        <AvatarImage src={user.avatar || undefined} />
+                        <AvatarFallback className="bg-zinc-700 text-zinc-300">
+                          {user.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-zinc-100">{user.name}</span>
+                          {user.isSystemAdmin && (
+                            <Badge variant="outline" className="border-amber-500 text-amber-500 text-xs">
+                              Admin
+                            </Badge>
+                          )}
+                          {!user.isActive && (
+                            <Badge variant="outline" className="border-red-500 text-red-500 text-xs">
+                              Disabled
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-sm text-zinc-500">{user.email}</span>
+                      </div>
                     </div>
-                    <span className="text-sm text-zinc-500">{user.email}</span>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-6">
-                  <div className="text-right hidden sm:block">
-                    <div className="text-xs text-zinc-500">Last login</div>
-                    <div className="text-sm text-zinc-400">{formatDate(user.lastLoginAt)}</div>
-                  </div>
-                  <div className="text-right hidden md:block">
-                    <div className="text-xs text-zinc-500">Created</div>
-                    <div className="text-sm text-zinc-400">{formatDate(user.createdAt)}</div>
-                  </div>
-                  <span className="text-sm text-zinc-500 min-w-[80px] text-right">
-                    {user._count.projects} project{user._count.projects !== 1 ? 's' : ''}
-                  </span>
+                    <div className="flex items-center gap-6">
+                      <div className="text-right hidden sm:block">
+                        <div className="text-xs text-zinc-500">Last login</div>
+                        <div className="text-sm text-zinc-400">{formatDate(user.lastLoginAt)}</div>
+                      </div>
+                      <div className="text-right hidden md:block">
+                        <div className="text-xs text-zinc-500">Created</div>
+                        <div className="text-sm text-zinc-400">{formatDate(user.createdAt)}</div>
+                      </div>
+                      <span className="text-sm text-zinc-500 min-w-[80px] text-right">
+                        {user._count.projects} project{user._count.projects !== 1 ? 's' : ''}
+                      </span>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-100">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
-                      <DropdownMenuItem
-                        onClick={() =>
-                          updateUser.mutate({
-                            userId: user.id,
-                            updates: { isSystemAdmin: !user.isSystemAdmin },
-                          })
-                        }
-                        className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
-                      >
-                        {user.isSystemAdmin ? (
-                          <>
-                            <ShieldOff className="h-4 w-4 mr-2" />
-                            Remove admin
-                          </>
-                        ) : (
-                          <>
-                            <Shield className="h-4 w-4 mr-2" />
-                            Make admin
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-zinc-800" />
-                      <DropdownMenuItem
-                        onClick={() =>
-                          updateUser.mutate({
-                            userId: user.id,
-                            updates: { isActive: !user.isActive },
-                          })
-                        }
-                        className={
-                          user.isActive
-                            ? 'text-red-400 focus:text-red-300 focus:bg-zinc-800'
-                            : 'text-green-400 focus:text-green-300 focus:bg-zinc-800'
-                        }
-                      >
-                        {user.isActive ? (
-                          <>
-                            <UserX className="h-4 w-4 mr-2" />
-                            Disable user
-                          </>
-                        ) : (
-                          <>
-                            <UserCheck className="h-4 w-4 mr-2" />
-                            Enable user
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-zinc-800" />
-                      <DropdownMenuItem
-                        onClick={() => setDeleteUserId(user.id)}
-                        className="text-red-400 focus:text-red-300 focus:bg-zinc-800"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete permanently
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-            ))}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-100">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              updateUser.mutate({
+                                userId: user.id,
+                                updates: { isSystemAdmin: !user.isSystemAdmin },
+                              })
+                            }
+                            className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                          >
+                            {user.isSystemAdmin ? (
+                              <>
+                                <ShieldOff className="h-4 w-4 mr-2" />
+                                Remove admin
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="h-4 w-4 mr-2" />
+                                Make admin
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-zinc-800" />
+                          <DropdownMenuItem
+                            onClick={() =>
+                              updateUser.mutate({
+                                userId: user.id,
+                                updates: { isActive: !user.isActive },
+                              })
+                            }
+                            className={
+                              user.isActive
+                                ? 'text-red-400 focus:text-red-300 focus:bg-zinc-800'
+                                : 'text-green-400 focus:text-green-300 focus:bg-zinc-800'
+                            }
+                          >
+                            {user.isActive ? (
+                              <>
+                                <UserX className="h-4 w-4 mr-2" />
+                                Disable user
+                              </>
+                            ) : (
+                              <>
+                                <UserCheck className="h-4 w-4 mr-2" />
+                                Enable user
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-zinc-800" />
+                          <DropdownMenuItem
+                            onClick={() => setDeleteUserId(user.id)}
+                            className="text-red-400 focus:text-red-300 focus:bg-zinc-800"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete permanently
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>
+
+      {/* Floating bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
+          <div className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/50">
+            <span className="text-sm text-zinc-300 font-medium pr-2 border-r border-zinc-700">
+              {selectedIds.size} selected
+            </span>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleBulkAction('makeAdmin')}
+              className="text-zinc-300 hover:text-amber-400 hover:bg-amber-500/10"
+            >
+              <Shield className="h-4 w-4 mr-1.5" />
+              Make Admin
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleBulkAction('removeAdmin')}
+              className="text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
+            >
+              <ShieldOff className="h-4 w-4 mr-1.5" />
+              Remove Admin
+            </Button>
+
+            <div className="w-px h-6 bg-zinc-700" />
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleBulkAction('enable')}
+              className="text-zinc-300 hover:text-green-400 hover:bg-green-500/10"
+            >
+              <UserCheck className="h-4 w-4 mr-1.5" />
+              Enable
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleBulkAction('disable')}
+              className="text-zinc-300 hover:text-red-400 hover:bg-red-500/10"
+            >
+              <UserX className="h-4 w-4 mr-1.5" />
+              Disable
+            </Button>
+
+            <div className="w-px h-6 bg-zinc-700" />
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={selectNone}
+              className="text-zinc-400 hover:text-zinc-100"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
@@ -471,6 +850,49 @@ export function UserList() {
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk action confirmation dialog */}
+      <AlertDialog open={!!bulkAction} onOpenChange={(open) => !open && setBulkAction(null)}>
+        <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">
+              {bulkAction === 'disable' && 'Disable Users'}
+              {bulkAction === 'enable' && 'Enable Users'}
+              {bulkAction === 'makeAdmin' && 'Grant Admin Privileges'}
+              {bulkAction === 'removeAdmin' && 'Remove Admin Privileges'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              {getBulkActionDescription()}
+            </AlertDialogDescription>
+            {selectedUsers.length <= 8 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {selectedUsers.map(user => (
+                  <Badge key={user.id} variant="outline" className="border-zinc-700 text-zinc-300">
+                    {user.name}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBulkAction}
+              className={
+                bulkAction === 'disable'
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : bulkAction === 'makeAdmin'
+                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                  : 'bg-zinc-600 hover:bg-zinc-700 text-white'
+              }
+            >
+              Confirm
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

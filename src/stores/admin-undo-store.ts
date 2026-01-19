@@ -1,0 +1,90 @@
+import { create } from 'zustand'
+
+interface DeletedUser {
+  id: string
+  name: string
+  email: string
+  isSystemAdmin: boolean
+  isActive: boolean
+}
+
+interface AdminUndoAction {
+  type: 'userDelete'
+  users: DeletedUser[]
+  timestamp: number
+}
+
+interface AdminUndoState {
+  undoStack: AdminUndoAction[]
+  redoStack: AdminUndoAction[]
+
+  // Push a user delete action (soft delete - can be restored)
+  pushUserDelete: (users: DeletedUser[]) => void
+
+  // Undo the most recent action
+  undo: () => AdminUndoAction | undefined
+
+  // Redo the most recently undone action
+  redo: () => AdminUndoAction | undefined
+
+  // Check if undo/redo is available
+  canUndo: () => boolean
+  canRedo: () => boolean
+
+  // Clear all history
+  clear: () => void
+}
+
+export const useAdminUndoStore = create<AdminUndoState>((set, get) => ({
+  undoStack: [],
+  redoStack: [],
+
+  pushUserDelete: (users) => {
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          type: 'userDelete',
+          users,
+          timestamp: Date.now(),
+        },
+      ],
+      // Clear redo stack when new action is performed
+      redoStack: [],
+    }))
+  },
+
+  undo: () => {
+    const state = get()
+    if (state.undoStack.length === 0) return undefined
+
+    const action = state.undoStack[state.undoStack.length - 1]
+    set({
+      undoStack: state.undoStack.slice(0, -1),
+      redoStack: [...state.redoStack, action],
+    })
+    return action
+  },
+
+  redo: () => {
+    const state = get()
+    if (state.redoStack.length === 0) return undefined
+
+    const action = state.redoStack[state.redoStack.length - 1]
+    set({
+      redoStack: state.redoStack.slice(0, -1),
+      undoStack: [...state.undoStack, action],
+    })
+    return action
+  },
+
+  canUndo: () => get().undoStack.length > 0,
+  canRedo: () => get().redoStack.length > 0,
+
+  clear: () => set({ undoStack: [], redoStack: [] }),
+}))
+
+// Expose for debugging
+if (typeof window !== 'undefined') {
+  ;(window as Window & { adminUndoStore?: typeof useAdminUndoStore }).adminUndoStore = useAdminUndoStore
+}
