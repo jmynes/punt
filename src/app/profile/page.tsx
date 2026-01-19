@@ -1,7 +1,7 @@
 'use client'
 
 import { Camera, KeyRound, Mail, Shield, Trash2, User } from 'lucide-react'
-import { useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -182,11 +182,11 @@ export default function ProfilePage() {
         throw new Error(data.error || 'Failed to delete account')
       }
 
-      toast.success('Account deleted. Redirecting...')
-      router.push('/login')
+      toast.success('Account deleted. Signing out...')
+      // Sign out to clear the session cookie and redirect to login
+      await signOut({ callbackUrl: '/login' })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete account')
-    } finally {
       setDeleteLoading(false)
     }
   }

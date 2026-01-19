@@ -66,15 +66,14 @@ export async function DELETE(request: Request) {
       }
     }
 
-    // Soft delete: deactivate the user
-    await db.user.update({
-      where: { id: currentUser.id },
-      data: { isActive: false },
-    })
-
-    // Delete all sessions for this user
+    // Delete all sessions for this user first
     await db.session.deleteMany({
       where: { userId: currentUser.id },
+    })
+
+    // Hard delete: permanently remove the user
+    await db.user.delete({
+      where: { id: currentUser.id },
     })
 
     return NextResponse.json({ success: true, message: 'Account deleted successfully' })

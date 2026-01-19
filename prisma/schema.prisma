@@ -103,8 +103,8 @@ model Invitation {
   status    String   @default("pending") // pending, accepted, expired, revoked
   createdAt DateTime @default(now())
 
-  senderId  String
-  sender    User    @relation(fields: [senderId], references: [id])
+  senderId  String?
+  sender    User?   @relation(fields: [senderId], references: [id], onDelete: SetNull)
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -209,8 +209,8 @@ model Ticket {
   // Users
   assigneeId String?
   assignee   User?   @relation("Assignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  creatorId  String
-  creator    User    @relation("Creator", fields: [creatorId], references: [id])
+  creatorId  String?
+  creator    User?   @relation("Creator", fields: [creatorId], references: [id], onDelete: SetNull)
 
   // Sprint
   sprintId String?

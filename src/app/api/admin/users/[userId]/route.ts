@@ -164,7 +164,10 @@ export async function PATCH(
 }
 
 /**
- * DELETE /api/admin/users/[userId] - Delete a user (soft delete by deactivating)
+ * DELETE /api/admin/users/[userId] - Delete or disable a user
+ * Query params:
+ *   - permanent=true: Hard delete (permanently remove from database)
+ *   - permanent=false or omitted: Soft delete (disable the account)
  */
 export async function DELETE(
   request: Request,
@@ -173,6 +176,8 @@ export async function DELETE(
   try {
     const currentUser = await requireSystemAdmin()
     const { userId } = await params
+    const { searchParams } = new URL(request.url)
+    const permanent = searchParams.get('permanent') === 'true'
 
     // Prevent self-deletion
     if (userId === currentUser.id) {
@@ -191,13 +196,23 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Soft delete: deactivate the user
-    await db.user.update({
-      where: { id: userId },
-      data: { isActive: false },
-    })
-
-    return NextResponse.json({ success: true })
+    if (permanent) {
+      // Hard delete: remove all sessions first, then delete user
+      await db.session.deleteMany({
+        where: { userId },
+      })
+      await db.user.delete({
+        where: { id: userId },
+      })
+      return NextResponse.json({ success: true, action: 'deleted' })
+    } else {
+      // Soft delete: deactivate the user
+      await db.user.update({
+        where: { id: userId },
+        data: { isActive: false },
+      })
+      return NextResponse.json({ success: true, action: 'disabled' })
+    }
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
