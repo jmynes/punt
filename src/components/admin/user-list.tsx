@@ -11,13 +11,11 @@ import {
   Loader2,
   Minus,
   MoreHorizontal,
-  Redo2,
   Search,
   Shield,
   ShieldOff,
   Square,
   Trash2,
-  Undo2,
   UserCheck,
   UserX,
   X,
@@ -740,30 +738,6 @@ export function UserList() {
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Undo/Redo buttons */}
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleUndo}
-              disabled={!canUndo()}
-              className="text-zinc-400 hover:text-zinc-100 disabled:opacity-30"
-              title="Undo (Ctrl+Z)"
-            >
-              <Undo2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleRedo}
-              disabled={!canRedo()}
-              className="text-zinc-400 hover:text-zinc-100 disabled:opacity-30"
-              title="Redo (Ctrl+Y)"
-            >
-              <Redo2 className="h-4 w-4" />
-            </Button>
-          </div>
 
           {/* Clear filters */}
           {hasActiveFilters && (
