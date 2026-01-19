@@ -1,7 +1,8 @@
 import NextAuth from 'next-auth'
 import { authConfig } from '@/lib/auth.config'
 
-export default NextAuth(authConfig).auth
+const { auth: proxy } = NextAuth(authConfig)
+export { proxy }
 
 export const config = {
   // Match all routes except static files, _next, and uploads

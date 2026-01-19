@@ -1,9 +1,9 @@
 import type { NextAuthConfig } from 'next-auth'
 
 /**
- * Edge-compatible auth configuration
- * This config is used by middleware (runs on Edge runtime)
- * Does not include database adapter or heavy dependencies
+ * Auth configuration for proxy (route protection)
+ * This config is used by proxy.ts (runs on Node.js runtime in Next.js 16+)
+ * Kept separate from main auth.ts for cleaner separation of concerns
  */
 export const authConfig: NextAuthConfig = {
   pages: {
