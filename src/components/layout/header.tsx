@@ -1,6 +1,6 @@
 'use client'
 
-import { LogOut, Menu, Search, Settings, Shield, User } from 'lucide-react'
+import { LogOut, Search, Settings, Shield, User } from 'lucide-react'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -13,6 +13,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { AnimatedMenuIcon } from '@/components/ui/animated-menu-icon'
+import { SidebarToggleIcon } from '@/components/ui/sidebar-toggle-icon'
 import { Input } from '@/components/ui/input'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useIsMobile } from '@/hooks/use-media-query'
@@ -21,7 +23,7 @@ import { useUIStore } from '@/stores/ui-store'
 
 export function Header() {
   const isMobile = useIsMobile()
-  const { toggleSidebar, setMobileNavOpen } = useUIStore()
+  const { sidebarOpen, toggleSidebar, mobileNavOpen, setMobileNavOpen } = useUIStore()
   const currentUser = useCurrentUser()
 
   const handleLogout = async () => {
@@ -30,20 +32,20 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-zinc-800 bg-zinc-950/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60 lg:px-6">
-      {/* Mobile menu button */}
+      {/* Menu toggle button */}
       {isMobile ? (
         <Button
           variant="ghost"
           size="icon"
           className="shrink-0 lg:hidden"
-          onClick={() => setMobileNavOpen(true)}
+          onClick={() => setMobileNavOpen(!mobileNavOpen)}
         >
-          <Menu className="h-5 w-5" />
+          <AnimatedMenuIcon isOpen={mobileNavOpen} />
           <span className="sr-only">Toggle navigation menu</span>
         </Button>
       ) : (
         <Button variant="ghost" size="icon" className="shrink-0" onClick={toggleSidebar}>
-          <Menu className="h-5 w-5" />
+          <SidebarToggleIcon isOpen={sidebarOpen} />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
       )}
