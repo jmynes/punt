@@ -36,7 +36,7 @@ interface CustomCodeMirrorEditorProps {
   nodeKey: string
   code: string
   meta: string
-  focusEmitter: any
+  focusEmitter: unknown
 }
 
 export function CustomCodeMirrorEditor({

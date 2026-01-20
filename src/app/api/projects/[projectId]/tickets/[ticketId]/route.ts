@@ -253,7 +253,8 @@ export async function PATCH(
       }
     }
 
-    let ticket: Awaited<ReturnType<typeof db.ticket.update>> | undefined
+    // biome-ignore lint/suspicious/noImplicitAnyLet: Type inferred from db.ticket.update with ticketSelect
+    let ticket
     try {
       ticket = await db.ticket.update({
         where: { id: ticketId },

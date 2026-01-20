@@ -865,7 +865,9 @@ export function UserList() {
             <DropdownMenuContent className="bg-zinc-900 border-zinc-800 p-3 w-[200px]">
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="min-projects-filter" className="text-xs text-zinc-500 mb-1 block">Min Projects</label>
+                  <label htmlFor="min-projects-filter" className="text-xs text-zinc-500 mb-1 block">
+                    Min Projects
+                  </label>
                   <Input
                     id="min-projects-filter"
                     type="number"
@@ -877,7 +879,9 @@ export function UserList() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="max-projects-filter" className="text-xs text-zinc-500 mb-1 block">Max Projects</label>
+                  <label htmlFor="max-projects-filter" className="text-xs text-zinc-500 mb-1 block">
+                    Max Projects
+                  </label>
                   <Input
                     id="max-projects-filter"
                     type="number"
@@ -965,7 +969,7 @@ export function UserList() {
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-20 bg-zinc-800/50 rounded-lg animate-pulse" />
+              <div key={`skeleton-${i}`} className="h-20 bg-zinc-800/50 rounded-lg animate-pulse" />
             ))}
           </div>
         ) : error ? (

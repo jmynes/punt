@@ -110,7 +110,10 @@ export function UserSelect({
                     </Avatar>
                     <span className="text-zinc-400">Unassigned</span>
                     <Check
-                      className={cn('ml-auto h-4 w-4', value === null ? 'opacity-100' : 'opacity-0')}
+                      className={cn(
+                        'ml-auto h-4 w-4',
+                        value === null ? 'opacity-100' : 'opacity-0',
+                      )}
                     />
                   </CommandItem>
                 )}
@@ -166,9 +169,19 @@ export function UserSelect({
               : 'bg-zinc-900 hover:bg-zinc-800',
           )}
           onClick={() => onChange(allowUnassigned && isAssignedToMe ? null : currentUserId || null)}
-          title={isAssignedToMe ? (allowUnassigned ? 'Unassign from me' : 'Assigned to you') : 'Assign to me'}
+          title={
+            isAssignedToMe
+              ? allowUnassigned
+                ? 'Unassign from me'
+                : 'Assigned to you'
+              : 'Assign to me'
+          }
         >
-          {isAssignedToMe && allowUnassigned ? <UserMinus className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+          {isAssignedToMe && allowUnassigned ? (
+            <UserMinus className="h-4 w-4" />
+          ) : (
+            <UserPlus className="h-4 w-4" />
+          )}
         </Button>
       )}
     </div>

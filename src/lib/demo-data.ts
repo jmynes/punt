@@ -1,4 +1,4 @@
-import type { ColumnWithTickets, IssueType, Priority } from '@/types'
+import type { ColumnWithTickets, IssueType, Priority, TicketWithRelations } from '@/types'
 
 // Helper to create demo columns for a project
 export function createDemoColumns(projectId: string, _projectKey: string): ColumnWithTickets[] {
@@ -598,7 +598,7 @@ export function createMOBDemoTickets(): Array<{
 // Helper to get demo data for a project
 export function getDemoData(projectId: string): ColumnWithTickets[] {
   const columns = createDemoColumns(projectId, '')
-  let demoTickets: Array<{ columnId: string; ticket: any }> = []
+  let demoTickets: Array<{ columnId: string; ticket: TicketWithRelations }> = []
 
   if (projectId === '1') {
     demoTickets = createPUNTDemoTickets()

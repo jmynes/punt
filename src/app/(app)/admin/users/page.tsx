@@ -19,7 +19,10 @@ export default function UsersPage() {
               </div>
               <div className="space-y-3">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-20 bg-zinc-800/50 rounded-lg animate-pulse" />
+                  <div
+                    key={`user-skeleton-${i}`}
+                    className="h-20 bg-zinc-800/50 rounded-lg animate-pulse"
+                  />
                 ))}
               </div>
             </div>

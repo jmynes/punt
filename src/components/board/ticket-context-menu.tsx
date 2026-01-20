@@ -59,26 +59,16 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   // This ensures we always use the correct project context
   const projectId = ticket.projectId
   const columns = getColumns(projectId)
-  const boardState = useBoardStore()
-  const board =
-    (
-      useBoardStore as typeof useBoardStore & { getState?: () => ReturnType<typeof useBoardStore> }
-    ).getState?.() ?? boardState
-  const undoStore =
-    (
-      useUndoStore as typeof useUndoStore & { getState?: () => ReturnType<typeof useUndoStore> }
-    ).getState?.() ?? useUndoStore()
-  const uiStore =
-    (
-      useUIStore as typeof useUIStore & { getState?: () => ReturnType<typeof useUIStore> }
-    ).getState?.() ?? useUIStore()
+  // Call hooks unconditionally at top level for reactivity
+  const _boardState = useBoardStore()
+  const _undoStoreState = useUndoStore()
+  const _uiStoreState = useUIStore()
   const selection = useSelectionStore()
-  const selectionApi =
-    (
-      useSelectionStore as typeof useSelectionStore & {
-        getState?: () => ReturnType<typeof useSelectionStore>
-      }
-    ).getState?.() ?? selection
+  // Use static getState() for imperative API access
+  const board = useBoardStore.getState()
+  const undoStore = useUndoStore.getState()
+  const uiStore = useUIStore.getState()
+  const selectionApi = useSelectionStore.getState()
   const _shortcutsApi = uiStore
   const currentUser = useCurrentUser()
   const members = useProjectMembers(projectId)
@@ -122,13 +112,13 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }
   }, [open])
 
-  const ensureSelection = () => {
+  const ensureSelection = useCallback(() => {
     const isSelected = selectionApi.isSelected || (() => false)
     const selectTicket = selectionApi.selectTicket || (() => {})
     if (!isSelected(ticket.id)) {
       selectTicket(ticket.id)
     }
-  }
+  }, [selectionApi, ticket.id])
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {

@@ -1804,8 +1804,16 @@ export function KeyboardShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  // Note: Don't copy tickets if drawer is open
-  }, [selectedTicketIds, openSinglePastedTicket, showDeleteConfirm, columns, handleDeleteSelected, activeTicketId, projectId])
+    // Note: Don't copy tickets if drawer is open
+  }, [
+    selectedTicketIds,
+    openSinglePastedTicket,
+    showDeleteConfirm,
+    columns,
+    handleDeleteSelected,
+    activeTicketId,
+    projectId,
+  ])
 
   return (
     <>

@@ -180,7 +180,7 @@ interface CreateTicketInput {
  */
 export function useCreateTicket() {
   const queryClient = useQueryClient()
-  const { addTicket, removeTicket, updateTicket: updateTicketInStore } = useBoardStore()
+  const { addTicket, removeTicket } = useBoardStore()
 
   return useMutation({
     mutationFn: async ({ projectId, columnId, data }: CreateTicketInput) => {
