@@ -538,7 +538,7 @@ export function KeyboardShortcuts() {
           }
         }
 
-        // If there were moves, create undo entry
+        // If there were moves, create undo entry and persist to database
         if (moves.length > 0) {
           const fromColumn = columns.find((c) => c.id === moves[0].fromColumnId)
           const toColumn = columns.find((c) => c.id === moves[0].toColumnId)
@@ -560,6 +560,30 @@ export function KeyboardShortcuts() {
             })
             .filter(Boolean)
 
+          const isDemo = isDemoProject(projectId)
+
+          // Persist to database for real projects
+          if (!isDemo) {
+            ;(async () => {
+              try {
+                for (const move of moves) {
+                  // Find the ticket's new position in the target column
+                  const targetCol = afterColumns.find((c) => c.id === move.toColumnId)
+                  const newOrder = targetCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
+                  await updateTicketAPI(projectId, move.ticketId, {
+                    columnId: move.toColumnId,
+                    order: newOrder,
+                  })
+                }
+              } catch (err) {
+                console.error('Failed to persist arrow key move:', err)
+                // Rollback on error
+                boardStore.setColumns(projectId, originalColumns)
+                toast.error('Failed to move ticket(s)')
+              }
+            })()
+          }
+
           let currentId: string | number | undefined
 
           const toastId = showUndoRedoToast('success', {
@@ -570,12 +594,29 @@ export function KeyboardShortcuts() {
                 : `${ticketKeys.join(', ')} moved to ${toName}`,
             duration: 5000,
             showUndoButtons: useUIStore.getState().showUndoButtons,
-            onUndo: (id) => {
+            onUndo: async (id) => {
               const undoEntry = useUndoStore.getState().undoByToastId(id)
               if (undoEntry) {
                 // Restore state
                 const board = useBoardStore.getState()
                 board.setColumns(undoEntry.projectId, originalColumns)
+
+                // Persist undo to database for real projects
+                if (!isDemo) {
+                  try {
+                    for (const move of moves) {
+                      const sourceCol = originalColumns.find((c) => c.id === move.fromColumnId)
+                      const originalOrder =
+                        sourceCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
+                      await updateTicketAPI(undoEntry.projectId, move.ticketId, {
+                        columnId: move.fromColumnId,
+                        order: originalOrder,
+                      })
+                    }
+                  } catch (err) {
+                    console.error('Failed to persist move undo:', err)
+                  }
+                }
               }
             },
             onUndoneToast: (newId) => {
@@ -584,12 +625,28 @@ export function KeyboardShortcuts() {
                 currentId = newId
               }
             },
-            onRedo: (id) => {
+            onRedo: async (id) => {
               const undoEntry = useUndoStore.getState().redoByToastId(id)
               if (undoEntry) {
                 // Redo state
                 const board = useBoardStore.getState()
                 board.setColumns(undoEntry.projectId, afterColumns)
+
+                // Persist redo to database for real projects
+                if (!isDemo) {
+                  try {
+                    for (const move of moves) {
+                      const targetCol = afterColumns.find((c) => c.id === move.toColumnId)
+                      const newOrder = targetCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
+                      await updateTicketAPI(undoEntry.projectId, move.ticketId, {
+                        columnId: move.toColumnId,
+                        order: newOrder,
+                      })
+                    }
+                  } catch (err) {
+                    console.error('Failed to persist move redo:', err)
+                  }
+                }
               }
             },
             onRedoneToast: (newId) => {
