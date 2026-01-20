@@ -10,15 +10,9 @@ import { useUndoStore } from '@/stores/undo-store'
 import { useUIStore } from '@/stores/ui-store'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { isDemoProject } from '@/lib/constants'
-import type { TicketWithRelations, ColumnWithTickets } from '@/types'
+import { formatTicketId } from '@/lib/ticket-format'
+import type { ColumnWithTickets } from '@/types'
 import type { TicketWithColumn, DeleteResult, ActionOptions } from './types'
-
-/**
- * Format a ticket ID for display (e.g., "#123").
- */
-function formatTicketId(ticket: TicketWithRelations): string {
-  return `#${ticket.number}`
-}
 
 export interface DeleteTicketsParams {
   /** The project ID to delete tickets from */

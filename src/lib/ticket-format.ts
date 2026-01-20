@@ -1,9 +1,10 @@
 'use client'
 
+import { useProjectsStore } from '@/stores/projects-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
-// Project key lookup used across the app (board/backlog)
-const projectKeys: Record<string, string> = {
+// Demo project key lookup (for localStorage-based demo projects)
+const demoProjectKeys: Record<string, string> = {
   '1': 'PUNT',
   '2': 'API',
   '3': 'MOB',
@@ -13,7 +14,15 @@ const projectKeys: Record<string, string> = {
 }
 
 export function formatTicketId(ticket: TicketWithRelations): string {
-  const projectKey = projectKeys[ticket.projectId] || ticket.projectId || 'TICKET'
+  // First check demo project keys
+  let projectKey = demoProjectKeys[ticket.projectId]
+
+  // If not a demo project, look up in the projects store
+  if (!projectKey) {
+    const project = useProjectsStore.getState().getProject(ticket.projectId)
+    projectKey = project?.key || 'TICKET'
+  }
+
   return `${projectKey}-${ticket.number ?? ''}`.trim()
 }
 

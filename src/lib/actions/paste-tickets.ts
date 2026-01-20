@@ -10,18 +10,10 @@ import { useUndoStore } from '@/stores/undo-store'
 import { useUIStore } from '@/stores/ui-store'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { isDemoProject } from '@/lib/constants'
+import { formatTicketId } from '@/lib/ticket-format'
 import { batchCreateTicketsAPI, batchDeleteTicketsAPI } from '@/hooks/queries/use-tickets'
 import type { TicketWithRelations, ColumnWithTickets } from '@/types'
 import type { TicketWithColumn, PasteResult, ActionOptions } from './types'
-
-/**
- * Format a ticket ID for display (e.g., "PROJ-123").
- */
-function formatTicketId(ticket: TicketWithRelations): string {
-  // This assumes we can get project key from the store or context
-  // For now, just use the number
-  return `#${ticket.number}`
-}
 
 /**
  * Generate a temporary ID for optimistic updates.
