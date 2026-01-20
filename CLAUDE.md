@@ -166,7 +166,8 @@ src/
 ├── generated/              # Prisma-generated client (auto-generated)
 ├── stores/                 # Zustand stores
 ├── hooks/                  # useCurrentUser, useMediaQuery, queries/
-├── lib/                    # auth.ts, password.ts, rate-limit.ts, db.ts, logger.ts
+├── lib/                    # auth.ts, password.ts, rate-limit.ts, db.ts, logger.ts, api-utils.ts, constants.ts
+│   └── actions/            # Unified action modules (paste-tickets.ts, delete-tickets.ts)
 └── types/                  # Prisma re-exports + custom types
 ```
 
@@ -194,6 +195,39 @@ Vitest + React Testing Library + MSW for API mocking. Tests colocated in `__test
 
 **Client-side:**
 - localStorage validation during hydration prevents crashes from corrupted data
+
+### API Utilities (`src/lib/api-utils.ts`)
+
+Centralized API response helpers to reduce duplication across routes:
+- `handleApiError(error, action)` - Standardized error handling for catch blocks
+- `validationError(result)` - Zod validation failure response
+- `rateLimitExceeded(rateLimit)` - Rate limit response with headers
+- `notFoundError(resource)` - 404 response
+- `badRequestError(message)` - 400 response
+- `passwordValidationError(errors)` - Password validation failure
+
+### Prisma Selects (`src/lib/prisma-selects.ts`)
+
+Shared Prisma select clauses to avoid duplication:
+- `TICKET_SELECT_FULL` - Full ticket with all relations
+- `USER_SELECT_SUMMARY` - User summary (id, name, email, avatar)
+- `USER_SELECT_ADMIN_LIST` - User for admin listing
+- `transformTicket(ticket)` - Flatten watchers relation
+
+### Action Modules (`src/lib/actions/`)
+
+Unified action implementations for consistent behavior across UI triggers (context menu, keyboard shortcuts, drawer). Each action handles:
+- Optimistic updates for immediate UI feedback
+- API persistence for real projects (vs demo projects)
+- Undo/redo support with toast integration
+- Selection management
+
+Available actions:
+- `pasteTickets({ projectId, columns, options?, onComplete? })` - Paste copied tickets
+- `deleteTickets({ projectId, tickets, options?, onComplete? })` - Delete tickets with undo
+
+Constants:
+- `isDemoProject(projectId)` - Check if project uses localStorage instead of API (`src/lib/constants.ts`)
 
 ### Debugging
 

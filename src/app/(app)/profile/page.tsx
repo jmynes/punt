@@ -335,11 +335,7 @@ export default function ProfilePage() {
               )}
 
               <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={profileLoading}
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                >
+                <Button type="submit" variant="primary" disabled={profileLoading}>
                   {profileLoading ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
@@ -413,8 +409,8 @@ export default function ProfilePage() {
               <div className="flex justify-end">
                 <Button
                   type="submit"
+                  variant="primary"
                   disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
                 >
                   {passwordLoading ? 'Updating...' : 'Update Password'}
                 </Button>

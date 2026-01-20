@@ -252,11 +252,7 @@ export function EditProjectDialog() {
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={!isValid || isPending}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-            >
+            <Button onClick={handleSubmit} variant="primary" disabled={!isValid || isPending}>
               {updateProject.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -105,10 +105,7 @@ export default function DashboardPage() {
       {/* Quick actions */}
       <div className="flex flex-wrap gap-3 mb-8">
         {projects.length > 0 && (
-          <Button
-            className="bg-amber-600 hover:bg-amber-700 text-white"
-            onClick={() => setCreateTicketOpen(true)}
-          >
+          <Button variant="primary" onClick={() => setCreateTicketOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Ticket
           </Button>
@@ -184,11 +181,7 @@ export default function DashboardPage() {
                 <p className="text-zinc-500 text-xs mt-1 mb-4">
                   Create your first project to get started
                 </p>
-                <Button
-                  size="sm"
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                  onClick={() => setCreateProjectOpen(true)}
-                >
+                <Button size="sm" variant="primary" onClick={() => setCreateProjectOpen(true)}>
                   <Plus className="h-4 w-4 mr-1" />
                   Create Project
                 </Button>

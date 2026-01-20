@@ -251,7 +251,8 @@ export default function BoardPage() {
           {/* Create ticket */}
           <Button
             size="sm"
-            className="bg-amber-600 hover:bg-amber-700 text-white w-fit"
+            variant="primary"
+            className="w-fit"
             onClick={() => setCreateTicketOpen(true)}
           >
             <Plus className="h-4 w-4 mr-1" />

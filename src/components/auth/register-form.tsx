@@ -295,7 +295,8 @@ export function RegisterForm() {
         <div className="px-6 pb-6 pt-2">
           <Button
             type="submit"
-            className="w-full h-11 bg-amber-600 hover:bg-amber-500 text-white font-medium tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="primary"
+            className="w-full h-11 font-medium tracking-wide"
             disabled={isLoading || !canSubmit}
           >
             {isLoading ? (

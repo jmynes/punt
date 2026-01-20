@@ -823,11 +823,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       }}
                     />
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleSaveField('title')}
-                        className="bg-amber-600 hover:bg-amber-700"
-                      >
+                      <Button size="sm" variant="primary" onClick={() => handleSaveField('title')}>
                         Save
                       </Button>
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -1004,11 +1000,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       placeholder="e.g., 2h, 1d"
                       className="w-24 h-8 bg-zinc-900 border-zinc-700 focus:border-amber-500"
                     />
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveField('estimate')}
-                      className="bg-amber-600 hover:bg-amber-700"
-                    >
+                    <Button size="sm" variant="primary" onClick={() => handleSaveField('estimate')}>
                       Save
                     </Button>
                     <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -1040,8 +1032,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     <div className="flex gap-2">
                       <Button
                         size="sm"
+                        variant="primary"
                         onClick={() => handleSaveField('description')}
-                        className="bg-amber-600 hover:bg-amber-700"
                       >
                         Save
                       </Button>
@@ -1318,7 +1310,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     className="resize-none bg-zinc-900 border-zinc-700 focus:border-amber-500"
                   />
                   <div className="flex justify-end">
-                    <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                    <Button size="sm" variant="primary">
                       Comment
                     </Button>
                   </div>
@@ -1345,11 +1337,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     <RotateCcw className="h-4 w-4 mr-1" />
                     Discard Changes
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSave}
-                    className="bg-amber-600 hover:bg-amber-700 text-white"
-                  >
+                  <Button size="sm" variant="primary" onClick={handleSave}>
                     Save Changes
                   </Button>
                 </>
@@ -1472,7 +1460,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 setRememberPreference(false)
                 onClose()
               }}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="bg-amber-600 hover:bg-amber-500 text-white"
             >
               Save and Close
             </AlertDialogAction>

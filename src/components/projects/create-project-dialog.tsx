@@ -233,8 +233,8 @@ export function CreateProjectDialog() {
           </Button>
           <Button
             onClick={handleSubmit}
+            variant="primary"
             disabled={!isValid || createProject.isPending}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
           >
             {createProject.isPending ? (
               <>

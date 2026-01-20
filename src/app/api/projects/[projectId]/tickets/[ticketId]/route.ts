@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { handleApiError, validationError, notFoundError, badRequestError } from '@/lib/api-utils'
 import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
+import { TICKET_SELECT_FULL, transformTicket } from '@/lib/prisma-selects'
 import type { IssueType, Priority } from '@/types'
 
 const updateTicketSchema = z.object({
@@ -35,95 +37,6 @@ const updateTicketSchema = z.object({
   watcherIds: z.array(z.string()).optional(),
 })
 
-// Common select for ticket relations
-const ticketSelect = {
-  id: true,
-  number: true,
-  title: true,
-  description: true,
-  type: true,
-  priority: true,
-  order: true,
-  storyPoints: true,
-  estimate: true,
-  startDate: true,
-  dueDate: true,
-  environment: true,
-  affectedVersion: true,
-  fixVersion: true,
-  createdAt: true,
-  updatedAt: true,
-  projectId: true,
-  columnId: true,
-  assigneeId: true,
-  creatorId: true,
-  sprintId: true,
-  parentId: true,
-  assignee: {
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      avatar: true,
-    },
-  },
-  creator: {
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      avatar: true,
-    },
-  },
-  sprint: {
-    select: {
-      id: true,
-      name: true,
-      isActive: true,
-      startDate: true,
-      endDate: true,
-    },
-  },
-  labels: {
-    select: {
-      id: true,
-      name: true,
-      color: true,
-    },
-  },
-  watchers: {
-    select: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatar: true,
-        },
-      },
-    },
-  },
-  _count: {
-    select: {
-      comments: true,
-      subtasks: true,
-      attachments: true,
-    },
-  },
-} as const
-
-// Transform DB ticket to API response format
-function transformTicket(ticket: {
-  watchers: { user: { id: string; name: string; email: string | null; avatar: string | null } }[]
-  [key: string]: unknown
-}) {
-  const { watchers, ...rest } = ticket
-  return {
-    ...rest,
-    watchers: watchers.map((w) => w.user),
-  }
-}
-
 /**
  * GET /api/projects/[projectId]/tickets/[ticketId] - Get a single ticket
  * Requires project membership
@@ -141,25 +54,16 @@ export async function GET(
 
     const ticket = await db.ticket.findFirst({
       where: { id: ticketId, projectId },
-      select: ticketSelect,
+      select: TICKET_SELECT_FULL,
     })
 
     if (!ticket) {
-      return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
+      return notFoundError('Ticket')
     }
 
     return NextResponse.json(transformTicket(ticket))
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      if (error.message.startsWith('Forbidden:')) {
-        return NextResponse.json({ error: error.message }, { status: 403 })
-      }
-    }
-    console.error('Failed to fetch ticket:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'fetch ticket')
   }
 }
 
@@ -185,17 +89,14 @@ export async function PATCH(
     })
 
     if (!existingTicket) {
-      return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
+      return notFoundError('Ticket')
     }
 
     const body = await request.json()
     const parsed = updateTicketSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 },
-      )
+      return validationError(parsed)
     }
 
     const { labelIds, watcherIds, ...updateData } = parsed.data
@@ -207,10 +108,7 @@ export async function PATCH(
       })
 
       if (!column) {
-        return NextResponse.json(
-          { error: 'Column not found or does not belong to project' },
-          { status: 400 },
-        )
+        return badRequestError('Column not found or does not belong to project')
       }
     }
 
@@ -253,13 +151,13 @@ export async function PATCH(
       }
     }
 
-    // biome-ignore lint/suspicious/noImplicitAnyLet: Type inferred from db.ticket.update with ticketSelect
+    // biome-ignore lint/suspicious/noImplicitAnyLet: Type inferred from db.ticket.update with TICKET_SELECT_FULL
     let ticket
     try {
       ticket = await db.ticket.update({
         where: { id: ticketId },
         data: dbUpdateData,
-        select: ticketSelect,
+        select: TICKET_SELECT_FULL,
       })
     } catch (dbError) {
       console.error('Prisma update error:', dbError)
@@ -283,16 +181,7 @@ export async function PATCH(
 
     return NextResponse.json(transformTicket(ticket))
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      if (error.message.startsWith('Forbidden:')) {
-        return NextResponse.json({ error: error.message }, { status: 403 })
-      }
-    }
-    console.error('Failed to update ticket:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'update ticket')
   }
 }
 
@@ -318,7 +207,7 @@ export async function DELETE(
     })
 
     if (!ticket) {
-      return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
+      return notFoundError('Ticket')
     }
 
     // Delete the ticket (cascades to watchers, comments, attachments, etc.)
@@ -340,15 +229,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      if (error.message.startsWith('Forbidden:')) {
-        return NextResponse.json({ error: error.message }, { status: 403 })
-      }
-    }
-    console.error('Failed to delete ticket:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'delete ticket')
   }
 }

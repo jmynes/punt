@@ -22,7 +22,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
       <h3 className="text-lg font-medium text-zinc-200 mb-1">{title}</h3>
       <p className="text-sm text-zinc-500 max-w-sm mb-4">{description}</p>
       {action && (
-        <Button onClick={action.onClick} className="bg-amber-600 hover:bg-amber-700 text-white">
+        <Button onClick={action.onClick} variant="primary">
           {action.label}
         </Button>
       )}

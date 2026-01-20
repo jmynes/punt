@@ -105,11 +105,7 @@ export default function BacklogPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            className="bg-amber-600 hover:bg-amber-700 text-white"
-            onClick={() => setCreateTicketOpen(true)}
-          >
+          <Button size="sm" variant="primary" onClick={() => setCreateTicketOpen(true)}>
             <Plus className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline">New Ticket</span>
           </Button>

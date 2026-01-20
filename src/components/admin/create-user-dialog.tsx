@@ -63,7 +63,7 @@ export function CreateUserDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-amber-600 hover:bg-amber-700 text-white">
+        <Button variant="primary">
           <UserPlus className="h-4 w-4 mr-2" />
           Create User
         </Button>
@@ -162,11 +162,7 @@ export function CreateUserDialog() {
             <Button type="button" variant="ghost" onClick={handleClose}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={createUser.isPending}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-            >
+            <Button type="submit" variant="primary" disabled={createUser.isPending}>
               {createUser.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

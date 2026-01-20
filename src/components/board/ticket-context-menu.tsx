@@ -25,12 +25,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import {
-  batchCreateTicketsAPI,
-  batchDeleteTicketsAPI,
-  updateTicketAPI,
-} from '@/hooks/queries/use-tickets'
+import { updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { pasteTickets } from '@/lib/actions'
+import { deleteTickets, prepareTicketsForDelete } from '@/lib/actions/delete-tickets'
+import { isDemoProject } from '@/lib/constants'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -40,9 +39,6 @@ import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
-
-// Demo project IDs that use local state instead of API
-const DEMO_PROJECT_IDS = ['1', '2', '3']
 
 type MenuProps = {
   ticket: TicketWithRelations
@@ -148,191 +144,14 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   }
 
   const doPaste = () => {
-    const getCopiedIds = selectionApi.getCopiedIds || (() => [])
-    const clearSelection = selectionApi.clearSelection || (() => {})
-    const toggleTicket = selectionApi.toggleTicket || (() => {})
-    const copiedIds = getCopiedIds()
-    if (copiedIds.length === 0) return
-
-    const ticketsToPaste: Array<{ ticket: TicketWithRelations; columnId: string }> = []
-    for (const id of copiedIds) {
-      for (const column of columns) {
-        const t = column.tickets.find((tk: TicketWithRelations) => tk.id === id)
-        if (t) {
-          ticketsToPaste.push({ ticket: t, columnId: column.id })
-          break
-        }
-      }
-    }
-    if (ticketsToPaste.length === 0) return
-
-    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
-    const newTickets: Array<{ ticket: TicketWithRelations; columnId: string }> = []
-    const getNext = board.getNextTicketNumber || (() => Date.now())
-    const addTicket = board.addTicket || (() => {})
-    let nextNumber = getNext(projectId)
-
-    for (const { ticket: t, columnId } of ticketsToPaste) {
-      const newTicket: TicketWithRelations = {
-        ...t,
-        id: `ticket-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        number: nextNumber++,
-        title: `${t.title} (copy)`,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-      newTickets.push({ ticket: newTicket, columnId })
-      // Optimistic add
-      addTicket(projectId, columnId, newTicket)
-    }
-
-    // For real projects, persist to database
-    if (!isDemoProject) {
-      ;(async () => {
-        try {
-          const ticketsToCreate = newTickets.map(({ ticket, columnId }) => ({
-            tempId: ticket.id,
-            columnId,
-            ticketData: {
-              title: ticket.title,
-              description: ticket.description,
-              type: ticket.type,
-              priority: ticket.priority,
-              storyPoints: ticket.storyPoints,
-              estimate: ticket.estimate,
-              startDate: ticket.startDate,
-              dueDate: ticket.dueDate,
-              environment: ticket.environment,
-              affectedVersion: ticket.affectedVersion,
-              fixVersion: ticket.fixVersion,
-              assigneeId: ticket.assigneeId,
-              sprintId: ticket.sprintId,
-              parentId: ticket.parentId,
-              labels: ticket.labels,
-              watchers: ticket.watchers,
-            },
-          }))
-
-          const serverTickets = await batchCreateTicketsAPI(projectId, ticketsToCreate)
-
-          // Replace temp tickets with server tickets
-          const boardState = useBoardStore.getState ? useBoardStore.getState() : board
-          for (const { ticket: tempTicket, columnId } of newTickets) {
-            const serverTicket = serverTickets.get(tempTicket.id)
-            if (serverTicket) {
-              boardState.removeTicket?.(projectId, tempTicket.id)
-              boardState.addTicket?.(projectId, columnId, serverTicket)
-              // Update selection if this ticket was selected
-              const sel = useSelectionStore.getState ? useSelectionStore.getState() : selectionApi
-              if (sel.isSelected?.(tempTicket.id)) {
-                sel.toggleTicket?.(tempTicket.id)
-                sel.toggleTicket?.(serverTicket.id)
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Failed to persist pasted tickets:', error)
-          // Remove optimistic tickets on failure
-          const boardState = useBoardStore.getState ? useBoardStore.getState() : board
-          for (const { ticket } of newTickets) {
-            boardState.removeTicket?.(projectId, ticket.id)
-          }
-          toast.error('Failed to paste tickets')
-        }
-      })()
-    }
-
-    const uiState = useUIStore.getState ? useUIStore.getState() : uiStore
-    const showUndo = uiState.showUndoButtons ?? true
-    const boardState = useBoardStore.getState ? useBoardStore.getState() : board
-    const _removeTicket = boardState.removeTicket || (() => {})
-    const _addTicketAgain = boardState.addTicket || (() => {})
-
-    const toastId = showUndoRedoToast('success', {
-      title: newTickets.length === 1 ? 'Ticket pasted' : `${newTickets.length} tickets pasted`,
-      description: newTickets.map(({ ticket }) => formatTicketId(ticket)).join(', '),
-      duration: 5000,
-      showUndoButtons: showUndo,
-      onUndo: async () => {
-        const boardState = useBoardStore.getState ? useBoardStore.getState() : board
-        const ticketIdsToDelete: string[] = []
-        for (const { ticket } of newTickets) {
-          const cols = boardState.getColumns?.(projectId) || columns
-          const foundTicket = cols
-            .flatMap((c: ColumnWithTickets) => c.tickets)
-            .find((t: TicketWithRelations) => t.id === ticket.id || t.title === ticket.title)
-          if (foundTicket) {
-            boardState.removeTicket?.(projectId, foundTicket.id)
-            ticketIdsToDelete.push(foundTicket.id)
-          }
-        }
-        if (!isDemoProject && ticketIdsToDelete.length > 0) {
-          batchDeleteTicketsAPI(projectId, ticketIdsToDelete).catch((err) => {
-            console.error('Failed to delete pasted tickets on undo:', err)
-          })
-        }
+    pasteTickets({
+      projectId,
+      columns,
+      onComplete: () => {
+        setOpen(false)
+        setSubmenu(null)
       },
-      onRedo: async () => {
-        const boardState = useBoardStore.getState ? useBoardStore.getState() : board
-        const redoTickets: Array<{ ticket: TicketWithRelations; columnId: string }> = []
-        for (const { ticket, columnId } of newTickets) {
-          const newTicket: TicketWithRelations = {
-            ...ticket,
-            id: `ticket-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }
-          boardState.addTicket?.(projectId, columnId, newTicket)
-          redoTickets.push({ ticket: newTicket, columnId })
-        }
-        if (!isDemoProject) {
-          try {
-            const ticketsToCreate = redoTickets.map(({ ticket, columnId }) => ({
-              tempId: ticket.id,
-              columnId,
-              ticketData: {
-                title: ticket.title,
-                description: ticket.description,
-                type: ticket.type,
-                priority: ticket.priority,
-                storyPoints: ticket.storyPoints,
-                estimate: ticket.estimate,
-                startDate: ticket.startDate,
-                dueDate: ticket.dueDate,
-                environment: ticket.environment,
-                affectedVersion: ticket.affectedVersion,
-                fixVersion: ticket.fixVersion,
-                assigneeId: ticket.assigneeId,
-                sprintId: ticket.sprintId,
-                parentId: ticket.parentId,
-                labels: ticket.labels,
-                watchers: ticket.watchers,
-              },
-            }))
-            const serverTickets = await batchCreateTicketsAPI(projectId, ticketsToCreate)
-            for (const { ticket: tempTicket, columnId } of redoTickets) {
-              const serverTicket = serverTickets.get(tempTicket.id)
-              if (serverTicket) {
-                boardState.removeTicket?.(projectId, tempTicket.id)
-                boardState.addTicket?.(projectId, columnId, serverTicket)
-              }
-            }
-          } catch (err) {
-            console.error('Failed to recreate tickets on redo:', err)
-          }
-        }
-      },
-      undoneTitle: 'Paste undone',
-      redoneTitle: 'Paste redone',
     })
-    undoStore.pushPaste(projectId, newTickets, toastId)
-
-    clearSelection()
-    for (const { ticket } of newTickets) {
-      toggleTicket(ticket.id)
-    }
-    setOpen(false)
-    setSubmenu(null)
   }
 
   const doSendTo = (toColumnId: string) => {
@@ -341,7 +160,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const toOrder = column.tickets.length
     const moveTickets = board.moveTickets || (() => {})
     const moveTicket = board.moveTicket || (() => {})
-    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
+    const isDemo = isDemoProject(projectId)
 
     const movableIds = selectedIds.filter((id: string) => {
       const current = columns
@@ -383,7 +202,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const toColumnName = column.name
 
     // Persist move to database for real projects
-    if (!isDemoProject) {
+    if (!isDemo) {
       ;(async () => {
         try {
           for (const move of moves) {
@@ -437,7 +256,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       onUndo: async () => {
         boardStateMove.setColumns(projectId, beforeColumns)
         // Persist undo to database
-        if (!isDemoProject) {
+        if (!isDemo) {
           try {
             for (const move of moves) {
               await updateTicketAPI(projectId, move.ticketId, {
@@ -452,7 +271,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       onRedo: async () => {
         boardStateMove.setColumns(projectId, afterColumns)
         // Persist redo to database
-        if (!isDemoProject) {
+        if (!isDemo) {
           try {
             for (const move of moves) {
               await updateTicketAPI(projectId, move.ticketId, {
@@ -507,7 +326,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const doPriority = (priority: TicketWithRelations['priority']) => {
     const updateTicket = board.updateTicket || (() => {})
-    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
+    const isDemo = isDemoProject(projectId)
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
       []
     for (const id of selectedIds) {
@@ -522,7 +341,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     if (updates.length === 0) return
 
     // Persist to database for real projects
-    if (!isDemoProject) {
+    if (!isDemo) {
       ;(async () => {
         try {
           for (const update of updates) {
@@ -553,7 +372,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const doAssign = (userId: string | null) => {
     const user = members.find((m) => m.id === userId) || null
     const updateTicket = board.updateTicket || (() => {})
-    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
+    const isDemo = isDemoProject(projectId)
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
       []
     for (const id of selectedIds) {
@@ -574,7 +393,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     if (updates.length === 0) return
 
     // Persist to database for real projects
-    if (!isDemoProject) {
+    if (!isDemo) {
       ;(async () => {
         try {
           for (const update of updates) {
@@ -615,77 +434,17 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const ticketsToDelete = pendingDelete
     if (ticketsToDelete.length === 0) return
 
-    const removeTicket = board.removeTicket || (() => {})
-    const addTicket = board.addTicket || (() => {})
+    // Prepare tickets with column IDs for the action
+    const tickets = ticketsToDelete.map((t) => ({ ticket: t, columnId: t.columnId }))
 
-    const deletedBatch = ticketsToDelete.map((t) => ({ ticket: t, columnId: t.columnId }))
-    const ticketKeys = ticketsToDelete.map((t) => formatTicketId(t))
-
-    // Optimistic delete - remove from UI immediately
-    for (const t of ticketsToDelete) {
-      removeTicket(projectId, t.id)
-    }
-    selectionApi.clearSelection?.()
-
-    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
-
-    // For real projects, call API to delete
-    if (!isDemoProject) {
-      try {
-        // Delete all tickets via API
-        await Promise.all(
-          ticketsToDelete.map((t) =>
-            fetch(`/api/projects/${projectId}/tickets/${t.id}`, { method: 'DELETE' }),
-          ),
-        )
-      } catch (_error) {
-        // Rollback on error
-        for (const { ticket, columnId } of deletedBatch) {
-          addTicket(projectId, columnId, ticket)
-        }
-        toast.error('Failed to delete ticket(s)')
+    await deleteTickets({
+      projectId,
+      tickets,
+      onComplete: () => {
         setPendingDelete([])
         setShowDeleteConfirm(false)
-        return
-      }
-    }
-
-    const uiState = useUIStore.getState ? useUIStore.getState() : uiStore
-    const showUndo = uiState.showUndoButtons ?? true
-    const toastId = showUndoRedoToast('error', {
-      title:
-        ticketsToDelete.length === 1
-          ? 'Ticket deleted'
-          : `${ticketsToDelete.length} tickets deleted`,
-      description: ticketsToDelete.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
-      duration: 5000,
-      showUndoButtons: isDemoProject ? showUndo : false, // No undo for API deletes
-      onUndo: () => {
-        for (const { ticket, columnId } of deletedBatch) {
-          addTicket(projectId, columnId, ticket)
-        }
-        useUndoStore.getState?.()?.removeEntry?.(toastId)
       },
-      onRedo: () => {
-        for (const { ticket } of deletedBatch) {
-          removeTicket(projectId, ticket.id)
-        }
-      },
-      undoneTitle:
-        ticketsToDelete.length === 1
-          ? 'Ticket restored'
-          : `${ticketsToDelete.length} tickets restored`,
-      redoneTitle:
-        ticketsToDelete.length === 1 ? 'Delete redone' : `${ticketsToDelete.length} deletes redone`,
     })
-
-    if (isDemoProject) {
-      const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-      undoState.pushDeletedBatch(projectId, deletedBatch, toastId)
-    }
-
-    setPendingDelete([])
-    setShowDeleteConfirm(false)
   }
 
   const contextChild = useMemo(

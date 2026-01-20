@@ -390,11 +390,7 @@ export function CreateTicketDialog() {
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!isValid || isSubmitting}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
-          >
+          <Button onClick={handleSubmit} variant="primary" disabled={!isValid || isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

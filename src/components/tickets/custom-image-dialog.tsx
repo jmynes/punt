@@ -287,11 +287,7 @@ export function CustomImageDialog() {
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!src.trim() || isUploading}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
-          >
+          <Button onClick={handleSubmit} variant="primary" disabled={!src.trim() || isUploading}>
             {isEditing ? 'Update' : 'Insert'}
           </Button>
         </div>

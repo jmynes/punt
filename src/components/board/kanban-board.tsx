@@ -231,13 +231,16 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
         }
       }
 
+      // Get after state for undo
+      const afterColumns = useBoardStore.getState().getColumns(projectId)
+      const afterSnapshot = afterColumns.map((col) => ({
+        ...col,
+        tickets: col.tickets.map((t) => ({ ...t })),
+      }))
+      const showUndo = useUIStore.getState().showUndoButtons
+
       // Check for cross-column moves for undo/notification
       if (!isSameColumn) {
-        const afterColumns = useBoardStore.getState().getColumns(projectId)
-        const afterSnapshot = afterColumns.map((col) => ({
-          ...col,
-          tickets: col.tickets.map((t) => ({ ...t })),
-        }))
         const fromName = sourceColumn.name
         const toColumn = afterColumns.find((col) => col.id === targetColumnId)
         const toName = toColumn?.name || 'Unknown'
@@ -261,7 +264,6 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
             ? `Ticket moved from ${fromName}`
             : `${moves.length} tickets moved from ${fromName}`
         const { icon: StatusIcon, color: statusColor } = getStatusIcon(toName)
-        const showUndo = useUIStore.getState().showUndoButtons
 
         const toastDescription =
           moves.length === 1 ? (
@@ -297,6 +299,54 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
         useUndoStore
           .getState()
           .pushMove(projectId, moves, fromName, toName, toastId, snapshot, afterSnapshot)
+      } else {
+        // Same-column reorder - also register undo
+        const allTickets = afterColumns.flatMap((col) => col.tickets)
+        const ticketKeys = draggedIds
+          .map((id) => {
+            const ticket = allTickets.find((t) => t.id === id)
+            return ticket ? `${projectKey}-${ticket.number}` : id
+          })
+          .filter(Boolean)
+
+        const toastTitle =
+          draggedIds.length === 1 ? 'Ticket reordered' : `${draggedIds.length} tickets reordered`
+
+        const toastDescription =
+          draggedIds.length === 1
+            ? `${ticketKeys[0]} moved within ${sourceColumn.name}`
+            : `${ticketKeys.join(', ')} moved within ${sourceColumn.name}`
+
+        const toastId = showUndoRedoToast('success', {
+          title: toastTitle,
+          description: toastDescription,
+          duration: 5000,
+          showUndoButtons: showUndo,
+          onUndo: () => useBoardStore.getState().setColumns(projectId, snapshot),
+          onRedo: () => useBoardStore.getState().setColumns(projectId, afterSnapshot),
+          undoneTitle: 'Reorder undone',
+          redoneTitle: toastTitle,
+          redoneDescription: toastDescription,
+        })
+
+        // Use fake moves since it's a reorder within the same column
+        const fakeMoves = draggedIds.map((id) => ({
+          ticketId: id,
+          fromColumnId: sourceColumn.id,
+          toColumnId: sourceColumn.id,
+        }))
+
+        useUndoStore
+          .getState()
+          .pushMove(
+            projectId,
+            fakeMoves,
+            sourceColumn.name,
+            sourceColumn.name,
+            toastId,
+            snapshot,
+            afterSnapshot,
+          )
       }
 
       // Persist to API for real projects (after optimistic update)

@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import {
+  handleApiError,
+  validationError,
+  rateLimitExceeded,
+  badRequestError,
+  passwordValidationError,
+} from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { hashPassword, validatePasswordStrength } from '@/lib/password'
+import { USER_SELECT_ADMIN_LIST, USER_SELECT_CREATED } from '@/lib/prisma-selects'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const createUserSchema = z.object({
@@ -69,19 +77,7 @@ export async function GET(request: Request) {
 
     const users = await db.user.findMany({
       where,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        avatar: true,
-        isSystemAdmin: true,
-        isActive: true,
-        createdAt: true,
-        lastLoginAt: true,
-        _count: {
-          select: { projects: true },
-        },
-      },
+      select: USER_SELECT_ADMIN_LIST,
       orderBy: { [sortField]: sortDirection },
     })
 
@@ -102,15 +98,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(filteredUsers)
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      if (error.message.includes('Forbidden')) {
-        return NextResponse.json({ error: error.message }, { status: 403 })
-      }
-    }
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'list users')
   }
 }
 
@@ -125,26 +113,14 @@ export async function POST(request: Request) {
     const ip = getClientIp(request)
     const rateLimit = await checkRateLimit(ip, 'admin/users')
     if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Remaining': String(rateLimit.remaining),
-            'X-RateLimit-Reset': rateLimit.resetAt.toISOString(),
-          },
-        },
-      )
+      return rateLimitExceeded(rateLimit)
     }
 
     const body = await request.json()
     const parsed = createUserSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 },
-      )
+      return validationError(parsed)
     }
 
     const { username, email, name, password, isSystemAdmin } = parsed.data
@@ -152,10 +128,7 @@ export async function POST(request: Request) {
     // Validate password strength
     const passwordValidation = validatePasswordStrength(password)
     if (!passwordValidation.valid) {
-      return NextResponse.json(
-        { error: 'Password does not meet requirements', details: passwordValidation.errors },
-        { status: 400 },
-      )
+      return passwordValidationError(passwordValidation.errors)
     }
 
     // Check if username already exists
@@ -164,7 +137,7 @@ export async function POST(request: Request) {
     })
 
     if (existingUsername) {
-      return NextResponse.json({ error: 'Username already exists' }, { status: 400 })
+      return badRequestError('Username already exists')
     }
 
     // Check if email already exists
@@ -173,7 +146,7 @@ export async function POST(request: Request) {
     })
 
     if (existingEmail) {
-      return NextResponse.json({ error: 'Email already exists' }, { status: 400 })
+      return badRequestError('Email already exists')
     }
 
     // Hash password and create user
@@ -188,28 +161,11 @@ export async function POST(request: Request) {
         isSystemAdmin,
         isActive: true,
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        avatar: true,
-        isSystemAdmin: true,
-        isActive: true,
-        createdAt: true,
-      },
+      select: USER_SELECT_CREATED,
     })
 
     return NextResponse.json(user, { status: 201 })
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      if (error.message.includes('Forbidden')) {
-        return NextResponse.json({ error: error.message }, { status: 403 })
-      }
-    }
-    console.error('Failed to create user:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(error, 'create user')
   }
 }
