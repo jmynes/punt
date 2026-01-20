@@ -505,6 +505,12 @@ export async function createTicketAPI(
  * Delete a ticket via API (imperative, for undo/redo operations)
  */
 export async function deleteTicketAPI(projectId: string, ticketId: string): Promise<void> {
+  // Skip API call for temp IDs (pasted tickets not yet synced)
+  if (ticketId.startsWith('ticket-')) {
+    console.warn('Skipping API delete for temp ticket ID:', ticketId)
+    return
+  }
+
   const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
     method: 'DELETE',
     headers: {
@@ -513,6 +519,7 @@ export async function deleteTicketAPI(projectId: string, ticketId: string): Prom
   })
   if (!res.ok) {
     const error = await res.json()
+    console.error('Delete ticket API error:', { projectId, ticketId, error })
     throw new Error(error.error || 'Failed to delete ticket')
   }
 }
@@ -564,6 +571,13 @@ export async function updateTicketAPI(
     apiUpdates.watcherIds = updates.watchers.map((w) => w.id)
   }
 
+  // Skip API call for temp IDs (pasted tickets not yet synced)
+  if (ticketId.startsWith('ticket-')) {
+    console.warn('Skipping API update for temp ticket ID:', ticketId)
+    // Return the updates as-is for temp tickets
+    return { id: ticketId, ...updates } as TicketWithRelations
+  }
+
   const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
     method: 'PATCH',
     headers: {
@@ -574,6 +588,7 @@ export async function updateTicketAPI(
   })
   if (!res.ok) {
     const error = await res.json()
+    console.error('Update ticket API error:', { projectId, ticketId, apiUpdates, error })
     throw new Error(error.error || 'Failed to update ticket')
   }
   const responseData: TicketAPIResponse = await res.json()

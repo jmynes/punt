@@ -252,11 +252,18 @@ export async function PATCH(
       }
     }
 
-    const ticket = await db.ticket.update({
-      where: { id: ticketId },
-      data: dbUpdateData,
-      select: ticketSelect,
-    })
+    let ticket
+    try {
+      ticket = await db.ticket.update({
+        where: { id: ticketId },
+        data: dbUpdateData,
+        select: ticketSelect,
+      })
+    } catch (dbError) {
+      console.error('Prisma update error:', dbError)
+      console.error('Update data was:', JSON.stringify(dbUpdateData, null, 2))
+      throw dbError
+    }
 
     // Emit real-time event for other clients
     // Use 'ticket.moved' if column changed, otherwise 'ticket.updated'
