@@ -431,54 +431,128 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
         </div>
       )}
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeTicket ? (
           draggingTicketIds.length > 1 ? (
-            <div className="relative">
-              {(() => {
-                // Use snapshot for stable ticket references
-                const allTickets = beforeDragSnapshot.current?.flatMap((col) => col.tickets) || []
-                const draggedTickets = draggingTicketIds
-                  .map((id) => allTickets.find((t) => t.id === id))
-                  .filter(Boolean) as TicketWithRelations[]
+            (() => {
+              // Calculate how many background cards to show (max 3 behind the main card)
+              const stackCount = Math.min(draggingTicketIds.length, 4)
+              const cardWidth = 272
 
-                const visibleCount = Math.min(draggedTickets.length, 5)
+              return (
+                <div
+                  className="relative"
+                  style={{
+                    // Account for horizontal offset of fanned cards
+                    width: cardWidth + (stackCount - 1) * 10,
+                    marginLeft: (stackCount - 1) * 10,
+                  }}
+                >
+                  {/* Fanned card stack - cards behind main card, offset to the left */}
+                  {Array.from({ length: stackCount - 1 }, (_, i) => {
+                    // i=0 is furthest back, higher i is closer to front
+                    const reverseIndex = stackCount - 2 - i
+                    const offset = (reverseIndex + 1) * 10
+                    const rotation = (reverseIndex + 1) * -0.8
+                    // Amber intensity increases toward front of stack
+                    const amberOpacity = 0.06 + i * 0.02
 
-                return (
-                  <>
-                    {Array.from({ length: visibleCount - 1 }, (_, index) => {
-                      const cardIndex = index + 1
-                      const ticket = draggedTickets[cardIndex]
-                      if (!ticket) return null
-
-                      return (
+                    return (
+                      <div
+                        key={`stack-${i}`}
+                        className="absolute top-0 rounded-lg"
+                        style={{
+                          width: cardWidth,
+                          height: '100%',
+                          right: offset,
+                          transform: `rotate(${rotation}deg)`,
+                          transformOrigin: 'bottom right',
+                          zIndex: i,
+                          // Amber-tinted background matching selection state
+                          background: `linear-gradient(135deg,
+                            rgba(245, 158, 11, ${amberOpacity}) 0%,
+                            rgba(217, 119, 6, ${amberOpacity * 0.8}) 100%)`,
+                          // Amber border + outer glow
+                          border: '1px solid rgba(245, 158, 11, 0.35)',
+                          boxShadow: `
+                            0 0 0 1px rgba(245, 158, 11, 0.15),
+                            0 2px 4px rgba(0,0,0,0.3),
+                            0 4px 8px rgba(0,0,0,0.2),
+                            inset 0 1px 0 rgba(245, 158, 11, 0.1)
+                          `,
+                        }}
+                      >
+                        {/* Inner card surface */}
                         <div
-                          key={ticket.id}
-                          className="absolute [&_*]:text-transparent"
+                          className="absolute inset-[1px] rounded-[7px]"
                           style={{
-                            top: `${cardIndex * 4}px`,
-                            left: `${cardIndex * 3}px`,
-                            transform: `rotate(${cardIndex * 1.5}deg)`,
-                            zIndex: cardIndex,
-                            pointerEvents: 'none',
+                            background: `linear-gradient(180deg,
+                              rgba(39, 39, 42, 0.95) 0%,
+                              rgba(24, 24, 27, 0.98) 100%)`,
+                          }}
+                        />
+                        {/* Amber edge highlight on left side (visible part) */}
+                        <div
+                          className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full"
+                          style={{
+                            background: `linear-gradient(180deg,
+                              rgba(251, 191, 36, 0.4) 0%,
+                              rgba(245, 158, 11, 0.6) 50%,
+                              rgba(251, 191, 36, 0.4) 100%)`,
+                          }}
+                        />
+                      </div>
+                    )
+                  })}
+
+                  {/* Main card - front of the stack */}
+                  <div
+                    className="relative rounded-lg"
+                    style={{
+                      width: cardWidth,
+                      marginLeft: 'auto',
+                      zIndex: stackCount,
+                      // Amber selection ring matching the stack cards
+                      boxShadow: `
+                        0 0 0 2px rgba(245, 158, 11, 0.8),
+                        0 0 12px rgba(245, 158, 11, 0.25),
+                        0 8px 16px rgba(0,0,0,0.4),
+                        0 2px 6px rgba(0,0,0,0.3)
+                      `,
+                    }}
+                  >
+                    <KanbanCard ticket={activeTicket} projectKey={projectKey} />
+
+                    {/* Selection count badge */}
+                    <div className="absolute -top-2.5 -right-2.5 z-20">
+                      <div className="relative">
+                        {/* Glow effect */}
+                        <div className="absolute inset-0 bg-amber-500 rounded-full blur-md opacity-50" />
+                        {/* Badge */}
+                        <div
+                          className="relative text-xs font-bold rounded-full h-7 w-7 flex items-center justify-center border"
+                          style={{
+                            background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
+                            borderColor: 'rgba(251, 191, 36, 0.5)',
+                            color: '#1c1917',
+                            boxShadow: '0 2px 8px rgba(217, 119, 6, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
                           }}
                         >
-                          <KanbanCard ticket={ticket} projectKey={projectKey} />
+                          {draggingTicketIds.length}
                         </div>
-                      )
-                    })}
-                    <div className="relative rotate-3" style={{ zIndex: 10 }}>
-                      <KanbanCard ticket={activeTicket} projectKey={projectKey} />
-                      <div className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center z-20 shadow-sm">
-                        {draggingTicketIds.length}
                       </div>
                     </div>
-                  </>
-                )
-              })()}
-            </div>
+                  </div>
+                </div>
+              )
+            })()
           ) : (
-            <div className="rotate-3 scale-105">
+            <div
+              className="w-[272px]"
+              style={{
+                filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.3)) drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+              }}
+            >
               <KanbanCard ticket={activeTicket} projectKey={projectKey} />
             </div>
           )
