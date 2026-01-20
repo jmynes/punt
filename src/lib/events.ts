@@ -10,6 +10,14 @@ export type TicketEventType =
   | 'ticket.moved'
 
 /**
+ * Event types for project operations
+ */
+export type ProjectEventType =
+  | 'project.created'
+  | 'project.updated'
+  | 'project.deleted'
+
+/**
  * Payload for ticket events
  */
 export interface TicketEvent {
@@ -22,8 +30,23 @@ export interface TicketEvent {
 }
 
 /**
- * Project-scoped event emitter for real-time updates
- * Events are namespaced by project ID so clients only receive relevant updates
+ * Payload for project events
+ */
+export interface ProjectEvent {
+  type: ProjectEventType
+  projectId: string
+  userId: string
+  tabId?: string  // Optional tab ID for self-skip
+  timestamp: number
+}
+
+// Global channel for project-level events (visible to all authenticated users)
+const PROJECTS_GLOBAL_CHANNEL = 'projects:global'
+
+/**
+ * Event emitter for real-time updates
+ * - Ticket events are namespaced by project ID so clients only receive relevant updates
+ * - Project events use a global channel since all users need to see project list changes
  */
 class ProjectEventEmitter extends EventEmitter {
   constructor() {
@@ -54,6 +77,29 @@ class ProjectEventEmitter extends EventEmitter {
    */
   getProjectListenerCount(projectId: string): number {
     return this.listenerCount(`project:${projectId}`)
+  }
+
+  /**
+   * Emit a project event to all subscribers (global channel)
+   */
+  emitProjectEvent(event: ProjectEvent) {
+    this.emit(PROJECTS_GLOBAL_CHANNEL, event)
+  }
+
+  /**
+   * Subscribe to global project events (create, update, delete)
+   * Returns an unsubscribe function
+   */
+  subscribeToProjects(callback: (event: ProjectEvent) => void): () => void {
+    this.on(PROJECTS_GLOBAL_CHANNEL, callback)
+    return () => this.off(PROJECTS_GLOBAL_CHANNEL, callback)
+  }
+
+  /**
+   * Get the number of listeners for global project events
+   */
+  getProjectsListenerCount(): number {
+    return this.listenerCount(PROJECTS_GLOBAL_CHANNEL)
   }
 }
 

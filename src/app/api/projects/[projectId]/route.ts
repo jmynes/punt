@@ -7,6 +7,7 @@ import {
   requireProjectOwner,
 } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 
 const updateProjectSchema = z.object({
   name: z.string().min(1).optional(),
@@ -146,6 +147,16 @@ export async function PATCH(
     const { members, ...projectData } = project
     const role = members[0]?.role ?? 'member'
 
+    // Emit real-time event for other clients
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitProjectEvent({
+      type: 'project.updated',
+      projectId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+    })
+
     return NextResponse.json({ ...projectData, role })
   } catch (error) {
     if (error instanceof Error) {
@@ -189,6 +200,16 @@ export async function DELETE(
     // Delete project (cascades to tickets, columns, members, etc.)
     await db.project.delete({
       where: { id: projectId },
+    })
+
+    // Emit real-time event for other clients
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitProjectEvent({
+      type: 'project.deleted',
+      projectId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
     })
 
     return NextResponse.json({ success: true })

@@ -31,6 +31,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDeleteProject, useProjects } from '@/hooks/queries/use-projects'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { useRealtimeProjects } from '@/hooks/use-realtime-projects'
 import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -63,6 +64,9 @@ export function Sidebar() {
 
   // Fetch projects from API and sync with store
   useProjects()
+
+  // Subscribe to real-time project events (create/update/delete from other users)
+  useRealtimeProjects()
 
   const deleteProject = useDeleteProject()
 

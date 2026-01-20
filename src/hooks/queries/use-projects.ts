@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
+import { getTabId } from '@/hooks/use-realtime'
 import { type ProjectSummary, useProjectsStore } from '@/stores/projects-store'
 
 export const projectKeys = {
@@ -65,7 +66,10 @@ export function useCreateProject() {
     }) => {
       const res = await fetch('/api/projects', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
         body: JSON.stringify(data),
       })
       if (!res.ok) {
@@ -132,7 +136,10 @@ export function useUpdateProject() {
     }) => {
       const res = await fetch(`/api/projects/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
         body: JSON.stringify(data),
       })
       if (!res.ok) {
@@ -177,6 +184,9 @@ export function useDeleteProject() {
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/projects/${id}`, {
         method: 'DELETE',
+        headers: {
+          'X-Tab-Id': getTabId(),
+        },
       })
       if (!res.ok) {
         const error = await res.json()

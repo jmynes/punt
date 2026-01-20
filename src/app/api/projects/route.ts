@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -123,6 +124,16 @@ export async function POST(request: Request) {
         createdAt: true,
         updatedAt: true,
       },
+    })
+
+    // Emit real-time event for other clients
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitProjectEvent({
+      type: 'project.created',
+      projectId: project.id,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
     })
 
     return NextResponse.json({ ...project, role: 'owner' }, { status: 201 })
