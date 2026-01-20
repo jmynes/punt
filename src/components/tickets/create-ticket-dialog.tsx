@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useCreateTicket } from '@/hooks/queries/use-tickets'
+import { useCreateLabel, useCreateTicket, useProjectLabels, useProjectSprints } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -126,11 +126,47 @@ export function CreateTicketDialog() {
 
   // Use API mutation for real projects
   const createTicketMutation = useCreateTicket()
+  const createLabelMutation = useCreateLabel()
 
   // Get columns for the active project
   const projectId = activeProjectId || '1' // Fallback to '1' if no project is active
+  const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
   const members = useProjectMembers(projectId)
   const columns = getColumns(projectId)
+
+  // Fetch real sprints and labels for non-demo projects
+  const { data: projectSprints } = useProjectSprints(projectId, { enabled: !isDemoProject })
+  const { data: projectLabels } = useProjectLabels(projectId, { enabled: !isDemoProject })
+
+  // Use real data for non-demo projects, demo data otherwise
+  const availableSprints = isDemoProject ? DEMO_SPRINTS : (projectSprints ?? [])
+  const availableLabels = isDemoProject ? DEMO_LABELS : (projectLabels ?? [])
+
+  // Callback for creating new labels inline
+  const handleCreateLabel = useCallback(
+    async (name: string): Promise<LabelSummary | null> => {
+      if (isDemoProject) {
+        // For demo projects, create a temporary label
+        const newLabel: LabelSummary = {
+          id: `label-${Date.now()}`,
+          name,
+          color: ['#ec4899', '#06b6d4', '#8b5cf6', '#f59e0b', '#ef4444', '#14b8a6'][
+            Math.floor(Math.random() * 6)
+          ],
+        }
+        return newLabel
+      }
+
+      // For real projects, use the API
+      try {
+        const result = await createLabelMutation.mutateAsync({ projectId, name })
+        return result
+      } catch {
+        return null
+      }
+    },
+    [isDemoProject, projectId, createLabelMutation],
+  )
 
   // Apply prefill data when dialog opens with clone data
   useEffect(() => {
@@ -170,16 +206,13 @@ export function CreateTicketDialog() {
 
     // Build the labels array from selected label IDs
     const selectedLabels = formData.labelIds
-      .map((id) => DEMO_LABELS.find((l) => l.id === id))
+      .map((id) => availableLabels.find((l) => l.id === id))
       .filter((l): l is LabelSummary => l !== undefined)
 
     // Build the sprint object if selected
     const selectedSprint = formData.sprintId
-      ? DEMO_SPRINTS.find((s) => s.id === formData.sprintId) || null
+      ? availableSprints.find((s) => s.id === formData.sprintId) || null
       : null
-
-    // Check if this is a demo project
-    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
 
     if (isDemoProject) {
       // Demo project: use local state only (no API)
@@ -352,8 +385,11 @@ export function CreateTicketDialog() {
     addTicket,
     handleClose,
     projectId,
+    isDemoProject,
     getNextTicketNumber,
     createTicketMutation,
+    availableLabels,
+    availableSprints,
   ])
 
   const isValid = formData.title.trim().length > 0
@@ -373,10 +409,11 @@ export function CreateTicketDialog() {
             <TicketForm
               data={formData}
               onChange={setFormData}
-              labels={DEMO_LABELS}
-              sprints={DEMO_SPRINTS}
+              labels={availableLabels}
+              sprints={availableSprints}
               parentTickets={DEMO_PARENT_TICKETS}
               disabled={isSubmitting}
+              onCreateLabel={handleCreateLabel}
             />
           </div>
         </ScrollArea>

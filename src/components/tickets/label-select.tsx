@@ -1,7 +1,7 @@
 'use client'
 
-import { Check, ChevronsUpDown, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Check, ChevronsUpDown, Plus, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,13 +21,40 @@ interface LabelSelectProps {
   onChange: (value: string[]) => void
   labels: LabelSummary[]
   disabled?: boolean
+  projectId?: string
+  onCreateLabel?: (name: string) => Promise<LabelSummary | null>
 }
 
-export function LabelSelect({ value, onChange, labels, disabled }: LabelSelectProps) {
+export function LabelSelect({
+  value,
+  onChange,
+  labels,
+  disabled,
+  onCreateLabel,
+}: LabelSelectProps) {
   const [open, setOpen] = useState(false)
   const [popoverWidth, setPopoverWidth] = useState<number | undefined>(undefined)
+  const [searchValue, setSearchValue] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const selectedLabels = labels.filter((l) => value.includes(l.id))
+
+  // Find case-insensitive match for search value
+  const findExistingLabel = useCallback(
+    (name: string) => {
+      const normalizedName = name.toLowerCase().trim()
+      return labels.find((l) => l.name.toLowerCase() === normalizedName)
+    },
+    [labels],
+  )
+
+  // Check if the search value matches an existing label (case-insensitive)
+  const existingMatch = searchValue.trim() ? findExistingLabel(searchValue) : null
+  const canCreateLabel =
+    onCreateLabel &&
+    searchValue.trim().length > 0 &&
+    !existingMatch
 
   const toggleLabel = (labelId: string) => {
     if (value.includes(labelId)) {
@@ -41,11 +68,86 @@ export function LabelSelect({ value, onChange, labels, disabled }: LabelSelectPr
     onChange(value.filter((id) => id !== labelId))
   }
 
+  const handleCreateLabel = useCallback(
+    async (name: string) => {
+      if (!onCreateLabel || isCreating) return
+
+      const trimmedName = name.trim()
+      if (!trimmedName) return
+
+      // Check if label already exists (case-insensitive)
+      const existing = findExistingLabel(trimmedName)
+      if (existing) {
+        // Select existing label if not already selected
+        if (!value.includes(existing.id)) {
+          onChange([...value, existing.id])
+        }
+        setSearchValue('')
+        return
+      }
+
+      setIsCreating(true)
+      try {
+        const newLabel = await onCreateLabel(trimmedName)
+        if (newLabel) {
+          // Select the newly created label
+          onChange([...value, newLabel.id])
+          setSearchValue('')
+        }
+      } finally {
+        setIsCreating(false)
+      }
+    },
+    [onCreateLabel, isCreating, findExistingLabel, value, onChange],
+  )
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Handle comma separator for creating labels
+      if (e.key === ',' || e.key === 'Enter') {
+        const trimmedSearch = searchValue.trim()
+        if (trimmedSearch) {
+          e.preventDefault()
+
+          // Check for existing match first
+          const existing = findExistingLabel(trimmedSearch)
+          if (existing) {
+            if (!value.includes(existing.id)) {
+              onChange([...value, existing.id])
+            }
+            setSearchValue('')
+          } else if (onCreateLabel) {
+            // Create new label
+            handleCreateLabel(trimmedSearch)
+          }
+        }
+      }
+    },
+    [searchValue, findExistingLabel, value, onChange, onCreateLabel, handleCreateLabel],
+  )
+
   useEffect(() => {
     if (triggerRef.current) {
       setPopoverWidth(triggerRef.current.offsetWidth)
     }
   }, [])
+
+  // Focus input when popover opens
+  useEffect(() => {
+    if (open) {
+      // Small delay to ensure popover is rendered
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 0)
+    } else {
+      setSearchValue('')
+    }
+  }, [open])
+
+  // Filter labels based on search (case-insensitive)
+  const filteredLabels = searchValue.trim()
+    ? labels.filter((l) => l.name.toLowerCase().includes(searchValue.toLowerCase().trim()))
+    : labels
 
   return (
     <div className="space-y-2">
@@ -72,32 +174,58 @@ export function LabelSelect({ value, onChange, labels, disabled }: LabelSelectPr
           align="start"
           style={popoverWidth ? { width: `${popoverWidth}px` } : undefined}
         >
-          <Command className="bg-transparent">
-            <CommandInput placeholder="Search labels..." className="border-zinc-700" />
+          <Command className="bg-transparent" shouldFilter={false}>
+            <CommandInput
+              ref={inputRef}
+              placeholder={onCreateLabel ? 'Search or create labels...' : 'Search labels...'}
+              className="border-zinc-700"
+              value={searchValue}
+              onValueChange={setSearchValue}
+              onKeyDown={handleKeyDown}
+            />
             <CommandList>
-              <CommandEmpty>No labels found.</CommandEmpty>
-              <CommandGroup>
-                {labels.map((label) => (
+              {filteredLabels.length === 0 && !canCreateLabel && (
+                <CommandEmpty>No labels found.</CommandEmpty>
+              )}
+              {canCreateLabel && (
+                <CommandGroup>
                   <CommandItem
-                    key={label.id}
-                    value={label.name}
-                    onSelect={() => toggleLabel(label.id)}
+                    value={`create-${searchValue}`}
+                    onSelect={() => handleCreateLabel(searchValue)}
                     className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
+                    disabled={isCreating}
                   >
-                    <div
-                      className="mr-2 h-3 w-3 rounded-full"
-                      style={{ backgroundColor: label.color }}
-                    />
-                    <span>{label.name}</span>
-                    <Check
-                      className={cn(
-                        'ml-auto h-4 w-4',
-                        value.includes(label.id) ? 'opacity-100' : 'opacity-0',
-                      )}
-                    />
+                    <Plus className="mr-2 h-4 w-4 text-green-500" />
+                    <span>
+                      {isCreating ? 'Creating...' : `Create "${searchValue.trim()}"`}
+                    </span>
                   </CommandItem>
-                ))}
-              </CommandGroup>
+                </CommandGroup>
+              )}
+              {filteredLabels.length > 0 && (
+                <CommandGroup heading={canCreateLabel ? 'Existing labels' : undefined}>
+                  {filteredLabels.map((label) => (
+                    <CommandItem
+                      key={label.id}
+                      value={label.name}
+                      onSelect={() => toggleLabel(label.id)}
+                      className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
+                    >
+                      <div
+                        className="mr-2 h-3 w-3 rounded-full"
+                        style={{ backgroundColor: label.color }}
+                      />
+                      <span>{label.name}</span>
+                      <Check
+                        className={cn(
+                          'ml-auto h-4 w-4',
+                          value.includes(label.id) ? 'opacity-100' : 'opacity-0',
+                        )}
+                      />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>

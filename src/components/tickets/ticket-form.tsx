@@ -43,6 +43,7 @@ interface TicketFormProps {
   sprints: SprintSummary[]
   parentTickets?: ParentTicketOption[]
   disabled?: boolean
+  onCreateLabel?: (name: string) => Promise<LabelSummary | null>
 }
 
 export function TicketForm({
@@ -52,6 +53,7 @@ export function TicketForm({
   sprints,
   parentTickets = [],
   disabled,
+  onCreateLabel,
 }: TicketFormProps) {
   const currentUser = useCurrentUser()
   const { getColumns } = useBoardStore()
@@ -164,6 +166,7 @@ export function TicketForm({
           onChange={(value) => updateField('labelIds', value)}
           labels={labels}
           disabled={disabled}
+          onCreateLabel={onCreateLabel}
         />
       </div>
 

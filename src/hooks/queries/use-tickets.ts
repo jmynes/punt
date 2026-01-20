@@ -792,3 +792,43 @@ export function useProjectLabels(projectId: string, options?: { enabled?: boolea
     enabled: options?.enabled ?? true,
   })
 }
+
+interface CreateLabelInput {
+  projectId: string
+  name: string
+  color?: string
+}
+
+/**
+ * Create a new label for a project
+ * Returns existing label if one with the same name (case-insensitive) exists
+ */
+export function useCreateLabel() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ projectId, name, color }: CreateLabelInput) => {
+      const res = await fetch(`/api/projects/${projectId}/labels`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify({ name, color }),
+      })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to create label')
+      }
+      const data: LabelAPIResponse = await res.json()
+      return data
+    },
+    onSuccess: (_data, { projectId }) => {
+      // Invalidate labels query to refetch with new label
+      queryClient.invalidateQueries({ queryKey: labelKeys.byProject(projectId) })
+    },
+    onError: (err) => {
+      toast.error(err.message)
+    },
+  })
+}

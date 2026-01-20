@@ -62,7 +62,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import { useDeleteTicket, useProjectLabels, useProjectSprints, useUpdateTicket } from '@/hooks/queries/use-tickets'
+import { useCreateLabel, useDeleteTicket, useProjectLabels, useProjectSprints, useUpdateTicket } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
@@ -169,6 +169,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   // API mutations for real projects
   const updateTicketMutation = useUpdateTicket()
   const deleteTicketMutation = useDeleteTicket()
+  const createLabelMutation = useCreateLabel()
 
   // Check if this is a demo project
   const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
@@ -180,6 +181,32 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   // Use real data for non-demo projects, demo data otherwise
   const availableSprints: SprintSummary[] = isDemoProject ? DEMO_SPRINTS : (projectSprints ?? [])
   const availableLabels: LabelSummary[] = isDemoProject ? DEMO_LABELS : (projectLabels ?? [])
+
+  // Callback for creating new labels inline
+  const handleCreateLabel = useCallback(
+    async (name: string): Promise<LabelSummary | null> => {
+      if (isDemoProject) {
+        // For demo projects, create a temporary label
+        const newLabel: LabelSummary = {
+          id: `label-${Date.now()}`,
+          name,
+          color: ['#ec4899', '#06b6d4', '#8b5cf6', '#f59e0b', '#ef4444', '#14b8a6'][
+            Math.floor(Math.random() * 6)
+          ],
+        }
+        return newLabel
+      }
+
+      // For real projects, use the API
+      try {
+        const result = await createLabelMutation.mutateAsync({ projectId, name })
+        return result
+      } catch {
+        return null
+      }
+    },
+    [isDemoProject, projectId, createLabelMutation],
+  )
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showUnsavedChangesConfirm, setShowUnsavedChangesConfirm] = useState(false)
@@ -1251,6 +1278,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   value={tempLabelIds}
                   onChange={(value) => handleChange('labels', value)}
                   labels={availableLabels}
+                  onCreateLabel={handleCreateLabel}
                 />
               </div>
 

@@ -2,8 +2,8 @@
 
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ticketKeys } from '@/hooks/queries/use-tickets'
-import type { TicketEvent } from '@/lib/events'
+import { labelKeys, ticketKeys } from '@/hooks/queries/use-tickets'
+import type { LabelEvent, TicketEvent } from '@/lib/events'
 
 // Demo project IDs that don't need real-time sync
 const DEMO_PROJECT_IDS = ['1', '2', '3']
@@ -37,7 +37,7 @@ interface ConnectedEvent {
   userId: string
 }
 
-type SSEEvent = TicketEvent | ConnectedEvent
+type SSEEvent = TicketEvent | LabelEvent | ConnectedEvent
 
 /**
  * Hook for real-time synchronization via Server-Sent Events
@@ -102,8 +102,12 @@ export function useRealtime(projectId: string, enabled = true): RealtimeStatus {
         // Use tabId instead of userId to allow same user to sync across tabs
         if (data.tabId && data.tabId === tabId) return
 
-        // Invalidate React Query cache to trigger refetch
-        queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+        // Invalidate React Query cache to trigger refetch based on event type
+        if (data.type.startsWith('ticket.')) {
+          queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+        } else if (data.type.startsWith('label.')) {
+          queryClient.invalidateQueries({ queryKey: labelKeys.byProject(projectId) })
+        }
       } catch {
         // Ignore parse errors (could be keepalive comments)
       }
