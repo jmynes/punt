@@ -1,12 +1,13 @@
 'use client'
 
-import { Plus } from 'lucide-react'
+import { Loader2, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef } from 'react'
 import { BacklogFilters } from '@/components/backlog'
 import { KanbanBoard } from '@/components/board'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
+import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { getDemoData } from '@/lib/demo-data'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
@@ -14,6 +15,9 @@ import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets } from '@/types'
+
+// Demo project IDs that should get demo data instead of API
+const DEMO_PROJECT_IDS = ['1', '2', '3']
 
 export default function BoardPage() {
   const params = useParams()
@@ -38,6 +42,23 @@ export default function BoardPage() {
     filterByDueDate,
     searchQuery,
   } = useBacklogStore()
+
+  // Determine if this is a demo project or a real project
+  const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
+
+  // Fetch columns from API for real projects (creates defaults if none exist)
+  const {
+    isLoading: columnsLoading,
+    error: columnsError,
+    isSuccess: columnsLoaded,
+  } = useColumnsByProject(projectId, {
+    enabled: !isDemoProject && _hasHydrated,
+  })
+
+  // Fetch tickets from API for real projects (only after columns are loaded)
+  const { isLoading: ticketsLoading, error: ticketsError } = useTicketsByProject(projectId, {
+    enabled: !isDemoProject && _hasHydrated && columnsLoaded,
+  })
 
   // Get columns for this project
   const columns = getColumns(projectId)
@@ -150,9 +171,6 @@ export default function BoardPage() {
     [activeTicketId, allTickets],
   )
 
-  // Demo project IDs that should get demo data
-  const DEMO_PROJECT_IDS = ['1', '2', '3']
-
   // Track which projects have been initialized to prevent re-running
   const initializedProjectsRef = useRef<Set<string>>(new Set())
 
@@ -166,7 +184,7 @@ export default function BoardPage() {
     }
 
     // Only load demo data for the original demo projects, not user-created ones
-    if (DEMO_PROJECT_IDS.includes(projectId)) {
+    if (isDemoProject) {
       // Get columns fresh inside effect to avoid dependency issues
       const currentColumns = getColumns(projectId)
       const hasTickets = currentColumns.some((col) => col.tickets.length > 0)
@@ -179,7 +197,7 @@ export default function BoardPage() {
     setActiveProjectId(projectId)
     // Note: getColumns is intentionally not in deps - we check fresh data inside
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [_hasHydrated, projectId, setActiveProjectId, setColumns])
+  }, [_hasHydrated, projectId, isDemoProject, setActiveProjectId, setColumns])
 
   // Redirect to dashboard if project doesn't exist after hydration
   useEffect(() => {
@@ -191,6 +209,29 @@ export default function BoardPage() {
   // Show nothing while redirecting
   if (!projectsLoading && !project) {
     return null
+  }
+
+  // Show loading state for real projects while fetching columns/tickets
+  if (!isDemoProject && (columnsLoading || ticketsLoading)) {
+    return (
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        <p className="mt-4 text-sm text-zinc-500">
+          {columnsLoading ? 'Loading board...' : 'Loading tickets...'}
+        </p>
+      </div>
+    )
+  }
+
+  // Show error state if columns or ticket fetch failed
+  if (!isDemoProject && (columnsError || ticketsError)) {
+    const error = columnsError || ticketsError
+    return (
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
+        <p className="text-sm text-red-400">Failed to load board</p>
+        <p className="mt-2 text-xs text-zinc-500">{error?.message}</p>
+      </div>
+    )
   }
 
   return (

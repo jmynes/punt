@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { useCreateTicket } from '@/hooks/queries/use-tickets'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
@@ -26,6 +27,9 @@ import {
   type TicketWithRelations,
 } from '@/types'
 import { TicketForm } from './ticket-form'
+
+// Demo project IDs that use local state instead of API
+const DEMO_PROJECT_IDS = ['1', '2', '3']
 
 // Demo labels - these should be CATEGORIES, not types or priorities
 // Good labels: area/component, team, customer-facing, technical debt, etc.
@@ -121,6 +125,9 @@ export function CreateTicketDialog() {
   const [formData, setFormData] = useState<TicketFormData>(DEFAULT_TICKET_FORM)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Use API mutation for real projects
+  const createTicketMutation = useCreateTicket()
+
   // Get columns for the active project
   const projectId = activeProjectId || '1' // Fallback to '1' if no project is active
   const columns = getColumns(projectId)
@@ -150,9 +157,6 @@ export function CreateTicketDialog() {
 
     setIsSubmitting(true)
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
     // Determine target column: user-selected in form, else "To Do", else first column
     const targetColumn =
       (formData.columnId && columns.find((c) => c.id === formData.columnId)) ||
@@ -164,10 +168,6 @@ export function CreateTicketDialog() {
       return
     }
 
-    // Generate unique ID and ticket number
-    const ticketId = `ticket-${Date.now()}`
-    const ticketNumber = getNextTicketNumber(projectId)
-
     // Build the labels array from selected label IDs
     const selectedLabels = formData.labelIds
       .map((id) => DEMO_LABELS.find((l) => l.id === id))
@@ -178,87 +178,169 @@ export function CreateTicketDialog() {
       ? DEMO_SPRINTS.find((s) => s.id === formData.sprintId) || null
       : null
 
-    // Create the full ticket object
-    const newTicket: TicketWithRelations = {
-      id: ticketId,
-      number: ticketNumber,
-      title: formData.title.trim(),
-      description: formData.description || null,
-      type: formData.type,
-      priority: formData.priority,
-      order: targetColumn.tickets.length, // Add to end of column
-      storyPoints: formData.storyPoints,
-      estimate: formData.estimate || null,
-      startDate: formData.startDate,
-      dueDate: formData.dueDate,
-      environment: formData.environment || null,
-      affectedVersion: formData.affectedVersion || null,
-      fixVersion: formData.fixVersion || null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      projectId,
-      columnId: targetColumn.id,
-      assigneeId: formData.assigneeId,
-      creatorId: currentUser.id,
-      sprintId: formData.sprintId,
-      parentId: formData.parentId,
-      assignee: formData.assigneeId
-        ? members.find((m) => m.id === formData.assigneeId) || null
-        : null,
-      creator: currentUser,
-      sprint: selectedSprint,
-      labels: selectedLabels,
-      watchers: [],
-      _count: {
-        comments: 0,
-        subtasks: 0,
-        attachments: formData.attachments.length,
-      },
+    // Check if this is a demo project
+    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
+
+    if (isDemoProject) {
+      // Demo project: use local state only (no API)
+      // Generate unique ID and ticket number
+      const ticketId = `ticket-${Date.now()}`
+      const ticketNumber = getNextTicketNumber(projectId)
+
+      // Create the full ticket object
+      const newTicket: TicketWithRelations = {
+        id: ticketId,
+        number: ticketNumber,
+        title: formData.title.trim(),
+        description: formData.description || null,
+        type: formData.type,
+        priority: formData.priority,
+        order: targetColumn.tickets.length, // Add to end of column
+        storyPoints: formData.storyPoints,
+        estimate: formData.estimate || null,
+        startDate: formData.startDate,
+        dueDate: formData.dueDate,
+        environment: formData.environment || null,
+        affectedVersion: formData.affectedVersion || null,
+        fixVersion: formData.fixVersion || null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        projectId,
+        columnId: targetColumn.id,
+        assigneeId: formData.assigneeId,
+        creatorId: currentUser.id,
+        sprintId: formData.sprintId,
+        parentId: formData.parentId,
+        assignee: formData.assigneeId
+          ? members.find((m) => m.id === formData.assigneeId) || null
+          : null,
+        creator: currentUser,
+        sprint: selectedSprint,
+        labels: selectedLabels,
+        watchers: [],
+        _count: {
+          comments: 0,
+          subtasks: 0,
+          attachments: formData.attachments.length,
+        },
+      }
+
+      // Add ticket to the board store
+      addTicket(projectId, targetColumn.id, newTicket)
+
+      // Show success toast with undo option
+      const showUndo = useUIStore.getState().showUndoButtons
+      const { removeTicket } = useBoardStore.getState()
+      const ticketKey = formatTicketId(newTicket)
+
+      let currentId: string | number | undefined
+
+      const toastId = showUndoRedoToast('success', {
+        title: 'Ticket created',
+        description: ticketKey,
+        duration: 5000,
+        showUndoButtons: showUndo,
+        onUndo: (id) => {
+          useUndoStore.getState().undoByToastId(id)
+          removeTicket(projectId, newTicket.id)
+        },
+        onUndoneToast: (newId) => {
+          if (currentId) {
+            useUndoStore.getState().updateRedoToastId(currentId, newId)
+            currentId = newId
+          }
+        },
+        onRedo: (id) => {
+          useUndoStore.getState().redoByToastId(id)
+          useBoardStore.getState().addTicket(projectId, targetColumn.id, newTicket)
+        },
+        onRedoneToast: (newId) => {
+          if (currentId) {
+            useUndoStore.getState().updateUndoToastId(currentId, newId)
+            currentId = newId
+          }
+        },
+        undoneTitle: 'Ticket creation undone',
+        redoneTitle: 'Ticket created',
+      })
+
+      currentId = toastId
+
+      // Push to undo stack
+      useUndoStore.getState().pushTicketCreate(projectId, newTicket, targetColumn.id, toastId)
+    } else {
+      // Real project: use API mutation
+      // Create temp ticket for optimistic update (will be replaced by server response)
+      const tempId = `temp-${Date.now()}`
+      const tempNumber = getNextTicketNumber(projectId)
+
+      const tempTicket: TicketWithRelations = {
+        id: tempId,
+        number: tempNumber,
+        title: formData.title.trim(),
+        description: formData.description || null,
+        type: formData.type,
+        priority: formData.priority,
+        order: targetColumn.tickets.length,
+        storyPoints: formData.storyPoints,
+        estimate: formData.estimate || null,
+        startDate: formData.startDate,
+        dueDate: formData.dueDate,
+        environment: formData.environment || null,
+        affectedVersion: formData.affectedVersion || null,
+        fixVersion: formData.fixVersion || null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        projectId,
+        columnId: targetColumn.id,
+        assigneeId: formData.assigneeId,
+        creatorId: currentUser.id,
+        sprintId: formData.sprintId,
+        parentId: formData.parentId,
+        assignee: formData.assigneeId
+          ? members.find((m) => m.id === formData.assigneeId) || null
+          : null,
+        creator: currentUser,
+        sprint: selectedSprint,
+        labels: selectedLabels,
+        watchers: [],
+        _count: {
+          comments: 0,
+          subtasks: 0,
+          attachments: formData.attachments.length,
+        },
+      }
+
+      try {
+        await createTicketMutation.mutateAsync({
+          projectId,
+          columnId: targetColumn.id,
+          data: {
+            title: formData.title.trim(),
+            description: formData.description || undefined,
+            type: formData.type,
+            priority: formData.priority,
+            assigneeId: formData.assigneeId,
+            sprintId: formData.sprintId,
+            parentId: formData.parentId,
+            storyPoints: formData.storyPoints,
+            estimate: formData.estimate || undefined,
+            startDate: formData.startDate,
+            dueDate: formData.dueDate,
+            environment: formData.environment || undefined,
+            affectedVersion: formData.affectedVersion || undefined,
+            fixVersion: formData.fixVersion || undefined,
+            labelIds: formData.labelIds,
+            watcherIds: formData.watcherIds,
+          },
+          tempTicket,
+        })
+      } catch {
+        // Error is already handled by mutation's onError
+        setIsSubmitting(false)
+        return
+      }
     }
-
-    // Add ticket to the board store
-    addTicket(projectId, targetColumn.id, newTicket)
-
-    // Show success toast with undo option
-    const showUndo = useUIStore.getState().showUndoButtons
-    const { removeTicket } = useBoardStore.getState()
-    const ticketKey = formatTicketId(newTicket)
-
-    let currentId: string | number | undefined
-
-    const toastId = showUndoRedoToast('success', {
-      title: 'Ticket created',
-      description: ticketKey,
-      duration: 5000,
-      showUndoButtons: showUndo,
-      onUndo: (id) => {
-        useUndoStore.getState().undoByToastId(id)
-        removeTicket(projectId, newTicket.id)
-      },
-      onUndoneToast: (newId) => {
-        if (currentId) {
-          useUndoStore.getState().updateRedoToastId(currentId, newId)
-          currentId = newId
-        }
-      },
-      onRedo: (id) => {
-        useUndoStore.getState().redoByToastId(id)
-        useBoardStore.getState().addTicket(projectId, targetColumn.id, newTicket)
-      },
-      onRedoneToast: (newId) => {
-        if (currentId) {
-          useUndoStore.getState().updateUndoToastId(currentId, newId)
-          currentId = newId
-        }
-      },
-      undoneTitle: 'Ticket creation undone',
-      redoneTitle: 'Ticket created',
-    })
-
-    currentId = toastId
-
-    // Push to undo stack
-    useUndoStore.getState().pushTicketCreate(projectId, newTicket, targetColumn.id, toastId)
 
     setIsSubmitting(false)
     handleClose()
@@ -271,6 +353,7 @@ export function CreateTicketDialog() {
     handleClose,
     projectId,
     getNextTicketNumber,
+    createTicketMutation,
   ])
 
   const isValid = formData.title.trim().length > 0

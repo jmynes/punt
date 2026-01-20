@@ -941,7 +941,9 @@ export function UserList() {
             ) : (
               <Square className="h-4 w-4" />
             )}
-            <span>{selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all other Users'}</span>
+            <span>
+              {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all other Users'}
+            </span>
           </button>
           {selectedIds.size > 0 && (
             <button

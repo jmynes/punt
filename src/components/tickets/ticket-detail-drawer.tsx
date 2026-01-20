@@ -62,6 +62,7 @@ import {
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { useUpdateTicket, useDeleteTicket } from '@/hooks/queries/use-tickets'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -112,6 +113,9 @@ interface TicketDetailDrawerProps {
   onClose: () => void
 }
 
+// Demo project IDs that use local state instead of API
+const DEMO_PROJECT_IDS = ['1', '2', '3']
+
 // Demo labels - same as in create-ticket-dialog
 const DEMO_LABELS: LabelSummary[] = [
   { id: 'label-1', name: 'frontend', color: '#ec4899' },
@@ -160,6 +164,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const { openCreateTicketWithData } = useUIStore()
   const currentUser = useCurrentUser()
   const members = useProjectMembers()
+
+  // API mutations for real projects
+  const updateTicketMutation = useUpdateTicket()
+  const deleteTicketMutation = useDeleteTicket()
+
+  // Check if this is a demo project
+  const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showUnsavedChangesConfirm, setShowUnsavedChangesConfirm] = useState(false)
@@ -433,35 +444,47 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     }
 
     const updatedTicket = { ...oldTicket, ...updates }
-    updateTicket(projectId, ticket.id, updates)
 
-    // Add to undo stack
-    const { pushUpdate } = useUndoStore.getState()
-    const showUndo = useUIStore.getState().showUndoButtons
-    const ticketKey = formatTicketId(ticket)
+    if (isDemoProject) {
+      // Demo project: use local state only
+      updateTicket(projectId, ticket.id, updates)
 
-    const toastId = showUndoRedoToast('success', {
-      title: 'Ticket details updated',
-      description: ticketKey,
-      duration: 3000,
-      showUndoButtons: showUndo,
-      onUndo: (id) => {
-        useUndoStore.getState().undoByToastId(id)
-        updateTicket(projectId, ticket.id, oldTicket)
-      },
-      onRedo: (id) => {
-        useUndoStore.getState().redoByToastId(id)
-        updateTicket(projectId, ticket.id, updates)
-      },
-      undoneTitle: 'Update undone',
-      redoneTitle: 'Update redone',
-    })
+      // Add to undo stack
+      const { pushUpdate } = useUndoStore.getState()
+      const showUndo = useUIStore.getState().showUndoButtons
+      const ticketKey = formatTicketId(ticket)
 
-    pushUpdate(
-      projectId,
-      [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }],
-      toastId,
-    )
+      const toastId = showUndoRedoToast('success', {
+        title: 'Ticket details updated',
+        description: ticketKey,
+        duration: 3000,
+        showUndoButtons: showUndo,
+        onUndo: (id) => {
+          useUndoStore.getState().undoByToastId(id)
+          updateTicket(projectId, ticket.id, oldTicket)
+        },
+        onRedo: (id) => {
+          useUndoStore.getState().redoByToastId(id)
+          updateTicket(projectId, ticket.id, updates)
+        },
+        undoneTitle: 'Update undone',
+        redoneTitle: 'Update redone',
+      })
+
+      pushUpdate(
+        projectId,
+        [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }],
+        toastId,
+      )
+    } else {
+      // Real project: use API mutation (optimistic update is handled by the mutation)
+      updateTicketMutation.mutate({
+        projectId,
+        ticketId: ticket.id,
+        updates,
+        previousTicket: oldTicket,
+      })
+    }
   }, [
     ticket,
     hasUnsavedChanges,
@@ -483,6 +506,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     tempLabelIds,
     members,
     updateTicket,
+    isDemoProject,
+    projectId,
+    updateTicketMutation,
   ])
 
   // Focus delete button when dialog opens
@@ -636,27 +662,40 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     const columnId = ticket.columnId
     const deletedTicket = { ...ticket }
 
-    removeTicket(projectId, ticket.id)
     setShowDeleteConfirm(false)
 
-    const showUndo = useUIStore.getState().showUndoButtons
-    const toastId = showUndoRedoToast('error', {
-      title: 'Ticket deleted',
-      description: ticketKey,
-      duration: 5000,
-      showUndoButtons: showUndo,
-      onUndo: () => {
-        addTicket(projectId, columnId, deletedTicket)
-        removeDeleted(toastId)
-      },
-      onRedo: () => {
-        removeTicket(projectId, deletedTicket.id)
-      },
-      undoneTitle: 'Ticket restored',
-      redoneTitle: 'Delete redone',
-    })
+    if (isDemoProject) {
+      // Demo project: use local state only
+      removeTicket(projectId, ticket.id)
 
-    pushDeleted(projectId, deletedTicket, columnId, toastId)
+      const showUndo = useUIStore.getState().showUndoButtons
+      const toastId = showUndoRedoToast('error', {
+        title: 'Ticket deleted',
+        description: ticketKey,
+        duration: 5000,
+        showUndoButtons: showUndo,
+        onUndo: () => {
+          addTicket(projectId, columnId, deletedTicket)
+          removeDeleted(toastId)
+        },
+        onRedo: () => {
+          removeTicket(projectId, deletedTicket.id)
+        },
+        undoneTitle: 'Ticket restored',
+        redoneTitle: 'Delete redone',
+      })
+
+      pushDeleted(projectId, deletedTicket, columnId, toastId)
+    } else {
+      // Real project: use API mutation (optimistic delete is handled by the mutation)
+      deleteTicketMutation.mutate({
+        projectId,
+        ticketId: ticket.id,
+        columnId,
+        deletedTicket,
+      })
+    }
+
     onClose()
   }
 

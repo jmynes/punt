@@ -58,6 +58,9 @@ interface BoardState {
   getColumns: (projectId: string) => ColumnWithTickets[]
   setColumns: (projectId: string, columns: ColumnWithTickets[]) => void
 
+  // Sync tickets from API response (organizes by column)
+  syncTicketsFromAPI: (projectId: string, tickets: TicketWithRelations[]) => void
+
   // Hydration state
   _hasHydrated: boolean
   setHasHydrated: (value: boolean) => void
@@ -127,6 +130,41 @@ export const useBoardStore = create<BoardState>()(
         set((state) => ({
           projects: { ...state.projects, [projectId]: columns },
         })),
+
+      syncTicketsFromAPI: (projectId: string, tickets: TicketWithRelations[]) =>
+        set((state) => {
+          logger.debug('Syncing tickets from API', { projectId, ticketCount: tickets.length })
+
+          // Get existing columns or create defaults
+          const existingColumns = state.projects[projectId]
+          const columns =
+            existingColumns && isValidColumns(existingColumns)
+              ? existingColumns
+              : createDefaultColumns(projectId)
+
+          // Group tickets by columnId
+          const ticketsByColumn = new Map<string, TicketWithRelations[]>()
+          for (const ticket of tickets) {
+            const columnTickets = ticketsByColumn.get(ticket.columnId) || []
+            columnTickets.push(ticket)
+            ticketsByColumn.set(ticket.columnId, columnTickets)
+          }
+
+          // Update columns with their tickets, preserving column order
+          const newColumns = columns.map((column) => {
+            const columnTickets = ticketsByColumn.get(column.id) || []
+            // Sort tickets by order
+            columnTickets.sort((a, b) => a.order - b.order)
+            return {
+              ...column,
+              tickets: columnTickets,
+            }
+          })
+
+          return {
+            projects: { ...state.projects, [projectId]: newColumns },
+          }
+        }),
 
       // Hydration state
       _hasHydrated: false,

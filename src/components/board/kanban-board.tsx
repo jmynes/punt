@@ -14,6 +14,7 @@ import {
 import { Layers } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { EmptyState } from '@/components/common/empty-state'
+import { useMoveTicket, useMoveTickets } from '@/hooks/queries/use-tickets'
 import { getStatusIcon } from '@/lib/status-icons'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
@@ -23,6 +24,9 @@ import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { KanbanCard } from './kanban-card'
 import { KanbanColumn } from './kanban-column'
+
+// Demo project IDs that use local state instead of API
+const DEMO_PROJECT_IDS = ['1', '2', '3']
 
 interface KanbanBoardProps {
   projectKey: string
@@ -34,6 +38,13 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
   const { getColumns, moveTicket, moveTickets, reorderTicket, reorderTickets, _hasHydrated } =
     useBoardStore()
   const { setCreateTicketOpen } = useUIStore()
+
+  // API mutations for real projects
+  const moveTicketMutation = useMoveTicket()
+  const moveTicketsMutation = useMoveTickets()
+
+  // Check if this is a demo project
+  const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
 
   // Get unfiltered columns for drag/drop operations (need full data for snapshots)
   const columns = getColumns(projectId)
@@ -202,7 +213,7 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
       const isSameColumn = sourceColumn.id === targetColumnId
       const isSingleDrag = draggedIds.length === 1
 
-      // Apply the move NOW (only on drop)
+      // Apply the move NOW (only on drop) - optimistic update
       if (isSingleDrag) {
         if (isSameColumn) {
           reorderTicket(projectId, targetColumnId, draggedIds[0], insertIndex)
@@ -288,6 +299,30 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
           .pushMove(projectId, moves, fromName, toName, toastId, snapshot, afterSnapshot)
       }
 
+      // Persist to API for real projects (after optimistic update)
+      if (!isDemoProject) {
+        if (isSingleDrag) {
+          // Single ticket move/reorder
+          moveTicketMutation.mutate({
+            projectId,
+            ticketId: draggedIds[0],
+            fromColumnId: sourceColumn.id,
+            toColumnId: targetColumnId,
+            newOrder: insertIndex,
+            previousColumns: snapshot,
+          })
+        } else {
+          // Multiple tickets move
+          moveTicketsMutation.mutate({
+            projectId,
+            ticketIds: draggedIds,
+            toColumnId: targetColumnId,
+            newOrder: insertIndex,
+            previousColumns: snapshot,
+          })
+        }
+      }
+
       // Cleanup
       setActiveTicket(null)
       setDraggingTicketIds([])
@@ -300,7 +335,18 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
         useSelectionStore.getState().clearSelection()
       }
     },
-    [insertPosition, moveTicket, moveTickets, projectId, projectKey, reorderTicket, reorderTickets],
+    [
+      insertPosition,
+      moveTicket,
+      moveTickets,
+      projectId,
+      projectKey,
+      reorderTicket,
+      reorderTickets,
+      isDemoProject,
+      moveTicketMutation,
+      moveTicketsMutation,
+    ],
   )
 
   const handleBoardClick = useCallback((e: React.MouseEvent) => {
