@@ -692,8 +692,26 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     setEditingField(null)
   }
 
-  const handleCancelEdit = () => {
-    // Reset temp values to current ticket values
+  // Cancel editing a single field - only resets that field's temp value
+  const handleCancelFieldEdit = (field: string) => {
+    if (!ticket) return
+
+    switch (field) {
+      case 'title':
+        setTempTitle(ticket.title)
+        break
+      case 'description':
+        setTempDescription(ticket.description || '')
+        break
+      case 'estimate':
+        setTempEstimate(ticket.estimate || '')
+        break
+    }
+    setEditingField(null)
+  }
+
+  // Discard ALL pending changes - resets all temp values to original ticket values
+  const handleDiscardAllChanges = () => {
     if (ticket) {
       setTempTitle(ticket.title)
       setTempDescription(ticket.description || '')
@@ -856,7 +874,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                         if (e.key === 'Enter') {
                           handleSaveField('title')
                         } else if (e.key === 'Escape') {
-                          handleCancelEdit()
+                          handleCancelFieldEdit('title')
                         }
                       }}
                     />
@@ -864,7 +882,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       <Button size="sm" variant="primary" onClick={() => handleSaveField('title')}>
                         Save
                       </Button>
-                      <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                      <Button size="sm" variant="outline" onClick={() => handleCancelFieldEdit('title')}>
                         Cancel
                       </Button>
                     </div>
@@ -1047,7 +1065,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     <Button size="sm" variant="primary" onClick={() => handleSaveField('estimate')}>
                       Save
                     </Button>
-                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                    <Button size="sm" variant="outline" onClick={() => handleCancelFieldEdit('estimate')}>
                       Cancel
                     </Button>
                   </div>
@@ -1081,7 +1099,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       >
                         Save
                       </Button>
-                      <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                      <Button size="sm" variant="outline" onClick={() => handleCancelFieldEdit('description')}>
                         Cancel
                       </Button>
                     </div>
@@ -1375,7 +1393,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleCancelEdit}
+                    onClick={handleDiscardAllChanges}
                     className="text-orange-400 hover:text-orange-300 hover:bg-orange-900/20 hover:border-orange-800"
                   >
                     <RotateCcw className="h-4 w-4 mr-1" />
