@@ -22,10 +22,11 @@ model User {
   lastLoginAt DateTime?
 
   // Auth fields
-  passwordHash  String?
-  emailVerified DateTime?
-  isSystemAdmin Boolean  @default(false)
-  isActive      Boolean  @default(true)
+  passwordHash      String?
+  passwordChangedAt DateTime? // For session invalidation after password change
+  emailVerified     DateTime?
+  isSystemAdmin     Boolean   @default(false)
+  isActive          Boolean   @default(true)
 
   // Ticket relations
   assignedTickets  Ticket[]        @relation("Assignee")

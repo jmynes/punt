@@ -71,11 +71,14 @@ export async function PATCH(request: Request) {
       )
     }
 
-    // Hash and update password
+    // Hash and update password, set passwordChangedAt to invalidate existing sessions
     const newPasswordHash = await hashPassword(newPassword)
     await db.user.update({
       where: { id: currentUser.id },
-      data: { passwordHash: newPasswordHash },
+      data: {
+        passwordHash: newPasswordHash,
+        passwordChangedAt: new Date(),
+      },
     })
 
     return NextResponse.json({ success: true, message: 'Password changed successfully' })
