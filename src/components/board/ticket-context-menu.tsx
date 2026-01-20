@@ -14,6 +14,7 @@ import { cloneElement, useCallback, useEffect, useMemo, useRef, useState } from 
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { PriorityBadge } from '@/components/common/priority-badge'
+import { batchCreateTicketsAPI, batchDeleteTicketsAPI, updateTicketAPI } from '@/hooks/queries/use-tickets'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -170,6 +171,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }
     if (ticketsToPaste.length === 0) return
 
+    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
     const newTickets: Array<{ ticket: TicketWithRelations; columnId: string }> = []
     const getNext = board.getNextTicketNumber || (() => Date.now())
     const addTicket = board.addTicket || (() => {})
@@ -185,7 +187,64 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         updatedAt: new Date(),
       }
       newTickets.push({ ticket: newTicket, columnId })
+      // Optimistic add
       addTicket(projectId, columnId, newTicket)
+    }
+
+    // For real projects, persist to database
+    if (!isDemoProject) {
+      ;(async () => {
+        try {
+          const ticketsToCreate = newTickets.map(({ ticket, columnId }) => ({
+            tempId: ticket.id,
+            columnId,
+            ticketData: {
+              title: ticket.title,
+              description: ticket.description,
+              type: ticket.type,
+              priority: ticket.priority,
+              storyPoints: ticket.storyPoints,
+              estimate: ticket.estimate,
+              startDate: ticket.startDate,
+              dueDate: ticket.dueDate,
+              environment: ticket.environment,
+              affectedVersion: ticket.affectedVersion,
+              fixVersion: ticket.fixVersion,
+              assigneeId: ticket.assigneeId,
+              sprintId: ticket.sprintId,
+              parentId: ticket.parentId,
+              labels: ticket.labels,
+              watchers: ticket.watchers,
+            },
+          }))
+
+          const serverTickets = await batchCreateTicketsAPI(projectId, ticketsToCreate)
+
+          // Replace temp tickets with server tickets
+          const boardState = useBoardStore.getState ? useBoardStore.getState() : board
+          for (const { ticket: tempTicket, columnId } of newTickets) {
+            const serverTicket = serverTickets.get(tempTicket.id)
+            if (serverTicket) {
+              boardState.removeTicket?.(projectId, tempTicket.id)
+              boardState.addTicket?.(projectId, columnId, serverTicket)
+              // Update selection if this ticket was selected
+              const sel = useSelectionStore.getState ? useSelectionStore.getState() : selectionApi
+              if (sel.isSelected?.(tempTicket.id)) {
+                sel.toggleTicket?.(tempTicket.id)
+                sel.toggleTicket?.(serverTicket.id)
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to persist pasted tickets:', error)
+          // Remove optimistic tickets on failure
+          const boardState = useBoardStore.getState ? useBoardStore.getState() : board
+          for (const { ticket } of newTickets) {
+            boardState.removeTicket?.(projectId, ticket.id)
+          }
+          toast.error('Failed to paste tickets')
+        }
+      })()
     }
 
     const uiState = useUIStore.getState ? useUIStore.getState() : uiStore
@@ -199,11 +258,74 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       description: newTickets.map(({ ticket }) => formatTicketId(ticket)).join(', '),
       duration: 5000,
       showUndoButtons: showUndo,
-      onUndo: () => {
-        for (const { ticket: t } of newTickets) removeTicket(projectId, t.id)
+      onUndo: async () => {
+        const boardState = useBoardStore.getState ? useBoardStore.getState() : board
+        const ticketIdsToDelete: string[] = []
+        for (const { ticket } of newTickets) {
+          const cols = boardState.getColumns?.(projectId) || columns
+          const foundTicket = cols.flatMap((c: ColumnWithTickets) => c.tickets).find(
+            (t: TicketWithRelations) => t.id === ticket.id || t.title === ticket.title
+          )
+          if (foundTicket) {
+            boardState.removeTicket?.(projectId, foundTicket.id)
+            ticketIdsToDelete.push(foundTicket.id)
+          }
+        }
+        if (!isDemoProject && ticketIdsToDelete.length > 0) {
+          batchDeleteTicketsAPI(projectId, ticketIdsToDelete).catch((err) => {
+            console.error('Failed to delete pasted tickets on undo:', err)
+          })
+        }
       },
-      onRedo: () => {
-        for (const { ticket: t, columnId } of newTickets) addTicketAgain(projectId, columnId, t)
+      onRedo: async () => {
+        const boardState = useBoardStore.getState ? useBoardStore.getState() : board
+        const redoTickets: Array<{ ticket: TicketWithRelations; columnId: string }> = []
+        for (const { ticket, columnId } of newTickets) {
+          const newTicket: TicketWithRelations = {
+            ...ticket,
+            id: `ticket-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }
+          boardState.addTicket?.(projectId, columnId, newTicket)
+          redoTickets.push({ ticket: newTicket, columnId })
+        }
+        if (!isDemoProject) {
+          try {
+            const ticketsToCreate = redoTickets.map(({ ticket, columnId }) => ({
+              tempId: ticket.id,
+              columnId,
+              ticketData: {
+                title: ticket.title,
+                description: ticket.description,
+                type: ticket.type,
+                priority: ticket.priority,
+                storyPoints: ticket.storyPoints,
+                estimate: ticket.estimate,
+                startDate: ticket.startDate,
+                dueDate: ticket.dueDate,
+                environment: ticket.environment,
+                affectedVersion: ticket.affectedVersion,
+                fixVersion: ticket.fixVersion,
+                assigneeId: ticket.assigneeId,
+                sprintId: ticket.sprintId,
+                parentId: ticket.parentId,
+                labels: ticket.labels,
+                watchers: ticket.watchers,
+              },
+            }))
+            const serverTickets = await batchCreateTicketsAPI(projectId, ticketsToCreate)
+            for (const { ticket: tempTicket, columnId } of redoTickets) {
+              const serverTicket = serverTickets.get(tempTicket.id)
+              if (serverTicket) {
+                boardState.removeTicket?.(projectId, tempTicket.id)
+                boardState.addTicket?.(projectId, columnId, serverTicket)
+              }
+            }
+          } catch (err) {
+            console.error('Failed to recreate tickets on redo:', err)
+          }
+        }
       },
       undoneTitle: 'Paste undone',
       redoneTitle: 'Paste redone',
@@ -224,6 +346,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const toOrder = column.tickets.length
     const moveTickets = board.moveTickets || (() => {})
     const moveTicket = board.moveTicket || (() => {})
+    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
 
     const movableIds = selectedIds.filter((id: string) => {
       const current = columns
@@ -264,6 +387,21 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         : 'Multiple'
     const toColumnName = column.name
 
+    // Persist move to database for real projects
+    if (!isDemoProject) {
+      ;(async () => {
+        try {
+          for (const move of moves) {
+            await updateTicketAPI(projectId, move.ticketId, {
+              columnId: move.toColumnId,
+            })
+          }
+        } catch (err) {
+          console.error('Failed to persist move:', err)
+        }
+      })()
+    }
+
     const ticketKeys = formatTicketIds(
       afterColumns,
       moves.map((m: { ticketId: string }) => m.ticketId),
@@ -301,11 +439,35 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       description: toastDescription,
       duration: 3000,
       showUndoButtons: showUndo,
-      onUndo: () => {
+      onUndo: async () => {
         boardStateMove.setColumns(projectId, beforeColumns)
+        // Persist undo to database
+        if (!isDemoProject) {
+          try {
+            for (const move of moves) {
+              await updateTicketAPI(projectId, move.ticketId, {
+                columnId: move.fromColumnId,
+              })
+            }
+          } catch (err) {
+            console.error('Failed to persist move undo:', err)
+          }
+        }
       },
-      onRedo: () => {
+      onRedo: async () => {
         boardStateMove.setColumns(projectId, afterColumns)
+        // Persist redo to database
+        if (!isDemoProject) {
+          try {
+            for (const move of moves) {
+              await updateTicketAPI(projectId, move.ticketId, {
+                columnId: move.toColumnId,
+              })
+            }
+          } catch (err) {
+            console.error('Failed to persist move redo:', err)
+          }
+        }
       },
       undoneTitle: 'Move undone',
       redoneTitle: toastTitle,

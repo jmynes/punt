@@ -454,6 +454,193 @@ interface MoveTicketsInput {
   previousColumns: ColumnWithTickets[]
 }
 
+// ============================================================================
+// Imperative API helpers (for use outside of React hooks, e.g., paste/undo/redo)
+// ============================================================================
+
+/**
+ * Create a ticket via API (imperative, for paste operations)
+ * Returns the created ticket with server-assigned ID and number
+ */
+export async function createTicketAPI(
+  projectId: string,
+  columnId: string,
+  ticketData: Partial<TicketWithRelations> & { title: string },
+): Promise<TicketWithRelations> {
+  const res = await fetch(`/api/projects/${projectId}/tickets`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Tab-Id': getTabId(),
+    },
+    body: JSON.stringify({
+      title: ticketData.title,
+      description: ticketData.description ?? null,
+      type: ticketData.type ?? 'task',
+      priority: ticketData.priority ?? 'medium',
+      columnId,
+      assigneeId: ticketData.assigneeId ?? null,
+      sprintId: ticketData.sprintId ?? null,
+      parentId: ticketData.parentId ?? null,
+      storyPoints: ticketData.storyPoints ?? null,
+      estimate: ticketData.estimate ?? null,
+      startDate: ticketData.startDate?.toISOString?.() ?? null,
+      dueDate: ticketData.dueDate?.toISOString?.() ?? null,
+      environment: ticketData.environment ?? null,
+      affectedVersion: ticketData.affectedVersion ?? null,
+      fixVersion: ticketData.fixVersion ?? null,
+      labelIds: ticketData.labels?.map((l) => l.id) ?? [],
+      watcherIds: ticketData.watchers?.map((w) => w.id) ?? [],
+    }),
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.error || 'Failed to create ticket')
+  }
+  const responseData: TicketAPIResponse = await res.json()
+  return transformTicket(responseData)
+}
+
+/**
+ * Delete a ticket via API (imperative, for undo/redo operations)
+ */
+export async function deleteTicketAPI(projectId: string, ticketId: string): Promise<void> {
+  const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
+    method: 'DELETE',
+    headers: {
+      'X-Tab-Id': getTabId(),
+    },
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.error || 'Failed to delete ticket')
+  }
+}
+
+/**
+ * Update a ticket via API (imperative, for undo/redo operations)
+ */
+export async function updateTicketAPI(
+  projectId: string,
+  ticketId: string,
+  updates: Partial<TicketWithRelations>,
+): Promise<TicketWithRelations> {
+  // Convert TicketWithRelations updates to API format
+  const apiUpdates: Record<string, unknown> = {}
+
+  const scalarFields = [
+    'title',
+    'description',
+    'type',
+    'priority',
+    'columnId',
+    'order',
+    'storyPoints',
+    'estimate',
+    'environment',
+    'affectedVersion',
+    'fixVersion',
+    'assigneeId',
+    'sprintId',
+    'parentId',
+  ]
+
+  for (const field of scalarFields) {
+    if (field in updates) {
+      apiUpdates[field] = updates[field as keyof typeof updates]
+    }
+  }
+
+  if ('startDate' in updates) {
+    apiUpdates.startDate = updates.startDate?.toISOString?.() ?? null
+  }
+  if ('dueDate' in updates) {
+    apiUpdates.dueDate = updates.dueDate?.toISOString?.() ?? null
+  }
+  if ('labels' in updates && updates.labels) {
+    apiUpdates.labelIds = updates.labels.map((l) => l.id)
+  }
+  if ('watchers' in updates && updates.watchers) {
+    apiUpdates.watcherIds = updates.watchers.map((w) => w.id)
+  }
+
+  const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Tab-Id': getTabId(),
+    },
+    body: JSON.stringify(apiUpdates),
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.error || 'Failed to update ticket')
+  }
+  const responseData: TicketAPIResponse = await res.json()
+  return transformTicket(responseData)
+}
+
+/**
+ * Batch create tickets via API (for paste operations)
+ * Creates tickets in parallel for performance
+ * Returns map of temp ID -> server ticket for replacing optimistic tickets
+ */
+export async function batchCreateTicketsAPI(
+  projectId: string,
+  tickets: Array<{ tempId: string; columnId: string; ticketData: Partial<TicketWithRelations> & { title: string } }>,
+): Promise<Map<string, TicketWithRelations>> {
+  const results = new Map<string, TicketWithRelations>()
+
+  // Create in parallel for better performance
+  const promises = tickets.map(async ({ tempId, columnId, ticketData }) => {
+    const serverTicket = await createTicketAPI(projectId, columnId, ticketData)
+    return { tempId, serverTicket }
+  })
+
+  const settled = await Promise.allSettled(promises)
+
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      results.set(result.value.tempId, result.value.serverTicket)
+    } else {
+      console.error('Failed to create ticket:', result.reason)
+    }
+  }
+
+  return results
+}
+
+/**
+ * Batch delete tickets via API (for redo delete operations)
+ */
+export async function batchDeleteTicketsAPI(
+  projectId: string,
+  ticketIds: string[],
+): Promise<{ succeeded: string[]; failed: string[] }> {
+  const succeeded: string[] = []
+  const failed: string[] = []
+
+  // Delete in parallel
+  const promises = ticketIds.map(async (ticketId) => {
+    await deleteTicketAPI(projectId, ticketId)
+    return ticketId
+  })
+
+  const settled = await Promise.allSettled(promises)
+
+  for (let i = 0; i < settled.length; i++) {
+    const result = settled[i]
+    if (result.status === 'fulfilled') {
+      succeeded.push(result.value)
+    } else {
+      failed.push(ticketIds[i])
+      console.error(`Failed to delete ticket ${ticketIds[i]}:`, result.reason)
+    }
+  }
+
+  return { succeeded, failed }
+}
+
 /**
  * Move multiple tickets to a different column (for multi-select drag-drop)
  */
