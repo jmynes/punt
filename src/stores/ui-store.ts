@@ -33,6 +33,9 @@ interface UIState {
   // Ticket detail drawer
   activeTicketId: string | null
   setActiveTicketId: (id: string | null) => void
+  drawerFocusField: string | null
+  openTicketWithFocus: (ticketId: string, field: string) => void
+  clearDrawerFocusField: () => void
 
   // Toast undo visibility
   showUndoButtons: boolean
@@ -71,7 +74,10 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Ticket detail drawer
   activeTicketId: null,
-  setActiveTicketId: (id) => set({ activeTicketId: id }),
+  setActiveTicketId: (id) => set({ activeTicketId: id, drawerFocusField: null }),
+  drawerFocusField: null,
+  openTicketWithFocus: (ticketId, field) => set({ activeTicketId: ticketId, drawerFocusField: field }),
+  clearDrawerFocusField: () => set({ drawerFocusField: null }),
 
   // Toast undo visibility (on by default)
   showUndoButtons: true,

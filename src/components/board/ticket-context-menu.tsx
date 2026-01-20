@@ -700,7 +700,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
                     {submenu.id === 'points' && (
                       <>
-                        {[1, 2, 3, 5, 8, 13, 21].map((p) => (
+                        {[1, 2, 3, 4, 5].map((p) => (
                           <button
                             key={p}
                             type="button"
@@ -713,6 +713,23 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                             </span>
                           </button>
                         ))}
+                        {!multi && (
+                          <>
+                            <div className="my-1 border-t border-zinc-800" />
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                              onClick={() => {
+                                uiStore.openTicketWithFocus(ticket.id, 'storyPoints')
+                                setOpen(false)
+                                setSubmenu(null)
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 text-amber-400" />
+                              <span>Custom...</span>
+                            </button>
+                          </>
+                        )}
                         <div className="my-1 border-t border-zinc-800" />
                         <button
                           type="button"

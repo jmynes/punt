@@ -156,7 +156,7 @@ const DEMO_SPRINTS: SprintSummary[] = [
 
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
   const { removeTicket, addTicket, updateTicket, getColumns } = useBoardStore()
-  const { activeProjectId, setActiveTicketId } = useUIStore()
+  const { activeProjectId, setActiveTicketId, drawerFocusField, clearDrawerFocusField } = useUIStore()
 
   // Get columns for the active project
   const projectId = activeProjectId || ticket?.projectId || '1' // Fallback to ticket's projectId or '1'
@@ -178,6 +178,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [_pendingClose, setPendingClose] = useState(false)
   const [rememberPreference, setRememberPreference] = useState(false)
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
+  const storyPointsInputRef = useRef<HTMLInputElement>(null)
 
   const { autoSaveOnDrawerClose, setAutoSaveOnDrawerClose } = useSettingsStore()
 
@@ -263,6 +264,25 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setTempAttachments([])
     }
   }, [ticket])
+
+  // Focus specific field when drawer opens with focus request
+  useEffect(() => {
+    if (drawerFocusField === 'storyPoints') {
+      // Delay to ensure drawer is fully rendered and scrollable
+      const timer = setTimeout(() => {
+        if (storyPointsInputRef.current) {
+          storyPointsInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // Additional delay after scroll for focus
+          setTimeout(() => {
+            storyPointsInputRef.current?.focus()
+            storyPointsInputRef.current?.select()
+          }, 100)
+        }
+        clearDrawerFocusField()
+      }, 200)
+      return () => clearTimeout(timer)
+    }
+  }, [drawerFocusField, clearDrawerFocusField])
 
   // Handler for updating temp state (no immediate save)
   const handleChange = (field: string, value: unknown) => {
@@ -873,6 +893,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
                 <div className="flex focus-within:ring-2 focus-within:ring-amber-500 focus-within:ring-offset-0 rounded-md overflow-hidden">
                   <Input
+                    ref={storyPointsInputRef}
                     type="number"
                     min={0}
                     value={tempStoryPoints ?? ticket.storyPoints ?? ''}
