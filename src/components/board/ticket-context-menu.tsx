@@ -51,8 +51,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const menuRef = useRef<HTMLDivElement | null>(null)
 
   const { getColumns } = useBoardStore()
-  const { activeProjectId } = useUIStore()
-  const projectId = activeProjectId || '1'
+  // Use the ticket's projectId directly instead of relying on activeProjectId from UI store
+  // This ensures we always use the correct project context
+  const projectId = ticket.projectId
   const columns = getColumns(projectId)
   const boardState = useBoardStore()
   const board =
