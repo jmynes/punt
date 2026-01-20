@@ -4,6 +4,7 @@ import {
   ChevronRight,
   ClipboardCopy,
   ClipboardPaste,
+  Hash,
   Pencil,
   Send,
   Trash2,
@@ -85,7 +86,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const multi = selectedIds.length > 1
   const [submenu, setSubmenu] = useState<null | {
-    id: 'priority' | 'assign' | 'send'
+    id: 'priority' | 'assign' | 'send' | 'points'
     anchor: { x: number; y: number; height: number }
   }>(null)
 
@@ -430,6 +431,65 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     setSubmenu(null)
   }
 
+  const doPoints = (points: number | null) => {
+    const updateTicket = board.updateTicket || (() => {})
+    const isDemo = isDemoProject(projectId)
+    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
+      []
+    for (const id of selectedIds) {
+      const current = columns
+        .flatMap((c: ColumnWithTickets) => c.tickets)
+        .find((t: TicketWithRelations) => t.id === id)
+      if (!current) continue
+      const currentPoints = current.storyPoints ?? null
+      if (currentPoints === points) continue
+      const after: TicketWithRelations = {
+        ...current,
+        storyPoints: points,
+      }
+      updates.push({ ticketId: id, before: current, after })
+      updateTicket(projectId, id, { storyPoints: points })
+    }
+    if (updates.length === 0) return
+
+    // Persist to database for real projects
+    if (!isDemo) {
+      ;(async () => {
+        try {
+          for (const update of updates) {
+            await updateTicketAPI(projectId, update.ticketId, { storyPoints: points })
+          }
+        } catch (err) {
+          console.error('Failed to persist points update:', err)
+        }
+      })()
+    }
+
+    const ticketKeys = formatTicketIds(
+      columns,
+      updates.map((u) => u.ticketId),
+    )
+
+    const msg =
+      updates.length === 1
+        ? points !== null
+          ? `Set to ${points} point${points === 1 ? '' : 's'}`
+          : 'Points cleared'
+        : points !== null
+          ? `Set ${updates.length} tickets to ${points} point${points === 1 ? '' : 's'}`
+          : `Cleared points from ${updates.length} tickets`
+
+    const toastId = toast.success(msg, {
+      description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+      duration: 3000,
+    })
+    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+    undoState.pushUpdate(projectId, updates, toastId)
+
+    setOpen(false)
+    setSubmenu(null)
+  }
+
   const confirmDeleteNow = async () => {
     const ticketsToDelete = pendingDelete
     if (ticketsToDelete.length === 0) return
@@ -460,7 +520,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     return contextChild
   }
 
-  const openSubmenu = (id: 'priority' | 'assign' | 'send') => (e: React.MouseEvent) => {
+  const openSubmenu = (id: 'priority' | 'assign' | 'send' | 'points') => (e: React.MouseEvent) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
     setSubmenu({ id, anchor: { x: rect.right, y: rect.top, height: rect.height } })
   }
@@ -492,6 +552,12 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                 label="Priority"
                 trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
                 onMouseEnter={openSubmenu('priority')}
+              />
+              <MenuButton
+                icon={<Hash className="h-4 w-4" />}
+                label="Points"
+                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                onMouseEnter={openSubmenu('points')}
               />
               {!multi && (
                 <MenuButton
@@ -631,6 +697,33 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           </button>
                         )
                       })}
+
+                    {submenu.id === 'points' && (
+                      <>
+                        {[1, 2, 3, 5, 8, 13, 21].map((p) => (
+                          <button
+                            key={p}
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doPoints(p)}
+                          >
+                            <Hash className="h-4 w-4 text-green-400" />
+                            <span>
+                              {p} point{p === 1 ? '' : 's'}
+                            </span>
+                          </button>
+                        ))}
+                        <div className="my-1 border-t border-zinc-800" />
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                          onClick={() => doPoints(null)}
+                        >
+                          <Hash className="h-4 w-4 text-zinc-500" />
+                          <span className="text-zinc-400">Clear points</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
