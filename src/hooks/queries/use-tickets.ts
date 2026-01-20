@@ -271,6 +271,7 @@ export function useUpdateTicket() {
         'affectedVersion',
         'fixVersion',
         'assigneeId',
+        'creatorId',
         'sprintId',
         'parentId',
       ]
@@ -548,6 +549,7 @@ export async function updateTicketAPI(
     'affectedVersion',
     'fixVersion',
     'assigneeId',
+    'creatorId',
     'sprintId',
     'parentId',
   ]

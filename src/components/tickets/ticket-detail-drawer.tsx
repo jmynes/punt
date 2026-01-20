@@ -15,6 +15,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   Paperclip,
+  RotateCcw,
   Share2,
   Trash2,
   X,
@@ -198,8 +199,16 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [tempFixVersion, setTempFixVersion] = useState('')
   const [tempParentId, setTempParentId] = useState<string | null>(null)
   const [tempStatusId, setTempStatusId] = useState<string | null>(null)
-  const [_tempCreatorId, setTempCreatorId] = useState<string>('')
+  const [tempCreatorId, setTempCreatorId] = useState<string | null>(null)
   const [tempAttachments, setTempAttachments] = useState<UploadedFileInfo[]>([])
+
+  // Ensure current user is always in the members list for assignment
+  const membersWithCurrentUser = useMemo(() => {
+    if (!currentUser) return members
+    const hasCurrentUser = members.some((m) => m.id === currentUser.id)
+    if (hasCurrentUser) return members
+    return [currentUser, ...members]
+  }, [members, currentUser])
 
   // Get all tickets for parent selection (exclude current ticket)
   const parentTickets: ParentTicketOption[] = useMemo(() => {
@@ -291,7 +300,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         break
       }
       case 'creator': {
-        const creatorId = value as string
+        const creatorId = value as string | null
         setTempCreatorId(creatorId)
         break
       }
@@ -355,6 +364,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       tempEnvironment !== (ticket.environment || '') ||
       tempAffectedVersion !== (ticket.affectedVersion || '') ||
       tempFixVersion !== (ticket.fixVersion || '') ||
+      tempCreatorId !== ticket.creatorId ||
       JSON.stringify(tempLabelIds.sort()) !== JSON.stringify(ticket.labels.map((l) => l.id).sort())
     )
   }, [
@@ -374,6 +384,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     tempEnvironment,
     tempAffectedVersion,
     tempFixVersion,
+    tempCreatorId,
     tempLabelIds,
   ])
 
@@ -434,6 +445,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     }
     if (tempFixVersion !== (ticket.fixVersion || '')) {
       updates.fixVersion = tempFixVersion || null
+    }
+    if (tempCreatorId !== ticket.creatorId && tempCreatorId) {
+      updates.creatorId = tempCreatorId
+      updates.creator = membersWithCurrentUser.find((m) => m.id === tempCreatorId) || ticket.creator
     }
     if (
       JSON.stringify(tempLabelIds.sort()) !== JSON.stringify(ticket.labels.map((l) => l.id).sort())
@@ -503,8 +518,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     tempEnvironment,
     tempAffectedVersion,
     tempFixVersion,
+    tempCreatorId,
     tempLabelIds,
     members,
+    membersWithCurrentUser,
     updateTicket,
     isDemoProject,
     projectId,
@@ -643,6 +660,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setTempType(ticket.type)
       setTempPriority(ticket.priority)
       setTempAssigneeId(ticket.assigneeId)
+      setTempCreatorId(ticket.creatorId)
       setTempLabelIds(ticket.labels.map((l) => l.id))
       setTempSprintId(ticket.sprintId)
       setTempStoryPoints(ticket.storyPoints)
@@ -1053,11 +1071,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Reporter</Label>
                   <UserSelect
-                    value={ticket.creatorId}
+                    value={tempCreatorId}
                     onChange={(value) => handleChange('creator', value)}
-                    users={members}
+                    users={membersWithCurrentUser}
                     currentUserId={currentUser?.id}
-                    placeholder="Unassigned"
+                    placeholder="Select reporter"
+                    showAssignToMe
                   />
                 </div>
 
@@ -1065,9 +1084,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Assignee</Label>
                   <UserSelect
-                    value={ticket.assigneeId}
+                    value={tempAssigneeId}
                     onChange={(value) => handleChange('assignee', value)}
-                    users={members}
+                    users={membersWithCurrentUser}
                     currentUserId={currentUser?.id}
                     placeholder="Unassigned"
                     showAssignToMe
@@ -1315,13 +1334,24 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             </div>
             <div className="flex items-center gap-2">
               {hasUnsavedChanges && (
-                <Button
-                  size="sm"
-                  onClick={handleSave}
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                >
-                  Save Changes
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelEdit}
+                    className="text-orange-400 hover:text-orange-300 hover:bg-orange-900/20 hover:border-orange-800"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" />
+                    Discard Changes
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    Save Changes
+                  </Button>
+                </>
               )}
               <Button variant="outline" size="sm" onClick={handleClone}>
                 <Copy className="h-4 w-4 mr-1" />

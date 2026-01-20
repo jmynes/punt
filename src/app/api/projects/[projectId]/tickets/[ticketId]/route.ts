@@ -13,6 +13,7 @@ const updateTicketSchema = z.object({
   columnId: z.string().min(1).optional(),
   order: z.number().optional(),
   assigneeId: z.string().nullable().optional(),
+  creatorId: z.string().min(1).optional(),
   sprintId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   storyPoints: z.number().nullable().optional(),
