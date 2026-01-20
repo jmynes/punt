@@ -163,7 +163,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const { pushDeleted, removeDeleted } = useUndoStore()
   const { openCreateTicketWithData } = useUIStore()
   const currentUser = useCurrentUser()
-  const members = useProjectMembers()
+  const members = useProjectMembers(projectId)
 
   // API mutations for real projects
   const updateTicketMutation = useUpdateTicket()

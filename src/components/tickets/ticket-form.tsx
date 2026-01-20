@@ -54,10 +54,10 @@ export function TicketForm({
   disabled,
 }: TicketFormProps) {
   const currentUser = useCurrentUser()
-  const members = useProjectMembers()
   const { getColumns } = useBoardStore()
   const { activeProjectId } = useUIStore()
   const projectId = activeProjectId || '1'
+  const members = useProjectMembers(projectId)
   const boardColumns = getColumns(projectId)
 
   const updateField = <K extends keyof TicketFormData>(field: K, value: TicketFormData[K]) => {

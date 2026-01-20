@@ -121,7 +121,6 @@ export function CreateTicketDialog() {
   } = useUIStore()
   const { getColumns, getNextTicketNumber, addTicket } = useBoardStore()
   const currentUser = useCurrentUser()
-  const members = useProjectMembers()
   const [formData, setFormData] = useState<TicketFormData>(DEFAULT_TICKET_FORM)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -130,6 +129,7 @@ export function CreateTicketDialog() {
 
   // Get columns for the active project
   const projectId = activeProjectId || '1' // Fallback to '1' if no project is active
+  const members = useProjectMembers(projectId)
   const columns = getColumns(projectId)
 
   // Apply prefill data when dialog opens with clone data
