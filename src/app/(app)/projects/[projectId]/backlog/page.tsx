@@ -63,7 +63,7 @@ export default function BacklogPage() {
     setActiveProjectId(projectId)
     // Note: getColumns is intentionally not in deps - we check fresh data inside
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [_hasHydrated, projectId, setActiveProjectId, setColumns])
+  }, [_hasHydrated, projectId, setActiveProjectId, setColumns, getColumns])
 
   // Extract all tickets from columns (flattened for backlog view)
   const allTickets = useMemo(() => {

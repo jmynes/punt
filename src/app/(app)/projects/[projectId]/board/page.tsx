@@ -201,7 +201,7 @@ export default function BoardPage() {
     setActiveProjectId(projectId)
     // Note: getColumns is intentionally not in deps - we check fresh data inside
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [_hasHydrated, projectId, isDemoProject, setActiveProjectId, setColumns])
+  }, [_hasHydrated, projectId, isDemoProject, setActiveProjectId, setColumns, getColumns])
 
   // Redirect to dashboard if project doesn't exist after hydration
   useEffect(() => {

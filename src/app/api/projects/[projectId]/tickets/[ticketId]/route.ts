@@ -129,7 +129,7 @@ function transformTicket(ticket: {
  * Requires project membership
  */
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ projectId: string; ticketId: string }> },
 ) {
   try {
@@ -253,7 +253,7 @@ export async function PATCH(
       }
     }
 
-    let ticket
+    let ticket: Awaited<ReturnType<typeof db.ticket.update>> | undefined
     try {
       ticket = await db.ticket.update({
         where: { id: ticketId },

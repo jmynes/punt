@@ -1,7 +1,7 @@
 import type { ColumnWithTickets, IssueType, Priority } from '@/types'
 
 // Helper to create demo columns for a project
-export function createDemoColumns(projectId: string, projectKey: string): ColumnWithTickets[] {
+export function createDemoColumns(projectId: string, _projectKey: string): ColumnWithTickets[] {
   const baseColumns = [
     { name: 'Backlog', order: 0 },
     { name: 'To Do', order: 1 },

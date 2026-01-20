@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     })
 
     // Delete old avatar file if exists
-    if (existingUser?.avatar && existingUser.avatar.startsWith('/uploads/avatars/')) {
+    if (existingUser?.avatar?.startsWith('/uploads/avatars/')) {
       try {
         const oldPath = fileStorage.join(process.cwd(), 'public', existingUser.avatar)
         await unlink(oldPath)
@@ -114,7 +114,7 @@ export async function DELETE() {
     })
 
     // Delete avatar file if exists
-    if (existingUser?.avatar && existingUser.avatar.startsWith('/uploads/avatars/')) {
+    if (existingUser?.avatar?.startsWith('/uploads/avatars/')) {
       try {
         const avatarPath = fileStorage.join(process.cwd(), 'public', existingUser.avatar)
         await unlink(avatarPath)

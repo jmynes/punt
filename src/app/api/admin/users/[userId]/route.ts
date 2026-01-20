@@ -15,7 +15,7 @@ const updateUserSchema = z.object({
 /**
  * GET /api/admin/users/[userId] - Get a specific user
  */
-export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
     await requireSystemAdmin()
 

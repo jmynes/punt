@@ -604,7 +604,11 @@ export async function updateTicketAPI(
  */
 export async function batchCreateTicketsAPI(
   projectId: string,
-  tickets: Array<{ tempId: string; columnId: string; ticketData: Partial<TicketWithRelations> & { title: string } }>,
+  tickets: Array<{
+    tempId: string
+    columnId: string
+    ticketData: Partial<TicketWithRelations> & { title: string }
+  }>,
 ): Promise<Map<string, TicketWithRelations>> {
   const results = new Map<string, TicketWithRelations>()
 

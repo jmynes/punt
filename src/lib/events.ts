@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events'
+import { EventEmitter } from 'node:events'
 
 /**
  * Event types for ticket operations
@@ -12,10 +12,7 @@ export type TicketEventType =
 /**
  * Event types for project operations
  */
-export type ProjectEventType =
-  | 'project.created'
-  | 'project.updated'
-  | 'project.deleted'
+export type ProjectEventType = 'project.created' | 'project.updated' | 'project.deleted'
 
 /**
  * Payload for ticket events
@@ -25,7 +22,7 @@ export interface TicketEvent {
   projectId: string
   ticketId: string
   userId: string
-  tabId?: string  // Optional tab ID for self-skip (when same user has multiple tabs)
+  tabId?: string // Optional tab ID for self-skip (when same user has multiple tabs)
   timestamp: number
 }
 
@@ -36,7 +33,7 @@ export interface ProjectEvent {
   type: ProjectEventType
   projectId: string
   userId: string
-  tabId?: string  // Optional tab ID for self-skip
+  tabId?: string // Optional tab ID for self-skip
   timestamp: number
 }
 

@@ -24,7 +24,7 @@ export default function SettingsPage() {
   } = useSettingsStore()
 
   const defaultMaxYear = new Date().getFullYear() + 5
-  const currentMaxYear = ticketDateMaxYearMode === 'default' ? defaultMaxYear : ticketDateMaxYear
+  const _currentMaxYear = ticketDateMaxYearMode === 'default' ? defaultMaxYear : ticketDateMaxYear
   const customInputRef = useRef<HTMLInputElement>(null)
 
   // Auto-focus input when switching to custom mode
@@ -147,6 +147,18 @@ export default function SettingsPage() {
                         }
                       }
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        if (ticketDateMaxYearMode !== 'custom') {
+                          setTicketDateMaxYearMode('custom')
+                          if (ticketDateMaxYear === defaultMaxYear) {
+                            setTicketDateMaxYear(defaultMaxYear)
+                          }
+                        }
+                      }
+                    }}
+                    role="button"
+                    tabIndex={ticketDateMaxYearMode !== 'custom' ? 0 : -1}
                     className={cn(ticketDateMaxYearMode !== 'custom' && 'cursor-pointer')}
                   >
                     <Input

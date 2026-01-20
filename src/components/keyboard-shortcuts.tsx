@@ -23,8 +23,6 @@ import {
 import {
   batchCreateTicketsAPI,
   batchDeleteTicketsAPI,
-  createTicketAPI,
-  deleteTicketAPI,
   updateTicketAPI,
 } from '@/hooks/queries/use-tickets'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
@@ -127,10 +125,10 @@ export function KeyboardShortcuts() {
               method: 'DELETE',
             }).then((res) => {
               if (!res.ok) throw new Error('Failed to delete ticket')
-            })
-          )
+            }),
+          ),
         )
-      } catch (error) {
+      } catch (_error) {
         // Rollback on error
         for (const { ticket, columnId } of batchTickets) {
           addTicket(projectId, columnId, ticket)
@@ -675,7 +673,7 @@ export function KeyboardShortcuts() {
         // Show toast with undo option
         const ticketKeys = newTickets.map(({ ticket }) => formatTicketId(ticket))
         const showUndo = useUIStore.getState().showUndoButtons
-        const { removeTicket } = useBoardStore.getState()
+        const { removeTicket: _removeTicket } = useBoardStore.getState()
 
         let currentId: string | number | undefined
 
@@ -693,9 +691,9 @@ export function KeyboardShortcuts() {
               for (const { ticket } of newTickets) {
                 // Find the ticket in the store (may have been replaced with server ticket)
                 const cols = boardState.getColumns(undoEntry.projectId)
-                const foundTicket = cols.flatMap((c) => c.tickets).find(
-                  (t) => t.id === ticket.id || t.title === ticket.title
-                )
+                const foundTicket = cols
+                  .flatMap((c) => c.tickets)
+                  .find((t) => t.id === ticket.id || t.title === ticket.title)
                 if (foundTicket) {
                   boardState.removeTicket(undoEntry.projectId, foundTicket.id)
                   ticketIdsToDelete.push(foundTicket.id)
@@ -756,7 +754,10 @@ export function KeyboardShortcuts() {
                       watchers: ticket.watchers,
                     },
                   }))
-                  const serverTickets = await batchCreateTicketsAPI(undoEntry.projectId, ticketsToCreate)
+                  const serverTickets = await batchCreateTicketsAPI(
+                    undoEntry.projectId,
+                    ticketsToCreate,
+                  )
                   // Replace temp with server
                   for (const { ticket: tempTicket, columnId } of redoTickets) {
                     const serverTicket = serverTickets.get(tempTicket.id)
@@ -814,7 +815,7 @@ export function KeyboardShortcuts() {
             const action = entry.action
             const isDemoProject = DEMO_PROJECT_IDS.includes(entry.projectId)
             // Restore all deleted tickets optimistically
-            const { addTicket, removeTicket } = useBoardStore.getState()
+            const { addTicket } = useBoardStore.getState()
             for (const { ticket, columnId } of action.tickets) {
               addTicket(entry.projectId, columnId, ticket)
             }
@@ -848,7 +849,10 @@ export function KeyboardShortcuts() {
                       watchers: ticket.watchers,
                     },
                   }))
-                  const serverTickets = await batchCreateTicketsAPI(entry.projectId, ticketsToCreate)
+                  const serverTickets = await batchCreateTicketsAPI(
+                    entry.projectId,
+                    ticketsToCreate,
+                  )
                   // Replace temp tickets with server tickets
                   const boardState = useBoardStore.getState()
                   for (const { ticket: tempTicket, columnId } of action.tickets) {
@@ -889,9 +893,9 @@ export function KeyboardShortcuts() {
                   for (const { ticket } of action.tickets) {
                     // Find ticket (may have been replaced with server ticket)
                     const cols = boardState.getColumns(undoEntry.projectId)
-                    const foundTicket = cols.flatMap((c) => c.tickets).find(
-                      (t) => t.id === ticket.id || t.title === ticket.title
-                    )
+                    const foundTicket = cols
+                      .flatMap((c) => c.tickets)
+                      .find((t) => t.id === ticket.id || t.title === ticket.title)
                     if (foundTicket) {
                       boardState.removeTicket(undoEntry.projectId, foundTicket.id)
                       ticketIdsToDelete.push(foundTicket.id)
@@ -944,7 +948,10 @@ export function KeyboardShortcuts() {
                           watchers: ticket.watchers,
                         },
                       }))
-                      const serverTickets = await batchCreateTicketsAPI(undoEntry.projectId, ticketsToCreate)
+                      const serverTickets = await batchCreateTicketsAPI(
+                        undoEntry.projectId,
+                        ticketsToCreate,
+                      )
                       for (const { ticket: tempTicket, columnId } of action.tickets) {
                         const serverTicket = serverTickets.get(tempTicket.id)
                         if (serverTicket) {
@@ -1383,16 +1390,16 @@ export function KeyboardShortcuts() {
           if (entry.action.type === 'delete') {
             const action = entry.action
             const isDemoProject = DEMO_PROJECT_IDS.includes(entry.projectId)
-            const { removeTicket, addTicket } = useBoardStore.getState()
+            const { removeTicket } = useBoardStore.getState()
 
             // Find and delete tickets (they may have been replaced with server tickets)
             const boardState = useBoardStore.getState()
             const ticketIdsToDelete: string[] = []
             for (const { ticket } of action.tickets) {
               const cols = boardState.getColumns(entry.projectId)
-              const foundTicket = cols.flatMap((c) => c.tickets).find(
-                (t) => t.id === ticket.id || t.title === ticket.title
-              )
+              const foundTicket = cols
+                .flatMap((c) => c.tickets)
+                .find((t) => t.id === ticket.id || t.title === ticket.title)
               if (foundTicket) {
                 removeTicket(entry.projectId, foundTicket.id)
                 ticketIdsToDelete.push(foundTicket.id)
@@ -1451,7 +1458,10 @@ export function KeyboardShortcuts() {
                           watchers: ticket.watchers,
                         },
                       }))
-                      const serverTickets = await batchCreateTicketsAPI(undoEntry.projectId, ticketsToCreate)
+                      const serverTickets = await batchCreateTicketsAPI(
+                        undoEntry.projectId,
+                        ticketsToCreate,
+                      )
                       for (const { ticket: tempTicket, columnId } of action.tickets) {
                         const serverTicket = serverTickets.get(tempTicket.id)
                         if (serverTicket) {
@@ -1478,9 +1488,9 @@ export function KeyboardShortcuts() {
                   const idsToDelete: string[] = []
                   for (const { ticket } of action.tickets) {
                     const cols = boardState.getColumns(undoEntry.projectId)
-                    const foundTicket = cols.flatMap((c) => c.tickets).find(
-                      (t) => t.id === ticket.id || t.title === ticket.title
-                    )
+                    const foundTicket = cols
+                      .flatMap((c) => c.tickets)
+                      .find((t) => t.id === ticket.id || t.title === ticket.title)
                     if (foundTicket) {
                       boardState.removeTicket(undoEntry.projectId, foundTicket.id)
                       idsToDelete.push(foundTicket.id)
@@ -1794,7 +1804,8 @@ export function KeyboardShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTicketIds, openSinglePastedTicket, showDeleteConfirm, columns, handleDeleteSelected])
+  // Note: Don't copy tickets if drawer is open
+  }, [selectedTicketIds, openSinglePastedTicket, showDeleteConfirm, columns, handleDeleteSelected, activeTicketId, projectId])
 
   return (
     <>

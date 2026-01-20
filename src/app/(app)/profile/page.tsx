@@ -26,7 +26,7 @@ import { getAvatarColor, getInitials } from '@/lib/utils'
 
 export default function ProfilePage() {
   const { data: session, update: updateSession } = useSession()
-  const router = useRouter()
+  const _router = useRouter()
   const user = session?.user
 
   // Profile form state

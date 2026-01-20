@@ -7,7 +7,7 @@ import { db } from '@/lib/db'
  * Requires project membership
  */
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ projectId: string }> },
 ) {
   try {

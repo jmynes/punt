@@ -129,7 +129,7 @@ async function main() {
     try {
       await prisma.user.create({ data: user })
       createdCount++
-    } catch (e) {
+    } catch (_e) {
       // Skip duplicates
       console.log(`Skipped duplicate: ${user.username}`)
     }

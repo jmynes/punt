@@ -14,9 +14,8 @@ const MAX_RECONNECT_DELAY = 30000
 const RECONNECT_BACKOFF_MULTIPLIER = 2
 
 // Generate a unique tab/connection ID that persists for this browser tab session
-const TAB_ID = typeof window !== 'undefined'
-  ? `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-  : ''
+const TAB_ID =
+  typeof window !== 'undefined' ? `${Date.now()}-${Math.random().toString(36).slice(2, 9)}` : ''
 
 // Store the tab ID in sessionStorage so it persists across hot reloads but not across tabs
 if (typeof window !== 'undefined' && !sessionStorage.getItem('punt-tab-id')) {

@@ -62,8 +62,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
+import { useDeleteTicket, useUpdateTicket } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
-import { useUpdateTicket, useDeleteTicket } from '@/hooks/queries/use-tickets'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -175,7 +175,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showUnsavedChangesConfirm, setShowUnsavedChangesConfirm] = useState(false)
-  const [pendingClose, setPendingClose] = useState(false)
+  const [_pendingClose, setPendingClose] = useState(false)
   const [rememberPreference, setRememberPreference] = useState(false)
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -236,7 +236,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     if (!ticket) return []
     const allTickets = columns.flatMap((col) => col.tickets)
     return allTickets.filter((t) => t.parentId === ticket.id)
-  }, [columns, ticket?.id])
+  }, [columns, ticket?.id, ticket])
 
   // Reset editing state when ticket changes
   useEffect(() => {
@@ -1077,6 +1077,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     currentUserId={currentUser?.id}
                     placeholder="Select reporter"
                     showAssignToMe
+                    allowUnassigned={false}
                   />
                 </div>
 

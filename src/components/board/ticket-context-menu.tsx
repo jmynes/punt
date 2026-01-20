@@ -14,7 +14,6 @@ import { cloneElement, useCallback, useEffect, useMemo, useRef, useState } from 
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { PriorityBadge } from '@/components/common/priority-badge'
-import { batchCreateTicketsAPI, batchDeleteTicketsAPI, updateTicketAPI } from '@/hooks/queries/use-tickets'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +25,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  batchCreateTicketsAPI,
+  batchDeleteTicketsAPI,
+  updateTicketAPI,
+} from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
@@ -251,8 +255,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const uiState = useUIStore.getState ? useUIStore.getState() : uiStore
     const showUndo = uiState.showUndoButtons ?? true
     const boardState = useBoardStore.getState ? useBoardStore.getState() : board
-    const removeTicket = boardState.removeTicket || (() => {})
-    const addTicketAgain = boardState.addTicket || (() => {})
+    const _removeTicket = boardState.removeTicket || (() => {})
+    const _addTicketAgain = boardState.addTicket || (() => {})
 
     const toastId = showUndoRedoToast('success', {
       title: newTickets.length === 1 ? 'Ticket pasted' : `${newTickets.length} tickets pasted`,
@@ -264,9 +268,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         const ticketIdsToDelete: string[] = []
         for (const { ticket } of newTickets) {
           const cols = boardState.getColumns?.(projectId) || columns
-          const foundTicket = cols.flatMap((c: ColumnWithTickets) => c.tickets).find(
-            (t: TicketWithRelations) => t.id === ticket.id || t.title === ticket.title
-          )
+          const foundTicket = cols
+            .flatMap((c: ColumnWithTickets) => c.tickets)
+            .find((t: TicketWithRelations) => t.id === ticket.id || t.title === ticket.title)
           if (foundTicket) {
             boardState.removeTicket?.(projectId, foundTicket.id)
             ticketIdsToDelete.push(foundTicket.id)
@@ -641,10 +645,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         // Delete all tickets via API
         await Promise.all(
           ticketsToDelete.map((t) =>
-            fetch(`/api/projects/${projectId}/tickets/${t.id}`, { method: 'DELETE' })
-          )
+            fetch(`/api/projects/${projectId}/tickets/${t.id}`, { method: 'DELETE' }),
+          ),
         )
-      } catch (error) {
+      } catch (_error) {
         // Rollback on error
         for (const { ticket, columnId } of deletedBatch) {
           addTicket(projectId, columnId, ticket)

@@ -12,8 +12,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useCreateTicket } from '@/hooks/queries/use-tickets'
+import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
@@ -109,7 +109,7 @@ const DEMO_PARENT_TICKETS: ParentTicketOption[] = [
 ]
 
 // Simple counter for generating ticket numbers (in production, this comes from the database)
-const ticketCounter = 200
+const _ticketCounter = 200
 
 export function CreateTicketDialog() {
   const {

@@ -365,7 +365,7 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
       <div className="flex gap-4 h-full min-h-0 overflow-x-auto pb-4">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
-            key={i}
+            key={`skeleton-${i}`}
             className="flex w-72 flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-900/30 max-h-full min-h-0"
           >
             <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
@@ -409,12 +409,6 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
         <div
           className="flex gap-4 h-full min-h-0 overflow-x-auto pb-4"
           onClick={handleBoardClick}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ')
-              handleBoardClick(e as unknown as React.MouseEvent)
-          }}
         >
           {filteredColumns.map((column) => (
             <KanbanColumn
@@ -535,7 +529,8 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
                             background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
                             borderColor: 'rgba(251, 191, 36, 0.5)',
                             color: '#1c1917',
-                            boxShadow: '0 2px 8px rgba(217, 119, 6, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
+                            boxShadow:
+                              '0 2px 8px rgba(217, 119, 6, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
                           }}
                         >
                           {draggingTicketIds.length}
@@ -550,7 +545,8 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
             <div
               className="w-[272px]"
               style={{
-                filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.3)) drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+                filter:
+                  'drop-shadow(0 8px 16px rgba(0,0,0,0.3)) drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
               }}
             >
               <KanbanCard ticket={activeTicket} projectKey={projectKey} />

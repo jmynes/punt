@@ -865,8 +865,9 @@ export function UserList() {
             <DropdownMenuContent className="bg-zinc-900 border-zinc-800 p-3 w-[200px]">
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs text-zinc-500 mb-1 block">Min Projects</label>
+                  <label htmlFor="min-projects-filter" className="text-xs text-zinc-500 mb-1 block">Min Projects</label>
                   <Input
+                    id="min-projects-filter"
                     type="number"
                     min="0"
                     value={minProjects}
@@ -876,8 +877,9 @@ export function UserList() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-500 mb-1 block">Max Projects</label>
+                  <label htmlFor="max-projects-filter" className="text-xs text-zinc-500 mb-1 block">Max Projects</label>
                   <Input
+                    id="max-projects-filter"
                     type="number"
                     min="0"
                     value={maxProjects}
@@ -931,6 +933,7 @@ export function UserList() {
       {users && users.length > 0 && (
         <div className="flex items-center gap-3 mb-3 px-1 flex-shrink-0">
           <button
+            type="button"
             onClick={allSelected ? selectNone : selectAll}
             className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
           >
@@ -947,6 +950,7 @@ export function UserList() {
           </button>
           {selectedIds.size > 0 && (
             <button
+              type="button"
               onClick={selectNone}
               className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
             >

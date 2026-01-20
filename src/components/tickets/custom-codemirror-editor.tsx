@@ -41,10 +41,10 @@ interface CustomCodeMirrorEditorProps {
 
 export function CustomCodeMirrorEditor({
   language,
-  nodeKey,
+  nodeKey: _nodeKey,
   code,
-  meta,
-  focusEmitter,
+  meta: _meta,
+  focusEmitter: _focusEmitter,
 }: CustomCodeMirrorEditorProps) {
   const t = useTranslation()
   const { parentEditor, lexicalNode, setCode } = useCodeBlockEditorContext()

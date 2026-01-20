@@ -24,6 +24,8 @@ interface UserSelectProps {
   placeholder?: string
   disabled?: boolean
   showAssignToMe?: boolean
+  /** Whether to allow unassigned/null value. Defaults to true. Set to false for required fields like Reporter. */
+  allowUnassigned?: boolean
 }
 
 export function UserSelect({
@@ -34,6 +36,7 @@ export function UserSelect({
   placeholder = 'Select user...',
   disabled,
   showAssignToMe = true,
+  allowUnassigned = true,
 }: UserSelectProps) {
   const [open, setOpen] = useState(false)
   const [popoverWidth, setPopoverWidth] = useState<number | undefined>(undefined)
@@ -90,25 +93,27 @@ export function UserSelect({
             <CommandList>
               <CommandEmpty>No users found.</CommandEmpty>
               <CommandGroup>
-                {/* Unassigned option */}
-                <CommandItem
-                  value="unassigned"
-                  onSelect={() => {
-                    onChange(null)
-                    setOpen(false)
-                  }}
-                  className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
-                >
-                  <Avatar className="mr-2 h-5 w-5">
-                    <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
-                      <User className="h-3 w-3 text-zinc-500" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-zinc-400">Unassigned</span>
-                  <Check
-                    className={cn('ml-auto h-4 w-4', value === null ? 'opacity-100' : 'opacity-0')}
-                  />
-                </CommandItem>
+                {/* Unassigned option - only show if allowUnassigned is true */}
+                {allowUnassigned && (
+                  <CommandItem
+                    value="unassigned"
+                    onSelect={() => {
+                      onChange(null)
+                      setOpen(false)
+                    }}
+                    className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
+                  >
+                    <Avatar className="mr-2 h-5 w-5">
+                      <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
+                        <User className="h-3 w-3 text-zinc-500" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-zinc-400">Unassigned</span>
+                    <Check
+                      className={cn('ml-auto h-4 w-4', value === null ? 'opacity-100' : 'opacity-0')}
+                    />
+                  </CommandItem>
+                )}
                 {/* User options */}
                 {users.map((user) => (
                   <CommandItem
@@ -153,17 +158,17 @@ export function UserSelect({
           type="button"
           variant="outline"
           size="icon"
-          disabled={disabled}
+          disabled={disabled || (isAssignedToMe && !allowUnassigned)}
           className={cn(
             'shrink-0 border-zinc-700',
             isAssignedToMe
               ? 'bg-amber-600/20 border-amber-600/50 hover:bg-amber-600/30 text-amber-400'
               : 'bg-zinc-900 hover:bg-zinc-800',
           )}
-          onClick={() => onChange(isAssignedToMe ? null : currentUserId || null)}
-          title={isAssignedToMe ? 'Unassign from me' : 'Assign to me'}
+          onClick={() => onChange(allowUnassigned && isAssignedToMe ? null : currentUserId || null)}
+          title={isAssignedToMe ? (allowUnassigned ? 'Unassign from me' : 'Assigned to you') : 'Assign to me'}
         >
-          {isAssignedToMe ? <UserMinus className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+          {isAssignedToMe && allowUnassigned ? <UserMinus className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
         </Button>
       )}
     </div>

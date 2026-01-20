@@ -137,7 +137,7 @@ describe('Password Validation', () => {
       })
 
       it('should handle very long passwords', () => {
-        const longPassword = 'A' + 'a'.repeat(998) + '1'
+        const longPassword = `A${'a'.repeat(998)}1`
         const result = validatePasswordStrength(longPassword)
         expect(result.valid).toBe(true)
       })
@@ -291,7 +291,7 @@ describe('Password Validation', () => {
     // Edge cases with bcrypt
     it('should handle very long passwords', async () => {
       // Note: bcrypt truncates at 72 bytes, but this shouldn't cause errors
-      const longPassword = 'A' + 'a'.repeat(100) + '1'
+      const longPassword = `A${'a'.repeat(100)}1`
       const hash = await hashPassword(longPassword)
       expect(await verifyPassword(longPassword, hash)).toBe(true)
     })

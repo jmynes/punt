@@ -88,12 +88,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         })
 
-        if (dbUser && dbUser.isActive) {
+        if (dbUser?.isActive) {
           // Check if password was changed after token was issued
           if (dbUser.passwordChangedAt && token.iat) {
-            const passwordChangedAtSeconds = Math.floor(
-              dbUser.passwordChangedAt.getTime() / 1000,
-            )
+            const passwordChangedAtSeconds = Math.floor(dbUser.passwordChangedAt.getTime() / 1000)
             // If password was changed after token was issued, invalidate session
             if (passwordChangedAtSeconds > (token.iat as number)) {
               // Return empty token to force re-authentication
