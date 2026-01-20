@@ -29,6 +29,9 @@ import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
 
+// Demo project IDs use localStorage only, real projects use API
+const DEMO_PROJECT_IDS = ['1', '2', '3']
+
 export function KeyboardShortcuts() {
   // Only subscribe to reactive state we need for re-renders
   const { getColumns } = useBoardStore()
@@ -94,9 +97,9 @@ export function KeyboardShortcuts() {
     setShowDeleteConfirm(true)
   }, [allTickets])
 
-  const confirmDelete = () => {
-    // Remove all tickets
-    const { removeTicket } = useBoardStore.getState()
+  const confirmDelete = async () => {
+    // Remove all tickets optimistically
+    const { removeTicket, addTicket } = useBoardStore.getState()
     for (const ticket of ticketsToDelete) {
       removeTicket(projectId, ticket.id)
     }
@@ -106,6 +109,31 @@ export function KeyboardShortcuts() {
       ticket,
       columnId: ticket.columnId,
     }))
+
+    // Call API for real projects (not demo projects)
+    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
+    if (!isDemoProject) {
+      try {
+        await Promise.all(
+          ticketsToDelete.map((ticket) =>
+            fetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
+              method: 'DELETE',
+            }).then((res) => {
+              if (!res.ok) throw new Error('Failed to delete ticket')
+            })
+          )
+        )
+      } catch (error) {
+        // Rollback on error
+        for (const { ticket, columnId } of batchTickets) {
+          addTicket(projectId, columnId, ticket)
+        }
+        toast.error('Failed to delete ticket(s)')
+        setShowDeleteConfirm(false)
+        setTicketsToDelete([])
+        return
+      }
+    }
 
     // Format ticket IDs for notification
     const ticketKeys = ticketsToDelete.map((ticket) => formatTicketId(ticket))

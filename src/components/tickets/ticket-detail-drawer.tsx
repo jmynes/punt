@@ -664,8 +664,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
     setShowDeleteConfirm(false)
 
-    console.log('[Delete] projectId:', projectId, 'isDemoProject:', isDemoProject, 'ticketId:', ticket.id)
-
     if (isDemoProject) {
       // Demo project: use local state only
       removeTicket(projectId, ticket.id)

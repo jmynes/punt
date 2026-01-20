@@ -352,11 +352,9 @@ export function useDeleteTicket() {
 
   return useMutation({
     mutationFn: async ({ projectId, ticketId }: DeleteTicketInput) => {
-      console.log('[DeleteMutation] Calling API to delete:', ticketId)
       const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
         method: 'DELETE',
       })
-      console.log('[DeleteMutation] Response status:', res.status)
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to delete ticket')
@@ -364,7 +362,6 @@ export function useDeleteTicket() {
       return res.json()
     },
     onMutate: async ({ projectId, ticketId, deletedTicket, columnId }) => {
-      console.log('[DeleteMutation] onMutate - optimistic delete:', ticketId)
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ticketKeys.byProject(projectId) })
 
@@ -374,7 +371,6 @@ export function useDeleteTicket() {
       return { deletedTicket, columnId }
     },
     onError: (err, { projectId }, context) => {
-      console.log('[DeleteMutation] onError:', err.message)
       // Rollback on error
       if (context?.deletedTicket && context?.columnId) {
         addTicket(projectId, context.columnId, context.deletedTicket)

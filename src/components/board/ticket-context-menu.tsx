@@ -36,6 +36,9 @@ import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
+// Demo project IDs that use local state instead of API
+const DEMO_PROJECT_IDS = ['1', '2', '3']
+
 type MenuProps = {
   ticket: TicketWithRelations
   children: React.ReactElement
@@ -423,7 +426,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     setSubmenu(null)
   }
 
-  const confirmDeleteNow = () => {
+  const confirmDeleteNow = async () => {
     const ticketsToDelete = pendingDelete
     if (ticketsToDelete.length === 0) return
 
@@ -433,10 +436,34 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const deletedBatch = ticketsToDelete.map((t) => ({ ticket: t, columnId: t.columnId }))
     const ticketKeys = ticketsToDelete.map((t) => formatTicketId(t))
 
+    // Optimistic delete - remove from UI immediately
     for (const t of ticketsToDelete) {
       removeTicket(projectId, t.id)
     }
     selectionApi.clearSelection?.()
+
+    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
+
+    // For real projects, call API to delete
+    if (!isDemoProject) {
+      try {
+        // Delete all tickets via API
+        await Promise.all(
+          ticketsToDelete.map((t) =>
+            fetch(`/api/projects/${projectId}/tickets/${t.id}`, { method: 'DELETE' })
+          )
+        )
+      } catch (error) {
+        // Rollback on error
+        for (const { ticket, columnId } of deletedBatch) {
+          addTicket(projectId, columnId, ticket)
+        }
+        toast.error('Failed to delete ticket(s)')
+        setPendingDelete([])
+        setShowDeleteConfirm(false)
+        return
+      }
+    }
 
     const uiState = useUIStore.getState ? useUIStore.getState() : uiStore
     const showUndo = uiState.showUndoButtons ?? true
@@ -447,7 +474,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           : `${ticketsToDelete.length} tickets deleted`,
       description: ticketsToDelete.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: 5000,
-      showUndoButtons: showUndo,
+      showUndoButtons: isDemoProject ? showUndo : false, // No undo for API deletes
       onUndo: () => {
         for (const { ticket, columnId } of deletedBatch) {
           addTicket(projectId, columnId, ticket)
@@ -467,8 +494,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         ticketsToDelete.length === 1 ? 'Delete redone' : `${ticketsToDelete.length} deletes redone`,
     })
 
-    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushDeletedBatch(projectId, deletedBatch, toastId)
+    if (isDemoProject) {
+      const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+      undoState.pushDeletedBatch(projectId, deletedBatch, toastId)
+    }
 
     setPendingDelete([])
     setShowDeleteConfirm(false)
