@@ -76,7 +76,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     ).getState?.() ?? selection
   const _shortcutsApi = uiStore
   const currentUser = useCurrentUser()
-  const members = useProjectMembers()
+  const members = useProjectMembers(projectId)
   const sortedMembers = useMemo(
     () => [...members].sort((a, b) => a.name.localeCompare(b.name)),
     [members],
