@@ -981,11 +981,26 @@ export function KeyboardShortcuts() {
             currentId = toastId
           } else if (entry.action.type === 'update') {
             const action = entry.action
+            const isDemoProject = DEMO_PROJECT_IDS.includes(entry.projectId)
             const boardStore = useBoardStore.getState()
             for (const item of action.tickets) {
               boardStore.updateTicket(entry.projectId, item.ticketId, item.before)
             }
             undoStore.pushRedo(entry)
+
+            // Persist undo to database for real projects
+            if (!isDemoProject) {
+              ;(async () => {
+                try {
+                  for (const item of action.tickets) {
+                    await updateTicketAPI(entry.projectId, item.ticketId, item.before)
+                  }
+                } catch (err) {
+                  console.error('Failed to persist update undo:', err)
+                }
+              })()
+            }
+
             const ticketKeys = action.tickets
               .map((item) => {
                 const t = boardStore
@@ -1008,11 +1023,21 @@ export function KeyboardShortcuts() {
               showUndoButtons: showUndo,
               undoLabel: 'Redo',
               redoLabel: 'Undo',
-              onUndo: (id) => {
+              onUndo: async (id) => {
                 const undoEntry = useUndoStore.getState().redoByToastId(id)
                 if (undoEntry) {
                   for (const item of action.tickets) {
                     boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.after)
+                  }
+                  // Persist to database
+                  if (!isDemoProject) {
+                    try {
+                      for (const item of action.tickets) {
+                        await updateTicketAPI(undoEntry.projectId, item.ticketId, item.after)
+                      }
+                    } catch (err) {
+                      console.error('Failed to persist update redo:', err)
+                    }
                   }
                 }
               },
@@ -1022,11 +1047,21 @@ export function KeyboardShortcuts() {
                   currentId = newId
                 }
               },
-              onRedo: (id) => {
+              onRedo: async (id) => {
                 const undoEntry = useUndoStore.getState().undoByToastId(id)
                 if (undoEntry) {
                   for (const item of action.tickets) {
                     boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.before)
+                  }
+                  // Persist to database
+                  if (!isDemoProject) {
+                    try {
+                      for (const item of action.tickets) {
+                        await updateTicketAPI(undoEntry.projectId, item.ticketId, item.before)
+                      }
+                    } catch (err) {
+                      console.error('Failed to persist update undo:', err)
+                    }
                   }
                 }
               },
@@ -1473,10 +1508,25 @@ export function KeyboardShortcuts() {
             redoStore.pushDeletedBatch(entry.projectId, action.tickets, newToastId, true)
           } else if (entry.action.type === 'update') {
             const action = entry.action
+            const isDemoProject = DEMO_PROJECT_IDS.includes(entry.projectId)
             const boardStore = useBoardStore.getState()
             for (const item of action.tickets) {
               boardStore.updateTicket(entry.projectId, item.ticketId, item.after)
             }
+
+            // Persist redo to database for real projects
+            if (!isDemoProject) {
+              ;(async () => {
+                try {
+                  for (const item of action.tickets) {
+                    await updateTicketAPI(entry.projectId, item.ticketId, item.after)
+                  }
+                } catch (err) {
+                  console.error('Failed to persist update redo:', err)
+                }
+              })()
+            }
+
             const swappedTickets = action.tickets.map((item) => ({
               ticketId: item.ticketId,
               before: item.before,
@@ -1503,11 +1553,21 @@ export function KeyboardShortcuts() {
               duration: 3000,
               showUndoButtons: showUndo,
               undoLabel: 'Undo', // Normal Undo
-              onUndo: (id) => {
+              onUndo: async (id) => {
                 const undoEntry = useUndoStore.getState().undoByToastId(id)
                 if (undoEntry) {
                   for (const item of swappedTickets) {
                     boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.before)
+                  }
+                  // Persist to database
+                  if (!isDemoProject) {
+                    try {
+                      for (const item of swappedTickets) {
+                        await updateTicketAPI(undoEntry.projectId, item.ticketId, item.before)
+                      }
+                    } catch (err) {
+                      console.error('Failed to persist update undo:', err)
+                    }
                   }
                 }
               },
@@ -1517,11 +1577,21 @@ export function KeyboardShortcuts() {
                   currentId = newId
                 }
               },
-              onRedo: (id) => {
+              onRedo: async (id) => {
                 const undoEntry = useUndoStore.getState().redoByToastId(id)
                 if (undoEntry) {
                   for (const item of swappedTickets) {
                     boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.after)
+                  }
+                  // Persist to database
+                  if (!isDemoProject) {
+                    try {
+                      for (const item of swappedTickets) {
+                        await updateTicketAPI(undoEntry.projectId, item.ticketId, item.after)
+                      }
+                    } catch (err) {
+                      console.error('Failed to persist update redo:', err)
+                    }
                   }
                 }
               },

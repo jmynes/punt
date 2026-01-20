@@ -512,6 +512,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const doPriority = (priority: TicketWithRelations['priority']) => {
     const updateTicket = board.updateTicket || (() => {})
+    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
       []
     for (const id of selectedIds) {
@@ -524,6 +525,19 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       updateTicket(projectId, id, { priority })
     }
     if (updates.length === 0) return
+
+    // Persist to database for real projects
+    if (!isDemoProject) {
+      ;(async () => {
+        try {
+          for (const update of updates) {
+            await updateTicketAPI(projectId, update.ticketId, { priority })
+          }
+        } catch (err) {
+          console.error('Failed to persist priority update:', err)
+        }
+      })()
+    }
 
     const ticketKeys = formatTicketIds(
       columns,
@@ -544,6 +558,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const doAssign = (userId: string | null) => {
     const user = members.find((m) => m.id === userId) || null
     const updateTicket = board.updateTicket || (() => {})
+    const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
       []
     for (const id of selectedIds) {
@@ -562,6 +577,19 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       updateTicket(projectId, id, { assignee: user ?? null, assigneeId: user?.id ?? null })
     }
     if (updates.length === 0) return
+
+    // Persist to database for real projects
+    if (!isDemoProject) {
+      ;(async () => {
+        try {
+          for (const update of updates) {
+            await updateTicketAPI(projectId, update.ticketId, { assigneeId: userId })
+          }
+        } catch (err) {
+          console.error('Failed to persist assignee update:', err)
+        }
+      })()
+    }
 
     const ticketKeys = formatTicketIds(
       columns,
