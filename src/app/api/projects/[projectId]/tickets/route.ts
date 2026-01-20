@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import type { IssueType, Priority } from '@/types'
 
 const createTicketSchema = z.object({
@@ -234,6 +235,18 @@ export async function POST(
       })
 
       return newTicket
+    })
+
+    // Emit real-time event for other clients
+    // Include tabId from header so the originating tab can skip the event
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitTicketEvent({
+      type: 'ticket.created',
+      projectId,
+      ticketId: ticket.id,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
     })
 
     return NextResponse.json(transformTicket(ticket), { status: 201 })

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import type { IssueType, Priority } from '@/types'
 
 const updateTicketSchema = z.object({
@@ -257,6 +258,20 @@ export async function PATCH(
       select: ticketSelect,
     })
 
+    // Emit real-time event for other clients
+    // Use 'ticket.moved' if column changed, otherwise 'ticket.updated'
+    // Include tabId from header so the originating tab can skip the event
+    const columnChanged = updateData.columnId && updateData.columnId !== existingTicket.columnId
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitTicketEvent({
+      type: columnChanged ? 'ticket.moved' : 'ticket.updated',
+      projectId,
+      ticketId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+    })
+
     return NextResponse.json(transformTicket(ticket))
   } catch (error) {
     if (error instanceof Error) {
@@ -300,6 +315,18 @@ export async function DELETE(
     // Delete the ticket (cascades to watchers, comments, attachments, etc.)
     await db.ticket.delete({
       where: { id: ticketId },
+    })
+
+    // Emit real-time event for other clients
+    // Include tabId from header so the originating tab can skip the event
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitTicketEvent({
+      type: 'ticket.deleted',
+      projectId,
+      ticketId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
     })
 
     return NextResponse.json({ success: true })

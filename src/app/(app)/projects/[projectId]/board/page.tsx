@@ -8,6 +8,7 @@ import { KanbanBoard } from '@/components/board'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
+import { useRealtime } from '@/hooks/use-realtime'
 import { getDemoData } from '@/lib/demo-data'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
@@ -59,6 +60,9 @@ export default function BoardPage() {
   const { isLoading: ticketsLoading, error: ticketsError } = useTicketsByProject(projectId, {
     enabled: !isDemoProject && _hasHydrated && columnsLoaded,
   })
+
+  // Connect to real-time updates (only for real projects after initial load)
+  useRealtime(projectId, !isDemoProject && _hasHydrated && columnsLoaded && !ticketsLoading)
 
   // Get columns for this project
   const columns = getColumns(projectId)

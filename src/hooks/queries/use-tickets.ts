@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
+import { getTabId } from '@/hooks/use-realtime'
 import { useBoardStore } from '@/stores/board-store'
 import type { Column, ColumnWithTickets, TicketFormData, TicketWithRelations } from '@/types'
 
@@ -185,7 +186,10 @@ export function useCreateTicket() {
     mutationFn: async ({ projectId, columnId, data }: CreateTicketInput) => {
       const res = await fetch(`/api/projects/${projectId}/tickets`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
         body: JSON.stringify({
           ...data,
           columnId,
@@ -297,7 +301,10 @@ export function useUpdateTicket() {
 
       const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
         body: JSON.stringify(apiUpdates),
       })
       if (!res.ok) {
@@ -354,6 +361,9 @@ export function useDeleteTicket() {
     mutationFn: async ({ projectId, ticketId }: DeleteTicketInput) => {
       const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
         method: 'DELETE',
+        headers: {
+          'X-Tab-Id': getTabId(),
+        },
       })
       if (!res.ok) {
         const error = await res.json()
@@ -402,7 +412,10 @@ export function useMoveTicket() {
     mutationFn: async ({ projectId, ticketId, toColumnId, newOrder }: MoveTicketInput) => {
       const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
         body: JSON.stringify({
           columnId: toColumnId,
           order: newOrder,
@@ -456,7 +469,10 @@ export function useMoveTickets() {
         const ticketId = ticketIds[i]
         const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tab-Id': getTabId(),
+          },
           body: JSON.stringify({
             columnId: toColumnId,
             order: newOrder + i,
