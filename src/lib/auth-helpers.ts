@@ -58,6 +58,17 @@ export async function requireSystemAdmin() {
 }
 
 /**
+ * Check if a user is a system admin
+ */
+async function isUserSystemAdmin(userId: string): Promise<boolean> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { isSystemAdmin: true },
+  })
+  return user?.isSystemAdmin ?? false
+}
+
+/**
  * Get a user's project membership
  * Returns null if user is not a member
  */
@@ -70,8 +81,14 @@ export async function getProjectMembership(userId: string, projectId: string) {
 
 /**
  * Require project membership - throws if not a member
+ * System admins have unrestricted access to all projects
  */
 export async function requireProjectMember(userId: string, projectId: string) {
+  // System admins bypass membership checks - they have virtual owner access
+  if (await isUserSystemAdmin(userId)) {
+    return { role: 'owner' as const }
+  }
+
   const membership = await getProjectMembership(userId, projectId)
   if (!membership) {
     throw new Error('Forbidden: Not a project member')
@@ -81,9 +98,18 @@ export async function requireProjectMember(userId: string, projectId: string) {
 
 /**
  * Require project admin role - throws if not admin or owner
+ * System admins have unrestricted access to all projects
  */
 export async function requireProjectAdmin(userId: string, projectId: string) {
-  const membership = await requireProjectMember(userId, projectId)
+  // System admins bypass membership checks - they have virtual owner access
+  if (await isUserSystemAdmin(userId)) {
+    return { role: 'owner' as const }
+  }
+
+  const membership = await getProjectMembership(userId, projectId)
+  if (!membership) {
+    throw new Error('Forbidden: Not a project member')
+  }
   if (membership.role !== 'owner' && membership.role !== 'admin') {
     throw new Error('Forbidden: Admin role required')
   }
@@ -92,9 +118,18 @@ export async function requireProjectAdmin(userId: string, projectId: string) {
 
 /**
  * Require project owner role - throws if not owner
+ * System admins have unrestricted access to all projects
  */
 export async function requireProjectOwner(userId: string, projectId: string) {
-  const membership = await requireProjectMember(userId, projectId)
+  // System admins bypass membership checks - they have virtual owner access
+  if (await isUserSystemAdmin(userId)) {
+    return { role: 'owner' as const }
+  }
+
+  const membership = await getProjectMembership(userId, projectId)
+  if (!membership) {
+    throw new Error('Forbidden: Not a project member')
+  }
   if (membership.role !== 'owner') {
     throw new Error('Forbidden: Owner role required')
   }
