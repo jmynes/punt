@@ -814,15 +814,15 @@ function MenuButton({
     <button
       className={cn(
         'flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800',
-        destructive && 'text-red-200 hover:bg-red-900/30',
+        destructive && 'text-red-400 hover:bg-red-900/20',
         className,
       )}
       {...rest}
     >
-      {icon && <span className="text-zinc-400">{icon}</span>}
-      <span className={cn('flex-1', destructive && 'text-red-200')}>{label}</span>
+      {icon && <span className={destructive ? 'text-red-400' : 'text-zinc-400'}>{icon}</span>}
+      <span className={cn('flex-1', destructive && 'text-red-400')}>{label}</span>
       {shortcut && (
-        <span className={cn('text-[10px] text-zinc-500 ml-3', destructive && 'text-red-300')}>
+        <span className={cn('text-[10px] text-zinc-500 ml-3', destructive && 'text-red-400/70')}>
           {shortcut}
         </span>
       )}
