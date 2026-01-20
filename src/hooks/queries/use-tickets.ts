@@ -713,3 +713,82 @@ export function useMoveTickets() {
     },
   })
 }
+
+// ============================================================================
+// Sprint queries
+// ============================================================================
+
+export const sprintKeys = {
+  all: ['sprints'] as const,
+  byProject: (projectId: string) => ['sprints', 'project', projectId] as const,
+}
+
+// API response type for sprints
+interface SprintAPIResponse {
+  id: string
+  name: string
+  isActive: boolean
+  startDate: string | null
+  endDate: string | null
+}
+
+/**
+ * Fetch all sprints for a project
+ */
+export function useProjectSprints(projectId: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: sprintKeys.byProject(projectId),
+    queryFn: async () => {
+      const res = await fetch(`/api/projects/${projectId}/sprints`)
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to fetch sprints')
+      }
+      const data: SprintAPIResponse[] = await res.json()
+      // Transform dates
+      return data.map((sprint) => ({
+        ...sprint,
+        startDate: sprint.startDate ? new Date(sprint.startDate) : null,
+        endDate: sprint.endDate ? new Date(sprint.endDate) : null,
+      }))
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes - sprints change rarely
+    enabled: options?.enabled ?? true,
+  })
+}
+
+// ============================================================================
+// Label queries
+// ============================================================================
+
+export const labelKeys = {
+  all: ['labels'] as const,
+  byProject: (projectId: string) => ['labels', 'project', projectId] as const,
+}
+
+// API response type for labels
+interface LabelAPIResponse {
+  id: string
+  name: string
+  color: string
+}
+
+/**
+ * Fetch all labels for a project
+ */
+export function useProjectLabels(projectId: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: labelKeys.byProject(projectId),
+    queryFn: async () => {
+      const res = await fetch(`/api/projects/${projectId}/labels`)
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to fetch labels')
+      }
+      const data: LabelAPIResponse[] = await res.json()
+      return data
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes - labels change rarely
+    enabled: options?.enabled ?? true,
+  })
+}

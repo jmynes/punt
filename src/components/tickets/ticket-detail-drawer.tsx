@@ -62,7 +62,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import { useDeleteTicket, useUpdateTicket } from '@/hooks/queries/use-tickets'
+import { useDeleteTicket, useProjectLabels, useProjectSprints, useUpdateTicket } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
@@ -172,6 +172,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
   // Check if this is a demo project
   const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
+
+  // Fetch real sprints and labels for non-demo projects
+  const { data: projectSprints } = useProjectSprints(projectId, { enabled: !isDemoProject })
+  const { data: projectLabels } = useProjectLabels(projectId, { enabled: !isDemoProject })
+
+  // Use real data for non-demo projects, demo data otherwise
+  const availableSprints: SprintSummary[] = isDemoProject ? DEMO_SPRINTS : (projectSprints ?? [])
+  const availableLabels: LabelSummary[] = isDemoProject ? DEMO_LABELS : (projectLabels ?? [])
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showUnsavedChangesConfirm, setShowUnsavedChangesConfirm] = useState(false)
@@ -474,7 +482,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       JSON.stringify(tempLabelIds.sort()) !== JSON.stringify(ticket.labels.map((l) => l.id).sort())
     ) {
       updates.labels = tempLabelIds
-        .map((id: string) => DEMO_LABELS.find((l) => l.id === id))
+        .map((id: string) => availableLabels.find((l) => l.id === id))
         .filter((l): l is LabelSummary => l !== undefined)
     }
 
@@ -596,13 +604,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         break
       case 'labels':
         updates.labels = tempLabelIds
-          .map((id) => DEMO_LABELS.find((l) => l.id === id))
+          .map((id) => availableLabels.find((l) => l.id === id))
           .filter((l): l is LabelSummary => l !== undefined)
         break
       case 'sprint':
         updates.sprintId = tempSprintId
         updates.sprint = tempSprintId
-          ? DEMO_SPRINTS.find((s) => s.id === tempSprintId) || null
+          ? availableSprints.find((s) => s.id === tempSprintId) || null
           : null
         break
       case 'storyPoints':
@@ -640,34 +648,46 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     }
 
     const updatedTicket = { ...oldTicket, ...updates }
-    updateTicket(projectId, ticket.id, updates)
 
-    // Add to undo stack
-    const { pushUpdate } = useUndoStore.getState()
-    const showUndo = useUIStore.getState().showUndoButtons
+    if (isDemoProject) {
+      // Demo project: use local state only
+      updateTicket(projectId, ticket.id, updates)
 
-    const toastId = showUndoRedoToast('success', {
-      title: 'Ticket updated',
-      description: ticketKey,
-      duration: 3000,
-      showUndoButtons: showUndo,
-      onUndo: (id) => {
-        useUndoStore.getState().undoByToastId(id)
-        updateTicket(projectId, ticket.id, oldTicket)
-      },
-      onRedo: (id) => {
-        useUndoStore.getState().redoByToastId(id)
-        updateTicket(projectId, ticket.id, updates)
-      },
-      undoneTitle: 'Update undone',
-      redoneTitle: 'Update redone',
-    })
+      // Add to undo stack
+      const { pushUpdate } = useUndoStore.getState()
+      const showUndo = useUIStore.getState().showUndoButtons
 
-    pushUpdate(
-      projectId,
-      [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }],
-      toastId,
-    )
+      const toastId = showUndoRedoToast('success', {
+        title: 'Ticket updated',
+        description: ticketKey,
+        duration: 3000,
+        showUndoButtons: showUndo,
+        onUndo: (id) => {
+          useUndoStore.getState().undoByToastId(id)
+          updateTicket(projectId, ticket.id, oldTicket)
+        },
+        onRedo: (id) => {
+          useUndoStore.getState().redoByToastId(id)
+          updateTicket(projectId, ticket.id, updates)
+        },
+        undoneTitle: 'Update undone',
+        redoneTitle: 'Update redone',
+      })
+
+      pushUpdate(
+        projectId,
+        [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }],
+        toastId,
+      )
+    } else {
+      // Real project: use API mutation (optimistic update is handled by the mutation)
+      updateTicketMutation.mutate({
+        projectId,
+        ticketId: ticket.id,
+        updates,
+        previousTicket: oldTicket,
+      })
+    }
 
     setEditingField(null)
   }
@@ -764,8 +784,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const startEditing = (field: string) => {
     setEditingField(field)
   }
-
-  const _selectedSprint = ticket.sprint ? DEMO_SPRINTS.find((s) => s.id === ticket.sprintId) : null
 
   return (
     <Sheet
@@ -866,8 +884,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8 shrink-0">
-                      <TypeBadge type={ticket.type} size="sm" />
-                      <span className="ml-2 capitalize">{ticket.type}</span>
+                      <TypeBadge type={tempType} size="sm" />
+                      <span className="ml-2 capitalize">{tempType}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="bg-zinc-900 border-zinc-700">
@@ -876,7 +894,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       return (
                         <DropdownMenuCheckboxItem
                           key={type}
-                          checked={ticket.type === type}
+                          checked={tempType === type}
                           onCheckedChange={() => {
                             const newType = type as IssueType
                             handleChange('type', newType)
@@ -945,14 +963,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <div className="cursor-pointer">
-                      <PriorityBadge priority={ticket.priority} showLabel />
+                      <PriorityBadge priority={tempPriority} showLabel />
                     </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
                     {PRIORITIES.map((priority) => (
                       <DropdownMenuCheckboxItem
                         key={priority}
-                        checked={ticket.priority === priority}
+                        checked={tempPriority === priority}
                         onCheckedChange={() => {
                           handleChange('priority', priority)
                         }}
@@ -967,30 +985,35 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <div className="cursor-pointer">
-                      {ticket.sprint ? (
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            ticket.sprint.isActive
-                              ? 'border-green-600 bg-green-900/30 text-green-400'
-                              : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
-                          )}
-                        >
-                          {ticket.sprint.name}
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="border-zinc-600 bg-zinc-800/50 text-zinc-400"
-                        >
-                          Backlog
-                        </Badge>
-                      )}
+                      {(() => {
+                        const selectedSprint = tempSprintId
+                          ? availableSprints.find((s) => s.id === tempSprintId)
+                          : null
+                        return selectedSprint ? (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              selectedSprint.isActive
+                                ? 'border-green-600 bg-green-900/30 text-green-400'
+                                : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
+                            )}
+                          >
+                            {selectedSprint.name}
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="border-zinc-600 bg-zinc-800/50 text-zinc-400"
+                          >
+                            Backlog
+                          </Badge>
+                        )
+                      })()}
                     </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
                     <DropdownMenuCheckboxItem
-                      checked={!ticket.sprint}
+                      checked={!tempSprintId}
                       onCheckedChange={() => {
                         handleChange('sprint', null)
                       }}
@@ -998,10 +1021,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     >
                       No sprint (Backlog)
                     </DropdownMenuCheckboxItem>
-                    {DEMO_SPRINTS.map((sprint) => (
+                    {availableSprints.map((sprint) => (
                       <DropdownMenuCheckboxItem
                         key={sprint.id}
-                        checked={ticket.sprint?.id === sprint.id}
+                        checked={tempSprintId === sprint.id}
                         onCheckedChange={() => {
                           handleChange('sprint', sprint.id)
                         }}
@@ -1111,7 +1134,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Status</Label>
                   <Select
-                    value={ticket.columnId}
+                    value={tempStatusId || ticket.columnId}
                     onValueChange={(value) => handleChange('status', value)}
                   >
                     <SelectTrigger className="w-full h-10 bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
@@ -1141,7 +1164,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Parent Epic / Story</Label>
                   <ParentSelect
-                    value={ticket.parentId}
+                    value={tempParentId}
                     onChange={(value) => handleChange('parent', value)}
                     parentTickets={parentTickets}
                   />
@@ -1151,7 +1174,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Due Date</Label>
                   <DatePicker
-                    value={ticket.dueDate}
+                    value={tempDueDate}
                     onChange={(value) => handleChange('dueDate', value)}
                     placeholder="Set due date"
                     context="ticket-form"
@@ -1162,7 +1185,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Start Date</Label>
                   <DatePicker
-                    value={ticket.startDate}
+                    value={tempStartDate}
                     onChange={(value) => handleChange('startDate', value)}
                     placeholder="Set start date"
                     context="ticket-form"
@@ -1173,7 +1196,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Environment</Label>
                   <Input
-                    value={ticket.environment || ''}
+                    value={tempEnvironment}
                     onChange={(e) => handleChange('environment', e.target.value)}
                     placeholder="e.g., Production, Staging"
                     className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
@@ -1184,7 +1207,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Affected Version</Label>
                   <Input
-                    value={ticket.affectedVersion || ''}
+                    value={tempAffectedVersion}
                     onChange={(e) => handleChange('affectedVersion', e.target.value)}
                     placeholder="e.g., 1.0.0"
                     className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
@@ -1195,7 +1218,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Fix Version</Label>
                   <Input
-                    value={ticket.fixVersion || ''}
+                    value={tempFixVersion}
                     onChange={(e) => handleChange('fixVersion', e.target.value)}
                     placeholder="e.g., 1.0.1"
                     className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
@@ -1207,9 +1230,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               <div className="space-y-2">
                 <Label className="text-zinc-400">Labels</Label>
                 <LabelSelect
-                  value={ticket.labels.map((l) => l.id)}
+                  value={tempLabelIds}
                   onChange={(value) => handleChange('labels', value)}
-                  labels={DEMO_LABELS}
+                  labels={availableLabels}
                 />
               </div>
 
