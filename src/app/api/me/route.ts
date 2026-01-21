@@ -5,11 +5,7 @@ import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 
 const updateProfileSchema = z.object({
-  name: z.string().min(1, 'Name is required').optional(),
-  email: z
-    .string()
-    .transform((val) => (val === '' ? undefined : val))
-    .pipe(z.string().email('Invalid email address').optional()),
+  name: z.string().min(1, 'Name is required'),
 })
 
 // GET /api/me - Get current user's profile
@@ -70,24 +66,11 @@ export async function PATCH(request: Request) {
       )
     }
 
-    const updates = parsed.data
-
-    // Check email uniqueness if being updated
-    if (updates.email && updates.email !== currentUser.email) {
-      const emailExists = await db.user.findUnique({
-        where: { email: updates.email },
-      })
-      if (emailExists) {
-        return NextResponse.json({ error: 'Email already in use' }, { status: 400 })
-      }
-    }
+    const { name } = parsed.data
 
     const user = await db.user.update({
       where: { id: currentUser.id },
-      data: {
-        ...(updates.name && { name: updates.name }),
-        ...(updates.email && { email: updates.email }),
-      },
+      data: { name },
       select: {
         id: true,
         email: true,
@@ -106,9 +89,7 @@ export async function PATCH(request: Request) {
       userId: currentUser.id,
       tabId,
       timestamp: Date.now(),
-      changes: {
-        name: updates.name,
-      },
+      changes: { name },
     })
 
     return NextResponse.json(user)
