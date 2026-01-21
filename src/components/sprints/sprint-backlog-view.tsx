@@ -13,8 +13,8 @@ import {
 } from '@dnd-kit/core'
 import { Plus, Target } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import {
   useDeleteSprint,
   useProjectSprints,
@@ -281,6 +281,12 @@ export function SprintBacklogView({
       // Case 2: Cross-section move
       if (ticketsChangingSprint.length === 0) return
 
+      // Capture original sprint IDs for undo
+      const originalSprintIds = ticketsChangingSprint.map((t) => ({
+        ticketId: t.id,
+        sprintId: t.sprintId,
+      }))
+
       // Get sprint names for toast
       const fromSprints = new Set(ticketsChangingSprint.map((t) => t.sprintId ?? 'backlog'))
       const targetSprintName =
@@ -288,42 +294,78 @@ export function SprintBacklogView({
           ? 'Backlog'
           : (sprints?.find((s) => s.id === targetSprintId)?.name ?? 'Sprint')
 
+      const count = ticketsChangingSprint.length
+      const fromLabel =
+        fromSprints.size === 1
+          ? fromSprints.has('backlog')
+            ? 'Backlog'
+            : (sprints?.find((s) => s.id === Array.from(fromSprints)[0])?.name ?? 'Sprint')
+          : 'multiple sprints'
+
       // Optimistically update the board store
       for (const ticket of ticketsChangingSprint) {
         updateTicket(projectId, ticket.id, { sprintId: targetSprintId })
       }
 
+      // Show undo/redo toast
+      showUndoRedoToast('success', {
+        title: count === 1 ? `Ticket moved to ${targetSprintName}` : `${count} tickets moved to ${targetSprintName}`,
+        description: `From ${fromLabel}`,
+        showUndoButtons: true,
+        onUndo: () => {
+          // Revert to original sprint IDs
+          for (const { ticketId, sprintId } of originalSprintIds) {
+            updateTicket(projectId, ticketId, { sprintId })
+          }
+          // Persist undo to database
+          Promise.all(
+            originalSprintIds.map(({ ticketId, sprintId }) =>
+              updateTicketSprintMutation.mutateAsync({ ticketId, sprintId }),
+            ),
+          ).catch(() => {
+            // Refetch will handle sync
+          })
+        },
+        onRedo: () => {
+          // Re-apply move to target sprint
+          for (const { ticketId } of originalSprintIds) {
+            updateTicket(projectId, ticketId, { sprintId: targetSprintId })
+          }
+          // Persist redo to database
+          Promise.all(
+            originalSprintIds.map(({ ticketId }) =>
+              updateTicketSprintMutation.mutateAsync({ ticketId, sprintId: targetSprintId }),
+            ),
+          ).catch(() => {
+            // Refetch will handle sync
+          })
+        },
+        undoneTitle: 'Move undone',
+        undoneDescription: `${count === 1 ? 'Ticket' : `${count} tickets`} returned to ${fromLabel}`,
+        redoneTitle: count === 1 ? `Ticket moved to ${targetSprintName}` : `${count} tickets moved to ${targetSprintName}`,
+        redoneDescription: `From ${fromLabel}`,
+      })
+
       // Persist to database
-      const promises = ticketsChangingSprint.map((ticket) =>
-        updateTicketSprintMutation.mutateAsync({
-          ticketId: ticket.id,
-          sprintId: targetSprintId,
-        }),
-      )
-
-      Promise.all(promises)
-        .then(() => {
-          const count = ticketsChangingSprint.length
-          const fromLabel =
-            fromSprints.size === 1
-              ? fromSprints.has('backlog')
-                ? 'Backlog'
-                : (sprints?.find((s) => s.id === Array.from(fromSprints)[0])?.name ?? 'Sprint')
-              : 'multiple sprints'
-
-          toast.success(
-            count === 1
-              ? `Ticket moved to ${targetSprintName}`
-              : `${count} tickets moved to ${targetSprintName}`,
-            {
-              description: `From ${fromLabel}`,
-            },
-          )
+      Promise.all(
+        ticketsChangingSprint.map((ticket) =>
+          updateTicketSprintMutation.mutateAsync({
+            ticketId: ticket.id,
+            sprintId: targetSprintId,
+          }),
+        ),
+      ).catch((error) => {
+        // Revert on error
+        for (const { ticketId, sprintId } of originalSprintIds) {
+          updateTicket(projectId, ticketId, { sprintId })
+        }
+        showUndoRedoToast('error', {
+          title: 'Failed to move tickets',
+          description: error.message,
+          showUndoButtons: false,
+          onUndo: () => {},
         })
-        .catch((error) => {
-          // Revert on error - refetch will handle this
-          toast.error('Failed to move tickets', { description: error.message })
-        })
+      })
     },
     [tickets, sprints, projectId, updateTicket, updateTicketSprintMutation],
   )
