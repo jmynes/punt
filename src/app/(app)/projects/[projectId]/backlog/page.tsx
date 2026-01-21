@@ -1,19 +1,33 @@
 'use client'
 
+import {
+  closestCorners,
+  DndContext,
+  type DragEndEvent,
+  type DragOverEvent,
+  DragOverlay,
+  type DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
 import { List, Loader2, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { ColumnConfig } from '@/components/backlog'
 import { SprintSection } from '@/components/sprints'
+import { SprintTicketRow } from '@/components/sprints/sprint-ticket-row'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
-import { useProjectSprints } from '@/hooks/queries/use-sprints'
+import { useProjectSprints, useUpdateTicketSprint } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
+import type { TicketWithRelations } from '@/types'
 
 export default function BacklogPage() {
   const params = useParams()
@@ -23,10 +37,30 @@ export default function BacklogPage() {
   const project = getProject(projectId)
   const projectKey = project?.key || 'PROJ'
 
-  const { getColumns, _hasHydrated } = useBoardStore()
+  const { getColumns, updateTicket, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
     useUIStore()
-  const { clearSelection } = useSelectionStore()
+  const { clearSelection, selectedTicketIds } = useSelectionStore()
+
+  // API mutations
+  const updateTicketSprintMutation = useUpdateTicketSprint(projectId)
+
+  // Drag state
+  const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
+  const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
+  const [dropTargetSprintId, setDropTargetSprintId] = useState<string | null | undefined>(undefined)
+
+  // Refs for drag operation
+  const draggedIdsRef = useRef<string[]>([])
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+  )
 
   // Fetch columns from API
   const { isLoading: columnsLoading, isSuccess: columnsLoaded } = useColumnsByProject(projectId, {
@@ -115,6 +149,127 @@ export default function BacklogPage() {
     columns,
   })
 
+  // Drag handlers
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event
+      if (active.data.current?.type !== 'ticket') return
+
+      const ticket = active.data.current.ticket as TicketWithRelations
+      setActiveTicket(ticket)
+
+      // Determine which tickets are being dragged
+      const selected = Array.from(selectedTicketIds)
+      const activeId = active.id as string
+
+      let ticketIds: string[]
+      if (selected.length > 1 && selected.includes(activeId)) {
+        ticketIds = selected
+      } else {
+        ticketIds = [activeId]
+      }
+
+      setDraggingTicketIds(ticketIds)
+      draggedIdsRef.current = ticketIds
+    },
+    [selectedTicketIds],
+  )
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { over } = event
+    if (!over) {
+      setDropTargetSprintId(undefined)
+      return
+    }
+
+    // Check if over a sprint section
+    if (over.data.current?.type === 'sprint-section') {
+      const sprintId = over.data.current.sprintId as string | null
+      setDropTargetSprintId(sprintId)
+    } else if (over.data.current?.type === 'ticket') {
+      // Over a ticket - get the sprint of that ticket
+      const ticket = over.data.current.ticket as TicketWithRelations
+      setDropTargetSprintId(ticket.sprintId)
+    }
+  }, [])
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const draggedIds = draggedIdsRef.current
+      const { over } = event
+
+      // Clean up state first
+      setActiveTicket(null)
+      setDraggingTicketIds([])
+      setDropTargetSprintId(undefined)
+      draggedIdsRef.current = []
+
+      if (!over || draggedIds.length === 0) return
+
+      // Determine target sprint
+      let targetSprintId: string | null = null
+      if (over.data.current?.type === 'sprint-section') {
+        targetSprintId = over.data.current.sprintId as string | null
+      } else if (over.data.current?.type === 'ticket') {
+        const ticket = over.data.current.ticket as TicketWithRelations
+        targetSprintId = ticket.sprintId
+      }
+
+      // Get the tickets being moved
+      const ticketsToMove = allTickets.filter((t) => draggedIds.includes(t.id))
+      if (ticketsToMove.length === 0) return
+
+      // Check if any ticket actually changes sprint
+      const ticketsChangingSprint = ticketsToMove.filter((t) => t.sprintId !== targetSprintId)
+      if (ticketsChangingSprint.length === 0) return
+
+      // Get sprint names for toast
+      const fromSprints = new Set(ticketsChangingSprint.map((t) => t.sprintId ?? 'backlog'))
+      const targetSprintName =
+        targetSprintId === null
+          ? 'Backlog'
+          : (sprints?.find((s) => s.id === targetSprintId)?.name ?? 'Sprint')
+
+      // Optimistically update the board store
+      for (const ticket of ticketsChangingSprint) {
+        updateTicket(projectId, ticket.id, { sprintId: targetSprintId })
+      }
+
+      // Persist to database
+      const promises = ticketsChangingSprint.map((ticket) =>
+        updateTicketSprintMutation.mutateAsync({
+          ticketId: ticket.id,
+          sprintId: targetSprintId,
+        }),
+      )
+
+      Promise.all(promises)
+        .then(() => {
+          const count = ticketsChangingSprint.length
+          const fromLabel =
+            fromSprints.size === 1
+              ? fromSprints.has('backlog')
+                ? 'Backlog'
+                : (sprints?.find((s) => s.id === Array.from(fromSprints)[0])?.name ?? 'Sprint')
+              : 'multiple sprints'
+
+          toast.success(
+            count === 1
+              ? `Ticket moved to ${targetSprintName}`
+              : `${count} tickets moved to ${targetSprintName}`,
+            {
+              description: `From ${fromLabel}`,
+            },
+          )
+        })
+        .catch((error) => {
+          // Revert on error - refetch will handle this
+          toast.error('Failed to move tickets', { description: error.message })
+        })
+    },
+    [allTickets, sprints, projectId, updateTicket, updateTicketSprintMutation],
+  )
+
   // Redirect to dashboard if project doesn't exist after loading
   useEffect(() => {
     if (!projectsLoading && !project) {
@@ -159,9 +314,7 @@ export default function BacklogPage() {
           </div>
           <div>
             <h1 className="text-xl font-semibold text-zinc-100">{projectKey} Backlog</h1>
-            <p className="text-sm text-zinc-500">
-              View and manage all tickets in a configurable list
-            </p>
+            <p className="text-sm text-zinc-500">Drag tickets between sprints to plan your work</p>
           </div>
         </div>
 
@@ -174,40 +327,72 @@ export default function BacklogPage() {
       </div>
 
       {/* Scrollable content with sprint and backlog sections */}
-      <div className="flex-1 overflow-y-auto min-h-0 p-4 lg:p-6 space-y-4">
-        {/* Active Sprints */}
-        {activeSprints.map((sprint) => (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 lg:p-6 space-y-4">
+          {/* Active Sprints */}
+          {activeSprints.map((sprint) => (
+            <SprintSection
+              key={sprint.id}
+              sprint={sprint}
+              tickets={
+                ticketsBySprint[sprint.id]?.filter((t) => !draggingTicketIds.includes(t.id)) ?? []
+              }
+              projectKey={projectKey}
+              projectId={projectId}
+              defaultExpanded={true}
+            />
+          ))}
+
+          {/* Planning Sprints */}
+          {planningSprints.map((sprint) => (
+            <SprintSection
+              key={sprint.id}
+              sprint={sprint}
+              tickets={
+                ticketsBySprint[sprint.id]?.filter((t) => !draggingTicketIds.includes(t.id)) ?? []
+              }
+              projectKey={projectKey}
+              projectId={projectId}
+              defaultExpanded={true}
+            />
+          ))}
+
+          {/* Backlog Section */}
           <SprintSection
-            key={sprint.id}
-            sprint={sprint}
-            tickets={ticketsBySprint[sprint.id] ?? []}
+            sprint={null}
+            tickets={
+              ticketsBySprint.backlog?.filter((t) => !draggingTicketIds.includes(t.id)) ?? []
+            }
             projectKey={projectKey}
             projectId={projectId}
             defaultExpanded={true}
           />
-        ))}
+        </div>
 
-        {/* Planning Sprints */}
-        {planningSprints.map((sprint) => (
-          <SprintSection
-            key={sprint.id}
-            sprint={sprint}
-            tickets={ticketsBySprint[sprint.id] ?? []}
-            projectKey={projectKey}
-            projectId={projectId}
-            defaultExpanded={true}
-          />
-        ))}
-
-        {/* Backlog Section */}
-        <SprintSection
-          sprint={null}
-          tickets={ticketsBySprint.backlog}
-          projectKey={projectKey}
-          projectId={projectId}
-          defaultExpanded={true}
-        />
-      </div>
+        {/* Drag overlay */}
+        <DragOverlay dropAnimation={null}>
+          {activeTicket && (
+            <div className="w-full max-w-4xl">
+              {draggingTicketIds.length > 1 ? (
+                <div className="relative">
+                  <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay />
+                  <div className="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold shadow-lg">
+                    {draggingTicketIds.length}
+                  </div>
+                </div>
+              ) : (
+                <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay />
+              )}
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
 
       {/* Column config sheet */}
       <ColumnConfig />

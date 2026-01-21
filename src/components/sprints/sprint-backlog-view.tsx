@@ -1,7 +1,7 @@
 'use client'
 
 import {
-  closestCenter,
+  closestCorners,
   DndContext,
   type DragEndEvent,
   type DragOverEvent,
@@ -12,7 +12,7 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { Plus, Target } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,6 +22,7 @@ import {
 } from '@/hooks/queries/use-sprints'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
+import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { TicketWithRelations } from '@/types'
 import { SprintSection } from './sprint-section'
@@ -47,13 +48,19 @@ export function SprintBacklogView({
   showHeader = true,
 }: SprintBacklogViewProps) {
   const { data: sprints, isLoading: sprintsLoading } = useProjectSprints(projectId)
-  const updateTicketSprint = useUpdateTicketSprint(projectId)
+  const updateTicketSprintMutation = useUpdateTicketSprint(projectId)
   const deleteSprint = useDeleteSprint(projectId)
   const { setSprintCreateOpen, openCreateTicketWithData } = useUIStore()
   const { updateTicket } = useBoardStore()
+  const { selectedTicketIds } = useSelectionStore()
 
+  // Drag state
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
+  const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
   const [_overId, setOverId] = useState<string | null>(null)
+
+  // Refs for drag operation
+  const draggedIdsRef = useRef<string[]>([])
 
   // Sensors for drag detection
   const sensors = useSensors(
@@ -109,13 +116,30 @@ export function SprintBacklogView({
   )
 
   // Handle drag start
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const { active } = event
-    const ticket = active.data.current?.ticket as TicketWithRelations | undefined
-    if (ticket) {
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event
+      if (active.data.current?.type !== 'ticket') return
+
+      const ticket = active.data.current.ticket as TicketWithRelations
       setActiveTicket(ticket)
-    }
-  }, [])
+
+      // Determine which tickets are being dragged
+      const selected = Array.from(selectedTicketIds)
+      const activeId = active.id as string
+
+      let ticketIds: string[]
+      if (selected.length > 1 && selected.includes(activeId)) {
+        ticketIds = selected
+      } else {
+        ticketIds = [activeId]
+      }
+
+      setDraggingTicketIds(ticketIds)
+      draggedIdsRef.current = ticketIds
+    },
+    [selectedTicketIds],
+  )
 
   // Handle drag over (for visual feedback)
   const handleDragOver = useCallback((event: DragOverEvent) => {
@@ -139,16 +163,17 @@ export function SprintBacklogView({
 
   // Handle drag end
   const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      const { active, over } = event
+    (event: DragEndEvent) => {
+      const draggedIds = draggedIdsRef.current
+      const { over } = event
 
+      // Clean up state first
       setActiveTicket(null)
+      setDraggingTicketIds([])
       setOverId(null)
+      draggedIdsRef.current = []
 
-      if (!over) return
-
-      const activeTicketData = active.data.current?.ticket as TicketWithRelations | undefined
-      if (!activeTicketData) return
+      if (!over || draggedIds.length === 0) return
 
       // Determine target sprint
       let targetSprintId: string | null = null
@@ -161,42 +186,59 @@ export function SprintBacklogView({
         targetSprintId = overTicket.sprintId
       }
 
-      // Check if sprint changed
-      const currentSprintId = activeTicketData.sprintId
-      if (targetSprintId === currentSprintId) {
-        // Same sprint - might be reordering within sprint
-        // For now, we don't support reordering within sprint section
-        return
-      }
+      // Get the tickets being moved
+      const ticketsToMove = tickets.filter((t) => draggedIds.includes(t.id))
+      if (ticketsToMove.length === 0) return
 
-      // Optimistically update the ticket
-      updateTicket(projectId, activeTicketData.id, { sprintId: targetSprintId })
+      // Check if any ticket actually changes sprint
+      const ticketsChangingSprint = ticketsToMove.filter((t) => t.sprintId !== targetSprintId)
+      if (ticketsChangingSprint.length === 0) return
 
-      // Show toast
+      // Get sprint names for toast
+      const fromSprints = new Set(ticketsChangingSprint.map((t) => t.sprintId ?? 'backlog'))
       const targetSprintName =
         targetSprintId === null
           ? 'Backlog'
           : (sprints?.find((s) => s.id === targetSprintId)?.name ?? 'Sprint')
 
-      toast.success(`Moved to ${targetSprintName}`, {
-        description: `${projectKey}-${activeTicketData.number}: ${activeTicketData.title}`,
-      })
-
-      // Persist to API
-      try {
-        await updateTicketSprint.mutateAsync({
-          ticketId: activeTicketData.id,
-          sprintId: targetSprintId,
-        })
-      } catch (_error) {
-        // Revert on failure
-        updateTicket(projectId, activeTicketData.id, { sprintId: currentSprintId })
-        toast.error('Failed to move ticket', {
-          description: 'Please try again.',
-        })
+      // Optimistically update the board store
+      for (const ticket of ticketsChangingSprint) {
+        updateTicket(projectId, ticket.id, { sprintId: targetSprintId })
       }
+
+      // Persist to database
+      const promises = ticketsChangingSprint.map((ticket) =>
+        updateTicketSprintMutation.mutateAsync({
+          ticketId: ticket.id,
+          sprintId: targetSprintId,
+        }),
+      )
+
+      Promise.all(promises)
+        .then(() => {
+          const count = ticketsChangingSprint.length
+          const fromLabel =
+            fromSprints.size === 1
+              ? fromSprints.has('backlog')
+                ? 'Backlog'
+                : (sprints?.find((s) => s.id === Array.from(fromSprints)[0])?.name ?? 'Sprint')
+              : 'multiple sprints'
+
+          toast.success(
+            count === 1
+              ? `Ticket moved to ${targetSprintName}`
+              : `${count} tickets moved to ${targetSprintName}`,
+            {
+              description: `From ${fromLabel}`,
+            },
+          )
+        })
+        .catch((error) => {
+          // Revert on error - refetch will handle this
+          toast.error('Failed to move tickets', { description: error.message })
+        })
     },
-    [projectId, projectKey, sprints, updateTicket, updateTicketSprint],
+    [tickets, sprints, projectId, updateTicket, updateTicketSprintMutation],
   )
 
   // Handle create ticket with sprint prefill
@@ -236,10 +278,14 @@ export function SprintBacklogView({
 
   const hasSprints = sprints && sprints.length > 0
 
+  // Filter out dragging tickets from display
+  const filterDragging = (ticketList: TicketWithRelations[]) =>
+    ticketList.filter((t) => !draggingTicketIds.includes(t.id))
+
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={closestCorners}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
@@ -274,7 +320,7 @@ export function SprintBacklogView({
           <SprintSection
             key={sprint.id}
             sprint={sprint}
-            tickets={ticketsBySprint[sprint.id] ?? []}
+            tickets={filterDragging(ticketsBySprint[sprint.id] ?? [])}
             projectKey={projectKey}
             projectId={projectId}
             defaultExpanded={true}
@@ -287,7 +333,7 @@ export function SprintBacklogView({
           <SprintSection
             key={sprint.id}
             sprint={sprint}
-            tickets={ticketsBySprint[sprint.id] ?? []}
+            tickets={filterDragging(ticketsBySprint[sprint.id] ?? [])}
             projectKey={projectKey}
             projectId={projectId}
             defaultExpanded={true}
@@ -299,7 +345,7 @@ export function SprintBacklogView({
         {/* Backlog */}
         <SprintSection
           sprint={null}
-          tickets={ticketsBySprint.backlog}
+          tickets={filterDragging(ticketsBySprint.backlog)}
           projectKey={projectKey}
           projectId={projectId}
           defaultExpanded={!hasSprints || ticketsBySprint.backlog.length > 0}
@@ -320,7 +366,7 @@ export function SprintBacklogView({
                 <SprintSection
                   key={sprint.id}
                   sprint={sprint}
-                  tickets={ticketsBySprint[sprint.id] ?? []}
+                  tickets={filterDragging(ticketsBySprint[sprint.id] ?? [])}
                   projectKey={projectKey}
                   projectId={projectId}
                   defaultExpanded={false}
@@ -337,10 +383,21 @@ export function SprintBacklogView({
       </div>
 
       {/* Drag overlay */}
-      <DragOverlay>
-        {activeTicket ? (
-          <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay={true} />
-        ) : null}
+      <DragOverlay dropAnimation={null}>
+        {activeTicket && (
+          <div className="w-full max-w-4xl">
+            {draggingTicketIds.length > 1 ? (
+              <div className="relative">
+                <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay />
+                <div className="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold shadow-lg">
+                  {draggingTicketIds.length}
+                </div>
+              </div>
+            ) : (
+              <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay />
+            )}
+          </div>
+        )}
       </DragOverlay>
     </DndContext>
   )
