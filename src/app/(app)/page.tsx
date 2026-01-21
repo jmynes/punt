@@ -1,5 +1,6 @@
 'use client'
 
+import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, CheckCircle2, Clock, FolderKanban, Layers, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef } from 'react'
@@ -8,9 +9,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useProjects } from '@/hooks/queries/use-projects'
-import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
+
+interface DashboardStats {
+  openTickets: number
+  inProgress: number
+  completed: number
+}
 
 export default function DashboardPage() {
   const { setCreateTicketOpen, setCreateProjectOpen } = useUIStore()
@@ -19,30 +25,25 @@ export default function DashboardPage() {
   // Fetch projects from database
   useProjects()
   const { projects, isLoading } = useProjectsStore()
-  const { getColumns } = useBoardStore()
 
-  // Compute stats from actual data
-  const stats = useMemo(() => {
-    let openTickets = 0
-    let inProgress = 0
-    let completed = 0
-
-    // Count tickets from board store for each project
-    for (const project of projects) {
-      const columns = getColumns(project.id)
-      for (const column of columns) {
-        const ticketCount = column.tickets.length
-        // Determine category by column name (simple heuristic)
-        const colName = column.name.toLowerCase()
-        if (colName.includes('done') || colName.includes('complete')) {
-          completed += ticketCount
-        } else if (colName.includes('progress') || colName.includes('review')) {
-          inProgress += ticketCount
-        } else {
-          openTickets += ticketCount
-        }
+  // Fetch dashboard stats from server
+  const { data: serverStats, isLoading: statsLoading } = useQuery<DashboardStats>({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: async () => {
+      const res = await fetch('/api/dashboard/stats')
+      if (!res.ok) {
+        throw new Error('Failed to fetch dashboard stats')
       }
-    }
+      return res.json()
+    },
+    staleTime: 1000 * 30, // 30 seconds
+  })
+
+  // Build stats array from server data
+  const stats = useMemo(() => {
+    const openTickets = serverStats?.openTickets ?? 0
+    const inProgress = serverStats?.inProgress ?? 0
+    const completed = serverStats?.completed ?? 0
 
     return [
       {
@@ -74,7 +75,7 @@ export default function DashboardPage() {
         color: 'text-purple-400',
       },
     ]
-  }, [projects, getColumns])
+  }, [serverStats, projects.length])
 
   // Show toast if redirected from invalid route
   useEffect(() => {
@@ -129,7 +130,7 @@ export default function DashboardPage() {
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {isLoading || statsLoading ? (
                 <Skeleton className="h-8 w-16 bg-zinc-800" />
               ) : (
                 <>
@@ -189,8 +190,7 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {projects.map((project) => {
-                  const columns = getColumns(project.id)
-                  const ticketCount = columns.reduce((sum, col) => sum + col.tickets.length, 0)
+                  const ticketCount = project._count?.tickets ?? 0
                   return (
                     <Link
                       key={project.id}

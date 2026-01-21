@@ -8,6 +8,10 @@ export interface ProjectSummary {
   color: string
   description?: string | null
   role?: string
+  _count?: {
+    tickets: number
+    members: number
+  }
 }
 
 interface ProjectsState {
