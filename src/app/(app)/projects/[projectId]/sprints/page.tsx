@@ -3,7 +3,7 @@
 import { Loader2, Target } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef } from 'react'
-import { SprintBacklogView } from '@/components/sprints'
+import { SprintBacklogView, SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { getDemoData } from '@/lib/demo-data'
@@ -118,7 +118,7 @@ export default function SprintPlanningPage() {
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
       {/* Page header */}
-      <div className="flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:px-6">
+      <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:px-6">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/20">
             <Target className="h-5 w-5 text-blue-400" />
@@ -132,9 +132,24 @@ export default function SprintPlanningPage() {
         </div>
       </div>
 
-      {/* Sprint backlog view */}
-      <div className="flex-1 overflow-auto p-4 lg:p-6">
-        <SprintBacklogView projectId={projectId} projectKey={projectKey} tickets={allTickets} />
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="p-4 lg:p-6 space-y-4">
+          {/* Active sprint header with progress */}
+          <SprintHeader
+            projectId={projectId}
+            tickets={allTickets}
+            columns={columns}
+          />
+
+          {/* Sprint backlog view */}
+          <SprintBacklogView
+            projectId={projectId}
+            projectKey={projectKey}
+            tickets={allTickets}
+            showHeader={false}
+          />
+        </div>
       </div>
 
       {/* Ticket detail drawer */}

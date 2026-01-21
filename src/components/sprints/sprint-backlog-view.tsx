@@ -32,6 +32,7 @@ interface SprintBacklogViewProps {
   projectKey: string
   tickets: TicketWithRelations[]
   className?: string
+  showHeader?: boolean
 }
 
 /**
@@ -43,6 +44,7 @@ export function SprintBacklogView({
   projectKey,
   tickets,
   className,
+  showHeader = true,
 }: SprintBacklogViewProps) {
   const { data: sprints, isLoading: sprintsLoading } = useProjectSprints(projectId)
   const updateTicketSprint = useUpdateTicketSprint(projectId)
@@ -244,26 +246,28 @@ export function SprintBacklogView({
     >
       <div className={cn('space-y-3', className)}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/20">
-              <Target className="h-5 w-5 text-blue-400" />
+        {showHeader && (
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/20">
+                <Target className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-100">Sprint Planning</h2>
+                <p className="text-sm text-zinc-500">
+                  Drag tickets between sprints to plan your work
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-100">Sprint Planning</h2>
-              <p className="text-sm text-zinc-500">
-                Drag tickets between sprints to plan your work
-              </p>
-            </div>
+            <Button
+              onClick={() => setSprintCreateOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Sprint
+            </Button>
           </div>
-          <Button
-            onClick={() => setSprintCreateOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Sprint
-          </Button>
-        </div>
+        )}
 
         {/* Active Sprints */}
         {activeSprints.map((sprint) => (
