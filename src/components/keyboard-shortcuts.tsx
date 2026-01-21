@@ -1237,6 +1237,115 @@ export function KeyboardShortcuts() {
 
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
+          } else if (entry.action.type === 'sprintMove') {
+            const action = entry.action
+            // Undo sprint move = move tickets back to original sprint
+            const boardStore = useBoardStore.getState()
+
+            // Move tickets back to original sprint in store
+            for (const move of action.moves) {
+              boardStore.updateTicket(entry.projectId, move.ticketId, {
+                sprintId: move.fromSprintId,
+              })
+            }
+
+            undoStore.pushRedo(entry)
+
+            // Persist undo to database
+            ;(async () => {
+              try {
+                for (const move of action.moves) {
+                  await updateTicketAPI(entry.projectId, move.ticketId, {
+                    sprintId: move.fromSprintId,
+                  })
+                }
+              } catch (err) {
+                console.error('Failed to persist sprint move undo:', err)
+              }
+            })()
+
+            let currentId = entry.toastId
+
+            const toastId = showUndoRedoToast('success', {
+              title:
+                action.moves.length === 1
+                  ? 'Sprint move undone'
+                  : `${action.moves.length} sprint moves undone`,
+              description: `Moved back to ${action.fromSprintName}`,
+              duration: 3000,
+              showUndoButtons: showUndo,
+              undoLabel: 'Redo',
+              redoLabel: 'Undo',
+              onUndo: async (id) => {
+                // Redo (move to target sprint again)
+                const redoEntry = useUndoStore.getState().redoByToastId(id)
+                if (redoEntry) {
+                  const bs = useBoardStore.getState()
+                  for (const move of action.moves) {
+                    bs.updateTicket(redoEntry.projectId, move.ticketId, {
+                      sprintId: move.toSprintId,
+                    })
+                  }
+                  // Persist to database
+                  try {
+                    for (const move of action.moves) {
+                      await updateTicketAPI(redoEntry.projectId, move.ticketId, {
+                        sprintId: move.toSprintId,
+                      })
+                    }
+                  } catch (err) {
+                    console.error('Failed to persist sprint move redo:', err)
+                  }
+                }
+              },
+              onUndoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateUndoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              onRedo: async (id) => {
+                // Undo again (move back to original sprint)
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (undoEntry) {
+                  const bs = useBoardStore.getState()
+                  for (const move of action.moves) {
+                    bs.updateTicket(undoEntry.projectId, move.ticketId, {
+                      sprintId: move.fromSprintId,
+                    })
+                  }
+                  // Persist to database
+                  try {
+                    for (const move of action.moves) {
+                      await updateTicketAPI(undoEntry.projectId, move.ticketId, {
+                        sprintId: move.fromSprintId,
+                      })
+                    }
+                  } catch (err) {
+                    console.error('Failed to persist sprint move undo:', err)
+                  }
+                }
+              },
+              onRedoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateRedoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              undoneTitle:
+                action.moves.length === 1
+                  ? 'Ticket moved'
+                  : `${action.moves.length} tickets moved`,
+              undoneDescription: `Moved to ${action.toSprintName}`,
+              redoneTitle:
+                action.moves.length === 1
+                  ? 'Sprint move undone'
+                  : `${action.moves.length} sprint moves undone`,
+              redoneDescription: `Moved back to ${action.fromSprintName}`,
+            })
+
+            undoStore.updateRedoToastId(currentId, toastId)
+            currentId = toastId
           }
           // Note: projectCreate and projectDelete undo/redo are not supported
           // since projects are now server-backed and require API calls
@@ -1644,6 +1753,76 @@ export function KeyboardShortcuts() {
               entry.projectId,
               action.ticket,
               action.columnId,
+              newToastId,
+              true,
+            )
+          } else if (entry.action.type === 'sprintMove') {
+            const action = entry.action
+            // Redo sprint move = move tickets to target sprint again
+            const boardStore = useBoardStore.getState()
+
+            for (const move of action.moves) {
+              boardStore.updateTicket(entry.projectId, move.ticketId, {
+                sprintId: move.toSprintId,
+              })
+            }
+
+            // Persist redo to database
+            ;(async () => {
+              try {
+                for (const move of action.moves) {
+                  await updateTicketAPI(entry.projectId, move.ticketId, {
+                    sprintId: move.toSprintId,
+                  })
+                }
+              } catch (err) {
+                console.error('Failed to persist sprint move redo:', err)
+              }
+            })()
+
+            const newToastId = toast.success(
+              action.moves.length === 1 ? 'Ticket moved' : `${action.moves.length} tickets moved`,
+              {
+                description: `Moved to ${action.toSprintName}`,
+                duration: 5000,
+                action: showUndo
+                  ? {
+                      label: 'Undo',
+                      onClick: async () => {
+                        const bs = useBoardStore.getState()
+                        for (const move of action.moves) {
+                          bs.updateTicket(entry.projectId, move.ticketId, {
+                            sprintId: move.fromSprintId,
+                          })
+                        }
+                        redoStore.pushRedo(entry)
+                        // Persist undo to database
+                        try {
+                          for (const move of action.moves) {
+                            await updateTicketAPI(entry.projectId, move.ticketId, {
+                              sprintId: move.fromSprintId,
+                            })
+                          }
+                        } catch (err) {
+                          console.error('Failed to persist sprint move undo:', err)
+                        }
+                        toast.success(
+                          action.moves.length === 1
+                            ? 'Sprint move undone'
+                            : `${action.moves.length} sprint moves undone`,
+                          { duration: 2000 },
+                        )
+                      },
+                    }
+                  : undefined,
+              },
+            )
+
+            redoStore.pushSprintMove(
+              entry.projectId,
+              action.moves,
+              action.fromSprintName,
+              action.toSprintName,
               newToastId,
               true,
             )

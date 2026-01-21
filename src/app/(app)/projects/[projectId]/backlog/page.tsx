@@ -31,6 +31,7 @@ import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
 
 /**
@@ -470,11 +471,13 @@ export default function BacklogPage() {
       }
 
       // Show undo/redo toast
-      showUndoRedoToast('success', {
+      const toastId = showUndoRedoToast('success', {
         title: count === 1 ? `Ticket moved to ${targetSprintName}` : `${count} tickets moved to ${targetSprintName}`,
         description: `From ${fromLabel}`,
         showUndoButtons: true,
-        onUndo: () => {
+        onUndo: (id) => {
+          // Move entry from undo to redo stack
+          useUndoStore.getState().undoByToastId(id)
           // Revert to original sprint IDs
           for (const { ticketId, sprintId } of originalSprintIds) {
             updateTicket(projectId, ticketId, { sprintId })
@@ -488,7 +491,9 @@ export default function BacklogPage() {
             // Refetch will handle sync
           })
         },
-        onRedo: () => {
+        onRedo: (id) => {
+          // Move entry from redo to undo stack
+          useUndoStore.getState().redoByToastId(id)
           // Re-apply move to target sprint
           for (const { ticketId } of originalSprintIds) {
             updateTicket(projectId, ticketId, { sprintId: targetSprintId })
@@ -507,6 +512,19 @@ export default function BacklogPage() {
         redoneTitle: count === 1 ? `Ticket moved to ${targetSprintName}` : `${count} tickets moved to ${targetSprintName}`,
         redoneDescription: `From ${fromLabel}`,
       })
+
+      // Register in undo store for keyboard shortcuts (Ctrl+Z/Y)
+      useUndoStore.getState().pushSprintMove(
+        projectId,
+        originalSprintIds.map(({ ticketId, sprintId }) => ({
+          ticketId,
+          fromSprintId: sprintId,
+          toSprintId: targetSprintId,
+        })),
+        fromLabel,
+        targetSprintName,
+        toastId,
+      )
 
       // Persist to database
       Promise.all(

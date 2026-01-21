@@ -23,6 +23,12 @@ interface UpdatedTicket {
   after: TicketWithRelations
 }
 
+interface SprintMovedTicket {
+  ticketId: string
+  fromSprintId: string | null
+  toSprintId: string | null
+}
+
 // Different types of undoable actions
 // Note: projectCreate and projectDelete are not supported since projects are now server-backed
 type UndoAction =
@@ -38,6 +44,12 @@ type UndoAction =
   | { type: 'paste'; tickets: PastedTicket[] }
   | { type: 'update'; tickets: UpdatedTicket[] }
   | { type: 'ticketCreate'; ticket: TicketWithRelations; columnId: string }
+  | {
+      type: 'sprintMove'
+      moves: SprintMovedTicket[]
+      fromSprintName: string
+      toSprintName: string
+    }
 
 interface UndoEntry {
   action: UndoAction
@@ -91,6 +103,16 @@ interface UndoState {
   pushUpdate: (
     projectId: string,
     tickets: UpdatedTicket[],
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
+
+  // Add a sprint move action to the undo stack
+  pushSprintMove: (
+    projectId: string,
+    moves: SprintMovedTicket[],
+    fromSprintName: string,
+    toSprintName: string,
     toastId: string | number,
     isRedo?: boolean,
   ) => void
@@ -265,6 +287,33 @@ export const useUndoStore = create<UndoState>((set, get) => ({
               before: { ...t.before },
               after: { ...t.after },
             })),
+          },
+          timestamp: Date.now(),
+          toastId,
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushSprintMove: (projectId, moves, fromSprintName, toSprintName, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Sprint Move ${isRedo ? '(Redo)' : ''}`, {
+      count: moves.length,
+      from: fromSprintName,
+      to: toSprintName,
+      ticketIds: moves.map((m) => m.ticketId),
+      projectId,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: {
+            type: 'sprintMove',
+            moves: moves.map((m) => ({ ...m })),
+            fromSprintName,
+            toSprintName,
           },
           timestamp: Date.now(),
           toastId,
