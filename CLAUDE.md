@@ -23,11 +23,25 @@ pnpm test             # Run tests once
 pnpm test:watch       # Watch mode
 pnpm test -- src/stores/__tests__/board-store.test.ts  # Run single test file
 
-# Linting (Biome)
+# Linting (Biome) - enforced via pre-commit hooks
 pnpm lint             # Check for issues
 pnpm lint:fix         # Auto-fix issues
 pnpm format           # Format code
 ```
+
+### Linting Enforcement
+
+Biome linting is enforced automatically:
+
+- **Pre-commit hooks**: husky + lint-staged runs `biome check --write` on staged JS/TS/JSON files before each commit. Commits fail if unfixable errors exist.
+- **VS Code integration**: `.vscode/settings.json` configures Biome as default formatter with format-on-save and auto-organize imports. `.vscode/extensions.json` recommends the Biome extension.
+- **Auto-setup**: The `"prepare": "husky"` script initializes hooks on `pnpm install`.
+
+Key files:
+- `biome.json` - Biome configuration (recommended rules, formatting options)
+- `.husky/pre-commit` - Pre-commit hook script
+- `.vscode/settings.json` - VS Code editor settings
+- `.vscode/extensions.json` - Recommended extensions
 
 ## Architecture
 

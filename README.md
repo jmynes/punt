@@ -187,6 +187,10 @@ Open [http://localhost:3000](http://localhost:3000) and log in with the admin cr
 
 ### Linting & Formatting
 
+This project uses [Biome](https://biomejs.dev/) for linting and formatting, with automatic enforcement via pre-commit hooks.
+
+**Automatic Setup:** Pre-commit hooks are configured automatically when you run `pnpm install` (via the `prepare` script). No additional setup required.
+
 ```bash
 # Check for issues
 pnpm lint
@@ -197,6 +201,13 @@ pnpm lint:fix
 # Format code
 pnpm format
 ```
+
+**Pre-commit hooks:** Staged files are automatically linted and fixed before each commit using [husky](https://typicode.github.io/husky/) + [lint-staged](https://github.com/lint-staged/lint-staged). Commits will fail if there are unfixable lint errors.
+
+**VS Code integration:** The project includes recommended extensions (`.vscode/extensions.json`) and settings (`.vscode/settings.json`) for Biome. When you open the project, VS Code will prompt you to install the Biome extension, which provides:
+- Real-time error highlighting
+- Format on save
+- Auto-organize imports
 
 ### Testing
 
