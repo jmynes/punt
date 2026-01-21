@@ -1,7 +1,6 @@
 'use client'
 
 import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { format, isBefore, isToday } from 'date-fns'
 import { GripVertical, User } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -12,6 +11,7 @@ import type { BacklogColumn } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { TicketWithRelations } from '@/types'
+import { DropIndicator } from '../sprints/drop-indicator'
 import { TicketContextMenu } from '../board/ticket-context-menu'
 import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
@@ -23,6 +23,12 @@ interface BacklogRowProps {
   getStatusName: (columnId: string) => string
   isDraggable?: boolean
   allTicketIds: string[]
+  /** Whether this row is currently being dragged */
+  isBeingDragged?: boolean
+  /** Whether to show drop indicator before this row */
+  showDropIndicator?: boolean
+  /** Number of items being dragged */
+  draggingCount?: number
 }
 
 export function BacklogRow({
@@ -32,12 +38,15 @@ export function BacklogRow({
   getStatusName,
   isDraggable = true,
   allTicketIds,
+  isBeingDragged = false,
+  showDropIndicator = false,
+  draggingCount = 0,
 }: BacklogRowProps) {
   const { setActiveTicketId } = useUIStore()
   const { isSelected, selectTicket, toggleTicket, selectRange } = useSelectionStore()
   const selected = isSelected(ticket.id)
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef } = useSortable({
     id: ticket.id,
     disabled: !isDraggable,
     data: {
@@ -47,10 +56,8 @@ export function BacklogRow({
     },
   })
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
+  // Don't apply transform - we want tickets to stay in place until drop
+  // The drop indicator shows where they'll land
 
   const handleClick = (e: React.MouseEvent) => {
     // Ctrl/Cmd + click: toggle selection (don't open detail)
@@ -265,24 +272,41 @@ export function BacklogRow({
   }
 
   return (
-    <TicketContextMenu ticket={ticket}>
-      <tr
-        ref={setNodeRef}
-        style={style}
-        data-ticket-row
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        className={cn(
-          'group border-b border-zinc-800/50 transition-colors focus:outline-none select-none',
-          !selected && 'hover:bg-zinc-800/50 focus:bg-zinc-800/50',
-          isDragging && 'opacity-50 bg-zinc-800 shadow-lg',
-          isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
-          selected &&
-            'bg-amber-500/20 hover:bg-amber-500/25 focus:bg-amber-500/25 border-amber-500/50',
-        )}
-        {...(isDraggable ? attributes : {})}
-        {...(isDraggable ? listeners : {})}
-      >
+    <>
+      {/* Drop indicator before this row */}
+      {showDropIndicator && (
+        <tr>
+          <td colSpan={columns.length + 1} className="p-0">
+            <DropIndicator itemCount={draggingCount} />
+          </td>
+        </tr>
+      )}
+      <TicketContextMenu ticket={ticket}>
+        <tr
+          ref={setNodeRef}
+          data-ticket-row
+          data-ticket-id={ticket.id}
+          onClick={handleClick}
+          onKeyDown={handleKeyDown}
+          className={cn(
+            'group border-b border-zinc-800/50 transition-all duration-200 focus:outline-none select-none',
+            !selected && !isBeingDragged && 'hover:bg-zinc-800/50 focus:bg-zinc-800/50',
+            isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
+            // Being dragged - prominent "moving" state
+            isBeingDragged && [
+              'bg-amber-500/10 border-amber-500/40',
+              'ring-2 ring-amber-500/50 ring-offset-1 ring-offset-zinc-900',
+              'shadow-[0_0_20px_rgba(245,158,11,0.15)]',
+              'relative z-10',
+            ],
+            // Selected state
+            selected &&
+              !isBeingDragged &&
+              'bg-amber-500/20 hover:bg-amber-500/25 focus:bg-amber-500/25 border-amber-500/50',
+          )}
+          {...(isDraggable ? attributes : {})}
+          {...(isDraggable ? listeners : {})}
+        >
         {/* Drag handle cell - always render to maintain table alignment */}
         <td className="w-8 px-1 py-2">
           {isDraggable && (
@@ -305,5 +329,6 @@ export function BacklogRow({
         ))}
       </tr>
     </TicketContextMenu>
+    </>
   )
 }

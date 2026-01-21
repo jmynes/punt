@@ -4,6 +4,7 @@ import {
   closestCenter,
   DndContext,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
@@ -18,7 +19,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { Settings2 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { type SortConfig, useBacklogStore } from '@/stores/backlog-store'
@@ -90,6 +91,11 @@ export function BacklogTable({
   const [hasManualOrder, setHasManualOrder] = useState((backlogOrder[projectId] || []).length > 0)
   const sortInitRef = useRef<SortConfig | null>(sort)
   const sortDidInitRef = useRef(false)
+
+  // Drag state
+  const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
+  const [dropPosition, setDropPosition] = useState<number | null>(null)
+  const draggedIdsRef = useRef<string[]>([])
 
   // Sync with incoming tickets prop
   useEffect(() => {
@@ -390,7 +396,7 @@ export function BacklogTable({
   // Get selection store
   const { selectedTicketIds, clearSelection, isSelected } = useSelectionStore()
 
-  // Handle drag start - clear selection if dragging a non-selected ticket
+  // Handle drag start - track dragging tickets and clear selection if needed
   function handleDragStart(event: DragStartEvent) {
     const { active } = event
     const activeId = active.id as string
@@ -404,13 +410,65 @@ export function BacklogTable({
       clearSelection()
     }
 
+    // Determine which tickets are being dragged
+    const selected = Array.from(selectedTicketIds)
+    let ticketIds: string[]
+    if (selected.length > 1 && selected.includes(activeId)) {
+      ticketIds = selected
+    } else {
+      ticketIds = [activeId]
+    }
+
+    setDraggingTicketIds(ticketIds)
+    draggedIdsRef.current = ticketIds
+
     // Notify external handler
     externalDragStart?.(event)
   }
 
+  // Handle drag over - track drop position for visual feedback
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { over } = event
+      if (!over) {
+        setDropPosition(null)
+        return
+      }
+
+      const overId = over.id as string
+      const draggedIds = draggedIdsRef.current
+
+      // Ignore column drags
+      if (columnIds.includes(overId as (typeof columnIds)[number])) {
+        setDropPosition(null)
+        return
+      }
+
+      // If hovering over a dragged ticket, don't show indicator
+      if (draggedIds.includes(overId)) {
+        setDropPosition(null)
+        return
+      }
+
+      // Find the index of the ticket we're hovering over
+      const overTicketIndex = filteredTickets.findIndex((t) => t.id === overId)
+      if (overTicketIndex >= 0) {
+        setDropPosition(overTicketIndex)
+      } else {
+        setDropPosition(null)
+      }
+    },
+    [filteredTickets, columnIds],
+  )
+
   // Handle drag end for both columns and rows
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
+
+    // Clean up drag state
+    setDraggingTicketIds([])
+    setDropPosition(null)
+    draggedIdsRef.current = []
 
     // If dropped on a sprint section, delegate to external handler
     if (over?.data.current?.type === 'sprint-section') {
@@ -518,17 +576,27 @@ export function BacklogTable({
       {/* Body with row reordering - disabled when sorted */}
       <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
         <tbody>
-          {filteredTickets.map((ticket) => (
-            <BacklogRow
-              key={ticket.id}
-              ticket={ticket}
-              projectKey={projectKey}
-              columns={visibleColumns}
-              getStatusName={getStatusName}
-              isDraggable={true}
-              allTicketIds={filteredTickets.map((t) => t.id)}
-            />
-          ))}
+          {filteredTickets.map((ticket, index) => {
+            const isBeingDragged = draggingTicketIds.includes(ticket.id)
+            // Show drop indicator before this ticket if this is the drop position
+            // Don't show indicator on the dragged ticket itself
+            const showIndicator = !isBeingDragged && index === dropPosition
+
+            return (
+              <BacklogRow
+                key={ticket.id}
+                ticket={ticket}
+                projectKey={projectKey}
+                columns={visibleColumns}
+                getStatusName={getStatusName}
+                isDraggable={true}
+                allTicketIds={ticketIds}
+                isBeingDragged={isBeingDragged}
+                showDropIndicator={showIndicator}
+                draggingCount={draggingTicketIds.length}
+              />
+            )
+          })}
         </tbody>
       </SortableContext>
     </table>
@@ -571,6 +639,7 @@ export function BacklogTable({
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
           >
             {tableContent}
