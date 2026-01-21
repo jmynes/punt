@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { handleApiError, notFoundError } from '@/lib/api-utils'
 import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { logger } from '@/lib/logger'
 import { getFileStorage } from '@/lib/upload-storage'
 
@@ -11,7 +12,7 @@ import { getFileStorage } from '@/lib/upload-storage'
  * Requires project membership
  */
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ projectId: string; ticketId: string; attachmentId: string }> },
 ) {
   try {
@@ -62,6 +63,17 @@ export async function DELETE(
         })
       }
     }
+
+    // Emit SSE event so other clients refresh the ticket
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitTicketEvent({
+      type: 'ticket.updated',
+      projectId,
+      ticketId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

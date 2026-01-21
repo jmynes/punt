@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
 import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { getSystemSettings } from '@/lib/system-settings'
 
 const addAttachmentsSchema = z.object({
@@ -111,6 +112,17 @@ export async function POST(
         size: attachment.size,
         url: attachment.url,
       })),
+    })
+
+    // Emit SSE event so other clients refresh the ticket
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitTicketEvent({
+      type: 'ticket.updated',
+      projectId,
+      ticketId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
     })
 
     return NextResponse.json(created, { status: 201 })

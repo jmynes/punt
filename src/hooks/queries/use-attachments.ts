@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { getTabId } from '@/hooks/use-realtime'
 import type { AttachmentInfo } from '@/types'
 
 export const attachmentKeys = {
@@ -80,7 +81,10 @@ export function useAddAttachments() {
     }) => {
       const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/attachments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
         body: JSON.stringify({ attachments }),
       })
       if (!res.ok) {
@@ -122,7 +126,10 @@ export function useRemoveAttachment() {
     }) => {
       const res = await fetch(
         `/api/projects/${projectId}/tickets/${ticketId}/attachments/${attachmentId}`,
-        { method: 'DELETE' },
+        {
+          method: 'DELETE',
+          headers: { 'X-Tab-Id': getTabId() },
+        },
       )
       if (!res.ok) {
         const error = await res.json()
