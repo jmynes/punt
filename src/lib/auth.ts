@@ -99,6 +99,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
           }
 
+          token.name = dbUser.name
+          token.email = dbUser.email
           token.username = dbUser.username
           token.isSystemAdmin = dbUser.isSystemAdmin
           token.avatar = dbUser.avatar
