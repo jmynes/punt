@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { BacklogTable, ColumnConfig } from '@/components/backlog'
 import { SprintSection } from '@/components/sprints'
-import { SprintTicketRow } from '@/components/sprints/sprint-ticket-row'
+import { SprintTableRow } from '@/components/sprints/sprint-table-row'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { useProjectSprints, useUpdateTicketSprint } from '@/hooks/queries/use-sprints'
@@ -76,8 +76,12 @@ export default function BacklogPage() {
   const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
     useUIStore()
   const { clearSelection, selectedTicketIds, isSelected } = useSelectionStore()
-  const { columns: backlogColumns, setBacklogOrder, reorderColumns, backlogOrder } =
-    useBacklogStore()
+  const {
+    columns: backlogColumns,
+    setBacklogOrder,
+    reorderColumns,
+    backlogOrder,
+  } = useBacklogStore()
 
   // API mutations
   const updateTicketSprintMutation = useUpdateTicketSprint(projectId)
@@ -245,7 +249,7 @@ export default function BacklogPage() {
       const activeType = activeDragDataRef.current.type || active.data.current?.type
       // Normalize null/undefined sprint IDs to null for comparison
       const activeSprintId =
-        (activeDragDataRef.current.sprintId ?? active.data.current?.sprintId) ?? null
+        activeDragDataRef.current.sprintId ?? active.data.current?.sprintId ?? null
       const overType = over.data.current?.type
       const overSprintId = over.data.current?.sprintId ?? null
 
@@ -302,7 +306,10 @@ export default function BacklogPage() {
             ...remaining.slice(insertIndex),
           ]
 
-          setBacklogOrder(projectId, newOrder.map((t) => t.id))
+          setBacklogOrder(
+            projectId,
+            newOrder.map((t) => t.id),
+          )
           clearSelection()
         } else {
           // Single drag reordering
@@ -311,7 +318,10 @@ export default function BacklogPage() {
 
           if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
             const newOrder = arrayMove(backlogTickets, oldIndex, newIndex)
-            setBacklogOrder(projectId, newOrder.map((t) => t.id))
+            setBacklogOrder(
+              projectId,
+              newOrder.map((t) => t.id),
+            )
           }
         }
         return
@@ -319,11 +329,7 @@ export default function BacklogPage() {
 
       // Case 2b: Row reordering within sprint (ticket to ticket, same sprint)
       // Note: Sprint internal order is visual only (not persisted to DB yet)
-      if (
-        activeType === 'ticket' &&
-        overType === 'ticket' &&
-        activeSprintId === overSprintId
-      ) {
+      if (activeType === 'ticket' && overType === 'ticket' && activeSprintId === overSprintId) {
         // Same sprint reordering - currently visual only via SortableContext
         // TODO: Add API to persist sprint ticket order when needed
         return
@@ -487,6 +493,7 @@ export default function BacklogPage() {
                 }
                 projectKey={projectKey}
                 projectId={projectId}
+                statusColumns={columns}
                 defaultExpanded={true}
               />
             ))}
@@ -501,6 +508,7 @@ export default function BacklogPage() {
                 }
                 projectKey={projectKey}
                 projectId={projectId}
+                statusColumns={columns}
                 defaultExpanded={true}
               />
             ))}
@@ -510,7 +518,9 @@ export default function BacklogPage() {
         {/* Backlog table with filters and columns */}
         <div className="flex-1 overflow-hidden min-h-0">
           <BacklogTable
-            tickets={ticketsBySprint.backlog?.filter((t) => !draggingTicketIds.includes(t.id)) ?? []}
+            tickets={
+              ticketsBySprint.backlog?.filter((t) => !draggingTicketIds.includes(t.id)) ?? []
+            }
             columns={columns}
             projectKey={projectKey}
             projectId={projectId}
@@ -524,13 +534,25 @@ export default function BacklogPage() {
             <div className="w-full max-w-4xl">
               {draggingTicketIds.length > 1 ? (
                 <div className="relative">
-                  <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay />
+                  <SprintTableRow
+                    ticket={activeTicket}
+                    projectKey={projectKey}
+                    statusColumns={columns}
+                    allTicketIds={[]}
+                    isOverlay
+                  />
                   <div className="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold shadow-lg">
                     {draggingTicketIds.length}
                   </div>
                 </div>
               ) : (
-                <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay />
+                <SprintTableRow
+                  ticket={activeTicket}
+                  projectKey={projectKey}
+                  statusColumns={columns}
+                  allTicketIds={[]}
+                  isOverlay
+                />
               )}
             </div>
           )}

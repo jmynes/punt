@@ -29,14 +29,20 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { formatDaysRemaining, isSprintExpired } from '@/lib/sprint-utils'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
-import type { SprintStatus, SprintWithMetrics, TicketWithRelations } from '@/types'
-import { SprintTicketRow } from './sprint-ticket-row'
+import type {
+  ColumnWithTickets,
+  SprintStatus,
+  SprintWithMetrics,
+  TicketWithRelations,
+} from '@/types'
+import { SprintTableRow } from './sprint-table-row'
 
 interface SprintSectionProps {
   sprint: SprintWithMetrics | null // null = backlog
   tickets: TicketWithRelations[]
   projectKey: string
   projectId: string
+  statusColumns: ColumnWithTickets[]
   defaultExpanded?: boolean
   onCreateTicket?: (sprintId: string | null) => void
   onDelete?: (sprintId: string) => void
@@ -51,6 +57,7 @@ export function SprintSection({
   tickets,
   projectKey,
   projectId: _projectId,
+  statusColumns,
   defaultExpanded = true,
   onCreateTicket,
   onDelete,
@@ -361,9 +368,9 @@ export function SprintSection({
         </div>
       </div>
 
-      {/* Ticket list */}
+      {/* Ticket table */}
       {expanded && (
-        <div ref={setNodeRef} className={cn('px-4 pb-3 space-y-1', ticketCount === 0 && 'py-6')}>
+        <div ref={setNodeRef} className={cn('pb-3', ticketCount === 0 && 'py-6 px-4')}>
           {ticketCount === 0 ? (
             <div className="text-center text-zinc-600 text-sm">
               {isBacklog
@@ -371,11 +378,34 @@ export function SprintSection({
                 : 'Drag tickets here to add them to this sprint'}
             </div>
           ) : (
-            <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
-              {tickets.map((ticket) => (
-                <SprintTicketRow key={ticket.id} ticket={ticket} projectKey={projectKey} />
-              ))}
-            </SortableContext>
+            <table className="w-full border-collapse">
+              <thead className="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                <tr className="border-b border-zinc-800/50">
+                  <th className="w-8" />
+                  <th className="px-3 py-2 w-10">Type</th>
+                  <th className="px-3 py-2 w-24">Key</th>
+                  <th className="px-3 py-2">Summary</th>
+                  <th className="px-3 py-2 w-28">Status</th>
+                  <th className="px-3 py-2 w-24">Priority</th>
+                  <th className="px-3 py-2 w-16 text-center">Pts</th>
+                  <th className="px-3 py-2 w-24">Due</th>
+                  <th className="px-3 py-2 w-8" />
+                </tr>
+              </thead>
+              <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
+                <tbody>
+                  {tickets.map((ticket) => (
+                    <SprintTableRow
+                      key={ticket.id}
+                      ticket={ticket}
+                      projectKey={projectKey}
+                      statusColumns={statusColumns}
+                      allTicketIds={ticketIds}
+                    />
+                  ))}
+                </tbody>
+              </SortableContext>
+            </table>
           )}
         </div>
       )}

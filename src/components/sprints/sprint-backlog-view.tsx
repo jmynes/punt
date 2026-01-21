@@ -26,7 +26,7 @@ import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { TicketWithRelations } from '@/types'
 import { SprintSection } from './sprint-section'
-import { SprintTicketRow } from './sprint-ticket-row'
+import { SprintTableRow } from './sprint-table-row'
 
 interface SprintBacklogViewProps {
   projectId: string
@@ -51,7 +51,8 @@ export function SprintBacklogView({
   const updateTicketSprintMutation = useUpdateTicketSprint(projectId)
   const deleteSprint = useDeleteSprint(projectId)
   const { setSprintCreateOpen, openCreateTicketWithData } = useUIStore()
-  const { updateTicket } = useBoardStore()
+  const { updateTicket, getColumns } = useBoardStore()
+  const statusColumns = getColumns(projectId)
   const { selectedTicketIds } = useSelectionStore()
 
   // Drag state
@@ -323,6 +324,7 @@ export function SprintBacklogView({
             tickets={filterDragging(ticketsBySprint[sprint.id] ?? [])}
             projectKey={projectKey}
             projectId={projectId}
+            statusColumns={statusColumns}
             defaultExpanded={true}
             onCreateTicket={handleCreateTicket}
           />
@@ -336,6 +338,7 @@ export function SprintBacklogView({
             tickets={filterDragging(ticketsBySprint[sprint.id] ?? [])}
             projectKey={projectKey}
             projectId={projectId}
+            statusColumns={statusColumns}
             defaultExpanded={true}
             onCreateTicket={handleCreateTicket}
             onDelete={handleDeleteSprint}
@@ -348,6 +351,7 @@ export function SprintBacklogView({
           tickets={filterDragging(ticketsBySprint.backlog)}
           projectKey={projectKey}
           projectId={projectId}
+          statusColumns={statusColumns}
           defaultExpanded={!hasSprints || ticketsBySprint.backlog.length > 0}
           onCreateTicket={handleCreateTicket}
         />
@@ -369,6 +373,7 @@ export function SprintBacklogView({
                   tickets={filterDragging(ticketsBySprint[sprint.id] ?? [])}
                   projectKey={projectKey}
                   projectId={projectId}
+                  statusColumns={statusColumns}
                   defaultExpanded={false}
                 />
               ))}
@@ -388,13 +393,25 @@ export function SprintBacklogView({
           <div className="w-full max-w-4xl">
             {draggingTicketIds.length > 1 ? (
               <div className="relative">
-                <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay />
+                <SprintTableRow
+                  ticket={activeTicket}
+                  projectKey={projectKey}
+                  statusColumns={statusColumns}
+                  allTicketIds={[]}
+                  isOverlay
+                />
                 <div className="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold shadow-lg">
                   {draggingTicketIds.length}
                 </div>
               </div>
             ) : (
-              <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay />
+              <SprintTableRow
+                ticket={activeTicket}
+                projectKey={projectKey}
+                statusColumns={statusColumns}
+                allTicketIds={[]}
+                isOverlay
+              />
             )}
           </div>
         )}
