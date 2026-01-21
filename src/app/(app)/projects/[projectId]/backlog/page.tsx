@@ -183,6 +183,11 @@ export default function BacklogPage() {
       }
     })
 
+    // Sort tickets within each group by order
+    Object.keys(groups).forEach((key) => {
+      groups[key].sort((a, b) => a.order - b.order)
+    })
+
     return groups
   }, [allTickets, sprints])
 
