@@ -133,8 +133,8 @@ async function main() {
             order: col.order,
             projectId: project!.id,
           },
-        })
-      )
+        }),
+      ),
     )
     console.log('\nCreated columns: Backlog, To Do, In Progress, Review, Done')
   } else {
@@ -168,8 +168,8 @@ async function main() {
           color: label.color,
           projectId: project!.id,
         },
-      })
-    )
+      }),
+    ),
   )
 
   console.log('\nLabels: frontend, backend, bug, feature, documentation')
