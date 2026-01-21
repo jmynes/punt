@@ -85,7 +85,6 @@ import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type {
-  AttachmentInfo,
   IssueType,
   LabelSummary,
   Priority,
@@ -632,6 +631,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     isDemoProject,
     projectId,
     updateTicketMutation,
+    availableLabels,
   ])
 
   // Focus delete button when dialog opens

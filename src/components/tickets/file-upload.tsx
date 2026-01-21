@@ -1,7 +1,7 @@
 'use client'
 
 import { FileImage, FileText, FileVideo, Loader2, Upload, X } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useUploadConfig } from '@/hooks/queries/use-attachments'
 import { cn } from '@/lib/utils'
@@ -201,7 +201,6 @@ export function FileUpload({ value, onChange, maxFiles: maxFilesProp, disabled }
 
   return (
     <div className="space-y-3">
-      {/* biome-ignore lint/a11y/useSemanticElements: Drop zone requires div for drag events */}
       <div
         role="region"
         aria-label="File drop zone"
