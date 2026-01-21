@@ -266,61 +266,68 @@ async function main() {
     console.log(`  ✓ ${project.name} (${project.key})`)
   }
 
-  // Add all users as members to the first project (PUNT)
-  const mainProject = createdProjects[0]
+  // Add all users as members to all projects
   console.log('\n👥 Adding project members...')
 
-  for (let i = 0; i < createdUsers.length; i++) {
-    const user = createdUsers[i]
-    const role = i === 0 ? 'owner' : i < 3 ? 'admin' : 'member'
+  for (const project of createdProjects) {
+    for (let i = 0; i < createdUsers.length; i++) {
+      const user = createdUsers[i]
+      const role = i === 0 ? 'owner' : i < 3 ? 'admin' : 'member'
 
-    await prisma.projectMember.create({
-      data: {
-        userId: user.id,
-        projectId: mainProject.id,
-        role,
-      },
-    })
+      await prisma.projectMember.create({
+        data: {
+          userId: user.id,
+          projectId: project.id,
+          role,
+        },
+      })
+    }
+    console.log(`  ✓ Added ${createdUsers.length} members to ${project.name}`)
   }
-  console.log(`  ✓ Added ${createdUsers.length} members to ${mainProject.name}`)
 
-  // Create columns for main project
+  // Create columns for all projects
   console.log('\n📋 Creating columns...')
   const columnNames = ['Backlog', 'To Do', 'In Progress', 'In Review', 'Done']
-  const createdColumns: { id: string; name: string }[] = []
+  const projectColumns: Record<string, { id: string; name: string }[]> = {}
 
-  for (let i = 0; i < columnNames.length; i++) {
-    const column = await prisma.column.create({
-      data: {
-        name: columnNames[i],
-        order: i,
-        projectId: mainProject.id,
-      },
-    })
-    createdColumns.push({ id: column.id, name: column.name })
+  for (const project of createdProjects) {
+    projectColumns[project.id] = []
+    for (let i = 0; i < columnNames.length; i++) {
+      const column = await prisma.column.create({
+        data: {
+          name: columnNames[i],
+          order: i,
+          projectId: project.id,
+        },
+      })
+      projectColumns[project.id].push({ id: column.id, name: column.name })
+    }
+    console.log(`  ✓ Created ${columnNames.length} columns for ${project.name}`)
   }
-  console.log(`  ✓ Created ${columnNames.length} columns`)
 
-  // Create labels
+  // Create labels for all projects
   console.log('\n🏷️  Creating labels...')
-  const createdLabels: { id: string; name: string }[] = []
+  const projectLabels: Record<string, { id: string; name: string }[]> = {}
 
-  for (const labelConfig of labelConfigs) {
-    const label = await prisma.label.create({
-      data: {
-        name: labelConfig.name,
-        color: labelConfig.color,
-        projectId: mainProject.id,
-      },
-    })
-    createdLabels.push({ id: label.id, name: label.name })
+  for (const project of createdProjects) {
+    projectLabels[project.id] = []
+    for (const labelConfig of labelConfigs) {
+      const label = await prisma.label.create({
+        data: {
+          name: labelConfig.name,
+          color: labelConfig.color,
+          projectId: project.id,
+        },
+      })
+      projectLabels[project.id].push({ id: label.id, name: label.name })
+    }
+    console.log(`  ✓ Created ${labelConfigs.length} labels for ${project.name}`)
   }
-  console.log(`  ✓ Created ${labelConfigs.length} labels`)
 
-  // Create sprints
+  // Create sprints for all projects
   console.log('\n🏃 Creating sprints...')
   const now = new Date()
-  const sprints = [
+  const sprintConfigs = [
     {
       name: 'Sprint 1 - Foundation',
       goal: 'Set up project infrastructure and basic features',
@@ -353,137 +360,152 @@ async function main() {
     },
   ]
 
-  const createdSprints: { id: string; name: string; status: string }[] = []
+  const projectSprints: Record<string, { id: string; name: string; status: string }[]> = {}
 
-  for (const sprintConfig of sprints) {
-    const sprint = await prisma.sprint.create({
-      data: {
-        name: sprintConfig.name,
-        goal: sprintConfig.goal,
-        status: sprintConfig.status,
-        startDate: sprintConfig.startDate,
-        endDate: sprintConfig.endDate,
-        completedAt: sprintConfig.completedAt,
-        completedById: sprintConfig.completedAt ? createdUsers[0].id : null,
-        projectId: mainProject.id,
-      },
-    })
-    createdSprints.push({ id: sprint.id, name: sprint.name, status: sprint.status })
-    console.log(`  ✓ ${sprint.name} [${sprint.status}]`)
+  for (const project of createdProjects) {
+    projectSprints[project.id] = []
+    for (const sprintConfig of sprintConfigs) {
+      const sprint = await prisma.sprint.create({
+        data: {
+          name: sprintConfig.name,
+          goal: sprintConfig.goal,
+          status: sprintConfig.status,
+          startDate: sprintConfig.startDate,
+          endDate: sprintConfig.endDate,
+          completedAt: sprintConfig.completedAt,
+          completedById: sprintConfig.completedAt ? createdUsers[0].id : null,
+          projectId: project.id,
+        },
+      })
+      projectSprints[project.id].push({ id: sprint.id, name: sprint.name, status: sprint.status })
+    }
+    console.log(`  ✓ Created ${sprintConfigs.length} sprints for ${project.name}`)
   }
 
-  // Create tickets
+  // Create tickets for all projects
   console.log('\n🎫 Creating tickets...')
-  let ticketNumber = 1
-  const createdTicketIds: string[] = []
+  const projectTicketNumbers: Record<string, number> = {}
+  let totalTicketCount = 0
 
   // Distribution: more tickets in backlog, fewer in done
-  const columnDistribution = [
-    { column: createdColumns[0], count: 35 }, // Backlog
-    { column: createdColumns[1], count: 15 }, // To Do
-    { column: createdColumns[2], count: 12 }, // In Progress
-    { column: createdColumns[3], count: 8 },  // In Review
-    { column: createdColumns[4], count: 30 }, // Done
+  const ticketDistribution = [
+    { columnIndex: 0, count: 35 }, // Backlog
+    { columnIndex: 1, count: 15 }, // To Do
+    { columnIndex: 2, count: 12 }, // In Progress
+    { columnIndex: 3, count: 8 },  // In Review
+    { columnIndex: 4, count: 30 }, // Done
   ]
 
-  for (const { column, count } of columnDistribution) {
-    for (let i = 0; i < count; i++) {
-      const type = randomElement(types)
-      const titleList = ticketTitles[type as keyof typeof ticketTitles] || ticketTitles.task
-      const title = randomElement(titleList)
-      const priority = randomElement(priorities)
-      const assignee = Math.random() > 0.3 ? randomElement(createdUsers) : null
-      const creator = randomElement(createdUsers)
+  for (const project of createdProjects) {
+    projectTicketNumbers[project.id] = 1
+    const columns = projectColumns[project.id]
+    const labels = projectLabels[project.id]
+    const sprints = projectSprints[project.id]
 
-      // Assign sprint based on column
-      let sprint = null
-      if (column.name === 'Done') {
-        // Done tickets are mostly from completed sprints
-        sprint = Math.random() > 0.3 ? randomElement(createdSprints.filter(s => s.status === 'completed')) : null
-      } else if (column.name === 'In Progress' || column.name === 'In Review') {
-        // Active work is in current sprint
-        sprint = createdSprints.find(s => s.status === 'active') || null
-      } else if (column.name === 'To Do') {
-        // To Do can be current or planning sprint
-        sprint = Math.random() > 0.5
-          ? createdSprints.find(s => s.status === 'active')
-          : Math.random() > 0.5 ? createdSprints.find(s => s.status === 'planning') : null
-      }
-      // Backlog items typically don't have sprints
+    for (const { columnIndex, count } of ticketDistribution) {
+      const column = columns[columnIndex]
+      for (let i = 0; i < count; i++) {
+        const type = randomElement(types)
+        const titleList = ticketTitles[type as keyof typeof ticketTitles] || ticketTitles.task
+        const title = randomElement(titleList)
+        const priority = randomElement(priorities)
+        const assignee = Math.random() > 0.3 ? randomElement(createdUsers) : null
+        const creator = randomElement(createdUsers)
 
-      const ticketLabels = randomSubset(createdLabels, 0, 3)
+        // Assign sprint based on column
+        let sprint = null
+        if (column.name === 'Done') {
+          // Done tickets are mostly from completed sprints
+          sprint = Math.random() > 0.3 ? randomElement(sprints.filter(s => s.status === 'completed')) : null
+        } else if (column.name === 'In Progress' || column.name === 'In Review') {
+          // Active work is in current sprint
+          sprint = sprints.find(s => s.status === 'active') || null
+        } else if (column.name === 'To Do') {
+          // To Do can be current or planning sprint
+          sprint = Math.random() > 0.5
+            ? sprints.find(s => s.status === 'active')
+            : Math.random() > 0.5 ? sprints.find(s => s.status === 'planning') : null
+        }
+        // Backlog items typically don't have sprints
 
-      // Create dates
-      const createdAt = new Date(now.getTime() - Math.random() * 60 * 24 * 60 * 60 * 1000) // Up to 60 days ago
-      const hasDueDate = Math.random() > 0.6
-      const dueDate = hasDueDate
-        ? new Date(now.getTime() + (Math.random() * 30 - 10) * 24 * 60 * 60 * 1000) // -10 to +20 days from now
-        : null
+        const ticketLabels = randomSubset(labels, 0, 3)
 
-      const ticket = await prisma.ticket.create({
-        data: {
-          number: ticketNumber++,
-          title: `${title}${i > 0 ? ` #${i + 1}` : ''}`, // Add suffix if duplicate title
-          description: generateTicketDescription(type, title),
-          type,
-          priority,
-          order: i,
-          storyPoints: type !== 'epic' ? randomElement(storyPointValues) : null,
-          estimate: randomElement(estimates),
-          startDate: column.name !== 'Backlog' && column.name !== 'To Do' ? createdAt : null,
-          dueDate,
-          environment: type === 'bug' ? randomElement(environments) : null,
-          createdAt,
-          projectId: mainProject.id,
-          columnId: column.id,
-          assigneeId: assignee?.id || null,
-          creatorId: creator.id,
-          sprintId: sprint?.id || null,
-          labels: {
-            connect: ticketLabels.map(l => ({ id: l.id })),
+        // Create dates
+        const createdAt = new Date(now.getTime() - Math.random() * 60 * 24 * 60 * 60 * 1000) // Up to 60 days ago
+        const hasDueDate = Math.random() > 0.6
+        const dueDate = hasDueDate
+          ? new Date(now.getTime() + (Math.random() * 30 - 10) * 24 * 60 * 60 * 1000) // -10 to +20 days from now
+          : null
+
+        await prisma.ticket.create({
+          data: {
+            number: projectTicketNumbers[project.id]++,
+            title: `${title}${i > 0 ? ` #${i + 1}` : ''}`, // Add suffix if duplicate title
+            description: generateTicketDescription(type, title),
+            type,
+            priority,
+            order: i,
+            storyPoints: type !== 'epic' ? randomElement(storyPointValues) : null,
+            estimate: randomElement(estimates),
+            startDate: column.name !== 'Backlog' && column.name !== 'To Do' ? createdAt : null,
+            dueDate,
+            environment: type === 'bug' ? randomElement(environments) : null,
+            createdAt,
+            projectId: project.id,
+            columnId: column.id,
+            assigneeId: assignee?.id || null,
+            creatorId: creator.id,
+            sprintId: sprint?.id || null,
+            labels: {
+              connect: ticketLabels.map(l => ({ id: l.id })),
+            },
           },
-        },
-      })
-      createdTicketIds.push(ticket.id)
+        })
+        totalTicketCount++
+      }
     }
-    console.log(`  ✓ Created ${count} tickets in "${column.name}"`)
+    console.log(`  ✓ Created 100 tickets for ${project.name}`)
   }
 
-  // Create some subtasks
+  // Create some subtasks for all projects
   console.log('\n📎 Creating subtasks...')
-  const parentTickets = await prisma.ticket.findMany({
-    where: {
-      projectId: mainProject.id,
-      type: { in: ['story', 'epic', 'task'] },
-    },
-    take: 15,
-  })
-
   let subtaskCount = 0
-  for (const parent of parentTickets) {
-    const numSubtasks = Math.floor(Math.random() * 4) + 1 // 1-4 subtasks
-    for (let i = 0; i < numSubtasks; i++) {
-      await prisma.ticket.create({
-        data: {
-          number: ticketNumber++,
-          title: randomElement(ticketTitles.subtask),
-          type: 'subtask',
-          priority: parent.priority,
-          order: i,
-          projectId: mainProject.id,
-          columnId: parent.columnId,
-          assigneeId: parent.assigneeId,
-          creatorId: parent.creatorId,
-          sprintId: parent.sprintId,
-          parentId: parent.id,
-        },
-      })
-      subtaskCount++
+
+  for (const project of createdProjects) {
+    const parentTickets = await prisma.ticket.findMany({
+      where: {
+        projectId: project.id,
+        type: { in: ['story', 'epic', 'task'] },
+      },
+      take: 15,
+    })
+
+    for (const parent of parentTickets) {
+      const numSubtasks = Math.floor(Math.random() * 4) + 1 // 1-4 subtasks
+      for (let i = 0; i < numSubtasks; i++) {
+        await prisma.ticket.create({
+          data: {
+            number: projectTicketNumbers[project.id]++,
+            title: randomElement(ticketTitles.subtask),
+            type: 'subtask',
+            priority: parent.priority,
+            order: i,
+            projectId: project.id,
+            columnId: parent.columnId,
+            assigneeId: parent.assigneeId,
+            creatorId: parent.creatorId,
+            sprintId: parent.sprintId,
+            parentId: parent.id,
+          },
+        })
+        subtaskCount++
+        totalTicketCount++
+      }
     }
   }
-  console.log(`  ✓ Created ${subtaskCount} subtasks`)
+  console.log(`  ✓ Created ${subtaskCount} subtasks across all projects`)
 
-  // Create some comments
+  // Create some comments for all projects
   console.log('\n💬 Creating comments...')
   const commentTemplates = [
     'I\'ll take a look at this today.',
@@ -498,61 +520,73 @@ async function main() {
     'Moved to In Review - ready for QA.',
   ]
 
-  const ticketsForComments = await prisma.ticket.findMany({
-    where: { projectId: mainProject.id },
-    take: 40,
-  })
-
   let commentCount = 0
-  for (const ticket of ticketsForComments) {
-    const numComments = Math.floor(Math.random() * 4) // 0-3 comments
-    for (let i = 0; i < numComments; i++) {
-      await prisma.comment.create({
-        data: {
-          content: randomElement(commentTemplates),
-          ticketId: ticket.id,
-          authorId: randomElement(createdUsers).id,
-          createdAt: new Date(ticket.createdAt.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000),
-        },
-      })
-      commentCount++
+  for (const project of createdProjects) {
+    const ticketsForComments = await prisma.ticket.findMany({
+      where: { projectId: project.id },
+      take: 40,
+    })
+
+    for (const ticket of ticketsForComments) {
+      const numComments = Math.floor(Math.random() * 4) // 0-3 comments
+      for (let i = 0; i < numComments; i++) {
+        await prisma.comment.create({
+          data: {
+            content: randomElement(commentTemplates),
+            ticketId: ticket.id,
+            authorId: randomElement(createdUsers).id,
+            createdAt: new Date(ticket.createdAt.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000),
+          },
+        })
+        commentCount++
+      }
     }
   }
-  console.log(`  ✓ Created ${commentCount} comments`)
+  console.log(`  ✓ Created ${commentCount} comments across all projects`)
 
-  // Create some watchers
+  // Create some watchers for all projects
   console.log('\n👀 Creating watchers...')
   let watcherCount = 0
-  for (const ticket of ticketsForComments.slice(0, 25)) {
-    const watchers = randomSubset(createdUsers, 1, 4)
-    for (const watcher of watchers) {
-      // Don't add creator or assignee as watcher
-      if (watcher.id !== ticket.creatorId && watcher.id !== ticket.assigneeId) {
-        try {
-          await prisma.ticketWatcher.create({
-            data: {
-              ticketId: ticket.id,
-              userId: watcher.id,
-            },
-          })
-          watcherCount++
-        } catch {
-          // Ignore duplicate errors
+  for (const project of createdProjects) {
+    const ticketsForWatchers = await prisma.ticket.findMany({
+      where: { projectId: project.id },
+      take: 25,
+    })
+
+    for (const ticket of ticketsForWatchers) {
+      const watchers = randomSubset(createdUsers, 1, 4)
+      for (const watcher of watchers) {
+        // Don't add creator or assignee as watcher
+        if (watcher.id !== ticket.creatorId && watcher.id !== ticket.assigneeId) {
+          try {
+            await prisma.ticketWatcher.create({
+              data: {
+                ticketId: ticket.id,
+                userId: watcher.id,
+              },
+            })
+            watcherCount++
+          } catch {
+            // Ignore duplicate errors
+          }
         }
       }
     }
   }
-  console.log(`  ✓ Created ${watcherCount} watchers`)
+  console.log(`  ✓ Created ${watcherCount} watchers across all projects`)
 
-  // Create sprint settings
-  await prisma.projectSprintSettings.create({
-    data: {
-      projectId: mainProject.id,
-      defaultSprintDuration: 14,
-      autoCarryOverIncomplete: true,
-      doneColumnIds: JSON.stringify([createdColumns[4].id]),
-    },
-  })
+  // Create sprint settings for all projects
+  for (const project of createdProjects) {
+    const doneColumn = projectColumns[project.id].find(c => c.name === 'Done')
+    await prisma.projectSprintSettings.create({
+      data: {
+        projectId: project.id,
+        defaultSprintDuration: 14,
+        autoCarryOverIncomplete: true,
+        doneColumnIds: JSON.stringify(doneColumn ? [doneColumn.id] : []),
+      },
+    })
+  }
 
   // Summary
   console.log('\n' + '='.repeat(50))
@@ -561,9 +595,9 @@ async function main() {
   console.log(`\n📊 Summary:`)
   console.log(`   Users:    ${createdUsers.length} (${users.filter(u => u.isSystemAdmin).length} admins)`)
   console.log(`   Projects: ${createdProjects.length}`)
-  console.log(`   Sprints:  ${createdSprints.length}`)
-  console.log(`   Labels:   ${createdLabels.length}`)
-  console.log(`   Tickets:  ${ticketNumber - 1}`)
+  console.log(`   Sprints:  ${sprintConfigs.length * createdProjects.length} (${sprintConfigs.length} per project)`)
+  console.log(`   Labels:   ${labelConfigs.length * createdProjects.length} (${labelConfigs.length} per project)`)
+  console.log(`   Tickets:  ${totalTicketCount}`)
   console.log(`   Comments: ${commentCount}`)
   console.log(`   Watchers: ${watcherCount}`)
   console.log(`\n🔑 Login credentials:`)
