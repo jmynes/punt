@@ -499,6 +499,41 @@ export function BacklogTable({
 
   const ticketIds = filteredTickets.map((t) => t.id)
 
+  // Table content (shared between internal and external DnD modes)
+  const tableContent = (
+    <table className="w-full border-collapse">
+      {/* Header with column reordering */}
+      <thead className="sticky top-0 z-10 bg-zinc-900">
+        <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
+          <tr className="border-b border-zinc-800">
+            {/* Empty cell for drag handle column */}
+            <th className="w-8" />
+            {visibleColumns.map((column) => (
+              <BacklogHeader key={column.id} column={column} />
+            ))}
+          </tr>
+        </SortableContext>
+      </thead>
+
+      {/* Body with row reordering - disabled when sorted */}
+      <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
+        <tbody>
+          {filteredTickets.map((ticket) => (
+            <BacklogRow
+              key={ticket.id}
+              ticket={ticket}
+              projectKey={projectKey}
+              columns={visibleColumns}
+              getStatusName={getStatusName}
+              isDraggable={true}
+              allTicketIds={filteredTickets.map((t) => t.id)}
+            />
+          ))}
+        </tbody>
+      </SortableContext>
+    </table>
+  )
+
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
@@ -526,58 +561,21 @@ export function BacklogTable({
           }
         }}
       >
-        {(() => {
-          const tableContent = (
-            <table className="w-full border-collapse">
-              {/* Header with column reordering */}
-              <thead className="sticky top-0 z-10 bg-zinc-900">
-                <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-                  <tr className="border-b border-zinc-800">
-                    {/* Empty cell for drag handle column */}
-                    <th className="w-8" />
-                    {visibleColumns.map((column) => (
-                      <BacklogHeader key={column.id} column={column} />
-                    ))}
-                  </tr>
-                </SortableContext>
-              </thead>
-
-              {/* Body with row reordering - disabled when sorted */}
-              <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
-                <tbody>
-                  {filteredTickets.map((ticket) => (
-                    <BacklogRow
-                      key={ticket.id}
-                      ticket={ticket}
-                      projectKey={projectKey}
-                      columns={visibleColumns}
-                      getStatusName={getStatusName}
-                      isDraggable={useExternalDnd || !sort}
-                      allTicketIds={filteredTickets.map((t) => t.id)}
-                    />
-                  ))}
-                </tbody>
-              </SortableContext>
-            </table>
-          )
-
-          // When using external DnD, don't create our own DndContext
-          if (useExternalDnd) {
-            return tableContent
-          }
-
-          return (
-            <DndContext
-              id="backlog-dnd"
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            >
-              {tableContent}
-            </DndContext>
-          )
-        })()}
+        {useExternalDnd ? (
+          // When using external DnD, just render the sortable contexts (parent provides DndContext)
+          tableContent
+        ) : (
+          // When using internal DnD, wrap with our own DndContext
+          <DndContext
+            id="backlog-dnd"
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            {tableContent}
+          </DndContext>
+        )}
 
         {filteredTickets.length === 0 && (
           <div className="flex h-40 items-center justify-center text-zinc-500">

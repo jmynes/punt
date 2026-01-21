@@ -1,16 +1,15 @@
 'use client'
 
 import {
+  type CollisionDetection,
   DndContext,
   type DragEndEvent,
   type DragOverEvent,
   DragOverlay,
   type DragStartEvent,
   KeyboardSensor,
-  pointerWithin,
   PointerSensor,
   rectIntersection,
-  useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -34,6 +33,37 @@ import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { TicketWithRelations } from '@/types'
 
+/**
+ * Custom collision detection that handles both cross-section drops and internal reordering.
+ * Priority: ticket/row items (for reordering) > sprint-sections (for cross-section moves)
+ */
+const customCollisionDetection: CollisionDetection = (args) => {
+  // Get all collisions using rect intersection (most reliable for sortable items)
+  const rectCollisions = rectIntersection(args)
+
+  // Find ticket/row collisions for internal reordering
+  const ticketCollision = rectCollisions.find((collision) => {
+    const type = collision.data?.droppableContainer?.data?.current?.type
+    return type === 'ticket' || type === 'backlog-ticket'
+  })
+
+  if (ticketCollision) {
+    return [ticketCollision]
+  }
+
+  // Find sprint-section collision for cross-section moves
+  const sprintCollision = rectCollisions.find(
+    (collision) => collision.data?.droppableContainer?.data?.current?.type === 'sprint-section',
+  )
+
+  if (sprintCollision) {
+    return [sprintCollision]
+  }
+
+  // Fallback to all rect collisions
+  return rectCollisions
+}
+
 export default function BacklogPage() {
   const params = useParams()
   const router = useRouter()
@@ -46,7 +76,7 @@ export default function BacklogPage() {
   const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
     useUIStore()
   const { clearSelection, selectedTicketIds, isSelected } = useSelectionStore()
-  const { columns: backlogColumns, setBacklogOrder, reorderColumns, sort: backlogSort } =
+  const { columns: backlogColumns, setBacklogOrder, reorderColumns, backlogOrder } =
     useBacklogStore()
 
   // API mutations
@@ -56,6 +86,11 @@ export default function BacklogPage() {
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
   const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
   const draggedIdsRef = useRef<string[]>([])
+  // Store active drag data because sortable item gets filtered out during drag
+  const activeDragDataRef = useRef<{
+    type: string | undefined
+    sprintId: string | null | undefined
+  }>({ type: undefined, sprintId: undefined })
 
   // DnD sensors - shared across sprint sections and backlog table
   const sensors = useSensors(
@@ -167,6 +202,12 @@ export default function BacklogPage() {
       const ticket = active.data.current?.ticket as TicketWithRelations
       setActiveTicket(ticket)
 
+      // Capture drag data in ref (needed because sortable item may be filtered out during drag)
+      activeDragDataRef.current = {
+        type: dataType,
+        sprintId: active.data.current?.sprintId as string | null | undefined,
+      }
+
       const selected = Array.from(selectedTicketIds)
       const activeId = active.id as string
 
@@ -200,8 +241,16 @@ export default function BacklogPage() {
 
       const activeId = active.id as string
       const overId = over.id as string
-      const activeType = active.data.current?.type
+      // Use captured drag data from ref (active.data.current may be empty if sortable was filtered out)
+      const activeType = activeDragDataRef.current.type || active.data.current?.type
+      // Normalize null/undefined sprint IDs to null for comparison
+      const activeSprintId =
+        (activeDragDataRef.current.sprintId ?? active.data.current?.sprintId) ?? null
       const overType = over.data.current?.type
+      const overSprintId = over.data.current?.sprintId ?? null
+
+      // Clear the captured drag data
+      activeDragDataRef.current = { type: undefined, sprintId: undefined }
 
       // Get visible backlog column IDs for column reordering detection
       const visibleColumnIds = backlogColumns.filter((c) => c.visible).map((c) => c.id)
@@ -218,16 +267,24 @@ export default function BacklogPage() {
         return
       }
 
-      // Case 2: Row reordering within backlog (backlog-ticket to backlog-ticket, same sprint)
-      // Only allow reordering when there's no active sort
+      // Case 2: Row reordering within backlog (backlog-ticket to backlog-ticket)
+      // Manual reordering clears the active sort via hasManualOrder in BacklogTable
       if (
         activeType === 'backlog-ticket' &&
         overType === 'backlog-ticket' &&
-        active.data.current?.sprintId === over.data.current?.sprintId &&
-        !backlogSort
+        activeSprintId === overSprintId
       ) {
-        const backlogTickets = ticketsBySprint.backlog ?? []
+        const rawBacklogTickets = ticketsBySprint.backlog ?? []
         const selectedIds = Array.from(selectedTicketIds)
+
+        // Apply existing backlog order to maintain current view order
+        const existingOrder = backlogOrder[projectId] || []
+        const orderSet = new Set(existingOrder)
+        const orderedTickets = existingOrder
+          .map((id) => rawBacklogTickets.find((t) => t.id === id))
+          .filter(Boolean) as typeof rawBacklogTickets
+        const remainingTickets = rawBacklogTickets.filter((t) => !orderSet.has(t.id))
+        const backlogTickets = [...orderedTickets, ...remainingTickets]
 
         // Multi-drag reordering
         if (selectedIds.length > 1 && isSelected(activeId)) {
@@ -257,6 +314,18 @@ export default function BacklogPage() {
             setBacklogOrder(projectId, newOrder.map((t) => t.id))
           }
         }
+        return
+      }
+
+      // Case 2b: Row reordering within sprint (ticket to ticket, same sprint)
+      // Note: Sprint internal order is visual only (not persisted to DB yet)
+      if (
+        activeType === 'ticket' &&
+        overType === 'ticket' &&
+        activeSprintId === overSprintId
+      ) {
+        // Same sprint reordering - currently visual only via SortableContext
+        // TODO: Add API to persist sprint ticket order when needed
         return
       }
 
@@ -332,11 +401,11 @@ export default function BacklogPage() {
       backlogColumns,
       reorderColumns,
       ticketsBySprint.backlog,
+      backlogOrder,
       selectedTicketIds,
       isSelected,
       setBacklogOrder,
       clearSelection,
-      backlogSort,
     ],
   )
 
@@ -398,8 +467,9 @@ export default function BacklogPage() {
 
       {/* Unified DnD context wrapping sprint sections AND backlog table */}
       <DndContext
+        id="unified-backlog-dnd"
         sensors={sensors}
-        collisionDetection={pointerWithin}
+        collisionDetection={customCollisionDetection}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
@@ -438,19 +508,15 @@ export default function BacklogPage() {
         )}
 
         {/* Backlog table with filters and columns */}
-        <BacklogDropZone isOver={false}>
-          <div className="flex-1 overflow-hidden min-h-0">
-            <BacklogTable
-              tickets={ticketsBySprint.backlog?.filter((t) => !draggingTicketIds.includes(t.id)) ?? []}
-              columns={columns}
-              projectKey={projectKey}
-              projectId={projectId}
-              useExternalDnd={hasActiveSprints}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            />
-          </div>
-        </BacklogDropZone>
+        <div className="flex-1 overflow-hidden min-h-0">
+          <BacklogTable
+            tickets={ticketsBySprint.backlog?.filter((t) => !draggingTicketIds.includes(t.id)) ?? []}
+            columns={columns}
+            projectKey={projectKey}
+            projectId={projectId}
+            useExternalDnd={true}
+          />
+        </div>
 
         {/* Drag overlay */}
         <DragOverlay dropAnimation={null}>
@@ -480,34 +546,6 @@ export default function BacklogPage() {
         projectKey={projectKey}
         onClose={() => setActiveTicketId(null)}
       />
-    </div>
-  )
-}
-
-/** Drop zone wrapper for the backlog section - enables dropping from sprint to backlog */
-function BacklogDropZone({
-  children,
-  isOver: _isOverProp,
-}: {
-  children: React.ReactNode
-  isOver?: boolean
-}) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: 'backlog',
-    data: {
-      type: 'sprint-section',
-      sprintId: null, // null = backlog
-    },
-  })
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`flex-1 flex flex-col overflow-hidden min-h-0 transition-colors ${
-        isOver ? 'bg-blue-500/5 ring-2 ring-blue-500/20 ring-inset' : ''
-      }`}
-    >
-      {children}
     </div>
   )
 }
