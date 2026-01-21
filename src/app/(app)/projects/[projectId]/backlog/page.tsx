@@ -89,7 +89,7 @@ export default function BacklogPage() {
   // Drag state for sprint sections and backlog table
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
   const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
-  const [backlogDropPosition, setBacklogDropPosition] = useState<number | null>(null)
+  const [backlogDropTargetId, setBacklogDropTargetId] = useState<string | null>(null)
   const draggedIdsRef = useRef<string[]>([])
   // Store active drag data because sortable item gets filtered out during drag
   const activeDragDataRef = useRef<{
@@ -229,40 +229,31 @@ export default function BacklogPage() {
     [selectedTicketIds],
   )
 
-  const handleDragOver = useCallback(
-    (event: DragOverEvent) => {
-      const { over } = event
-      if (!over) {
-        setBacklogDropPosition(null)
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { over } = event
+    if (!over) {
+      setBacklogDropTargetId(null)
+      return
+    }
+
+    const overId = over.id as string
+    const overType = over.data.current?.type
+    const draggedIds = draggedIdsRef.current
+
+    // Only track drop target for backlog tickets
+    if (overType === 'backlog-ticket') {
+      // If hovering over a dragged ticket, don't show indicator
+      if (draggedIds.includes(overId)) {
+        setBacklogDropTargetId(null)
         return
       }
 
-      const overId = over.id as string
-      const overType = over.data.current?.type
-      const draggedIds = draggedIdsRef.current
-
-      // Only track drop position for backlog tickets
-      if (overType === 'backlog-ticket') {
-        // If hovering over a dragged ticket, don't show indicator
-        if (draggedIds.includes(overId)) {
-          setBacklogDropPosition(null)
-          return
-        }
-
-        // Find the index in backlog tickets
-        const backlogTickets = ticketsBySprint.backlog ?? []
-        const overTicketIndex = backlogTickets.findIndex((t) => t.id === overId)
-        if (overTicketIndex >= 0) {
-          setBacklogDropPosition(overTicketIndex)
-        } else {
-          setBacklogDropPosition(null)
-        }
-      } else {
-        setBacklogDropPosition(null)
-      }
-    },
-    [ticketsBySprint.backlog],
-  )
+      // Track the ID of the ticket we're hovering over
+      setBacklogDropTargetId(overId)
+    } else {
+      setBacklogDropTargetId(null)
+    }
+  }, [])
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -272,7 +263,7 @@ export default function BacklogPage() {
       // Clean up all drag state
       setActiveTicket(null)
       setDraggingTicketIds([])
-      setBacklogDropPosition(null)
+      setBacklogDropTargetId(null)
       draggedIdsRef.current = []
 
       if (!over) return
@@ -556,7 +547,7 @@ export default function BacklogPage() {
             projectId={projectId}
             useExternalDnd={true}
             externalDraggingIds={draggingTicketIds}
-            externalDropPosition={backlogDropPosition}
+            externalDropTargetId={backlogDropTargetId}
           />
         </div>
 

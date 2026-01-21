@@ -42,8 +42,8 @@ interface BacklogTableProps {
   onDragEnd?: (event: DragEndEvent) => void
   /** IDs of tickets being dragged (for external DnD mode) */
   externalDraggingIds?: string[]
-  /** Drop position index (for external DnD mode) */
-  externalDropPosition?: number | null
+  /** ID of ticket being hovered over for drop (for external DnD mode) */
+  externalDropTargetId?: string | null
 }
 
 export function BacklogTable({
@@ -55,7 +55,7 @@ export function BacklogTable({
   onDragStart: externalDragStart,
   onDragEnd: externalDragEnd,
   externalDraggingIds = [],
-  externalDropPosition = null,
+  externalDropTargetId = null,
 }: BacklogTableProps) {
   const {
     columns,
@@ -585,11 +585,19 @@ export function BacklogTable({
           {filteredTickets.map((ticket, index) => {
             // Use external state when using external DnD, otherwise use internal state
             const activeDraggingIds = useExternalDnd ? externalDraggingIds : draggingTicketIds
-            const activeDropPosition = useExternalDnd ? externalDropPosition : dropPosition
             const isBeingDragged = activeDraggingIds.includes(ticket.id)
-            // Show drop indicator before this ticket if this is the drop position
-            // Don't show indicator on the dragged ticket itself
-            const showIndicator = !isBeingDragged && index === activeDropPosition
+
+            // Determine if drop indicator should show before this ticket
+            let showIndicator = false
+            if (!isBeingDragged) {
+              if (useExternalDnd) {
+                // External mode: show indicator if this ticket is the drop target
+                showIndicator = ticket.id === externalDropTargetId
+              } else {
+                // Internal mode: use numeric index
+                showIndicator = index === dropPosition
+              }
+            }
 
             return (
               <BacklogRow
