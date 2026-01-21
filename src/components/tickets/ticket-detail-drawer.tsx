@@ -159,18 +159,18 @@ const DEMO_SPRINTS: SprintSummary[] = [
   {
     id: 'sprint-1',
     name: 'Sprint 1 - Foundation',
-    isActive: false,
+    status: 'completed',
     startDate: new Date('2024-01-01'),
     endDate: new Date('2024-01-14'),
   },
   {
     id: 'sprint-2',
     name: 'Sprint 2 - Core Features',
-    isActive: true,
+    status: 'active',
     startDate: new Date('2024-01-15'),
     endDate: new Date('2024-01-28'),
   },
-  { id: 'sprint-3', name: 'Sprint 3 - Polish', isActive: false, startDate: null, endDate: null },
+  { id: 'sprint-3', name: 'Sprint 3 - Polish', status: 'planning', startDate: null, endDate: null },
 ]
 
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
@@ -1093,7 +1093,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                           <Badge
                             variant="outline"
                             className={cn(
-                              selectedSprint.isActive
+                              selectedSprint.status === 'active'
                                 ? 'border-green-600 bg-green-900/30 text-green-400'
                                 : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
                             )}
@@ -1130,7 +1130,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                         }}
                         className="cursor-pointer"
                       >
-                        {sprint.name} {sprint.isActive && '(Active)'}
+                        {sprint.name} {sprint.status === 'active' && '(Active)'}
                       </DropdownMenuCheckboxItem>
                     ))}
                   </DropdownMenuContent>

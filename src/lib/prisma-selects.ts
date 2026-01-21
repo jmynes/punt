@@ -19,9 +19,31 @@ export const USER_SELECT_SUMMARY = {
 export const SPRINT_SELECT_SUMMARY = {
   id: true,
   name: true,
-  isActive: true,
+  status: true,
   startDate: true,
   endDate: true,
+  goal: true,
+} as const
+
+/**
+ * Full sprint select with all fields including completion metrics.
+ */
+export const SPRINT_SELECT_FULL = {
+  id: true,
+  name: true,
+  goal: true,
+  startDate: true,
+  endDate: true,
+  status: true,
+  completedAt: true,
+  completedById: true,
+  completedTicketCount: true,
+  incompleteTicketCount: true,
+  completedStoryPoints: true,
+  incompleteStoryPoints: true,
+  createdAt: true,
+  updatedAt: true,
+  projectId: true,
 } as const
 
 /**
@@ -72,6 +94,10 @@ export const TICKET_SELECT_FULL = {
   creatorId: true,
   sprintId: true,
   parentId: true,
+  // Carryover tracking
+  isCarriedOver: true,
+  carriedFromSprintId: true,
+  carriedOverCount: true,
   assignee: {
     select: USER_SELECT_SUMMARY,
   },
@@ -79,6 +105,9 @@ export const TICKET_SELECT_FULL = {
     select: USER_SELECT_SUMMARY,
   },
   sprint: {
+    select: SPRINT_SELECT_SUMMARY,
+  },
+  carriedFromSprint: {
     select: SPRINT_SELECT_SUMMARY,
   },
   labels: {

@@ -44,6 +44,9 @@ model User {
   sessions         Session[]
   accounts         Account[]
   sentInvitations  Invitation[]
+
+  // Sprint relations
+  completedSprints Sprint[] @relation("SprintCompleter")
 }
 
 // Auth.js Account model for OAuth providers (future-proofing)
@@ -126,12 +129,13 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  columns     Column[]
-  tickets     Ticket[]
-  members     ProjectMember[]
-  labels      Label[]
-  sprints     Sprint[]
-  invitations Invitation[]
+  columns        Column[]
+  tickets        Ticket[]
+  members        ProjectMember[]
+  labels         Label[]
+  sprints        Sprint[]
+  invitations    Invitation[]
+  sprintSettings ProjectSprintSettings?
 }
 
 model ProjectMember {
@@ -152,7 +156,21 @@ model Sprint {
   goal      String?
   startDate DateTime?
   endDate   DateTime?
-  isActive  Boolean   @default(false)
+
+  // Status replaces isActive: planning, active, completed
+  status    String    @default("planning")
+
+  // Completion tracking
+  completedAt   DateTime?
+  completedById String?
+  completedBy   User?     @relation("SprintCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+
+  // Completion metrics (calculated at close)
+  completedTicketCount   Int?
+  incompleteTicketCount  Int?
+  completedStoryPoints   Int?
+  incompleteStoryPoints  Int?
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -160,7 +178,12 @@ model Sprint {
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tickets   Ticket[]
 
+  // New relations
+  ticketHistory    TicketSprintHistory[]
+  carriedToTickets Ticket[] @relation("CarriedFrom")
+
   @@index([projectId])
+  @@index([projectId, status])
 }
 
 model Column {
@@ -219,6 +242,15 @@ model Ticket {
   sprintId String?
   sprint   Sprint? @relation(fields: [sprintId], references: [id], onDelete: SetNull)
 
+  // Carryover tracking
+  isCarriedOver         Boolean   @default(false)
+  carriedFromSprintId   String?
+  carriedFromSprint     Sprint?   @relation("CarriedFrom", fields: [carriedFromSprintId], references: [id], onDelete: SetNull)
+  carriedOverCount      Int       @default(0)
+
+  // Sprint history
+  sprintHistory         TicketSprintHistory[]
+
   // Parent ticket (for subtasks)
   parentId String?
   parent   Ticket?  @relation("Subtasks", fields: [parentId], references: [id], onDelete: SetNull)
@@ -241,6 +273,7 @@ model Ticket {
   @@index([assigneeId])
   @@index([sprintId])
   @@index([parentId])
+  @@index([carriedFromSprintId])
 }
 
 // Watchers (CC users on a ticket)
@@ -331,6 +364,41 @@ model Attachment {
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
+}
+
+// Track which sprints a ticket has been in for historical reporting
+model TicketSprintHistory {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sprintId  String
+  sprint    Sprint   @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+
+  addedAt   DateTime @default(now())
+  removedAt DateTime?
+
+  entryType String   @default("added") // added, carried_over
+  exitStatus String? // completed, carried_over, removed
+
+  carriedFromSprintId String?
+
+  @@unique([ticketId, sprintId])
+  @@index([ticketId])
+  @@index([sprintId])
+}
+
+// Project-level sprint configuration
+model ProjectSprintSettings {
+  id                      String  @id @default(cuid())
+  projectId               String  @unique
+  project                 Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  defaultSprintDuration   Int     @default(14) // days
+  autoCarryOverIncomplete Boolean @default(true)
+  doneColumnIds           String  @default("[]") // JSON array
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // System-wide settings for file upload limits (singleton)

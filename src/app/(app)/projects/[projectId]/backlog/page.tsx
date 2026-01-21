@@ -4,8 +4,10 @@ import { List, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef } from 'react'
 import { BacklogTable, ColumnConfig } from '@/components/backlog'
+import { SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
+import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { getDemoData } from '@/lib/demo-data'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -30,6 +32,7 @@ export default function BacklogPage() {
 
   // Demo project IDs that should get demo data
   const DEMO_PROJECT_IDS = ['1', '2', '3']
+  const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
 
   // Track which projects have been initialized to prevent re-running
   const initializedProjectsRef = useRef<Set<string>>(new Set())
@@ -76,6 +79,13 @@ export default function BacklogPage() {
     [activeTicketId, allTickets],
   )
 
+  // Sprint completion detection (handles expired sprint prompts)
+  useSprintCompletion({
+    projectId,
+    tickets: allTickets,
+    columns,
+  })
+
   // Redirect to dashboard if project doesn't exist after loading
   useEffect(() => {
     if (!projectsLoading && !project) {
@@ -90,6 +100,13 @@ export default function BacklogPage() {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+      {/* Sprint header */}
+      {!isDemoProject && (
+        <div className="px-4 pt-4 lg:px-6">
+          <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
         <div className="flex items-center gap-3">

@@ -22,42 +22,7 @@ export function createDemoColumns(projectId: string, _projectKey: string): Colum
 // Demo tickets for PUNT (projectId: '1')
 export function createPUNTDemoTickets(): Array<{
   columnId: string
-  ticket: {
-    id: string
-    number: number
-    title: string
-    description: string
-    type: IssueType
-    priority: Priority
-    order: number
-    storyPoints: number
-    estimate: string
-    startDate: Date | null
-    dueDate: Date | null
-    environment: string | null
-    affectedVersion: string | null
-    fixVersion: string | null
-    createdAt: Date
-    updatedAt: Date
-    projectId: string
-    columnId: string
-    assigneeId: string | null
-    creatorId: string
-    sprintId: string | null
-    parentId: string | null
-    assignee: { id: string; name: string; email: string; avatar: string | null } | null
-    creator: { id: string; name: string; email: string; avatar: string | null }
-    sprint: {
-      id: string
-      name: string
-      isActive: boolean
-      startDate: Date | null
-      endDate: Date | null
-    } | null
-    labels: Array<{ id: string; name: string; color: string }>
-    watchers: Array<{ id: string; name: string; email: string; avatar: string | null }>
-    _count: { comments: number; subtasks: number; attachments: number }
-  }
+  ticket: TicketWithRelations
 }> {
   const projectId = '1'
   return [
@@ -86,15 +51,20 @@ export function createPUNTDemoTickets(): Array<{
         creatorId: 'user-1',
         sprintId: 'sprint-2',
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: null,
         creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         sprint: {
           id: 'sprint-2',
           name: 'Sprint 2',
-          isActive: true,
+          status: 'active' as const,
           startDate: null,
           endDate: null,
+          goal: null,
         },
+        carriedFromSprint: null,
         labels: [{ id: 'label-1', name: 'infrastructure', color: '#10b981' }],
         watchers: [],
         _count: { comments: 0, subtasks: 0, attachments: 0 },
@@ -125,9 +95,13 @@ export function createPUNTDemoTickets(): Array<{
         creatorId: 'user-1',
         sprintId: null,
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         sprint: null,
+        carriedFromSprint: null,
         labels: [
           { id: 'label-2', name: 'database', color: '#8b5cf6' },
           { id: 'label-3', name: 'backend', color: '#f59e0b' },
@@ -161,15 +135,20 @@ export function createPUNTDemoTickets(): Array<{
         creatorId: 'user-1',
         sprintId: 'sprint-2',
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: null,
         creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         sprint: {
           id: 'sprint-2',
           name: 'Sprint 2',
-          isActive: true,
+          status: 'active' as const,
           startDate: null,
           endDate: null,
+          goal: null,
         },
+        carriedFromSprint: null,
         labels: [{ id: 'label-4', name: 'auth', color: '#ef4444' }],
         watchers: [{ id: 'user-2', name: 'Alice Smith', email: 'alice@punt.local', avatar: null }],
         _count: { comments: 0, subtasks: 3, attachments: 0 },
@@ -200,15 +179,20 @@ export function createPUNTDemoTickets(): Array<{
         creatorId: 'user-1',
         sprintId: 'sprint-2',
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         sprint: {
           id: 'sprint-2',
           name: 'Sprint 2',
-          isActive: true,
+          status: 'active' as const,
           startDate: null,
           endDate: null,
+          goal: null,
         },
+        carriedFromSprint: null,
         labels: [
           { id: 'label-5', name: 'frontend', color: '#06b6d4' },
           { id: 'label-6', name: 'ui/ux', color: '#ec4899' },
@@ -242,15 +226,20 @@ export function createPUNTDemoTickets(): Array<{
         creatorId: 'user-1',
         sprintId: 'sprint-1',
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         sprint: {
           id: 'sprint-1',
           name: 'Sprint 1',
-          isActive: false,
+          status: 'completed' as const,
           startDate: null,
           endDate: null,
+          goal: null,
         },
+        carriedFromSprint: null,
         labels: [],
         watchers: [],
         _count: { comments: 0, subtasks: 0, attachments: 0 },
@@ -281,15 +270,20 @@ export function createPUNTDemoTickets(): Array<{
         creatorId: 'user-3',
         sprintId: 'sprint-1',
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: { id: 'user-2', name: 'Alice Smith', email: 'alice@punt.local', avatar: null },
         creator: { id: 'user-3', name: 'Bob Johnson', email: 'bob@punt.local', avatar: null },
         sprint: {
           id: 'sprint-1',
           name: 'Sprint 1',
-          isActive: false,
+          status: 'completed' as const,
           startDate: null,
           endDate: null,
+          goal: null,
         },
+        carriedFromSprint: null,
         labels: [{ id: 'label-7', name: 'mobile', color: '#f97316' }],
         watchers: [],
         _count: { comments: 3, subtasks: 0, attachments: 2 },
@@ -301,42 +295,7 @@ export function createPUNTDemoTickets(): Array<{
 // Demo tickets for API (projectId: '2')
 export function createAPIDemoTickets(): Array<{
   columnId: string
-  ticket: {
-    id: string
-    number: number
-    title: string
-    description: string
-    type: IssueType
-    priority: Priority
-    order: number
-    storyPoints: number
-    estimate: string
-    startDate: Date | null
-    dueDate: Date | null
-    environment: string | null
-    affectedVersion: string | null
-    fixVersion: string | null
-    createdAt: Date
-    updatedAt: Date
-    projectId: string
-    columnId: string
-    assigneeId: string | null
-    creatorId: string
-    sprintId: string | null
-    parentId: string | null
-    assignee: { id: string; name: string; email: string; avatar: string | null } | null
-    creator: { id: string; name: string; email: string; avatar: string | null }
-    sprint: {
-      id: string
-      name: string
-      isActive: boolean
-      startDate: Date | null
-      endDate: Date | null
-    } | null
-    labels: Array<{ id: string; name: string; color: string }>
-    watchers: Array<{ id: string; name: string; email: string; avatar: string | null }>
-    _count: { comments: number; subtasks: number; attachments: number }
-  }
+  ticket: TicketWithRelations
 }> {
   const projectId = '2'
   return [
@@ -365,9 +324,13 @@ export function createAPIDemoTickets(): Array<{
         creatorId: 'user-1',
         sprintId: null,
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: null,
         creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         sprint: null,
+        carriedFromSprint: null,
         labels: [{ id: 'label-api-1', name: 'api', color: '#3b82f6' }],
         watchers: [],
         _count: { comments: 0, subtasks: 0, attachments: 0 },
@@ -398,9 +361,13 @@ export function createAPIDemoTickets(): Array<{
         creatorId: 'user-1',
         sprintId: null,
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         sprint: null,
+        carriedFromSprint: null,
         labels: [
           { id: 'label-api-2', name: 'auth', color: '#ef4444' },
           { id: 'label-api-3', name: 'security', color: '#f59e0b' },
@@ -434,9 +401,13 @@ export function createAPIDemoTickets(): Array<{
         creatorId: 'user-1',
         sprintId: null,
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: { id: 'user-2', name: 'Alice Smith', email: 'alice@punt.local', avatar: null },
         creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         sprint: null,
+        carriedFromSprint: null,
         labels: [{ id: 'label-api-4', name: 'documentation', color: '#10b981' }],
         watchers: [],
         _count: { comments: 0, subtasks: 0, attachments: 0 },
@@ -448,42 +419,7 @@ export function createAPIDemoTickets(): Array<{
 // Demo tickets for MOB (projectId: '3')
 export function createMOBDemoTickets(): Array<{
   columnId: string
-  ticket: {
-    id: string
-    number: number
-    title: string
-    description: string
-    type: IssueType
-    priority: Priority
-    order: number
-    storyPoints: number
-    estimate: string
-    startDate: Date | null
-    dueDate: Date | null
-    environment: string | null
-    affectedVersion: string | null
-    fixVersion: string | null
-    createdAt: Date
-    updatedAt: Date
-    projectId: string
-    columnId: string
-    assigneeId: string | null
-    creatorId: string
-    sprintId: string | null
-    parentId: string | null
-    assignee: { id: string; name: string; email: string; avatar: string | null } | null
-    creator: { id: string; name: string; email: string; avatar: string | null }
-    sprint: {
-      id: string
-      name: string
-      isActive: boolean
-      startDate: Date | null
-      endDate: Date | null
-    } | null
-    labels: Array<{ id: string; name: string; color: string }>
-    watchers: Array<{ id: string; name: string; email: string; avatar: string | null }>
-    _count: { comments: number; subtasks: number; attachments: number }
-  }
+  ticket: TicketWithRelations
 }> {
   const projectId = '3'
   return [
@@ -512,9 +448,13 @@ export function createMOBDemoTickets(): Array<{
         creatorId: 'user-1',
         sprintId: null,
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: null,
         creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         sprint: null,
+        carriedFromSprint: null,
         labels: [
           { id: 'label-mob-1', name: 'mobile', color: '#f97316' },
           { id: 'label-mob-2', name: 'ui/ux', color: '#ec4899' },
@@ -548,9 +488,13 @@ export function createMOBDemoTickets(): Array<{
         creatorId: 'user-1',
         sprintId: null,
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: { id: 'user-2', name: 'Alice Smith', email: 'alice@punt.local', avatar: null },
         creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         sprint: null,
+        carriedFromSprint: null,
         labels: [{ id: 'label-mob-3', name: 'navigation', color: '#06b6d4' }],
         watchers: [],
         _count: { comments: 0, subtasks: 0, attachments: 0 },
@@ -581,9 +525,13 @@ export function createMOBDemoTickets(): Array<{
         creatorId: 'user-1',
         sprintId: null,
         parentId: null,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         creator: { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
         sprint: null,
+        carriedFromSprint: null,
         labels: [
           { id: 'label-mob-4', name: 'frontend', color: '#06b6d4' },
           { id: 'label-mob-5', name: 'screens', color: '#8b5cf6' },

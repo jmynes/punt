@@ -25,6 +25,22 @@ interface UIState {
   openEditProject: (projectId: string) => void
   closeEditProject: () => void
 
+  // Sprint modals
+  sprintCreateOpen: boolean
+  setSprintCreateOpen: (open: boolean) => void
+  sprintEditOpen: boolean
+  sprintEditId: string | null
+  openSprintEdit: (sprintId: string) => void
+  closeSprintEdit: () => void
+  sprintCompleteOpen: boolean
+  sprintCompleteId: string | null
+  openSprintComplete: (sprintId: string) => void
+  closeSprintComplete: () => void
+  sprintStartOpen: boolean
+  sprintStartId: string | null
+  openSprintStart: (sprintId: string) => void
+  closeSprintStart: () => void
+
   // Pre-filled data for creating a ticket (e.g., when cloning)
   prefillTicketData: Partial<TicketFormData> | null
   openCreateTicketWithData: (data: Partial<TicketFormData>) => void
@@ -66,6 +82,22 @@ export const useUIStore = create<UIState>((set) => ({
   editProjectId: null,
   openEditProject: (projectId) => set({ editProjectOpen: true, editProjectId: projectId }),
   closeEditProject: () => set({ editProjectOpen: false, editProjectId: null }),
+
+  // Sprint modals
+  sprintCreateOpen: false,
+  setSprintCreateOpen: (open) => set({ sprintCreateOpen: open }),
+  sprintEditOpen: false,
+  sprintEditId: null,
+  openSprintEdit: (sprintId) => set({ sprintEditOpen: true, sprintEditId: sprintId }),
+  closeSprintEdit: () => set({ sprintEditOpen: false, sprintEditId: null }),
+  sprintCompleteOpen: false,
+  sprintCompleteId: null,
+  openSprintComplete: (sprintId) => set({ sprintCompleteOpen: true, sprintCompleteId: sprintId }),
+  closeSprintComplete: () => set({ sprintCompleteOpen: false, sprintCompleteId: null }),
+  sprintStartOpen: false,
+  sprintStartId: null,
+  openSprintStart: (sprintId) => set({ sprintStartOpen: true, sprintStartId: sprintId }),
+  closeSprintStart: () => set({ sprintStartOpen: false, sprintStartId: null }),
 
   // Pre-filled data for creating a ticket (e.g., when cloning)
   prefillTicketData: null,

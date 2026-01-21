@@ -1,0 +1,98 @@
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { handleApiError, validationError } from '@/lib/api-utils'
+import { requireAuth, requireProjectAdmin, requireProjectMember } from '@/lib/auth-helpers'
+import { db } from '@/lib/db'
+
+const updateSettingsSchema = z.object({
+  defaultSprintDuration: z.number().int().min(1).max(90).optional(),
+  autoCarryOverIncomplete: z.boolean().optional(),
+  doneColumnIds: z.array(z.string()).optional(),
+})
+
+type RouteParams = { params: Promise<{ projectId: string }> }
+
+/**
+ * GET /api/projects/[projectId]/sprints/settings - Get sprint settings
+ * Requires project membership
+ * Returns default settings if none configured
+ */
+export async function GET(_request: Request, { params }: RouteParams) {
+  try {
+    const user = await requireAuth()
+    const { projectId } = await params
+
+    await requireProjectMember(user.id, projectId)
+
+    let settings = await db.projectSprintSettings.findUnique({
+      where: { projectId },
+    })
+
+    // Return default settings if none exist
+    if (!settings) {
+      settings = {
+        id: '',
+        projectId,
+        defaultSprintDuration: 14,
+        autoCarryOverIncomplete: true,
+        doneColumnIds: '[]',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    }
+
+    // Parse doneColumnIds from JSON string
+    return NextResponse.json({
+      defaultSprintDuration: settings.defaultSprintDuration,
+      autoCarryOverIncomplete: settings.autoCarryOverIncomplete,
+      doneColumnIds: JSON.parse(settings.doneColumnIds),
+    })
+  } catch (error) {
+    return handleApiError(error, 'fetch sprint settings')
+  }
+}
+
+/**
+ * PATCH /api/projects/[projectId]/sprints/settings - Update sprint settings
+ * Requires project admin role
+ */
+export async function PATCH(request: Request, { params }: RouteParams) {
+  try {
+    const user = await requireAuth()
+    const { projectId } = await params
+
+    await requireProjectAdmin(user.id, projectId)
+
+    const body = await request.json()
+    const result = updateSettingsSchema.safeParse(body)
+
+    if (!result.success) {
+      return validationError(result)
+    }
+
+    const { defaultSprintDuration, autoCarryOverIncomplete, doneColumnIds } = result.data
+
+    const settings = await db.projectSprintSettings.upsert({
+      where: { projectId },
+      create: {
+        projectId,
+        ...(defaultSprintDuration !== undefined && { defaultSprintDuration }),
+        ...(autoCarryOverIncomplete !== undefined && { autoCarryOverIncomplete }),
+        ...(doneColumnIds !== undefined && { doneColumnIds: JSON.stringify(doneColumnIds) }),
+      },
+      update: {
+        ...(defaultSprintDuration !== undefined && { defaultSprintDuration }),
+        ...(autoCarryOverIncomplete !== undefined && { autoCarryOverIncomplete }),
+        ...(doneColumnIds !== undefined && { doneColumnIds: JSON.stringify(doneColumnIds) }),
+      },
+    })
+
+    return NextResponse.json({
+      defaultSprintDuration: settings.defaultSprintDuration,
+      autoCarryOverIncomplete: settings.autoCarryOverIncomplete,
+      doneColumnIds: JSON.parse(settings.doneColumnIds),
+    })
+  } catch (error) {
+    return handleApiError(error, 'update sprint settings')
+  }
+}

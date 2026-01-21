@@ -64,18 +64,18 @@ const DEMO_SPRINTS: SprintSummary[] = [
   {
     id: 'sprint-1',
     name: 'Sprint 1 - Foundation',
-    isActive: false,
+    status: 'completed',
     startDate: new Date('2024-01-01'),
     endDate: new Date('2024-01-14'),
   },
   {
     id: 'sprint-2',
     name: 'Sprint 2 - Core Features',
-    isActive: true,
+    status: 'active',
     startDate: new Date('2024-01-15'),
     endDate: new Date('2024-01-28'),
   },
-  { id: 'sprint-3', name: 'Sprint 3 - Polish', isActive: false, startDate: null, endDate: null },
+  { id: 'sprint-3', name: 'Sprint 3 - Polish', status: 'planning', startDate: null, endDate: null },
 ]
 
 // Demo parent tickets (epics and stories that can contain subtasks)
@@ -265,11 +265,15 @@ export function CreateTicketDialog() {
         creatorId: currentUser.id,
         sprintId: formData.sprintId,
         parentId: formData.parentId,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: formData.assigneeId
           ? members.find((m) => m.id === formData.assigneeId) || null
           : null,
         creator: currentUser,
         sprint: selectedSprint,
+        carriedFromSprint: null,
         labels: selectedLabels,
         watchers: [],
         _count: {
@@ -351,11 +355,15 @@ export function CreateTicketDialog() {
         creatorId: currentUser.id,
         sprintId: formData.sprintId,
         parentId: formData.parentId,
+        isCarriedOver: false,
+        carriedFromSprintId: null,
+        carriedOverCount: 0,
         assignee: formData.assigneeId
           ? members.find((m) => m.id === formData.assigneeId) || null
           : null,
         creator: currentUser,
         sprint: selectedSprint,
+        carriedFromSprint: null,
         labels: selectedLabels,
         watchers: [],
         _count: {

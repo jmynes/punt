@@ -5,10 +5,12 @@ import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef } from 'react'
 import { BacklogFilters } from '@/components/backlog'
 import { KanbanBoard } from '@/components/board'
+import { SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { getDemoData } from '@/lib/demo-data'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
@@ -175,6 +177,13 @@ export default function BoardPage() {
     [activeTicketId, allTickets],
   )
 
+  // Sprint completion detection (handles expired sprint prompts)
+  useSprintCompletion({
+    projectId,
+    tickets: allTickets,
+    columns,
+  })
+
   // Track which projects have been initialized to prevent re-running
   const initializedProjectsRef = useRef<Set<string>>(new Set())
 
@@ -240,6 +249,13 @@ export default function BoardPage() {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+      {/* Sprint header */}
+      {!isDemoProject && (
+        <div className="px-4 pt-4 lg:px-6">
+          <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
+        </div>
+      )}
+
       {/* Board header */}
       <div className="flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

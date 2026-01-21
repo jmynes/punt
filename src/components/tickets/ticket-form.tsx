@@ -194,7 +194,7 @@ export function TicketForm({
                 value={sprint.id}
                 className="focus:bg-zinc-800 focus:text-zinc-100"
               >
-                {sprint.name} {sprint.isActive && '(Active)'}
+                {sprint.name} {sprint.status === 'active' && '(Active)'}
               </SelectItem>
             ))}
           </SelectContent>

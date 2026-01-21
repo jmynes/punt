@@ -43,14 +43,26 @@ interface TicketAPIResponse {
   creatorId: string
   sprintId: string | null
   parentId: string | null
+  isCarriedOver: boolean
+  carriedFromSprintId: string | null
+  carriedOverCount: number
   assignee: { id: string; name: string; email: string | null; avatar: string | null } | null
   creator: { id: string; name: string; email: string | null; avatar: string | null }
   sprint: {
     id: string
     name: string
-    isActive: boolean
+    status: 'planning' | 'active' | 'completed'
     startDate: string | null
     endDate: string | null
+    goal?: string | null
+  } | null
+  carriedFromSprint: {
+    id: string
+    name: string
+    status: 'planning' | 'active' | 'completed'
+    startDate: string | null
+    endDate: string | null
+    goal?: string | null
   } | null
   labels: { id: string; name: string; color: string }[]
   watchers: { id: string; name: string; email: string | null; avatar: string | null }[]
@@ -131,6 +143,17 @@ function transformTicket(ticket: TicketAPIResponse): TicketWithRelations {
           ...ticket.sprint,
           startDate: ticket.sprint.startDate ? new Date(ticket.sprint.startDate) : null,
           endDate: ticket.sprint.endDate ? new Date(ticket.sprint.endDate) : null,
+        }
+      : null,
+    carriedFromSprint: ticket.carriedFromSprint
+      ? {
+          ...ticket.carriedFromSprint,
+          startDate: ticket.carriedFromSprint.startDate
+            ? new Date(ticket.carriedFromSprint.startDate)
+            : null,
+          endDate: ticket.carriedFromSprint.endDate
+            ? new Date(ticket.carriedFromSprint.endDate)
+            : null,
         }
       : null,
     watchers: ticket.watchers.map((w) => ({ ...w, email: w.email ?? '' })),
@@ -727,9 +750,10 @@ export const sprintKeys = {
 interface SprintAPIResponse {
   id: string
   name: string
-  isActive: boolean
+  status: 'planning' | 'active' | 'completed'
   startDate: string | null
   endDate: string | null
+  goal?: string | null
 }
 
 /**

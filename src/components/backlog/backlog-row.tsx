@@ -193,7 +193,7 @@ export function BacklogRow({
           <Badge
             variant="outline"
             className={cn(
-              ticket.sprint.isActive
+              ticket.sprint.status === 'active'
                 ? 'border-green-600 bg-green-900/30 text-green-400'
                 : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
             )}

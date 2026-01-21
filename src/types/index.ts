@@ -6,10 +6,12 @@ export type {
   Label,
   Project,
   ProjectMember,
+  ProjectSprintSettings,
   Sprint,
   Ticket,
   TicketEdit,
   TicketLink,
+  TicketSprintHistory,
   TicketWatcher,
   User,
 } from '@/generated/prisma'
@@ -38,6 +40,30 @@ export const LINK_TYPES = [
 ] as const
 export type LinkType = (typeof LINK_TYPES)[number]
 
+// Sprint status constants
+export const SPRINT_STATUSES = ['planning', 'active', 'completed'] as const
+export type SprintStatus = (typeof SPRINT_STATUSES)[number]
+
+// Entry types for sprint history
+export const SPRINT_ENTRY_TYPES = ['added', 'carried_over'] as const
+export type SprintEntryType = (typeof SPRINT_ENTRY_TYPES)[number]
+
+// Exit statuses for sprint history
+export const SPRINT_EXIT_STATUSES = ['completed', 'carried_over', 'removed'] as const
+export type SprintExitStatus = (typeof SPRINT_EXIT_STATUSES)[number]
+
+// Sprint completion action types
+export type SprintCompletionAction = 'extend' | 'close_to_next' | 'close_to_backlog' | 'close_keep'
+
+// Sprint completion options
+export interface SprintCompletionOptions {
+  action: SprintCompletionAction
+  extendDays?: number
+  targetSprintId?: string
+  createNextSprint?: boolean
+  doneColumnIds?: string[]
+}
+
 // User summary for display
 export interface UserSummary {
   id: string
@@ -58,9 +84,40 @@ export interface LabelSummary {
 export interface SprintSummary {
   id: string
   name: string
-  isActive: boolean
+  status: SprintStatus
   startDate: Date | null
   endDate: Date | null
+  goal?: string | null
+}
+
+// Full sprint with completion metrics
+export interface SprintWithMetrics extends SprintSummary {
+  completedAt: Date | null
+  completedById: string | null
+  completedTicketCount: number | null
+  incompleteTicketCount: number | null
+  completedStoryPoints: number | null
+  incompleteStoryPoints: number | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Sprint completion result
+export interface SprintCompletionResult {
+  sprint: SprintWithMetrics
+  ticketDisposition: {
+    completed: string[]
+    movedToBacklog: string[]
+    carriedOver: string[]
+  }
+  nextSprint?: SprintSummary
+}
+
+// Project sprint settings
+export interface ProjectSprintSettingsData {
+  defaultSprintDuration: number
+  autoCarryOverIncomplete: boolean
+  doneColumnIds: string[]
 }
 
 // Attachment info from database
@@ -97,9 +154,14 @@ export interface TicketWithRelations {
   creatorId: string
   sprintId: string | null
   parentId: string | null
+  // Carryover tracking
+  isCarriedOver: boolean
+  carriedFromSprintId: string | null
+  carriedOverCount: number
   assignee: UserSummary | null
   creator: UserSummary
   sprint: SprintSummary | null
+  carriedFromSprint: SprintSummary | null
   labels: LabelSummary[]
   watchers: UserSummary[]
   attachments?: AttachmentInfo[]
