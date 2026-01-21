@@ -354,11 +354,15 @@ See [Environment Setup](#environment-setup) for details on the database path.
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines before submitting a PR.
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting a PR.
+
+All contributors must sign our [Contributor License Agreement](CLA.md). The CLA-Assistant bot will guide you through the process when you open a pull request.
 
 ## License
 
-AGPL-3.0 License - see LICENSE file for details.
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
+
+The AGPL-3.0 requires that if you modify this software and provide it as a service over a network, you must make the source code available to users of that service.
 
 ---
 
