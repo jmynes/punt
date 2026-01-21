@@ -98,6 +98,16 @@ export default function BacklogPage() {
     return null
   }
 
+  // Wait for store hydration to prevent hydration mismatch
+  // Server renders with empty store, client may have localStorage data
+  if (!_hasHydrated) {
+    return (
+      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
+        <div className="text-zinc-500">Loading backlog...</div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
       {/* Sprint header */}

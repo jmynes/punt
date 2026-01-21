@@ -224,6 +224,17 @@ export default function BoardPage() {
     return null
   }
 
+  // Wait for store hydration to prevent hydration mismatch
+  // Server renders with empty store, client may have localStorage data
+  if (!_hasHydrated) {
+    return (
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        <p className="mt-4 text-sm text-zinc-500">Loading board...</p>
+      </div>
+    )
+  }
+
   // Show loading state for real projects while fetching columns/tickets
   if (!isDemoProject && (columnsLoading || ticketsLoading)) {
     return (
