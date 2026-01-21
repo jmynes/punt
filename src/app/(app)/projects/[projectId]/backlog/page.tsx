@@ -1,12 +1,13 @@
 'use client'
 
-import { List, Plus } from 'lucide-react'
+import { List, Loader2, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef } from 'react'
 import { BacklogTable, ColumnConfig } from '@/components/backlog'
 import { SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
+import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { getDemoData } from '@/lib/demo-data'
 import { useBoardStore } from '@/stores/board-store'
@@ -27,12 +28,22 @@ export default function BacklogPage() {
     useUIStore()
   const { clearSelection } = useSelectionStore()
 
-  // Get columns for this project
-  const columns = getColumns(projectId)
-
   // Demo project IDs that should get demo data
   const DEMO_PROJECT_IDS = ['1', '2', '3']
   const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
+
+  // Fetch columns from API for real projects
+  const { isLoading: columnsLoading, isSuccess: columnsLoaded } = useColumnsByProject(projectId, {
+    enabled: !isDemoProject && _hasHydrated,
+  })
+
+  // Fetch tickets from API for real projects (only after columns are loaded)
+  const { isLoading: ticketsLoading } = useTicketsByProject(projectId, {
+    enabled: !isDemoProject && _hasHydrated && columnsLoaded,
+  })
+
+  // Get columns for this project
+  const columns = getColumns(projectId)
 
   // Track which projects have been initialized to prevent re-running
   const initializedProjectsRef = useRef<Set<string>>(new Set())
@@ -104,6 +115,18 @@ export default function BacklogPage() {
     return (
       <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
         <div className="text-zinc-500">Loading backlog...</div>
+      </div>
+    )
+  }
+
+  // Show loading state for real projects
+  if (!isDemoProject && (columnsLoading || ticketsLoading)) {
+    return (
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <p className="mt-4 text-sm text-zinc-500">
+          {columnsLoading ? 'Loading columns...' : 'Loading tickets...'}
+        </p>
       </div>
     )
   }
