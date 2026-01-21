@@ -8,6 +8,7 @@ import { KanbanBoard } from '@/components/board'
 import { SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
+import { useActiveSprint } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
@@ -27,8 +28,13 @@ export default function BoardPage() {
   const projectKey = project?.key || 'PROJ'
 
   const { getColumns, _hasHydrated } = useBoardStore()
-  const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
-    useUIStore()
+  const {
+    setCreateTicketOpen,
+    setActiveProjectId,
+    activeTicketId,
+    setActiveTicketId,
+    openCreateTicketWithData,
+  } = useUIStore()
   const { clearSelection } = useSelectionStore()
   const {
     filterByType,
@@ -56,6 +62,9 @@ export default function BoardPage() {
     enabled: _hasHydrated && columnsLoaded,
   })
 
+  // Fetch active sprint - board only shows tickets in the active sprint
+  const { data: activeSprint } = useActiveSprint(projectId)
+
   // Connect to real-time updates (after initial load)
   useRealtime(projectId, _hasHydrated && columnsLoaded && !ticketsLoading)
 
@@ -69,10 +78,21 @@ export default function BoardPage() {
   }, [clearSelection, setActiveTicketId])
 
   // Apply filters to columns
+  // Board view only shows tickets in the active sprint
   const filteredColumns = useMemo((): ColumnWithTickets[] => {
     return columns.map((col) => ({
       ...col,
       tickets: col.tickets.filter((ticket) => {
+        // BOARD ONLY: Filter to active sprint first
+        // If there's an active sprint, only show tickets in that sprint
+        // If there's no active sprint, show no tickets (board is sprint-focused)
+        if (activeSprint) {
+          if (ticket.sprintId !== activeSprint.id) return false
+        } else {
+          // No active sprint - board shows nothing
+          return false
+        }
+
         // Search query
         if (searchQuery) {
           const query = searchQuery.toLowerCase()
@@ -104,7 +124,7 @@ export default function BoardPage() {
           if (!filterByLabels.some((labelId) => ticketLabelIds.includes(labelId))) return false
         }
 
-        // Sprint filter
+        // Sprint filter (additional filtering within the active sprint, e.g., user manually overrides)
         if (filterBySprint) {
           if (filterBySprint === 'backlog') {
             if (ticket.sprintId) return false
@@ -152,6 +172,7 @@ export default function BoardPage() {
     }))
   }, [
     columns,
+    activeSprint,
     searchQuery,
     filterByType,
     filterByPriority,
@@ -249,15 +270,25 @@ export default function BoardPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-xl font-semibold text-zinc-100">{projectKey} Board</h1>
-            <p className="text-sm text-zinc-500">Drag and drop tickets to update their status</p>
+            <p className="text-sm text-zinc-500">
+              {activeSprint
+                ? 'Drag and drop tickets to update their status'
+                : 'Start a sprint to see tickets on the board'}
+            </p>
           </div>
 
-          {/* Create ticket */}
+          {/* Create ticket - auto-assign to active sprint */}
           <Button
             size="sm"
             variant="primary"
             className="w-fit"
-            onClick={() => setCreateTicketOpen(true)}
+            onClick={() => {
+              if (activeSprint) {
+                openCreateTicketWithData({ sprintId: activeSprint.id })
+              } else {
+                setCreateTicketOpen(true)
+              }
+            }}
           >
             <Plus className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline">New Ticket</span>
