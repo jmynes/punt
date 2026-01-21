@@ -119,7 +119,7 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
   const hasIncomplete = incompleteCount > 0
 
   return (
-    <Dialog open={sprintCompleteOpen} onOpenChange={(open) => !open && handleClose()}>
+    <Dialog open={sprintCompleteOpen} onOpenChange={(open) => !open && handleDismissLater()}>
       <DialogContent className="sm:max-w-lg bg-zinc-950 border-zinc-800">
         <DialogHeader>
           <DialogTitle className="text-xl text-zinc-100">
@@ -269,7 +269,7 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={handleClose}
+              onClick={handleDismissLater}
               disabled={completeSprint.isPending}
               className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
             >

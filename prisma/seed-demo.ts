@@ -423,8 +423,8 @@ async function main() {
       name: 'Sprint 3 - Polish & Performance',
       goal: 'Improve UX and optimize performance',
       status: 'active',
-      startDate: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000),
-      endDate: new Date(now.getTime() + 0 * 24 * 60 * 60 * 1000),
+      startDate: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+      endDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
     },
     {
       name: 'Sprint 4 - Mobile & Integration',
