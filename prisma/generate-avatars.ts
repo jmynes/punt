@@ -1,6 +1,6 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { PNG } from 'pngjs'
-import * as fs from 'fs'
-import * as path from 'path'
 
 const AVATAR_SIZE = 200
 
@@ -12,15 +12,50 @@ interface AvatarConfig {
 }
 
 const avatarConfigs: AvatarConfig[] = [
-  { name: 'avatar-blue', baseColor: [59, 130, 246], accentColor: [147, 197, 253], pattern: 'gradient' },
-  { name: 'avatar-green', baseColor: [34, 197, 94], accentColor: [134, 239, 172], pattern: 'circle' },
-  { name: 'avatar-purple', baseColor: [147, 51, 234], accentColor: [216, 180, 254], pattern: 'diamond' },
-  { name: 'avatar-orange', baseColor: [249, 115, 22], accentColor: [253, 186, 116], pattern: 'gradient' },
-  { name: 'avatar-pink', baseColor: [236, 72, 153], accentColor: [249, 168, 212], pattern: 'waves' },
-  { name: 'avatar-cyan', baseColor: [6, 182, 212], accentColor: [103, 232, 249], pattern: 'stripes' },
+  {
+    name: 'avatar-blue',
+    baseColor: [59, 130, 246],
+    accentColor: [147, 197, 253],
+    pattern: 'gradient',
+  },
+  {
+    name: 'avatar-green',
+    baseColor: [34, 197, 94],
+    accentColor: [134, 239, 172],
+    pattern: 'circle',
+  },
+  {
+    name: 'avatar-purple',
+    baseColor: [147, 51, 234],
+    accentColor: [216, 180, 254],
+    pattern: 'diamond',
+  },
+  {
+    name: 'avatar-orange',
+    baseColor: [249, 115, 22],
+    accentColor: [253, 186, 116],
+    pattern: 'gradient',
+  },
+  {
+    name: 'avatar-pink',
+    baseColor: [236, 72, 153],
+    accentColor: [249, 168, 212],
+    pattern: 'waves',
+  },
+  {
+    name: 'avatar-cyan',
+    baseColor: [6, 182, 212],
+    accentColor: [103, 232, 249],
+    pattern: 'stripes',
+  },
   { name: 'avatar-red', baseColor: [239, 68, 68], accentColor: [252, 165, 165], pattern: 'circle' },
   { name: 'avatar-amber', baseColor: [245, 158, 11], accentColor: [252, 211, 77], pattern: 'dots' },
-  { name: 'avatar-indigo', baseColor: [99, 102, 241], accentColor: [165, 180, 252], pattern: 'diamond' },
+  {
+    name: 'avatar-indigo',
+    baseColor: [99, 102, 241],
+    accentColor: [165, 180, 252],
+    pattern: 'diamond',
+  },
   { name: 'avatar-teal', baseColor: [20, 184, 166], accentColor: [94, 234, 212], pattern: 'waves' },
 ]
 
@@ -51,7 +86,7 @@ function createAvatar(config: AvatarConfig): PNG {
       // Anti-aliasing for circle edge
       let alpha = 255
       if (distance > maxDist - 4) {
-        alpha = Math.round(255 * (maxDist - distance) / 4)
+        alpha = Math.round((255 * (maxDist - distance)) / 4)
       }
 
       let color: [number, number, number]
@@ -92,8 +127,8 @@ function createAvatar(config: AvatarConfig): PNG {
         }
         case 'dots': {
           const dotSize = 30
-          const dotX = ((x % dotSize) - dotSize / 2)
-          const dotY = ((y % dotSize) - dotSize / 2)
+          const dotX = (x % dotSize) - dotSize / 2
+          const dotY = (y % dotSize) - dotSize / 2
           const dotDist = Math.sqrt(dotX * dotX + dotY * dotY)
           color = dotDist < 8 ? config.accentColor : config.baseColor
           break

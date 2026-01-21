@@ -1,6 +1,6 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import bcrypt from 'bcryptjs'
-import * as fs from 'fs'
-import * as path from 'path'
 import { PrismaClient } from '../src/generated/prisma'
 
 const prisma = new PrismaClient()
@@ -18,19 +18,79 @@ interface UserConfig {
 }
 
 const users: UserConfig[] = [
-  { username: 'admin', name: 'Alex Admin', email: 'alex@example.com', isSystemAdmin: true, avatarFile: 'avatar-blue.png' },
-  { username: 'sarah', name: 'Sarah Chen', email: 'sarah@example.com', isSystemAdmin: true, avatarFile: 'avatar-purple.png' },
-  { username: 'marcus', name: 'Marcus Johnson', email: 'marcus@example.com', isSystemAdmin: false, avatarFile: 'avatar-green.png' },
-  { username: 'emily', name: 'Emily Rodriguez', email: 'emily@example.com', isSystemAdmin: false, avatarFile: 'avatar-pink.png' },
-  { username: 'david', name: 'David Kim', email: 'david@example.com', isSystemAdmin: false, avatarFile: 'avatar-orange.png' },
-  { username: 'lisa', name: 'Lisa Thompson', email: 'lisa@example.com', isSystemAdmin: false, avatarFile: 'avatar-cyan.png' },
-  { username: 'james', name: 'James Wilson', email: 'james@example.com', isSystemAdmin: false, avatarFile: 'avatar-red.png' },
-  { username: 'anna', name: 'Anna Martinez', email: 'anna@example.com', isSystemAdmin: false, avatarFile: 'avatar-amber.png' },
-  { username: 'michael', name: 'Michael Brown', email: 'michael@example.com', isSystemAdmin: false, avatarFile: 'avatar-indigo.png' },
-  { username: 'jessica', name: 'Jessica Lee', email: 'jessica@example.com', isSystemAdmin: false, avatarFile: 'avatar-teal.png' },
+  {
+    username: 'admin',
+    name: 'Alex Admin',
+    email: 'alex@example.com',
+    isSystemAdmin: true,
+    avatarFile: 'avatar-blue.png',
+  },
+  {
+    username: 'sarah',
+    name: 'Sarah Chen',
+    email: 'sarah@example.com',
+    isSystemAdmin: true,
+    avatarFile: 'avatar-purple.png',
+  },
+  {
+    username: 'marcus',
+    name: 'Marcus Johnson',
+    email: 'marcus@example.com',
+    isSystemAdmin: false,
+    avatarFile: 'avatar-green.png',
+  },
+  {
+    username: 'emily',
+    name: 'Emily Rodriguez',
+    email: 'emily@example.com',
+    isSystemAdmin: false,
+    avatarFile: 'avatar-pink.png',
+  },
+  {
+    username: 'david',
+    name: 'David Kim',
+    email: 'david@example.com',
+    isSystemAdmin: false,
+    avatarFile: 'avatar-orange.png',
+  },
+  {
+    username: 'lisa',
+    name: 'Lisa Thompson',
+    email: 'lisa@example.com',
+    isSystemAdmin: false,
+    avatarFile: 'avatar-cyan.png',
+  },
+  {
+    username: 'james',
+    name: 'James Wilson',
+    email: 'james@example.com',
+    isSystemAdmin: false,
+    avatarFile: 'avatar-red.png',
+  },
+  {
+    username: 'anna',
+    name: 'Anna Martinez',
+    email: 'anna@example.com',
+    isSystemAdmin: false,
+    avatarFile: 'avatar-amber.png',
+  },
+  {
+    username: 'michael',
+    name: 'Michael Brown',
+    email: 'michael@example.com',
+    isSystemAdmin: false,
+    avatarFile: 'avatar-indigo.png',
+  },
+  {
+    username: 'jessica',
+    name: 'Jessica Lee',
+    email: 'jessica@example.com',
+    isSystemAdmin: false,
+    avatarFile: 'avatar-teal.png',
+  },
 ]
 
-const projectColors = ['#6366f1', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6']
+const _projectColors = ['#6366f1', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6']
 
 const labelConfigs = [
   { name: 'bug', color: '#ef4444' },
@@ -159,7 +219,7 @@ function randomSubset<T>(arr: T[], minCount: number, maxCount: number): T[] {
   return shuffled.slice(0, count)
 }
 
-function generateTicketDescription(type: string, title: string): string | null {
+function generateTicketDescription(_type: string, title: string): string | null {
   const shouldHaveDescription = Math.random() > 0.2 // 80% have descriptions
 
   if (!shouldHaveDescription) return null
@@ -182,7 +242,7 @@ async function copyAvatarsToPublic() {
     fs.mkdirSync(publicDir, { recursive: true })
   }
 
-  const files = fs.readdirSync(sampleDir).filter(f => f.endsWith('.png'))
+  const files = fs.readdirSync(sampleDir).filter((f) => f.endsWith('.png'))
   for (const file of files) {
     const src = path.join(sampleDir, file)
     const dest = path.join(publicDir, file)
@@ -246,9 +306,24 @@ async function main() {
   // Create projects
   console.log('\n📁 Creating projects...')
   const projectConfigs = [
-    { name: 'PUNT Development', key: 'PUNT', description: 'Main project tracker development', color: '#6366f1' },
-    { name: 'Mobile App', key: 'MOB', description: 'iOS and Android mobile application', color: '#10b981' },
-    { name: 'API Platform', key: 'API', description: 'Backend API and infrastructure', color: '#f59e0b' },
+    {
+      name: 'PUNT Development',
+      key: 'PUNT',
+      description: 'Main project tracker development',
+      color: '#6366f1',
+    },
+    {
+      name: 'Mobile App',
+      key: 'MOB',
+      description: 'iOS and Android mobile application',
+      color: '#10b981',
+    },
+    {
+      name: 'API Platform',
+      key: 'API',
+      description: 'Backend API and infrastructure',
+      color: '#f59e0b',
+    },
   ]
 
   const createdProjects: { id: string; name: string; key: string }[] = []
@@ -392,7 +467,7 @@ async function main() {
     { columnIndex: 0, count: 35 }, // Backlog
     { columnIndex: 1, count: 15 }, // To Do
     { columnIndex: 2, count: 12 }, // In Progress
-    { columnIndex: 3, count: 8 },  // In Review
+    { columnIndex: 3, count: 8 }, // In Review
     { columnIndex: 4, count: 30 }, // Done
   ]
 
@@ -416,15 +491,21 @@ async function main() {
         let sprint = null
         if (column.name === 'Done') {
           // Done tickets are mostly from completed sprints
-          sprint = Math.random() > 0.3 ? randomElement(sprints.filter(s => s.status === 'completed')) : null
+          sprint =
+            Math.random() > 0.3
+              ? randomElement(sprints.filter((s) => s.status === 'completed'))
+              : null
         } else if (column.name === 'In Progress' || column.name === 'In Review') {
           // Active work is in current sprint
-          sprint = sprints.find(s => s.status === 'active') || null
+          sprint = sprints.find((s) => s.status === 'active') || null
         } else if (column.name === 'To Do') {
           // To Do can be current or planning sprint
-          sprint = Math.random() > 0.5
-            ? sprints.find(s => s.status === 'active')
-            : Math.random() > 0.5 ? sprints.find(s => s.status === 'planning') : null
+          sprint =
+            Math.random() > 0.5
+              ? sprints.find((s) => s.status === 'active')
+              : Math.random() > 0.5
+                ? sprints.find((s) => s.status === 'planning')
+                : null
         }
         // Backlog items typically don't have sprints
 
@@ -457,7 +538,7 @@ async function main() {
             creatorId: creator.id,
             sprintId: sprint?.id || null,
             labels: {
-              connect: ticketLabels.map(l => ({ id: l.id })),
+              connect: ticketLabels.map((l) => ({ id: l.id })),
             },
           },
         })
@@ -508,11 +589,11 @@ async function main() {
   // Create some comments for all projects
   console.log('\n💬 Creating comments...')
   const commentTemplates = [
-    'I\'ll take a look at this today.',
+    "I'll take a look at this today.",
     'Could you provide more details about the expected behavior?',
     'This is blocked by the database migration.',
     'LGTM! Ready for review.',
-    'I\'ve pushed a fix for this. Please review when you get a chance.',
+    "I've pushed a fix for this. Please review when you get a chance.",
     'This might be related to the issue we saw last week.',
     'Updated the implementation based on feedback.',
     'Can we schedule a quick call to discuss this?',
@@ -535,7 +616,9 @@ async function main() {
             content: randomElement(commentTemplates),
             ticketId: ticket.id,
             authorId: randomElement(createdUsers).id,
-            createdAt: new Date(ticket.createdAt.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000),
+            createdAt: new Date(
+              ticket.createdAt.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000,
+            ),
           },
         })
         commentCount++
@@ -577,7 +660,7 @@ async function main() {
 
   // Create sprint settings for all projects
   for (const project of createdProjects) {
-    const doneColumn = projectColumns[project.id].find(c => c.name === 'Done')
+    const doneColumn = projectColumns[project.id].find((c) => c.name === 'Done')
     await prisma.projectSprintSettings.create({
       data: {
         projectId: project.id,
@@ -589,21 +672,27 @@ async function main() {
   }
 
   // Summary
-  console.log('\n' + '='.repeat(50))
+  console.log(`\n${'='.repeat(50)}`)
   console.log('✅ Database seeded successfully!')
   console.log('='.repeat(50))
   console.log(`\n📊 Summary:`)
-  console.log(`   Users:    ${createdUsers.length} (${users.filter(u => u.isSystemAdmin).length} admins)`)
+  console.log(
+    `   Users:    ${createdUsers.length} (${users.filter((u) => u.isSystemAdmin).length} admins)`,
+  )
   console.log(`   Projects: ${createdProjects.length}`)
-  console.log(`   Sprints:  ${sprintConfigs.length * createdProjects.length} (${sprintConfigs.length} per project)`)
-  console.log(`   Labels:   ${labelConfigs.length * createdProjects.length} (${labelConfigs.length} per project)`)
+  console.log(
+    `   Sprints:  ${sprintConfigs.length * createdProjects.length} (${sprintConfigs.length} per project)`,
+  )
+  console.log(
+    `   Labels:   ${labelConfigs.length * createdProjects.length} (${labelConfigs.length} per project)`,
+  )
   console.log(`   Tickets:  ${totalTicketCount}`)
   console.log(`   Comments: ${commentCount}`)
   console.log(`   Watchers: ${watcherCount}`)
   console.log(`\n🔑 Login credentials:`)
   console.log(`   All users have password: ${DEFAULT_PASSWORD}`)
   console.log(`\n👤 Admin accounts:`)
-  for (const user of users.filter(u => u.isSystemAdmin)) {
+  for (const user of users.filter((u) => u.isSystemAdmin)) {
     console.log(`   - ${user.username} (${user.name})`)
   }
   console.log(`\n🌐 Start the app with: pnpm dev`)

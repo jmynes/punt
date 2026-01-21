@@ -130,7 +130,7 @@ async function main() {
           data: {
             name: col.name,
             order: col.order,
-            projectId: project!.id,
+            projectId: project?.id,
           },
         }),
       ),
@@ -158,13 +158,13 @@ async function main() {
     labelData.map((label) =>
       prisma.label.upsert({
         where: {
-          projectId_name: { projectId: project!.id, name: label.name },
+          projectId_name: { projectId: project?.id, name: label.name },
         },
         update: {},
         create: {
           name: label.name,
           color: label.color,
-          projectId: project!.id,
+          projectId: project?.id,
         },
       }),
     ),
@@ -417,7 +417,7 @@ async function main() {
   console.log('  - 2 in backlog (no sprint)')
   console.log('  - 2 assigned to Sprint 3 (planning)')
 
-  console.log('\n' + '='.repeat(50))
+  console.log(`\n${'='.repeat(50)}`)
   console.log('Sprint test data created successfully!')
   console.log('='.repeat(50))
   console.log('\nYou can log in with any of these users:')
