@@ -10,6 +10,7 @@ import {
   Plus,
   Settings,
   Shield,
+  Target,
   Trash2,
   Users,
 } from 'lucide-react'
@@ -281,6 +282,19 @@ export function Sidebar() {
                 >
                   <List className="h-3.5 w-3.5" />
                   Backlog
+                </Button>
+              </Link>
+              <Link href={`/projects/${activeProjectId}/sprints`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100',
+                    pathname.includes('/sprints') && 'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Target className="h-3.5 w-3.5" />
+                  Sprints
                 </Button>
               </Link>
               <Link href="/settings">

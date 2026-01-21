@@ -346,6 +346,37 @@ export function useExtendSprint(projectId: string) {
 }
 
 /**
+ * Update a ticket's sprint assignment (for drag-and-drop)
+ */
+export function useUpdateTicketSprint(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ticketId, sprintId }: { ticketId: string; sprintId: string | null }) => {
+      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify({ sprintId }),
+      })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to update ticket')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      // Invalidate both sprints and tickets queries
+      queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
+      queryClient.invalidateQueries({ queryKey: ['tickets', projectId] })
+    },
+    // Don't show toast here - we handle it in the component for better UX
+  })
+}
+
+/**
  * Update sprint settings
  */
 export function useUpdateSprintSettings(projectId: string) {
