@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         reduction: `${Math.round((1 - processedBuffer.length / rawBuffer.length) * 100)}%`,
       })
     } catch (error) {
-      logger.error('Failed to process avatar image', { error })
+      logger.error('Failed to process avatar image', error instanceof Error ? error : undefined)
       return NextResponse.json(
         { error: 'Failed to process image. Please try a different file.' },
         { status: 400 },

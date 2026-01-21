@@ -391,7 +391,7 @@ export function SprintBacklogView({
         })
       })
     },
-    [tickets, sprints, projectId, updateTicket, updateTicketSprintMutation],
+    [tickets, sprints, projectId, updateTicket, updateTicketSprintMutation, ticketsBySprint],
   )
 
   // Handle create ticket with sprint prefill

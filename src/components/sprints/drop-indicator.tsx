@@ -69,6 +69,8 @@ export function DropZone({
               viewBox="0 0 24 24"
               stroke="currentColor"
               strokeWidth={2}
+              role="img"
+              aria-label="Drop indicator arrow"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m0 0l-4-4m4 4l4-4" />
             </svg>

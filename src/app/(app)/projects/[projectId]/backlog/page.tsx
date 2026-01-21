@@ -561,7 +561,7 @@ export default function BacklogPage() {
       updateTicketSprintMutation,
       backlogColumns,
       reorderColumns,
-      ticketsBySprint.backlog,
+      ticketsBySprint,
       backlogOrder,
       selectedTicketIds,
       isSelected,

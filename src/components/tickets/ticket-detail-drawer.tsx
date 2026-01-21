@@ -131,7 +131,7 @@ function getMimeTypeCategory(mimeType: string): 'image' | 'video' | 'document' {
 }
 
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
-  const { updateTicket, getColumns } = useBoardStore()
+  const { getColumns } = useBoardStore()
   const { activeProjectId, setActiveTicketId, drawerFocusField, clearDrawerFocusField } =
     useUIStore()
 
