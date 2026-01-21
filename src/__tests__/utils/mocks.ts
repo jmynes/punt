@@ -115,9 +115,38 @@ export const createMockColumns = (): ColumnWithTickets[] => [
   }),
 ]
 
+// Magic byte patterns for common file types
+const MAGIC_BYTES: Record<string, Uint8Array> = {
+  'image/jpeg': new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]),
+  'image/png': new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  'image/gif': new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]),
+  'image/webp': new Uint8Array([
+    0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+  ]),
+  'video/mp4': new Uint8Array([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0x34]),
+  'video/webm': new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]),
+  'application/pdf': new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]),
+}
+
 // Mock file for upload tests
 export const createMockFile = (name = 'test.jpg', type = 'image/jpeg', size = 1024): File => {
-  const blob = new Blob(['test content'], { type })
+  // Use magic bytes for the file type if available, otherwise use placeholder content
+  const magicBytes = MAGIC_BYTES[type]
+  let content: BlobPart
+
+  if (magicBytes) {
+    // Create content with proper magic bytes plus padding to reach size
+    const padding = new Uint8Array(Math.max(0, size - magicBytes.length))
+    const fullContent = new Uint8Array(magicBytes.length + padding.length)
+    fullContent.set(magicBytes, 0)
+    fullContent.set(padding, magicBytes.length)
+    content = fullContent
+  } else {
+    // For text files or unknown types, use text content
+    content = 'test content'.padEnd(size, ' ')
+  }
+
+  const blob = new Blob([content], { type })
   const file = new File([blob], name, { type })
   // Ensure size is set correctly
   Object.defineProperty(file, 'size', {

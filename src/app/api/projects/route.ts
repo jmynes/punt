@@ -12,42 +12,59 @@ const createProjectSchema = z.object({
 })
 
 /**
- * GET /api/projects - List all projects
- * All authenticated users can see all projects (no per-user visibility restrictions yet)
+ * GET /api/projects - List projects
+ * Users see only projects they're members of (system admins see all)
  */
 export async function GET() {
   try {
     const user = await requireAuth()
 
-    // Get all projects
-    const projects = await db.project.findMany({
-      select: {
-        id: true,
-        name: true,
-        key: true,
-        color: true,
-        description: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: {
-          select: { tickets: true, members: true },
+    // System admins can see all projects
+    if (user.isSystemAdmin) {
+      const projects = await db.project.findMany({
+        select: {
+          id: true,
+          name: true,
+          key: true,
+          color: true,
+          description: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: { tickets: true, members: true },
+          },
         },
-        members: {
-          where: { userId: user.id },
-          select: { role: true },
+        orderBy: { name: 'asc' },
+      })
+      return NextResponse.json(projects.map((p) => ({ ...p, role: 'admin' })))
+    }
+
+    // Regular users only see projects they're members of
+    const memberships = await db.projectMember.findMany({
+      where: { userId: user.id },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            key: true,
+            color: true,
+            description: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: {
+              select: { tickets: true, members: true },
+            },
+          },
         },
       },
-      orderBy: { name: 'asc' },
+      orderBy: { project: { name: 'asc' } },
     })
 
-    // Add role to response (user's role if member, otherwise 'member' as default)
-    const projectsWithRole = projects.map((p) => {
-      const { members, ...project } = p
-      return {
-        ...project,
-        role: members[0]?.role ?? 'member',
-      }
-    })
+    const projectsWithRole = memberships.map((m) => ({
+      ...m.project,
+      role: m.role,
+    }))
 
     return NextResponse.json(projectsWithRole)
   } catch (error) {

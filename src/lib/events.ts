@@ -1,5 +1,9 @@
 import { EventEmitter } from 'node:events'
 
+// Connection limit constants
+const MAX_CONNECTIONS_PER_USER = 10
+const MAX_CONNECTIONS_PER_PROJECT = 100
+
 /**
  * Event types for ticket operations
  */
@@ -84,10 +88,50 @@ const USERS_GLOBAL_CHANNEL = 'users:global'
  * - Project events use a global channel since all users need to see project list changes
  */
 class ProjectEventEmitter extends EventEmitter {
+  private userConnectionCounts: Map<string, number> = new Map()
+  private projectConnectionCounts: Map<string, number> = new Map()
+
   constructor() {
     super()
     // Allow many listeners (one per connected client)
     this.setMaxListeners(1000)
+  }
+
+  /**
+   * Check if a user can open a new connection
+   */
+  canUserConnect(userId: string): boolean {
+    const count = this.userConnectionCounts.get(userId) || 0
+    return count < MAX_CONNECTIONS_PER_USER
+  }
+
+  /**
+   * Check if a project can accept a new connection
+   */
+  canProjectAcceptConnection(projectId: string): boolean {
+    const count = this.projectConnectionCounts.get(projectId) || 0
+    return count < MAX_CONNECTIONS_PER_PROJECT
+  }
+
+  /**
+   * Track a new connection and return a cleanup function
+   */
+  trackConnection(userId: string, projectId: string): () => void {
+    // Increment counts
+    this.userConnectionCounts.set(userId, (this.userConnectionCounts.get(userId) || 0) + 1)
+    this.projectConnectionCounts.set(
+      projectId,
+      (this.projectConnectionCounts.get(projectId) || 0) + 1,
+    )
+
+    // Return cleanup function
+    return () => {
+      const userCount = this.userConnectionCounts.get(userId) || 1
+      this.userConnectionCounts.set(userId, Math.max(0, userCount - 1))
+
+      const projectCount = this.projectConnectionCounts.get(projectId) || 1
+      this.projectConnectionCounts.set(projectId, Math.max(0, projectCount - 1))
+    }
   }
 
   /**

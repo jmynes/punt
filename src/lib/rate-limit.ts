@@ -103,9 +103,26 @@ export function getClientIp(request: Request): string {
     }
   }
 
-  // Fallback: use a hash of user-agent + accept-language as identifier
-  // This prevents trivial rate limit bypasses via header spoofing
+  // Fallback: use combination of multiple headers for fingerprint
+  // This is harder to spoof than just user-agent + accept-language
   const userAgent = request.headers.get('user-agent') || ''
   const acceptLang = request.headers.get('accept-language') || ''
-  return `fingerprint:${hashString(userAgent + acceptLang)}`
+  const acceptEncoding = request.headers.get('accept-encoding') || ''
+  const connection = request.headers.get('connection') || ''
+  const secFetchDest = request.headers.get('sec-fetch-dest') || ''
+  const secFetchMode = request.headers.get('sec-fetch-mode') || ''
+  const secFetchSite = request.headers.get('sec-fetch-site') || ''
+
+  // Combine multiple fingerprint signals
+  const fingerprint = [
+    userAgent,
+    acceptLang,
+    acceptEncoding,
+    connection,
+    secFetchDest,
+    secFetchMode,
+    secFetchSite,
+  ].join('|')
+
+  return `fingerprint:${hashString(fingerprint)}`
 }

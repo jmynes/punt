@@ -2,6 +2,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockFile, createMockFormData } from '@/__tests__/utils/mocks'
 import { FilesystemStorage, InMemoryStorage } from '@/lib/file-storage'
 import { setFileStorage } from '@/lib/upload-storage'
+
+// Mock auth-helpers to bypass authentication in tests
+// vi.mock is hoisted automatically by vitest
+vi.mock('@/lib/auth-helpers', () => ({
+  requireAuth: vi.fn().mockResolvedValue({ id: 'test-user-id', name: 'Test User' }),
+  requireProjectMember: vi.fn().mockResolvedValue(undefined),
+  requireProjectAdmin: vi.fn().mockResolvedValue(undefined),
+  requireProjectOwner: vi.fn().mockResolvedValue(undefined),
+  requireSystemAdmin: vi.fn().mockResolvedValue(undefined),
+  getCurrentUser: vi.fn().mockResolvedValue({ id: 'test-user-id', name: 'Test User' }),
+}))
+
+// Mock file-type to allow all files in tests (magic byte validation tested separately)
+vi.mock('file-type', () => ({
+  fileTypeFromBuffer: vi.fn().mockResolvedValue(null),
+}))
+
 import { GET, POST } from '../route'
 
 describe('Upload API Route', () => {

@@ -17,6 +17,24 @@ export async function GET(
     // Check project membership
     await requireProjectMember(user.id, projectId)
 
+    // Check connection limits
+    if (!projectEvents.canUserConnect(user.id)) {
+      return new Response(JSON.stringify({ error: 'Too many connections' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (!projectEvents.canProjectAcceptConnection(projectId)) {
+      return new Response(JSON.stringify({ error: 'Project connection limit reached' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Track connection and get cleanup function
+    const cleanupConnection = projectEvents.trackConnection(user.id, projectId)
+
     const encoder = new TextEncoder()
 
     const stream = new ReadableStream({
@@ -48,6 +66,7 @@ export async function GET(
 
         // Cleanup on client disconnect
         request.signal.addEventListener('abort', () => {
+          cleanupConnection()
           unsubscribe()
           clearInterval(keepaliveInterval)
           try {

@@ -1,4 +1,6 @@
+import { fileTypeFromBuffer } from 'file-type'
 import { NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth-helpers'
 import { logger } from '@/lib/logger'
 import {
   getFileCategoryForMimeType,
@@ -18,6 +20,8 @@ function generateFilename(originalName: string): string {
 
 export async function POST(request: Request) {
   try {
+    await requireAuth()
+
     logger.info('File upload request received')
     const formData = await request.formData()
     const files = formData.getAll('files') as File[]
@@ -76,9 +80,32 @@ export async function POST(request: Request) {
       const filename = generateFilename(file.name)
       const filepath = getFileStorage().join(uploadDir, filename)
 
-      // Write file to disk
+      // Read file contents
       const bytes = await file.arrayBuffer()
       const buffer = Buffer.from(bytes)
+
+      // Magic byte validation - verify file content matches declared type
+      const detectedType = await fileTypeFromBuffer(buffer)
+
+      // For files that file-type can detect, verify MIME matches
+      if (detectedType) {
+        // Allow if detected type matches declared type OR is in allowed list
+        if (detectedType.mime !== file.type && !allowedTypes.includes(detectedType.mime)) {
+          logger.warn('File content does not match declared type', {
+            name: file.name,
+            declared: file.type,
+            detected: detectedType.mime,
+          })
+          return NextResponse.json(
+            { error: 'File content does not match declared type' },
+            { status: 400 },
+          )
+        }
+      }
+      // For text files (plain text, CSV) that file-type can't detect, trust extension + MIME
+      // These are already validated by the allowedTypes check above
+
+      // Write file to disk
       await getFileStorage().writeFile(filepath, buffer)
 
       // Add to uploaded files list
@@ -115,6 +142,8 @@ export async function POST(request: Request) {
 // Return allowed types for client-side validation
 export async function GET() {
   try {
+    await requireAuth()
+
     const config = await getUploadConfig()
     return NextResponse.json(config)
   } catch (error) {

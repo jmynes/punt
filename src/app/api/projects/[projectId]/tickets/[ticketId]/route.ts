@@ -15,7 +15,7 @@ const updateTicketSchema = z.object({
   columnId: z.string().min(1).optional(),
   order: z.number().optional(),
   assigneeId: z.string().nullable().optional(),
-  creatorId: z.string().min(1).optional(),
+  // Note: creatorId is intentionally excluded - it's set at creation and cannot be changed
   sprintId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   storyPoints: z.number().nullable().optional(),
@@ -112,6 +112,29 @@ export async function PATCH(
       }
     }
 
+    // Validate assigneeId is a project member (if provided and not null)
+    if (updateData.assigneeId !== undefined && updateData.assigneeId !== null) {
+      const assigneeMembership = await db.projectMember.findUnique({
+        where: { userId_projectId: { userId: updateData.assigneeId, projectId } },
+      })
+      if (!assigneeMembership) {
+        return badRequestError('Assignee must be a project member')
+      }
+    }
+
+    // Validate all watcherIds are project members (if provided)
+    if (watcherIds !== undefined && watcherIds.length > 0) {
+      const validMembers = await db.projectMember.findMany({
+        where: { projectId, userId: { in: watcherIds } },
+        select: { userId: true },
+      })
+      const validUserIds = new Set(validMembers.map((m) => m.userId))
+      const invalidWatchers = watcherIds.filter((id) => !validUserIds.has(id))
+      if (invalidWatchers.length > 0) {
+        return badRequestError('All watchers must be project members')
+      }
+    }
+
     // Build update data, filtering out undefined values
     const dbUpdateData: Record<string, unknown> = {}
 
@@ -151,15 +174,17 @@ export async function PATCH(
       }
     }
 
-    const ticket = await db.ticket.update({
-      where: { id: ticketId },
-      data: dbUpdateData,
-      select: TICKET_SELECT_FULL,
-    }).catch((dbError) => {
-      console.error('Prisma update error:', dbError)
-      console.error('Update data was:', JSON.stringify(dbUpdateData, null, 2))
-      throw dbError
-    })
+    const ticket = await db.ticket
+      .update({
+        where: { id: ticketId },
+        data: dbUpdateData,
+        select: TICKET_SELECT_FULL,
+      })
+      .catch((dbError) => {
+        console.error('Prisma update error:', dbError)
+        console.error('Update data was:', JSON.stringify(dbUpdateData, null, 2))
+        throw dbError
+      })
 
     // Emit real-time event for other clients
     // Use 'ticket.moved' if column changed, otherwise 'ticket.updated'

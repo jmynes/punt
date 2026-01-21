@@ -95,6 +95,29 @@ export async function POST(
       return badRequestError('Column not found or does not belong to project')
     }
 
+    // Validate assigneeId is a project member (if provided)
+    if (ticketData.assigneeId) {
+      const assigneeMembership = await db.projectMember.findUnique({
+        where: { userId_projectId: { userId: ticketData.assigneeId, projectId } },
+      })
+      if (!assigneeMembership) {
+        return badRequestError('Assignee must be a project member')
+      }
+    }
+
+    // Validate all watcherIds are project members (if provided)
+    if (watcherIds.length > 0) {
+      const validMembers = await db.projectMember.findMany({
+        where: { projectId, userId: { in: watcherIds } },
+        select: { userId: true },
+      })
+      const validUserIds = new Set(validMembers.map((m) => m.userId))
+      const invalidWatchers = watcherIds.filter((id) => !validUserIds.has(id))
+      if (invalidWatchers.length > 0) {
+        return badRequestError('All watchers must be project members')
+      }
+    }
+
     // Create ticket with atomic ticket number generation
     const ticket = await db.$transaction(async (tx) => {
       // Get max ticket number for this project
