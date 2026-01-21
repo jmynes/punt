@@ -88,10 +88,8 @@ export async function POST(
     const result = createLabelSchema.safeParse(body)
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: 'Invalid label data', details: result.error.flatten() },
-        { status: 400 },
-      )
+      console.error('Label creation validation error:', result.error.flatten())
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
 
     const { name, color } = result.data

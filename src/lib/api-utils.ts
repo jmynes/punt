@@ -26,14 +26,17 @@ export function handleApiError(error: unknown, action: string): NextResponse {
  * Creates a validation error response from a failed Zod parse result.
  * Use this when schema.safeParse() returns success: false.
  *
+ * Note: We intentionally don't expose detailed validation errors to avoid
+ * leaking schema information. Detailed errors are logged server-side only.
+ *
  * @param result - The failed Zod parse result (must have success: false and error property)
- * @returns NextResponse with 400 status and validation details
+ * @returns NextResponse with 400 status
  */
 export function validationError(result: { success: false; error: ZodError }): NextResponse {
-  return NextResponse.json(
-    { error: 'Validation failed', details: result.error.flatten() },
-    { status: 400 },
-  )
+  // Log detailed errors server-side for debugging
+  console.error('Validation error:', result.error.flatten())
+  // Return generic error to client to avoid leaking schema details
+  return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
 }
 
 /**

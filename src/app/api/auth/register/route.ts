@@ -45,10 +45,8 @@ export async function POST(request: Request) {
     const parsed = registerSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 },
-      )
+      console.error('Registration validation error:', parsed.error.flatten())
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
 
     const { username, name, email, password } = parsed.data

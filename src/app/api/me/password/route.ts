@@ -35,10 +35,8 @@ export async function PATCH(request: Request) {
     const parsed = changePasswordSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 },
-      )
+      console.error('Password change validation error:', parsed.error.flatten())
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
 
     const { currentPassword, newPassword } = parsed.data

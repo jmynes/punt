@@ -102,7 +102,7 @@ describe('Registration API - Username Validation', () => {
 
         expect(response.status).toBe(400)
         const data = await response.json()
-        expect(data.error).toBe('Validation failed')
+        expect(data.error).toBe('Invalid request data')
       })
     })
   })
@@ -144,7 +144,7 @@ describe('Registration API - Username Validation', () => {
       // Should be rejected due to invalid characters, not cause SQL error
       expect(response.status).toBe(400)
       const data = await response.json()
-      expect(data.error).toBe('Validation failed')
+      expect(data.error).toBe('Invalid request data')
     })
 
     it('should handle XSS attempt in username', async () => {

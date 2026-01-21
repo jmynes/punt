@@ -105,10 +105,8 @@ export async function PATCH(
     const parsed = updateProjectSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 },
-      )
+      console.error('Project update validation error:', parsed.error.flatten())
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
 
     const updates = parsed.data

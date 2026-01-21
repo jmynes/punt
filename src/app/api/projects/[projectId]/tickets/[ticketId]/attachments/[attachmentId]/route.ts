@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { NextResponse } from 'next/server'
 import { handleApiError, notFoundError } from '@/lib/api-utils'
 import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
@@ -49,7 +50,32 @@ export async function DELETE(
     // The URL is like /uploads/filename.ext, so we need to construct the full path
     if (attachment.url.startsWith('/uploads/')) {
       const filename = attachment.url.replace('/uploads/', '')
-      const filepath = getFileStorage().join(process.cwd(), 'public', 'uploads', filename)
+
+      // Security: Prevent path traversal attacks
+      // Reject filenames containing path separators or parent directory references
+      if (filename.includes('/') || filename.includes('\\') || filename.includes('..')) {
+        logger.warn('Path traversal attempt blocked in attachment deletion', {
+          attachmentId,
+          filename,
+        })
+        // Still return success since the DB record is deleted
+        return NextResponse.json({ success: true })
+      }
+
+      const uploadDir = getFileStorage().join(process.cwd(), 'public', 'uploads')
+      const filepath = getFileStorage().join(uploadDir, filename)
+
+      // Additional check: Ensure resolved path is within uploads directory
+      const resolvedPath = path.resolve(filepath)
+      const resolvedUploadDir = path.resolve(uploadDir)
+      if (!resolvedPath.startsWith(resolvedUploadDir)) {
+        logger.warn('Path traversal attempt blocked (resolved path check)', {
+          attachmentId,
+          filepath,
+          resolvedPath,
+        })
+        return NextResponse.json({ success: true })
+      }
 
       try {
         await getFileStorage().deleteFile(filepath)

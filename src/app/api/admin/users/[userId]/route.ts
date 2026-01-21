@@ -79,10 +79,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
     const parsed = updateUserSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 },
-      )
+      console.error('Admin user update validation error:', parsed.error.flatten())
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
 
     const updates = parsed.data

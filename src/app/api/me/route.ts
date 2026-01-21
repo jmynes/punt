@@ -60,10 +60,8 @@ export async function PATCH(request: Request) {
     const parsed = updateProfileSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 },
-      )
+      console.error('Profile update validation error:', parsed.error.flatten())
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
 
     const { name } = parsed.data

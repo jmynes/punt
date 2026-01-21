@@ -10,11 +10,35 @@ import {
 } from '@/lib/system-settings'
 import { getFileStorage } from '@/lib/upload-storage'
 
-function generateFilename(originalName: string): string {
+// Allowed extensions mapped from MIME types - prevents dual extension attacks
+const SAFE_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/ogg': 'ogg',
+  'video/quicktime': 'mov',
+  'application/pdf': 'pdf',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'text/plain': 'txt',
+  'text/csv': 'csv',
+}
+
+function generateFilename(originalName: string, mimeType: string): string {
   const timestamp = Date.now()
   const random = Math.random().toString(36).substring(2, 8)
-  const extension = originalName.split('.').pop() || ''
-  const baseName = originalName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '_')
+  // Use safe extension based on MIME type to prevent dual extension attacks (e.g., shell.php.jpg)
+  const extension = SAFE_EXTENSIONS[mimeType] || 'bin'
+  // Strip ALL extensions from original name and sanitize
+  const baseName = originalName
+    .replace(/\.[^/.]+/g, '') // Remove all extensions
+    .replace(/[^a-zA-Z0-9-_]/g, '_') // Sanitize
+    .substring(0, 50) // Limit length
   return `${baseName}-${timestamp}-${random}.${extension}`
 }
 
@@ -76,8 +100,8 @@ export async function POST(request: Request) {
         )
       }
 
-      // Generate unique filename
-      const filename = generateFilename(file.name)
+      // Generate unique filename based on MIME type (prevents dual extension attacks)
+      const filename = generateFilename(file.name, file.type)
       const filepath = getFileStorage().join(uploadDir, filename)
 
       // Read file contents

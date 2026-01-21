@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { verifyPassword } from '@/lib/password'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const updateEmailSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -15,14 +16,29 @@ export async function PATCH(request: Request) {
   try {
     const currentUser = await requireAuth()
 
+    // Rate limiting - prevents brute force password guessing via email change
+    const ip = getClientIp(request)
+    const rateLimit = await checkRateLimit(ip, 'me/email')
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+            'X-RateLimit-Reset': rateLimit.resetAt.toISOString(),
+          },
+        },
+      )
+    }
+
     const body = await request.json()
     const parsed = updateEmailSchema.safeParse(body)
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.flatten() },
-        { status: 400 },
-      )
+      // Log detailed errors server-side, return generic error to client
+      console.error('Email update validation error:', parsed.error.flatten())
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
 
     const { email, password } = parsed.data
