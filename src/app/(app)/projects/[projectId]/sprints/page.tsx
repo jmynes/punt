@@ -120,11 +120,7 @@ export default function SprintPlanningPage() {
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-4 lg:p-6 space-y-4">
           {/* Active sprint header with progress */}
-          <SprintHeader
-            projectId={projectId}
-            tickets={allTickets}
-            columns={columns}
-          />
+          <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
 
           {/* Sprint backlog view */}
           <SprintBacklogView

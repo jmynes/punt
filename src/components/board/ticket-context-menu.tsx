@@ -345,9 +345,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       updates.push({ ticketId: id, before: current, after })
       updateTicket(projectId, id, { priority })
     }
-    if (updates.length === 0) return
-
-    // Persist to database
+    if (updates.length === 0) return // Persist to database
     ;(async () => {
       try {
         for (const update of updates) {
@@ -394,9 +392,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       updates.push({ ticketId: id, before: current, after })
       updateTicket(projectId, id, { assignee: user ?? null, assigneeId: user?.id ?? null })
     }
-    if (updates.length === 0) return
-
-    // Persist to database
+    if (updates.length === 0) return // Persist to database
     ;(async () => {
       try {
         for (const update of updates) {
@@ -450,9 +446,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       updates.push({ ticketId: id, before: current, after })
       updateTicket(projectId, id, { storyPoints: points })
     }
-    if (updates.length === 0) return
-
-    // Persist to database
+    if (updates.length === 0) return // Persist to database
     ;(async () => {
       try {
         for (const update of updates) {

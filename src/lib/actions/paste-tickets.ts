@@ -123,7 +123,6 @@ export function pasteTickets(params: PasteTicketsParams): PasteResult {
     // Optimistic add
     boardStore.addTicket(projectId, columnId, newTicket)
   }
-
   // Persist to database
   ;(async () => {
     try {

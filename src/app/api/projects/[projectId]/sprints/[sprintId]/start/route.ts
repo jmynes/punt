@@ -83,16 +83,31 @@ export async function POST(request: Request, { params }: RouteParams) {
         select: SPRINT_SELECT_FULL,
       })
 
-      // Create sprint history entries for all tickets in the sprint
+      // Create sprint history entries for tickets that don't already have one
       if (sprint.tickets.length > 0) {
-        // Note: skipDuplicates not supported by SQLite, unique constraint handles duplicates
-        await tx.ticketSprintHistory.createMany({
-          data: sprint.tickets.map((ticket) => ({
-            ticketId: ticket.id,
+        const ticketIds = sprint.tickets.map((t) => t.id)
+
+        // Find which tickets already have history entries for this sprint
+        const existingHistories = await tx.ticketSprintHistory.findMany({
+          where: {
             sprintId,
-            entryType: 'added',
-          })),
+            ticketId: { in: ticketIds },
+          },
+          select: { ticketId: true },
         })
+
+        const existingTicketIds = new Set(existingHistories.map((h) => h.ticketId))
+        const ticketsToAdd = ticketIds.filter((id) => !existingTicketIds.has(id))
+
+        if (ticketsToAdd.length > 0) {
+          await tx.ticketSprintHistory.createMany({
+            data: ticketsToAdd.map((ticketId) => ({
+              ticketId,
+              sprintId,
+              entryType: 'added',
+            })),
+          })
+        }
       }
 
       return updated

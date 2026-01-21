@@ -40,7 +40,7 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
   const { data: sprint } = useSprintDetail(projectId, sprintCompleteId ?? '')
 
   const [action, setAction] = useState<SprintCompletionAction>('close_to_next')
-  const [targetSprintId, setTargetSprintId] = useState<string>('')
+  const [targetSprintId, setTargetSprintId] = useState<string>('__new__')
   const [createNextSprint, setCreateNextSprint] = useState(true)
 
   // Get planning sprints for target selection
@@ -78,7 +78,7 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
     closeSprintComplete()
     setTimeout(() => {
       setAction('close_to_next')
-      setTargetSprintId('')
+      setTargetSprintId('__new__')
       setCreateNextSprint(true)
     }, 200)
   }, [closeSprintComplete])
@@ -93,14 +93,15 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
   const handleSubmit = useCallback(async () => {
     if (!sprintCompleteId) return
 
+    const isNewSprint = targetSprintId === '__new__'
     completeSprint.mutate(
       {
         sprintId: sprintCompleteId,
         options: {
           action,
           ...(action === 'close_to_next' && {
-            targetSprintId: targetSprintId || undefined,
-            createNextSprint: !targetSprintId && createNextSprint,
+            targetSprintId: isNewSprint ? undefined : targetSprintId,
+            createNextSprint: isNewSprint && createNextSprint,
           }),
         },
       },
@@ -238,7 +239,7 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
                       <SelectValue placeholder="Create new sprint" />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-zinc-700">
-                      <SelectItem value="">Create new sprint</SelectItem>
+                      <SelectItem value="__new__">Create new sprint</SelectItem>
                       {planningSprints.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
                           {s.name}

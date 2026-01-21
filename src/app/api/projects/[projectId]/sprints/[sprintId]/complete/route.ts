@@ -155,16 +155,28 @@ export async function POST(request: Request, { params }: RouteParams) {
         // Create new sprint history entries for carried over tickets
         // targetId is guaranteed to be set at this point (either from create or targetSprintId)
         const confirmedTargetId = targetId as string
-        const historyEntries = incompleteTickets.map((t) => ({
-          ticketId: t.id,
-          sprintId: confirmedTargetId,
-          entryType: 'carried_over' as const,
-          carriedFromSprintId: sprintId,
-        }))
-        if (historyEntries.length > 0) {
-          // Note: skipDuplicates not supported by SQLite, unique constraint handles duplicates
+        const incompleteTicketIds = incompleteTickets.map((t) => t.id)
+
+        // Find which tickets already have history entries for target sprint
+        const existingHistories = await tx.ticketSprintHistory.findMany({
+          where: {
+            sprintId: confirmedTargetId,
+            ticketId: { in: incompleteTicketIds },
+          },
+          select: { ticketId: true },
+        })
+
+        const existingTicketIds = new Set(existingHistories.map((h) => h.ticketId))
+        const ticketsToAdd = incompleteTicketIds.filter((id) => !existingTicketIds.has(id))
+
+        if (ticketsToAdd.length > 0) {
           await tx.ticketSprintHistory.createMany({
-            data: historyEntries,
+            data: ticketsToAdd.map((ticketId) => ({
+              ticketId,
+              sprintId: confirmedTargetId,
+              entryType: 'carried_over' as const,
+              carriedFromSprintId: sprintId,
+            })),
           })
         }
 

@@ -738,10 +738,7 @@ export function KeyboardShortcuts() {
                     watchers: ticket.watchers,
                   },
                 }))
-                const serverTickets = await batchCreateTicketsAPI(
-                  entry.projectId,
-                  ticketsToCreate,
-                )
+                const serverTickets = await batchCreateTicketsAPI(entry.projectId, ticketsToCreate)
                 // Replace temp tickets with server tickets
                 const boardState = useBoardStore.getState()
                 for (const { ticket: tempTicket, columnId } of action.tickets) {
@@ -1391,7 +1388,6 @@ export function KeyboardShortcuts() {
             for (const item of action.tickets) {
               boardStore.updateTicket(entry.projectId, item.ticketId, item.after)
             }
-
             // Persist redo to database
             ;(async () => {
               try {
@@ -1513,7 +1509,6 @@ export function KeyboardShortcuts() {
                 )
               }
             }
-
             // Persist move redo to database
             ;(async () => {
               try {
