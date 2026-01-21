@@ -48,25 +48,11 @@ export function useIsSystemAdmin(): { isSystemAdmin: boolean; isLoading: boolean
   }
 }
 
-// Demo project IDs that use local state instead of API
-const DEMO_PROJECT_IDS = ['1', '2', '3']
-
-// Demo members for demo projects only
-export const DEMO_MEMBERS: UserSummary[] = [
-  { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
-  { id: 'user-2', name: 'Alice Smith', email: 'alice@punt.local', avatar: null },
-  { id: 'user-3', name: 'Bob Johnson', email: 'bob@punt.local', avatar: null },
-  { id: 'user-4', name: 'Carol Williams', email: 'carol@punt.local', avatar: null },
-]
-
 /**
  * Get project members (fetched from API)
- * Returns demo data only for demo projects (IDs 1, 2, 3)
- * Returns empty array while loading for real projects
+ * Returns empty array while loading
  */
 export function useProjectMembers(projectId?: string): UserSummary[] {
-  const isDemoProject = projectId ? DEMO_PROJECT_IDS.includes(projectId) : false
-
   const { data } = useQuery({
     queryKey: ['project', projectId, 'members'],
     queryFn: async () => {
@@ -77,13 +63,8 @@ export function useProjectMembers(projectId?: string): UserSummary[] {
       const responseData = await res.json()
       return responseData.map((m: { user: UserSummary }) => m.user) as UserSummary[]
     },
-    // Only fetch for real projects with a projectId
-    enabled: !!projectId && !isDemoProject,
+    enabled: !!projectId,
   })
 
-  // Return demo data for demo projects, actual data or empty array for real projects
-  if (isDemoProject) {
-    return DEMO_MEMBERS
-  }
   return data || []
 }

@@ -78,17 +78,14 @@ import {
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
-import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
-import { useUndoStore } from '@/stores/undo-store'
 import type {
   IssueType,
   LabelSummary,
   Priority,
-  SprintSummary,
   TicketWithRelations,
   UploadedFileInfo,
 } from '@/types'
@@ -126,9 +123,6 @@ interface TicketDetailDrawerProps {
   onClose: () => void
 }
 
-// Demo project IDs that use local state instead of API
-const DEMO_PROJECT_IDS = ['1', '2', '3']
-
 // Helper to convert MIME type to category
 function getMimeTypeCategory(mimeType: string): 'image' | 'video' | 'document' {
   if (mimeType.startsWith('image/')) return 'image'
@@ -136,57 +130,19 @@ function getMimeTypeCategory(mimeType: string): 'image' | 'video' | 'document' {
   return 'document'
 }
 
-// Demo labels - same as in create-ticket-dialog
-const DEMO_LABELS: LabelSummary[] = [
-  { id: 'label-1', name: 'frontend', color: '#ec4899' },
-  { id: 'label-2', name: 'backend', color: '#06b6d4' },
-  { id: 'label-3', name: 'database', color: '#8b5cf6' },
-  { id: 'label-4', name: 'api', color: '#f59e0b' },
-  { id: 'label-5', name: 'auth', color: '#ef4444' },
-  { id: 'label-6', name: 'ui/ux', color: '#14b8a6' },
-  { id: 'label-7', name: 'documentation', color: '#64748b' },
-  { id: 'label-8', name: 'testing', color: '#22c55e' },
-  { id: 'label-9', name: 'performance', color: '#eab308' },
-  { id: 'label-10', name: 'security', color: '#dc2626' },
-  { id: 'label-11', name: 'refactor', color: '#a855f7' },
-  { id: 'label-12', name: 'tech-debt', color: '#78716c' },
-  { id: 'label-13', name: 'needs-review', color: '#3b82f6' },
-  { id: 'label-14', name: 'blocked', color: '#991b1b' },
-  { id: 'label-15', name: 'help-wanted', color: '#16a34a' },
-]
-
-const DEMO_SPRINTS: SprintSummary[] = [
-  {
-    id: 'sprint-1',
-    name: 'Sprint 1 - Foundation',
-    status: 'completed',
-    startDate: new Date('2024-01-01'),
-    endDate: new Date('2024-01-14'),
-  },
-  {
-    id: 'sprint-2',
-    name: 'Sprint 2 - Core Features',
-    status: 'active',
-    startDate: new Date('2024-01-15'),
-    endDate: new Date('2024-01-28'),
-  },
-  { id: 'sprint-3', name: 'Sprint 3 - Polish', status: 'planning', startDate: null, endDate: null },
-]
-
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
-  const { removeTicket, addTicket, updateTicket, getColumns } = useBoardStore()
+  const { updateTicket, getColumns } = useBoardStore()
   const { activeProjectId, setActiveTicketId, drawerFocusField, clearDrawerFocusField } =
     useUIStore()
 
   // Get columns for the active project
-  const projectId = activeProjectId || ticket?.projectId || '1' // Fallback to ticket's projectId or '1'
+  const projectId = activeProjectId || ticket?.projectId || ''
   const columns = getColumns(projectId)
-  const { pushDeleted, removeDeleted } = useUndoStore()
   const { openCreateTicketWithData } = useUIStore()
   const currentUser = useCurrentUser()
   const members = useProjectMembers(projectId)
 
-  // API mutations for real projects
+  // API mutations
   const updateTicketMutation = useUpdateTicket()
   const deleteTicketMutation = useDeleteTicket()
   const createLabelMutation = useCreateLabel()
@@ -197,33 +153,19 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   // Get upload config for max attachments
   const { data: uploadConfig } = useUploadConfig()
 
-  // Check if this is a demo project
-  const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
+  // Fetch sprints and labels from API
+  const { data: projectSprints } = useProjectSprints(projectId, { enabled: !!projectId })
+  const { data: projectLabels } = useProjectLabels(projectId, { enabled: !!projectId })
 
-  // Fetch real sprints and labels for non-demo projects
-  const { data: projectSprints } = useProjectSprints(projectId, { enabled: !isDemoProject })
-  const { data: projectLabels } = useProjectLabels(projectId, { enabled: !isDemoProject })
-
-  // Use real data for non-demo projects, demo data otherwise
-  const availableSprints: SprintSummary[] = isDemoProject ? DEMO_SPRINTS : (projectSprints ?? [])
-  const availableLabels: LabelSummary[] = isDemoProject ? DEMO_LABELS : (projectLabels ?? [])
+  // Use API data with fallback to empty arrays while loading
+  const availableSprints = projectSprints ?? []
+  const availableLabels = projectLabels ?? []
 
   // Callback for creating new labels inline
   const handleCreateLabel = useCallback(
     async (name: string): Promise<LabelSummary | null> => {
-      if (isDemoProject) {
-        // For demo projects, create a temporary label
-        const newLabel: LabelSummary = {
-          id: `label-${Date.now()}`,
-          name,
-          color: ['#ec4899', '#06b6d4', '#8b5cf6', '#f59e0b', '#ef4444', '#14b8a6'][
-            Math.floor(Math.random() * 6)
-          ],
-        }
-        return newLabel
-      }
+      if (!projectId) return null
 
-      // For real projects, use the API
       try {
         const result = await createLabelMutation.mutateAsync({ projectId, name })
         return result
@@ -231,21 +173,17 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         return null
       }
     },
-    [isDemoProject, projectId, createLabelMutation],
+    [projectId, createLabelMutation],
   )
 
   // Callback for deleting labels
   const handleDeleteLabel = useCallback(
     async (labelId: string): Promise<void> => {
-      if (isDemoProject) {
-        // Demo projects don't persist label deletion
-        return
-      }
+      if (!projectId) return
 
-      // For real projects, use the API
       await deleteLabelMutation.mutateAsync({ projectId, labelId })
     },
-    [isDemoProject, projectId, deleteLabelMutation],
+    [projectId, deleteLabelMutation],
   )
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -563,48 +501,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         .filter((l): l is LabelSummary => l !== undefined)
     }
 
-    const updatedTicket = { ...oldTicket, ...updates }
-
-    if (isDemoProject) {
-      // Demo project: use local state only
-      updateTicket(projectId, ticket.id, updates)
-
-      // Add to undo stack
-      const { pushUpdate } = useUndoStore.getState()
-      const showUndo = useUIStore.getState().showUndoButtons
-      const ticketKey = formatTicketId(ticket)
-
-      const toastId = showUndoRedoToast('success', {
-        title: 'Ticket details updated',
-        description: ticketKey,
-        duration: 3000,
-        showUndoButtons: showUndo,
-        onUndo: (id) => {
-          useUndoStore.getState().undoByToastId(id)
-          updateTicket(projectId, ticket.id, oldTicket)
-        },
-        onRedo: (id) => {
-          useUndoStore.getState().redoByToastId(id)
-          updateTicket(projectId, ticket.id, updates)
-        },
-        undoneTitle: 'Update undone',
-        redoneTitle: 'Update redone',
-      })
-
-      pushUpdate(
-        projectId,
-        [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }],
-        toastId,
-      )
-    } else {
-      // Real project: use API mutation (optimistic update is handled by the mutation)
-      updateTicketMutation.mutate({
-        projectId,
-        ticketId: ticket.id,
-        updates,
-        previousTicket: oldTicket,
-      })
-    }
+    // Use API mutation (optimistic update is handled by the mutation)
+    updateTicketMutation.mutate({
+      projectId,
+      ticketId: ticket.id,
+      updates,
+      previousTicket: oldTicket,
+    })
   }, [
     ticket,
     hasUnsavedChanges,
@@ -627,8 +530,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     tempLabelIds,
     members,
     membersWithCurrentUser,
-    updateTicket,
-    isDemoProject,
     projectId,
     updateTicketMutation,
     availableLabels,
@@ -725,47 +626,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         break
     }
 
-    const updatedTicket = { ...oldTicket, ...updates }
-
-    if (isDemoProject) {
-      // Demo project: use local state only
-      updateTicket(projectId, ticket.id, updates)
-
-      // Add to undo stack
-      const { pushUpdate } = useUndoStore.getState()
-      const showUndo = useUIStore.getState().showUndoButtons
-
-      const toastId = showUndoRedoToast('success', {
-        title: 'Ticket updated',
-        description: ticketKey,
-        duration: 3000,
-        showUndoButtons: showUndo,
-        onUndo: (id) => {
-          useUndoStore.getState().undoByToastId(id)
-          updateTicket(projectId, ticket.id, oldTicket)
-        },
-        onRedo: (id) => {
-          useUndoStore.getState().redoByToastId(id)
-          updateTicket(projectId, ticket.id, updates)
-        },
-        undoneTitle: 'Update undone',
-        redoneTitle: 'Update redone',
-      })
-
-      pushUpdate(
-        projectId,
-        [{ ticketId: ticket.id, before: oldTicket, after: updatedTicket }],
-        toastId,
-      )
-    } else {
-      // Real project: use API mutation (optimistic update is handled by the mutation)
-      updateTicketMutation.mutate({
-        projectId,
-        ticketId: ticket.id,
-        updates,
-        previousTicket: oldTicket,
-      })
-    }
+    // Use API mutation (optimistic update is handled by the mutation)
+    updateTicketMutation.mutate({
+      projectId,
+      ticketId: ticket.id,
+      updates,
+      previousTicket: oldTicket,
+    })
 
     setEditingField(null)
   }
@@ -818,37 +685,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
     setShowDeleteConfirm(false)
 
-    if (isDemoProject) {
-      // Demo project: use local state only
-      removeTicket(projectId, ticket.id)
-
-      const showUndo = useUIStore.getState().showUndoButtons
-      const toastId = showUndoRedoToast('error', {
-        title: 'Ticket deleted',
-        description: ticketKey,
-        duration: 5000,
-        showUndoButtons: showUndo,
-        onUndo: () => {
-          addTicket(projectId, columnId, deletedTicket)
-          removeDeleted(toastId)
-        },
-        onRedo: () => {
-          removeTicket(projectId, deletedTicket.id)
-        },
-        undoneTitle: 'Ticket restored',
-        redoneTitle: 'Delete redone',
-      })
-
-      pushDeleted(projectId, deletedTicket, columnId, toastId)
-    } else {
-      // Real project: use API mutation (optimistic delete is handled by the mutation)
-      deleteTicketMutation.mutate({
-        projectId,
-        ticketId: ticket.id,
-        columnId,
-        deletedTicket,
-      })
-    }
+    // Use API mutation (optimistic delete is handled by the mutation)
+    deleteTicketMutation.mutate({
+      projectId,
+      ticketId: ticket.id,
+      columnId,
+      deletedTicket,
+    })
 
     onClose()
   }
@@ -1342,7 +1185,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   onChange={(value) => handleChange('labels', value)}
                   labels={availableLabels}
                   onCreateLabel={handleCreateLabel}
-                  onDeleteLabel={!isDemoProject ? handleDeleteLabel : undefined}
+                  onDeleteLabel={handleDeleteLabel}
                 />
               </div>
 
@@ -1440,24 +1283,23 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     // Find removed files (in current but not in new)
                     const removedFiles = tempAttachments.filter((a) => !newIds.has(a.id))
 
-                    // Handle persistence for real projects
-                    if (!isDemoProject && ticket) {
-                      // Add new files to database
-                      if (addedFiles.length > 0) {
-                        addAttachmentsMutation.mutate({
-                          projectId,
-                          ticketId: ticket.id,
-                          attachments: addedFiles.map((f) => ({
-                            filename: f.filename,
-                            originalName: f.originalName,
-                            mimeType: f.mimetype,
-                            size: f.size,
-                            url: f.url,
-                          })),
-                        })
-                      }
+                    // Handle persistence - add new files to database
+                    if (ticket && addedFiles.length > 0) {
+                      addAttachmentsMutation.mutate({
+                        projectId,
+                        ticketId: ticket.id,
+                        attachments: addedFiles.map((f) => ({
+                          filename: f.filename,
+                          originalName: f.originalName,
+                          mimeType: f.mimetype,
+                          size: f.size,
+                          url: f.url,
+                        })),
+                      })
+                    }
 
-                      // Remove deleted files from database
+                    // Remove deleted files from database
+                    if (ticket) {
                       for (const removed of removedFiles) {
                         removeAttachmentMutation.mutate({
                           projectId,

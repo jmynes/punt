@@ -4,7 +4,6 @@
  */
 
 import { toast } from 'sonner'
-import { isDemoProject } from '@/lib/constants'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
@@ -43,7 +42,6 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
     return { success: false, deletedTickets: [], error: 'No tickets to delete' }
   }
 
-  const isDemo = isDemoProject(projectId)
   const boardStore = useBoardStore.getState()
 
   // Optimistic delete - remove from UI immediately
@@ -54,27 +52,25 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
   // Clear selection
   useSelectionStore.getState().clearSelection()
 
-  // For real projects, call API to delete
-  if (!isDemo) {
-    try {
-      await Promise.all(
-        tickets.map(({ ticket }) =>
-          fetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
-            method: 'DELETE',
-          }).then((res) => {
-            if (!res.ok) throw new Error('Failed to delete ticket')
-          }),
-        ),
-      )
-    } catch (_error) {
-      // Rollback on error - restore all tickets
-      for (const { ticket, columnId } of tickets) {
-        boardStore.addTicket(projectId, columnId, ticket)
-      }
-      toast.error('Failed to delete ticket(s)')
-      onComplete?.()
-      return { success: false, deletedTickets: [], error: 'API error' }
+  // Call API to delete
+  try {
+    await Promise.all(
+      tickets.map(({ ticket }) =>
+        fetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
+          method: 'DELETE',
+        }).then((res) => {
+          if (!res.ok) throw new Error('Failed to delete ticket')
+        }),
+      ),
+    )
+  } catch (_error) {
+    // Rollback on error - restore all tickets
+    for (const { ticket, columnId } of tickets) {
+      boardStore.addTicket(projectId, columnId, ticket)
     }
+    toast.error('Failed to delete ticket(s)')
+    onComplete?.()
+    return { success: false, deletedTickets: [], error: 'API error' }
   }
 
   // Format ticket IDs for notification
@@ -98,42 +94,40 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
           currentBoardStore.addTicket(projectId, columnId, ticket)
         }
 
-        // For real projects, recreate via API
-        if (!isDemo) {
-          try {
-            await Promise.all(
-              tickets.map(({ ticket, columnId }) =>
-                fetch(`/api/projects/${projectId}/tickets`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    title: ticket.title,
-                    description: ticket.description,
-                    type: ticket.type,
-                    priority: ticket.priority,
-                    columnId,
-                    storyPoints: ticket.storyPoints,
-                    estimate: ticket.estimate,
-                    startDate: ticket.startDate,
-                    dueDate: ticket.dueDate,
-                    assigneeId: ticket.assigneeId,
-                    sprintId: ticket.sprintId,
-                    labelIds: ticket.labels?.map((l) => l.id) ?? [],
-                    watcherIds: ticket.watchers?.map((w) => w.id) ?? [],
-                  }),
-                }).then(async (res) => {
-                  if (!res.ok) throw new Error('Failed to restore ticket')
-                  const serverTicket = await res.json()
-                  // Replace temp ticket with server ticket
-                  currentBoardStore.removeTicket(projectId, ticket.id)
-                  currentBoardStore.addTicket(projectId, columnId, serverTicket)
+        // Recreate via API
+        try {
+          await Promise.all(
+            tickets.map(({ ticket, columnId }) =>
+              fetch(`/api/projects/${projectId}/tickets`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: ticket.title,
+                  description: ticket.description,
+                  type: ticket.type,
+                  priority: ticket.priority,
+                  columnId,
+                  storyPoints: ticket.storyPoints,
+                  estimate: ticket.estimate,
+                  startDate: ticket.startDate,
+                  dueDate: ticket.dueDate,
+                  assigneeId: ticket.assigneeId,
+                  sprintId: ticket.sprintId,
+                  labelIds: ticket.labels?.map((l) => l.id) ?? [],
+                  watcherIds: ticket.watchers?.map((w) => w.id) ?? [],
                 }),
-              ),
-            )
-          } catch (err) {
-            console.error('Failed to restore deleted tickets via API:', err)
-            toast.error('Failed to restore tickets')
-          }
+              }).then(async (res) => {
+                if (!res.ok) throw new Error('Failed to restore ticket')
+                const serverTicket = await res.json()
+                // Replace temp ticket with server ticket
+                currentBoardStore.removeTicket(projectId, ticket.id)
+                currentBoardStore.addTicket(projectId, columnId, serverTicket)
+              }),
+            ),
+          )
+        } catch (err) {
+          console.error('Failed to restore deleted tickets via API:', err)
+          toast.error('Failed to restore tickets')
         }
       }
     },
@@ -147,18 +141,16 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
         currentBoardStore.removeTicket(projectId, ticket.id)
       }
 
-      // For real projects, delete via API again
-      if (!isDemo) {
-        Promise.all(
-          tickets.map(({ ticket }) =>
-            fetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
-              method: 'DELETE',
-            }),
-          ),
-        ).catch((err) => {
-          console.error('Failed to re-delete tickets via API:', err)
-        })
-      }
+      // Delete via API
+      Promise.all(
+        tickets.map(({ ticket }) =>
+          fetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
+            method: 'DELETE',
+          }),
+        ),
+      ).catch((err) => {
+        console.error('Failed to re-delete tickets via API:', err)
+      })
     },
     onUndoneToast: (newId) => {
       if (currentId) {

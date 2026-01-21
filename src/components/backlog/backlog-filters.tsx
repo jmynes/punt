@@ -38,10 +38,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useProjectMembers } from '@/hooks/use-current-user'
 import { getStatusIcon } from '@/lib/status-icons'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
-import type { ColumnWithTickets, IssueType, Priority, UserSummary } from '@/types'
+import type { ColumnWithTickets, IssueType, Priority } from '@/types'
 import { ISSUE_TYPES } from '@/types'
 
 // Type icons
@@ -82,18 +83,13 @@ const priorityColors: Record<Priority, string> = {
 
 const PRIORITY_ORDER_DESC: Priority[] = ['critical', 'highest', 'high', 'medium', 'low', 'lowest']
 
-// Demo users for assignee filter - in real app this would come from API/store
-const DEMO_USERS: UserSummary[] = [
-  { id: 'user-1', name: 'Demo User', email: 'demo@punt.local', avatar: null },
-  { id: 'user-2', name: 'Alice Smith', email: 'alice@punt.local', avatar: null },
-  { id: 'user-3', name: 'Bob Johnson', email: 'bob@punt.local', avatar: null },
-]
-
 interface BacklogFiltersProps {
   statusColumns: ColumnWithTickets[]
+  projectId: string
 }
 
-export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFiltersProps) {
+export function BacklogFilters({ statusColumns: _statusColumns, projectId }: BacklogFiltersProps) {
+  const members = useProjectMembers(projectId)
   const {
     searchQuery,
     setSearchQuery,
@@ -813,8 +809,8 @@ export function BacklogFilters({ statusColumns: _statusColumns }: BacklogFilters
                     <span className="text-zinc-400">Unassigned</span>
                   </div>
                 </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                {DEMO_USERS.map((user) => (
+                {members.length > 0 && <DropdownMenuSeparator />}
+                {members.map((user) => (
                   <DropdownMenuCheckboxItem
                     key={user.id}
                     checked={filterByAssignee.includes(user.id)}

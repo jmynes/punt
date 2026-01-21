@@ -11,16 +11,12 @@ import { Button } from '@/components/ui/button'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
-import { getDemoData } from '@/lib/demo-data'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets } from '@/types'
-
-// Demo project IDs that should get demo data instead of API
-const DEMO_PROJECT_IDS = ['1', '2', '3']
 
 export default function BoardPage() {
   const params = useParams()
@@ -30,7 +26,7 @@ export default function BoardPage() {
   const project = getProject(projectId)
   const projectKey = project?.key || 'PROJ'
 
-  const { getColumns, setColumns, _hasHydrated } = useBoardStore()
+  const { getColumns, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
     useUIStore()
   const { clearSelection } = useSelectionStore()
@@ -46,25 +42,22 @@ export default function BoardPage() {
     searchQuery,
   } = useBacklogStore()
 
-  // Determine if this is a demo project or a real project
-  const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
-
-  // Fetch columns from API for real projects (creates defaults if none exist)
+  // Fetch columns from API (creates defaults if none exist)
   const {
     isLoading: columnsLoading,
     error: columnsError,
     isSuccess: columnsLoaded,
   } = useColumnsByProject(projectId, {
-    enabled: !isDemoProject && _hasHydrated,
+    enabled: _hasHydrated,
   })
 
-  // Fetch tickets from API for real projects (only after columns are loaded)
+  // Fetch tickets from API (only after columns are loaded)
   const { isLoading: ticketsLoading, error: ticketsError } = useTicketsByProject(projectId, {
-    enabled: !isDemoProject && _hasHydrated && columnsLoaded,
+    enabled: _hasHydrated && columnsLoaded,
   })
 
-  // Connect to real-time updates (only for real projects after initial load)
-  useRealtime(projectId, !isDemoProject && _hasHydrated && columnsLoaded && !ticketsLoading)
+  // Connect to real-time updates (after initial load)
+  useRealtime(projectId, _hasHydrated && columnsLoaded && !ticketsLoading)
 
   // Get columns for this project
   const columns = getColumns(projectId)
@@ -187,30 +180,16 @@ export default function BoardPage() {
   // Track which projects have been initialized to prevent re-running
   const initializedProjectsRef = useRef<Set<string>>(new Set())
 
-  // Load demo data after hydration (only for demo projects that have no tickets)
+  // Set active project after hydration
   useEffect(() => {
-    if (!_hasHydrated) return // Wait for hydration
+    if (!_hasHydrated) return
     if (initializedProjectsRef.current.has(projectId)) {
-      // Already initialized this project, just set active
       setActiveProjectId(projectId)
       return
     }
-
-    // Only load demo data for the original demo projects, not user-created ones
-    if (isDemoProject) {
-      // Get columns fresh inside effect to avoid dependency issues
-      const currentColumns = getColumns(projectId)
-      const hasTickets = currentColumns.some((col) => col.tickets.length > 0)
-      if (!hasTickets) {
-        const demoColumns = getDemoData(projectId)
-        setColumns(projectId, demoColumns)
-      }
-    }
     initializedProjectsRef.current.add(projectId)
     setActiveProjectId(projectId)
-    // Note: getColumns is intentionally not in deps - we check fresh data inside
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [_hasHydrated, projectId, isDemoProject, setActiveProjectId, setColumns, getColumns])
+  }, [_hasHydrated, projectId, setActiveProjectId])
 
   // Redirect to dashboard if project doesn't exist after hydration
   useEffect(() => {
@@ -235,8 +214,8 @@ export default function BoardPage() {
     )
   }
 
-  // Show loading state for real projects while fetching columns/tickets
-  if (!isDemoProject && (columnsLoading || ticketsLoading)) {
+  // Show loading state while fetching columns/tickets
+  if (columnsLoading || ticketsLoading) {
     return (
       <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
@@ -248,7 +227,7 @@ export default function BoardPage() {
   }
 
   // Show error state if columns or ticket fetch failed
-  if (!isDemoProject && (columnsError || ticketsError)) {
+  if (columnsError || ticketsError) {
     const error = columnsError || ticketsError
     return (
       <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
@@ -261,11 +240,9 @@ export default function BoardPage() {
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
       {/* Sprint header */}
-      {!isDemoProject && (
-        <div className="px-4 pt-4 lg:px-6">
-          <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
-        </div>
-      )}
+      <div className="px-4 pt-4 lg:px-6">
+        <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
+      </div>
 
       {/* Board header */}
       <div className="flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:px-6">
@@ -289,7 +266,7 @@ export default function BoardPage() {
 
         {/* Filters */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          <BacklogFilters statusColumns={columns} />
+          <BacklogFilters statusColumns={columns} projectId={projectId} />
         </div>
       </div>
 

@@ -218,16 +218,13 @@ Shared Prisma select clauses to avoid duplication:
 
 Unified action implementations for consistent behavior across UI triggers (context menu, keyboard shortcuts, drawer). Each action handles:
 - Optimistic updates for immediate UI feedback
-- API persistence for real projects (vs demo projects)
+- API persistence with rollback on error
 - Undo/redo support with toast integration
 - Selection management
 
 Available actions:
 - `pasteTickets({ projectId, columns, options?, onComplete? })` - Paste copied tickets
 - `deleteTickets({ projectId, tickets, options?, onComplete? })` - Delete tickets with undo
-
-Constants:
-- `isDemoProject(projectId)` - Check if project uses localStorage instead of API (`src/lib/constants.ts`)
 
 ### Debugging
 

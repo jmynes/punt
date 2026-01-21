@@ -9,7 +9,6 @@ import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
-import { getDemoData } from '@/lib/demo-data'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -23,23 +22,19 @@ export default function BacklogPage() {
   const project = getProject(projectId)
   const projectKey = project?.key || 'PROJ'
 
-  const { getColumns, setColumns, _hasHydrated } = useBoardStore()
+  const { getColumns, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
     useUIStore()
   const { clearSelection } = useSelectionStore()
 
-  // Demo project IDs that should get demo data
-  const DEMO_PROJECT_IDS = ['1', '2', '3']
-  const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
-
-  // Fetch columns from API for real projects
+  // Fetch columns from API
   const { isLoading: columnsLoading, isSuccess: columnsLoaded } = useColumnsByProject(projectId, {
-    enabled: !isDemoProject && _hasHydrated,
+    enabled: _hasHydrated,
   })
 
-  // Fetch tickets from API for real projects (only after columns are loaded)
+  // Fetch tickets from API (only after columns are loaded)
   const { isLoading: ticketsLoading } = useTicketsByProject(projectId, {
-    enabled: !isDemoProject && _hasHydrated && columnsLoaded,
+    enabled: _hasHydrated && columnsLoaded,
   })
 
   // Get columns for this project
@@ -54,30 +49,16 @@ export default function BacklogPage() {
     setActiveTicketId(null)
   }, [clearSelection, setActiveTicketId])
 
-  // Initialize with demo data after hydration (only for demo projects that have no tickets)
+  // Set active project after hydration
   useEffect(() => {
-    if (!_hasHydrated) return // Wait for hydration
+    if (!_hasHydrated) return
     if (initializedProjectsRef.current.has(projectId)) {
-      // Already initialized this project, just set active
       setActiveProjectId(projectId)
       return
     }
-
-    // Only load demo data for the original demo projects, not user-created ones
-    if (DEMO_PROJECT_IDS.includes(projectId)) {
-      // Get columns fresh inside effect to avoid dependency issues
-      const currentColumns = getColumns(projectId)
-      const hasTickets = currentColumns.some((col) => col.tickets.length > 0)
-      if (!hasTickets) {
-        const demoColumns = getDemoData(projectId)
-        setColumns(projectId, demoColumns)
-      }
-    }
     initializedProjectsRef.current.add(projectId)
     setActiveProjectId(projectId)
-    // Note: getColumns is intentionally not in deps - we check fresh data inside
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [_hasHydrated, projectId, setActiveProjectId, setColumns, getColumns])
+  }, [_hasHydrated, projectId, setActiveProjectId])
 
   // Extract all tickets from columns (flattened for backlog view)
   const allTickets = useMemo(() => {
@@ -119,8 +100,8 @@ export default function BacklogPage() {
     )
   }
 
-  // Show loading state for real projects
-  if (!isDemoProject && (columnsLoading || ticketsLoading)) {
+  // Show loading state
+  if (columnsLoading || ticketsLoading) {
     return (
       <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -134,11 +115,9 @@ export default function BacklogPage() {
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
       {/* Sprint header */}
-      {!isDemoProject && (
-        <div className="px-4 pt-4 lg:px-6">
-          <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
-        </div>
-      )}
+      <div className="px-4 pt-4 lg:px-6">
+        <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
+      </div>
 
       {/* Page header */}
       <div className="flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">

@@ -20,65 +20,17 @@ import {
   useProjectSprints,
 } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
-import { formatTicketId } from '@/lib/ticket-format'
-import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
-import { useUndoStore } from '@/stores/undo-store'
 import {
   DEFAULT_TICKET_FORM,
   type LabelSummary,
-  type SprintSummary,
   type TicketFormData,
   type TicketWithRelations,
 } from '@/types'
 import { TicketForm } from './ticket-form'
 
-// Demo project IDs that use local state instead of API
-const DEMO_PROJECT_IDS = ['1', '2', '3']
-
-// Demo labels - these should be CATEGORIES, not types or priorities
-// Good labels: area/component, team, customer-facing, technical debt, etc.
-const DEMO_LABELS: LabelSummary[] = [
-  // Area/Component labels
-  { id: 'label-1', name: 'frontend', color: '#ec4899' },
-  { id: 'label-2', name: 'backend', color: '#06b6d4' },
-  { id: 'label-3', name: 'database', color: '#8b5cf6' },
-  { id: 'label-4', name: 'api', color: '#f59e0b' },
-  { id: 'label-5', name: 'auth', color: '#ef4444' },
-  { id: 'label-6', name: 'ui/ux', color: '#14b8a6' },
-  // Category labels
-  { id: 'label-7', name: 'documentation', color: '#64748b' },
-  { id: 'label-8', name: 'testing', color: '#22c55e' },
-  { id: 'label-9', name: 'performance', color: '#eab308' },
-  { id: 'label-10', name: 'security', color: '#dc2626' },
-  { id: 'label-11', name: 'refactor', color: '#a855f7' },
-  { id: 'label-12', name: 'tech-debt', color: '#78716c' },
-  // Status-ish labels
-  { id: 'label-13', name: 'needs-review', color: '#3b82f6' },
-  { id: 'label-14', name: 'blocked', color: '#991b1b' },
-  { id: 'label-15', name: 'help-wanted', color: '#16a34a' },
-]
-
-const DEMO_SPRINTS: SprintSummary[] = [
-  {
-    id: 'sprint-1',
-    name: 'Sprint 1 - Foundation',
-    status: 'completed',
-    startDate: new Date('2024-01-01'),
-    endDate: new Date('2024-01-14'),
-  },
-  {
-    id: 'sprint-2',
-    name: 'Sprint 2 - Core Features',
-    status: 'active',
-    startDate: new Date('2024-01-15'),
-    endDate: new Date('2024-01-28'),
-  },
-  { id: 'sprint-3', name: 'Sprint 3 - Polish', status: 'planning', startDate: null, endDate: null },
-]
-
-// Demo parent tickets (epics and stories that can contain subtasks)
+// Parent tickets interface (epics and stories that can contain subtasks)
 export interface ParentTicketOption {
   id: string
   number: number
@@ -86,36 +38,6 @@ export interface ParentTicketOption {
   type: 'epic' | 'story'
   projectKey: string
 }
-
-const DEMO_PARENT_TICKETS: ParentTicketOption[] = [
-  {
-    id: 'epic-1',
-    number: 100,
-    title: 'User Authentication System',
-    type: 'epic',
-    projectKey: 'PUNT',
-  },
-  {
-    id: 'epic-2',
-    number: 101,
-    title: 'Kanban Board Implementation',
-    type: 'epic',
-    projectKey: 'PUNT',
-  },
-  { id: 'epic-3', number: 102, title: 'Ticket Management', type: 'epic', projectKey: 'PUNT' },
-  {
-    id: 'story-1',
-    number: 103,
-    title: 'Login and Registration Flow',
-    type: 'story',
-    projectKey: 'PUNT',
-  },
-  { id: 'story-2', number: 104, title: 'Drag and Drop Cards', type: 'story', projectKey: 'PUNT' },
-  { id: 'story-3', number: 105, title: 'Create Ticket Form', type: 'story', projectKey: 'PUNT' },
-]
-
-// Simple counter for generating ticket numbers (in production, this comes from the database)
-const _ticketCounter = 200
 
 export function CreateTicketDialog() {
   const {
@@ -125,46 +47,34 @@ export function CreateTicketDialog() {
     clearPrefillData,
     activeProjectId,
   } = useUIStore()
-  const { getColumns, getNextTicketNumber, addTicket } = useBoardStore()
+  const { getColumns, getNextTicketNumber } = useBoardStore()
   const currentUser = useCurrentUser()
   const [formData, setFormData] = useState<TicketFormData>(DEFAULT_TICKET_FORM)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Use API mutation for real projects
+  // Use API mutations
   const createTicketMutation = useCreateTicket()
   const createLabelMutation = useCreateLabel()
   const deleteLabelMutation = useDeleteLabel()
 
   // Get columns for the active project
-  const projectId = activeProjectId || '1' // Fallback to '1' if no project is active
-  const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
+  const projectId = activeProjectId || ''
   const members = useProjectMembers(projectId)
   const columns = getColumns(projectId)
 
-  // Fetch real sprints and labels for non-demo projects
-  const { data: projectSprints } = useProjectSprints(projectId, { enabled: !isDemoProject })
-  const { data: projectLabels } = useProjectLabels(projectId, { enabled: !isDemoProject })
+  // Fetch sprints and labels from API
+  const { data: projectSprints } = useProjectSprints(projectId, { enabled: !!projectId })
+  const { data: projectLabels } = useProjectLabels(projectId, { enabled: !!projectId })
 
-  // Use real data for non-demo projects, demo data otherwise
-  const availableSprints = isDemoProject ? DEMO_SPRINTS : (projectSprints ?? [])
-  const availableLabels = isDemoProject ? DEMO_LABELS : (projectLabels ?? [])
+  // Use API data with fallback to empty arrays while loading
+  const availableSprints = projectSprints ?? []
+  const availableLabels = projectLabels ?? []
 
   // Callback for creating new labels inline
   const handleCreateLabel = useCallback(
     async (name: string): Promise<LabelSummary | null> => {
-      if (isDemoProject) {
-        // For demo projects, create a temporary label
-        const newLabel: LabelSummary = {
-          id: `label-${Date.now()}`,
-          name,
-          color: ['#ec4899', '#06b6d4', '#8b5cf6', '#f59e0b', '#ef4444', '#14b8a6'][
-            Math.floor(Math.random() * 6)
-          ],
-        }
-        return newLabel
-      }
+      if (!projectId) return null
 
-      // For real projects, use the API
       try {
         const result = await createLabelMutation.mutateAsync({ projectId, name })
         return result
@@ -172,21 +82,17 @@ export function CreateTicketDialog() {
         return null
       }
     },
-    [isDemoProject, projectId, createLabelMutation],
+    [projectId, createLabelMutation],
   )
 
   // Callback for deleting labels
   const handleDeleteLabel = useCallback(
     async (labelId: string): Promise<void> => {
-      if (isDemoProject) {
-        // Demo projects don't persist label deletion
-        return
-      }
+      if (!projectId) return
 
-      // For real projects, use the API
       await deleteLabelMutation.mutateAsync({ projectId, labelId })
     },
-    [isDemoProject, projectId, deleteLabelMutation],
+    [projectId, deleteLabelMutation],
   )
 
   // Apply prefill data when dialog opens with clone data
@@ -212,6 +118,10 @@ export function CreateTicketDialog() {
       return // Not authenticated
     }
 
+    if (!projectId) {
+      return // No project selected
+    }
+
     setIsSubmitting(true)
 
     // Determine target column: user-selected in form, else "To Do", else first column
@@ -235,173 +145,79 @@ export function CreateTicketDialog() {
       ? availableSprints.find((s) => s.id === formData.sprintId) || null
       : null
 
-    if (isDemoProject) {
-      // Demo project: use local state only (no API)
-      // Generate unique ID and ticket number
-      const ticketId = `ticket-${Date.now()}`
-      const ticketNumber = getNextTicketNumber(projectId)
+    // Create temp ticket for optimistic update (will be replaced by server response)
+    const tempId = `temp-${Date.now()}`
+    const tempNumber = getNextTicketNumber(projectId)
 
-      // Create the full ticket object
-      const newTicket: TicketWithRelations = {
-        id: ticketId,
-        number: ticketNumber,
-        title: formData.title.trim(),
-        description: formData.description || null,
-        type: formData.type,
-        priority: formData.priority,
-        order: targetColumn.tickets.length, // Add to end of column
-        storyPoints: formData.storyPoints,
-        estimate: formData.estimate || null,
-        startDate: formData.startDate,
-        dueDate: formData.dueDate,
-        environment: formData.environment || null,
-        affectedVersion: formData.affectedVersion || null,
-        fixVersion: formData.fixVersion || null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+    const tempTicket: TicketWithRelations = {
+      id: tempId,
+      number: tempNumber,
+      title: formData.title.trim(),
+      description: formData.description || null,
+      type: formData.type,
+      priority: formData.priority,
+      order: targetColumn.tickets.length,
+      storyPoints: formData.storyPoints,
+      estimate: formData.estimate || null,
+      startDate: formData.startDate,
+      dueDate: formData.dueDate,
+      environment: formData.environment || null,
+      affectedVersion: formData.affectedVersion || null,
+      fixVersion: formData.fixVersion || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      projectId,
+      columnId: targetColumn.id,
+      assigneeId: formData.assigneeId,
+      creatorId: currentUser.id,
+      sprintId: formData.sprintId,
+      parentId: formData.parentId,
+      isCarriedOver: false,
+      carriedFromSprintId: null,
+      carriedOverCount: 0,
+      assignee: formData.assigneeId
+        ? members.find((m) => m.id === formData.assigneeId) || null
+        : null,
+      creator: currentUser,
+      sprint: selectedSprint,
+      carriedFromSprint: null,
+      labels: selectedLabels,
+      watchers: [],
+      _count: {
+        comments: 0,
+        subtasks: 0,
+        attachments: formData.attachments.length,
+      },
+    }
+
+    try {
+      await createTicketMutation.mutateAsync({
         projectId,
         columnId: targetColumn.id,
-        assigneeId: formData.assigneeId,
-        creatorId: currentUser.id,
-        sprintId: formData.sprintId,
-        parentId: formData.parentId,
-        isCarriedOver: false,
-        carriedFromSprintId: null,
-        carriedOverCount: 0,
-        assignee: formData.assigneeId
-          ? members.find((m) => m.id === formData.assigneeId) || null
-          : null,
-        creator: currentUser,
-        sprint: selectedSprint,
-        carriedFromSprint: null,
-        labels: selectedLabels,
-        watchers: [],
-        _count: {
-          comments: 0,
-          subtasks: 0,
-          attachments: formData.attachments.length,
+        data: {
+          title: formData.title.trim(),
+          description: formData.description || undefined,
+          type: formData.type,
+          priority: formData.priority,
+          assigneeId: formData.assigneeId,
+          sprintId: formData.sprintId,
+          parentId: formData.parentId,
+          storyPoints: formData.storyPoints,
+          estimate: formData.estimate || undefined,
+          startDate: formData.startDate,
+          dueDate: formData.dueDate,
+          environment: formData.environment || undefined,
+          affectedVersion: formData.affectedVersion || undefined,
+          fixVersion: formData.fixVersion || undefined,
+          labelIds: formData.labelIds,
+          watcherIds: formData.watcherIds,
         },
-      }
-
-      // Add ticket to the board store
-      addTicket(projectId, targetColumn.id, newTicket)
-
-      // Show success toast with undo option
-      const showUndo = useUIStore.getState().showUndoButtons
-      const { removeTicket } = useBoardStore.getState()
-      const ticketKey = formatTicketId(newTicket)
-
-      let currentId: string | number | undefined
-
-      const toastId = showUndoRedoToast('success', {
-        title: 'Ticket created',
-        description: ticketKey,
-        duration: 5000,
-        showUndoButtons: showUndo,
-        onUndo: (id) => {
-          useUndoStore.getState().undoByToastId(id)
-          removeTicket(projectId, newTicket.id)
-        },
-        onUndoneToast: (newId) => {
-          if (currentId) {
-            useUndoStore.getState().updateRedoToastId(currentId, newId)
-            currentId = newId
-          }
-        },
-        onRedo: (id) => {
-          useUndoStore.getState().redoByToastId(id)
-          useBoardStore.getState().addTicket(projectId, targetColumn.id, newTicket)
-        },
-        onRedoneToast: (newId) => {
-          if (currentId) {
-            useUndoStore.getState().updateUndoToastId(currentId, newId)
-            currentId = newId
-          }
-        },
-        undoneTitle: 'Ticket creation undone',
-        redoneTitle: 'Ticket created',
+        tempTicket,
       })
-
-      currentId = toastId
-
-      // Push to undo stack
-      useUndoStore.getState().pushTicketCreate(projectId, newTicket, targetColumn.id, toastId)
-    } else {
-      // Real project: use API mutation
-      // Create temp ticket for optimistic update (will be replaced by server response)
-      const tempId = `temp-${Date.now()}`
-      const tempNumber = getNextTicketNumber(projectId)
-
-      const tempTicket: TicketWithRelations = {
-        id: tempId,
-        number: tempNumber,
-        title: formData.title.trim(),
-        description: formData.description || null,
-        type: formData.type,
-        priority: formData.priority,
-        order: targetColumn.tickets.length,
-        storyPoints: formData.storyPoints,
-        estimate: formData.estimate || null,
-        startDate: formData.startDate,
-        dueDate: formData.dueDate,
-        environment: formData.environment || null,
-        affectedVersion: formData.affectedVersion || null,
-        fixVersion: formData.fixVersion || null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        projectId,
-        columnId: targetColumn.id,
-        assigneeId: formData.assigneeId,
-        creatorId: currentUser.id,
-        sprintId: formData.sprintId,
-        parentId: formData.parentId,
-        isCarriedOver: false,
-        carriedFromSprintId: null,
-        carriedOverCount: 0,
-        assignee: formData.assigneeId
-          ? members.find((m) => m.id === formData.assigneeId) || null
-          : null,
-        creator: currentUser,
-        sprint: selectedSprint,
-        carriedFromSprint: null,
-        labels: selectedLabels,
-        watchers: [],
-        _count: {
-          comments: 0,
-          subtasks: 0,
-          attachments: formData.attachments.length,
-        },
-      }
-
-      try {
-        await createTicketMutation.mutateAsync({
-          projectId,
-          columnId: targetColumn.id,
-          data: {
-            title: formData.title.trim(),
-            description: formData.description || undefined,
-            type: formData.type,
-            priority: formData.priority,
-            assigneeId: formData.assigneeId,
-            sprintId: formData.sprintId,
-            parentId: formData.parentId,
-            storyPoints: formData.storyPoints,
-            estimate: formData.estimate || undefined,
-            startDate: formData.startDate,
-            dueDate: formData.dueDate,
-            environment: formData.environment || undefined,
-            affectedVersion: formData.affectedVersion || undefined,
-            fixVersion: formData.fixVersion || undefined,
-            labelIds: formData.labelIds,
-            watcherIds: formData.watcherIds,
-          },
-          tempTicket,
-        })
-      } catch {
-        // Error is already handled by mutation's onError
-        setIsSubmitting(false)
-        return
-      }
+    } catch {
+      // Error is already handled by mutation's onError
+      setIsSubmitting(false)
+      return
     }
 
     setIsSubmitting(false)
@@ -411,17 +227,15 @@ export function CreateTicketDialog() {
     currentUser,
     members,
     columns,
-    addTicket,
     handleClose,
     projectId,
-    isDemoProject,
     getNextTicketNumber,
     createTicketMutation,
     availableLabels,
     availableSprints,
   ])
 
-  const isValid = formData.title.trim().length > 0
+  const isValid = formData.title.trim().length > 0 && !!projectId
 
   return (
     <Dialog open={createTicketOpen} onOpenChange={setCreateTicketOpen}>
@@ -440,10 +254,10 @@ export function CreateTicketDialog() {
               onChange={setFormData}
               labels={availableLabels}
               sprints={availableSprints}
-              parentTickets={DEMO_PARENT_TICKETS}
+              parentTickets={[]}
               disabled={isSubmitting}
               onCreateLabel={handleCreateLabel}
-              onDeleteLabel={!isDemoProject ? handleDeleteLabel : undefined}
+              onDeleteLabel={handleDeleteLabel}
             />
           </div>
         </ScrollArea>

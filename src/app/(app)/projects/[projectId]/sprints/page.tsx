@@ -6,14 +6,10 @@ import { useEffect, useMemo, useRef } from 'react'
 import { SprintBacklogView, SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
-import { getDemoData } from '@/lib/demo-data'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
-
-// Demo project IDs that should get demo data instead of API
-const DEMO_PROJECT_IDS = ['1', '2', '3']
 
 export default function SprintPlanningPage() {
   const params = useParams()
@@ -23,21 +19,18 @@ export default function SprintPlanningPage() {
   const project = getProject(projectId)
   const projectKey = project?.key || 'PROJ'
 
-  const { getColumns, setColumns, _hasHydrated } = useBoardStore()
+  const { getColumns, _hasHydrated } = useBoardStore()
   const { setActiveProjectId, activeTicketId, setActiveTicketId } = useUIStore()
   const { clearSelection } = useSelectionStore()
 
-  // Determine if this is a demo project or a real project
-  const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
-
-  // Fetch columns from API for real projects
+  // Fetch columns from API
   const { isLoading: columnsLoading, isSuccess: columnsLoaded } = useColumnsByProject(projectId, {
-    enabled: !isDemoProject && _hasHydrated,
+    enabled: _hasHydrated,
   })
 
-  // Fetch tickets from API for real projects (only after columns are loaded)
+  // Fetch tickets from API (only after columns are loaded)
   const { isLoading: ticketsLoading } = useTicketsByProject(projectId, {
-    enabled: !isDemoProject && _hasHydrated && columnsLoaded,
+    enabled: _hasHydrated && columnsLoaded,
   })
 
   // Get columns for this project
@@ -52,25 +45,16 @@ export default function SprintPlanningPage() {
   // Track which projects have been initialized to prevent re-running
   const initializedProjectsRef = useRef<Set<string>>(new Set())
 
-  // Load demo data after hydration (only for demo projects that have no tickets)
+  // Set active project after hydration
   useEffect(() => {
     if (!_hasHydrated) return
     if (initializedProjectsRef.current.has(projectId)) {
       setActiveProjectId(projectId)
       return
     }
-
-    if (isDemoProject) {
-      const currentColumns = getColumns(projectId)
-      const hasTickets = currentColumns.some((col) => col.tickets.length > 0)
-      if (!hasTickets) {
-        const demoColumns = getDemoData(projectId)
-        setColumns(projectId, demoColumns)
-      }
-    }
     initializedProjectsRef.current.add(projectId)
     setActiveProjectId(projectId)
-  }, [_hasHydrated, projectId, isDemoProject, setActiveProjectId, setColumns, getColumns])
+  }, [_hasHydrated, projectId, setActiveProjectId])
 
   // Get all tickets from columns (flattened for sprint view)
   const allTickets = useMemo(() => columns.flatMap((col) => col.tickets), [columns])
@@ -103,8 +87,8 @@ export default function SprintPlanningPage() {
     )
   }
 
-  // Show loading state for real projects
-  if (!isDemoProject && (columnsLoading || ticketsLoading)) {
+  // Show loading state
+  if (columnsLoading || ticketsLoading) {
     return (
       <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />

@@ -5,7 +5,6 @@
 
 import { toast } from 'sonner'
 import { batchCreateTicketsAPI, batchDeleteTicketsAPI } from '@/hooks/queries/use-tickets'
-import { isDemoProject } from '@/lib/constants'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
@@ -106,7 +105,6 @@ export function pasteTickets(params: PasteTicketsParams): PasteResult {
     return { success: false, newTickets: [], error: 'Could not find copied tickets' }
   }
 
-  const isDemo = isDemoProject(projectId)
   const boardStore = useBoardStore.getState()
   const newTickets: TicketWithColumn[] = []
   let nextNumber = boardStore.getNextTicketNumber(projectId)
@@ -126,45 +124,43 @@ export function pasteTickets(params: PasteTicketsParams): PasteResult {
     boardStore.addTicket(projectId, columnId, newTicket)
   }
 
-  // Persist to database for real projects
-  if (!isDemo) {
-    ;(async () => {
-      try {
-        const ticketsToCreate = newTickets.map(({ ticket, columnId }) => ({
-          tempId: ticket.id,
-          columnId,
-          ticketData: createTicketData(ticket),
-        }))
+  // Persist to database
+  ;(async () => {
+    try {
+      const ticketsToCreate = newTickets.map(({ ticket, columnId }) => ({
+        tempId: ticket.id,
+        columnId,
+        ticketData: createTicketData(ticket),
+      }))
 
-        const serverTickets = await batchCreateTicketsAPI(projectId, ticketsToCreate)
+      const serverTickets = await batchCreateTicketsAPI(projectId, ticketsToCreate)
 
-        // Replace temp tickets with server tickets
-        const currentBoardState = useBoardStore.getState()
-        const selectionState = useSelectionStore.getState()
+      // Replace temp tickets with server tickets
+      const currentBoardState = useBoardStore.getState()
+      const selectionState = useSelectionStore.getState()
 
-        for (const { ticket: tempTicket, columnId } of newTickets) {
-          const serverTicket = serverTickets.get(tempTicket.id)
-          if (serverTicket) {
-            currentBoardState.removeTicket(projectId, tempTicket.id)
-            currentBoardState.addTicket(projectId, columnId, serverTicket)
-            // Update selection if this ticket was selected
-            if (selectionState.isSelected(tempTicket.id)) {
-              selectionState.toggleTicket(tempTicket.id) // deselect temp
-              selectionState.toggleTicket(serverTicket.id) // select server
-            }
+      for (const { ticket: tempTicket, columnId } of newTickets) {
+        const serverTicket = serverTickets.get(tempTicket.id)
+        if (serverTicket) {
+          currentBoardState.removeTicket(projectId, tempTicket.id)
+          currentBoardState.addTicket(projectId, columnId, serverTicket)
+          // Update selection if this ticket was selected
+          if (selectionState.isSelected(tempTicket.id)) {
+            selectionState.toggleTicket(tempTicket.id) // deselect temp
+            selectionState.toggleTicket(serverTicket.id) // select server
           }
         }
-      } catch (error) {
-        console.error('Failed to persist pasted tickets:', error)
-        // Remove optimistic tickets on failure
-        const currentBoardState = useBoardStore.getState()
-        for (const { ticket } of newTickets) {
-          currentBoardState.removeTicket(projectId, ticket.id)
-        }
-        toast.error('Failed to paste tickets')
       }
-    })()
-  }
+    } catch (error) {
+      console.error('Failed to persist pasted tickets:', error)
+      // Remove optimistic tickets on failure
+      const currentBoardState = useBoardStore.getState()
+      for (const { ticket } of newTickets) {
+        currentBoardState.removeTicket(projectId, ticket.id)
+      }
+      toast.error('Failed to paste tickets')
+    }
+  })()
 
   // Show undo/redo toast
   const ticketKeys = newTickets.map(({ ticket }) => formatTicketId(ticket))
@@ -192,8 +188,8 @@ export function pasteTickets(params: PasteTicketsParams): PasteResult {
         }
       }
 
-      // Delete from database for real projects
-      if (!isDemo && ticketIdsToDelete.length > 0) {
+      // Delete from database
+      if (ticketIdsToDelete.length > 0) {
         batchDeleteTicketsAPI(projectId, ticketIdsToDelete).catch((err) => {
           console.error('Failed to delete pasted tickets on undo:', err)
         })
@@ -215,26 +211,24 @@ export function pasteTickets(params: PasteTicketsParams): PasteResult {
         redoTickets.push({ ticket: redoTicket, columnId })
       }
 
-      // Persist to database for real projects
-      if (!isDemo) {
-        try {
-          const ticketsToCreate = redoTickets.map(({ ticket, columnId }) => ({
-            tempId: ticket.id,
-            columnId,
-            ticketData: createTicketData(ticket),
-          }))
-          const serverTickets = await batchCreateTicketsAPI(projectId, ticketsToCreate)
+      // Persist to database
+      try {
+        const ticketsToCreate = redoTickets.map(({ ticket, columnId }) => ({
+          tempId: ticket.id,
+          columnId,
+          ticketData: createTicketData(ticket),
+        }))
+        const serverTickets = await batchCreateTicketsAPI(projectId, ticketsToCreate)
 
-          for (const { ticket: tempTicket, columnId } of redoTickets) {
-            const serverTicket = serverTickets.get(tempTicket.id)
-            if (serverTicket) {
-              currentBoardState.removeTicket(projectId, tempTicket.id)
-              currentBoardState.addTicket(projectId, columnId, serverTicket)
-            }
+        for (const { ticket: tempTicket, columnId } of redoTickets) {
+          const serverTicket = serverTickets.get(tempTicket.id)
+          if (serverTicket) {
+            currentBoardState.removeTicket(projectId, tempTicket.id)
+            currentBoardState.addTicket(projectId, columnId, serverTicket)
           }
-        } catch (err) {
-          console.error('Failed to recreate tickets on redo:', err)
         }
+      } catch (err) {
+        console.error('Failed to recreate tickets on redo:', err)
       }
     },
     undoneTitle: 'Paste undone',

@@ -27,7 +27,6 @@ import {
 } from '@/hooks/queries/use-tickets'
 import { pasteTickets } from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
-import { isDemoProject } from '@/lib/constants'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
@@ -47,7 +46,7 @@ export function KeyboardShortcuts() {
   const openSinglePastedTicket = useSettingsStore((state) => state.openSinglePastedTicket)
 
   // Get columns for the active project
-  const projectId = activeProjectId || '1' // Fallback to '1' if no project is active
+  const projectId = activeProjectId || ''
   const columns = getColumns(projectId)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
@@ -273,7 +272,6 @@ export function KeyboardShortcuts() {
             .filter(Boolean)
 
           const direction = e.key === 'ArrowUp' ? 'up' : 'down'
-          const isDemo = isDemoProject(projectId)
 
           let currentId: string | number | undefined
 
@@ -295,22 +293,20 @@ export function KeyboardShortcuts() {
                 const board = useBoardStore.getState()
                 board.setColumns(undoEntry.projectId, originalColumns)
 
-                // Persist to database for real projects
-                if (!isDemo) {
-                  try {
-                    // For reordering, we need to update the order field of affected tickets
-                    // Since we're restoring full column state, just update all ticket orders
-                    for (const col of originalColumns) {
-                      for (let i = 0; i < col.tickets.length; i++) {
-                        const ticket = col.tickets[i]
-                        if (reorderedTicketIds.includes(ticket.id)) {
-                          await updateTicketAPI(undoEntry.projectId, ticket.id, { order: i })
-                        }
+                // Persist to database
+                try {
+                  // For reordering, we need to update the order field of affected tickets
+                  // Since we're restoring full column state, just update all ticket orders
+                  for (const col of originalColumns) {
+                    for (let i = 0; i < col.tickets.length; i++) {
+                      const ticket = col.tickets[i]
+                      if (reorderedTicketIds.includes(ticket.id)) {
+                        await updateTicketAPI(undoEntry.projectId, ticket.id, { order: i })
                       }
                     }
-                  } catch (err) {
-                    console.error('Failed to persist reorder undo:', err)
                   }
+                } catch (err) {
+                  console.error('Failed to persist reorder undo:', err)
                 }
               }
             },
@@ -327,20 +323,18 @@ export function KeyboardShortcuts() {
                 const board = useBoardStore.getState()
                 board.setColumns(undoEntry.projectId, afterColumns)
 
-                // Persist to database for real projects
-                if (!isDemo) {
-                  try {
-                    for (const col of afterColumns) {
-                      for (let i = 0; i < col.tickets.length; i++) {
-                        const ticket = col.tickets[i]
-                        if (reorderedTicketIds.includes(ticket.id)) {
-                          await updateTicketAPI(undoEntry.projectId, ticket.id, { order: i })
-                        }
+                // Persist to database
+                try {
+                  for (const col of afterColumns) {
+                    for (let i = 0; i < col.tickets.length; i++) {
+                      const ticket = col.tickets[i]
+                      if (reorderedTicketIds.includes(ticket.id)) {
+                        await updateTicketAPI(undoEntry.projectId, ticket.id, { order: i })
                       }
                     }
-                  } catch (err) {
-                    console.error('Failed to persist reorder redo:', err)
                   }
+                } catch (err) {
+                  console.error('Failed to persist reorder redo:', err)
                 }
               }
             },
@@ -560,29 +554,25 @@ export function KeyboardShortcuts() {
             })
             .filter(Boolean)
 
-          const isDemo = isDemoProject(projectId)
-
-          // Persist to database for real projects
-          if (!isDemo) {
-            ;(async () => {
-              try {
-                for (const move of moves) {
-                  // Find the ticket's new position in the target column
-                  const targetCol = afterColumns.find((c) => c.id === move.toColumnId)
-                  const newOrder = targetCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
-                  await updateTicketAPI(projectId, move.ticketId, {
-                    columnId: move.toColumnId,
-                    order: newOrder,
-                  })
-                }
-              } catch (err) {
-                console.error('Failed to persist arrow key move:', err)
-                // Rollback on error
-                boardStore.setColumns(projectId, originalColumns)
-                toast.error('Failed to move ticket(s)')
+          // Persist to database
+          ;(async () => {
+            try {
+              for (const move of moves) {
+                // Find the ticket's new position in the target column
+                const targetCol = afterColumns.find((c) => c.id === move.toColumnId)
+                const newOrder = targetCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
+                await updateTicketAPI(projectId, move.ticketId, {
+                  columnId: move.toColumnId,
+                  order: newOrder,
+                })
               }
-            })()
-          }
+            } catch (err) {
+              console.error('Failed to persist arrow key move:', err)
+              // Rollback on error
+              boardStore.setColumns(projectId, originalColumns)
+              toast.error('Failed to move ticket(s)')
+            }
+          })()
 
           let currentId: string | number | undefined
 
@@ -601,21 +591,19 @@ export function KeyboardShortcuts() {
                 const board = useBoardStore.getState()
                 board.setColumns(undoEntry.projectId, originalColumns)
 
-                // Persist undo to database for real projects
-                if (!isDemo) {
-                  try {
-                    for (const move of moves) {
-                      const sourceCol = originalColumns.find((c) => c.id === move.fromColumnId)
-                      const originalOrder =
-                        sourceCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
-                      await updateTicketAPI(undoEntry.projectId, move.ticketId, {
-                        columnId: move.fromColumnId,
-                        order: originalOrder,
-                      })
-                    }
-                  } catch (err) {
-                    console.error('Failed to persist move undo:', err)
+                // Persist undo to database
+                try {
+                  for (const move of moves) {
+                    const sourceCol = originalColumns.find((c) => c.id === move.fromColumnId)
+                    const originalOrder =
+                      sourceCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
+                    await updateTicketAPI(undoEntry.projectId, move.ticketId, {
+                      columnId: move.fromColumnId,
+                      order: originalOrder,
+                    })
                   }
+                } catch (err) {
+                  console.error('Failed to persist move undo:', err)
                 }
               }
             },
@@ -632,21 +620,19 @@ export function KeyboardShortcuts() {
                 const board = useBoardStore.getState()
                 board.setColumns(undoEntry.projectId, afterColumns)
 
-                // Persist redo to database for real projects
-                if (!isDemo) {
-                  try {
-                    for (const move of moves) {
-                      const targetCol = afterColumns.find((c) => c.id === move.toColumnId)
-                      const newOrder =
-                        targetCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
-                      await updateTicketAPI(undoEntry.projectId, move.ticketId, {
-                        columnId: move.toColumnId,
-                        order: newOrder,
-                      })
-                    }
-                  } catch (err) {
-                    console.error('Failed to persist move redo:', err)
+                // Persist redo to database
+                try {
+                  for (const move of moves) {
+                    const targetCol = afterColumns.find((c) => c.id === move.toColumnId)
+                    const newOrder =
+                      targetCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
+                    await updateTicketAPI(undoEntry.projectId, move.ticketId, {
+                      columnId: move.toColumnId,
+                      order: newOrder,
+                    })
                   }
+                } catch (err) {
+                  console.error('Failed to persist move redo:', err)
                 }
               }
             },
@@ -718,7 +704,6 @@ export function KeyboardShortcuts() {
 
           if (entry.action.type === 'delete') {
             const action = entry.action
-            const isDemo = isDemoProject(entry.projectId)
             // Restore all deleted tickets optimistically
             const { addTicket } = useBoardStore.getState()
             for (const { ticket, columnId } of action.tickets) {
@@ -728,51 +713,49 @@ export function KeyboardShortcuts() {
             useSelectionStore.getState().clearSelection()
             undoStore.pushRedo(entry)
 
-            // For real projects, recreate tickets in database
-            if (!isDemo) {
-              ;(async () => {
-                try {
-                  const ticketsToCreate = action.tickets.map(({ ticket, columnId }) => ({
-                    tempId: ticket.id,
-                    columnId,
-                    ticketData: {
-                      title: ticket.title,
-                      description: ticket.description,
-                      type: ticket.type,
-                      priority: ticket.priority,
-                      storyPoints: ticket.storyPoints,
-                      estimate: ticket.estimate,
-                      startDate: ticket.startDate,
-                      dueDate: ticket.dueDate,
-                      environment: ticket.environment,
-                      affectedVersion: ticket.affectedVersion,
-                      fixVersion: ticket.fixVersion,
-                      assigneeId: ticket.assigneeId,
-                      sprintId: ticket.sprintId,
-                      parentId: ticket.parentId,
-                      labels: ticket.labels,
-                      watchers: ticket.watchers,
-                    },
-                  }))
-                  const serverTickets = await batchCreateTicketsAPI(
-                    entry.projectId,
-                    ticketsToCreate,
-                  )
-                  // Replace temp tickets with server tickets
-                  const boardState = useBoardStore.getState()
-                  for (const { ticket: tempTicket, columnId } of action.tickets) {
-                    const serverTicket = serverTickets.get(tempTicket.id)
-                    if (serverTicket) {
-                      boardState.removeTicket(entry.projectId, tempTicket.id)
-                      boardState.addTicket(entry.projectId, columnId, serverTicket)
-                    }
+            // Recreate tickets in database
+            ;(async () => {
+              try {
+                const ticketsToCreate = action.tickets.map(({ ticket, columnId }) => ({
+                  tempId: ticket.id,
+                  columnId,
+                  ticketData: {
+                    title: ticket.title,
+                    description: ticket.description,
+                    type: ticket.type,
+                    priority: ticket.priority,
+                    storyPoints: ticket.storyPoints,
+                    estimate: ticket.estimate,
+                    startDate: ticket.startDate,
+                    dueDate: ticket.dueDate,
+                    environment: ticket.environment,
+                    affectedVersion: ticket.affectedVersion,
+                    fixVersion: ticket.fixVersion,
+                    assigneeId: ticket.assigneeId,
+                    sprintId: ticket.sprintId,
+                    parentId: ticket.parentId,
+                    labels: ticket.labels,
+                    watchers: ticket.watchers,
+                  },
+                }))
+                const serverTickets = await batchCreateTicketsAPI(
+                  entry.projectId,
+                  ticketsToCreate,
+                )
+                // Replace temp tickets with server tickets
+                const boardState = useBoardStore.getState()
+                for (const { ticket: tempTicket, columnId } of action.tickets) {
+                  const serverTicket = serverTickets.get(tempTicket.id)
+                  if (serverTicket) {
+                    boardState.removeTicket(entry.projectId, tempTicket.id)
+                    boardState.addTicket(entry.projectId, columnId, serverTicket)
                   }
-                } catch (err) {
-                  console.error('Failed to restore tickets:', err)
-                  toast.error('Failed to restore tickets')
                 }
-              })()
-            }
+              } catch (err) {
+                console.error('Failed to restore tickets:', err)
+                toast.error('Failed to restore tickets')
+              }
+            })()
 
             const ticketKeys = action.tickets.map(({ ticket }) => formatTicketId(ticket))
 
@@ -806,8 +789,8 @@ export function KeyboardShortcuts() {
                       ticketIdsToDelete.push(foundTicket.id)
                     }
                   }
-                  // Delete from database for real projects
-                  if (!isDemo && ticketIdsToDelete.length > 0) {
+                  // Delete from database
+                  if (ticketIdsToDelete.length > 0) {
                     batchDeleteTicketsAPI(undoEntry.projectId, ticketIdsToDelete).catch((err) => {
                       console.error('Failed to delete tickets on redo:', err)
                     })
@@ -828,45 +811,43 @@ export function KeyboardShortcuts() {
                   for (const { ticket, columnId } of action.tickets) {
                     boardState.addTicket(undoEntry.projectId, columnId, ticket)
                   }
-                  // Recreate in database for real projects
-                  if (!isDemo) {
-                    try {
-                      const ticketsToCreate = action.tickets.map(({ ticket, columnId }) => ({
-                        tempId: ticket.id,
-                        columnId,
-                        ticketData: {
-                          title: ticket.title,
-                          description: ticket.description,
-                          type: ticket.type,
-                          priority: ticket.priority,
-                          storyPoints: ticket.storyPoints,
-                          estimate: ticket.estimate,
-                          startDate: ticket.startDate,
-                          dueDate: ticket.dueDate,
-                          environment: ticket.environment,
-                          affectedVersion: ticket.affectedVersion,
-                          fixVersion: ticket.fixVersion,
-                          assigneeId: ticket.assigneeId,
-                          sprintId: ticket.sprintId,
-                          parentId: ticket.parentId,
-                          labels: ticket.labels,
-                          watchers: ticket.watchers,
-                        },
-                      }))
-                      const serverTickets = await batchCreateTicketsAPI(
-                        undoEntry.projectId,
-                        ticketsToCreate,
-                      )
-                      for (const { ticket: tempTicket, columnId } of action.tickets) {
-                        const serverTicket = serverTickets.get(tempTicket.id)
-                        if (serverTicket) {
-                          boardState.removeTicket(undoEntry.projectId, tempTicket.id)
-                          boardState.addTicket(undoEntry.projectId, columnId, serverTicket)
-                        }
+                  // Recreate in database
+                  try {
+                    const ticketsToCreate = action.tickets.map(({ ticket, columnId }) => ({
+                      tempId: ticket.id,
+                      columnId,
+                      ticketData: {
+                        title: ticket.title,
+                        description: ticket.description,
+                        type: ticket.type,
+                        priority: ticket.priority,
+                        storyPoints: ticket.storyPoints,
+                        estimate: ticket.estimate,
+                        startDate: ticket.startDate,
+                        dueDate: ticket.dueDate,
+                        environment: ticket.environment,
+                        affectedVersion: ticket.affectedVersion,
+                        fixVersion: ticket.fixVersion,
+                        assigneeId: ticket.assigneeId,
+                        sprintId: ticket.sprintId,
+                        parentId: ticket.parentId,
+                        labels: ticket.labels,
+                        watchers: ticket.watchers,
+                      },
+                    }))
+                    const serverTickets = await batchCreateTicketsAPI(
+                      undoEntry.projectId,
+                      ticketsToCreate,
+                    )
+                    for (const { ticket: tempTicket, columnId } of action.tickets) {
+                      const serverTicket = serverTickets.get(tempTicket.id)
+                      if (serverTicket) {
+                        boardState.removeTicket(undoEntry.projectId, tempTicket.id)
+                        boardState.addTicket(undoEntry.projectId, columnId, serverTicket)
                       }
-                    } catch (err) {
-                      console.error('Failed to restore tickets:', err)
                     }
+                  } catch (err) {
+                    console.error('Failed to restore tickets:', err)
                   }
                 }
               },
@@ -893,25 +874,22 @@ export function KeyboardShortcuts() {
             currentId = toastId
           } else if (entry.action.type === 'update') {
             const action = entry.action
-            const isDemo = isDemoProject(entry.projectId)
             const boardStore = useBoardStore.getState()
             for (const item of action.tickets) {
               boardStore.updateTicket(entry.projectId, item.ticketId, item.before)
             }
             undoStore.pushRedo(entry)
 
-            // Persist undo to database for real projects
-            if (!isDemo) {
-              ;(async () => {
-                try {
-                  for (const item of action.tickets) {
-                    await updateTicketAPI(entry.projectId, item.ticketId, item.before)
-                  }
-                } catch (err) {
-                  console.error('Failed to persist update undo:', err)
+            // Persist undo to database
+            ;(async () => {
+              try {
+                for (const item of action.tickets) {
+                  await updateTicketAPI(entry.projectId, item.ticketId, item.before)
                 }
-              })()
-            }
+              } catch (err) {
+                console.error('Failed to persist update undo:', err)
+              }
+            })()
 
             const ticketKeys = action.tickets
               .map((item) => {
@@ -942,14 +920,12 @@ export function KeyboardShortcuts() {
                     boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.after)
                   }
                   // Persist to database
-                  if (!isDemo) {
-                    try {
-                      for (const item of action.tickets) {
-                        await updateTicketAPI(undoEntry.projectId, item.ticketId, item.after)
-                      }
-                    } catch (err) {
-                      console.error('Failed to persist update redo:', err)
+                  try {
+                    for (const item of action.tickets) {
+                      await updateTicketAPI(undoEntry.projectId, item.ticketId, item.after)
                     }
+                  } catch (err) {
+                    console.error('Failed to persist update redo:', err)
                   }
                 }
               },
@@ -966,14 +942,12 @@ export function KeyboardShortcuts() {
                     boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.before)
                   }
                   // Persist to database
-                  if (!isDemo) {
-                    try {
-                      for (const item of action.tickets) {
-                        await updateTicketAPI(undoEntry.projectId, item.ticketId, item.before)
-                      }
-                    } catch (err) {
-                      console.error('Failed to persist update undo:', err)
+                  try {
+                    for (const item of action.tickets) {
+                      await updateTicketAPI(undoEntry.projectId, item.ticketId, item.before)
                     }
+                  } catch (err) {
+                    console.error('Failed to persist update undo:', err)
                   }
                 }
               },
@@ -999,7 +973,6 @@ export function KeyboardShortcuts() {
             currentId = toastId
           } else if (entry.action.type === 'move') {
             const action = entry.action
-            const isDemo = isDemoProject(entry.projectId)
             // Restore the exact column state from before the move
             const moveBoardStore = useBoardStore.getState()
             if (action.originalColumns) {
@@ -1025,21 +998,19 @@ export function KeyboardShortcuts() {
             // Push to redo stack (same entry, will restore to afterColumns when redoing)
             undoStore.pushRedo(entry)
 
-            // Persist move undo to database for real projects
-            if (!isDemo) {
-              ;(async () => {
-                try {
-                  // Update each moved ticket's columnId back to original
-                  for (const move of action.moves) {
-                    await updateTicketAPI(entry.projectId, move.ticketId, {
-                      columnId: move.fromColumnId,
-                    })
-                  }
-                } catch (err) {
-                  console.error('Failed to persist move undo:', err)
+            // Persist move undo to database
+            ;(async () => {
+              try {
+                // Update each moved ticket's columnId back to original
+                for (const move of action.moves) {
+                  await updateTicketAPI(entry.projectId, move.ticketId, {
+                    columnId: move.fromColumnId,
+                  })
                 }
-              })()
-            }
+              } catch (err) {
+                console.error('Failed to persist move undo:', err)
+              }
+            })()
 
             // Look up ticket IDs from columns
             const moveAllTickets = moveBoardStore
@@ -1091,16 +1062,14 @@ export function KeyboardShortcuts() {
                     }
                   }
                   // Persist to database
-                  if (!isDemo) {
-                    try {
-                      for (const move of action.moves) {
-                        await updateTicketAPI(undoEntry.projectId, move.ticketId, {
-                          columnId: move.toColumnId,
-                        })
-                      }
-                    } catch (err) {
-                      console.error('Failed to persist move redo:', err)
+                  try {
+                    for (const move of action.moves) {
+                      await updateTicketAPI(undoEntry.projectId, move.ticketId, {
+                        columnId: move.toColumnId,
+                      })
                     }
+                  } catch (err) {
+                    console.error('Failed to persist move redo:', err)
                   }
                 }
               },
@@ -1121,16 +1090,14 @@ export function KeyboardShortcuts() {
                     moveBoardStore.setColumns(undoEntry.projectId, restoredColumns)
                   }
                   // Persist to database
-                  if (!isDemo) {
-                    try {
-                      for (const move of action.moves) {
-                        await updateTicketAPI(undoEntry.projectId, move.ticketId, {
-                          columnId: move.fromColumnId,
-                        })
-                      }
-                    } catch (err) {
-                      console.error('Failed to persist move undo:', err)
+                  try {
+                    for (const move of action.moves) {
+                      await updateTicketAPI(undoEntry.projectId, move.ticketId, {
+                        columnId: move.fromColumnId,
+                      })
                     }
+                  } catch (err) {
+                    console.error('Failed to persist move undo:', err)
                   }
                 }
               },
@@ -1294,7 +1261,6 @@ export function KeyboardShortcuts() {
 
           if (entry.action.type === 'delete') {
             const action = entry.action
-            const isDemo = isDemoProject(entry.projectId)
             const { removeTicket } = useBoardStore.getState()
 
             // Find and delete tickets (they may have been replaced with server tickets)
@@ -1311,8 +1277,8 @@ export function KeyboardShortcuts() {
               }
             }
 
-            // Delete from database for real projects
-            if (!isDemo && ticketIdsToDelete.length > 0) {
+            // Delete from database
+            if (ticketIdsToDelete.length > 0) {
               batchDeleteTicketsAPI(entry.projectId, ticketIdsToDelete).catch((err) => {
                 console.error('Failed to delete tickets on redo:', err)
               })
@@ -1338,45 +1304,43 @@ export function KeyboardShortcuts() {
                   for (const { ticket, columnId } of action.tickets) {
                     boardState.addTicket(undoEntry.projectId, columnId, ticket)
                   }
-                  // Recreate in database for real projects
-                  if (!isDemo) {
-                    try {
-                      const ticketsToCreate = action.tickets.map(({ ticket, columnId }) => ({
-                        tempId: ticket.id,
-                        columnId,
-                        ticketData: {
-                          title: ticket.title,
-                          description: ticket.description,
-                          type: ticket.type,
-                          priority: ticket.priority,
-                          storyPoints: ticket.storyPoints,
-                          estimate: ticket.estimate,
-                          startDate: ticket.startDate,
-                          dueDate: ticket.dueDate,
-                          environment: ticket.environment,
-                          affectedVersion: ticket.affectedVersion,
-                          fixVersion: ticket.fixVersion,
-                          assigneeId: ticket.assigneeId,
-                          sprintId: ticket.sprintId,
-                          parentId: ticket.parentId,
-                          labels: ticket.labels,
-                          watchers: ticket.watchers,
-                        },
-                      }))
-                      const serverTickets = await batchCreateTicketsAPI(
-                        undoEntry.projectId,
-                        ticketsToCreate,
-                      )
-                      for (const { ticket: tempTicket, columnId } of action.tickets) {
-                        const serverTicket = serverTickets.get(tempTicket.id)
-                        if (serverTicket) {
-                          boardState.removeTicket(undoEntry.projectId, tempTicket.id)
-                          boardState.addTicket(undoEntry.projectId, columnId, serverTicket)
-                        }
+                  // Recreate in database
+                  try {
+                    const ticketsToCreate = action.tickets.map(({ ticket, columnId }) => ({
+                      tempId: ticket.id,
+                      columnId,
+                      ticketData: {
+                        title: ticket.title,
+                        description: ticket.description,
+                        type: ticket.type,
+                        priority: ticket.priority,
+                        storyPoints: ticket.storyPoints,
+                        estimate: ticket.estimate,
+                        startDate: ticket.startDate,
+                        dueDate: ticket.dueDate,
+                        environment: ticket.environment,
+                        affectedVersion: ticket.affectedVersion,
+                        fixVersion: ticket.fixVersion,
+                        assigneeId: ticket.assigneeId,
+                        sprintId: ticket.sprintId,
+                        parentId: ticket.parentId,
+                        labels: ticket.labels,
+                        watchers: ticket.watchers,
+                      },
+                    }))
+                    const serverTickets = await batchCreateTicketsAPI(
+                      undoEntry.projectId,
+                      ticketsToCreate,
+                    )
+                    for (const { ticket: tempTicket, columnId } of action.tickets) {
+                      const serverTicket = serverTickets.get(tempTicket.id)
+                      if (serverTicket) {
+                        boardState.removeTicket(undoEntry.projectId, tempTicket.id)
+                        boardState.addTicket(undoEntry.projectId, columnId, serverTicket)
                       }
-                    } catch (err) {
-                      console.error('Failed to restore tickets:', err)
                     }
+                  } catch (err) {
+                    console.error('Failed to restore tickets:', err)
                   }
                 }
               },
@@ -1401,7 +1365,7 @@ export function KeyboardShortcuts() {
                       idsToDelete.push(foundTicket.id)
                     }
                   }
-                  if (!isDemo && idsToDelete.length > 0) {
+                  if (idsToDelete.length > 0) {
                     batchDeleteTicketsAPI(undoEntry.projectId, idsToDelete).catch((err) => {
                       console.error('Failed to delete tickets on redo:', err)
                     })
@@ -1423,24 +1387,21 @@ export function KeyboardShortcuts() {
             redoStore.pushDeletedBatch(entry.projectId, action.tickets, newToastId, true)
           } else if (entry.action.type === 'update') {
             const action = entry.action
-            const isDemo = isDemoProject(entry.projectId)
             const boardStore = useBoardStore.getState()
             for (const item of action.tickets) {
               boardStore.updateTicket(entry.projectId, item.ticketId, item.after)
             }
 
-            // Persist redo to database for real projects
-            if (!isDemo) {
-              ;(async () => {
-                try {
-                  for (const item of action.tickets) {
-                    await updateTicketAPI(entry.projectId, item.ticketId, item.after)
-                  }
-                } catch (err) {
-                  console.error('Failed to persist update redo:', err)
+            // Persist redo to database
+            ;(async () => {
+              try {
+                for (const item of action.tickets) {
+                  await updateTicketAPI(entry.projectId, item.ticketId, item.after)
                 }
-              })()
-            }
+              } catch (err) {
+                console.error('Failed to persist update redo:', err)
+              }
+            })()
 
             const swappedTickets = action.tickets.map((item) => ({
               ticketId: item.ticketId,
@@ -1475,14 +1436,12 @@ export function KeyboardShortcuts() {
                     boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.before)
                   }
                   // Persist to database
-                  if (!isDemo) {
-                    try {
-                      for (const item of swappedTickets) {
-                        await updateTicketAPI(undoEntry.projectId, item.ticketId, item.before)
-                      }
-                    } catch (err) {
-                      console.error('Failed to persist update undo:', err)
+                  try {
+                    for (const item of swappedTickets) {
+                      await updateTicketAPI(undoEntry.projectId, item.ticketId, item.before)
                     }
+                  } catch (err) {
+                    console.error('Failed to persist update undo:', err)
                   }
                 }
               },
@@ -1499,14 +1458,12 @@ export function KeyboardShortcuts() {
                     boardStore.updateTicket(undoEntry.projectId, item.ticketId, item.after)
                   }
                   // Persist to database
-                  if (!isDemo) {
-                    try {
-                      for (const item of swappedTickets) {
-                        await updateTicketAPI(undoEntry.projectId, item.ticketId, item.after)
-                      }
-                    } catch (err) {
-                      console.error('Failed to persist update redo:', err)
+                  try {
+                    for (const item of swappedTickets) {
+                      await updateTicketAPI(undoEntry.projectId, item.ticketId, item.after)
                     }
+                  } catch (err) {
+                    console.error('Failed to persist update redo:', err)
                   }
                 }
               },
@@ -1533,7 +1490,6 @@ export function KeyboardShortcuts() {
             redoStore.pushUpdate(entry.projectId, swappedTickets, newToastId, true)
           } else if (entry.action.type === 'move') {
             const action = entry.action
-            const isDemo = isDemoProject(entry.projectId)
             const boardStore = useBoardStore.getState()
             const currentStateBeforeRedo = boardStore.getColumns(entry.projectId).map((col) => ({
               ...col,
@@ -1558,20 +1514,18 @@ export function KeyboardShortcuts() {
               }
             }
 
-            // Persist move redo to database for real projects
-            if (!isDemo) {
-              ;(async () => {
-                try {
-                  for (const move of action.moves) {
-                    await updateTicketAPI(entry.projectId, move.ticketId, {
-                      columnId: move.toColumnId,
-                    })
-                  }
-                } catch (err) {
-                  console.error('Failed to persist move redo:', err)
+            // Persist move redo to database
+            ;(async () => {
+              try {
+                for (const move of action.moves) {
+                  await updateTicketAPI(entry.projectId, move.ticketId, {
+                    columnId: move.toColumnId,
+                  })
                 }
-              })()
-            }
+              } catch (err) {
+                console.error('Failed to persist move redo:', err)
+              }
+            })()
 
             const allTickets = boardStore.getColumns(entry.projectId).flatMap((col) => col.tickets)
             const ticketKeys = action.moves
@@ -1597,16 +1551,14 @@ export function KeyboardShortcuts() {
                         bs.setColumns(entry.projectId, currentStateBeforeRedo)
                         redoStore.pushRedo(entry)
                         // Persist undo to database
-                        if (!isDemo) {
-                          try {
-                            for (const move of action.moves) {
-                              await updateTicketAPI(entry.projectId, move.ticketId, {
-                                columnId: move.fromColumnId,
-                              })
-                            }
-                          } catch (err) {
-                            console.error('Failed to persist move undo:', err)
+                        try {
+                          for (const move of action.moves) {
+                            await updateTicketAPI(entry.projectId, move.ticketId, {
+                              columnId: move.fromColumnId,
+                            })
                           }
+                        } catch (err) {
+                          console.error('Failed to persist move undo:', err)
                         }
                         toast.success(
                           action.moves.length === 1

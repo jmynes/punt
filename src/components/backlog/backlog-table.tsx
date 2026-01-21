@@ -484,7 +484,7 @@ export function BacklogTable({
     <div className="flex h-full flex-col">
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4 border-b border-zinc-800 px-4 py-3">
-        <BacklogFilters statusColumns={statusColumns} />
+        <BacklogFilters projectId={projectId} statusColumns={statusColumns} />
         <Button
           variant="outline"
           size="sm"

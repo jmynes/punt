@@ -38,7 +38,6 @@ import { updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { pasteTickets } from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
-import { isDemoProject } from '@/lib/constants'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketIds } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -176,7 +175,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const toOrder = column.tickets.length
     const moveTickets = board.moveTickets || (() => {})
     const moveTicket = board.moveTicket || (() => {})
-    const isDemo = isDemoProject(projectId)
 
     const movableIds = selectedIds.filter((id: string) => {
       const current = columns
@@ -217,20 +215,18 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         : 'Multiple'
     const toColumnName = column.name
 
-    // Persist move to database for real projects
-    if (!isDemo) {
-      ;(async () => {
-        try {
-          for (const move of moves) {
-            await updateTicketAPI(projectId, move.ticketId, {
-              columnId: move.toColumnId,
-            })
-          }
-        } catch (err) {
-          console.error('Failed to persist move:', err)
+    // Persist move to database
+    ;(async () => {
+      try {
+        for (const move of moves) {
+          await updateTicketAPI(projectId, move.ticketId, {
+            columnId: move.toColumnId,
+          })
         }
-      })()
-    }
+      } catch (err) {
+        console.error('Failed to persist move:', err)
+      }
+    })()
 
     const ticketKeys = formatTicketIds(
       afterColumns,
@@ -272,31 +268,27 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       onUndo: async () => {
         boardStateMove.setColumns(projectId, beforeColumns)
         // Persist undo to database
-        if (!isDemo) {
-          try {
-            for (const move of moves) {
-              await updateTicketAPI(projectId, move.ticketId, {
-                columnId: move.fromColumnId,
-              })
-            }
-          } catch (err) {
-            console.error('Failed to persist move undo:', err)
+        try {
+          for (const move of moves) {
+            await updateTicketAPI(projectId, move.ticketId, {
+              columnId: move.fromColumnId,
+            })
           }
+        } catch (err) {
+          console.error('Failed to persist move undo:', err)
         }
       },
       onRedo: async () => {
         boardStateMove.setColumns(projectId, afterColumns)
         // Persist redo to database
-        if (!isDemo) {
-          try {
-            for (const move of moves) {
-              await updateTicketAPI(projectId, move.ticketId, {
-                columnId: move.toColumnId,
-              })
-            }
-          } catch (err) {
-            console.error('Failed to persist move redo:', err)
+        try {
+          for (const move of moves) {
+            await updateTicketAPI(projectId, move.ticketId, {
+              columnId: move.toColumnId,
+            })
           }
+        } catch (err) {
+          console.error('Failed to persist move redo:', err)
         }
       },
       undoneTitle: 'Move undone',
@@ -342,7 +334,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const doPriority = (priority: TicketWithRelations['priority']) => {
     const updateTicket = board.updateTicket || (() => {})
-    const isDemo = isDemoProject(projectId)
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
       []
     for (const id of selectedIds) {
@@ -356,18 +347,16 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }
     if (updates.length === 0) return
 
-    // Persist to database for real projects
-    if (!isDemo) {
-      ;(async () => {
-        try {
-          for (const update of updates) {
-            await updateTicketAPI(projectId, update.ticketId, { priority })
-          }
-        } catch (err) {
-          console.error('Failed to persist priority update:', err)
+    // Persist to database
+    ;(async () => {
+      try {
+        for (const update of updates) {
+          await updateTicketAPI(projectId, update.ticketId, { priority })
         }
-      })()
-    }
+      } catch (err) {
+        console.error('Failed to persist priority update:', err)
+      }
+    })()
 
     const ticketKeys = formatTicketIds(
       columns,
@@ -388,7 +377,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const doAssign = (userId: string | null) => {
     const user = members.find((m) => m.id === userId) || null
     const updateTicket = board.updateTicket || (() => {})
-    const isDemo = isDemoProject(projectId)
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
       []
     for (const id of selectedIds) {
@@ -408,18 +396,16 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }
     if (updates.length === 0) return
 
-    // Persist to database for real projects
-    if (!isDemo) {
-      ;(async () => {
-        try {
-          for (const update of updates) {
-            await updateTicketAPI(projectId, update.ticketId, { assigneeId: userId })
-          }
-        } catch (err) {
-          console.error('Failed to persist assignee update:', err)
+    // Persist to database
+    ;(async () => {
+      try {
+        for (const update of updates) {
+          await updateTicketAPI(projectId, update.ticketId, { assigneeId: userId })
         }
-      })()
-    }
+      } catch (err) {
+        console.error('Failed to persist assignee update:', err)
+      }
+    })()
 
     const ticketKeys = formatTicketIds(
       columns,
@@ -448,7 +434,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const doPoints = (points: number | null) => {
     const updateTicket = board.updateTicket || (() => {})
-    const isDemo = isDemoProject(projectId)
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
       []
     for (const id of selectedIds) {
@@ -467,18 +452,16 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }
     if (updates.length === 0) return
 
-    // Persist to database for real projects
-    if (!isDemo) {
-      ;(async () => {
-        try {
-          for (const update of updates) {
-            await updateTicketAPI(projectId, update.ticketId, { storyPoints: points })
-          }
-        } catch (err) {
-          console.error('Failed to persist points update:', err)
+    // Persist to database
+    ;(async () => {
+      try {
+        for (const update of updates) {
+          await updateTicketAPI(projectId, update.ticketId, { storyPoints: points })
         }
-      })()
-    }
+      } catch (err) {
+        console.error('Failed to persist points update:', err)
+      }
+    })()
 
     const ticketKeys = formatTicketIds(
       columns,

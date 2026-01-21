@@ -5,9 +5,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { labelKeys, ticketKeys } from '@/hooks/queries/use-tickets'
 import type { LabelEvent, TicketEvent } from '@/lib/events'
 
-// Demo project IDs that don't need real-time sync
-const DEMO_PROJECT_IDS = ['1', '2', '3']
-
 // Reconnection config
 const INITIAL_RECONNECT_DELAY = 1000
 const MAX_RECONNECT_DELAY = 30000
@@ -72,7 +69,7 @@ export function useRealtime(projectId: string, enabled = true): RealtimeStatus {
 
   const connect = useCallback(() => {
     if (!mountedRef.current) return
-    if (!projectId || DEMO_PROJECT_IDS.includes(projectId)) return
+    if (!projectId) return
 
     cleanup()
     setStatus('connecting')
@@ -138,7 +135,7 @@ export function useRealtime(projectId: string, enabled = true): RealtimeStatus {
   useEffect(() => {
     mountedRef.current = true
 
-    if (enabled && projectId && !DEMO_PROJECT_IDS.includes(projectId)) {
+    if (enabled && projectId) {
       connect()
     }
 

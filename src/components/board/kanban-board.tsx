@@ -25,9 +25,6 @@ import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { KanbanCard } from './kanban-card'
 import { KanbanColumn } from './kanban-column'
 
-// Demo project IDs that use local state instead of API
-const DEMO_PROJECT_IDS = ['1', '2', '3']
-
 interface KanbanBoardProps {
   projectKey: string
   projectId: string
@@ -39,12 +36,9 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
     useBoardStore()
   const { setCreateTicketOpen } = useUIStore()
 
-  // API mutations for real projects
+  // API mutations
   const moveTicketMutation = useMoveTicket()
   const moveTicketsMutation = useMoveTickets()
-
-  // Check if this is a demo project
-  const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
 
   // Get unfiltered columns for drag/drop operations (need full data for snapshots)
   const columns = getColumns(projectId)
@@ -349,28 +343,26 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
           )
       }
 
-      // Persist to API for real projects (after optimistic update)
-      if (!isDemoProject) {
-        if (isSingleDrag) {
-          // Single ticket move/reorder
-          moveTicketMutation.mutate({
-            projectId,
-            ticketId: draggedIds[0],
-            fromColumnId: sourceColumn.id,
-            toColumnId: targetColumnId,
-            newOrder: insertIndex,
-            previousColumns: snapshot,
-          })
-        } else {
-          // Multiple tickets move
-          moveTicketsMutation.mutate({
-            projectId,
-            ticketIds: draggedIds,
-            toColumnId: targetColumnId,
-            newOrder: insertIndex,
-            previousColumns: snapshot,
-          })
-        }
+      // Persist to API (after optimistic update)
+      if (isSingleDrag) {
+        // Single ticket move/reorder
+        moveTicketMutation.mutate({
+          projectId,
+          ticketId: draggedIds[0],
+          fromColumnId: sourceColumn.id,
+          toColumnId: targetColumnId,
+          newOrder: insertIndex,
+          previousColumns: snapshot,
+        })
+      } else {
+        // Multiple tickets move
+        moveTicketsMutation.mutate({
+          projectId,
+          ticketIds: draggedIds,
+          toColumnId: targetColumnId,
+          newOrder: insertIndex,
+          previousColumns: snapshot,
+        })
       }
 
       // Cleanup
@@ -393,7 +385,6 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
       projectKey,
       reorderTicket,
       reorderTickets,
-      isDemoProject,
       moveTicketMutation,
       moveTicketsMutation,
     ],
