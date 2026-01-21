@@ -4,16 +4,18 @@ import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { FilesystemStorage } from '@/lib/file-storage'
+import { processAvatarImage } from '@/lib/image-processing'
+import { logger } from '@/lib/logger'
 
 const fileStorage = new FilesystemStorage()
 
 const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024 // 5MB
 
-function generateAvatarFilename(userId: string, originalName: string): string {
+function generateAvatarFilename(userId: string): string {
   const timestamp = Date.now()
-  const extension = originalName.split('.').pop() || 'jpg'
-  return `avatar-${userId}-${timestamp}.${extension}`
+  // Always use .webp since we convert all avatars to WebP
+  return `avatar-${userId}-${timestamp}.webp`
 }
 
 // POST /api/me/avatar - Upload avatar
@@ -54,12 +56,30 @@ export async function POST(request: Request) {
     const avatarDir = fileStorage.join(process.cwd(), 'public', 'uploads', 'avatars')
     await fileStorage.ensureDirectoryExists(avatarDir)
 
-    const filename = generateAvatarFilename(currentUser.id, file.name)
+    const filename = generateAvatarFilename(currentUser.id)
     const filepath = fileStorage.join(avatarDir, filename)
 
     const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    await fileStorage.writeFile(filepath, buffer)
+    const rawBuffer = Buffer.from(bytes)
+
+    // Process image: resize, strip metadata, convert to WebP
+    let processedBuffer: Buffer
+    try {
+      processedBuffer = await processAvatarImage(rawBuffer)
+      logger.debug('Avatar processed successfully', {
+        originalSize: rawBuffer.length,
+        processedSize: processedBuffer.length,
+        reduction: `${Math.round((1 - processedBuffer.length / rawBuffer.length) * 100)}%`,
+      })
+    } catch (error) {
+      logger.error('Failed to process avatar image', { error })
+      return NextResponse.json(
+        { error: 'Failed to process image. Please try a different file.' },
+        { status: 400 },
+      )
+    }
+
+    await fileStorage.writeFile(filepath, processedBuffer)
 
     const avatarUrl = `/uploads/avatars/${filename}`
 

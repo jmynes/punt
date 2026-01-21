@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { ImageCropDialog, resizeImageForCropper } from '@/components/profile/image-crop-dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,7 +56,13 @@ export default function ProfilePage() {
         isSystemAdmin: session.user.isSystemAdmin,
       })
     }
-  }, [session?.user?.id, session?.user?.name, session?.user?.email, session?.user?.avatar, session?.user?.isSystemAdmin])
+  }, [
+    session?.user?.id,
+    session?.user?.name,
+    session?.user?.email,
+    session?.user?.avatar,
+    session?.user?.isSystemAdmin,
+  ])
 
   // Profile form state
   const [name, setName] = useState('')
@@ -92,6 +99,11 @@ export default function ProfilePage() {
   const [optimisticAvatar, setOptimisticAvatar] = useState<string | null | 'pending'>(null)
   const blobUrlRef = useRef<string | null>(null)
 
+  // Crop dialog state
+  const [cropDialogOpen, setCropDialogOpen] = useState(false)
+  const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null)
+  const selectedFileRef = useRef<File | null>(null)
+
   // Clear optimistic avatar when session catches up
   useEffect(() => {
     if (optimisticAvatar !== 'pending' && optimisticAvatar !== null) {
@@ -99,7 +111,11 @@ export default function ProfilePage() {
       if (session?.user?.avatar === optimisticAvatar) {
         setOptimisticAvatar(null)
       }
-    } else if (optimisticAvatar === null && session?.user?.avatar === null && stableUser?.avatar !== null) {
+    } else if (
+      optimisticAvatar === null &&
+      session?.user?.avatar === null &&
+      stableUser?.avatar !== null
+    ) {
       // Session shows null (avatar removed), update stable user
       // This handles the case where we removed avatar and session caught up
     }
@@ -263,9 +279,30 @@ export default function ProfilePage() {
     }
   }
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    // Reset the input immediately so the same file can be selected again
+    e.target.value = ''
+
+    // Store file reference
+    selectedFileRef.current = file
+
+    try {
+      // Resize large images for better cropper performance
+      const resizedImageSrc = await resizeImageForCropper(file)
+      setSelectedImageSrc(resizedImageSrc)
+      setCropDialogOpen(true)
+    } catch (error) {
+      console.error('Failed to load image:', error)
+      toast.error('Failed to load image')
+    }
+  }
+
+  const handleCroppedImage = async (croppedBlob: Blob) => {
+    // Clear selected image (data URL, no need to revoke)
+    setSelectedImageSrc(null)
 
     // Clean up previous blob URL if any
     if (blobUrlRef.current) {
@@ -275,14 +312,19 @@ export default function ProfilePage() {
 
     setAvatarLoading(true)
 
-    // Create optimistic preview URL
-    const previewUrl = URL.createObjectURL(file)
+    // Create optimistic preview URL from cropped blob
+    const previewUrl = URL.createObjectURL(croppedBlob)
     blobUrlRef.current = previewUrl
     setOptimisticAvatar(previewUrl)
 
     try {
+      // Create a File from the cropped Blob
+      const originalFile = selectedFileRef.current
+      const fileName = originalFile?.name || 'avatar.jpg'
+      const croppedFile = new File([croppedBlob], fileName, { type: 'image/jpeg' })
+
       const formData = new FormData()
-      formData.append('avatar', file)
+      formData.append('avatar', croppedFile)
 
       const res = await fetch('/api/me/avatar', {
         method: 'POST',
@@ -326,10 +368,16 @@ export default function ProfilePage() {
       toast.error(error instanceof Error ? error.message : 'Failed to upload avatar')
     } finally {
       setAvatarLoading(false)
+      selectedFileRef.current = null
     }
+  }
 
-    // Reset the input so the same file can be selected again
-    e.target.value = ''
+  const handleCropDialogClose = (open: boolean) => {
+    if (!open) {
+      setSelectedImageSrc(null)
+      selectedFileRef.current = null
+    }
+    setCropDialogOpen(open)
   }
 
   const handleAvatarRemove = async () => {
@@ -496,7 +544,7 @@ export default function ProfilePage() {
                         type="file"
                         accept="image/jpeg,image/png,image/gif,image/webp"
                         className="hidden"
-                        onChange={handleAvatarUpload}
+                        onChange={handleAvatarSelect}
                         disabled={avatarLoading}
                       />
                     </label>
@@ -570,7 +618,8 @@ export default function ProfilePage() {
               <CardTitle className="text-zinc-100">Email Address</CardTitle>
             </div>
             <CardDescription className="text-zinc-500">
-              Your current email is <span className="text-zinc-300">{stableUser.email || 'not set'}</span>
+              Your current email is{' '}
+              <span className="text-zinc-300">{stableUser.email || 'not set'}</span>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -778,6 +827,16 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Image Crop Dialog */}
+      {selectedImageSrc && (
+        <ImageCropDialog
+          open={cropDialogOpen}
+          onOpenChange={handleCropDialogClose}
+          imageSrc={selectedImageSrc}
+          onCropComplete={handleCroppedImage}
+        />
+      )}
     </div>
   )
 }
