@@ -86,9 +86,10 @@ export default function BacklogPage() {
   // API mutations
   const updateTicketSprintMutation = useUpdateTicketSprint(projectId)
 
-  // Drag state for sprint sections
+  // Drag state for sprint sections and backlog table
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
   const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
+  const [backlogDropPosition, setBacklogDropPosition] = useState<number | null>(null)
   const draggedIdsRef = useRef<string[]>([])
   // Store active drag data because sortable item gets filtered out during drag
   const activeDragDataRef = useRef<{
@@ -228,17 +229,50 @@ export default function BacklogPage() {
     [selectedTicketIds],
   )
 
-  const handleDragOver = useCallback((_event: DragOverEvent) => {
-    // Visual feedback handled by SprintSection's isOver state
-  }, [])
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { over } = event
+      if (!over) {
+        setBacklogDropPosition(null)
+        return
+      }
+
+      const overId = over.id as string
+      const overType = over.data.current?.type
+      const draggedIds = draggedIdsRef.current
+
+      // Only track drop position for backlog tickets
+      if (overType === 'backlog-ticket') {
+        // If hovering over a dragged ticket, don't show indicator
+        if (draggedIds.includes(overId)) {
+          setBacklogDropPosition(null)
+          return
+        }
+
+        // Find the index in backlog tickets
+        const backlogTickets = ticketsBySprint.backlog ?? []
+        const overTicketIndex = backlogTickets.findIndex((t) => t.id === overId)
+        if (overTicketIndex >= 0) {
+          setBacklogDropPosition(overTicketIndex)
+        } else {
+          setBacklogDropPosition(null)
+        }
+      } else {
+        setBacklogDropPosition(null)
+      }
+    },
+    [ticketsBySprint.backlog],
+  )
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const draggedIds = draggedIdsRef.current
       const { active, over } = event
 
+      // Clean up all drag state
       setActiveTicket(null)
       setDraggingTicketIds([])
+      setBacklogDropPosition(null)
       draggedIdsRef.current = []
 
       if (!over) return
@@ -488,13 +522,12 @@ export default function BacklogPage() {
               <SprintSection
                 key={sprint.id}
                 sprint={sprint}
-                tickets={
-                  ticketsBySprint[sprint.id]?.filter((t) => !draggingTicketIds.includes(t.id)) ?? []
-                }
+                tickets={ticketsBySprint[sprint.id] ?? []}
                 projectKey={projectKey}
                 projectId={projectId}
                 statusColumns={columns}
                 defaultExpanded={true}
+                draggingTicketIds={draggingTicketIds}
               />
             ))}
 
@@ -503,13 +536,12 @@ export default function BacklogPage() {
               <SprintSection
                 key={sprint.id}
                 sprint={sprint}
-                tickets={
-                  ticketsBySprint[sprint.id]?.filter((t) => !draggingTicketIds.includes(t.id)) ?? []
-                }
+                tickets={ticketsBySprint[sprint.id] ?? []}
                 projectKey={projectKey}
                 projectId={projectId}
                 statusColumns={columns}
                 defaultExpanded={true}
+                draggingTicketIds={draggingTicketIds}
               />
             ))}
           </div>
@@ -518,13 +550,13 @@ export default function BacklogPage() {
         {/* Backlog table with filters and columns */}
         <div className="flex-1 overflow-hidden min-h-0">
           <BacklogTable
-            tickets={
-              ticketsBySprint.backlog?.filter((t) => !draggingTicketIds.includes(t.id)) ?? []
-            }
+            tickets={ticketsBySprint.backlog ?? []}
             columns={columns}
             projectKey={projectKey}
             projectId={projectId}
             useExternalDnd={true}
+            externalDraggingIds={draggingTicketIds}
+            externalDropPosition={backlogDropPosition}
           />
         </div>
 

@@ -40,6 +40,10 @@ interface BacklogTableProps {
   onDragStart?: (event: DragStartEvent) => void
   /** Called when drag ends (for external DnD coordination) */
   onDragEnd?: (event: DragEndEvent) => void
+  /** IDs of tickets being dragged (for external DnD mode) */
+  externalDraggingIds?: string[]
+  /** Drop position index (for external DnD mode) */
+  externalDropPosition?: number | null
 }
 
 export function BacklogTable({
@@ -50,6 +54,8 @@ export function BacklogTable({
   useExternalDnd = false,
   onDragStart: externalDragStart,
   onDragEnd: externalDragEnd,
+  externalDraggingIds = [],
+  externalDropPosition = null,
 }: BacklogTableProps) {
   const {
     columns,
@@ -577,10 +583,13 @@ export function BacklogTable({
       <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
         <tbody>
           {filteredTickets.map((ticket, index) => {
-            const isBeingDragged = draggingTicketIds.includes(ticket.id)
+            // Use external state when using external DnD, otherwise use internal state
+            const activeDraggingIds = useExternalDnd ? externalDraggingIds : draggingTicketIds
+            const activeDropPosition = useExternalDnd ? externalDropPosition : dropPosition
+            const isBeingDragged = activeDraggingIds.includes(ticket.id)
             // Show drop indicator before this ticket if this is the drop position
             // Don't show indicator on the dragged ticket itself
-            const showIndicator = !isBeingDragged && index === dropPosition
+            const showIndicator = !isBeingDragged && index === activeDropPosition
 
             return (
               <BacklogRow
@@ -593,7 +602,7 @@ export function BacklogTable({
                 allTicketIds={ticketIds}
                 isBeingDragged={isBeingDragged}
                 showDropIndicator={showIndicator}
-                draggingCount={draggingTicketIds.length}
+                draggingCount={activeDraggingIds.length}
               />
             )
           })}
