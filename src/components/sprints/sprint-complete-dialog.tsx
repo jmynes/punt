@@ -21,23 +21,20 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCompleteSprint, useProjectSprints, useSprintDetail } from '@/hooks/queries/use-sprints'
+import { isCompletedColumn } from '@/lib/sprint-utils'
+import { useBoardStore } from '@/stores/board-store'
 import { useSprintStore } from '@/stores/sprint-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { SprintCompletionAction } from '@/types'
 
 interface SprintCompleteDialogProps {
   projectId: string
-  incompleteCount?: number
-  completedCount?: number
 }
 
-export function SprintCompleteDialog({
-  projectId,
-  incompleteCount = 0,
-  completedCount = 0,
-}: SprintCompleteDialogProps) {
+export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
   const { sprintCompleteOpen, sprintCompleteId, closeSprintComplete } = useUIStore()
   const { dismissSprintPrompt } = useSprintStore()
+  const { getColumns } = useBoardStore()
   const completeSprint = useCompleteSprint(projectId)
   const { data: sprints } = useProjectSprints(projectId)
   const { data: sprint } = useSprintDetail(projectId, sprintCompleteId ?? '')
@@ -51,6 +48,31 @@ export function SprintCompleteDialog({
     () => sprints?.filter((s) => s.status === 'planning') ?? [],
     [sprints],
   )
+
+  // Calculate completed vs incomplete counts from board store
+  const { completedCount, incompleteCount } = useMemo(() => {
+    if (!sprintCompleteId) return { completedCount: 0, incompleteCount: 0 }
+
+    const columns = getColumns(projectId)
+    const doneColumnIds = columns.filter((col) => isCompletedColumn(col.name)).map((col) => col.id)
+
+    let completed = 0
+    let incomplete = 0
+
+    columns.forEach((col) => {
+      col.tickets.forEach((ticket) => {
+        if (ticket.sprintId === sprintCompleteId) {
+          if (doneColumnIds.includes(col.id)) {
+            completed++
+          } else {
+            incomplete++
+          }
+        }
+      })
+    })
+
+    return { completedCount: completed, incompleteCount: incomplete }
+  }, [projectId, sprintCompleteId, getColumns])
 
   const handleClose = useCallback(() => {
     closeSprintComplete()
