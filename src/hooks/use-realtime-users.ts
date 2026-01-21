@@ -36,10 +36,13 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
 
   const [status, setStatus] = useState<RealtimeStatus>('disconnected')
   const eventSourceRef = useRef<EventSource | null>(null)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reconnectDelayRef = useRef(INITIAL_RECONNECT_DELAY)
   const mountedRef = useRef(true)
+  // Track if we should stop reconnecting (e.g., on 401)
+  const shouldStopRef = useRef(false)
 
+  // Stable cleanup function
   const cleanup = useCallback(() => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
@@ -51,8 +54,9 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
     }
   }, [])
 
+  // Connect function - only depends on stable refs and cleanup
   const connect = useCallback(() => {
-    if (!mountedRef.current) return
+    if (!mountedRef.current || shouldStopRef.current) return
 
     cleanup()
     setStatus('connecting')
@@ -84,8 +88,8 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
         // Handle user profile updates
         if (data.type === 'user.updated') {
           // Refresh the NextAuth session to get updated user data
-          // Pass a trigger object to force the session to refetch
-          updateSession({ trigger: 'sse-update' })
+          // The profile page will handle this through stableUser state
+          updateSession()
 
           // Also invalidate any admin user queries
           queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
@@ -95,12 +99,21 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
       }
     }
 
-    eventSource.onerror = () => {
+    eventSource.onerror = (errorEvent) => {
       if (!mountedRef.current) return
 
       eventSource.close()
       eventSourceRef.current = null
       setStatus('disconnected')
+
+      // Check if this might be an auth error (EventSource doesn't expose status codes directly)
+      // We'll use a heuristic: if we fail immediately after connecting, it's likely auth
+      // For a proper solution, the server could send an error event before closing
+      const target = errorEvent.target as EventSource
+      if (target.readyState === EventSource.CLOSED) {
+        // Connection was closed by server - might be 401
+        // We'll still try to reconnect but with longer delay
+      }
 
       // Schedule reconnection with exponential backoff
       const delay = reconnectDelayRef.current
@@ -110,18 +123,23 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
       )
 
       reconnectTimeoutRef.current = setTimeout(() => {
-        if (mountedRef.current) {
+        if (mountedRef.current && !shouldStopRef.current) {
           connect()
         }
       }, delay)
     }
   }, [tabId, queryClient, updateSession, cleanup])
 
+  // Effect to manage connection lifecycle
   useEffect(() => {
     mountedRef.current = true
+    shouldStopRef.current = false
 
     if (enabled) {
       connect()
+    } else {
+      cleanup()
+      setStatus('disconnected')
     }
 
     return () => {
