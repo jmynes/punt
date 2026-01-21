@@ -3,10 +3,11 @@
 import { List, Loader2, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef } from 'react'
-import { BacklogTable, ColumnConfig } from '@/components/backlog'
-import { SprintHeader } from '@/components/sprints'
+import { ColumnConfig } from '@/components/backlog'
+import { SprintSection } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
+import { useActiveSprint } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { useBoardStore } from '@/stores/board-store'
@@ -37,6 +38,9 @@ export default function BacklogPage() {
     enabled: _hasHydrated && columnsLoaded,
   })
 
+  // Fetch active sprint
+  const { data: activeSprint } = useActiveSprint(projectId)
+
   // Get columns for this project
   const columns = getColumns(projectId)
 
@@ -64,6 +68,16 @@ export default function BacklogPage() {
   const allTickets = useMemo(() => {
     return columns.flatMap((col) => col.tickets)
   }, [columns])
+
+  // Split tickets into sprint vs backlog
+  const sprintTickets = useMemo(() => {
+    if (!activeSprint) return []
+    return allTickets.filter((t) => t.sprintId === activeSprint.id)
+  }, [allTickets, activeSprint])
+
+  const backlogTickets = useMemo(() => {
+    return allTickets.filter((t) => !t.sprintId)
+  }, [allTickets])
 
   // Find the selected ticket
   const selectedTicket = useMemo(
@@ -114,13 +128,8 @@ export default function BacklogPage() {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
-      {/* Sprint header */}
-      <div className="px-4 pt-4 lg:px-6">
-        <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
-      </div>
-
       {/* Page header */}
-      <div className="flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+      <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-zinc-800">
             <List className="h-5 w-5 text-zinc-400" />
@@ -141,13 +150,26 @@ export default function BacklogPage() {
         </div>
       </div>
 
-      {/* Backlog table */}
-      <div className="flex-1 overflow-hidden">
-        <BacklogTable
-          tickets={allTickets}
-          columns={columns}
+      {/* Scrollable content with sprint and backlog sections */}
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 lg:p-6 space-y-4">
+        {/* Active Sprint Section - Jira-style collapsible section */}
+        {activeSprint && (
+          <SprintSection
+            sprint={activeSprint}
+            tickets={sprintTickets}
+            projectKey={projectKey}
+            projectId={projectId}
+            defaultExpanded={true}
+          />
+        )}
+
+        {/* Backlog Section */}
+        <SprintSection
+          sprint={null}
+          tickets={backlogTickets}
           projectKey={projectKey}
           projectId={projectId}
+          defaultExpanded={true}
         />
       </div>
 
