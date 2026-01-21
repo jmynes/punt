@@ -84,7 +84,8 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
         // Handle user profile updates
         if (data.type === 'user.updated') {
           // Refresh the NextAuth session to get updated user data
-          updateSession()
+          // Pass a trigger object to force the session to refetch
+          updateSession({ trigger: 'sse-update' })
 
           // Also invalidate any admin user queries
           queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })

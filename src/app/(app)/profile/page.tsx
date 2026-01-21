@@ -3,7 +3,7 @@
 import { Camera, KeyRound, Mail, Shield, Trash2, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -30,9 +30,41 @@ export default function ProfilePage() {
   const _router = useRouter()
   const user = session?.user
 
+  // Track previous values to prevent flashing during session updates
+  const lastKnownUserRef = useRef<{
+    name: string
+    avatar: string | null
+    email: string | null
+    id: string
+    isSystemAdmin: boolean
+  } | null>(null)
+
+  // Update ref when we have valid user data
+  useEffect(() => {
+    if (user?.id) {
+      lastKnownUserRef.current = {
+        name: user.name,
+        avatar: user.avatar,
+        email: user.email,
+        id: user.id,
+        isSystemAdmin: user.isSystemAdmin,
+      }
+    }
+  }, [user?.id, user?.name, user?.avatar, user?.email, user?.isSystemAdmin])
+
+  // Use last known values as fallback during session refresh
+  const displayUser = user?.id ? user : lastKnownUserRef.current
+
   // Profile form state (display name only)
   const [name, setName] = useState(user?.name || '')
   const [profileLoading, setProfileLoading] = useState(false)
+
+  // Sync name input with session when it changes from SSE
+  useEffect(() => {
+    if (user?.name && !profileLoading) {
+      setName(user.name)
+    }
+  }, [user?.name, profileLoading])
 
   // Email change state
   const [newEmail, setNewEmail] = useState('')
@@ -45,13 +77,25 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordLoading, setPasswordLoading] = useState(false)
 
-  // Avatar state
+  // Avatar state - track optimistic URL for immediate display
   const [avatarLoading, setAvatarLoading] = useState(false)
+  const [optimisticAvatar, setOptimisticAvatar] = useState<string | null | undefined>(undefined)
+
+  // Clear optimistic avatar when session updates with new value
+  useEffect(() => {
+    if (user?.avatar !== undefined && optimisticAvatar !== undefined) {
+      setOptimisticAvatar(undefined)
+    }
+  }, [user?.avatar, optimisticAvatar])
 
   // Delete account state
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
+
+  // Determine which avatar to show: optimistic > session > last known
+  const displayAvatar =
+    optimisticAvatar !== undefined ? optimisticAvatar : (displayUser?.avatar ?? null)
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -153,6 +197,10 @@ export default function ProfilePage() {
 
     setAvatarLoading(true)
 
+    // Create optimistic preview URL
+    const previewUrl = URL.createObjectURL(file)
+    setOptimisticAvatar(previewUrl)
+
     try {
       const formData = new FormData()
       formData.append('avatar', file)
@@ -168,20 +216,30 @@ export default function ProfilePage() {
       const data = await res.json()
 
       if (!res.ok) {
+        // Revert optimistic update on error
+        setOptimisticAvatar(undefined)
         throw new Error(data.error || 'Failed to upload avatar')
       }
 
+      // Set the real URL from server response
+      setOptimisticAvatar(data.avatar)
       await updateSession()
-      toast.success('Avatar updated successfully')
+      toast.success('Avatar updated')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to upload avatar')
     } finally {
       setAvatarLoading(false)
+      // Cleanup blob URL
+      URL.revokeObjectURL(previewUrl)
     }
   }
 
   const handleAvatarRemove = async () => {
     setAvatarLoading(true)
+
+    // Optimistically remove avatar
+    const previousAvatar = displayAvatar
+    setOptimisticAvatar(null)
 
     try {
       const res = await fetch('/api/me/avatar', {
@@ -193,6 +251,8 @@ export default function ProfilePage() {
       const data = await res.json()
 
       if (!res.ok) {
+        // Revert optimistic update on error
+        setOptimisticAvatar(previousAvatar)
         throw new Error(data.error || 'Failed to remove avatar')
       }
 
@@ -238,13 +298,16 @@ export default function ProfilePage() {
     }
   }
 
-  if (!user) {
+  if (!displayUser) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="animate-pulse text-zinc-500">Loading...</div>
       </div>
     )
   }
+
+  // Use the name from form state (synced with session) for display
+  const displayName = name || displayUser.name
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -280,12 +343,12 @@ export default function ProfilePage() {
             <div className="flex items-center gap-6">
               <div className="relative group">
                 <Avatar className="h-24 w-24 ring-4 ring-zinc-800 transition-all group-hover:ring-amber-500/50">
-                  <AvatarImage src={user.avatar || undefined} alt={user.name} />
+                  <AvatarImage src={displayAvatar || undefined} alt={displayName} />
                   <AvatarFallback
                     className="text-2xl font-semibold text-white"
-                    style={{ backgroundColor: getAvatarColor(user.id || user.name) }}
+                    style={{ backgroundColor: getAvatarColor(displayUser.id) }}
                   >
-                    {getInitials(user.name)}
+                    {getInitials(displayName)}
                   </AvatarFallback>
                 </Avatar>
                 {avatarLoading && (
@@ -315,7 +378,7 @@ export default function ProfilePage() {
                       />
                     </label>
                   </Button>
-                  {user.avatar && (
+                  {displayAvatar && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -359,7 +422,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {user.isSystemAdmin && (
+              {displayUser.isSystemAdmin && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg max-w-md">
                   <Shield className="h-4 w-4 text-amber-500" />
                   <span className="text-sm text-amber-400">System Administrator</span>
@@ -383,7 +446,7 @@ export default function ProfilePage() {
               <CardTitle className="text-zinc-100">Email Address</CardTitle>
             </div>
             <CardDescription className="text-zinc-500">
-              Your current email is <span className="text-zinc-300">{user.email || 'not set'}</span>
+              Your current email is <span className="text-zinc-300">{displayUser.email || 'not set'}</span>
             </CardDescription>
           </CardHeader>
           <CardContent>

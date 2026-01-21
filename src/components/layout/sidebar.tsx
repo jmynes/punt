@@ -2,6 +2,8 @@
 
 import {
   Check,
+  ChevronDown,
+  ChevronRight,
   FileText,
   Home,
   Layers,
@@ -16,7 +18,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,6 +64,35 @@ export function Sidebar() {
   const { projects, isLoading } = useProjectsStore()
   const [editMode, setEditMode] = useState(false)
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set())
+
+  // Default all projects to expanded when they load
+  useEffect(() => {
+    if (projects.length > 0) {
+      setExpandedProjectIds((prev) => {
+        // Add any new projects to expanded set (keeps existing expansion state)
+        const newSet = new Set(prev)
+        for (const project of projects) {
+          if (!prev.has(project.id)) {
+            newSet.add(project.id)
+          }
+        }
+        return newSet
+      })
+    }
+  }, [projects])
+
+  const toggleProjectExpanded = (projectId: string) => {
+    setExpandedProjectIds((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId)
+      } else {
+        newSet.add(projectId)
+      }
+      return newSet
+    })
+  }
 
   // Fetch projects from API and sync with store
   useProjects()
@@ -196,56 +227,121 @@ export function Sidebar() {
               ) : (
                 projects.map((project) => {
                   const isActive = activeProjectId === project.id
+                  const isExpanded = expandedProjectIds.has(project.id)
+                  const isOnProjectPage = pathname.startsWith(`/projects/${project.id}`)
                   return (
-                    <div key={project.id} className="relative flex items-center">
-                      <Link
-                        href={`/projects/${project.id}/board`}
-                        onClick={() => setActiveProjectId(project.id)}
-                        className="flex-1"
-                      >
+                    <div key={project.id}>
+                      <div className="relative flex items-center">
                         <Button
                           variant="ghost"
-                          className={cn(
-                            'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
-                            isActive && 'bg-zinc-800/50 text-zinc-100',
-                          )}
+                          size="icon"
+                          className="h-9 w-6 shrink-0 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                          onClick={() => toggleProjectExpanded(project.id)}
                         >
-                          <div
-                            className="h-3 w-3 rounded-sm"
-                            style={{ backgroundColor: project.color }}
-                          />
-                          <span className="truncate">{project.name}</span>
-                          {!editMode && (
-                            <span className="ml-auto text-xs text-zinc-600">{project.key}</span>
+                          {isExpanded ? (
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          ) : (
+                            <ChevronRight className="h-3.5 w-3.5" />
                           )}
                         </Button>
-                      </Link>
-                      {editMode && (
-                        <div className="absolute right-1 flex items-center gap-0.5">
+                        <Link
+                          href={`/projects/${project.id}/board`}
+                          onClick={() => setActiveProjectId(project.id)}
+                          className="flex-1 min-w-0"
+                        >
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              openEditProject(project.id)
-                            }}
+                            className={cn(
+                              'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 pl-1',
+                              (isActive || isOnProjectPage) && 'bg-zinc-800/50 text-zinc-100',
+                            )}
                           >
-                            <Pencil className="h-3 w-3" />
+                            <div
+                              className="h-3 w-3 rounded-sm shrink-0"
+                              style={{ backgroundColor: project.color }}
+                            />
+                            <span className="truncate">{project.name}</span>
+                            {!editMode && (
+                              <span className="ml-auto text-xs text-zinc-600 shrink-0">
+                                {project.key}
+                              </span>
+                            )}
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-zinc-500 hover:text-red-400"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              setDeleteProjectId(project.id)
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                        </Link>
+                        {editMode && (
+                          <div className="absolute right-1 flex items-center gap-0.5">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                openEditProject(project.id)
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-zinc-500 hover:text-red-400"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setDeleteProjectId(project.id)
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      {/* Project sub-nav */}
+                      {isExpanded && (
+                        <div className="ml-6 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                          <Link href={`/projects/${project.id}/board`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
+                                pathname === `/projects/${project.id}/board` &&
+                                  'bg-zinc-800/50 text-zinc-100',
+                              )}
+                            >
+                              <Layers className="h-3.5 w-3.5" />
+                              Board
+                            </Button>
+                          </Link>
+                          <Link href={`/projects/${project.id}/backlog`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
+                                pathname === `/projects/${project.id}/backlog` &&
+                                  'bg-zinc-800/50 text-zinc-100',
+                              )}
+                            >
+                              <List className="h-3.5 w-3.5" />
+                              Backlog
+                            </Button>
+                          </Link>
+                          <Link href={`/projects/${project.id}/sprints`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
+                                pathname === `/projects/${project.id}/sprints` &&
+                                  'bg-zinc-800/50 text-zinc-100',
+                              )}
+                            >
+                              <Target className="h-3.5 w-3.5" />
+                              Sprints
+                            </Button>
+                          </Link>
                         </div>
                       )}
                     </div>
@@ -254,64 +350,6 @@ export function Sidebar() {
               )}
             </div>
           </div>
-
-          {/* Project sub-nav when project is selected */}
-          {activeProjectId && projects.some((p) => p.id === activeProjectId) && (
-            <div className="mt-4 ml-4 space-y-1 border-l border-zinc-800 pl-3">
-              <Link href={`/projects/${activeProjectId}/board`}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100',
-                    pathname.includes('/board') && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Layers className="h-3.5 w-3.5" />
-                  Board
-                </Button>
-              </Link>
-              <Link href={`/projects/${activeProjectId}/backlog`}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100',
-                    pathname.includes('/backlog') && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <List className="h-3.5 w-3.5" />
-                  Backlog
-                </Button>
-              </Link>
-              <Link href={`/projects/${activeProjectId}/sprints`}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100',
-                    pathname.includes('/sprints') && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Target className="h-3.5 w-3.5" />
-                  Sprints
-                </Button>
-              </Link>
-              <Link href="/settings">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100',
-                    pathname === '/settings' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Settings className="h-3.5 w-3.5" />
-                  Settings
-                </Button>
-              </Link>
-            </div>
-          )}
         </ScrollArea>
 
         {/* Bottom section */}
