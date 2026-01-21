@@ -1,7 +1,6 @@
 'use client'
 
 import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { format, isBefore, isToday } from 'date-fns'
 import { GripVertical, User } from 'lucide-react'
 import { PriorityBadge } from '@/components/common/priority-badge'
@@ -47,7 +46,7 @@ export function SprintTableRow({
   const { isSelected, selectTicket, toggleTicket, selectRange } = useSelectionStore()
   const selected = isSelected(ticket.id)
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef } = useSortable({
     id: ticket.id,
     data: {
       type: 'ticket',
@@ -56,10 +55,8 @@ export function SprintTableRow({
     },
   })
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition: isDragging ? 'none' : transition,
-  }
+  // Don't apply transform - we want tickets to stay in place until drop
+  // The drop indicator shows where they'll land
 
   const handleClick = (e: React.MouseEvent) => {
     if (e.ctrlKey || e.metaKey) {
@@ -176,7 +173,6 @@ export function SprintTableRow({
       <TicketContextMenu ticket={ticket}>
         <tr
           ref={setNodeRef}
-          style={style}
           data-ticket-row
           data-ticket-id={ticket.id}
           onClick={handleClick}
