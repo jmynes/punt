@@ -87,36 +87,30 @@ export const createMockColumn = (overrides?: Partial<ColumnWithTickets>): Column
   ...overrides,
 })
 
-// Mock columns with tickets
+// Mock columns with tickets (4 columns: To Do, In Progress, Review, Done)
 export const createMockColumns = (): ColumnWithTickets[] => [
   createMockColumn({
     id: 'col-1',
-    name: 'Backlog',
+    name: 'To Do',
     order: 0,
     tickets: [createMockTicket({ id: 'ticket-1', columnId: 'col-1', order: 0 })],
   }),
   createMockColumn({
     id: 'col-2',
-    name: 'To Do',
+    name: 'In Progress',
     order: 1,
     tickets: [createMockTicket({ id: 'ticket-2', columnId: 'col-2', order: 0 })],
   }),
   createMockColumn({
     id: 'col-3',
-    name: 'In Progress',
+    name: 'Review',
     order: 2,
     tickets: [],
   }),
   createMockColumn({
     id: 'col-4',
-    name: 'In Review',
-    order: 3,
-    tickets: [],
-  }),
-  createMockColumn({
-    id: 'col-5',
     name: 'Done',
-    order: 4,
+    order: 3,
     tickets: [],
   }),
 ]

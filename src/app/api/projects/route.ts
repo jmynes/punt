@@ -101,11 +101,10 @@ export async function POST(request: Request) {
         color,
         columns: {
           create: [
-            { name: 'Backlog', order: 0 },
-            { name: 'To Do', order: 1 },
-            { name: 'In Progress', order: 2 },
-            { name: 'In Review', order: 3 },
-            { name: 'Done', order: 4 },
+            { name: 'To Do', order: 0 },
+            { name: 'In Progress', order: 1 },
+            { name: 'Review', order: 2 },
+            { name: 'Done', order: 3 },
           ],
         },
         members: {

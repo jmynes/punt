@@ -118,11 +118,10 @@ async function main() {
   let columns = existingColumns
   if (columns.length === 0) {
     const columnData = [
-      { name: 'Backlog', order: 0 },
-      { name: 'To Do', order: 1 },
-      { name: 'In Progress', order: 2 },
-      { name: 'Review', order: 3 },
-      { name: 'Done', order: 4 },
+      { name: 'To Do', order: 0 },
+      { name: 'In Progress', order: 1 },
+      { name: 'Review', order: 2 },
+      { name: 'Done', order: 3 },
     ]
 
     columns = await Promise.all(
@@ -136,12 +135,11 @@ async function main() {
         }),
       ),
     )
-    console.log('\nCreated columns: Backlog, To Do, In Progress, Review, Done')
+    console.log('\nCreated columns: To Do, In Progress, Review, Done')
   } else {
     console.log('\nUsing existing columns')
   }
 
-  const backlogCol = columns.find((c) => c.name === 'Backlog')!
   const todoCol = columns.find((c) => c.name === 'To Do')!
   const inProgressCol = columns.find((c) => c.name === 'In Progress')!
   const reviewCol = columns.find((c) => c.name === 'Review')!
@@ -355,7 +353,7 @@ async function main() {
         storyPoints: 3,
         order: 0,
         projectId: project.id,
-        columnId: backlogCol.id,
+        columnId: todoCol.id,
         creatorId: alice.id,
         sprintId: null,
         labels: { connect: [{ id: labels[0].id }] },
@@ -371,7 +369,7 @@ async function main() {
         storyPoints: 2,
         order: 1,
         projectId: project.id,
-        columnId: backlogCol.id,
+        columnId: todoCol.id,
         creatorId: bob.id,
         sprintId: null,
         labels: { connect: [{ id: labels[4].id }] },
@@ -389,7 +387,7 @@ async function main() {
         storyPoints: 5,
         order: 0,
         projectId: project.id,
-        columnId: backlogCol.id,
+        columnId: todoCol.id,
         creatorId: alice.id,
         sprintId: sprint3.id,
         labels: { connect: [{ id: labels[0].id }] },
@@ -405,7 +403,7 @@ async function main() {
         storyPoints: 3,
         order: 1,
         projectId: project.id,
-        columnId: backlogCol.id,
+        columnId: todoCol.id,
         creatorId: carol.id,
         sprintId: sprint3.id,
         labels: { connect: [{ id: labels[0].id }, { id: labels[3].id }] },

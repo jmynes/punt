@@ -3,12 +3,12 @@ import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 
 // Default columns to create for new projects
+// Note: "Backlog" is not a column - tickets without a sprint are in the backlog view
 const DEFAULT_COLUMNS = [
-  { name: 'Backlog', order: 0 },
-  { name: 'To Do', order: 1 },
-  { name: 'In Progress', order: 2 },
-  { name: 'In Review', order: 3 },
-  { name: 'Done', order: 4 },
+  { name: 'To Do', order: 0 },
+  { name: 'In Progress', order: 1 },
+  { name: 'Review', order: 2 },
+  { name: 'Done', order: 3 },
 ]
 
 /**

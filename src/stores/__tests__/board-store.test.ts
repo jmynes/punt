@@ -29,13 +29,13 @@ describe('Board Store', () => {
   describe('getColumns', () => {
     it('should return columns for a project', () => {
       const columns = useBoardStore.getState().getColumns(PROJECT_ID)
-      expect(columns).toHaveLength(5) // Default mock columns
+      expect(columns).toHaveLength(4) // Default mock columns: To Do, In Progress, Review, Done
     })
 
     it('should return default columns for unknown project', () => {
       const columns = useBoardStore.getState().getColumns('unknown-project')
-      expect(columns).toHaveLength(5) // Default columns
-      expect(columns[0].name).toBe('Backlog')
+      expect(columns).toHaveLength(4) // Default columns
+      expect(columns[0].name).toBe('To Do')
     })
   })
 

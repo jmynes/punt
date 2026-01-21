@@ -4,13 +4,13 @@ import { logger } from '@/lib/logger'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
 // Helper to create default columns for a project
+// Note: "Backlog" is not a column - tickets without a sprint are in the backlog view
 function createDefaultColumns(projectId: string): ColumnWithTickets[] {
   return [
-    { id: `${projectId}-col-1`, name: 'Backlog', order: 0, projectId, tickets: [] },
-    { id: `${projectId}-col-2`, name: 'To Do', order: 1, projectId, tickets: [] },
-    { id: `${projectId}-col-3`, name: 'In Progress', order: 2, projectId, tickets: [] },
-    { id: `${projectId}-col-4`, name: 'In Review', order: 3, projectId, tickets: [] },
-    { id: `${projectId}-col-5`, name: 'Done', order: 4, projectId, tickets: [] },
+    { id: `${projectId}-col-1`, name: 'To Do', order: 0, projectId, tickets: [] },
+    { id: `${projectId}-col-2`, name: 'In Progress', order: 1, projectId, tickets: [] },
+    { id: `${projectId}-col-3`, name: 'Review', order: 2, projectId, tickets: [] },
+    { id: `${projectId}-col-4`, name: 'Done', order: 3, projectId, tickets: [] },
   ]
 }
 
