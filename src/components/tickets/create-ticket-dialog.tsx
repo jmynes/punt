@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useCreateLabel, useCreateTicket, useProjectLabels, useProjectSprints } from '@/hooks/queries/use-tickets'
+import { useCreateLabel, useCreateTicket, useDeleteLabel, useProjectLabels, useProjectSprints } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -127,6 +127,7 @@ export function CreateTicketDialog() {
   // Use API mutation for real projects
   const createTicketMutation = useCreateTicket()
   const createLabelMutation = useCreateLabel()
+  const deleteLabelMutation = useDeleteLabel()
 
   // Get columns for the active project
   const projectId = activeProjectId || '1' // Fallback to '1' if no project is active
@@ -166,6 +167,20 @@ export function CreateTicketDialog() {
       }
     },
     [isDemoProject, projectId, createLabelMutation],
+  )
+
+  // Callback for deleting labels
+  const handleDeleteLabel = useCallback(
+    async (labelId: string): Promise<void> => {
+      if (isDemoProject) {
+        // Demo projects don't persist label deletion
+        return
+      }
+
+      // For real projects, use the API
+      await deleteLabelMutation.mutateAsync({ projectId, labelId })
+    },
+    [isDemoProject, projectId, deleteLabelMutation],
   )
 
   // Apply prefill data when dialog opens with clone data
@@ -414,6 +429,7 @@ export function CreateTicketDialog() {
               parentTickets={DEMO_PARENT_TICKETS}
               disabled={isSubmitting}
               onCreateLabel={handleCreateLabel}
+              onDeleteLabel={!isDemoProject ? handleDeleteLabel : undefined}
             />
           </div>
         </ScrollArea>

@@ -1,7 +1,17 @@
 'use client'
 
-import { Check, ChevronsUpDown, Plus, X } from 'lucide-react'
+import { Check, ChevronsUpDown, Plus, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,6 +33,7 @@ interface LabelSelectProps {
   disabled?: boolean
   projectId?: string
   onCreateLabel?: (name: string) => Promise<LabelSummary | null>
+  onDeleteLabel?: (labelId: string) => Promise<void>
 }
 
 export function LabelSelect({
@@ -31,11 +42,14 @@ export function LabelSelect({
   labels,
   disabled,
   onCreateLabel,
+  onDeleteLabel,
 }: LabelSelectProps) {
   const [open, setOpen] = useState(false)
   const [popoverWidth, setPopoverWidth] = useState<number | undefined>(undefined)
   const [searchValue, setSearchValue] = useState('')
   const [isCreating, setIsCreating] = useState(false)
+  const [labelToDelete, setLabelToDelete] = useState<LabelSummary | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const selectedLabels = labels.filter((l) => value.includes(l.id))
@@ -100,6 +114,22 @@ export function LabelSelect({
     },
     [onCreateLabel, isCreating, findExistingLabel, value, onChange],
   )
+
+  const handleDeleteLabel = useCallback(async () => {
+    if (!onDeleteLabel || !labelToDelete || isDeleting) return
+
+    setIsDeleting(true)
+    try {
+      await onDeleteLabel(labelToDelete.id)
+      // Remove from selection if it was selected
+      if (value.includes(labelToDelete.id)) {
+        onChange(value.filter((id) => id !== labelToDelete.id))
+      }
+    } finally {
+      setIsDeleting(false)
+      setLabelToDelete(null)
+    }
+  }, [onDeleteLabel, labelToDelete, isDeleting, value, onChange])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -209,19 +239,32 @@ export function LabelSelect({
                       key={label.id}
                       value={label.name}
                       onSelect={() => toggleLabel(label.id)}
-                      className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
+                      className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100 group"
                     >
                       <div
-                        className="mr-2 h-3 w-3 rounded-full"
+                        className="mr-2 h-3 w-3 rounded-full shrink-0"
                         style={{ backgroundColor: label.color }}
                       />
-                      <span>{label.name}</span>
+                      <span className="flex-1 truncate">{label.name}</span>
                       <Check
                         className={cn(
-                          'ml-auto h-4 w-4',
+                          'h-4 w-4 shrink-0',
                           value.includes(label.id) ? 'opacity-100' : 'opacity-0',
                         )}
                       />
+                      {onDeleteLabel && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setLabelToDelete(label)
+                          }}
+                          className="ml-1 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/30 hover:text-red-400 transition-all shrink-0"
+                          title="Delete label"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -257,6 +300,43 @@ export function LabelSelect({
           ))}
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!labelToDelete} onOpenChange={(open) => !open && setLabelToDelete(null)}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">Delete label?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Are you sure you want to delete the label{' '}
+              <span
+                className="font-medium px-1.5 py-0.5 rounded"
+                style={{
+                  color: labelToDelete?.color,
+                  backgroundColor: `${labelToDelete?.color}20`,
+                }}
+              >
+                {labelToDelete?.name}
+              </span>
+              ? This will remove it from all tickets that use it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+              disabled={isDeleting}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLabel}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

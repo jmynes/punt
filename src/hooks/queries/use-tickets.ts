@@ -832,3 +832,41 @@ export function useCreateLabel() {
     },
   })
 }
+
+interface DeleteLabelInput {
+  projectId: string
+  labelId: string
+}
+
+/**
+ * Delete a label from a project
+ * Removes the label from all tickets that use it
+ */
+export function useDeleteLabel() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ projectId, labelId }: DeleteLabelInput) => {
+      const res = await fetch(`/api/projects/${projectId}/labels/${labelId}`, {
+        method: 'DELETE',
+        headers: {
+          'X-Tab-Id': getTabId(),
+        },
+      })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to delete label')
+      }
+      return res.json()
+    },
+    onSuccess: (_data, { projectId }) => {
+      // Invalidate labels query to refetch without deleted label
+      queryClient.invalidateQueries({ queryKey: labelKeys.byProject(projectId) })
+      // Also invalidate tickets as they may have had this label
+      queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+    },
+    onError: (err) => {
+      toast.error(err.message)
+    },
+  })
+}

@@ -62,7 +62,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import { useCreateLabel, useDeleteTicket, useProjectLabels, useProjectSprints, useUpdateTicket } from '@/hooks/queries/use-tickets'
+import { useCreateLabel, useDeleteLabel, useDeleteTicket, useProjectLabels, useProjectSprints, useUpdateTicket } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
@@ -170,6 +170,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const updateTicketMutation = useUpdateTicket()
   const deleteTicketMutation = useDeleteTicket()
   const createLabelMutation = useCreateLabel()
+  const deleteLabelMutation = useDeleteLabel()
 
   // Check if this is a demo project
   const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
@@ -206,6 +207,20 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       }
     },
     [isDemoProject, projectId, createLabelMutation],
+  )
+
+  // Callback for deleting labels
+  const handleDeleteLabel = useCallback(
+    async (labelId: string): Promise<void> => {
+      if (isDemoProject) {
+        // Demo projects don't persist label deletion
+        return
+      }
+
+      // For real projects, use the API
+      await deleteLabelMutation.mutateAsync({ projectId, labelId })
+    },
+    [isDemoProject, projectId, deleteLabelMutation],
   )
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -1279,6 +1294,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   onChange={(value) => handleChange('labels', value)}
                   labels={availableLabels}
                   onCreateLabel={handleCreateLabel}
+                  onDeleteLabel={!isDemoProject ? handleDeleteLabel : undefined}
                 />
               </div>
 

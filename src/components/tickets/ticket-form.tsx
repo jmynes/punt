@@ -44,6 +44,7 @@ interface TicketFormProps {
   parentTickets?: ParentTicketOption[]
   disabled?: boolean
   onCreateLabel?: (name: string) => Promise<LabelSummary | null>
+  onDeleteLabel?: (labelId: string) => Promise<void>
 }
 
 export function TicketForm({
@@ -54,6 +55,7 @@ export function TicketForm({
   parentTickets = [],
   disabled,
   onCreateLabel,
+  onDeleteLabel,
 }: TicketFormProps) {
   const currentUser = useCurrentUser()
   const { getColumns } = useBoardStore()
@@ -167,6 +169,7 @@ export function TicketForm({
           labels={labels}
           disabled={disabled}
           onCreateLabel={onCreateLabel}
+          onDeleteLabel={onDeleteLabel}
         />
       </div>
 
