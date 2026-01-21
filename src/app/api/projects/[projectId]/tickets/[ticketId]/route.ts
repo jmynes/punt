@@ -151,19 +151,15 @@ export async function PATCH(
       }
     }
 
-    // biome-ignore lint/suspicious/noImplicitAnyLet: Type inferred from db.ticket.update with TICKET_SELECT_FULL
-    let ticket
-    try {
-      ticket = await db.ticket.update({
-        where: { id: ticketId },
-        data: dbUpdateData,
-        select: TICKET_SELECT_FULL,
-      })
-    } catch (dbError) {
+    const ticket = await db.ticket.update({
+      where: { id: ticketId },
+      data: dbUpdateData,
+      select: TICKET_SELECT_FULL,
+    }).catch((dbError) => {
       console.error('Prisma update error:', dbError)
       console.error('Update data was:', JSON.stringify(dbUpdateData, null, 2))
       throw dbError
-    }
+    })
 
     // Emit real-time event for other clients
     // Use 'ticket.moved' if column changed, otherwise 'ticket.updated'
