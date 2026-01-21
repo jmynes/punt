@@ -218,7 +218,7 @@ export function SprintBacklogView({
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const draggedIds = draggedIdsRef.current
-      const { over } = event
+      const { active, over } = event
 
       // Clean up state first
       setActiveTicket(null)
@@ -228,9 +228,12 @@ export function SprintBacklogView({
 
       if (!over || draggedIds.length === 0) return
 
+      const activeId = active.id as string
+      const overId = over.id as string
+      const overData = over.data.current
+
       // Determine target sprint
       let targetSprintId: string | null = null
-      const overData = over.data.current
 
       if (overData?.type === 'sprint-section') {
         targetSprintId = overData.sprintId ?? null
@@ -245,6 +248,37 @@ export function SprintBacklogView({
 
       // Check if any ticket actually changes sprint
       const ticketsChangingSprint = ticketsToMove.filter((t) => t.sprintId !== targetSprintId)
+
+      // Case 1: Internal reordering within the same section
+      if (ticketsChangingSprint.length === 0 && overData?.type === 'ticket') {
+        const sourceSprintId = ticketsToMove[0]?.sprintId ?? null
+        const sectionKey = sourceSprintId ?? 'backlog'
+        const sectionTickets = ticketsBySprint[sectionKey] ?? []
+
+        // Skip if dropped on self
+        if (activeId === overId) return
+
+        // Find indices
+        const oldIndex = sectionTickets.findIndex((t) => t.id === activeId)
+        const newIndex = sectionTickets.findIndex((t) => t.id === overId)
+
+        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+          // Calculate new order values
+          const reordered = [...sectionTickets]
+          const [moved] = reordered.splice(oldIndex, 1)
+          reordered.splice(newIndex, 0, moved)
+
+          // Update order for each ticket based on new position
+          reordered.forEach((ticket, index) => {
+            if (ticket.order !== index) {
+              updateTicket(projectId, ticket.id, { order: index })
+            }
+          })
+        }
+        return
+      }
+
+      // Case 2: Cross-section move
       if (ticketsChangingSprint.length === 0) return
 
       // Get sprint names for toast

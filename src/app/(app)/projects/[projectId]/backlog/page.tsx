@@ -90,6 +90,10 @@ export default function BacklogPage() {
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
   const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
   const [backlogDropTargetId, setBacklogDropTargetId] = useState<string | null>(null)
+  const [sprintDropPosition, setSprintDropPosition] = useState<{
+    sectionId: string
+    insertIndex: number
+  } | null>(null)
   const draggedIdsRef = useRef<string[]>([])
   // Store active drag data because sortable item gets filtered out during drag
   const activeDragDataRef = useRef<{
@@ -229,31 +233,62 @@ export default function BacklogPage() {
     [selectedTicketIds],
   )
 
-  const handleDragOver = useCallback((event: DragOverEvent) => {
-    const { over } = event
-    if (!over) {
-      setBacklogDropTargetId(null)
-      return
-    }
-
-    const overId = over.id as string
-    const overType = over.data.current?.type
-    const draggedIds = draggedIdsRef.current
-
-    // Only track drop target for backlog tickets
-    if (overType === 'backlog-ticket') {
-      // If hovering over a dragged ticket, don't show indicator
-      if (draggedIds.includes(overId)) {
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { over } = event
+      if (!over) {
         setBacklogDropTargetId(null)
+        setSprintDropPosition(null)
         return
       }
 
-      // Track the ID of the ticket we're hovering over
-      setBacklogDropTargetId(overId)
-    } else {
+      const overId = over.id as string
+      const overType = over.data.current?.type
+      const draggedIds = draggedIdsRef.current
+
+      // Track drop target for backlog tickets
+      if (overType === 'backlog-ticket') {
+        setSprintDropPosition(null)
+        if (draggedIds.includes(overId)) {
+          setBacklogDropTargetId(null)
+          return
+        }
+        setBacklogDropTargetId(overId)
+        return
+      }
+
+      // Track drop position for sprint tickets
+      if (overType === 'ticket') {
+        setBacklogDropTargetId(null)
+        if (draggedIds.includes(overId)) {
+          setSprintDropPosition(null)
+          return
+        }
+
+        // Find which sprint contains this ticket
+        for (const [sectionId, sectionTickets] of Object.entries(ticketsBySprint)) {
+          const ticketIndex = sectionTickets.findIndex((t) => t.id === overId)
+          if (ticketIndex !== -1) {
+            setSprintDropPosition({ sectionId, insertIndex: ticketIndex })
+            return
+          }
+        }
+      }
+
+      // Hovering over sprint section (empty area)
+      if (overType === 'sprint-section') {
+        setBacklogDropTargetId(null)
+        const sectionId = (over.data.current?.sprintId as string | null) ?? 'backlog'
+        const sectionTickets = ticketsBySprint[sectionId] ?? []
+        setSprintDropPosition({ sectionId, insertIndex: sectionTickets.length })
+        return
+      }
+
       setBacklogDropTargetId(null)
-    }
-  }, [])
+      setSprintDropPosition(null)
+    },
+    [ticketsBySprint],
+  )
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -264,6 +299,7 @@ export default function BacklogPage() {
       setActiveTicket(null)
       setDraggingTicketIds([])
       setBacklogDropTargetId(null)
+      setSprintDropPosition(null)
       draggedIdsRef.current = []
 
       if (!over) return
@@ -353,10 +389,30 @@ export default function BacklogPage() {
       }
 
       // Case 2b: Row reordering within sprint (ticket to ticket, same sprint)
-      // Note: Sprint internal order is visual only (not persisted to DB yet)
       if (activeType === 'ticket' && overType === 'ticket' && activeSprintId === overSprintId) {
-        // Same sprint reordering - currently visual only via SortableContext
-        // TODO: Add API to persist sprint ticket order when needed
+        const sectionKey = activeSprintId ?? 'backlog'
+        const sectionTickets = ticketsBySprint[sectionKey] ?? []
+
+        // Skip if dropped on self
+        if (activeId === overId) return
+
+        // Find indices
+        const oldIndex = sectionTickets.findIndex((t) => t.id === activeId)
+        const newIndex = sectionTickets.findIndex((t) => t.id === overId)
+
+        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+          // Calculate new order values
+          const reordered = [...sectionTickets]
+          const [moved] = reordered.splice(oldIndex, 1)
+          reordered.splice(newIndex, 0, moved)
+
+          // Update order for each ticket based on new position
+          reordered.forEach((ticket, index) => {
+            if (ticket.order !== index) {
+              updateTicket(projectId, ticket.id, { order: index })
+            }
+          })
+        }
         return
       }
 
@@ -519,6 +575,11 @@ export default function BacklogPage() {
                 statusColumns={columns}
                 defaultExpanded={true}
                 draggingTicketIds={draggingTicketIds}
+                dropPosition={
+                  sprintDropPosition?.sectionId === sprint.id
+                    ? sprintDropPosition.insertIndex
+                    : null
+                }
               />
             ))}
 
@@ -533,6 +594,11 @@ export default function BacklogPage() {
                 statusColumns={columns}
                 defaultExpanded={true}
                 draggingTicketIds={draggingTicketIds}
+                dropPosition={
+                  sprintDropPosition?.sectionId === sprint.id
+                    ? sprintDropPosition.insertIndex
+                    : null
+                }
               />
             ))}
           </div>
