@@ -11,10 +11,10 @@ import type { BacklogColumn } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { TicketWithRelations } from '@/types'
-import { DropIndicator } from '../sprints/drop-indicator'
 import { TicketContextMenu } from '../board/ticket-context-menu'
 import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
+import { DropIndicator } from '../sprints/drop-indicator'
 
 interface BacklogRowProps {
   ticket: TicketWithRelations
@@ -307,28 +307,28 @@ export function BacklogRow({
           {...(isDraggable ? attributes : {})}
           {...(isDraggable ? listeners : {})}
         >
-        {/* Drag handle cell - always render to maintain table alignment */}
-        <td className="w-8 px-1 py-2">
-          {isDraggable && (
-            <div className="flex h-6 w-6 items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              <GripVertical className="h-4 w-4 text-zinc-500" />
-            </div>
-          )}
-        </td>
-        {columns.map((column) => (
-          <td
-            key={column.id}
-            style={{
-              width: column.width || undefined,
-              minWidth: column.minWidth,
-            }}
-            className="px-3 py-2"
-          >
-            {renderCell(column)}
+          {/* Drag handle cell - always render to maintain table alignment */}
+          <td className="w-8 px-1 py-2">
+            {isDraggable && (
+              <div className="flex h-6 w-6 items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <GripVertical className="h-4 w-4 text-zinc-500" />
+              </div>
+            )}
           </td>
-        ))}
-      </tr>
-    </TicketContextMenu>
+          {columns.map((column) => (
+            <td
+              key={column.id}
+              style={{
+                width: column.width || undefined,
+                minWidth: column.minWidth,
+              }}
+              className="px-3 py-2"
+            >
+              {renderCell(column)}
+            </td>
+          ))}
+        </tr>
+      </TicketContextMenu>
     </>
   )
 }

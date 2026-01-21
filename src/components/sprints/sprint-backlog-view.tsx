@@ -14,12 +14,12 @@ import {
 import { Plus, Target } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { showUndoRedoToast } from '@/lib/undo-toast'
 import {
   useDeleteSprint,
   useProjectSprints,
   useUpdateTicketSprint,
 } from '@/hooks/queries/use-sprints'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -310,7 +310,10 @@ export function SprintBacklogView({
 
       // Show undo/redo toast
       const toastId = showUndoRedoToast('success', {
-        title: count === 1 ? `Ticket moved to ${targetSprintName}` : `${count} tickets moved to ${targetSprintName}`,
+        title:
+          count === 1
+            ? `Ticket moved to ${targetSprintName}`
+            : `${count} tickets moved to ${targetSprintName}`,
         description: `From ${fromLabel}`,
         showUndoButtons: true,
         onUndo: (id) => {
@@ -347,7 +350,10 @@ export function SprintBacklogView({
         },
         undoneTitle: 'Move undone',
         undoneDescription: `${count === 1 ? 'Ticket' : `${count} tickets`} returned to ${fromLabel}`,
-        redoneTitle: count === 1 ? `Ticket moved to ${targetSprintName}` : `${count} tickets moved to ${targetSprintName}`,
+        redoneTitle:
+          count === 1
+            ? `Ticket moved to ${targetSprintName}`
+            : `${count} tickets moved to ${targetSprintName}`,
         redoneDescription: `From ${fromLabel}`,
       })
 

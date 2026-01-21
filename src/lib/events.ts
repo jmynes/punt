@@ -20,6 +20,11 @@ export type ProjectEventType = 'project.created' | 'project.updated' | 'project.
 export type LabelEventType = 'label.created' | 'label.updated' | 'label.deleted'
 
 /**
+ * Event types for user profile operations
+ */
+export type UserEventType = 'user.updated'
+
+/**
  * Payload for ticket events
  */
 export interface TicketEvent {
@@ -54,8 +59,24 @@ export interface LabelEvent {
   timestamp: number
 }
 
+/**
+ * Payload for user profile events
+ */
+export interface UserEvent {
+  type: UserEventType
+  userId: string
+  tabId?: string // Optional tab ID for self-skip
+  timestamp: number
+  changes?: {
+    name?: string
+    avatar?: string | null
+  }
+}
+
 // Global channel for project-level events (visible to all authenticated users)
 const PROJECTS_GLOBAL_CHANNEL = 'projects:global'
+// Global channel for user profile events (visible to all authenticated users)
+const USERS_GLOBAL_CHANNEL = 'users:global'
 
 /**
  * Event emitter for real-time updates
@@ -124,6 +145,29 @@ class ProjectEventEmitter extends EventEmitter {
    */
   getProjectsListenerCount(): number {
     return this.listenerCount(PROJECTS_GLOBAL_CHANNEL)
+  }
+
+  /**
+   * Emit a user profile event to all subscribers (global channel)
+   */
+  emitUserEvent(event: UserEvent) {
+    this.emit(USERS_GLOBAL_CHANNEL, event)
+  }
+
+  /**
+   * Subscribe to global user profile events
+   * Returns an unsubscribe function
+   */
+  subscribeToUsers(callback: (event: UserEvent) => void): () => void {
+    this.on(USERS_GLOBAL_CHANNEL, callback)
+    return () => this.off(USERS_GLOBAL_CHANNEL, callback)
+  }
+
+  /**
+   * Get the number of listeners for global user events
+   */
+  getUsersListenerCount(): number {
+    return this.listenerCount(USERS_GLOBAL_CHANNEL)
   }
 }
 

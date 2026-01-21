@@ -1333,9 +1333,7 @@ export function KeyboardShortcuts() {
                 }
               },
               undoneTitle:
-                action.moves.length === 1
-                  ? 'Ticket moved'
-                  : `${action.moves.length} tickets moved`,
+                action.moves.length === 1 ? 'Ticket moved' : `${action.moves.length} tickets moved`,
               undoneDescription: `Moved to ${action.toSprintName}`,
               redoneTitle:
                 action.moves.length === 1
@@ -1766,7 +1764,6 @@ export function KeyboardShortcuts() {
                 sprintId: move.toSprintId,
               })
             }
-
             // Persist redo to database
             ;(async () => {
               try {

@@ -2,6 +2,7 @@ import { unlink } from 'node:fs/promises'
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { FilesystemStorage } from '@/lib/file-storage'
 
 const fileStorage = new FilesystemStorage()
@@ -82,6 +83,18 @@ export async function POST(request: Request) {
       }
     }
 
+    // Emit SSE event for avatar update
+    const tabId = request.headers.get('x-tab-id') || undefined
+    projectEvents.emitUserEvent({
+      type: 'user.updated',
+      userId: currentUser.id,
+      tabId,
+      timestamp: Date.now(),
+      changes: {
+        avatar: user.avatar,
+      },
+    })
+
     return NextResponse.json({ success: true, avatar: user.avatar })
   } catch (error) {
     if (error instanceof Error) {
@@ -97,7 +110,7 @@ export async function POST(request: Request) {
 }
 
 // DELETE /api/me/avatar - Remove avatar
-export async function DELETE() {
+export async function DELETE(request: Request) {
   try {
     const currentUser = await requireAuth()
 
@@ -122,6 +135,18 @@ export async function DELETE() {
         // Ignore errors deleting file
       }
     }
+
+    // Emit SSE event for avatar removal
+    const tabId = request.headers.get('x-tab-id') || undefined
+    projectEvents.emitUserEvent({
+      type: 'user.updated',
+      userId: currentUser.id,
+      tabId,
+      timestamp: Date.now(),
+      changes: {
+        avatar: null,
+      },
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

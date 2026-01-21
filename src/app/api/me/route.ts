@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 
 const updateProfileSchema = z.object({
   name: z.string().min(1, 'Name is required').optional(),
-  email: z.string().email('Invalid email address').optional(),
+  email: z
+    .string()
+    .transform((val) => (val === '' ? undefined : val))
+    .pipe(z.string().email('Invalid email address').optional()),
 })
 
 // GET /api/me - Get current user's profile
@@ -92,6 +96,18 @@ export async function PATCH(request: Request) {
         isSystemAdmin: true,
         createdAt: true,
         updatedAt: true,
+      },
+    })
+
+    // Emit SSE event for profile update
+    const tabId = request.headers.get('x-tab-id') || undefined
+    projectEvents.emitUserEvent({
+      type: 'user.updated',
+      userId: currentUser.id,
+      tabId,
+      timestamp: Date.now(),
+      changes: {
+        name: updates.name,
       },
     })
 

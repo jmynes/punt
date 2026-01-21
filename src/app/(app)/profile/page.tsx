@@ -22,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { getTabId } from '@/hooks/use-realtime'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 
 export default function ProfilePage() {
@@ -29,10 +30,14 @@ export default function ProfilePage() {
   const _router = useRouter()
   const user = session?.user
 
-  // Profile form state
+  // Profile form state (display name only)
   const [name, setName] = useState(user?.name || '')
-  const [email, setEmail] = useState(user?.email || '')
   const [profileLoading, setProfileLoading] = useState(false)
+
+  // Email change state
+  const [newEmail, setNewEmail] = useState('')
+  const [emailPassword, setEmailPassword] = useState('')
+  const [emailLoading, setEmailLoading] = useState(false)
 
   // Password form state
   const [currentPassword, setCurrentPassword] = useState('')
@@ -55,8 +60,11 @@ export default function ProfilePage() {
     try {
       const res = await fetch('/api/me', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email }),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tab-id': getTabId(),
+        },
+        body: JSON.stringify({ name }),
       })
 
       const data = await res.json()
@@ -66,11 +74,42 @@ export default function ProfilePage() {
       }
 
       await updateSession()
-      toast.success('Profile updated successfully')
+      toast.success('Display name updated')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update profile')
     } finally {
       setProfileLoading(false)
+    }
+  }
+
+  const handleEmailChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setEmailLoading(true)
+
+    try {
+      const res = await fetch('/api/me/email', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tab-id': getTabId(),
+        },
+        body: JSON.stringify({ email: newEmail, password: emailPassword }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to change email')
+      }
+
+      await updateSession()
+      setNewEmail('')
+      setEmailPassword('')
+      toast.success('Email address updated')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to change email')
+    } finally {
+      setEmailLoading(false)
     }
   }
 
@@ -120,6 +159,9 @@ export default function ProfilePage() {
 
       const res = await fetch('/api/me/avatar', {
         method: 'POST',
+        headers: {
+          'x-tab-id': getTabId(),
+        },
         body: formData,
       })
 
@@ -142,7 +184,12 @@ export default function ProfilePage() {
     setAvatarLoading(true)
 
     try {
-      const res = await fetch('/api/me/avatar', { method: 'DELETE' })
+      const res = await fetch('/api/me/avatar', {
+        method: 'DELETE',
+        headers: {
+          'x-tab-id': getTabId(),
+        },
+      })
       const data = await res.json()
 
       if (!res.ok) {
@@ -286,57 +333,94 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Profile Information */}
+        {/* Display Name */}
         <Card className="border-zinc-800 bg-zinc-900/50">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-amber-500" />
-              <CardTitle className="text-zinc-100">Profile Information</CardTitle>
+              <User className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-zinc-100">Display Name</CardTitle>
             </div>
             <CardDescription className="text-zinc-500">
-              Update your personal details
+              This is how other users will see you
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleProfileUpdate} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-zinc-300">
-                    Display Name
-                  </Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
-                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-zinc-300">
-                    Email Address
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-zinc-300">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className="bg-zinc-900 border-zinc-700 focus:border-amber-500 max-w-md"
+                />
               </div>
 
               {user.isSystemAdmin && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg max-w-md">
                   <Shield className="h-4 w-4 text-amber-500" />
                   <span className="text-sm text-amber-400">System Administrator</span>
                 </div>
               )}
 
-              <div className="flex justify-end">
-                <Button type="submit" variant="primary" disabled={profileLoading}>
-                  {profileLoading ? 'Saving...' : 'Save Changes'}
+              <div className="flex justify-end max-w-md">
+                <Button type="submit" variant="primary" disabled={profileLoading || !name.trim()}>
+                  {profileLoading ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Email Address */}
+        <Card className="border-zinc-800 bg-zinc-900/50">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-zinc-100">Email Address</CardTitle>
+            </div>
+            <CardDescription className="text-zinc-500">
+              Your current email is <span className="text-zinc-300">{user.email || 'not set'}</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleEmailChange} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newEmail" className="text-zinc-300">
+                  New Email Address
+                </Label>
+                <Input
+                  id="newEmail"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="bg-zinc-900 border-zinc-700 focus:border-amber-500 max-w-md"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emailPassword" className="text-zinc-300">
+                  Confirm with Password
+                </Label>
+                <Input
+                  id="emailPassword"
+                  type="password"
+                  value={emailPassword}
+                  onChange={(e) => setEmailPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="bg-zinc-900 border-zinc-700 focus:border-amber-500 max-w-md"
+                />
+              </div>
+              <div className="flex justify-end max-w-md">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={emailLoading || !newEmail.trim() || !emailPassword}
+                >
+                  {emailLoading ? 'Updating...' : 'Change Email'}
                 </Button>
               </div>
             </form>

@@ -17,7 +17,6 @@ import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { List, Loader2, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { showUndoRedoToast } from '@/lib/undo-toast'
 import { BacklogTable, ColumnConfig } from '@/components/backlog'
 import { SprintSection } from '@/components/sprints'
 import { SprintTableRow } from '@/components/sprints/sprint-table-row'
@@ -26,6 +25,7 @@ import { Button } from '@/components/ui/button'
 import { useProjectSprints, useUpdateTicketSprint } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -472,7 +472,10 @@ export default function BacklogPage() {
 
       // Show undo/redo toast
       const toastId = showUndoRedoToast('success', {
-        title: count === 1 ? `Ticket moved to ${targetSprintName}` : `${count} tickets moved to ${targetSprintName}`,
+        title:
+          count === 1
+            ? `Ticket moved to ${targetSprintName}`
+            : `${count} tickets moved to ${targetSprintName}`,
         description: `From ${fromLabel}`,
         showUndoButtons: true,
         onUndo: (id) => {
@@ -509,7 +512,10 @@ export default function BacklogPage() {
         },
         undoneTitle: 'Move undone',
         undoneDescription: `${count === 1 ? 'Ticket' : `${count} tickets`} returned to ${fromLabel}`,
-        redoneTitle: count === 1 ? `Ticket moved to ${targetSprintName}` : `${count} tickets moved to ${targetSprintName}`,
+        redoneTitle:
+          count === 1
+            ? `Ticket moved to ${targetSprintName}`
+            : `${count} tickets moved to ${targetSprintName}`,
         redoneDescription: `From ${fromLabel}`,
       })
 
