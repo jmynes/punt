@@ -10,80 +10,26 @@ interface DropIndicatorProps {
 }
 
 /**
- * Bold, unmistakable drop indicator for drag-and-drop.
- * Creates an animated "slot" that clearly shows where items will be inserted.
+ * Minimal drop indicator line for drag-and-drop.
+ * A glowing line that shows where items will be inserted without causing reflow.
  */
-export function DropIndicator({ itemCount = 1, className }: DropIndicatorProps) {
+export function DropIndicator({ itemCount: _itemCount = 1, className }: DropIndicatorProps) {
   return (
     <div
       className={cn(
-        'relative overflow-hidden',
-        // Generous height to make it unmistakable
-        'h-12 my-1',
-        // Animated entrance
-        'animate-in slide-in-from-left-2 fade-in-0 duration-200',
+        'relative h-0.5 -my-px',
+        // Glow effect
+        'before:absolute before:inset-0 before:-top-1 before:-bottom-1',
+        'before:bg-emerald-500/30 before:blur-sm',
         className,
       )}
     >
-      {/* Background glow effect */}
-      <div
-        className={cn(
-          'absolute inset-0 rounded-lg',
-          'bg-gradient-to-r from-emerald-500/20 via-emerald-400/30 to-emerald-500/20',
-          'animate-pulse',
-        )}
-      />
-
-      {/* Animated border container */}
-      <div
-        className={cn(
-          'absolute inset-0 rounded-lg',
-          'border-2 border-dashed border-emerald-500/70',
-          'bg-emerald-500/5',
-        )}
-      />
-
-      {/* Left chevron indicator */}
-      <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-        <div className="w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[8px] border-l-emerald-500" />
-      </div>
-
-      {/* Center content */}
-      <div className="absolute inset-0 flex items-center justify-center gap-2">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/90 shadow-lg shadow-emerald-500/30">
-          <svg
-            className="w-4 h-4 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2.5}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m0 0l-4-4m4 4l4-4" />
-          </svg>
-          <span className="text-sm font-semibold text-white tracking-wide">
-            {itemCount > 1 ? `Drop ${itemCount} items here` : 'Drop here'}
-          </span>
-        </div>
-      </div>
-
-      {/* Right chevron indicator */}
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-        <div className="w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[8px] border-r-emerald-500" />
-        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-      </div>
-
-      {/* Scanning line animation */}
-      <div
-        className={cn(
-          'absolute top-0 left-0 w-full h-full',
-          'bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent',
-          'animate-[scan_1.5s_ease-in-out_infinite]',
-        )}
-        style={{
-          backgroundSize: '200% 100%',
-        }}
-      />
+      {/* Main line */}
+      <div className="absolute inset-0 bg-emerald-500 rounded-full" />
+      {/* Left dot */}
+      <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+      {/* Right dot */}
+      <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
     </div>
   )
 }
