@@ -11,7 +11,15 @@ import {
   UserCheck,
   User as UserIcon,
 } from 'lucide-react'
-import { cloneElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  cloneElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { PriorityBadge } from '@/components/common/priority-badge'
@@ -75,6 +83,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   )
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<TicketWithRelations[]>([])
+  // Track if component has mounted to avoid hydration mismatch
+  const [isMounted, setIsMounted] = useState(false)
 
   const selectedIds = useMemo(() => {
     const selectionState = useSelectionStore.getState ? useSelectionStore.getState() : selection
@@ -89,6 +99,11 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     id: 'priority' | 'assign' | 'send' | 'points'
     anchor: { x: number; y: number; height: number }
   }>(null)
+
+  // Set mounted state after hydration to enable client-only features
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Close on outside click / escape
   useEffect(() => {
@@ -516,10 +531,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     [children, handleContextMenu],
   )
 
-  if (typeof document === 'undefined') {
-    return contextChild
-  }
-
   const openSubmenu = (id: 'priority' | 'assign' | 'send' | 'points') => (e: React.MouseEvent) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
     setSubmenu({ id, anchor: { x: rect.right, y: rect.top, height: rect.height } })
@@ -527,268 +538,272 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const closeSubmenu = () => setSubmenu(null)
 
+  // Render portal content only after mount to avoid hydration mismatch
+  let portalContent: ReactNode = null
+  if (isMounted && open) {
+    portalContent = createPortal(
+      <div
+        ref={menuRef}
+        className="z-[200] min-w-[220px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
+        style={{ position: 'fixed', left: coords.x, top: coords.y }}
+      >
+        <div className="py-1 text-sm text-zinc-200 relative">
+          <div className="px-3 pb-1 pt-2 text-xs uppercase text-zinc-500">
+            {multi ? `Modify ${selectedIds.length} Tasks` : 'Modify Task'}
+          </div>
+          <MenuButton
+            icon={<UserIcon className="h-4 w-4" />}
+            label="Assign"
+            trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+            onMouseEnter={openSubmenu('assign')}
+          />
+          <MenuButton
+            icon={<UserCheck className="h-4 w-4" />}
+            label="Priority"
+            trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+            onMouseEnter={openSubmenu('priority')}
+          />
+          <MenuButton
+            icon={<Hash className="h-4 w-4" />}
+            label="Points"
+            trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+            onMouseEnter={openSubmenu('points')}
+          />
+          {!multi && (
+            <MenuButton
+              icon={<Pencil className="h-4 w-4" />}
+              label="Edit"
+              onMouseEnter={closeSubmenu}
+              onClick={doEdit}
+            />
+          )}
+
+          <MenuSection title="Status">
+            <MenuButton
+              icon={<Send className="h-4 w-4" />}
+              label="Status"
+              trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+              onMouseEnter={openSubmenu('send')}
+            />
+          </MenuSection>
+
+          <MenuSection title="Operations">
+            <MenuButton
+              icon={<ClipboardCopy className="h-4 w-4" />}
+              label="Copy"
+              shortcut="Ctrl/Cmd + C"
+              onMouseEnter={closeSubmenu}
+              onClick={doCopy}
+            />
+            <MenuButton
+              icon={<ClipboardPaste className="h-4 w-4" />}
+              label="Paste"
+              shortcut="Ctrl/Cmd + V"
+              onMouseEnter={closeSubmenu}
+              onClick={doPaste}
+            />
+            <MenuButton
+              icon={<Trash2 className="h-4 w-4" />}
+              label="Delete"
+              shortcut="Del"
+              destructive
+              onMouseEnter={closeSubmenu}
+              onClick={doDelete}
+            />
+          </MenuSection>
+
+          {submenu && (
+            <div
+              className="fixed z-[201] min-w-[200px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
+              style={{
+                left: submenu.anchor.x + 2,
+                top: submenu.anchor.y,
+              }}
+            >
+              <div className="py-1 text-sm text-zinc-200">
+                {submenu.id === 'priority' &&
+                  (['critical', 'highest', 'high', 'medium', 'low', 'lowest'] as const).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                      onClick={() => doPriority(p)}
+                    >
+                      <PriorityBadge priority={p} size="sm" />
+                    </button>
+                  ))}
+
+                {submenu.id === 'assign' && (
+                  <>
+                    {currentUser && (
+                      <>
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                          onClick={() => doAssign(currentUser.id)}
+                        >
+                          <Avatar className="h-5 w-5">
+                            <AvatarFallback
+                              className="text-[10px] text-white font-medium"
+                              style={{ backgroundColor: getAvatarColor(currentUser.id) }}
+                            >
+                              {getInitials(currentUser.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>Assign to me</span>
+                        </button>
+                        <div className="my-1 border-t border-zinc-800" />
+                      </>
+                    )}
+                    {sortedMembers.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                        onClick={() => doAssign(m.id)}
+                      >
+                        <Avatar className="h-5 w-5">
+                          {m.avatar && <AvatarImage src={m.avatar} />}
+                          <AvatarFallback
+                            className="text-[10px] text-white font-medium"
+                            style={{ backgroundColor: getAvatarColor(m.id) }}
+                          >
+                            {getInitials(m.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{m.name}</span>
+                      </button>
+                    ))}
+                    <div className="my-1 border-t border-zinc-800" />
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                      onClick={() => doAssign(null)}
+                    >
+                      <Avatar className="h-5 w-5">
+                        <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
+                          <UserIcon className="h-3 w-3 text-zinc-500" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>Unassign</span>
+                    </button>
+                  </>
+                )}
+
+                {submenu.id === 'send' &&
+                  columns.map((col) => {
+                    const { icon: StatusIcon, color } = getStatusIcon(col.name)
+                    return (
+                      <button
+                        key={col.id}
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                        onClick={() => doSendTo(col.id)}
+                      >
+                        <StatusIcon className={`h-4 w-4 ${color}`} />
+                        <span>{col.name}</span>
+                      </button>
+                    )
+                  })}
+
+                {submenu.id === 'points' && (
+                  <>
+                    {[1, 2, 3, 4, 5].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                        onClick={() => doPoints(p)}
+                      >
+                        <Hash className="h-4 w-4 text-green-400" />
+                        <span>
+                          {p} point{p === 1 ? '' : 's'}
+                        </span>
+                      </button>
+                    ))}
+                    {!multi && (
+                      <>
+                        <div className="my-1 border-t border-zinc-800" />
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                          onClick={() => {
+                            uiStore.openTicketWithFocus(ticket.id, 'storyPoints')
+                            setOpen(false)
+                            setSubmenu(null)
+                          }}
+                        >
+                          <Pencil className="h-4 w-4 text-amber-400" />
+                          <span>Custom...</span>
+                        </button>
+                      </>
+                    )}
+                    <div className="my-1 border-t border-zinc-800" />
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                      onClick={() => doPoints(null)}
+                    >
+                      <Hash className="h-4 w-4 text-zinc-500" />
+                      <span className="text-zinc-400">Clear points</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>,
+      document.body,
+    )
+  }
+
   return (
     <>
       {contextChild}
-      {open &&
-        createPortal(
-          <div
-            ref={menuRef}
-            className="z-[200] min-w-[220px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
-            style={{ position: 'fixed', left: coords.x, top: coords.y }}
-          >
-            <div className="py-1 text-sm text-zinc-200 relative">
-              <div className="px-3 pb-1 pt-2 text-xs uppercase text-zinc-500">
-                {multi ? `Modify ${selectedIds.length} Tasks` : 'Modify Task'}
-              </div>
-              <MenuButton
-                icon={<UserIcon className="h-4 w-4" />}
-                label="Assign"
-                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-                onMouseEnter={openSubmenu('assign')}
-              />
-              <MenuButton
-                icon={<UserCheck className="h-4 w-4" />}
-                label="Priority"
-                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-                onMouseEnter={openSubmenu('priority')}
-              />
-              <MenuButton
-                icon={<Hash className="h-4 w-4" />}
-                label="Points"
-                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-                onMouseEnter={openSubmenu('points')}
-              />
-              {!multi && (
-                <MenuButton
-                  icon={<Pencil className="h-4 w-4" />}
-                  label="Edit"
-                  onMouseEnter={closeSubmenu}
-                  onClick={doEdit}
-                />
-              )}
-
-              <MenuSection title="Status">
-                <MenuButton
-                  icon={<Send className="h-4 w-4" />}
-                  label="Status"
-                  trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-                  onMouseEnter={openSubmenu('send')}
-                />
-              </MenuSection>
-
-              <MenuSection title="Operations">
-                <MenuButton
-                  icon={<ClipboardCopy className="h-4 w-4" />}
-                  label="Copy"
-                  shortcut="Ctrl/Cmd + C"
-                  onMouseEnter={closeSubmenu}
-                  onClick={doCopy}
-                />
-                <MenuButton
-                  icon={<ClipboardPaste className="h-4 w-4" />}
-                  label="Paste"
-                  shortcut="Ctrl/Cmd + V"
-                  onMouseEnter={closeSubmenu}
-                  onClick={doPaste}
-                />
-                <MenuButton
-                  icon={<Trash2 className="h-4 w-4" />}
-                  label="Delete"
-                  shortcut="Del"
-                  destructive
-                  onMouseEnter={closeSubmenu}
-                  onClick={doDelete}
-                />
-              </MenuSection>
-
-              {submenu && (
-                <div
-                  className="fixed z-[201] min-w-[200px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
-                  style={{
-                    left: submenu.anchor.x + 2,
-                    top: submenu.anchor.y,
-                  }}
-                >
-                  <div className="py-1 text-sm text-zinc-200">
-                    {submenu.id === 'priority' &&
-                      (['critical', 'highest', 'high', 'medium', 'low', 'lowest'] as const).map(
-                        (p) => (
-                          <button
-                            key={p}
-                            type="button"
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                            onClick={() => doPriority(p)}
-                          >
-                            <PriorityBadge priority={p} size="sm" />
-                          </button>
-                        ),
-                      )}
-
-                    {submenu.id === 'assign' && (
-                      <>
-                        {currentUser && (
-                          <>
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                              onClick={() => doAssign(currentUser.id)}
-                            >
-                              <Avatar className="h-5 w-5">
-                                <AvatarFallback
-                                  className="text-[10px] text-white font-medium"
-                                  style={{ backgroundColor: getAvatarColor(currentUser.id) }}
-                                >
-                                  {getInitials(currentUser.name)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span>Assign to me</span>
-                            </button>
-                            <div className="my-1 border-t border-zinc-800" />
-                          </>
-                        )}
-                        {sortedMembers.map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                            onClick={() => doAssign(m.id)}
-                          >
-                            <Avatar className="h-5 w-5">
-                              {m.avatar && <AvatarImage src={m.avatar} />}
-                              <AvatarFallback
-                                className="text-[10px] text-white font-medium"
-                                style={{ backgroundColor: getAvatarColor(m.id) }}
-                              >
-                                {getInitials(m.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span>{m.name}</span>
-                          </button>
-                        ))}
-                        <div className="my-1 border-t border-zinc-800" />
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                          onClick={() => doAssign(null)}
-                        >
-                          <Avatar className="h-5 w-5">
-                            <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
-                              <UserIcon className="h-3 w-3 text-zinc-500" />
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>Unassign</span>
-                        </button>
-                      </>
-                    )}
-
-                    {submenu.id === 'send' &&
-                      columns.map((col) => {
-                        const { icon: StatusIcon, color } = getStatusIcon(col.name)
-                        return (
-                          <button
-                            key={col.id}
-                            type="button"
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                            onClick={() => doSendTo(col.id)}
-                          >
-                            <StatusIcon className={`h-4 w-4 ${color}`} />
-                            <span>{col.name}</span>
-                          </button>
-                        )
-                      })}
-
-                    {submenu.id === 'points' && (
-                      <>
-                        {[1, 2, 3, 4, 5].map((p) => (
-                          <button
-                            key={p}
-                            type="button"
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                            onClick={() => doPoints(p)}
-                          >
-                            <Hash className="h-4 w-4 text-green-400" />
-                            <span>
-                              {p} point{p === 1 ? '' : 's'}
-                            </span>
-                          </button>
-                        ))}
-                        {!multi && (
-                          <>
-                            <div className="my-1 border-t border-zinc-800" />
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                              onClick={() => {
-                                uiStore.openTicketWithFocus(ticket.id, 'storyPoints')
-                                setOpen(false)
-                                setSubmenu(null)
-                              }}
-                            >
-                              <Pencil className="h-4 w-4 text-amber-400" />
-                              <span>Custom...</span>
-                            </button>
-                          </>
-                        )}
-                        <div className="my-1 border-t border-zinc-800" />
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                          onClick={() => doPoints(null)}
-                        >
-                          <Hash className="h-4 w-4 text-zinc-500" />
-                          <span className="text-zinc-400">Clear points</span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>,
-          document.body,
-        )}
-
-      <AlertDialog
-        open={showDeleteConfirm}
-        onOpenChange={(open) => {
-          setShowDeleteConfirm(open)
-          if (!open) setPendingDelete([])
-        }}
-      >
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">
-              Delete {pendingDelete.length === 1 ? 'ticket' : `${pendingDelete.length} tickets`}?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              {pendingDelete.length === 1 ? (
-                <>
-                  Are you sure you want to delete{' '}
-                  <span className="font-semibold text-zinc-300">{pendingDelete[0]?.title}</span>?
-                </>
-              ) : (
-                <>
-                  Are you sure you want to delete these {pendingDelete.length} tickets? This action
-                  can be undone with Ctrl+Z.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteNow}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {portalContent}
+      {isMounted && (
+        <AlertDialog
+          open={showDeleteConfirm}
+          onOpenChange={(open) => {
+            setShowDeleteConfirm(open)
+            if (!open) setPendingDelete([])
+          }}
+        >
+          <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-zinc-100">
+                Delete {pendingDelete.length === 1 ? 'ticket' : `${pendingDelete.length} tickets`}?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-zinc-400">
+                {pendingDelete.length === 1 ? (
+                  <>
+                    Are you sure you want to delete{' '}
+                    <span className="font-semibold text-zinc-300">{pendingDelete[0]?.title}</span>?
+                  </>
+                ) : (
+                  <>
+                    Are you sure you want to delete these {pendingDelete.length} tickets? This
+                    action can be undone with Ctrl+Z.
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteNow}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   )
 }
