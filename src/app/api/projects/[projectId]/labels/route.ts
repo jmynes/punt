@@ -26,7 +26,10 @@ const LABEL_COLORS = [
 
 const createLabelSchema = z.object({
   name: z.string().min(1).max(50).trim(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
 })
 
 /**
@@ -100,9 +103,7 @@ export async function POST(
       select: LABEL_SELECT,
     })
     const normalizedName = name.toLowerCase()
-    const existingLabel = allLabels.find(
-      (l) => l.name.toLowerCase() === normalizedName,
-    )
+    const existingLabel = allLabels.find((l) => l.name.toLowerCase() === normalizedName)
 
     if (existingLabel) {
       // Return existing label instead of creating duplicate

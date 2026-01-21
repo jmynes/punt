@@ -65,10 +65,7 @@ export function LabelSelect({
 
   // Check if the search value matches an existing label (case-insensitive)
   const existingMatch = searchValue.trim() ? findExistingLabel(searchValue) : null
-  const canCreateLabel =
-    onCreateLabel &&
-    searchValue.trim().length > 0 &&
-    !existingMatch
+  const canCreateLabel = onCreateLabel && searchValue.trim().length > 0 && !existingMatch
 
   const toggleLabel = (labelId: string) => {
     if (value.includes(labelId)) {
@@ -226,9 +223,7 @@ export function LabelSelect({
                     disabled={isCreating}
                   >
                     <Plus className="mr-2 h-4 w-4 text-green-500" />
-                    <span>
-                      {isCreating ? 'Creating...' : `Create "${searchValue.trim()}"`}
-                    </span>
+                    <span>{isCreating ? 'Creating...' : `Create "${searchValue.trim()}"`}</span>
                   </CommandItem>
                 </CommandGroup>
               )}

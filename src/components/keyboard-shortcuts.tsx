@@ -637,7 +637,8 @@ export function KeyboardShortcuts() {
                   try {
                     for (const move of moves) {
                       const targetCol = afterColumns.find((c) => c.id === move.toColumnId)
-                      const newOrder = targetCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
+                      const newOrder =
+                        targetCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
                       await updateTicketAPI(undoEntry.projectId, move.ticketId, {
                         columnId: move.toColumnId,
                         order: newOrder,

@@ -4,15 +4,15 @@
  */
 
 import { toast } from 'sonner'
-import { useBoardStore } from '@/stores/board-store'
-import { useSelectionStore } from '@/stores/selection-store'
-import { useUndoStore } from '@/stores/undo-store'
-import { useUIStore } from '@/stores/ui-store'
-import { showUndoRedoToast } from '@/lib/undo-toast'
 import { isDemoProject } from '@/lib/constants'
 import { formatTicketId } from '@/lib/ticket-format'
+import { showUndoRedoToast } from '@/lib/undo-toast'
+import { useBoardStore } from '@/stores/board-store'
+import { useSelectionStore } from '@/stores/selection-store'
+import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets } from '@/types'
-import type { TicketWithColumn, DeleteResult, ActionOptions } from './types'
+import type { ActionOptions, DeleteResult, TicketWithColumn } from './types'
 
 export interface DeleteTicketsParams {
   /** The project ID to delete tickets from */

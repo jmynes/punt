@@ -76,7 +76,8 @@ export const useUIStore = create<UIState>((set) => ({
   activeTicketId: null,
   setActiveTicketId: (id) => set({ activeTicketId: id, drawerFocusField: null }),
   drawerFocusField: null,
-  openTicketWithFocus: (ticketId, field) => set({ activeTicketId: ticketId, drawerFocusField: field }),
+  openTicketWithFocus: (ticketId, field) =>
+    set({ activeTicketId: ticketId, drawerFocusField: field }),
   clearDrawerFocusField: () => set({ drawerFocusField: null }),
 
   // Toast undo visibility (on by default)

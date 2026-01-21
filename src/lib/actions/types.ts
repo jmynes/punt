@@ -3,7 +3,7 @@
  * These types are used by the unified action implementations.
  */
 
-import type { TicketWithRelations, ColumnWithTickets } from '@/types'
+import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
 /**
  * Ticket with its column ID, used for paste and delete operations.

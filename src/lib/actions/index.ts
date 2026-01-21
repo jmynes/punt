@@ -20,6 +20,6 @@
  * ```
  */
 
-export * from './types'
-export * from './paste-tickets'
 export * from './delete-tickets'
+export * from './paste-tickets'
+export * from './types'

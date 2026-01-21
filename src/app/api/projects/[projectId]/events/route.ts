@@ -1,5 +1,5 @@
 import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
-import { projectEvents, type LabelEvent, type TicketEvent } from '@/lib/events'
+import { type LabelEvent, projectEvents, type TicketEvent } from '@/lib/events'
 
 /**
  * GET /api/projects/[projectId]/events - Server-Sent Events endpoint

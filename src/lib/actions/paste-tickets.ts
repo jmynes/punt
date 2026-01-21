@@ -4,16 +4,16 @@
  */
 
 import { toast } from 'sonner'
-import { useBoardStore } from '@/stores/board-store'
-import { useSelectionStore } from '@/stores/selection-store'
-import { useUndoStore } from '@/stores/undo-store'
-import { useUIStore } from '@/stores/ui-store'
-import { showUndoRedoToast } from '@/lib/undo-toast'
+import { batchCreateTicketsAPI, batchDeleteTicketsAPI } from '@/hooks/queries/use-tickets'
 import { isDemoProject } from '@/lib/constants'
 import { formatTicketId } from '@/lib/ticket-format'
-import { batchCreateTicketsAPI, batchDeleteTicketsAPI } from '@/hooks/queries/use-tickets'
-import type { TicketWithRelations, ColumnWithTickets } from '@/types'
-import type { TicketWithColumn, PasteResult, ActionOptions } from './types'
+import { showUndoRedoToast } from '@/lib/undo-toast'
+import { useBoardStore } from '@/stores/board-store'
+import { useSelectionStore } from '@/stores/selection-store'
+import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
+import type { ColumnWithTickets, TicketWithRelations } from '@/types'
+import type { ActionOptions, PasteResult, TicketWithColumn } from './types'
 
 /**
  * Generate a temporary ID for optimistic updates.
