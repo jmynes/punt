@@ -6,10 +6,11 @@
 export interface FileStorage {
   ensureDirectoryExists(path: string): Promise<void>
   writeFile(filepath: string, buffer: Buffer): Promise<void>
+  deleteFile(filepath: string): Promise<void>
   join(...paths: string[]): string
 }
 
-import { writeFile as fsWriteFile, mkdir } from 'node:fs/promises'
+import { writeFile as fsWriteFile, mkdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 
 /**
@@ -22,6 +23,10 @@ export class FilesystemStorage implements FileStorage {
 
   async writeFile(filepath: string, buffer: Buffer): Promise<void> {
     await fsWriteFile(filepath, buffer)
+  }
+
+  async deleteFile(filepath: string): Promise<void> {
+    await unlink(filepath)
   }
 
   join(...paths: string[]): string {
@@ -52,6 +57,13 @@ export class InMemoryStorage implements FileStorage {
     if (parentDir) {
       this._directories.add(parentDir)
     }
+  }
+
+  async deleteFile(filepath: string): Promise<void> {
+    if (!this._files.has(filepath)) {
+      throw new Error(`File not found: ${filepath}`)
+    }
+    this._files.delete(filepath)
   }
 
   join(...paths: string[]): string {

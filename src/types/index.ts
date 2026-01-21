@@ -63,6 +63,16 @@ export interface SprintSummary {
   endDate: Date | null
 }
 
+// Attachment info from database
+export interface AttachmentInfo {
+  id: string
+  filename: string
+  mimeType: string
+  size: number
+  url: string
+  createdAt: Date
+}
+
 // Extended types with relations
 export interface TicketWithRelations {
   id: string
@@ -92,6 +102,7 @@ export interface TicketWithRelations {
   sprint: SprintSummary | null
   labels: LabelSummary[]
   watchers: UserSummary[]
+  attachments?: AttachmentInfo[]
   _count?: {
     comments: number
     subtasks: number

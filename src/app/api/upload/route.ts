@@ -1,39 +1,12 @@
 import { NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
+import {
+  getFileCategoryForMimeType,
+  getMaxSizeForMimeType,
+  getSystemSettings,
+  getUploadConfig,
+} from '@/lib/system-settings'
 import { getFileStorage } from '@/lib/upload-storage'
-
-// Allowed file types
-// Note: SVG intentionally excluded due to XSS risk (embedded scripts)
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']
-const ALLOWED_DOCUMENT_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/plain',
-  'text/csv',
-]
-
-const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES, ...ALLOWED_DOCUMENT_TYPES]
-
-// Max file sizes (in bytes)
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024 // 100MB
-const MAX_DOCUMENT_SIZE = 25 * 1024 * 1024 // 25MB
-
-function getMaxSize(mimetype: string): number {
-  if (ALLOWED_IMAGE_TYPES.includes(mimetype)) return MAX_IMAGE_SIZE
-  if (ALLOWED_VIDEO_TYPES.includes(mimetype)) return MAX_VIDEO_SIZE
-  return MAX_DOCUMENT_SIZE
-}
-
-function getFileCategory(mimetype: string): 'image' | 'video' | 'document' {
-  if (ALLOWED_IMAGE_TYPES.includes(mimetype)) return 'image'
-  if (ALLOWED_VIDEO_TYPES.includes(mimetype)) return 'video'
-  return 'document'
-}
 
 function generateFilename(originalName: string): string {
   const timestamp = Date.now()
@@ -56,6 +29,14 @@ export async function POST(request: Request) {
 
     logger.debug('Processing file upload', { fileCount: files.length })
 
+    // Get dynamic settings from database
+    const settings = await getSystemSettings()
+    const allowedTypes = [
+      ...settings.allowedImageTypes,
+      ...settings.allowedVideoTypes,
+      ...settings.allowedDocumentTypes,
+    ]
+
     const uploadedFiles: Array<{
       id: string
       filename: string
@@ -74,13 +55,13 @@ export async function POST(request: Request) {
       logger.debug('Validating file', { name: file.name, type: file.type, size: file.size })
 
       // Validate file type
-      if (!ALLOWED_TYPES.includes(file.type)) {
+      if (!allowedTypes.includes(file.type)) {
         logger.warn('File type not allowed', { name: file.name, type: file.type })
         return NextResponse.json({ error: `File type not allowed: ${file.type}` }, { status: 400 })
       }
 
       // Validate file size
-      const maxSize = getMaxSize(file.type)
+      const maxSize = getMaxSizeForMimeType(file.type, settings)
       if (file.size > maxSize) {
         logger.warn('File too large', { name: file.name, size: file.size, maxSize })
         return NextResponse.json(
@@ -108,7 +89,7 @@ export async function POST(request: Request) {
         mimetype: file.type,
         size: file.size,
         url: `/uploads/${filename}`,
-        category: getFileCategory(file.type),
+        category: getFileCategoryForMimeType(file.type, settings),
       }
       uploadedFiles.push(fileInfo)
       logger.info('File uploaded successfully', {
@@ -133,12 +114,39 @@ export async function POST(request: Request) {
 
 // Return allowed types for client-side validation
 export async function GET() {
-  return NextResponse.json({
-    allowedTypes: ALLOWED_TYPES,
-    maxSizes: {
-      image: MAX_IMAGE_SIZE,
-      video: MAX_VIDEO_SIZE,
-      document: MAX_DOCUMENT_SIZE,
-    },
-  })
+  try {
+    const config = await getUploadConfig()
+    return NextResponse.json(config)
+  } catch (error) {
+    logger.error(
+      'Failed to fetch upload config',
+      error instanceof Error ? error : new Error(String(error)),
+    )
+    // Return sensible defaults if settings fetch fails
+    return NextResponse.json({
+      allowedTypes: [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'video/mp4',
+        'video/webm',
+        'video/ogg',
+        'video/quicktime',
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain',
+        'text/csv',
+      ],
+      maxSizes: {
+        image: 10 * 1024 * 1024,
+        video: 100 * 1024 * 1024,
+        document: 25 * 1024 * 1024,
+      },
+      maxAttachmentsPerTicket: 20,
+    })
+  }
 }

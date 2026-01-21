@@ -146,6 +146,7 @@ describe('Upload API Route', () => {
       const errorStorage = {
         ensureDirectoryExists: vi.fn().mockRejectedValue(new Error('File system error')),
         writeFile: vi.fn().mockRejectedValue(new Error('File system error')),
+        deleteFile: vi.fn().mockRejectedValue(new Error('File system error')),
         join: (...paths: string[]) => paths.join('/'),
       }
       setFileStorage(errorStorage)

@@ -62,7 +62,19 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import { useCreateLabel, useDeleteLabel, useDeleteTicket, useProjectLabels, useProjectSprints, useUpdateTicket } from '@/hooks/queries/use-tickets'
+import {
+  useAddAttachments,
+  useRemoveAttachment,
+  useUploadConfig,
+} from '@/hooks/queries/use-attachments'
+import {
+  useCreateLabel,
+  useDeleteLabel,
+  useDeleteTicket,
+  useProjectLabels,
+  useProjectSprints,
+  useUpdateTicket,
+} from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
@@ -73,6 +85,7 @@ import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type {
+  AttachmentInfo,
   IssueType,
   LabelSummary,
   Priority,
@@ -117,6 +130,13 @@ interface TicketDetailDrawerProps {
 // Demo project IDs that use local state instead of API
 const DEMO_PROJECT_IDS = ['1', '2', '3']
 
+// Helper to convert MIME type to category
+function getMimeTypeCategory(mimeType: string): 'image' | 'video' | 'document' {
+  if (mimeType.startsWith('image/')) return 'image'
+  if (mimeType.startsWith('video/')) return 'video'
+  return 'document'
+}
+
 // Demo labels - same as in create-ticket-dialog
 const DEMO_LABELS: LabelSummary[] = [
   { id: 'label-1', name: 'frontend', color: '#ec4899' },
@@ -156,7 +176,8 @@ const DEMO_SPRINTS: SprintSummary[] = [
 
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
   const { removeTicket, addTicket, updateTicket, getColumns } = useBoardStore()
-  const { activeProjectId, setActiveTicketId, drawerFocusField, clearDrawerFocusField } = useUIStore()
+  const { activeProjectId, setActiveTicketId, drawerFocusField, clearDrawerFocusField } =
+    useUIStore()
 
   // Get columns for the active project
   const projectId = activeProjectId || ticket?.projectId || '1' // Fallback to ticket's projectId or '1'
@@ -171,6 +192,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const deleteTicketMutation = useDeleteTicket()
   const createLabelMutation = useCreateLabel()
   const deleteLabelMutation = useDeleteLabel()
+  const addAttachmentsMutation = useAddAttachments()
+  const removeAttachmentMutation = useRemoveAttachment()
+
+  // Get upload config for max attachments
+  const { data: uploadConfig } = useUploadConfig()
 
   // Check if this is a demo project
   const isDemoProject = DEMO_PROJECT_IDS.includes(projectId)
@@ -310,8 +336,18 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setTempParentId(ticket.parentId)
       setTempStatusId(ticket.columnId)
       setTempCreatorId(ticket.creatorId)
-      // Attachments would need to be loaded from the ticket's attachment array
-      setTempAttachments([])
+      // Convert database attachments to UploadedFileInfo format
+      setTempAttachments(
+        (ticket.attachments || []).map((a) => ({
+          id: a.id,
+          filename: a.filename,
+          originalName: a.filename, // Use filename as original name
+          mimetype: a.mimeType,
+          size: a.size,
+          url: a.url,
+          category: getMimeTypeCategory(a.mimeType),
+        })),
+      )
     }
   }, [ticket])
 
@@ -924,7 +960,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       <Button size="sm" variant="primary" onClick={() => handleSaveField('title')}>
                         Save
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleCancelFieldEdit('title')}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCancelFieldEdit('title')}
+                      >
                         Cancel
                       </Button>
                     </div>
@@ -1107,7 +1147,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     <Button size="sm" variant="primary" onClick={() => handleSaveField('estimate')}>
                       Save
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleCancelFieldEdit('estimate')}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCancelFieldEdit('estimate')}
+                    >
                       Cancel
                     </Button>
                   </div>
@@ -1141,7 +1185,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       >
                         Save
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleCancelFieldEdit('description')}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCancelFieldEdit('description')}
+                      >
                         Cancel
                       </Button>
                     </div>
@@ -1381,8 +1429,48 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 </Label>
                 <FileUpload
                   value={tempAttachments}
-                  onChange={(files) => setTempAttachments(files as UploadedFileInfo[])}
-                  maxFiles={10}
+                  onChange={(files) => {
+                    const newFiles = files as UploadedFileInfo[]
+                    const currentIds = new Set(tempAttachments.map((a) => a.id))
+                    const newIds = new Set(newFiles.map((f) => f.id))
+
+                    // Find added files (in new but not in current)
+                    const addedFiles = newFiles.filter((f) => !currentIds.has(f.id))
+
+                    // Find removed files (in current but not in new)
+                    const removedFiles = tempAttachments.filter((a) => !newIds.has(a.id))
+
+                    // Handle persistence for real projects
+                    if (!isDemoProject && ticket) {
+                      // Add new files to database
+                      if (addedFiles.length > 0) {
+                        addAttachmentsMutation.mutate({
+                          projectId,
+                          ticketId: ticket.id,
+                          attachments: addedFiles.map((f) => ({
+                            filename: f.filename,
+                            originalName: f.originalName,
+                            mimeType: f.mimetype,
+                            size: f.size,
+                            url: f.url,
+                          })),
+                        })
+                      }
+
+                      // Remove deleted files from database
+                      for (const removed of removedFiles) {
+                        removeAttachmentMutation.mutate({
+                          projectId,
+                          ticketId: ticket.id,
+                          attachmentId: removed.id,
+                        })
+                      }
+                    }
+
+                    // Update local state
+                    setTempAttachments(newFiles)
+                  }}
+                  maxFiles={uploadConfig?.maxAttachmentsPerTicket ?? 20}
                 />
               </div>
 

@@ -34,6 +34,18 @@ export const LABEL_SELECT = {
 } as const
 
 /**
+ * Attachment fields commonly used when including attachment relations.
+ */
+export const ATTACHMENT_SELECT = {
+  id: true,
+  filename: true,
+  mimeType: true,
+  size: true,
+  url: true,
+  createdAt: true,
+} as const
+
+/**
  * Full ticket select with all relations for API responses.
  * Use this for GET endpoints that return complete ticket data.
  */
@@ -78,6 +90,10 @@ export const TICKET_SELECT_FULL = {
         select: USER_SELECT_SUMMARY,
       },
     },
+  },
+  attachments: {
+    select: ATTACHMENT_SELECT,
+    orderBy: { createdAt: 'desc' as const },
   },
   _count: {
     select: {

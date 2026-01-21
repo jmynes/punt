@@ -332,3 +332,21 @@ model Attachment {
 
   @@index([ticketId])
 }
+
+// System-wide settings for file upload limits (singleton)
+model SystemSettings {
+  id        String   @id @default("system-settings")
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  // File upload limits (in MB)
+  maxImageSizeMB          Int @default(10)
+  maxVideoSizeMB          Int @default(100)
+  maxDocumentSizeMB       Int @default(25)
+  maxAttachmentsPerTicket Int @default(20)
+
+  // Allowed MIME types (JSON arrays stored as strings)
+  allowedImageTypes    String @default("[\"image/jpeg\",\"image/png\",\"image/gif\",\"image/webp\"]")
+  allowedVideoTypes    String @default("[\"video/mp4\",\"video/webm\",\"video/ogg\",\"video/quicktime\"]")
+  allowedDocumentTypes String @default("[\"application/pdf\",\"application/msword\",\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"application/vnd.ms-excel\",\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\",\"text/plain\",\"text/csv\"]")
+}

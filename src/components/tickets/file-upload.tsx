@@ -1,8 +1,9 @@
 'use client'
 
 import { FileImage, FileText, FileVideo, Loader2, Upload, X } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useUploadConfig } from '@/hooks/queries/use-attachments'
 import { cn } from '@/lib/utils'
 
 export interface UploadedFile {
@@ -22,15 +23,15 @@ interface FileUploadProps {
   disabled?: boolean
 }
 
-const ALLOWED_EXTENSIONS = [
+// Fallback extensions when config hasn't loaded yet
+const DEFAULT_EXTENSIONS = [
   // Images
   '.jpg',
   '.jpeg',
   '.png',
   '.gif',
   '.webp',
-  '.svg',
-  // Videos
+  // Videos (SVG intentionally excluded for security)
   '.mp4',
   '.webm',
   '.ogg',
@@ -44,6 +45,28 @@ const ALLOWED_EXTENSIONS = [
   '.txt',
   '.csv',
 ]
+
+// Map MIME types to extensions
+function mimeTypesToExtensions(types: string[]): string[] {
+  const mimeToExt: Record<string, string> = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/gif': '.gif',
+    'image/webp': '.webp',
+    'video/mp4': '.mp4',
+    'video/webm': '.webm',
+    'video/ogg': '.ogg',
+    'video/quicktime': '.mov',
+    'application/pdf': '.pdf',
+    'application/msword': '.doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+    'application/vnd.ms-excel': '.xls',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+    'text/plain': '.txt',
+    'text/csv': '.csv',
+  }
+  return types.map((type) => mimeToExt[type]).filter(Boolean)
+}
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes'
@@ -64,11 +87,30 @@ function getFileIcon(category: 'image' | 'video' | 'document') {
   }
 }
 
-export function FileUpload({ value, onChange, maxFiles = 10, disabled }: FileUploadProps) {
+export function FileUpload({ value, onChange, maxFiles: maxFilesProp, disabled }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Fetch dynamic upload config
+  const { data: uploadConfig } = useUploadConfig()
+
+  // Use config from server or fallback to defaults/props
+  const maxFiles = maxFilesProp ?? uploadConfig?.maxAttachmentsPerTicket ?? 10
+  const allowedExtensions = uploadConfig?.allowedTypes
+    ? mimeTypesToExtensions(uploadConfig.allowedTypes)
+    : DEFAULT_EXTENSIONS
+
+  // Get max size for display
+  const maxSizeDisplay = uploadConfig?.maxSizes
+    ? Math.max(
+        uploadConfig.maxSizes.image,
+        uploadConfig.maxSizes.video,
+        uploadConfig.maxSizes.document,
+      ) /
+      (1024 * 1024)
+    : 100
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -196,7 +238,7 @@ export function FileUpload({ value, onChange, maxFiles = 10, disabled }: FileUpl
                   ref={fileInputRef}
                   type="file"
                   multiple
-                  accept={ALLOWED_EXTENSIONS.join(',')}
+                  accept={allowedExtensions.join(',')}
                   onChange={handleFileSelect}
                   disabled={disabled || isUploading}
                   className="sr-only"
@@ -204,7 +246,7 @@ export function FileUpload({ value, onChange, maxFiles = 10, disabled }: FileUpl
               </label>
             </p>
             <p className="mt-1 text-xs text-zinc-500">
-              Images, videos, PDFs, documents up to 100MB
+              Images, videos, PDFs, documents up to {maxSizeDisplay}MB
             </p>
           </>
         )}

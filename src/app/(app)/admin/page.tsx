@@ -1,4 +1,4 @@
-import { Shield, Users } from 'lucide-react'
+import { Settings, Shield, Users } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { db } from '@/lib/db'
@@ -63,6 +63,22 @@ export default async function AdminDashboard() {
                 <div>
                   <h3 className="font-semibold text-zinc-100">User Management</h3>
                   <p className="text-sm text-zinc-500">Create, edit, and manage user accounts</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/settings">
+            <Card className="border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800/50 transition-colors cursor-pointer">
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-amber-500/10">
+                  <Settings className="h-6 w-6 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-zinc-100">System Settings</h3>
+                  <p className="text-sm text-zinc-500">
+                    Configure file upload limits and allowed types
+                  </p>
                 </div>
               </CardContent>
             </Card>
