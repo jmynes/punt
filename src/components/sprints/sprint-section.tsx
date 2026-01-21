@@ -35,6 +35,7 @@ import type {
   SprintWithMetrics,
   TicketWithRelations,
 } from '@/types'
+import { DropIndicator, DropZone } from './drop-indicator'
 import { SprintTableRow } from './sprint-table-row'
 
 interface SprintSectionProps {
@@ -46,6 +47,10 @@ interface SprintSectionProps {
   defaultExpanded?: boolean
   onCreateTicket?: (sprintId: string | null) => void
   onDelete?: (sprintId: string) => void
+  /** Index where drop indicator should appear (null = not a drop target) */
+  dropPosition?: number | null
+  /** IDs of tickets currently being dragged */
+  draggingTicketIds?: string[]
 }
 
 /**
@@ -61,6 +66,8 @@ export function SprintSection({
   defaultExpanded = true,
   onCreateTicket,
   onDelete,
+  dropPosition = null,
+  draggingTicketIds = [],
 }: SprintSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
@@ -75,9 +82,11 @@ export function SprintSection({
       ? isSprintExpired({ ...sprint, status: sprint.status as SprintStatus })
       : false
 
-  // Calculate totals
-  const totalPoints = tickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
-  const ticketCount = tickets.length
+  // Calculate totals (excluding dragging tickets for display counts)
+  const visibleTickets = tickets.filter((t) => !draggingTicketIds.includes(t.id))
+  const totalPoints = visibleTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
+  const ticketCount = visibleTickets.length
+  const draggingCount = draggingTicketIds.length
 
   // Droppable for the section
   const droppableId = sprint?.id ?? 'backlog'
@@ -89,7 +98,7 @@ export function SprintSection({
     },
   })
 
-  // Ticket IDs for sortable context
+  // Ticket IDs for sortable context - include ALL tickets since they stay visible
   const ticketIds = tickets.map((t) => t.id)
 
   const handleStartSprint = useCallback(() => {
@@ -119,7 +128,10 @@ export function SprintSection({
         isActive && !expired && 'border-green-500/30 bg-green-500/5',
         isActive && expired && 'border-orange-500/30 bg-orange-500/5',
         isCompleted && 'border-zinc-700 bg-zinc-900/20 opacity-75',
-        isOver && 'border-blue-500/50 bg-blue-500/10 ring-2 ring-blue-500/20',
+        // Drop target styling - subtle glow when this section is a valid drop target
+        dropPosition !== null && 'border-blue-500/40 ring-1 ring-blue-500/20',
+        // isOver is still useful for empty sections
+        isOver && ticketCount === 0 && 'border-blue-500/50 bg-blue-500/10 ring-2 ring-blue-500/20',
       )}
     >
       {/* Section Header */}
@@ -370,42 +382,66 @@ export function SprintSection({
 
       {/* Ticket table */}
       {expanded && (
-        <div ref={setNodeRef} className={cn('pb-3', ticketCount === 0 && 'py-6 px-4')}>
+        <div ref={setNodeRef} className={cn('pb-3', ticketCount === 0 && 'px-4 py-3')}>
           {ticketCount === 0 ? (
-            <div className="text-center text-zinc-600 text-sm">
-              {isBacklog
-                ? 'Drag tickets here to remove them from sprints'
-                : 'Drag tickets here to add them to this sprint'}
-            </div>
+            <DropZone
+              isActive={dropPosition !== null || isOver}
+              itemCount={draggingCount}
+              message={
+                isBacklog
+                  ? 'Drag tickets here to remove them from sprints'
+                  : 'Drag tickets here to add them to this sprint'
+              }
+            />
           ) : (
-            <table className="w-full border-collapse">
-              <thead className="text-left text-xs text-zinc-500 uppercase tracking-wider">
-                <tr className="border-b border-zinc-800/50">
-                  <th className="w-8" />
-                  <th className="px-3 py-2 w-10">Type</th>
-                  <th className="px-3 py-2 w-24">Key</th>
-                  <th className="px-3 py-2">Summary</th>
-                  <th className="px-3 py-2 w-28">Status</th>
-                  <th className="px-3 py-2 w-24">Priority</th>
-                  <th className="px-3 py-2 w-16 text-center">Pts</th>
-                  <th className="px-3 py-2 w-24">Due</th>
-                  <th className="px-3 py-2 w-8" />
-                </tr>
-              </thead>
-              <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
-                <tbody>
-                  {tickets.map((ticket) => (
-                    <SprintTableRow
-                      key={ticket.id}
-                      ticket={ticket}
-                      projectKey={projectKey}
-                      statusColumns={statusColumns}
-                      allTicketIds={ticketIds}
-                    />
-                  ))}
-                </tbody>
-              </SortableContext>
-            </table>
+            <div className="relative">
+              <table className="w-full border-collapse">
+                <thead className="text-left text-xs text-zinc-500 uppercase tracking-wider">
+                  <tr className="border-b border-zinc-800/50">
+                    <th className="w-8" />
+                    <th className="px-3 py-2 w-10">Type</th>
+                    <th className="px-3 py-2 w-24">Key</th>
+                    <th className="px-3 py-2">Summary</th>
+                    <th className="px-3 py-2 w-28">Status</th>
+                    <th className="px-3 py-2 w-24">Priority</th>
+                    <th className="px-3 py-2 w-16 text-center">Pts</th>
+                    <th className="px-3 py-2 w-24">Due</th>
+                    <th className="px-3 py-2 w-8" />
+                  </tr>
+                </thead>
+                <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
+                  <tbody>
+                    {tickets.map((ticket, index) => {
+                      const isBeingDragged = draggingTicketIds.includes(ticket.id)
+                      // Show drop indicator before this ticket if this is the drop position
+                      // Don't show indicator on the dragged ticket itself
+                      const showIndicator = !isBeingDragged && index === dropPosition
+
+                      return (
+                        <SprintTableRow
+                          key={ticket.id}
+                          ticket={ticket}
+                          projectKey={projectKey}
+                          statusColumns={statusColumns}
+                          allTicketIds={ticketIds}
+                          isBeingDragged={isBeingDragged}
+                          showDropIndicator={showIndicator}
+                          draggingCount={draggingCount}
+                        />
+                      )
+                    })}
+                    {/* Drop indicator at end of list */}
+                    {dropPosition !== null && dropPosition >= tickets.length && (
+                      <tr>
+                        <td colSpan={9} className="p-0">
+                          <DropIndicator itemCount={draggingCount} />
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </SortableContext>
+              </table>
+            </div>
           )}
         </div>
       )}

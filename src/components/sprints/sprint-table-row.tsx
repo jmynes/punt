@@ -14,6 +14,7 @@ import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { TicketContextMenu } from '../board/ticket-context-menu'
+import { DropIndicator } from './drop-indicator'
 
 interface SprintTableRowProps {
   ticket: TicketWithRelations
@@ -21,6 +22,12 @@ interface SprintTableRowProps {
   statusColumns: ColumnWithTickets[]
   allTicketIds: string[]
   isOverlay?: boolean
+  /** Whether this row is currently being dragged */
+  isBeingDragged?: boolean
+  /** Whether to show drop indicator before this row */
+  showDropIndicator?: boolean
+  /** Number of items being dragged */
+  draggingCount?: number
 }
 
 /**
@@ -32,6 +39,9 @@ export function SprintTableRow({
   statusColumns,
   allTicketIds,
   isOverlay = false,
+  isBeingDragged = false,
+  showDropIndicator = false,
+  draggingCount = 0,
 }: SprintTableRowProps) {
   const { setActiveTicketId } = useUIStore()
   const { isSelected, selectTicket, toggleTicket, selectRange } = useSelectionStore()
@@ -154,119 +164,138 @@ export function SprintTableRow({
   }
 
   return (
-    <TicketContextMenu ticket={ticket}>
-      <tr
-        ref={setNodeRef}
-        style={style}
-        data-ticket-row
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        className={cn(
-          'group border-b border-zinc-800/50 transition-colors focus:outline-none select-none',
-          !selected && 'hover:bg-zinc-800/50 focus:bg-zinc-800/50',
-          isDragging && 'opacity-50 bg-zinc-800 shadow-lg',
-          'cursor-grab active:cursor-grabbing',
-          selected &&
-            'bg-amber-500/20 hover:bg-amber-500/25 focus:bg-amber-500/25 border-amber-500/50',
-        )}
-        {...attributes}
-        {...listeners}
-      >
-        {/* Drag handle */}
-        <td className="w-8 px-1 py-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            <GripVertical className="h-4 w-4 text-zinc-500" />
-          </div>
-        </td>
-
-        {/* Type */}
-        <td className="px-3 py-2 w-10">
-          <TypeBadge type={ticket.type} />
-        </td>
-
-        {/* Key */}
-        <td className="px-3 py-2 w-24">
-          <span className="font-mono text-sm text-zinc-400">
-            {projectKey}-{ticket.number}
-          </span>
-        </td>
-
-        {/* Title */}
-        <td className="px-3 py-2">
-          <div className="flex items-center gap-2">
-            <span className="truncate font-medium">{ticket.title}</span>
-            {ticket._count && ticket._count.subtasks > 0 && (
-              <Badge variant="outline" className="shrink-0 text-xs">
-                {ticket._count.subtasks} subtasks
-              </Badge>
-            )}
-          </div>
-        </td>
-
-        {/* Status */}
-        <td className="px-3 py-2 w-28">
-          <Badge variant="secondary" className="whitespace-nowrap flex items-center gap-1">
-            <StatusIcon className={cn('h-3.5 w-3.5', statusColor)} aria-hidden />
-            {statusName}
-          </Badge>
-        </td>
-
-        {/* Priority */}
-        <td className="px-3 py-2 w-24">
-          <PriorityBadge priority={ticket.priority} showLabel />
-        </td>
-
-        {/* Story Points */}
-        <td className="px-3 py-2 w-16 text-center">
-          {ticket.storyPoints !== null ? (
-            <Badge variant="outline" className="font-mono">
-              {ticket.storyPoints}
-            </Badge>
-          ) : (
-            <span className="text-zinc-500">—</span>
+    <>
+      {/* Drop indicator before this row */}
+      {showDropIndicator && (
+        <tr>
+          <td colSpan={9} className="p-0">
+            <DropIndicator itemCount={draggingCount} />
+          </td>
+        </tr>
+      )}
+      <TicketContextMenu ticket={ticket}>
+        <tr
+          ref={setNodeRef}
+          style={style}
+          data-ticket-row
+          data-ticket-id={ticket.id}
+          onClick={handleClick}
+          onKeyDown={handleKeyDown}
+          className={cn(
+            'group border-b border-zinc-800/50 transition-all duration-200 focus:outline-none select-none',
+            !selected && !isBeingDragged && 'hover:bg-zinc-800/50 focus:bg-zinc-800/50',
+            'cursor-grab active:cursor-grabbing',
+            // Being dragged - prominent "moving" state
+            isBeingDragged && [
+              'bg-amber-500/10 border-amber-500/40',
+              'ring-2 ring-amber-500/50 ring-offset-1 ring-offset-zinc-900',
+              'shadow-[0_0_20px_rgba(245,158,11,0.15)]',
+              'relative z-10',
+            ],
+            // Selected state
+            selected &&
+              !isBeingDragged &&
+              'bg-amber-500/20 hover:bg-amber-500/25 focus:bg-amber-500/25 border-amber-500/50',
           )}
-        </td>
+          {...attributes}
+          {...listeners}
+        >
+          {/* Drag handle */}
+          <td className="w-8 px-1 py-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              <GripVertical className="h-4 w-4 text-zinc-500" />
+            </div>
+          </td>
 
-        {/* Due Date */}
-        <td className="px-3 py-2 w-24">
-          {ticket.dueDate ? (
-            <span
-              className={cn(
-                'text-sm',
-                isOverdue && 'font-medium text-red-400',
-                isDueToday && 'font-medium text-amber-400',
-              )}
-            >
-              {format(ticket.dueDate, 'MMM d')}
+          {/* Type */}
+          <td className="px-3 py-2 w-10">
+            <TypeBadge type={ticket.type} />
+          </td>
+
+          {/* Key */}
+          <td className="px-3 py-2 w-24">
+            <span className="font-mono text-sm text-zinc-400">
+              {projectKey}-{ticket.number}
             </span>
-          ) : (
-            <span className="text-zinc-500">—</span>
-          )}
-        </td>
+          </td>
 
-        {/* Assignee */}
-        <td className="px-3 py-2 w-8">
-          {ticket.assignee ? (
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={ticket.assignee.avatar || undefined} />
-              <AvatarFallback
-                className="text-[10px] text-white font-medium"
-                style={{
-                  backgroundColor: getAvatarColor(ticket.assignee.id || ticket.assignee.name),
-                }}
+          {/* Title */}
+          <td className="px-3 py-2">
+            <div className="flex items-center gap-2">
+              <span className="truncate font-medium">{ticket.title}</span>
+              {ticket._count && ticket._count.subtasks > 0 && (
+                <Badge variant="outline" className="shrink-0 text-xs">
+                  {ticket._count.subtasks} subtasks
+                </Badge>
+              )}
+            </div>
+          </td>
+
+          {/* Status */}
+          <td className="px-3 py-2 w-28">
+            <Badge variant="secondary" className="whitespace-nowrap flex items-center gap-1">
+              <StatusIcon className={cn('h-3.5 w-3.5', statusColor)} aria-hidden />
+              {statusName}
+            </Badge>
+          </td>
+
+          {/* Priority */}
+          <td className="px-3 py-2 w-24">
+            <PriorityBadge priority={ticket.priority} showLabel />
+          </td>
+
+          {/* Story Points */}
+          <td className="px-3 py-2 w-16 text-center">
+            {ticket.storyPoints !== null ? (
+              <Badge variant="outline" className="font-mono">
+                {ticket.storyPoints}
+              </Badge>
+            ) : (
+              <span className="text-zinc-500">—</span>
+            )}
+          </td>
+
+          {/* Due Date */}
+          <td className="px-3 py-2 w-24">
+            {ticket.dueDate ? (
+              <span
+                className={cn(
+                  'text-sm',
+                  isOverdue && 'font-medium text-red-400',
+                  isDueToday && 'font-medium text-amber-400',
+                )}
               >
-                {getInitials(ticket.assignee.name)}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <Avatar className="h-6 w-6">
-              <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
-                <User className="h-3 w-3 text-zinc-500" />
-              </AvatarFallback>
-            </Avatar>
-          )}
-        </td>
-      </tr>
-    </TicketContextMenu>
+                {format(ticket.dueDate, 'MMM d')}
+              </span>
+            ) : (
+              <span className="text-zinc-500">—</span>
+            )}
+          </td>
+
+          {/* Assignee */}
+          <td className="px-3 py-2 w-8">
+            {ticket.assignee ? (
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={ticket.assignee.avatar || undefined} />
+                <AvatarFallback
+                  className="text-[10px] text-white font-medium"
+                  style={{
+                    backgroundColor: getAvatarColor(ticket.assignee.id || ticket.assignee.name),
+                  }}
+                >
+                  {getInitials(ticket.assignee.name)}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <Avatar className="h-6 w-6">
+                <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
+                  <User className="h-3 w-3 text-zinc-500" />
+                </AvatarFallback>
+              </Avatar>
+            )}
+          </td>
+        </tr>
+      </TicketContextMenu>
+    </>
   )
 }

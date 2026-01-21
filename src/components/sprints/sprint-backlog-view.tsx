@@ -58,7 +58,11 @@ export function SprintBacklogView({
   // Drag state
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
   const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
-  const [_overId, setOverId] = useState<string | null>(null)
+  // Drop position tracks where the drop indicator should appear
+  const [dropPosition, setDropPosition] = useState<{
+    sectionId: string // sprint id or 'backlog'
+    insertIndex: number // index where items will be inserted
+  } | null>(null)
 
   // Refs for drag operation
   const draggedIdsRef = useRef<string[]>([])
@@ -143,24 +147,72 @@ export function SprintBacklogView({
   )
 
   // Handle drag over (for visual feedback)
-  const handleDragOver = useCallback((event: DragOverEvent) => {
-    const { over } = event
-    if (over) {
-      // Check if we're over a sprint section or a ticket
-      const overData = over.data.current
-      if (overData?.type === 'sprint-section') {
-        setOverId(over.id as string)
-      } else if (overData?.type === 'ticket') {
-        // Get the sprint of the ticket we're over
-        const overTicket = overData.ticket as TicketWithRelations
-        setOverId(overTicket.sprintId ?? 'backlog')
-      } else {
-        setOverId(null)
+  // Tickets stay visible during drag, so we use their actual index
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { over } = event
+      if (!over) {
+        setDropPosition(null)
+        return
       }
-    } else {
-      setOverId(null)
-    }
-  }, [])
+
+      const overId = over.id as string
+      const overData = over.data.current
+      const draggedIds = draggedIdsRef.current
+
+      // Check if hovering over a sprint section (droppable container)
+      const isOverSection = overData?.type === 'sprint-section'
+
+      let targetSectionId: string | undefined
+      let forceInsertAtEnd = false
+
+      if (isOverSection) {
+        // Hovering over an empty section or section container
+        targetSectionId = (overData.sprintId as string | null) ?? 'backlog'
+        forceInsertAtEnd = true
+      } else {
+        // Must be hovering over a ticket - find which section contains it
+        for (const [sectionId, sectionTickets] of Object.entries(ticketsBySprint)) {
+          const foundTicket = sectionTickets.find((t) => t.id === overId)
+          if (foundTicket) {
+            targetSectionId = sectionId
+            break
+          }
+        }
+      }
+
+      if (!targetSectionId) {
+        setDropPosition(null)
+        return
+      }
+
+      const sectionTickets = ticketsBySprint[targetSectionId] ?? []
+
+      let insertIndex: number
+      if (forceInsertAtEnd) {
+        // Insert at end of section
+        insertIndex = sectionTickets.length
+      } else {
+        // Find the index of the ticket we're hovering over
+        // This is where the drop indicator will appear (before this ticket)
+        const overTicketIndex = sectionTickets.findIndex((t) => t.id === overId)
+
+        // If hovering over a dragged ticket, don't show indicator there
+        if (draggedIds.includes(overId)) {
+          setDropPosition(null)
+          return
+        }
+
+        insertIndex = overTicketIndex >= 0 ? overTicketIndex : sectionTickets.length
+      }
+
+      setDropPosition({
+        sectionId: targetSectionId,
+        insertIndex,
+      })
+    },
+    [ticketsBySprint],
+  )
 
   // Handle drag end
   const handleDragEnd = useCallback(
@@ -171,7 +223,7 @@ export function SprintBacklogView({
       // Clean up state first
       setActiveTicket(null)
       setDraggingTicketIds([])
-      setOverId(null)
+      setDropPosition(null)
       draggedIdsRef.current = []
 
       if (!over || draggedIds.length === 0) return
@@ -279,10 +331,6 @@ export function SprintBacklogView({
 
   const hasSprints = sprints && sprints.length > 0
 
-  // Filter out dragging tickets from display
-  const filterDragging = (ticketList: TicketWithRelations[]) =>
-    ticketList.filter((t) => !draggingTicketIds.includes(t.id))
-
   return (
     <DndContext
       sensors={sensors}
@@ -321,12 +369,14 @@ export function SprintBacklogView({
           <SprintSection
             key={sprint.id}
             sprint={sprint}
-            tickets={filterDragging(ticketsBySprint[sprint.id] ?? [])}
+            tickets={ticketsBySprint[sprint.id] ?? []}
             projectKey={projectKey}
             projectId={projectId}
             statusColumns={statusColumns}
             defaultExpanded={true}
             onCreateTicket={handleCreateTicket}
+            dropPosition={dropPosition?.sectionId === sprint.id ? dropPosition.insertIndex : null}
+            draggingTicketIds={draggingTicketIds}
           />
         ))}
 
@@ -335,25 +385,29 @@ export function SprintBacklogView({
           <SprintSection
             key={sprint.id}
             sprint={sprint}
-            tickets={filterDragging(ticketsBySprint[sprint.id] ?? [])}
+            tickets={ticketsBySprint[sprint.id] ?? []}
             projectKey={projectKey}
             projectId={projectId}
             statusColumns={statusColumns}
             defaultExpanded={true}
             onCreateTicket={handleCreateTicket}
             onDelete={handleDeleteSprint}
+            dropPosition={dropPosition?.sectionId === sprint.id ? dropPosition.insertIndex : null}
+            draggingTicketIds={draggingTicketIds}
           />
         ))}
 
         {/* Backlog */}
         <SprintSection
           sprint={null}
-          tickets={filterDragging(ticketsBySprint.backlog)}
+          tickets={ticketsBySprint.backlog}
           projectKey={projectKey}
           projectId={projectId}
           statusColumns={statusColumns}
           defaultExpanded={!hasSprints || ticketsBySprint.backlog.length > 0}
           onCreateTicket={handleCreateTicket}
+          dropPosition={dropPosition?.sectionId === 'backlog' ? dropPosition.insertIndex : null}
+          draggingTicketIds={draggingTicketIds}
         />
 
         {/* Completed Sprints (collapsed by default) */}
@@ -370,11 +424,15 @@ export function SprintBacklogView({
                 <SprintSection
                   key={sprint.id}
                   sprint={sprint}
-                  tickets={filterDragging(ticketsBySprint[sprint.id] ?? [])}
+                  tickets={ticketsBySprint[sprint.id] ?? []}
                   projectKey={projectKey}
                   projectId={projectId}
                   statusColumns={statusColumns}
                   defaultExpanded={false}
+                  dropPosition={
+                    dropPosition?.sectionId === sprint.id ? dropPosition.insertIndex : null
+                  }
+                  draggingTicketIds={draggingTicketIds}
                 />
               ))}
               {completedSprints.length > 3 && (
