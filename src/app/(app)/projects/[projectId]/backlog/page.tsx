@@ -44,11 +44,11 @@ export default function BacklogPage() {
   // Get active and planning sprints (exclude completed)
   const activeSprints = useMemo(
     () => sprints?.filter((s) => s.status === 'active') ?? [],
-    [sprints]
+    [sprints],
   )
   const planningSprints = useMemo(
     () => sprints?.filter((s) => s.status === 'planning') ?? [],
-    [sprints]
+    [sprints],
   )
 
   // Get columns for this project

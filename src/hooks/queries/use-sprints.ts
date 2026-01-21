@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
 import type {
   ProjectSprintSettingsData,
@@ -295,7 +296,7 @@ export function useCompleteSprint(projectId: string) {
       queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: sprintKeys.active(projectId) })
       // Also invalidate tickets as they may have been moved
-      queryClient.invalidateQueries({ queryKey: ['tickets', projectId] })
+      queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
     },
     onError: (err) => {
       toast.error(err.message)
@@ -370,7 +371,7 @@ export function useUpdateTicketSprint(projectId: string) {
     onSuccess: () => {
       // Invalidate both sprints and tickets queries
       queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
-      queryClient.invalidateQueries({ queryKey: ['tickets', projectId] })
+      queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
     },
     // Don't show toast here - we handle it in the component for better UX
   })
