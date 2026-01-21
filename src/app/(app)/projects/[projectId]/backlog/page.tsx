@@ -7,7 +7,7 @@ import { ColumnConfig } from '@/components/backlog'
 import { SprintSection } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
-import { useActiveSprint } from '@/hooks/queries/use-sprints'
+import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { useBoardStore } from '@/stores/board-store'
@@ -38,8 +38,18 @@ export default function BacklogPage() {
     enabled: _hasHydrated && columnsLoaded,
   })
 
-  // Fetch active sprint
-  const { data: activeSprint } = useActiveSprint(projectId)
+  // Fetch all sprints
+  const { data: sprints } = useProjectSprints(projectId)
+
+  // Get active and planning sprints (exclude completed)
+  const activeSprints = useMemo(
+    () => sprints?.filter((s) => s.status === 'active') ?? [],
+    [sprints]
+  )
+  const planningSprints = useMemo(
+    () => sprints?.filter((s) => s.status === 'planning') ?? [],
+    [sprints]
+  )
 
   // Get columns for this project
   const columns = getColumns(projectId)
@@ -69,15 +79,28 @@ export default function BacklogPage() {
     return columns.flatMap((col) => col.tickets)
   }, [columns])
 
-  // Split tickets into sprint vs backlog
-  const sprintTickets = useMemo(() => {
-    if (!activeSprint) return []
-    return allTickets.filter((t) => t.sprintId === activeSprint.id)
-  }, [allTickets, activeSprint])
+  // Group tickets by sprint
+  const ticketsBySprint = useMemo(() => {
+    const groups: Record<string, typeof allTickets> = { backlog: [] }
 
-  const backlogTickets = useMemo(() => {
-    return allTickets.filter((t) => !t.sprintId)
-  }, [allTickets])
+    // Initialize groups for each sprint
+    sprints?.forEach((sprint) => {
+      groups[sprint.id] = []
+    })
+
+    // Sort tickets into groups
+    allTickets.forEach((ticket) => {
+      const sprintId = ticket.sprintId ?? 'backlog'
+      if (groups[sprintId]) {
+        groups[sprintId].push(ticket)
+      } else {
+        // Sprint doesn't exist, move to backlog
+        groups.backlog.push(ticket)
+      }
+    })
+
+    return groups
+  }, [allTickets, sprints])
 
   // Find the selected ticket
   const selectedTicket = useMemo(
@@ -152,21 +175,34 @@ export default function BacklogPage() {
 
       {/* Scrollable content with sprint and backlog sections */}
       <div className="flex-1 overflow-y-auto min-h-0 p-4 lg:p-6 space-y-4">
-        {/* Active Sprint Section - Jira-style collapsible section */}
-        {activeSprint && (
+        {/* Active Sprints */}
+        {activeSprints.map((sprint) => (
           <SprintSection
-            sprint={activeSprint}
-            tickets={sprintTickets}
+            key={sprint.id}
+            sprint={sprint}
+            tickets={ticketsBySprint[sprint.id] ?? []}
             projectKey={projectKey}
             projectId={projectId}
             defaultExpanded={true}
           />
-        )}
+        ))}
+
+        {/* Planning Sprints */}
+        {planningSprints.map((sprint) => (
+          <SprintSection
+            key={sprint.id}
+            sprint={sprint}
+            tickets={ticketsBySprint[sprint.id] ?? []}
+            projectKey={projectKey}
+            projectId={projectId}
+            defaultExpanded={true}
+          />
+        ))}
 
         {/* Backlog Section */}
         <SprintSection
           sprint={null}
-          tickets={backlogTickets}
+          tickets={ticketsBySprint.backlog}
           projectKey={projectKey}
           projectId={projectId}
           defaultExpanded={true}
