@@ -75,7 +75,10 @@ export function SprintHeader({
             <p className="text-xs text-zinc-600">Start a sprint to track your progress</p>
           </div>
         </div>
-        <Button onClick={() => setSprintCreateOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+        <Button
+          onClick={() => setSprintCreateOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Create Sprint
         </Button>
