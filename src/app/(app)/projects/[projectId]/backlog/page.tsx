@@ -1,16 +1,20 @@
 'use client'
 
 import {
-  closestCorners,
   DndContext,
   type DragEndEvent,
   type DragOverEvent,
   DragOverlay,
   type DragStartEvent,
+  KeyboardSensor,
+  pointerWithin,
   PointerSensor,
+  rectIntersection,
+  useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { List, Loader2, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -23,6 +27,7 @@ import { Button } from '@/components/ui/button'
 import { useProjectSprints, useUpdateTicketSprint } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
+import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -40,7 +45,9 @@ export default function BacklogPage() {
   const { getColumns, updateTicket, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
     useUIStore()
-  const { clearSelection, selectedTicketIds } = useSelectionStore()
+  const { clearSelection, selectedTicketIds, isSelected } = useSelectionStore()
+  const { columns: backlogColumns, setBacklogOrder, reorderColumns, sort: backlogSort } =
+    useBacklogStore()
 
   // API mutations
   const updateTicketSprintMutation = useUpdateTicketSprint(projectId)
@@ -50,12 +57,15 @@ export default function BacklogPage() {
   const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
   const draggedIdsRef = useRef<string[]>([])
 
-  // DnD sensors for sprint sections
+  // DnD sensors - shared across sprint sections and backlog table
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
       },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     }),
   )
 
@@ -145,13 +155,16 @@ export default function BacklogPage() {
     columns,
   })
 
-  // Drag handlers for sprint sections
+  // Drag handlers - unified for sprint sections and backlog table
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       const { active } = event
-      if (active.data.current?.type !== 'ticket') return
+      const dataType = active.data.current?.type
 
-      const ticket = active.data.current.ticket as TicketWithRelations
+      // Handle both 'ticket' (from sprint) and 'backlog-ticket' (from backlog table)
+      if (dataType !== 'ticket' && dataType !== 'backlog-ticket') return
+
+      const ticket = active.data.current?.ticket as TicketWithRelations
       setActiveTicket(ticket)
 
       const selected = Array.from(selectedTicketIds)
@@ -177,20 +190,91 @@ export default function BacklogPage() {
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const draggedIds = draggedIdsRef.current
-      const { over } = event
+      const { active, over } = event
 
       setActiveTicket(null)
       setDraggingTicketIds([])
       draggedIdsRef.current = []
 
-      if (!over || draggedIds.length === 0) return
+      if (!over) return
+
+      const activeId = active.id as string
+      const overId = over.id as string
+      const activeType = active.data.current?.type
+      const overType = over.data.current?.type
+
+      // Get visible backlog column IDs for column reordering detection
+      const visibleColumnIds = backlogColumns.filter((c) => c.visible).map((c) => c.id)
+
+      // Case 1: Column reordering in backlog table
+      if (visibleColumnIds.includes(activeId as (typeof visibleColumnIds)[number])) {
+        if (activeId !== overId) {
+          const oldIndex = backlogColumns.findIndex((c) => c.id === activeId)
+          const newIndex = backlogColumns.findIndex((c) => c.id === overId)
+          if (oldIndex !== -1 && newIndex !== -1) {
+            reorderColumns(oldIndex, newIndex)
+          }
+        }
+        return
+      }
+
+      // Case 2: Row reordering within backlog (backlog-ticket to backlog-ticket, same sprint)
+      // Only allow reordering when there's no active sort
+      if (
+        activeType === 'backlog-ticket' &&
+        overType === 'backlog-ticket' &&
+        active.data.current?.sprintId === over.data.current?.sprintId &&
+        !backlogSort
+      ) {
+        const backlogTickets = ticketsBySprint.backlog ?? []
+        const selectedIds = Array.from(selectedTicketIds)
+
+        // Multi-drag reordering
+        if (selectedIds.length > 1 && isSelected(activeId)) {
+          const selectedSet = new Set(selectedIds)
+          const remaining = backlogTickets.filter((t) => !selectedSet.has(t.id))
+          const selectedInOrder = backlogTickets.filter((t) => selectedSet.has(t.id))
+
+          let insertIndex = remaining.findIndex((t) => t.id === overId)
+          if (insertIndex === -1) insertIndex = remaining.length
+          if (selectedSet.has(overId)) insertIndex = remaining.length
+
+          const newOrder = [
+            ...remaining.slice(0, insertIndex),
+            ...selectedInOrder,
+            ...remaining.slice(insertIndex),
+          ]
+
+          setBacklogOrder(projectId, newOrder.map((t) => t.id))
+          clearSelection()
+        } else {
+          // Single drag reordering
+          const oldIndex = backlogTickets.findIndex((t) => t.id === activeId)
+          const newIndex = backlogTickets.findIndex((t) => t.id === overId)
+
+          if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+            const newOrder = arrayMove(backlogTickets, oldIndex, newIndex)
+            setBacklogOrder(projectId, newOrder.map((t) => t.id))
+          }
+        }
+        return
+      }
+
+      // Case 3: Cross-section sprint assignment (ticket to sprint-section, or ticket to different sprint's ticket)
+      if (draggedIds.length === 0) return
 
       let targetSprintId: string | null = null
-      if (over.data.current?.type === 'sprint-section') {
-        targetSprintId = over.data.current.sprintId as string | null
-      } else if (over.data.current?.type === 'ticket') {
-        const ticket = over.data.current.ticket as TicketWithRelations
+
+      if (overType === 'sprint-section') {
+        targetSprintId = over.data.current?.sprintId as string | null
+      } else if (overType === 'ticket') {
+        const ticket = over.data.current?.ticket as TicketWithRelations
         targetSprintId = ticket.sprintId
+      } else if (overType === 'backlog-ticket') {
+        // Dropped on a backlog ticket from a different section - move to backlog
+        targetSprintId = null
+      } else {
+        return
       }
 
       const ticketsToMove = allTickets.filter((t) => draggedIds.includes(t.id))
@@ -239,7 +323,21 @@ export default function BacklogPage() {
           toast.error('Failed to move tickets', { description: error.message })
         })
     },
-    [allTickets, sprints, projectId, updateTicket, updateTicketSprintMutation],
+    [
+      allTickets,
+      sprints,
+      projectId,
+      updateTicket,
+      updateTicketSprintMutation,
+      backlogColumns,
+      reorderColumns,
+      ticketsBySprint.backlog,
+      selectedTicketIds,
+      isSelected,
+      setBacklogOrder,
+      clearSelection,
+      backlogSort,
+    ],
   )
 
   // Redirect to dashboard if project doesn't exist after loading
@@ -298,15 +396,16 @@ export default function BacklogPage() {
         </div>
       </div>
 
-      {/* Sprint sections (if any sprints exist) */}
-      {hasActiveSprints && (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
+      {/* Unified DnD context wrapping sprint sections AND backlog table */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={pointerWithin}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        {/* Sprint sections (if any sprints exist) */}
+        {hasActiveSprints && (
           <div className="flex-shrink-0 p-4 lg:px-6 space-y-3 border-b border-zinc-800">
             {/* Active Sprints */}
             {activeSprints.map((sprint) => (
@@ -336,36 +435,41 @@ export default function BacklogPage() {
               />
             ))}
           </div>
+        )}
 
-          {/* Drag overlay */}
-          <DragOverlay dropAnimation={null}>
-            {activeTicket && (
-              <div className="w-full max-w-4xl">
-                {draggingTicketIds.length > 1 ? (
-                  <div className="relative">
-                    <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay />
-                    <div className="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold shadow-lg">
-                      {draggingTicketIds.length}
-                    </div>
-                  </div>
-                ) : (
+        {/* Backlog table with filters and columns */}
+        <BacklogDropZone isOver={false}>
+          <div className="flex-1 overflow-hidden min-h-0">
+            <BacklogTable
+              tickets={ticketsBySprint.backlog?.filter((t) => !draggingTicketIds.includes(t.id)) ?? []}
+              columns={columns}
+              projectKey={projectKey}
+              projectId={projectId}
+              useExternalDnd={hasActiveSprints}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            />
+          </div>
+        </BacklogDropZone>
+
+        {/* Drag overlay */}
+        <DragOverlay dropAnimation={null}>
+          {activeTicket && (
+            <div className="w-full max-w-4xl">
+              {draggingTicketIds.length > 1 ? (
+                <div className="relative">
                   <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay />
-                )}
-              </div>
-            )}
-          </DragOverlay>
-        </DndContext>
-      )}
-
-      {/* Backlog table with filters and columns */}
-      <div className="flex-1 overflow-hidden min-h-0">
-        <BacklogTable
-          tickets={ticketsBySprint.backlog ?? []}
-          columns={columns}
-          projectKey={projectKey}
-          projectId={projectId}
-        />
-      </div>
+                  <div className="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold shadow-lg">
+                    {draggingTicketIds.length}
+                  </div>
+                </div>
+              ) : (
+                <SprintTicketRow ticket={activeTicket} projectKey={projectKey} isOverlay />
+              )}
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
 
       {/* Column config sheet */}
       <ColumnConfig />
@@ -376,6 +480,34 @@ export default function BacklogPage() {
         projectKey={projectKey}
         onClose={() => setActiveTicketId(null)}
       />
+    </div>
+  )
+}
+
+/** Drop zone wrapper for the backlog section - enables dropping from sprint to backlog */
+function BacklogDropZone({
+  children,
+  isOver: _isOverProp,
+}: {
+  children: React.ReactNode
+  isOver?: boolean
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'backlog',
+    data: {
+      type: 'sprint-section',
+      sprintId: null, // null = backlog
+    },
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-1 flex flex-col overflow-hidden min-h-0 transition-colors ${
+        isOver ? 'bg-blue-500/5 ring-2 ring-blue-500/20 ring-inset' : ''
+      }`}
+    >
+      {children}
     </div>
   )
 }

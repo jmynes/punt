@@ -33,6 +33,12 @@ interface BacklogTableProps {
   columns: ColumnWithTickets[]
   projectKey: string
   projectId: string
+  /** When true, BacklogTable won't create its own DndContext - expects external one */
+  useExternalDnd?: boolean
+  /** Called when drag starts (for external DnD coordination) */
+  onDragStart?: (event: DragStartEvent) => void
+  /** Called when drag ends (for external DnD coordination) */
+  onDragEnd?: (event: DragEndEvent) => void
 }
 
 export function BacklogTable({
@@ -40,6 +46,9 @@ export function BacklogTable({
   columns: statusColumns,
   projectKey,
   projectId,
+  useExternalDnd = false,
+  onDragStart: externalDragStart,
+  onDragEnd: externalDragEnd,
 }: BacklogTableProps) {
   const {
     columns,
@@ -394,11 +403,21 @@ export function BacklogTable({
     if (selectedTicketIds.size > 0 && !isSelected(activeId)) {
       clearSelection()
     }
+
+    // Notify external handler
+    externalDragStart?.(event)
   }
 
   // Handle drag end for both columns and rows
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
+
+    // If dropped on a sprint section, delegate to external handler
+    if (over?.data.current?.type === 'sprint-section') {
+      externalDragEnd?.(event)
+      return
+    }
+
     if (!over || active.id === over.id) return
 
     const activeId = active.id as string
@@ -507,45 +526,58 @@ export function BacklogTable({
           }
         }}
       >
-        <DndContext
-          id="backlog-dnd"
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <table className="w-full border-collapse">
-            {/* Header with column reordering */}
-            <thead className="sticky top-0 z-10 bg-zinc-900">
-              <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-                <tr className="border-b border-zinc-800">
-                  {/* Empty cell for drag handle column */}
-                  <th className="w-8" />
-                  {visibleColumns.map((column) => (
-                    <BacklogHeader key={column.id} column={column} />
-                  ))}
-                </tr>
-              </SortableContext>
-            </thead>
+        {(() => {
+          const tableContent = (
+            <table className="w-full border-collapse">
+              {/* Header with column reordering */}
+              <thead className="sticky top-0 z-10 bg-zinc-900">
+                <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
+                  <tr className="border-b border-zinc-800">
+                    {/* Empty cell for drag handle column */}
+                    <th className="w-8" />
+                    {visibleColumns.map((column) => (
+                      <BacklogHeader key={column.id} column={column} />
+                    ))}
+                  </tr>
+                </SortableContext>
+              </thead>
 
-            {/* Body with row reordering - disabled when sorted */}
-            <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
-              <tbody>
-                {filteredTickets.map((ticket) => (
-                  <BacklogRow
-                    key={ticket.id}
-                    ticket={ticket}
-                    projectKey={projectKey}
-                    columns={visibleColumns}
-                    getStatusName={getStatusName}
-                    isDraggable={!sort}
-                    allTicketIds={filteredTickets.map((t) => t.id)}
-                  />
-                ))}
-              </tbody>
-            </SortableContext>
-          </table>
-        </DndContext>
+              {/* Body with row reordering - disabled when sorted */}
+              <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
+                <tbody>
+                  {filteredTickets.map((ticket) => (
+                    <BacklogRow
+                      key={ticket.id}
+                      ticket={ticket}
+                      projectKey={projectKey}
+                      columns={visibleColumns}
+                      getStatusName={getStatusName}
+                      isDraggable={useExternalDnd || !sort}
+                      allTicketIds={filteredTickets.map((t) => t.id)}
+                    />
+                  ))}
+                </tbody>
+              </SortableContext>
+            </table>
+          )
+
+          // When using external DnD, don't create our own DndContext
+          if (useExternalDnd) {
+            return tableContent
+          }
+
+          return (
+            <DndContext
+              id="backlog-dnd"
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              {tableContent}
+            </DndContext>
+          )
+        })()}
 
         {filteredTickets.length === 0 && (
           <div className="flex h-40 items-center justify-center text-zinc-500">

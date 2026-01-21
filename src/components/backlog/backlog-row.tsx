@@ -40,6 +40,11 @@ export function BacklogRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: ticket.id,
     disabled: !isDraggable,
+    data: {
+      type: 'backlog-ticket',
+      ticket,
+      sprintId: ticket.sprintId,
+    },
   })
 
   const style = {

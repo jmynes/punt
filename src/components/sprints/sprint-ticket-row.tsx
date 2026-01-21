@@ -83,30 +83,28 @@ export function SprintTicketRow({
       ref={setNodeRef}
       style={style}
       onClick={handleClick}
+      {...attributes}
+      {...listeners}
       className={cn(
         'group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150',
         'border border-transparent hover:border-zinc-700/50',
         'bg-zinc-900/40 hover:bg-zinc-800/60',
-        'cursor-pointer select-none',
+        'cursor-grab active:cursor-grabbing select-none',
         selected && 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/15',
         isOverlay && 'shadow-2xl shadow-black/50 ring-2 ring-blue-500/50 bg-zinc-800',
         isSortableDragging && 'opacity-50',
       )}
     >
-      {/* Drag handle */}
-      <button
-        {...attributes}
-        {...listeners}
+      {/* Drag handle indicator */}
+      <div
         className={cn(
           'flex-shrink-0 p-1 -ml-1 rounded opacity-0 group-hover:opacity-100',
-          'hover:bg-zinc-700/50 cursor-grab active:cursor-grabbing',
           'transition-opacity duration-150',
-          'text-zinc-500 hover:text-zinc-400',
+          'text-zinc-500',
         )}
-        onClick={(e) => e.stopPropagation()}
       >
         <GripVertical className="h-4 w-4" />
-      </button>
+      </div>
 
       {/* Type icon */}
       <TypeBadge type={ticket.type} size="sm" />
