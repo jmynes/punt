@@ -1,8 +1,5 @@
 'use client'
 
-import { Settings } from 'lucide-react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   AlertDialog,
@@ -14,18 +11,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useDeleteProject, useProjects } from '@/hooks/queries/use-projects'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useRealtimeProjects } from '@/hooks/use-realtime-projects'
-import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
 import { SidebarContent } from './sidebar-content'
 
 export function Sidebar() {
-  const pathname = usePathname()
   const currentUser = useCurrentUser()
   const {
     sidebarOpen,
@@ -77,22 +71,6 @@ export function Sidebar() {
             onDeleteProject={setDeleteProjectId}
           />
         </ScrollArea>
-
-        {/* Bottom section */}
-        <div className="border-t border-zinc-800 p-3">
-          <Link href="/settings">
-            <Button
-              variant="ghost"
-              className={cn(
-                'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
-                pathname === '/settings' && 'bg-zinc-800/50 text-zinc-100',
-              )}
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Button>
-          </Link>
-        </div>
       </aside>
 
       {/* Delete confirmation dialog */}
