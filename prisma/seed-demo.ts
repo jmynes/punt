@@ -404,34 +404,19 @@ async function main() {
   const now = new Date()
   const sprintConfigs = [
     {
-      name: 'Sprint 1 - Foundation',
+      name: 'Sprint 1',
       goal: 'Set up project infrastructure and basic features',
       status: 'completed',
-      startDate: new Date(now.getTime() - 42 * 24 * 60 * 60 * 1000),
-      endDate: new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000),
-      completedAt: new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000),
+      startDate: new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000),
+      endDate: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+      completedAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
     },
     {
-      name: 'Sprint 2 - Core Features',
-      goal: 'Implement core user features and authentication',
-      status: 'completed',
-      startDate: new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000),
-      endDate: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000),
-      completedAt: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000),
-    },
-    {
-      name: 'Sprint 3 - Polish & Performance',
-      goal: 'Improve UX and optimize performance',
+      name: 'Sprint 2',
+      goal: 'Implement core user features and workflows',
       status: 'active',
       startDate: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
       endDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
-    },
-    {
-      name: 'Sprint 4 - Mobile & Integration',
-      goal: 'Mobile responsiveness and third-party integrations',
-      status: 'planning',
-      startDate: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000),
-      endDate: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
     },
   ]
 
@@ -462,13 +447,13 @@ async function main() {
   const projectTicketNumbers: Record<string, number> = {}
   let totalTicketCount = 0
 
-  // Distribution: more tickets in To Do, fewer in done
-  const ticketDistribution = [
-    { columnIndex: 0, count: 50 }, // To Do
-    { columnIndex: 1, count: 12 }, // In Progress
-    { columnIndex: 2, count: 8 }, // In Review
-    { columnIndex: 3, count: 30 }, // Done
-  ]
+  // Ticket distribution per project:
+  // - Done (completed sprint): 6 tickets
+  // - In Progress (active sprint): 3 tickets
+  // - In Review (active sprint): 2 tickets
+  // - To Do (active sprint): 4 tickets
+  // - To Do (backlog - no sprint): 5 tickets
+  // Total: 20 tickets per project
 
   for (const project of createdProjects) {
     projectTicketNumbers[project.id] = 1
@@ -476,8 +461,28 @@ async function main() {
     const labels = projectLabels[project.id]
     const sprints = projectSprints[project.id]
 
-    for (const { columnIndex, count } of ticketDistribution) {
-      const column = columns[columnIndex]
+    const completedSprint = sprints.find((s) => s.status === 'completed')
+    const activeSprint = sprints.find((s) => s.status === 'active')
+
+    const todoCol = columns[0] // To Do
+    const inProgressCol = columns[1] // In Progress
+    const inReviewCol = columns[2] // In Review
+    const doneCol = columns[3] // Done
+
+    // Ticket configs: [column, sprint, count]
+    const ticketConfigs: {
+      column: { id: string; name: string }
+      sprint: { id: string } | null
+      count: number
+    }[] = [
+      { column: doneCol, sprint: completedSprint || null, count: 6 },
+      { column: inProgressCol, sprint: activeSprint || null, count: 3 },
+      { column: inReviewCol, sprint: activeSprint || null, count: 2 },
+      { column: todoCol, sprint: activeSprint || null, count: 4 },
+      { column: todoCol, sprint: null, count: 5 }, // Backlog items
+    ]
+
+    for (const { column, sprint, count } of ticketConfigs) {
       for (let i = 0; i < count; i++) {
         const type = randomElement(types)
         const titleList = ticketTitles[type as keyof typeof ticketTitles] || ticketTitles.task
@@ -485,41 +490,19 @@ async function main() {
         const priority = randomElement(priorities)
         const assignee = Math.random() > 0.3 ? randomElement(createdUsers) : null
         const creator = randomElement(createdUsers)
-
-        // Assign sprint based on column
-        let sprint = null
-        if (column.name === 'Done') {
-          // Done tickets are mostly from completed sprints
-          sprint =
-            Math.random() > 0.3
-              ? randomElement(sprints.filter((s) => s.status === 'completed'))
-              : null
-        } else if (column.name === 'In Progress' || column.name === 'In Review') {
-          // Active work is in current sprint
-          sprint = sprints.find((s) => s.status === 'active') || null
-        } else if (column.name === 'To Do') {
-          // To Do items - some have sprints, some are in backlog (no sprint)
-          sprint =
-            Math.random() > 0.4
-              ? sprints.find((s) => s.status === 'active')
-              : Math.random() > 0.5
-                ? sprints.find((s) => s.status === 'planning')
-                : null // Items without a sprint are in the backlog
-        }
-
         const ticketLabels = randomSubset(labels, 0, 3)
 
         // Create dates
-        const createdAt = new Date(now.getTime() - Math.random() * 60 * 24 * 60 * 60 * 1000) // Up to 60 days ago
+        const createdAt = new Date(now.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000) // Up to 30 days ago
         const hasDueDate = Math.random() > 0.6
         const dueDate = hasDueDate
-          ? new Date(now.getTime() + (Math.random() * 30 - 10) * 24 * 60 * 60 * 1000) // -10 to +20 days from now
+          ? new Date(now.getTime() + (Math.random() * 14 - 3) * 24 * 60 * 60 * 1000) // -3 to +11 days from now
           : null
 
         await prisma.ticket.create({
           data: {
             number: projectTicketNumbers[project.id]++,
-            title: `${title}${i > 0 ? ` #${i + 1}` : ''}`, // Add suffix if duplicate title
+            title,
             description: generateTicketDescription(type, title),
             type,
             priority,
@@ -543,7 +526,7 @@ async function main() {
         totalTicketCount++
       }
     }
-    console.log(`  ✓ Created 100 tickets for ${project.name}`)
+    console.log(`  ✓ Created 20 tickets for ${project.name}`)
   }
 
   // Create some subtasks for all projects
@@ -556,11 +539,11 @@ async function main() {
         projectId: project.id,
         type: { in: ['story', 'epic', 'task'] },
       },
-      take: 15,
+      take: 3,
     })
 
     for (const parent of parentTickets) {
-      const numSubtasks = Math.floor(Math.random() * 4) + 1 // 1-4 subtasks
+      const numSubtasks = Math.floor(Math.random() * 2) + 1 // 1-2 subtasks
       for (let i = 0; i < numSubtasks; i++) {
         await prisma.ticket.create({
           data: {
@@ -603,11 +586,11 @@ async function main() {
   for (const project of createdProjects) {
     const ticketsForComments = await prisma.ticket.findMany({
       where: { projectId: project.id },
-      take: 40,
+      take: 10,
     })
 
     for (const ticket of ticketsForComments) {
-      const numComments = Math.floor(Math.random() * 4) // 0-3 comments
+      const numComments = Math.floor(Math.random() * 3) // 0-2 comments
       for (let i = 0; i < numComments; i++) {
         await prisma.comment.create({
           data: {
@@ -631,11 +614,11 @@ async function main() {
   for (const project of createdProjects) {
     const ticketsForWatchers = await prisma.ticket.findMany({
       where: { projectId: project.id },
-      take: 25,
+      take: 8,
     })
 
     for (const ticket of ticketsForWatchers) {
-      const watchers = randomSubset(createdUsers, 1, 4)
+      const watchers = randomSubset(createdUsers, 1, 2)
       for (const watcher of watchers) {
         // Don't add creator or assignee as watcher
         if (watcher.id !== ticket.creatorId && watcher.id !== ticket.assigneeId) {
