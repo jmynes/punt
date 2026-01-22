@@ -21,6 +21,7 @@ import {
 } from '@/hooks/queries/use-sprints'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
+import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -55,6 +56,8 @@ export function SprintBacklogView({
   const { updateTicket, getColumns } = useBoardStore()
   const statusColumns = getColumns(projectId)
   const { selectedTicketIds } = useSelectionStore()
+  const { columns: backlogColumns } = useBacklogStore()
+  const visibleColumns = backlogColumns.filter((c) => c.visible)
 
   // Drag state
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
@@ -555,6 +558,7 @@ export function SprintBacklogView({
                   ticket={activeTicket}
                   projectKey={projectKey}
                   statusColumns={statusColumns}
+                  columns={visibleColumns}
                   allTicketIds={[]}
                   isOverlay
                 />
@@ -567,6 +571,7 @@ export function SprintBacklogView({
                 ticket={activeTicket}
                 projectKey={projectKey}
                 statusColumns={statusColumns}
+                columns={visibleColumns}
                 allTicketIds={[]}
                 isOverlay
               />

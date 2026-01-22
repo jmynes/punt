@@ -4,6 +4,8 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { format } from 'date-fns'
 import {
+  ArrowDown,
+  ArrowUp,
   CalendarDays,
   ChevronDown,
   ChevronRight,
@@ -16,7 +18,7 @@ import {
   Trash2,
   TrendingUp,
 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -28,6 +30,12 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatDaysRemaining, isSprintExpired } from '@/lib/sprint-utils'
 import { cn } from '@/lib/utils'
+import {
+  type BacklogColumnId,
+  type SortConfig,
+  type SortDirection,
+  useBacklogStore,
+} from '@/stores/backlog-store'
 import { useUIStore } from '@/stores/ui-store'
 import type {
   ColumnWithTickets,
@@ -71,6 +79,128 @@ export function SprintSection({
 }: SprintSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
+  const { columns } = useBacklogStore()
+  const visibleColumns = columns.filter((c) => c.visible)
+
+  // Local sort state for this section only
+  const [sort, setSort] = useState<SortConfig | null>(null)
+
+  const handleToggleSort = useCallback(
+    (columnId: BacklogColumnId) => {
+      const column = columns.find((c) => c.id === columnId)
+      if (!column?.sortable) return
+
+      setSort((prev) => {
+        if (prev?.column === columnId) {
+          // Toggle direction or clear
+          if (prev.direction === 'asc') {
+            return { column: columnId, direction: 'desc' as SortDirection }
+          }
+          return null
+        }
+        return { column: columnId, direction: 'asc' as SortDirection }
+      })
+    },
+    [columns],
+  )
+
+  // Get status name helper
+  const getStatusName = useCallback(
+    (columnId: string) => {
+      const col = statusColumns.find((c) => c.id === columnId)
+      return col?.name || 'Unknown'
+    },
+    [statusColumns],
+  )
+
+  // Sort tickets locally
+  const sortedTickets = useMemo(() => {
+    if (!sort) return tickets
+
+    const sorted = [...tickets]
+    sorted.sort((a, b) => {
+      let aVal: string | number | Date | null = null
+      let bVal: string | number | Date | null = null
+
+      switch (sort.column) {
+        case 'key':
+          aVal = a.number
+          bVal = b.number
+          break
+        case 'title':
+          aVal = a.title.toLowerCase()
+          bVal = b.title.toLowerCase()
+          break
+        case 'type':
+          aVal = a.type
+          bVal = b.type
+          break
+        case 'status':
+          aVal = getStatusName(a.columnId).toLowerCase()
+          bVal = getStatusName(b.columnId).toLowerCase()
+          break
+        case 'priority': {
+          const priorityOrder = ['critical', 'highest', 'high', 'medium', 'low', 'lowest']
+          aVal = priorityOrder.indexOf(a.priority)
+          bVal = priorityOrder.indexOf(b.priority)
+          break
+        }
+        case 'assignee':
+          aVal = a.assignee?.name.toLowerCase() || 'zzz'
+          bVal = b.assignee?.name.toLowerCase() || 'zzz'
+          break
+        case 'reporter':
+          aVal = a.creator.name.toLowerCase()
+          bVal = b.creator.name.toLowerCase()
+          break
+        case 'sprint':
+          aVal = a.sprint?.name.toLowerCase() || 'zzz'
+          bVal = b.sprint?.name.toLowerCase() || 'zzz'
+          break
+        case 'storyPoints':
+          aVal = a.storyPoints ?? -1
+          bVal = b.storyPoints ?? -1
+          break
+        case 'estimate':
+          aVal = a.estimate || ''
+          bVal = b.estimate || ''
+          break
+        case 'dueDate':
+          aVal = a.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER
+          bVal = b.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER
+          break
+        case 'created':
+          aVal = a.createdAt.getTime()
+          bVal = b.createdAt.getTime()
+          break
+        case 'updated':
+          aVal = a.updatedAt.getTime()
+          bVal = b.updatedAt.getTime()
+          break
+        case 'parent':
+          aVal = a.parentId || 'zzz'
+          bVal = b.parentId || 'zzz'
+          break
+        case 'labels':
+          aVal = a.labels
+            .map((l) => l.name)
+            .join(',')
+            .toLowerCase()
+          bVal = b.labels
+            .map((l) => l.name)
+            .join(',')
+            .toLowerCase()
+          break
+      }
+
+      if (aVal === null || bVal === null) return 0
+      if (aVal < bVal) return sort.direction === 'asc' ? -1 : 1
+      if (aVal > bVal) return sort.direction === 'asc' ? 1 : -1
+      return 0
+    })
+
+    return sorted
+  }, [tickets, sort, getStatusName])
 
   const isBacklog = !sprint
   const isPlanning = sprint?.status === 'planning'
@@ -98,8 +228,8 @@ export function SprintSection({
     },
   })
 
-  // Ticket IDs for sortable context - include ALL tickets since they stay visible
-  const ticketIds = tickets.map((t) => t.id)
+  // Ticket IDs for sortable context - use sorted order
+  const ticketIds = sortedTickets.map((t) => t.id)
 
   const handleStartSprint = useCallback(() => {
     if (sprint) openSprintStart(sprint.id)
@@ -399,19 +529,43 @@ export function SprintSection({
                 <thead className="text-left text-xs text-zinc-500 uppercase tracking-wider">
                   <tr className="border-b border-zinc-800/50">
                     <th className="w-8" />
-                    <th className="px-3 py-2 w-10">Type</th>
-                    <th className="px-3 py-2 w-24">Key</th>
-                    <th className="px-3 py-2">Summary</th>
-                    <th className="px-3 py-2 w-28">Status</th>
-                    <th className="px-3 py-2 w-24">Priority</th>
-                    <th className="px-3 py-2 w-16 text-center">Pts</th>
-                    <th className="px-3 py-2 w-24">Due</th>
-                    <th className="px-3 py-2 w-8" />
+                    {visibleColumns.map((column) => {
+                      const isSorted = sort?.column === column.id
+                      return (
+                        <th
+                          key={column.id}
+                          style={{
+                            width: column.width || undefined,
+                            minWidth: column.minWidth,
+                          }}
+                          className={cn(
+                            'px-3 py-2 select-none whitespace-nowrap',
+                            column.sortable && 'cursor-pointer hover:text-zinc-200',
+                          )}
+                          onClick={column.sortable ? () => handleToggleSort(column.id) : undefined}
+                        >
+                          <div className="flex items-center gap-1">
+                            <span className={cn(column.sortable && 'hover:underline')}>
+                              {column.label}
+                            </span>
+                            {isSorted && (
+                              <span className="text-amber-500">
+                                {sort.direction === 'asc' ? (
+                                  <ArrowUp className="h-3 w-3" />
+                                ) : (
+                                  <ArrowDown className="h-3 w-3" />
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        </th>
+                      )
+                    })}
                   </tr>
                 </thead>
                 <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
                   <tbody>
-                    {tickets.map((ticket, index) => {
+                    {sortedTickets.map((ticket, index) => {
                       const isBeingDragged = draggingTicketIds.includes(ticket.id)
                       // Show drop indicator before this ticket if this is the drop position
                       // Don't show indicator on the dragged ticket itself
@@ -423,6 +577,7 @@ export function SprintSection({
                           ticket={ticket}
                           projectKey={projectKey}
                           statusColumns={statusColumns}
+                          columns={visibleColumns}
                           allTicketIds={ticketIds}
                           isBeingDragged={isBeingDragged}
                           showDropIndicator={showIndicator}
@@ -431,9 +586,9 @@ export function SprintSection({
                       )
                     })}
                     {/* Drop indicator at end of list */}
-                    {dropPosition !== null && dropPosition >= tickets.length && (
+                    {dropPosition !== null && dropPosition >= sortedTickets.length && (
                       <tr>
-                        <td colSpan={9} className="p-0">
+                        <td colSpan={visibleColumns.length + 1} className="p-0">
                           <DropIndicator itemCount={draggingCount} />
                         </td>
                       </tr>

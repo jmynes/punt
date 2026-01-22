@@ -701,6 +701,7 @@ export default function BacklogPage() {
                     ticket={activeTicket}
                     projectKey={projectKey}
                     statusColumns={columns}
+                    columns={backlogColumns.filter((c) => c.visible)}
                     allTicketIds={[]}
                     isOverlay
                   />
@@ -713,6 +714,7 @@ export default function BacklogPage() {
                   ticket={activeTicket}
                   projectKey={projectKey}
                   statusColumns={columns}
+                  columns={backlogColumns.filter((c) => c.visible)}
                   allTicketIds={[]}
                   isOverlay
                 />
