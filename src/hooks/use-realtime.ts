@@ -2,8 +2,9 @@
 
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { sprintKeys } from '@/hooks/queries/use-sprints'
 import { labelKeys, ticketKeys } from '@/hooks/queries/use-tickets'
-import type { LabelEvent, TicketEvent } from '@/lib/events'
+import type { LabelEvent, SprintEvent, TicketEvent } from '@/lib/events'
 
 // Reconnection config
 const INITIAL_RECONNECT_DELAY = 1000
@@ -34,7 +35,7 @@ interface ConnectedEvent {
   userId: string
 }
 
-type SSEEvent = TicketEvent | LabelEvent | ConnectedEvent
+type SSEEvent = TicketEvent | LabelEvent | SprintEvent | ConnectedEvent
 
 /**
  * Hook for real-time synchronization via Server-Sent Events
@@ -104,6 +105,9 @@ export function useRealtime(projectId: string, enabled = true): RealtimeStatus {
           queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
         } else if (data.type.startsWith('label.')) {
           queryClient.invalidateQueries({ queryKey: labelKeys.byProject(projectId) })
+        } else if (data.type.startsWith('sprint.')) {
+          queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
+          queryClient.invalidateQueries({ queryKey: sprintKeys.active(projectId) })
         }
       } catch {
         // Ignore parse errors (could be keepalive comments)

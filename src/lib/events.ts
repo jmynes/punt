@@ -24,6 +24,16 @@ export type ProjectEventType = 'project.created' | 'project.updated' | 'project.
 export type LabelEventType = 'label.created' | 'label.updated' | 'label.deleted'
 
 /**
+ * Event types for sprint operations
+ */
+export type SprintEventType =
+  | 'sprint.created'
+  | 'sprint.updated'
+  | 'sprint.deleted'
+  | 'sprint.started'
+  | 'sprint.completed'
+
+/**
  * Event types for user profile operations
  */
 export type UserEventType = 'user.updated'
@@ -58,6 +68,18 @@ export interface LabelEvent {
   type: LabelEventType
   projectId: string
   labelId: string
+  userId: string
+  tabId?: string // Optional tab ID for self-skip
+  timestamp: number
+}
+
+/**
+ * Payload for sprint events
+ */
+export interface SprintEvent {
+  type: SprintEventType
+  projectId: string
+  sprintId: string
   userId: string
   tabId?: string // Optional tab ID for self-skip
   timestamp: number
@@ -149,12 +171,19 @@ class ProjectEventEmitter extends EventEmitter {
   }
 
   /**
-   * Subscribe to events for a specific project (tickets and labels)
+   * Emit a sprint event to all subscribers of a project
+   */
+  emitSprintEvent(event: SprintEvent) {
+    this.emit(`project:${event.projectId}`, event)
+  }
+
+  /**
+   * Subscribe to events for a specific project (tickets, labels, and sprints)
    * Returns an unsubscribe function
    */
   subscribeToProject(
     projectId: string,
-    callback: (event: TicketEvent | LabelEvent) => void,
+    callback: (event: TicketEvent | LabelEvent | SprintEvent) => void,
   ): () => void {
     const eventName = `project:${projectId}`
     this.on(eventName, callback)

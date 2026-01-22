@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
 import { requireAuth, requireProjectAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { SPRINT_SELECT_FULL } from '@/lib/prisma-selects'
 
 const startSprintSchema = z.object({
@@ -111,6 +112,17 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
 
       return updated
+    })
+
+    // Emit sprint started event
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitSprintEvent({
+      type: 'sprint.started',
+      projectId,
+      sprintId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
     })
 
     return NextResponse.json(updatedSprint)

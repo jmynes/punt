@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
 import { requireAuth, requireProjectAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { SPRINT_SELECT_FULL, SPRINT_SELECT_SUMMARY } from '@/lib/prisma-selects'
 import { generateNextSprintName, isCompletedColumn } from '@/lib/sprint-utils'
 
@@ -96,7 +97,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Handle incomplete tickets based on action
-    let nextSprint = null
+    // Using `any` since Prisma return types don't match our interface exactly
+    // biome-ignore lint/suspicious/noExplicitAny: Prisma select return type
+    let nextSprint: any = null
 
     const updatedSprint = await db.$transaction(async (tx) => {
       // Determine target for incomplete tickets
@@ -235,6 +238,29 @@ export async function POST(request: Request, { params }: RouteParams) {
 
       return completed
     })
+
+    // Emit sprint completed event
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitSprintEvent({
+      type: 'sprint.completed',
+      projectId,
+      sprintId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+    })
+
+    // If a new sprint was created, emit that event too
+    if (nextSprint) {
+      projectEvents.emitSprintEvent({
+        type: 'sprint.created',
+        projectId,
+        sprintId: nextSprint.id,
+        userId: user.id,
+        tabId,
+        timestamp: Date.now(),
+      })
+    }
 
     return NextResponse.json({
       sprint: updatedSprint,

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
 import { requireAuth, requireProjectAdmin, requireProjectMember } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { SPRINT_SELECT_FULL } from '@/lib/prisma-selects'
 
 const updateSprintSchema = z.object({
@@ -89,6 +90,17 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       select: SPRINT_SELECT_FULL,
     })
 
+    // Emit sprint updated event
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitSprintEvent({
+      type: 'sprint.updated',
+      projectId,
+      sprintId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+    })
+
     return NextResponse.json(sprint)
   } catch (error) {
     return handleApiError(error, 'update sprint')
@@ -100,7 +112,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
  * Requires project admin role
  * Can only delete planning sprints, not active or completed
  */
-export async function DELETE(_request: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     const user = await requireAuth()
     const { projectId, sprintId } = await params
@@ -129,6 +141,17 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     // Delete the sprint
     await db.sprint.delete({
       where: { id: sprintId },
+    })
+
+    // Emit sprint deleted event
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitSprintEvent({
+      type: 'sprint.deleted',
+      projectId,
+      sprintId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
     })
 
     return NextResponse.json({ success: true })
