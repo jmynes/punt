@@ -3,8 +3,9 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { brandingKeys } from '@/hooks/queries/use-branding'
 import { getTabId } from '@/hooks/use-realtime'
-import type { UserEvent } from '@/lib/events'
+import type { BrandingEvent, UserEvent } from '@/lib/events'
 
 // Reconnection config
 const INITIAL_RECONNECT_DELAY = 1000
@@ -18,7 +19,7 @@ interface ConnectedEvent {
   listenerId: string
 }
 
-type SSEEvent = UserEvent | ConnectedEvent
+type SSEEvent = UserEvent | BrandingEvent | ConnectedEvent
 
 /**
  * Hook for real-time user profile synchronization via Server-Sent Events
@@ -93,6 +94,12 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
 
           // Also invalidate any admin user queries
           queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+        }
+
+        // Handle branding updates
+        if (data.type === 'branding.updated') {
+          // Invalidate branding query to fetch new branding settings
+          queryClient.invalidateQueries({ queryKey: brandingKeys.all })
         }
       } catch {
         // Ignore parse errors (could be keepalive comments)

@@ -39,6 +39,11 @@ export type SprintEventType =
 export type UserEventType = 'user.updated'
 
 /**
+ * Event types for branding operations
+ */
+export type BrandingEventType = 'branding.updated'
+
+/**
  * Payload for ticket events
  */
 export interface TicketEvent {
@@ -99,10 +104,22 @@ export interface UserEvent {
   }
 }
 
+/**
+ * Payload for branding events
+ */
+export interface BrandingEvent {
+  type: BrandingEventType
+  userId: string
+  tabId?: string // Optional tab ID for self-skip
+  timestamp: number
+}
+
 // Global channel for project-level events (visible to all authenticated users)
 const PROJECTS_GLOBAL_CHANNEL = 'projects:global'
 // Global channel for user profile events (visible to all authenticated users)
 const USERS_GLOBAL_CHANNEL = 'users:global'
+// Global channel for branding events (visible to all authenticated users)
+const BRANDING_GLOBAL_CHANNEL = 'branding:global'
 
 /**
  * Event emitter for real-time updates
@@ -241,6 +258,29 @@ class ProjectEventEmitter extends EventEmitter {
    */
   getUsersListenerCount(): number {
     return this.listenerCount(USERS_GLOBAL_CHANNEL)
+  }
+
+  /**
+   * Emit a branding event to all subscribers (global channel)
+   */
+  emitBrandingEvent(event: BrandingEvent) {
+    this.emit(BRANDING_GLOBAL_CHANNEL, event)
+  }
+
+  /**
+   * Subscribe to global branding events
+   * Returns an unsubscribe function
+   */
+  subscribeToBranding(callback: (event: BrandingEvent) => void): () => void {
+    this.on(BRANDING_GLOBAL_CHANNEL, callback)
+    return () => this.off(BRANDING_GLOBAL_CHANNEL, callback)
+  }
+
+  /**
+   * Get the number of listeners for global branding events
+   */
+  getBrandingListenerCount(): number {
+    return this.listenerCount(BRANDING_GLOBAL_CHANNEL)
   }
 }
 

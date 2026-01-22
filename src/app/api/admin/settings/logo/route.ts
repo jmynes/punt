@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { FilesystemStorage } from '@/lib/file-storage'
 import { processLogoImage } from '@/lib/image-processing'
 import { logger } from '@/lib/logger'
@@ -110,6 +111,15 @@ export async function POST(request: Request) {
       }
     }
 
+    // Emit branding event for real-time sync
+    const tabId = request.headers.get('x-tab-id') || undefined
+    projectEvents.emitBrandingEvent({
+      type: 'branding.updated',
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+    })
+
     return NextResponse.json({ success: true, logoUrl })
   } catch (error) {
     return handleApiError(error, 'upload logo')
@@ -121,7 +131,7 @@ export async function POST(request: Request) {
  * Remove the custom logo
  * Requires system admin
  */
-export async function DELETE() {
+export async function DELETE(request: Request) {
   try {
     const user = await requireSystemAdmin()
 
@@ -154,6 +164,15 @@ export async function DELETE() {
         // Ignore errors deleting file
       }
     }
+
+    // Emit branding event for real-time sync
+    const tabId = request.headers.get('x-tab-id') || undefined
+    projectEvents.emitBrandingEvent({
+      type: 'branding.updated',
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

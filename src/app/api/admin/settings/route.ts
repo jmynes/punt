@@ -4,6 +4,7 @@ import { handleApiError, validationError } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { getEmailSettings } from '@/lib/email/settings'
+import { projectEvents } from '@/lib/events'
 import { getSystemSettings } from '@/lib/system-settings'
 
 const UpdateSettingsSchema = z.object({
@@ -171,6 +172,23 @@ export async function PATCH(request: Request) {
         ...updateData,
       },
     })
+
+    // Emit branding event if any branding field was updated
+    const hasBrandingUpdate =
+      updates.appName !== undefined ||
+      updates.logoLetter !== undefined ||
+      updates.logoGradientFrom !== undefined ||
+      updates.logoGradientTo !== undefined
+
+    if (hasBrandingUpdate) {
+      const tabId = request.headers.get('x-tab-id') || undefined
+      projectEvents.emitBrandingEvent({
+        type: 'branding.updated',
+        userId: user.id,
+        tabId,
+        timestamp: Date.now(),
+      })
+    }
 
     // Return the updated settings with parsed arrays
     const uploadSettings = await getSystemSettings()

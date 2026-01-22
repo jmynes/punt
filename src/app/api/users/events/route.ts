@@ -1,5 +1,5 @@
 import { requireAuth } from '@/lib/auth-helpers'
-import { projectEvents, type UserEvent } from '@/lib/events'
+import { type BrandingEvent, projectEvents, type UserEvent } from '@/lib/events'
 
 /**
  * GET /api/users/events - Server-Sent Events endpoint for user profile changes
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
         )
 
         // Subscribe to global user events
-        const handleEvent = (event: UserEvent) => {
+        const handleUserEvent = (event: UserEvent) => {
           try {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
           } catch {
@@ -28,7 +28,17 @@ export async function GET(request: Request) {
           }
         }
 
-        const unsubscribe = projectEvents.subscribeToUsers(handleEvent)
+        // Subscribe to global branding events
+        const handleBrandingEvent = (event: BrandingEvent) => {
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
+          } catch {
+            // Stream may be closed, ignore
+          }
+        }
+
+        const unsubscribeUsers = projectEvents.subscribeToUsers(handleUserEvent)
+        const unsubscribeBranding = projectEvents.subscribeToBranding(handleBrandingEvent)
 
         // Send keepalive comment every 30 seconds to prevent timeout
         const keepaliveInterval = setInterval(() => {
@@ -41,7 +51,8 @@ export async function GET(request: Request) {
 
         // Cleanup on client disconnect
         request.signal.addEventListener('abort', () => {
-          unsubscribe()
+          unsubscribeUsers()
+          unsubscribeBranding()
           clearInterval(keepaliveInterval)
           try {
             controller.close()
