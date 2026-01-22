@@ -65,6 +65,8 @@ export function Sidebar() {
   const [editMode, setEditMode] = useState(false)
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set())
+  const [adminExpanded, setAdminExpanded] = useState(true)
+  const [projectsExpanded, setProjectsExpanded] = useState(true)
 
   // Default all projects to expanded when they load
   useEffect(() => {
@@ -121,7 +123,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="hidden lg:flex h-[calc(100vh-3.5rem)] w-64 flex-col border-r border-zinc-800 bg-zinc-950">
+      <aside className="hidden lg:flex h-[calc(100vh-3.5rem)] w-72 flex-col border-r border-zinc-800 bg-zinc-950">
         <ScrollArea className="flex-1 px-3 py-4">
           {/* Main navigation */}
           <div className="space-y-1">
@@ -147,46 +149,83 @@ export function Sidebar() {
           {/* Admin section - only visible to system admins */}
           {currentUser.isSystemAdmin && (
             <div className="mt-6">
-              <div className="flex items-center px-3 mb-2">
+              <button
+                type="button"
+                className="flex items-center gap-1 px-3 mb-1 w-full text-left"
+                onClick={() => setAdminExpanded(!adminExpanded)}
+              >
+                {adminExpanded ? (
+                  <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
+                )}
                 <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
                   Admin
                 </span>
-              </div>
-              <div className="space-y-1">
-                <Link href="/admin">
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
-                      pathname === '/admin' && 'bg-zinc-800/50 text-zinc-100',
-                    )}
-                  >
-                    <Shield className="h-4 w-4" />
-                    Dashboard
-                  </Button>
-                </Link>
-                <Link href="/admin/users">
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50',
-                      pathname === '/admin/users' && 'bg-zinc-800/50 text-zinc-100',
-                    )}
-                  >
-                    <Users className="h-4 w-4" />
-                    Users
-                  </Button>
-                </Link>
-              </div>
+              </button>
+              {adminExpanded && (
+                <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                  <Link href="/admin">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                        pathname === '/admin' && 'bg-zinc-800/50 text-zinc-100',
+                      )}
+                    >
+                      <Shield className="h-3.5 w-3.5" />
+                      Dashboard
+                    </Button>
+                  </Link>
+                  <Link href="/admin/users">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                        pathname === '/admin/users' && 'bg-zinc-800/50 text-zinc-100',
+                      )}
+                    >
+                      <Users className="h-3.5 w-3.5" />
+                      Users
+                    </Button>
+                  </Link>
+                  <Link href="/admin/settings">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                        pathname === '/admin/settings' && 'bg-zinc-800/50 text-zinc-100',
+                      )}
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                      Settings
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 
           {/* Projects section */}
           <div className="mt-6">
-            <div className="flex items-center justify-between px-3 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Projects
-              </span>
+            <div className="flex items-center justify-between px-3 mb-1">
+              <button
+                type="button"
+                className="flex items-center gap-1"
+                onClick={() => setProjectsExpanded(!projectsExpanded)}
+              >
+                {projectsExpanded ? (
+                  <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
+                )}
+                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Projects
+                </span>
+              </button>
               <div className="flex items-center gap-1">
                 {projects.length > 0 && (
                   <Button
@@ -214,141 +253,143 @@ export function Sidebar() {
               </div>
             </div>
 
-            <div className="space-y-1">
-              {isLoading ? (
-                // Show skeleton while loading from API
-                <>
-                  <Skeleton className="h-9 w-full bg-zinc-800" />
-                  <Skeleton className="h-9 w-full bg-zinc-800" />
-                  <Skeleton className="h-9 w-full bg-zinc-800" />
-                </>
-              ) : projects.length === 0 ? (
-                <p className="px-3 py-2 text-xs text-zinc-500">No projects yet</p>
-              ) : (
-                projects.map((project) => {
-                  const isActive = activeProjectId === project.id
-                  const isExpanded = expandedProjectIds.has(project.id)
-                  const isOnProjectPage = pathname.startsWith(`/projects/${project.id}`)
-                  return (
-                    <div key={project.id}>
-                      <div className="relative flex items-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-6 shrink-0 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
-                          onClick={() => toggleProjectExpanded(project.id)}
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="h-3.5 w-3.5" />
-                          ) : (
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                        <Link
-                          href={`/projects/${project.id}/board`}
-                          onClick={() => setActiveProjectId(project.id)}
-                          className="flex-1 min-w-0"
-                        >
-                          <Button
-                            variant="ghost"
-                            className={cn(
-                              'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 pl-1',
-                              (isActive || isOnProjectPage) && 'bg-zinc-800/50 text-zinc-100',
-                            )}
+            {projectsExpanded && (
+              <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                {isLoading ? (
+                  // Show skeleton while loading from API
+                  <>
+                    <Skeleton className="h-8 w-full bg-zinc-800" />
+                    <Skeleton className="h-8 w-full bg-zinc-800" />
+                    <Skeleton className="h-8 w-full bg-zinc-800" />
+                  </>
+                ) : projects.length === 0 ? (
+                  <p className="py-2 text-xs text-zinc-500">No projects yet</p>
+                ) : (
+                  projects.map((project) => {
+                    const isActive = activeProjectId === project.id
+                    const isExpanded = expandedProjectIds.has(project.id)
+                    const isOnProjectPage = pathname.startsWith(`/projects/${project.id}`)
+                    return (
+                      <div key={project.id}>
+                        <div className="relative flex items-center">
+                          <button
+                            type="button"
+                            className="h-8 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300"
+                            onClick={() => toggleProjectExpanded(project.id)}
                           >
-                            <div
-                              className="h-3 w-3 rounded-sm shrink-0"
-                              style={{ backgroundColor: project.color }}
-                            />
-                            <span className="truncate">{project.name}</span>
-                            {!editMode && (
-                              <span className="ml-auto text-xs text-zinc-600 shrink-0">
-                                {project.key}
-                              </span>
+                            {isExpanded ? (
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            ) : (
+                              <ChevronRight className="h-3.5 w-3.5" />
                             )}
-                          </Button>
-                        </Link>
-                        {editMode && (
-                          <div className="absolute right-1 flex items-center gap-0.5">
+                          </button>
+                          <Link
+                            href={`/projects/${project.id}/board`}
+                            onClick={() => setActiveProjectId(project.id)}
+                            className="flex-1 min-w-0"
+                          >
                             <Button
                               variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                openEditProject(project.id)
-                              }}
+                              size="sm"
+                              className={cn(
+                                'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+                                (isActive || isOnProjectPage) && 'bg-zinc-800/50 text-zinc-100',
+                              )}
                             >
-                              <Pencil className="h-3 w-3" />
+                              <div
+                                className="h-3 w-3 rounded-sm shrink-0"
+                                style={{ backgroundColor: project.color }}
+                              />
+                              <span className="truncate">{project.name}</span>
+                              {!editMode && (
+                                <span className="ml-auto text-xs text-zinc-600 shrink-0">
+                                  {project.key}
+                                </span>
+                              )}
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-zinc-500 hover:text-red-400"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                setDeleteProjectId(project.id)
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                          </Link>
+                          {editMode && (
+                            <div className="absolute right-0 flex items-center gap-0.5">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  openEditProject(project.id)
+                                }}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-zinc-500 hover:text-red-400"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setDeleteProjectId(project.id)
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        {/* Project sub-nav */}
+                        {isExpanded && (
+                          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                            <Link href={`/projects/${project.id}/board`}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={cn(
+                                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
+                                  pathname === `/projects/${project.id}/board` &&
+                                    'bg-zinc-800/50 text-zinc-100',
+                                )}
+                              >
+                                <Layers className="h-3.5 w-3.5" />
+                                Board
+                              </Button>
+                            </Link>
+                            <Link href={`/projects/${project.id}/backlog`}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={cn(
+                                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
+                                  pathname === `/projects/${project.id}/backlog` &&
+                                    'bg-zinc-800/50 text-zinc-100',
+                                )}
+                              >
+                                <List className="h-3.5 w-3.5" />
+                                Backlog
+                              </Button>
+                            </Link>
+                            <Link href={`/projects/${project.id}/sprints`}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={cn(
+                                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
+                                  pathname === `/projects/${project.id}/sprints` &&
+                                    'bg-zinc-800/50 text-zinc-100',
+                                )}
+                              >
+                                <Target className="h-3.5 w-3.5" />
+                                Sprints
+                              </Button>
+                            </Link>
                           </div>
                         )}
                       </div>
-                      {/* Project sub-nav */}
-                      {isExpanded && (
-                        <div className="ml-6 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-                          <Link href={`/projects/${project.id}/board`}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={cn(
-                                'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
-                                pathname === `/projects/${project.id}/board` &&
-                                  'bg-zinc-800/50 text-zinc-100',
-                              )}
-                            >
-                              <Layers className="h-3.5 w-3.5" />
-                              Board
-                            </Button>
-                          </Link>
-                          <Link href={`/projects/${project.id}/backlog`}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={cn(
-                                'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
-                                pathname === `/projects/${project.id}/backlog` &&
-                                  'bg-zinc-800/50 text-zinc-100',
-                              )}
-                            >
-                              <List className="h-3.5 w-3.5" />
-                              Backlog
-                            </Button>
-                          </Link>
-                          <Link href={`/projects/${project.id}/sprints`}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={cn(
-                                'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
-                                pathname === `/projects/${project.id}/sprints` &&
-                                  'bg-zinc-800/50 text-zinc-100',
-                              )}
-                            >
-                              <Target className="h-3.5 w-3.5" />
-                              Sprints
-                            </Button>
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })
-              )}
-            </div>
+                    )
+                  })
+                )}
+              </div>
+            )}
           </div>
         </ScrollArea>
 

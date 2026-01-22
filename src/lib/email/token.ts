@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'crypto'
+import { createHash, randomBytes } from 'node:crypto'
 
 /**
  * Token expiry times in milliseconds

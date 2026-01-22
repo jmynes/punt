@@ -6,10 +6,10 @@ import { EmailSettingsForm } from '@/components/admin/email-settings-form'
 import { SettingsForm } from '@/components/admin/settings-form'
 import { cn } from '@/lib/utils'
 
-type SettingsTab = 'uploads' | 'email'
+type SettingsTab = 'email' | 'uploads'
 
 export default function AdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('uploads')
+  const [activeTab, setActiveTab] = useState<SettingsTab>('email')
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -24,19 +24,6 @@ export default function AdminSettingsPage() {
         <div className="flex gap-1 mb-6 border-b border-zinc-800">
           <button
             type="button"
-            onClick={() => setActiveTab('uploads')}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-              activeTab === 'uploads'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Upload className="h-4 w-4" />
-            File Uploads
-          </button>
-          <button
-            type="button"
             onClick={() => setActiveTab('email')}
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
@@ -48,11 +35,24 @@ export default function AdminSettingsPage() {
             <Mail className="h-4 w-4" />
             Email
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('uploads')}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              activeTab === 'uploads'
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            <Upload className="h-4 w-4" />
+            File Uploads
+          </button>
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'uploads' && <SettingsForm />}
         {activeTab === 'email' && <EmailSettingsForm />}
+        {activeTab === 'uploads' && <SettingsForm />}
 
         {/* Footer spacer */}
         <div className="h-8 flex-shrink-0" />
