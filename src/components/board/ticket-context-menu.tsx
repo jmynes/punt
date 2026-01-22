@@ -105,10 +105,21 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   // Fetch sprints for add to sprint menu
   const { data: sprints = [] } = useProjectSprints(projectId)
-  const availableSprints = useMemo(
-    () => sprints.filter((s) => s.status === 'active' || s.status === 'planning'),
-    [sprints],
-  )
+  const availableSprints = useMemo(() => {
+    const activePlanningsprints = sprints.filter(
+      (s) => s.status === 'active' || s.status === 'planning',
+    )
+    // Filter out sprints where ALL selected tickets are already in that sprint
+    return activePlanningsprints.filter((sprint) => {
+      const allTicketsInThisSprint = selectedIds.every((id: string) => {
+        const t = columns
+          .flatMap((c: ColumnWithTickets) => c.tickets)
+          .find((t: TicketWithRelations) => t.id === id)
+        return t?.sprintId === sprint.id
+      })
+      return !allTicketsInThisSprint
+    })
+  }, [sprints, selectedIds, columns])
 
   // Set mounted state after hydration to enable client-only features
   useEffect(() => {
