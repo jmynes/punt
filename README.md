@@ -81,6 +81,7 @@ Pre-commit hooks automatically lint staged files.
 
 ## Documentation
 
+- [User Guide & API Reference](https://jmynes.github.io/punt/) — Full documentation
 - [Testing Guide](docs/TESTING.md)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Contributor License Agreement](CLA.md)

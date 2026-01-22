@@ -1,0 +1,63 @@
+/**
+ * PUNT Documentation custom styles
+ * Overrides default Infima CSS variables
+ */
+
+:root {
+  --ifm-color-primary: #3B82F6;
+  --ifm-color-primary-dark: #2563EB;
+  --ifm-color-primary-darker: #1D4ED8;
+  --ifm-color-primary-darkest: #1E40AF;
+  --ifm-color-primary-light: #60A5FA;
+  --ifm-color-primary-lighter: #93C5FD;
+  --ifm-color-primary-lightest: #BFDBFE;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(59, 130, 246, 0.1);
+  --ifm-font-family-base: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #60A5FA;
+  --ifm-color-primary-dark: #3B82F6;
+  --ifm-color-primary-darker: #2563EB;
+  --ifm-color-primary-darkest: #1D4ED8;
+  --ifm-color-primary-light: #93C5FD;
+  --ifm-color-primary-lighter: #BFDBFE;
+  --ifm-color-primary-lightest: #DBEAFE;
+  --docusaurus-highlighted-code-line-bg: rgba(96, 165, 250, 0.2);
+}
+
+/* Navigation enhancements */
+.navbar__title {
+  font-weight: 700;
+}
+
+/* Better table styling */
+table {
+  display: table;
+  width: 100%;
+}
+
+/* Code block styling */
+.prism-code {
+  font-size: 0.9rem;
+}
+
+/* Admonition styling */
+.alert--warning {
+  --ifm-alert-background-color: #FEF3C7;
+  --ifm-alert-border-color: #F59E0B;
+}
+
+[data-theme='dark'] .alert--warning {
+  --ifm-alert-background-color: rgba(245, 158, 11, 0.15);
+}
+
+.alert--danger {
+  --ifm-alert-background-color: #FEE2E2;
+  --ifm-alert-border-color: #EF4444;
+}
+
+[data-theme='dark'] .alert--danger {
+  --ifm-alert-background-color: rgba(239, 68, 68, 0.15);
+}
