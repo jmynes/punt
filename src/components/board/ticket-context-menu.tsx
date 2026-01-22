@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  CalendarMinus,
   ChevronRight,
   ClipboardCopy,
   ClipboardPaste,
@@ -482,6 +483,127 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     setSubmenu(null)
   }
 
+  const doRemoveFromSprint = () => {
+    const updateTicket = board.updateTicket || (() => {})
+
+    // Get tickets that are in a sprint
+    const ticketsInSprint: { ticket: TicketWithRelations; sprintName: string }[] = []
+    for (const id of selectedIds) {
+      const current = columns
+        .flatMap((c: ColumnWithTickets) => c.tickets)
+        .find((t: TicketWithRelations) => t.id === id)
+      if (current?.sprintId && current.sprint?.name) {
+        ticketsInSprint.push({ ticket: current, sprintName: current.sprint.name })
+      }
+    }
+
+    if (ticketsInSprint.length === 0) return
+
+    // Capture original sprint IDs for undo (sprintId is guaranteed non-null since we filtered above)
+    const originalSprintIds = ticketsInSprint.map(({ ticket, sprintName }) => ({
+      ticketId: ticket.id,
+      sprintId: ticket.sprintId as string,
+      sprintName,
+    }))
+
+    // Get the sprint name(s) for the toast message
+    const uniqueSprintNames = [...new Set(originalSprintIds.map((t) => t.sprintName))]
+    const fromLabel =
+      uniqueSprintNames.length === 1 ? uniqueSprintNames[0] : `${uniqueSprintNames.length} sprints`
+
+    // Optimistic update - remove sprint from all selected tickets
+    for (const { ticket } of ticketsInSprint) {
+      updateTicket(projectId, ticket.id, { sprintId: null, sprint: null })
+    }
+
+    const ticketKeys = formatTicketIds(
+      columns,
+      ticketsInSprint.map(({ ticket }) => ticket.id),
+    )
+    const count = ticketsInSprint.length
+
+    // Prepare sprint moves for undo store
+    const moves = originalSprintIds.map(({ ticketId, sprintId }) => ({
+      ticketId,
+      fromSprintId: sprintId,
+      toSprintId: null,
+    }))
+
+    const uiState = useUIStore.getState ? useUIStore.getState() : uiStore
+    const showUndo = uiState.showUndoButtons ?? true
+
+    const toastId = showUndoRedoToast('success', {
+      title: count === 1 ? 'Removed from sprint' : `${count} tickets removed from sprint`,
+      description: count === 1 ? `${ticketKeys[0]} sent to Backlog` : `Sent to Backlog`,
+      duration: 5000,
+      showUndoButtons: showUndo,
+      onUndo: async (id) => {
+        // Move to redo stack
+        useUndoStore.getState().undoByToastId(id)
+        // Restore original sprint IDs
+        for (const { ticketId, sprintId, sprintName } of originalSprintIds) {
+          const originalTicket = ticketsInSprint.find(({ ticket }) => ticket.id === ticketId)
+          updateTicket(projectId, ticketId, {
+            sprintId,
+            sprint: originalTicket?.ticket.sprint ?? {
+              id: sprintId,
+              name: sprintName,
+              status: 'planning',
+              startDate: null,
+              endDate: null,
+            },
+          })
+        }
+        // Persist to API
+        try {
+          for (const { ticketId, sprintId } of originalSprintIds) {
+            await updateTicketAPI(projectId, ticketId, { sprintId })
+          }
+        } catch (err) {
+          console.error('Failed to persist sprint restore:', err)
+        }
+      },
+      onRedo: async (id) => {
+        useUndoStore.getState().redoByToastId(id)
+        // Remove from sprint again
+        for (const { ticket } of ticketsInSprint) {
+          updateTicket(projectId, ticket.id, { sprintId: null, sprint: null })
+        }
+        // Persist to API
+        try {
+          for (const { ticket } of ticketsInSprint) {
+            await updateTicketAPI(projectId, ticket.id, { sprintId: null })
+          }
+        } catch (err) {
+          console.error('Failed to persist sprint removal:', err)
+        }
+      },
+      undoneTitle: 'Restored to sprint',
+      undoneDescription:
+        count === 1 ? `${ticketKeys[0]} returned to ${fromLabel}` : `${count} tickets returned`,
+      redoneTitle: count === 1 ? 'Removed from sprint' : `${count} tickets removed from sprint`,
+      redoneDescription: count === 1 ? `${ticketKeys[0]} sent to Backlog` : 'Sent to Backlog',
+    })
+
+    // Register in undo store
+    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+    undoState.pushSprintMove(projectId, moves, fromLabel, 'Backlog', toastId)
+
+    // Persist to API
+    ;(async () => {
+      try {
+        for (const { ticket } of ticketsInSprint) {
+          await updateTicketAPI(projectId, ticket.id, { sprintId: null })
+        }
+      } catch (err) {
+        console.error('Failed to persist sprint removal:', err)
+      }
+    })()
+
+    setOpen(false)
+    setSubmenu(null)
+  }
+
   const confirmDeleteNow = async () => {
     const ticketsToDelete = pendingDelete
     if (ticketsToDelete.length === 0) return
@@ -563,6 +685,23 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
               onMouseEnter={openSubmenu('send')}
             />
           </MenuSection>
+
+          {/* Show Sprint section if any selected ticket is in a sprint */}
+          {selectedIds.some((id: string) => {
+            const t = columns
+              .flatMap((c: ColumnWithTickets) => c.tickets)
+              .find((t: TicketWithRelations) => t.id === id)
+            return t?.sprintId
+          }) && (
+            <MenuSection title="Sprint">
+              <MenuButton
+                icon={<CalendarMinus className="h-4 w-4" />}
+                label="Remove from Sprint"
+                onMouseEnter={closeSubmenu}
+                onClick={doRemoveFromSprint}
+              />
+            </MenuSection>
+          )}
 
           <MenuSection title="Operations">
             <MenuButton
