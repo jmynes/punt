@@ -336,13 +336,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     setSubmenu(null)
   }
 
-  const doEdit = () => {
-    if (multi) return
-    uiStore.setActiveTicketId(ticket.id)
-    setOpen(false)
-    setSubmenu(null)
-  }
-
   const doPriority = (priority: TicketWithRelations['priority']) => {
     const updateTicket = board.updateTicket || (() => {})
     const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
@@ -848,23 +841,12 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
             onMouseEnter={openSubmenu('points')}
           />
-          {!multi && (
-            <MenuButton
-              icon={<Pencil className="h-4 w-4" />}
-              label="Edit"
-              onMouseEnter={closeSubmenu}
-              onClick={doEdit}
-            />
-          )}
-
-          <MenuSection title="Status">
-            <MenuButton
-              icon={<Send className="h-4 w-4" />}
-              label="Status"
-              trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-              onMouseEnter={openSubmenu('send')}
-            />
-          </MenuSection>
+          <MenuButton
+            icon={<Send className="h-4 w-4" />}
+            label="Status"
+            trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+            onMouseEnter={openSubmenu('send')}
+          />
 
           <MenuSection title="Sprint">
             {/* Show Remove from Sprint if any selected ticket is in a sprint */}
