@@ -4,7 +4,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  FileText,
   Home,
   Layers,
   List,
@@ -33,7 +32,6 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/', icon: Home },
-  { title: 'Editor Test', href: '/editor-test', icon: FileText },
   { title: 'Settings', href: '/settings', icon: Settings },
 ]
 
