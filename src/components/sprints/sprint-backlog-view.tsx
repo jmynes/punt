@@ -19,6 +19,7 @@ import {
   useProjectSprints,
   useUpdateTicketSprint,
 } from '@/hooks/queries/use-sprints'
+import { updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
@@ -273,11 +274,26 @@ export function SprintBacklogView({
           reordered.splice(newIndex, 0, moved)
 
           // Update order for each ticket based on new position
+          const ticketsToUpdate: { id: string; order: number }[] = []
           reordered.forEach((ticket, index) => {
             if (ticket.order !== index) {
               updateTicket(projectId, ticket.id, { order: index })
+              ticketsToUpdate.push({ id: ticket.id, order: index })
             }
           })
+
+          // Persist order changes to API (triggers SSE for other clients)
+          if (ticketsToUpdate.length > 0) {
+            ;(async () => {
+              try {
+                for (const { id, order } of ticketsToUpdate) {
+                  await updateTicketAPI(projectId, id, { order })
+                }
+              } catch (err) {
+                console.error('Failed to persist sprint reorder:', err)
+              }
+            })()
+          }
         }
         return
       }

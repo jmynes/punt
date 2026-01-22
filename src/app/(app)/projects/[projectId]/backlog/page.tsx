@@ -23,7 +23,11 @@ import { SprintTableRow } from '@/components/sprints/sprint-table-row'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { useProjectSprints, useUpdateTicketSprint } from '@/hooks/queries/use-sprints'
-import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
+import {
+  updateTicketAPI,
+  useColumnsByProject,
+  useTicketsByProject,
+} from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -361,6 +365,8 @@ export default function BacklogPage() {
         const remainingTickets = rawBacklogTickets.filter((t) => !orderSet.has(t.id))
         const backlogTickets = [...orderedTickets, ...remainingTickets]
 
+        let newOrderedTickets: typeof backlogTickets = []
+
         // Multi-drag reordering
         if (selectedIds.length > 1 && isSelected(activeId)) {
           const selectedSet = new Set(selectedIds)
@@ -371,7 +377,7 @@ export default function BacklogPage() {
           if (insertIndex === -1) insertIndex = remaining.length
           if (selectedSet.has(overId)) insertIndex = remaining.length
 
-          const newOrder = [
+          newOrderedTickets = [
             ...remaining.slice(0, insertIndex),
             ...selectedInOrder,
             ...remaining.slice(insertIndex),
@@ -379,7 +385,7 @@ export default function BacklogPage() {
 
           setBacklogOrder(
             projectId,
-            newOrder.map((t) => t.id),
+            newOrderedTickets.map((t) => t.id),
           )
           clearSelection()
         } else {
@@ -388,11 +394,34 @@ export default function BacklogPage() {
           const newIndex = backlogTickets.findIndex((t) => t.id === overId)
 
           if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-            const newOrder = arrayMove(backlogTickets, oldIndex, newIndex)
+            newOrderedTickets = arrayMove(backlogTickets, oldIndex, newIndex)
             setBacklogOrder(
               projectId,
-              newOrder.map((t) => t.id),
+              newOrderedTickets.map((t) => t.id),
             )
+          }
+        }
+
+        // Persist order changes to API (triggers SSE for other clients)
+        if (newOrderedTickets.length > 0) {
+          const ticketsToUpdate: { id: string; order: number }[] = []
+          newOrderedTickets.forEach((ticket, index) => {
+            if (ticket.order !== index) {
+              updateTicket(projectId, ticket.id, { order: index })
+              ticketsToUpdate.push({ id: ticket.id, order: index })
+            }
+          })
+
+          if (ticketsToUpdate.length > 0) {
+            ;(async () => {
+              try {
+                for (const { id, order } of ticketsToUpdate) {
+                  await updateTicketAPI(projectId, id, { order })
+                }
+              } catch (err) {
+                console.error('Failed to persist backlog reorder:', err)
+              }
+            })()
           }
         }
         return
@@ -417,11 +446,24 @@ export default function BacklogPage() {
           reordered.splice(newIndex, 0, moved)
 
           // Update order for each ticket based on new position
+          const ticketsToUpdate: { id: string; order: number }[] = []
           reordered.forEach((ticket, index) => {
             if (ticket.order !== index) {
               updateTicket(projectId, ticket.id, { order: index })
+              ticketsToUpdate.push({ id: ticket.id, order: index })
             }
           })
+
+          // Persist to API (triggers SSE for other clients)
+          ;(async () => {
+            try {
+              for (const { id, order } of ticketsToUpdate) {
+                await updateTicketAPI(projectId, id, { order })
+              }
+            } catch (err) {
+              console.error('Failed to persist ticket reorder:', err)
+            }
+          })()
         }
         return
       }
