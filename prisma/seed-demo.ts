@@ -362,7 +362,7 @@ async function main() {
 
   // Create columns for all projects
   console.log('\n📋 Creating columns...')
-  const columnNames = ['Backlog', 'To Do', 'In Progress', 'In Review', 'Done']
+  const columnNames = ['To Do', 'In Progress', 'In Review', 'Done']
   const projectColumns: Record<string, { id: string; name: string }[]> = {}
 
   for (const project of createdProjects) {
@@ -462,13 +462,12 @@ async function main() {
   const projectTicketNumbers: Record<string, number> = {}
   let totalTicketCount = 0
 
-  // Distribution: more tickets in backlog, fewer in done
+  // Distribution: more tickets in To Do, fewer in done
   const ticketDistribution = [
-    { columnIndex: 0, count: 35 }, // Backlog
-    { columnIndex: 1, count: 15 }, // To Do
-    { columnIndex: 2, count: 12 }, // In Progress
-    { columnIndex: 3, count: 8 }, // In Review
-    { columnIndex: 4, count: 30 }, // Done
+    { columnIndex: 0, count: 50 }, // To Do
+    { columnIndex: 1, count: 12 }, // In Progress
+    { columnIndex: 2, count: 8 }, // In Review
+    { columnIndex: 3, count: 30 }, // Done
   ]
 
   for (const project of createdProjects) {
@@ -499,15 +498,14 @@ async function main() {
           // Active work is in current sprint
           sprint = sprints.find((s) => s.status === 'active') || null
         } else if (column.name === 'To Do') {
-          // To Do can be current or planning sprint
+          // To Do items - some have sprints, some are in backlog (no sprint)
           sprint =
-            Math.random() > 0.5
+            Math.random() > 0.4
               ? sprints.find((s) => s.status === 'active')
               : Math.random() > 0.5
                 ? sprints.find((s) => s.status === 'planning')
-                : null
+                : null // Items without a sprint are in the backlog
         }
-        // Backlog items typically don't have sprints
 
         const ticketLabels = randomSubset(labels, 0, 3)
 
@@ -528,7 +526,7 @@ async function main() {
             order: i,
             storyPoints: type !== 'epic' ? randomElement(storyPointValues) : null,
             estimate: randomElement(estimates),
-            startDate: column.name !== 'Backlog' && column.name !== 'To Do' ? createdAt : null,
+            startDate: column.name !== 'To Do' ? createdAt : null,
             dueDate,
             environment: type === 'bug' ? randomElement(environments) : null,
             createdAt,
