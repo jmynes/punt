@@ -105,6 +105,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   // Fetch sprints for add to sprint menu
   const { data: sprints = [] } = useProjectSprints(projectId)
+  const hasActiveSprint = useMemo(() => sprints.some((s) => s.status === 'active'), [sprints])
   const availableSprints = useMemo(() => {
     const activePlanningsprints = sprints.filter(
       (s) => s.status === 'active' || s.status === 'planning',
@@ -874,9 +875,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                 onClick={doRemoveFromSprint}
               />
             )}
-            {/* Show Add to Sprint or Create Sprint */}
-            {availableSprints.length > 0 ? (
-              availableSprints.length === 1 ? (
+            {/* Show Add to Sprint if available sprints exist */}
+            {availableSprints.length > 0 &&
+              (availableSprints.length === 1 ? (
                 <MenuButton
                   icon={<CalendarPlus className="h-4 w-4" />}
                   label={`Add to ${availableSprints[0].name}`}
@@ -890,8 +891,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                   trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
                   onMouseEnter={openSubmenu('sprint')}
                 />
-              )
-            ) : (
+              ))}
+            {/* Show Create Sprint only when no active sprint exists */}
+            {!hasActiveSprint && (
               <MenuButton
                 icon={<Plus className="h-4 w-4" />}
                 label="Create Sprint"
@@ -1082,15 +1084,19 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                         )}
                       </button>
                     ))}
-                    <div className="my-1 border-t border-zinc-800" />
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                      onClick={doCreateSprint}
-                    >
-                      <Plus className="h-4 w-4 text-zinc-400" />
-                      <span className="text-zinc-400">Create new sprint...</span>
-                    </button>
+                    {!hasActiveSprint && (
+                      <>
+                        <div className="my-1 border-t border-zinc-800" />
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                          onClick={doCreateSprint}
+                        >
+                          <Plus className="h-4 w-4 text-zinc-400" />
+                          <span className="text-zinc-400">Create new sprint...</span>
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
               </div>

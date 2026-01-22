@@ -457,13 +457,15 @@ export function SprintBacklogView({
                 </p>
               </div>
             </div>
-            <Button
-              onClick={() => setSprintCreateOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Sprint
-            </Button>
+            {activeSprints.length === 0 && (
+              <Button
+                onClick={() => setSprintCreateOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Sprint
+              </Button>
+            )}
           </div>
         )}
 
@@ -511,6 +513,7 @@ export function SprintBacklogView({
           onCreateTicket={handleCreateTicket}
           dropPosition={dropPosition?.sectionId === 'backlog' ? dropPosition.insertIndex : null}
           draggingTicketIds={draggingTicketIds}
+          hasActiveSprint={activeSprints.length > 0}
         />
 
         {/* Completed Sprints (collapsed by default) */}

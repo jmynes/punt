@@ -60,17 +60,19 @@ export function SprintList({ projectId, tickets = [], className }: SprintListPro
 
   return (
     <div className={cn('space-y-6', className)}>
-      {/* Header with create button */}
+      {/* Header with create button (only show when no active sprint) */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-zinc-100">Sprints</h2>
-        <Button
-          size="sm"
-          onClick={() => setSprintCreateOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Create Sprint
-        </Button>
+        {activeSprints.length === 0 && (
+          <Button
+            size="sm"
+            onClick={() => setSprintCreateOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Create Sprint
+          </Button>
+        )}
       </div>
 
       {isEmpty ? (

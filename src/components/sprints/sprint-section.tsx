@@ -59,6 +59,8 @@ interface SprintSectionProps {
   dropPosition?: number | null
   /** IDs of tickets currently being dragged */
   draggingTicketIds?: string[]
+  /** Whether there's an active sprint (used to hide create sprint button) */
+  hasActiveSprint?: boolean
 }
 
 /**
@@ -76,6 +78,7 @@ export function SprintSection({
   onDelete,
   dropPosition = null,
   draggingTicketIds = [],
+  hasActiveSprint = false,
 }: SprintSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
@@ -495,8 +498,8 @@ export function SprintSection({
             </DropdownMenu>
           )}
 
-          {/* Create Sprint button for backlog */}
-          {isBacklog && (
+          {/* Create Sprint button for backlog (only when no active sprint) */}
+          {isBacklog && !hasActiveSprint && (
             <Button
               size="sm"
               variant="ghost"

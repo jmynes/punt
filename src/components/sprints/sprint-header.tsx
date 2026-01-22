@@ -16,7 +16,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -193,14 +192,6 @@ export function SprintHeader({
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" />
                 Complete Sprint
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-zinc-700" />
-              <DropdownMenuItem
-                onClick={() => setSprintCreateOpen(true)}
-                className="text-zinc-300 focus:bg-zinc-800"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Sprint
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

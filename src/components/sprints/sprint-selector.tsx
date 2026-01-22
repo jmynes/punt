@@ -131,8 +131,8 @@ export function SprintSelector({
           </SelectGroup>
         )}
 
-        {/* Create new sprint option */}
-        {showCreateButton && (
+        {/* Create new sprint option (only when no active sprint) */}
+        {showCreateButton && activeSprints.length === 0 && (
           <>
             <SelectSeparator className="bg-zinc-700" />
             <SelectItem value="__create__" className="text-blue-400">
