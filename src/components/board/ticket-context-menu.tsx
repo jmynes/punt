@@ -2,11 +2,13 @@
 
 import {
   CalendarMinus,
+  CalendarPlus,
   ChevronRight,
   ClipboardCopy,
   ClipboardPaste,
   Hash,
   Pencil,
+  Plus,
   Send,
   Trash2,
   UserCheck,
@@ -35,6 +37,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { pasteTickets } from '@/lib/actions'
@@ -47,7 +50,7 @@ import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
-import type { ColumnWithTickets, TicketWithRelations } from '@/types'
+import type { ColumnWithTickets, SprintSummary, TicketWithRelations } from '@/types'
 
 type MenuProps = {
   ticket: TicketWithRelations
@@ -96,9 +99,16 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const multi = selectedIds.length > 1
   const [submenu, setSubmenu] = useState<null | {
-    id: 'priority' | 'assign' | 'send' | 'points'
+    id: 'priority' | 'assign' | 'send' | 'points' | 'sprint'
     anchor: { x: number; y: number; height: number }
   }>(null)
+
+  // Fetch sprints for add to sprint menu
+  const { data: sprints = [] } = useProjectSprints(projectId)
+  const availableSprints = useMemo(
+    () => sprints.filter((s) => s.status === 'active' || s.status === 'planning'),
+    [sprints],
+  )
 
   // Set mounted state after hydration to enable client-only features
   useEffect(() => {
@@ -604,6 +614,175 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     setSubmenu(null)
   }
 
+  const doAddToSprint = (targetSprint: SprintSummary) => {
+    const updateTicket = board.updateTicket || (() => {})
+
+    // Get tickets that are NOT already in the target sprint
+    const ticketsToAdd: {
+      ticket: TicketWithRelations
+      fromSprintId: string | null
+      fromSprintName: string | null
+    }[] = []
+    for (const id of selectedIds) {
+      const current = columns
+        .flatMap((c: ColumnWithTickets) => c.tickets)
+        .find((t: TicketWithRelations) => t.id === id)
+      if (current && current.sprintId !== targetSprint.id) {
+        ticketsToAdd.push({
+          ticket: current,
+          fromSprintId: current.sprintId,
+          fromSprintName: current.sprint?.name ?? null,
+        })
+      }
+    }
+
+    if (ticketsToAdd.length === 0) return
+
+    // Capture original sprint IDs for undo
+    const originalSprintIds = ticketsToAdd.map(({ ticket, fromSprintId, fromSprintName }) => ({
+      ticketId: ticket.id,
+      fromSprintId,
+      fromSprintName,
+    }))
+
+    // Get the from label for the toast message
+    const uniqueFromNames = [...new Set(originalSprintIds.map((t) => t.fromSprintName))]
+    const fromLabel =
+      uniqueFromNames.length === 1
+        ? (uniqueFromNames[0] ?? 'Backlog')
+        : uniqueFromNames.every((n) => n === null)
+          ? 'Backlog'
+          : 'multiple locations'
+
+    // Optimistic update - add to sprint
+    for (const { ticket } of ticketsToAdd) {
+      updateTicket(projectId, ticket.id, {
+        sprintId: targetSprint.id,
+        sprint: {
+          id: targetSprint.id,
+          name: targetSprint.name,
+          status: targetSprint.status,
+          startDate: targetSprint.startDate,
+          endDate: targetSprint.endDate,
+        },
+      })
+    }
+
+    const ticketKeys = formatTicketIds(
+      columns,
+      ticketsToAdd.map(({ ticket }) => ticket.id),
+    )
+    const count = ticketsToAdd.length
+
+    // Prepare sprint moves for undo store
+    const moves = originalSprintIds.map(({ ticketId, fromSprintId }) => ({
+      ticketId,
+      fromSprintId,
+      toSprintId: targetSprint.id,
+    }))
+
+    const uiState = useUIStore.getState ? useUIStore.getState() : uiStore
+    const showUndo = uiState.showUndoButtons ?? true
+
+    const toastId = showUndoRedoToast('success', {
+      title:
+        count === 1
+          ? `Added to ${targetSprint.name}`
+          : `${count} tickets added to ${targetSprint.name}`,
+      description: count === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+      duration: 5000,
+      showUndoButtons: showUndo,
+      onUndo: async (id) => {
+        // Move to redo stack
+        useUndoStore.getState().undoByToastId(id)
+        // Restore original sprint IDs
+        for (const { ticketId, fromSprintId, fromSprintName } of originalSprintIds) {
+          const originalTicket = ticketsToAdd.find(({ ticket }) => ticket.id === ticketId)
+          if (fromSprintId && fromSprintName) {
+            updateTicket(projectId, ticketId, {
+              sprintId: fromSprintId,
+              sprint: originalTicket?.ticket.sprint ?? {
+                id: fromSprintId,
+                name: fromSprintName,
+                status: 'planning',
+                startDate: null,
+                endDate: null,
+              },
+            })
+          } else {
+            updateTicket(projectId, ticketId, { sprintId: null, sprint: null })
+          }
+        }
+        // Persist to API
+        try {
+          for (const { ticketId, fromSprintId } of originalSprintIds) {
+            await updateTicketAPI(projectId, ticketId, { sprintId: fromSprintId })
+          }
+        } catch (err) {
+          console.error('Failed to persist sprint restore:', err)
+        }
+      },
+      onRedo: async (id) => {
+        useUndoStore.getState().redoByToastId(id)
+        // Add to sprint again
+        for (const { ticket } of ticketsToAdd) {
+          updateTicket(projectId, ticket.id, {
+            sprintId: targetSprint.id,
+            sprint: {
+              id: targetSprint.id,
+              name: targetSprint.name,
+              status: targetSprint.status,
+              startDate: targetSprint.startDate,
+              endDate: targetSprint.endDate,
+            },
+          })
+        }
+        // Persist to API
+        try {
+          for (const { ticket } of ticketsToAdd) {
+            await updateTicketAPI(projectId, ticket.id, { sprintId: targetSprint.id })
+          }
+        } catch (err) {
+          console.error('Failed to persist sprint addition:', err)
+        }
+      },
+      undoneTitle: `Restored to ${fromLabel}`,
+      undoneDescription:
+        count === 1
+          ? `${ticketKeys[0]} removed from ${targetSprint.name}`
+          : `${count} tickets removed`,
+      redoneTitle:
+        count === 1
+          ? `Added to ${targetSprint.name}`
+          : `${count} tickets added to ${targetSprint.name}`,
+      redoneDescription: count === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+    })
+
+    // Register in undo store
+    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+    undoState.pushSprintMove(projectId, moves, fromLabel, targetSprint.name, toastId)
+
+    // Persist to API
+    ;(async () => {
+      try {
+        for (const { ticket } of ticketsToAdd) {
+          await updateTicketAPI(projectId, ticket.id, { sprintId: targetSprint.id })
+        }
+      } catch (err) {
+        console.error('Failed to persist sprint addition:', err)
+      }
+    })()
+
+    setOpen(false)
+    setSubmenu(null)
+  }
+
+  const doCreateSprint = () => {
+    uiStore.setSprintCreateOpen(true)
+    setOpen(false)
+    setSubmenu(null)
+  }
+
   const confirmDeleteNow = async () => {
     const ticketsToDelete = pendingDelete
     if (ticketsToDelete.length === 0) return
@@ -630,10 +809,11 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     [children, handleContextMenu],
   )
 
-  const openSubmenu = (id: 'priority' | 'assign' | 'send' | 'points') => (e: React.MouseEvent) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setSubmenu({ id, anchor: { x: rect.right, y: rect.top, height: rect.height } })
-  }
+  const openSubmenu =
+    (id: 'priority' | 'assign' | 'send' | 'points' | 'sprint') => (e: React.MouseEvent) => {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+      setSubmenu({ id, anchor: { x: rect.right, y: rect.top, height: rect.height } })
+    }
 
   const closeSubmenu = () => setSubmenu(null)
 
@@ -686,22 +866,47 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             />
           </MenuSection>
 
-          {/* Show Sprint section if any selected ticket is in a sprint */}
-          {selectedIds.some((id: string) => {
-            const t = columns
-              .flatMap((c: ColumnWithTickets) => c.tickets)
-              .find((t: TicketWithRelations) => t.id === id)
-            return t?.sprintId
-          }) && (
-            <MenuSection title="Sprint">
+          <MenuSection title="Sprint">
+            {/* Show Remove from Sprint if any selected ticket is in a sprint */}
+            {selectedIds.some((id: string) => {
+              const t = columns
+                .flatMap((c: ColumnWithTickets) => c.tickets)
+                .find((t: TicketWithRelations) => t.id === id)
+              return t?.sprintId
+            }) && (
               <MenuButton
                 icon={<CalendarMinus className="h-4 w-4" />}
                 label="Remove from Sprint"
                 onMouseEnter={closeSubmenu}
                 onClick={doRemoveFromSprint}
               />
-            </MenuSection>
-          )}
+            )}
+            {/* Show Add to Sprint or Create Sprint */}
+            {availableSprints.length > 0 ? (
+              availableSprints.length === 1 ? (
+                <MenuButton
+                  icon={<CalendarPlus className="h-4 w-4" />}
+                  label={`Add to ${availableSprints[0].name}`}
+                  onMouseEnter={closeSubmenu}
+                  onClick={() => doAddToSprint(availableSprints[0])}
+                />
+              ) : (
+                <MenuButton
+                  icon={<CalendarPlus className="h-4 w-4" />}
+                  label="Add to Sprint"
+                  trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                  onMouseEnter={openSubmenu('sprint')}
+                />
+              )
+            ) : (
+              <MenuButton
+                icon={<Plus className="h-4 w-4" />}
+                label="Create Sprint"
+                onMouseEnter={closeSubmenu}
+                onClick={doCreateSprint}
+              />
+            )}
+          </MenuSection>
 
           <MenuSection title="Operations">
             <MenuButton
@@ -862,6 +1067,36 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                     >
                       <Hash className="h-4 w-4 text-zinc-500" />
                       <span className="text-zinc-400">Clear points</span>
+                    </button>
+                  </>
+                )}
+
+                {submenu.id === 'sprint' && (
+                  <>
+                    {availableSprints.map((sprint) => (
+                      <button
+                        key={sprint.id}
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                        onClick={() => doAddToSprint(sprint)}
+                      >
+                        <CalendarPlus className="h-4 w-4 text-blue-400" />
+                        <span>{sprint.name}</span>
+                        {sprint.status === 'active' && (
+                          <span className="ml-auto text-[10px] text-emerald-400 uppercase">
+                            Active
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                    <div className="my-1 border-t border-zinc-800" />
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                      onClick={doCreateSprint}
+                    >
+                      <Plus className="h-4 w-4 text-zinc-400" />
+                      <span className="text-zinc-400">Create new sprint...</span>
                     </button>
                   </>
                 )}
