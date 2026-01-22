@@ -4,6 +4,8 @@ A self-hosted issue tracker with backlog and Kanban views. Keep your data on you
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 
+**[Read the Documentation](https://jmynes.github.io/punt/)**
+
 ## Overview
 
 PUNT is a lightweight, local-first issue tracking system for teams who want the essentials without the overhead. It combines a filterable backlog view with a drag-and-drop Kanban board, sprint planning, and real-time sync across browser tabs.
