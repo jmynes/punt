@@ -12,7 +12,11 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
-      const isOnAuthPage = nextUrl.pathname === '/login' || nextUrl.pathname === '/register'
+      const isOnAuthPage =
+        nextUrl.pathname === '/login' ||
+        nextUrl.pathname === '/register' ||
+        nextUrl.pathname === '/forgot-password' ||
+        nextUrl.pathname === '/reset-password'
       const isOnAuthApi = nextUrl.pathname.startsWith('/api/auth')
       const isOnInvite = nextUrl.pathname.startsWith('/invite')
 

@@ -3,9 +3,11 @@ import { z } from 'zod'
 import { handleApiError, validationError } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { getEmailSettings } from '@/lib/email/settings'
 import { getSystemSettings } from '@/lib/system-settings'
 
 const UpdateSettingsSchema = z.object({
+  // Upload settings
   maxImageSizeMB: z.number().int().min(1).max(100).optional(),
   maxVideoSizeMB: z.number().int().min(1).max(500).optional(),
   maxDocumentSizeMB: z.number().int().min(1).max(100).optional(),
@@ -13,6 +15,20 @@ const UpdateSettingsSchema = z.object({
   allowedImageTypes: z.array(z.string()).optional(),
   allowedVideoTypes: z.array(z.string()).optional(),
   allowedDocumentTypes: z.array(z.string()).optional(),
+
+  // Email settings
+  emailEnabled: z.boolean().optional(),
+  emailProvider: z.enum(['none', 'smtp', 'resend', 'console']).optional(),
+  emailFromAddress: z.string().email().optional().or(z.literal('')),
+  emailFromName: z.string().max(100).optional(),
+  smtpHost: z.string().max(255).optional(),
+  smtpPort: z.number().int().min(1).max(65535).optional(),
+  smtpUsername: z.string().max(255).optional(),
+  smtpSecure: z.boolean().optional(),
+  emailPasswordReset: z.boolean().optional(),
+  emailWelcome: z.boolean().optional(),
+  emailVerification: z.boolean().optional(),
+  emailInvitations: z.boolean().optional(),
 })
 
 /**
@@ -24,8 +40,13 @@ export async function GET() {
   try {
     await requireSystemAdmin()
 
-    const settings = await getSystemSettings()
-    return NextResponse.json(settings)
+    const uploadSettings = await getSystemSettings()
+    const emailSettings = await getEmailSettings()
+
+    return NextResponse.json({
+      ...uploadSettings,
+      ...emailSettings,
+    })
   } catch (error) {
     return handleApiError(error, 'fetch system settings')
   }
@@ -77,6 +98,44 @@ export async function PATCH(request: Request) {
       updateData.allowedDocumentTypes = JSON.stringify(updates.allowedDocumentTypes)
     }
 
+    // Email settings
+    if (updates.emailEnabled !== undefined) {
+      updateData.emailEnabled = updates.emailEnabled
+    }
+    if (updates.emailProvider !== undefined) {
+      updateData.emailProvider = updates.emailProvider
+    }
+    if (updates.emailFromAddress !== undefined) {
+      updateData.emailFromAddress = updates.emailFromAddress
+    }
+    if (updates.emailFromName !== undefined) {
+      updateData.emailFromName = updates.emailFromName
+    }
+    if (updates.smtpHost !== undefined) {
+      updateData.smtpHost = updates.smtpHost
+    }
+    if (updates.smtpPort !== undefined) {
+      updateData.smtpPort = updates.smtpPort
+    }
+    if (updates.smtpUsername !== undefined) {
+      updateData.smtpUsername = updates.smtpUsername
+    }
+    if (updates.smtpSecure !== undefined) {
+      updateData.smtpSecure = updates.smtpSecure
+    }
+    if (updates.emailPasswordReset !== undefined) {
+      updateData.emailPasswordReset = updates.emailPasswordReset
+    }
+    if (updates.emailWelcome !== undefined) {
+      updateData.emailWelcome = updates.emailWelcome
+    }
+    if (updates.emailVerification !== undefined) {
+      updateData.emailVerification = updates.emailVerification
+    }
+    if (updates.emailInvitations !== undefined) {
+      updateData.emailInvitations = updates.emailInvitations
+    }
+
     // Upsert to handle case where settings don't exist yet
     await db.systemSettings.upsert({
       where: { id: 'system-settings' },
@@ -88,8 +147,12 @@ export async function PATCH(request: Request) {
     })
 
     // Return the updated settings with parsed arrays
-    const settings = await getSystemSettings()
-    return NextResponse.json(settings)
+    const uploadSettings = await getSystemSettings()
+    const emailSettings = await getEmailSettings()
+    return NextResponse.json({
+      ...uploadSettings,
+      ...emailSettings,
+    })
   } catch (error) {
     return handleApiError(error, 'update system settings')
   }

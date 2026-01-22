@@ -41,9 +41,11 @@ model User {
   ticketEdits      TicketEdit[]
 
   // Auth relations
-  sessions         Session[]
-  accounts         Account[]
-  sentInvitations  Invitation[]
+  sessions                Session[]
+  accounts                Account[]
+  sentInvitations         Invitation[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   // Sprint relations
   completedSprints Sprint[] @relation("SprintCompleter")
@@ -417,4 +419,49 @@ model SystemSettings {
   allowedImageTypes    String @default("[\"image/jpeg\",\"image/png\",\"image/gif\",\"image/webp\"]")
   allowedVideoTypes    String @default("[\"video/mp4\",\"video/webm\",\"video/ogg\",\"video/quicktime\"]")
   allowedDocumentTypes String @default("[\"application/pdf\",\"application/msword\",\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"application/vnd.ms-excel\",\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\",\"text/plain\",\"text/csv\"]")
+
+  // Email provider configuration
+  emailEnabled     Boolean @default(false)
+  emailProvider    String  @default("none") // none, smtp, resend, console
+  emailFromAddress String  @default("")
+  emailFromName    String  @default("PUNT")
+
+  // SMTP settings (password stored in env var EMAIL_SMTP_PASSWORD)
+  smtpHost     String  @default("")
+  smtpPort     Int     @default(587)
+  smtpUsername String  @default("")
+  smtpSecure   Boolean @default(true)
+
+  // Email feature toggles
+  emailPasswordReset Boolean @default(true)
+  emailWelcome       Boolean @default(false)
+  emailVerification  Boolean @default(false)
+  emailInvitations   Boolean @default(true)
+}
+
+// Password reset tokens (for forgot password flow)
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique // SHA-256 hash of the token (never store plain token)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// Email verification tokens
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique // SHA-256 hash of the token
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String   // Email being verified (may differ from current user email)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
