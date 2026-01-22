@@ -51,7 +51,7 @@ export function Header() {
       )}
 
       {/* Logo */}
-      <div className="flex items-center gap-2 font-semibold">
+      <div className="flex items-center gap-2 font-semibold select-none">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white">
           <span className="text-sm font-bold">P</span>
         </div>

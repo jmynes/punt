@@ -127,7 +127,7 @@ export function SidebarContent({
         <div className="mt-6">
           <button
             type="button"
-            className="flex items-center gap-1 px-3 mb-1 w-full text-left"
+            className="flex items-center gap-1 px-3 mb-1 w-full text-left select-none"
             onClick={() => setAdminExpanded(!adminExpanded)}
           >
             {adminExpanded ? (
@@ -190,7 +190,7 @@ export function SidebarContent({
         <div className="flex items-center justify-between px-3 mb-1">
           <button
             type="button"
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 select-none"
             onClick={() => setProjectsExpanded(!projectsExpanded)}
           >
             {projectsExpanded ? (
@@ -252,7 +252,7 @@ export function SidebarContent({
                     <div className="relative flex items-center">
                       <button
                         type="button"
-                        className="h-8 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300"
+                        className="h-8 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
                         onClick={() => toggleProjectExpanded(project.id)}
                       >
                         {isExpanded ? (

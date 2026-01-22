@@ -198,7 +198,7 @@ export default function DashboardPage() {
                       className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/30 hover:bg-zinc-800/50 transition-colors group"
                     >
                       <div
-                        className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+                        className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold text-sm select-none"
                         style={{ backgroundColor: project.color }}
                       >
                         {project.key.charAt(0)}
