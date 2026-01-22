@@ -228,7 +228,7 @@ export default function BoardPage() {
   // Server renders with empty store, client may have localStorage data
   if (!_hasHydrated) {
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
+      <div className="flex h-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
         <p className="mt-4 text-sm text-zinc-500">Loading board...</p>
       </div>
@@ -238,7 +238,7 @@ export default function BoardPage() {
   // Show loading state while fetching columns/tickets
   if (columnsLoading || ticketsLoading) {
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
+      <div className="flex h-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
         <p className="mt-4 text-sm text-zinc-500">
           {columnsLoading ? 'Loading board...' : 'Loading tickets...'}
@@ -251,7 +251,7 @@ export default function BoardPage() {
   if (columnsError || ticketsError) {
     const error = columnsError || ticketsError
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
+      <div className="flex h-full flex-col items-center justify-center">
         <p className="text-sm text-red-400">Failed to load board</p>
         <p className="mt-2 text-xs text-zinc-500">{error?.message}</p>
       </div>
@@ -259,7 +259,7 @@ export default function BoardPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+    <div className="flex h-full flex-col">
       {/* Page header */}
       <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
         <div className="flex items-center gap-3">

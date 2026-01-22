@@ -583,7 +583,7 @@ export default function BacklogPage() {
 
   if (!_hasHydrated) {
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <div className="text-zinc-500">Loading backlog...</div>
       </div>
     )
@@ -591,7 +591,7 @@ export default function BacklogPage() {
 
   if (columnsLoading || ticketsLoading) {
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
+      <div className="flex h-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
         <p className="mt-4 text-sm text-zinc-500">
           {columnsLoading ? 'Loading columns...' : 'Loading tickets...'}
@@ -603,7 +603,7 @@ export default function BacklogPage() {
   const hasActiveSprints = activeSprints.length > 0 || planningSprints.length > 0
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+    <div className="flex h-full flex-col">
       {/* Page header */}
       <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
         <div className="flex items-center gap-3">

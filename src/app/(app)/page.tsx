@@ -96,7 +96,7 @@ export default function DashboardPage() {
   }, [])
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] overflow-y-auto p-4 lg:p-6">
+    <div className="h-full overflow-y-auto p-4 lg:p-6">
       {/* Welcome section */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-zinc-100 mb-2">Welcome back!</h1>
