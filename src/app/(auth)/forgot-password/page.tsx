@@ -1,13 +1,14 @@
 import Link from 'next/link'
+import { AuthBranding } from '@/components/auth/auth-branding'
 import { ForgotPasswordForm } from '@/components/auth/forgot-password-form'
 
 export default function ForgotPasswordPage() {
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold text-zinc-100">Reset your password</h1>
-        <p className="text-zinc-500">Enter your email to receive a reset link</p>
-      </div>
+      <AuthBranding
+        title="Reset your password"
+        subtitle="Enter your email to receive a reset link"
+      />
       <ForgotPasswordForm />
       <p className="text-center text-sm text-zinc-500">
         Remember your password?{' '}

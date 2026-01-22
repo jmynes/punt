@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { SidebarToggleIcon } from '@/components/ui/sidebar-toggle-icon'
+import { useBranding } from '@/hooks/queries/use-branding'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useIsMobile } from '@/hooks/use-media-query'
 import { getAvatarColor, getInitials } from '@/lib/utils'
@@ -25,6 +26,7 @@ export function Header() {
   const isMobile = useIsMobile()
   const { sidebarOpen, toggleSidebar, mobileNavOpen, setMobileNavOpen } = useUIStore()
   const currentUser = useCurrentUser()
+  const { data: branding } = useBranding()
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/login' })
@@ -52,10 +54,25 @@ export function Header() {
 
       {/* Logo */}
       <div className="flex items-center gap-2 font-semibold select-none">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white">
-          <span className="text-sm font-bold">P</span>
-        </div>
-        <span className="hidden text-lg tracking-tight text-white sm:inline-block">PUNT</span>
+        {branding?.logoUrl ? (
+          <img
+            src={branding.logoUrl}
+            alt={branding.appName}
+            className="h-8 w-8 rounded-lg object-contain"
+          />
+        ) : (
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
+            style={{
+              background: `linear-gradient(to bottom right, ${branding?.logoGradientFrom || '#f59e0b'}, ${branding?.logoGradientTo || '#ea580c'})`,
+            }}
+          >
+            <span className="text-sm font-bold">{branding?.logoLetter || 'P'}</span>
+          </div>
+        )}
+        <span className="hidden text-lg tracking-tight text-white sm:inline-block">
+          {branding?.appName || 'PUNT'}
+        </span>
       </div>
 
       {/* Search - hidden on mobile, only show when logged in */}

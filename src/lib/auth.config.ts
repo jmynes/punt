@@ -19,9 +19,15 @@ export const authConfig: NextAuthConfig = {
         nextUrl.pathname === '/reset-password'
       const isOnAuthApi = nextUrl.pathname.startsWith('/api/auth')
       const isOnInvite = nextUrl.pathname.startsWith('/invite')
+      const isOnBrandingApi = nextUrl.pathname === '/api/branding'
 
       // Allow auth API routes
       if (isOnAuthApi) {
+        return true
+      }
+
+      // Allow public branding API (used by login page and header)
+      if (isOnBrandingApi) {
         return true
       }
 

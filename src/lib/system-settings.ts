@@ -1,12 +1,22 @@
 /**
  * System settings helper for fetching and managing global configuration.
- * Provides cached access to system-wide settings like file upload limits.
+ * Provides cached access to system-wide settings like file upload limits and branding.
  */
 
 import { db } from '@/lib/db'
 
+// Default branding values
+export const DEFAULT_BRANDING = {
+  appName: 'PUNT',
+  logoUrl: null as string | null,
+  logoLetter: 'P',
+  logoGradientFrom: '#f59e0b',
+  logoGradientTo: '#ea580c',
+}
+
 // Default values matching Prisma schema defaults
 const DEFAULT_SETTINGS = {
+  ...DEFAULT_BRANDING,
   maxImageSizeMB: 10,
   maxVideoSizeMB: 100,
   maxDocumentSizeMB: 25,
@@ -24,10 +34,25 @@ const DEFAULT_SETTINGS = {
   ],
 }
 
+export interface BrandingSettings {
+  appName: string
+  logoUrl: string | null
+  logoLetter: string
+  logoGradientFrom: string
+  logoGradientTo: string
+}
+
 export interface SystemSettings {
   id: string
   updatedAt: Date
   updatedBy: string | null
+  // Branding
+  appName: string
+  logoUrl: string | null
+  logoLetter: string
+  logoGradientFrom: string
+  logoGradientTo: string
+  // Upload settings
   maxImageSizeMB: number
   maxVideoSizeMB: number
   maxDocumentSizeMB: number
@@ -77,6 +102,13 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     id: settings.id,
     updatedAt: settings.updatedAt,
     updatedBy: settings.updatedBy,
+    // Branding
+    appName: settings.appName,
+    logoUrl: settings.logoUrl,
+    logoLetter: settings.logoLetter,
+    logoGradientFrom: settings.logoGradientFrom,
+    logoGradientTo: settings.logoGradientTo,
+    // Upload settings
     maxImageSizeMB: settings.maxImageSizeMB,
     maxVideoSizeMB: settings.maxVideoSizeMB,
     maxDocumentSizeMB: settings.maxDocumentSizeMB,
@@ -93,6 +125,36 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       settings.allowedDocumentTypes,
       DEFAULT_SETTINGS.allowedDocumentTypes,
     ),
+  }
+}
+
+/**
+ * Fetch branding settings from database.
+ * This is a public endpoint (no auth required) for use in header and login page.
+ */
+export async function getBrandingSettings(): Promise<BrandingSettings> {
+  // Find existing settings or return defaults
+  const settings = await db.systemSettings.findUnique({
+    where: { id: 'system-settings' },
+    select: {
+      appName: true,
+      logoUrl: true,
+      logoLetter: true,
+      logoGradientFrom: true,
+      logoGradientTo: true,
+    },
+  })
+
+  if (!settings) {
+    return { ...DEFAULT_BRANDING }
+  }
+
+  return {
+    appName: settings.appName,
+    logoUrl: settings.logoUrl,
+    logoLetter: settings.logoLetter,
+    logoGradientFrom: settings.logoGradientFrom,
+    logoGradientTo: settings.logoGradientTo,
   }
 }
 

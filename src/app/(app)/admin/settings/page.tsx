@@ -1,15 +1,16 @@
 'use client'
 
-import { Mail, Settings, Upload } from 'lucide-react'
+import { Mail, Palette, Settings, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { BrandingSettingsForm } from '@/components/admin/branding-settings-form'
 import { EmailSettingsForm } from '@/components/admin/email-settings-form'
 import { SettingsForm } from '@/components/admin/settings-form'
 import { cn } from '@/lib/utils'
 
-type SettingsTab = 'email' | 'uploads'
+type SettingsTab = 'branding' | 'email' | 'uploads'
 
-const VALID_TABS: SettingsTab[] = ['email', 'uploads']
+const VALID_TABS: SettingsTab[] = ['branding', 'email', 'uploads']
 
 function isValidTab(tab: string | null): tab is SettingsTab {
   return tab !== null && VALID_TABS.includes(tab as SettingsTab)
@@ -18,7 +19,7 @@ function isValidTab(tab: string | null): tab is SettingsTab {
 export default function AdminSettingsPage() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const activeTab: SettingsTab = isValidTab(tabParam) ? tabParam : 'email'
+  const activeTab: SettingsTab = isValidTab(tabParam) ? tabParam : 'branding'
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -31,6 +32,18 @@ export default function AdminSettingsPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-zinc-800">
+          <Link
+            href="/admin/settings?tab=branding"
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              activeTab === 'branding'
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            <Palette className="h-4 w-4" />
+            Branding
+          </Link>
           <Link
             href="/admin/settings?tab=email"
             className={cn(
@@ -58,6 +71,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Tab Content */}
+        {activeTab === 'branding' && <BrandingSettingsForm />}
         {activeTab === 'email' && <EmailSettingsForm />}
         {activeTab === 'uploads' && <SettingsForm />}
 

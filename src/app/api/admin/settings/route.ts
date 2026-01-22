@@ -7,6 +7,18 @@ import { getEmailSettings } from '@/lib/email/settings'
 import { getSystemSettings } from '@/lib/system-settings'
 
 const UpdateSettingsSchema = z.object({
+  // Branding settings
+  appName: z.string().min(1).max(50).optional(),
+  logoLetter: z.string().min(1).max(2).optional(),
+  logoGradientFrom: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color')
+    .optional(),
+  logoGradientTo: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color')
+    .optional(),
+
   // Upload settings
   maxImageSizeMB: z.number().int().min(1).max(100).optional(),
   maxVideoSizeMB: z.number().int().min(1).max(500).optional(),
@@ -71,6 +83,20 @@ export async function PATCH(request: Request) {
     const updates = parseResult.data
     const updateData: Record<string, unknown> = {
       updatedBy: user.id,
+    }
+
+    // Branding updates
+    if (updates.appName !== undefined) {
+      updateData.appName = updates.appName
+    }
+    if (updates.logoLetter !== undefined) {
+      updateData.logoLetter = updates.logoLetter
+    }
+    if (updates.logoGradientFrom !== undefined) {
+      updateData.logoGradientFrom = updates.logoGradientFrom
+    }
+    if (updates.logoGradientTo !== undefined) {
+      updateData.logoGradientTo = updates.logoGradientTo
     }
 
     // Apply numeric updates

@@ -409,6 +409,13 @@ model SystemSettings {
   updatedAt DateTime @updatedAt
   updatedBy String?
 
+  // Branding settings
+  appName          String  @default("PUNT")
+  logoUrl          String? // URL to uploaded logo image
+  logoLetter       String  @default("P")
+  logoGradientFrom String  @default("#f59e0b")
+  logoGradientTo   String  @default("#ea580c")
+
   // File upload limits (in MB)
   maxImageSizeMB          Int @default(10)
   maxVideoSizeMB          Int @default(100)

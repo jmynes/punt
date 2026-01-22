@@ -1,14 +1,12 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
+import { AuthBranding } from '@/components/auth/auth-branding'
 import { RegisterForm } from '@/components/auth/register-form'
 
 export default function RegisterPage() {
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold text-zinc-100">Create an account</h1>
-        <p className="text-zinc-500">Get started with Punt</p>
-      </div>
+      <AuthBranding subtitle="Create a new account" />
       <Suspense fallback={<div className="h-96 animate-pulse bg-zinc-800/50 rounded-lg" />}>
         <RegisterForm />
       </Suspense>
