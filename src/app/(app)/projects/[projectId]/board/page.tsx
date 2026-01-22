@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, Plus } from 'lucide-react'
+import { Columns3, Loader2, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef } from 'react'
 import { BacklogFilters } from '@/components/backlog'
@@ -260,14 +260,12 @@ export default function BoardPage() {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
-      {/* Sprint header */}
-      <div className="px-4 pt-4 lg:px-6">
-        <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
-      </div>
-
-      {/* Board header */}
-      <div className="flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      {/* Page header */}
+      <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-zinc-800">
+            <Columns3 className="h-5 w-5 text-zinc-400" />
+          </div>
           <div>
             <h1 className="text-xl font-semibold text-zinc-100">{projectKey} Board</h1>
             <p className="text-sm text-zinc-500">
@@ -276,24 +274,29 @@ export default function BoardPage() {
                 : 'Start a sprint to see tickets on the board'}
             </p>
           </div>
-
-          {/* Create ticket - auto-assign to active sprint */}
-          <Button
-            size="sm"
-            variant="primary"
-            className="w-fit"
-            onClick={() => {
-              if (activeSprint) {
-                openCreateTicketWithData({ sprintId: activeSprint.id })
-              } else {
-                setCreateTicketOpen(true)
-              }
-            }}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">New Ticket</span>
-          </Button>
         </div>
+
+        {/* Create ticket - auto-assign to active sprint */}
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={() => {
+            if (activeSprint) {
+              openCreateTicketWithData({ sprintId: activeSprint.id })
+            } else {
+              setCreateTicketOpen(true)
+            }
+          }}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          <span className="hidden sm:inline">New Ticket</span>
+        </Button>
+      </div>
+
+      {/* Sprint header + filters */}
+      <div className="flex-shrink-0 flex flex-col gap-4 px-4 py-4 lg:px-6 border-b border-zinc-800">
+        {/* Sprint progress */}
+        <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
 
         {/* Filters */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
