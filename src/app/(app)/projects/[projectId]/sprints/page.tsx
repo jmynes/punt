@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { SprintBacklogView, SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
+import { useRealtime } from '@/hooks/use-realtime'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -32,6 +33,9 @@ export default function SprintPlanningPage() {
   const { isLoading: ticketsLoading } = useTicketsByProject(projectId, {
     enabled: _hasHydrated && columnsLoaded,
   })
+
+  // Connect to real-time updates (after initial load)
+  useRealtime(projectId, _hasHydrated && columnsLoaded && !ticketsLoading)
 
   // Get columns for this project
   const columns = getColumns(projectId)

@@ -24,6 +24,7 @@ import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { useProjectSprints, useUpdateTicketSprint } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
+import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBacklogStore } from '@/stores/backlog-store'
@@ -123,6 +124,9 @@ export default function BacklogPage() {
   const { isLoading: ticketsLoading } = useTicketsByProject(projectId, {
     enabled: _hasHydrated && columnsLoaded,
   })
+
+  // Connect to real-time updates (after initial load)
+  useRealtime(projectId, _hasHydrated && columnsLoaded && !ticketsLoading)
 
   // Fetch all sprints
   const { data: sprints } = useProjectSprints(projectId)
