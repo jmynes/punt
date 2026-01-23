@@ -138,6 +138,8 @@ export function pasteTickets(params: PasteTicketsParams): PasteResult {
       const currentBoardState = useBoardStore.getState()
       const selectionState = useSelectionStore.getState()
 
+      const undoState = useUndoStore.getState()
+      const uiState = useUIStore.getState()
       for (const { ticket: tempTicket, columnId } of newTickets) {
         const serverTicket = serverTickets.get(tempTicket.id)
         if (serverTicket) {
@@ -147,6 +149,12 @@ export function pasteTickets(params: PasteTicketsParams): PasteResult {
           if (selectionState.isSelected(tempTicket.id)) {
             selectionState.toggleTicket(tempTicket.id) // deselect temp
             selectionState.toggleTicket(serverTicket.id) // select server
+          }
+          // Update the undo store with the server ticket ID
+          undoState.updatePastedTicketId(projectId, tempTicket.id, serverTicket)
+          // Update active ticket ID if drawer was opened with temp ticket
+          if (uiState.activeTicketId === tempTicket.id) {
+            uiState.setActiveTicketId(serverTicket.id)
           }
         }
       }

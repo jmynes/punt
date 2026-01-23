@@ -1116,15 +1116,27 @@ export function KeyboardShortcuts() {
             currentId = toastId
           } else if (entry.action.type === 'paste') {
             const action = entry.action
-            // Remove all pasted tickets
+            // Remove all pasted tickets from store and database
             const { removeTicket } = useBoardStore.getState()
+            const ticketIdsToDelete: string[] = []
+
             for (const { ticket } of action.tickets) {
+              // Use the stored ticket ID (which is now the server ID after updatePastedTicketId)
               removeTicket(entry.projectId, ticket.id)
+              ticketIdsToDelete.push(ticket.id)
             }
+
             // Ensure drawer is closed and selection cleared
             useUIStore.getState().setActiveTicketId(null)
             useSelectionStore.getState().clearSelection()
             undoStore.pushRedo(entry)
+
+            // Delete from database
+            if (ticketIdsToDelete.length > 0) {
+              batchDeleteTicketsAPI(entry.projectId, ticketIdsToDelete).catch((err) => {
+                console.error('Failed to delete pasted tickets on undo:', err)
+              })
+            }
 
             // Format ticket IDs for notification
             const pasteTicketKeys = action.tickets.map(({ ticket }) => formatTicketId(ticket))
@@ -1142,12 +1154,63 @@ export function KeyboardShortcuts() {
               showUndoButtons: showUndo,
               undoLabel: 'Redo',
               redoLabel: 'Undo',
-              onUndo: (id) => {
+              onUndo: async (id) => {
+                // Redo paste: re-create the tickets
                 const undoEntry = useUndoStore.getState().redoByToastId(id)
                 if (undoEntry) {
                   const pasteBoard = useBoardStore.getState()
+                  const pasteUndoStore = useUndoStore.getState()
+                  const redoTickets: Array<{ ticket: TicketWithRelations; columnId: string }> = []
+
                   for (const { ticket, columnId } of action.tickets) {
-                    pasteBoard.addTicket(undoEntry.projectId, columnId, ticket)
+                    const tempId = `ticket-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+                    const redoTicket = { ...ticket, id: tempId }
+                    redoTickets.push({ ticket: redoTicket, columnId })
+                    pasteBoard.addTicket(undoEntry.projectId, columnId, redoTicket)
+                  }
+
+                  // Persist to database
+                  try {
+                    const ticketsToCreate = redoTickets.map(({ ticket, columnId }) => ({
+                      tempId: ticket.id,
+                      columnId,
+                      ticketData: {
+                        title: ticket.title,
+                        description: ticket.description,
+                        type: ticket.type,
+                        priority: ticket.priority,
+                        storyPoints: ticket.storyPoints,
+                        estimate: ticket.estimate,
+                        startDate: ticket.startDate,
+                        dueDate: ticket.dueDate,
+                        environment: ticket.environment,
+                        affectedVersion: ticket.affectedVersion,
+                        fixVersion: ticket.fixVersion,
+                        assigneeId: ticket.assigneeId,
+                        sprintId: ticket.sprintId,
+                        parentId: ticket.parentId,
+                        labels: ticket.labels,
+                        watchers: ticket.watchers,
+                      },
+                    }))
+                    const serverTickets = await batchCreateTicketsAPI(
+                      undoEntry.projectId,
+                      ticketsToCreate,
+                    )
+                    for (const { ticket: tempTicket, columnId } of redoTickets) {
+                      const serverTicket = serverTickets.get(tempTicket.id)
+                      if (serverTicket) {
+                        pasteBoard.removeTicket(undoEntry.projectId, tempTicket.id)
+                        pasteBoard.addTicket(undoEntry.projectId, columnId, serverTicket)
+                        pasteUndoStore.updatePastedTicketId(
+                          undoEntry.projectId,
+                          tempTicket.id,
+                          serverTicket,
+                        )
+                      }
+                    }
+                  } catch (err) {
+                    console.error('Failed to recreate pasted tickets:', err)
                   }
                 }
               },
@@ -1157,12 +1220,20 @@ export function KeyboardShortcuts() {
                   currentId = newId
                 }
               },
-              onRedo: (id) => {
+              onRedo: async (id) => {
+                // Undo paste again: delete the tickets
                 const undoEntry = useUndoStore.getState().undoByToastId(id)
                 if (undoEntry) {
                   const pasteBoard = useBoardStore.getState()
+                  const idsToDelete: string[] = []
                   for (const { ticket } of action.tickets) {
                     pasteBoard.removeTicket(undoEntry.projectId, ticket.id)
+                    idsToDelete.push(ticket.id)
+                  }
+                  if (idsToDelete.length > 0) {
+                    batchDeleteTicketsAPI(undoEntry.projectId, idsToDelete).catch((err) => {
+                      console.error('Failed to delete pasted tickets:', err)
+                    })
                   }
                 }
               },
@@ -1690,33 +1761,97 @@ export function KeyboardShortcuts() {
             const action = entry.action
             const { addTicket: redoAddTicket, removeTicket: redoRemoveTicket } =
               useBoardStore.getState()
-            for (const { ticket, columnId } of action.tickets) {
-              redoAddTicket(entry.projectId, columnId, ticket)
-            }
 
-            const redoPasteTicketKeys = action.tickets.map(({ ticket }) => formatTicketId(ticket))
+            // Generate new temp IDs for redo
+            const redoTickets: Array<{ ticket: TicketWithRelations; columnId: string }> = []
+            for (const { ticket, columnId } of action.tickets) {
+              const tempId = `ticket-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+              const redoTicket = { ...ticket, id: tempId }
+              redoTickets.push({ ticket: redoTicket, columnId })
+              redoAddTicket(entry.projectId, columnId, redoTicket)
+            }
+            // Persist to database
+            ;(async () => {
+              try {
+                const ticketsToCreate = redoTickets.map(({ ticket, columnId }) => ({
+                  tempId: ticket.id,
+                  columnId,
+                  ticketData: {
+                    title: ticket.title,
+                    description: ticket.description,
+                    type: ticket.type,
+                    priority: ticket.priority,
+                    storyPoints: ticket.storyPoints,
+                    estimate: ticket.estimate,
+                    startDate: ticket.startDate,
+                    dueDate: ticket.dueDate,
+                    environment: ticket.environment,
+                    affectedVersion: ticket.affectedVersion,
+                    fixVersion: ticket.fixVersion,
+                    assigneeId: ticket.assigneeId,
+                    sprintId: ticket.sprintId,
+                    parentId: ticket.parentId,
+                    labels: ticket.labels,
+                    watchers: ticket.watchers,
+                  },
+                }))
+                const serverTickets = await batchCreateTicketsAPI(entry.projectId, ticketsToCreate)
+                const boardState = useBoardStore.getState()
+                const undoState = useUndoStore.getState()
+                for (const { ticket: tempTicket, columnId } of redoTickets) {
+                  const serverTicket = serverTickets.get(tempTicket.id)
+                  if (serverTicket) {
+                    boardState.removeTicket(entry.projectId, tempTicket.id)
+                    boardState.addTicket(entry.projectId, columnId, serverTicket)
+                    undoState.updatePastedTicketId(entry.projectId, tempTicket.id, serverTicket)
+                  }
+                }
+              } catch (err) {
+                console.error('Failed to persist pasted tickets on redo:', err)
+                // Rollback on error
+                for (const { ticket } of redoTickets) {
+                  redoRemoveTicket(entry.projectId, ticket.id)
+                }
+                toast.error('Failed to redo paste')
+              }
+            })()
+
+            const redoPasteTicketKeys = redoTickets.map(({ ticket }) => formatTicketId(ticket))
             const newPasteToastId = toast.success(
-              action.tickets.length === 1
-                ? 'Ticket pasted'
-                : `${action.tickets.length} tickets pasted`,
+              redoTickets.length === 1 ? 'Ticket pasted' : `${redoTickets.length} tickets pasted`,
               {
                 description:
-                  action.tickets.length === 1
+                  redoTickets.length === 1
                     ? redoPasteTicketKeys[0]
                     : redoPasteTicketKeys.join(', '),
                 duration: 5000,
                 action: showUndo
                   ? {
                       label: 'Undo',
-                      onClick: () => {
-                        for (const { ticket } of action.tickets) {
-                          redoRemoveTicket(entry.projectId, ticket.id)
+                      onClick: async () => {
+                        const boardState = useBoardStore.getState()
+                        const idsToDelete: string[] = []
+                        for (const { ticket } of redoTickets) {
+                          // Find the ticket (may have been replaced with server ticket)
+                          const cols = boardState.getColumns(entry.projectId)
+                          const foundTicket = cols
+                            .flatMap((c) => c.tickets)
+                            .find((t) => t.id === ticket.id)
+                          if (foundTicket) {
+                            boardState.removeTicket(entry.projectId, foundTicket.id)
+                            idsToDelete.push(foundTicket.id)
+                          }
                         }
                         redoStore.pushRedo(entry)
+                        if (idsToDelete.length > 0) {
+                          batchDeleteTicketsAPI(entry.projectId, idsToDelete).catch((err) => {
+                            console.error('Failed to delete tickets on undo:', err)
+                          })
+                        }
                         toast.success(
-                          action.tickets.length === 1
+                          redoTickets.length === 1
                             ? 'Paste undone'
-                            : `${action.tickets.length} pastes undone`,
+                            : `${redoTickets.length} pastes undone`,
                           { duration: 2000 },
                         )
                       },
@@ -1724,7 +1859,7 @@ export function KeyboardShortcuts() {
                   : undefined,
               },
             )
-            redoStore.pushPaste(entry.projectId, action.tickets, newPasteToastId, true)
+            redoStore.pushPaste(entry.projectId, redoTickets, newPasteToastId, true)
           } else if (entry.action.type === 'ticketCreate') {
             const action = entry.action
             // Redo ticket creation = add the ticket back

@@ -87,6 +87,13 @@ interface UndoState {
     isRedo?: boolean,
   ) => void
 
+  // Update a ticket ID in a paste entry (called when temp ticket is replaced with server ticket)
+  updatePastedTicketId: (
+    projectId: string,
+    tempId: string,
+    serverTicket: TicketWithRelations,
+  ) => void
+
   // Add a move action to the undo stack
   pushMove: (
     projectId: string,
@@ -219,6 +226,43 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         },
       ],
       redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  updatePastedTicketId: (projectId, tempId, serverTicket) => {
+    console.debug('[SessionLog] Internal: Updating pasted ticket ID', {
+      projectId,
+      tempId,
+      serverId: serverTicket.id,
+    })
+    set((state) => ({
+      undoStack: state.undoStack.map((entry) => {
+        if (entry.projectId !== projectId || entry.action.type !== 'paste') {
+          return entry
+        }
+        const pasteAction = entry.action
+        const updatedTickets = pasteAction.tickets.map((pt) =>
+          pt.ticket.id === tempId ? { ...pt, ticket: serverTicket } : pt,
+        )
+        // Only update if a ticket was actually changed
+        if (updatedTickets.some((t, i) => t !== pasteAction.tickets[i])) {
+          return { ...entry, action: { ...pasteAction, tickets: updatedTickets } }
+        }
+        return entry
+      }),
+      redoStack: state.redoStack.map((entry) => {
+        if (entry.projectId !== projectId || entry.action.type !== 'paste') {
+          return entry
+        }
+        const pasteAction = entry.action
+        const updatedTickets = pasteAction.tickets.map((pt) =>
+          pt.ticket.id === tempId ? { ...pt, ticket: serverTicket } : pt,
+        )
+        if (updatedTickets.some((t, i) => t !== pasteAction.tickets[i])) {
+          return { ...entry, action: { ...pasteAction, tickets: updatedTickets } }
+        }
+        return entry
+      }),
     }))
   },
 
