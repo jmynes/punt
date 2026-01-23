@@ -74,6 +74,52 @@ async function main() {
     console.log(`\nUsing existing project: ${project.name} (${project.key})`)
   }
 
+  // Create or get default roles for the project
+  const defaultRoles = [
+    {
+      name: 'Owner',
+      color: '#f59e0b',
+      position: 0,
+      permissions:
+        '["project.settings","project.delete","members.invite","members.manage","members.admin","board.manage","tickets.create","tickets.manage_own","tickets.manage_any","sprints.manage","labels.manage","comments.manage_any","attachments.manage_any"]',
+    },
+    {
+      name: 'Admin',
+      color: '#3b82f6',
+      position: 1,
+      permissions:
+        '["project.settings","members.invite","members.manage","board.manage","tickets.create","tickets.manage_own","tickets.manage_any","sprints.manage","labels.manage","comments.manage_any","attachments.manage_any"]',
+    },
+    {
+      name: 'Member',
+      color: '#6b7280',
+      position: 2,
+      permissions: '["tickets.create","tickets.manage_own"]',
+    },
+    { name: 'Viewer', color: '#71717a', position: 3, permissions: '[]' },
+  ]
+
+  const roleMap = new Map<string, string>()
+  for (const roleConfig of defaultRoles) {
+    const role = await prisma.role.upsert({
+      where: { projectId_name: { projectId: project.id, name: roleConfig.name } },
+      update: {},
+      create: {
+        name: roleConfig.name,
+        color: roleConfig.color,
+        position: roleConfig.position,
+        permissions: roleConfig.permissions,
+        isDefault: true,
+        projectId: project.id,
+      },
+    })
+    roleMap.set(roleConfig.name, role.id)
+  }
+
+  const ownerRoleId = roleMap.get('Owner')!
+  const adminRoleId = roleMap.get('Admin')!
+  const memberRoleId = roleMap.get('Member')!
+
   // Add users as project members
   await Promise.all([
     prisma.projectMember.upsert({
@@ -82,7 +128,7 @@ async function main() {
       create: {
         userId: alice.id,
         projectId: project.id,
-        role: 'owner',
+        roleId: ownerRoleId,
       },
     }),
     prisma.projectMember.upsert({
@@ -91,7 +137,7 @@ async function main() {
       create: {
         userId: bob.id,
         projectId: project.id,
-        role: 'admin',
+        roleId: adminRoleId,
       },
     }),
     prisma.projectMember.upsert({
@@ -100,7 +146,7 @@ async function main() {
       create: {
         userId: carol.id,
         projectId: project.id,
-        role: 'member',
+        roleId: memberRoleId,
       },
     }),
   ])

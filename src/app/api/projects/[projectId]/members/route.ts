@@ -28,15 +28,34 @@ export async function GET(
             avatar: true,
           },
         },
-      },
-      orderBy: {
-        user: {
-          name: 'asc',
+        role: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            description: true,
+            position: true,
+            isDefault: true,
+          },
         },
       },
+      orderBy: [{ role: { position: 'asc' } }, { user: { name: 'asc' } }],
     })
 
-    return NextResponse.json(members)
+    // Format response to include role details
+    const membersWithRoles = members.map((m) => ({
+      id: m.id,
+      userId: m.userId,
+      projectId: m.projectId,
+      roleId: m.roleId,
+      overrides: m.overrides,
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+      user: m.user,
+      role: m.role,
+    }))
+
+    return NextResponse.json(membersWithRoles)
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {

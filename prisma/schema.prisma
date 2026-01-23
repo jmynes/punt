@@ -138,18 +138,58 @@ model Project {
   sprints        Sprint[]
   invitations    Invitation[]
   sprintSettings ProjectSprintSettings?
+  roles          Role[]
 }
 
 model ProjectMember {
-  id   String @id @default(cuid())
-  role String @default("member") // owner, admin, member
+  id String @id @default(cuid())
+
+  // Role relation (replaces old string role field)
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  // Optional per-member permission overrides (additive to role permissions)
+  // JSON array of permission strings, e.g., ["sprints.manage", "labels.manage"]
+  overrides String?
 
   userId    String
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([userId, projectId])
+  @@index([projectId])
+  @@index([roleId])
+}
+
+// Custom roles for granular permissions (Discord/Jira-style)
+model Role {
+  id          String  @id @default(cuid())
+  name        String // "Owner", "Admin", "Moderator", "Member", "Viewer"
+  color       String  @default("#6b7280") // For UI badge display
+  description String? // Optional description of what this role can do
+
+  // JSON array of permission strings, e.g., ["tickets.create", "tickets.manage_own"]
+  permissions String @default("[]")
+
+  // Built-in roles (Owner, Admin, Member, Viewer) cannot be deleted
+  isDefault Boolean @default(false)
+
+  // Position for display ordering (lower = higher rank)
+  position Int @default(0)
+
+  projectId String
+  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members   ProjectMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId])
 }
 
 model Sprint {

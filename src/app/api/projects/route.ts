@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
+import { createDefaultRolesForProject, DEFAULT_ROLE_NAMES } from '@/lib/permissions'
 
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -57,13 +58,22 @@ export async function GET() {
             },
           },
         },
+        role: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            position: true,
+          },
+        },
       },
       orderBy: { project: { name: 'asc' } },
     })
 
     const projectsWithRole = memberships.map((m) => ({
       ...m.project,
-      role: m.role,
+      role: m.role.name, // Keep backwards compatible - return role name as string
+      roleDetails: m.role, // Also include full role details
     }))
 
     return NextResponse.json(projectsWithRole)
@@ -107,7 +117,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Project key already exists' }, { status: 400 })
     }
 
-    // Create project with default columns and make the creator an owner
+    // Create project with default columns
     const project = await db.project.create({
       data: {
         name,
@@ -122,12 +132,6 @@ export async function POST(request: Request) {
             { name: 'Done', order: 3 },
           ],
         },
-        members: {
-          create: {
-            userId: user.id,
-            role: 'owner',
-          },
-        },
       },
       select: {
         id: true,
@@ -137,6 +141,24 @@ export async function POST(request: Request) {
         description: true,
         createdAt: true,
         updatedAt: true,
+      },
+    })
+
+    // Create default roles for the project
+    const roleMap = await createDefaultRolesForProject(project.id)
+    const ownerRoleId = roleMap.get(DEFAULT_ROLE_NAMES.OWNER)
+
+    if (!ownerRoleId) {
+      // This should never happen, but handle it gracefully
+      throw new Error('Failed to create Owner role')
+    }
+
+    // Add the creator as an Owner
+    await db.projectMember.create({
+      data: {
+        userId: user.id,
+        projectId: project.id,
+        roleId: ownerRoleId,
       },
     })
 
@@ -150,7 +172,19 @@ export async function POST(request: Request) {
       timestamp: Date.now(),
     })
 
-    return NextResponse.json({ ...project, role: 'owner' }, { status: 201 })
+    return NextResponse.json(
+      {
+        ...project,
+        role: 'Owner', // Backwards compatible
+        roleDetails: {
+          id: ownerRoleId,
+          name: 'Owner',
+          color: '#f59e0b',
+          position: 0,
+        },
+      },
+      { status: 201 },
+    )
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {

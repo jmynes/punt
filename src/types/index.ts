@@ -1,3 +1,30 @@
+// Import Prisma types for use within this file
+import type {
+  Attachment as PrismaAttachment,
+  Column as PrismaColumn,
+  Comment as PrismaComment,
+  Label as PrismaLabel,
+  Project as PrismaProject,
+  ProjectMember as PrismaProjectMember,
+  ProjectSprintSettings as PrismaProjectSprintSettings,
+  Role as PrismaRole,
+  Sprint as PrismaSprint,
+  Ticket as PrismaTicket,
+  TicketEdit as PrismaTicketEdit,
+  TicketLink as PrismaTicketLink,
+  TicketSprintHistory as PrismaTicketSprintHistory,
+  TicketWatcher as PrismaTicketWatcher,
+  User as PrismaUser,
+} from '@/generated/prisma'
+
+// Import permission types for use within this file
+import type {
+  CategoryMeta as CategoryMetaType,
+  PermissionCategory as PermissionCategoryType,
+  PermissionMeta as PermissionMetaType,
+  Permission as PermissionType,
+} from '@/lib/permissions'
+
 // Re-export Prisma types
 export type {
   Attachment,
@@ -7,6 +34,7 @@ export type {
   Project,
   ProjectMember,
   ProjectSprintSettings,
+  Role,
   Sprint,
   Ticket,
   TicketEdit,
@@ -16,6 +44,14 @@ export type {
   User,
 } from '@/generated/prisma'
 
+// Re-export permission types
+export type {
+  CategoryMeta,
+  Permission,
+  PermissionCategory,
+  PermissionMeta,
+} from '@/lib/permissions'
+
 // Issue types
 export const ISSUE_TYPES = ['epic', 'story', 'task', 'bug', 'subtask'] as const
 export type IssueType = (typeof ISSUE_TYPES)[number]
@@ -24,9 +60,13 @@ export type IssueType = (typeof ISSUE_TYPES)[number]
 export const PRIORITIES = ['lowest', 'low', 'medium', 'high', 'highest', 'critical'] as const
 export type Priority = (typeof PRIORITIES)[number]
 
-// Project member roles
-export const ROLES = ['owner', 'admin', 'member'] as const
-export type Role = (typeof ROLES)[number]
+// Legacy project member roles (kept for backwards compatibility)
+// @deprecated Use the new Role model with granular permissions instead
+export const LEGACY_ROLES = ['owner', 'admin', 'member'] as const
+export type LegacyRole = (typeof LEGACY_ROLES)[number]
+
+// Alias for backwards compatibility
+export const ROLES = LEGACY_ROLES
 
 // Link types between tickets
 export const LINK_TYPES = [
@@ -193,7 +233,7 @@ export interface ProjectWithDetails {
   columns: ColumnWithTickets[]
   members: {
     id: string
-    role: Role
+    role: PrismaRole
     user: UserSummary
   }[]
   labels: LabelSummary[]
@@ -256,4 +296,53 @@ export const DEFAULT_TICKET_FORM: TicketFormData = {
   fixVersion: '',
   parentId: null,
   attachments: [],
+}
+
+// ============================================================================
+// Role-Based Permission System Types
+// ============================================================================
+
+// Role summary for display
+export interface RoleSummary {
+  id: string
+  name: string
+  color: string
+  description: string | null
+  isDefault: boolean
+  position: number
+}
+
+// Role with parsed permissions
+export interface RoleWithPermissions extends RoleSummary {
+  permissions: PermissionType[]
+  memberCount?: number
+}
+
+// Project member with role details
+export interface ProjectMemberWithRole {
+  id: string
+  roleId: string
+  overrides: PermissionType[] | null
+  userId: string
+  projectId: string
+  createdAt: Date
+  updatedAt: Date
+  user: UserSummary
+  role: RoleSummary
+}
+
+// Full member details with effective permissions
+export interface ProjectMemberDetails extends ProjectMemberWithRole {
+  effectivePermissions: PermissionType[]
+}
+
+// Project with roles
+export interface ProjectWithRoles {
+  id: string
+  name: string
+  key: string
+  description: string | null
+  color: string
+  roles: RoleSummary[]
+  members: ProjectMemberWithRole[]
 }

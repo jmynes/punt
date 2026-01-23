@@ -1,0 +1,326 @@
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { handleApiError, notFoundError } from '@/lib/api-utils'
+import { requireAuth, requirePermission } from '@/lib/auth-helpers'
+import { db } from '@/lib/db'
+import {
+  canAssignRole,
+  canManageMember,
+  isMember,
+  isValidPermission,
+  PERMISSIONS,
+  parsePermissions,
+} from '@/lib/permissions'
+
+// Schema for updating a member
+const updateMemberSchema = z.object({
+  roleId: z.string().optional(),
+  overrides: z.array(z.string()).nullable().optional(),
+})
+
+/**
+ * GET /api/projects/[projectId]/members/[memberId] - Get a single member
+ * Requires project membership
+ */
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ projectId: string; memberId: string }> },
+) {
+  try {
+    const user = await requireAuth()
+    const { projectId, memberId } = await params
+
+    // Check membership
+    const membershipExists = await isMember(user.id, projectId)
+    if (!membershipExists) {
+      return NextResponse.json({ error: 'Not a project member' }, { status: 403 })
+    }
+
+    const member = await db.projectMember.findFirst({
+      where: { id: memberId, projectId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        role: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            description: true,
+            permissions: true,
+            position: true,
+            isDefault: true,
+          },
+        },
+      },
+    })
+
+    if (!member) {
+      return notFoundError('Member')
+    }
+
+    // Parse role permissions and member overrides
+    const rolePermissions = parsePermissions(member.role.permissions)
+    const overridePermissions = parsePermissions(member.overrides)
+
+    return NextResponse.json({
+      id: member.id,
+      userId: member.userId,
+      projectId: member.projectId,
+      roleId: member.roleId,
+      overrides: overridePermissions,
+      createdAt: member.createdAt,
+      updatedAt: member.updatedAt,
+      user: member.user,
+      role: {
+        ...member.role,
+        permissions: rolePermissions,
+      },
+      effectivePermissions: [...new Set([...rolePermissions, ...overridePermissions])],
+    })
+  } catch (error) {
+    return handleApiError(error, 'fetch member')
+  }
+}
+
+/**
+ * PATCH /api/projects/[projectId]/members/[memberId] - Update a member's role or overrides
+ * Requires members.manage permission (for role changes)
+ * Requires members.admin permission (for override changes)
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ projectId: string; memberId: string }> },
+) {
+  try {
+    const user = await requireAuth()
+    const { projectId, memberId } = await params
+
+    // Get the target member first
+    const targetMember = await db.projectMember.findFirst({
+      where: { id: memberId, projectId },
+      select: {
+        id: true,
+        userId: true,
+        roleId: true,
+        role: { select: { name: true, position: true } },
+      },
+    })
+
+    if (!targetMember) {
+      return notFoundError('Member')
+    }
+
+    const body = await request.json()
+    const parsed = updateMemberSchema.safeParse(body)
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request data', details: parsed.error.flatten() },
+        { status: 400 },
+      )
+    }
+
+    const { roleId, overrides } = parsed.data
+
+    // Check permissions for role change
+    if (roleId !== undefined && roleId !== targetMember.roleId) {
+      // Need members.manage permission
+      await requirePermission(user.id, projectId, PERMISSIONS.MEMBERS_MANAGE)
+
+      // Can't change your own role
+      if (targetMember.userId === user.id) {
+        return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 })
+      }
+
+      // Check if user can manage this member (hierarchy check)
+      const canManage = await canManageMember(user.id, targetMember.userId, projectId)
+      if (!canManage) {
+        return NextResponse.json(
+          { error: 'Cannot modify members with equal or higher rank' },
+          { status: 403 },
+        )
+      }
+
+      // Check if user can assign the target role
+      const canAssign = await canAssignRole(user.id, projectId, roleId)
+      if (!canAssign) {
+        return NextResponse.json(
+          { error: 'Cannot assign roles equal to or higher than your own' },
+          { status: 403 },
+        )
+      }
+
+      // Verify the role exists in this project
+      const newRole = await db.role.findFirst({
+        where: { id: roleId, projectId },
+      })
+      if (!newRole) {
+        return NextResponse.json({ error: 'Invalid role for this project' }, { status: 400 })
+      }
+
+      // Check we're not removing the last Owner
+      if (targetMember.role.name === 'Owner') {
+        const ownerCount = await db.projectMember.count({
+          where: {
+            projectId,
+            role: { name: 'Owner' },
+          },
+        })
+        if (ownerCount <= 1) {
+          return NextResponse.json(
+            { error: 'Cannot remove the last Owner. Transfer ownership first.' },
+            { status: 400 },
+          )
+        }
+      }
+    }
+
+    // Check permissions for override change
+    if (overrides !== undefined) {
+      // Need members.admin permission for override changes
+      await requirePermission(user.id, projectId, PERMISSIONS.MEMBERS_ADMIN)
+
+      // Validate overrides are valid permissions
+      if (overrides !== null) {
+        const invalidPermissions = overrides.filter((p) => !isValidPermission(p))
+        if (invalidPermissions.length > 0) {
+          return NextResponse.json(
+            { error: 'Invalid permissions provided', invalid: invalidPermissions },
+            { status: 400 },
+          )
+        }
+      }
+    }
+
+    // Build update data
+    const updateData: Record<string, unknown> = {}
+    if (roleId !== undefined) updateData.roleId = roleId
+    if (overrides !== undefined) {
+      updateData.overrides = overrides === null ? null : JSON.stringify(overrides)
+    }
+
+    // Update the member
+    const member = await db.projectMember.update({
+      where: { id: memberId },
+      data: updateData,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        role: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            description: true,
+            permissions: true,
+            position: true,
+            isDefault: true,
+          },
+        },
+      },
+    })
+
+    // Parse role permissions and member overrides
+    const rolePermissions = parsePermissions(member.role.permissions)
+    const overridePermissions = parsePermissions(member.overrides)
+
+    return NextResponse.json({
+      id: member.id,
+      userId: member.userId,
+      projectId: member.projectId,
+      roleId: member.roleId,
+      overrides: overridePermissions,
+      createdAt: member.createdAt,
+      updatedAt: member.updatedAt,
+      user: member.user,
+      role: {
+        ...member.role,
+        permissions: rolePermissions,
+      },
+      effectivePermissions: [...new Set([...rolePermissions, ...overridePermissions])],
+    })
+  } catch (error) {
+    return handleApiError(error, 'update member')
+  }
+}
+
+/**
+ * DELETE /api/projects/[projectId]/members/[memberId] - Remove a member
+ * Requires members.manage permission
+ */
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ projectId: string; memberId: string }> },
+) {
+  try {
+    const user = await requireAuth()
+    const { projectId, memberId } = await params
+
+    // Get the target member
+    const targetMember = await db.projectMember.findFirst({
+      where: { id: memberId, projectId },
+      select: {
+        id: true,
+        userId: true,
+        role: { select: { name: true } },
+      },
+    })
+
+    if (!targetMember) {
+      return notFoundError('Member')
+    }
+
+    // Special case: allow users to leave the project themselves
+    if (targetMember.userId === user.id) {
+      // Check we're not the last owner
+      if (targetMember.role.name === 'Owner') {
+        const ownerCount = await db.projectMember.count({
+          where: {
+            projectId,
+            role: { name: 'Owner' },
+          },
+        })
+        if (ownerCount <= 1) {
+          return NextResponse.json(
+            { error: 'Cannot leave as the last Owner. Transfer ownership first.' },
+            { status: 400 },
+          )
+        }
+      }
+    } else {
+      // Removing someone else - need members.manage permission
+      await requirePermission(user.id, projectId, PERMISSIONS.MEMBERS_MANAGE)
+
+      // Check hierarchy
+      const canManage = await canManageMember(user.id, targetMember.userId, projectId)
+      if (!canManage) {
+        return NextResponse.json(
+          { error: 'Cannot remove members with equal or higher rank' },
+          { status: 403 },
+        )
+      }
+    }
+
+    // Remove the member
+    await db.projectMember.delete({
+      where: { id: memberId },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return handleApiError(error, 'remove member')
+  }
+}

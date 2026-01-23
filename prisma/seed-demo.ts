@@ -326,7 +326,33 @@ async function main() {
     },
   ]
 
-  const createdProjects: { id: string; name: string; key: string }[] = []
+  const createdProjects: { id: string; name: string; key: string; roles: Map<string, string> }[] =
+    []
+
+  // Default role configurations
+  const defaultRoles = [
+    {
+      name: 'Owner',
+      color: '#f59e0b',
+      position: 0,
+      permissions:
+        '["project.settings","project.delete","members.invite","members.manage","members.admin","board.manage","tickets.create","tickets.manage_own","tickets.manage_any","sprints.manage","labels.manage","comments.manage_any","attachments.manage_any"]',
+    },
+    {
+      name: 'Admin',
+      color: '#3b82f6',
+      position: 1,
+      permissions:
+        '["project.settings","members.invite","members.manage","board.manage","tickets.create","tickets.manage_own","tickets.manage_any","sprints.manage","labels.manage","comments.manage_any","attachments.manage_any"]',
+    },
+    {
+      name: 'Member',
+      color: '#6b7280',
+      position: 2,
+      permissions: '["tickets.create","tickets.manage_own"]',
+    },
+    { name: 'Viewer', color: '#71717a', position: 3, permissions: '[]' },
+  ]
 
   for (const projectConfig of projectConfigs) {
     const project = await prisma.project.create({
@@ -337,7 +363,24 @@ async function main() {
         color: projectConfig.color,
       },
     })
-    createdProjects.push({ id: project.id, name: project.name, key: project.key })
+
+    // Create default roles for the project
+    const roleMap = new Map<string, string>()
+    for (const roleConfig of defaultRoles) {
+      const role = await prisma.role.create({
+        data: {
+          name: roleConfig.name,
+          color: roleConfig.color,
+          position: roleConfig.position,
+          permissions: roleConfig.permissions,
+          isDefault: true,
+          projectId: project.id,
+        },
+      })
+      roleMap.set(roleConfig.name, role.id)
+    }
+
+    createdProjects.push({ id: project.id, name: project.name, key: project.key, roles: roleMap })
     console.log(`  ✓ ${project.name} (${project.key})`)
   }
 
@@ -347,13 +390,15 @@ async function main() {
   for (const project of createdProjects) {
     for (let i = 0; i < createdUsers.length; i++) {
       const user = createdUsers[i]
-      const role = i === 0 ? 'owner' : i < 3 ? 'admin' : 'member'
+      const roleName = i === 0 ? 'Owner' : i < 3 ? 'Admin' : 'Member'
+      const roleId = project.roles.get(roleName)
+      if (!roleId) throw new Error(`Role ${roleName} not found for project ${project.id}`)
 
       await prisma.projectMember.create({
         data: {
           userId: user.id,
           projectId: project.id,
-          role,
+          roleId,
         },
       })
     }
