@@ -28,8 +28,10 @@ import {
   useColumnsByProject,
   useTicketsByProject,
 } from '@/hooks/queries/use-tickets'
+import { useHasPermission } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
+import { PERMISSIONS } from '@/lib/permissions'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
@@ -134,6 +136,9 @@ export default function BacklogPage() {
 
   // Fetch all sprints
   const { data: sprints } = useProjectSprints(projectId)
+
+  // Check permission to create tickets
+  const canCreateTickets = useHasPermission(projectId, PERMISSIONS.TICKETS_CREATE)
 
   // Get active and planning sprints (exclude completed)
   const activeSprints = useMemo(
@@ -664,12 +669,14 @@ export default function BacklogPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="primary" onClick={() => setCreateTicketOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">New Ticket</span>
-          </Button>
-        </div>
+        {canCreateTickets && (
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="primary" onClick={() => setCreateTicketOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">New Ticket</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Unified DnD context wrapping sprint sections AND backlog table */}

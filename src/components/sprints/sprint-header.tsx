@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useActiveSprint } from '@/hooks/queries/use-sprints'
+import { useHasPermission } from '@/hooks/use-permissions'
+import { PERMISSIONS } from '@/lib/permissions'
 import {
   formatDaysRemaining,
   getSprintStatusLabel,
@@ -65,6 +67,7 @@ export function SprintHeader({
 }: SprintHeaderProps) {
   const { data: activeSprint, isLoading } = useActiveSprint(projectId)
   const { setSprintCreateOpen, openSprintComplete } = useUIStore()
+  const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
 
   if (isLoading) {
     return <div className={cn('h-16 bg-zinc-900/50 rounded-xl animate-pulse', className)} />
@@ -90,13 +93,15 @@ export function SprintHeader({
             <p className="text-xs text-zinc-600">Start a sprint to track your progress</p>
           </div>
         </div>
-        <Button
-          onClick={() => setSprintCreateOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Sprint
-        </Button>
+        {canManageSprints && (
+          <Button
+            onClick={() => setSprintCreateOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Sprint
+          </Button>
+        )}
       </div>
     )
   }
@@ -202,13 +207,15 @@ export function SprintHeader({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56 bg-zinc-900 border-zinc-700">
-              <DropdownMenuItem
-                onClick={() => openSprintComplete(activeSprint.id)}
-                className="text-zinc-300 focus:bg-zinc-800"
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Complete Sprint
-              </DropdownMenuItem>
+              {canManageSprints && (
+                <DropdownMenuItem
+                  onClick={() => openSprintComplete(activeSprint.id)}
+                  className="text-zinc-300 focus:bg-zinc-800"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Complete Sprint
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -333,7 +340,7 @@ export function SprintHeader({
           </div>
 
           {/* Complete button when expired */}
-          {expired && (
+          {expired && canManageSprints && (
             <Button
               onClick={() => openSprintComplete(activeSprint.id)}
               className="bg-orange-500 hover:bg-orange-600 text-white font-medium"

@@ -76,6 +76,8 @@ import {
   useUpdateTicket,
 } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { useHasPermission } from '@/hooks/use-permissions'
+import { PERMISSIONS } from '@/lib/permissions'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
@@ -160,6 +162,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   // Use API data with fallback to empty arrays while loading
   const availableSprints = projectSprints ?? []
   const availableLabels = projectLabels ?? []
+
+  // Check permission to manage labels
+  const canManageLabels = useHasPermission(projectId, PERMISSIONS.LABELS_MANAGE)
 
   // Callback for creating new labels inline
   const handleCreateLabel = useCallback(
@@ -1184,8 +1189,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   value={tempLabelIds}
                   onChange={(value) => handleChange('labels', value)}
                   labels={availableLabels}
-                  onCreateLabel={handleCreateLabel}
-                  onDeleteLabel={handleDeleteLabel}
+                  onCreateLabel={canManageLabels ? handleCreateLabel : undefined}
+                  onDeleteLabel={canManageLabels ? handleDeleteLabel : undefined}
                 />
               </div>
 

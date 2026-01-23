@@ -5,6 +5,8 @@ import { useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDeleteSprint, useProjectSprints } from '@/hooks/queries/use-sprints'
+import { useHasPermission } from '@/hooks/use-permissions'
+import { PERMISSIONS } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 import { SprintCard } from './sprint-card'
@@ -22,6 +24,7 @@ export function SprintList({ projectId, tickets = [], className }: SprintListPro
   const { data: sprints, isLoading } = useProjectSprints(projectId)
   const deleteSprint = useDeleteSprint(projectId)
   const { setSprintCreateOpen } = useUIStore()
+  const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
 
   // Count tickets per sprint
   const ticketCounts = tickets.reduce(
@@ -60,10 +63,10 @@ export function SprintList({ projectId, tickets = [], className }: SprintListPro
 
   return (
     <div className={cn('space-y-6', className)}>
-      {/* Header with create button (only show when no active sprint) */}
+      {/* Header with create button (only show when no active sprint and user can manage sprints) */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-zinc-100">Sprints</h2>
-        {activeSprints.length === 0 && (
+        {activeSprints.length === 0 && canManageSprints && (
           <Button
             size="sm"
             onClick={() => setSprintCreateOpen(true)}
@@ -78,12 +81,14 @@ export function SprintList({ projectId, tickets = [], className }: SprintListPro
       {isEmpty ? (
         <div className="rounded-lg border border-dashed border-zinc-700 p-8 text-center">
           <p className="text-zinc-500 mb-4">
-            No sprints yet. Create your first sprint to get started.
+            No sprints yet.{canManageSprints ? ' Create your first sprint to get started.' : ''}
           </p>
-          <Button onClick={() => setSprintCreateOpen(true)} variant="outline">
-            <Plus className="h-4 w-4 mr-1" />
-            Create Sprint
-          </Button>
+          {canManageSprints && (
+            <Button onClick={() => setSprintCreateOpen(true)} variant="outline">
+              <Plus className="h-4 w-4 mr-1" />
+              Create Sprint
+            </Button>
+          )}
         </div>
       ) : (
         <>

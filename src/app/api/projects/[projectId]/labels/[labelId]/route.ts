@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
+import { requireAuth, requirePermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
+import { PERMISSIONS } from '@/lib/permissions'
 
 /**
  * DELETE /api/projects/[projectId]/labels/[labelId] - Delete a label
- * Requires project membership
+ * Requires labels.manage permission
  * Removes the label from all tickets that use it
  */
 export async function DELETE(
@@ -16,8 +17,8 @@ export async function DELETE(
     const user = await requireAuth()
     const { projectId, labelId } = await params
 
-    // Check project membership
-    await requireProjectMember(user.id, projectId)
+    // Check label management permission
+    await requirePermission(user.id, projectId, PERMISSIONS.LABELS_MANAGE)
 
     // Verify label exists and belongs to this project
     const label = await db.label.findFirst({

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 
 // Default columns to create for new projects
@@ -25,7 +25,7 @@ export async function GET(
     const { projectId } = await params
 
     // Check project membership
-    await requireProjectMember(user.id, projectId)
+    await requireMembership(user.id, projectId)
 
     // Check if project exists
     const project = await db.project.findUnique({

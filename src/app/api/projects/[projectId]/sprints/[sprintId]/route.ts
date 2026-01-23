@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
-import { requireAuth, requireProjectAdmin, requireProjectMember } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership, requirePermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
+import { PERMISSIONS } from '@/lib/permissions'
 import { SPRINT_SELECT_FULL } from '@/lib/prisma-selects'
 
 const updateSprintSchema = z.object({
@@ -25,7 +26,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const user = await requireAuth()
     const { projectId, sprintId } = await params
 
-    await requireProjectMember(user.id, projectId)
+    await requireMembership(user.id, projectId)
 
     const sprint = await db.sprint.findFirst({
       where: { id: sprintId, projectId },
@@ -52,7 +53,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const user = await requireAuth()
     const { projectId, sprintId } = await params
 
-    await requireProjectAdmin(user.id, projectId)
+    await requirePermission(user.id, projectId, PERMISSIONS.SPRINTS_MANAGE)
 
     const existingSprint = await db.sprint.findFirst({
       where: { id: sprintId, projectId },
@@ -119,7 +120,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     const user = await requireAuth()
     const { projectId, sprintId } = await params
 
-    await requireProjectAdmin(user.id, projectId)
+    await requirePermission(user.id, projectId, PERMISSIONS.SPRINTS_MANAGE)
 
     const sprint = await db.sprint.findFirst({
       where: { id: sprintId, projectId },

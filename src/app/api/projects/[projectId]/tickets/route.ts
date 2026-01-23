@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, validationError } from '@/lib/api-utils'
-import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership, requirePermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
+import { PERMISSIONS } from '@/lib/permissions'
 import { TICKET_SELECT_FULL, transformTicket } from '@/lib/prisma-selects'
 import type { IssueType, Priority } from '@/types'
 
@@ -48,7 +49,7 @@ export async function GET(
     const { projectId } = await params
 
     // Check project membership
-    await requireProjectMember(user.id, projectId)
+    await requireMembership(user.id, projectId)
 
     const tickets = await db.ticket.findMany({
       where: { projectId },
@@ -74,8 +75,8 @@ export async function POST(
     const user = await requireAuth()
     const { projectId } = await params
 
-    // Check project membership
-    await requireProjectMember(user.id, projectId)
+    // Check ticket creation permission
+    await requirePermission(user.id, projectId, PERMISSIONS.TICKETS_CREATE)
 
     const body = await request.json()
     const parsed = createTicketSchema.safeParse(body)

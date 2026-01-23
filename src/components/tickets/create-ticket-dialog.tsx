@@ -20,6 +20,8 @@ import {
   useProjectSprints,
 } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { useHasPermission } from '@/hooks/use-permissions'
+import { PERMISSIONS } from '@/lib/permissions'
 import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
 import {
@@ -69,6 +71,9 @@ export function CreateTicketDialog() {
   // Use API data with fallback to empty arrays while loading
   const availableSprints = projectSprints ?? []
   const availableLabels = projectLabels ?? []
+
+  // Check permission to manage labels
+  const canManageLabels = useHasPermission(projectId, PERMISSIONS.LABELS_MANAGE)
 
   // Callback for creating new labels inline
   const handleCreateLabel = useCallback(
@@ -256,8 +261,8 @@ export function CreateTicketDialog() {
               sprints={availableSprints}
               parentTickets={[]}
               disabled={isSubmitting}
-              onCreateLabel={handleCreateLabel}
-              onDeleteLabel={handleDeleteLabel}
+              onCreateLabel={canManageLabels ? handleCreateLabel : undefined}
+              onDeleteLabel={canManageLabels ? handleDeleteLabel : undefined}
             />
           </div>
         </ScrollArea>

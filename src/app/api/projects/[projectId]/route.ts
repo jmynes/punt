@@ -1,13 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import {
-  requireAuth,
-  requireProjectAdmin,
-  requireProjectMember,
-  requireProjectOwner,
-} from '@/lib/auth-helpers'
+import { requireAuth, requireMembership, requirePermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
+import { PERMISSIONS } from '@/lib/permissions'
 
 const updateProjectSchema = z.object({
   name: z.string().min(1).optional(),
@@ -32,7 +28,7 @@ export async function GET(
     const { projectId } = await params
 
     // Check project membership
-    await requireProjectMember(user.id, projectId)
+    await requireMembership(user.id, projectId)
 
     const project = await db.project.findUnique({
       where: { id: projectId },
@@ -49,7 +45,7 @@ export async function GET(
         },
         members: {
           where: { userId: user.id },
-          select: { role: true },
+          select: { role: { select: { id: true, name: true, color: true } } },
         },
       },
     })
@@ -59,9 +55,9 @@ export async function GET(
     }
 
     const { members, ...projectData } = project
-    const role = members[0]?.role ?? 'member'
+    const roleDetails = members[0]?.role ?? null
 
-    return NextResponse.json({ ...projectData, role })
+    return NextResponse.json({ ...projectData, role: roleDetails?.name ?? 'member', roleDetails })
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
@@ -88,8 +84,8 @@ export async function PATCH(
     const user = await requireAuth()
     const { projectId } = await params
 
-    // Check project admin permission
-    await requireProjectAdmin(user.id, projectId)
+    // Check project settings permission
+    await requirePermission(user.id, projectId, PERMISSIONS.PROJECT_SETTINGS)
 
     // Check if project exists
     const existingProject = await db.project.findUnique({
@@ -137,13 +133,13 @@ export async function PATCH(
         updatedAt: true,
         members: {
           where: { userId: user.id },
-          select: { role: true },
+          select: { role: { select: { id: true, name: true, color: true } } },
         },
       },
     })
 
     const { members, ...projectData } = project
-    const role = members[0]?.role ?? 'member'
+    const roleDetails = members[0]?.role ?? null
 
     // Emit real-time event for other clients
     const tabId = request.headers.get('X-Tab-Id') || undefined
@@ -155,7 +151,7 @@ export async function PATCH(
       timestamp: Date.now(),
     })
 
-    return NextResponse.json({ ...projectData, role })
+    return NextResponse.json({ ...projectData, role: roleDetails?.name ?? 'member', roleDetails })
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
@@ -182,8 +178,8 @@ export async function DELETE(
     const user = await requireAuth()
     const { projectId } = await params
 
-    // Check project owner permission
-    await requireProjectOwner(user.id, projectId)
+    // Check project delete permission
+    await requirePermission(user.id, projectId, PERMISSIONS.PROJECT_DELETE)
 
     // Check if project exists
     const project = await db.project.findUnique({

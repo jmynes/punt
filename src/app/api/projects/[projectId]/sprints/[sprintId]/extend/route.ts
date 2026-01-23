@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
-import { requireAuth, requireProjectAdmin } from '@/lib/auth-helpers'
+import { requireAuth, requirePermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { PERMISSIONS } from '@/lib/permissions'
 import { SPRINT_SELECT_FULL } from '@/lib/prisma-selects'
 
 const extendSprintSchema = z.object({
@@ -23,7 +24,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const user = await requireAuth()
     const { projectId, sprintId } = await params
 
-    await requireProjectAdmin(user.id, projectId)
+    await requirePermission(user.id, projectId, PERMISSIONS.SPRINTS_MANAGE)
 
     const body = await request.json()
     const result = extendSprintSchema.safeParse(body)

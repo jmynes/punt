@@ -10,8 +10,10 @@ import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { useActiveSprint } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
+import { useHasPermission } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
+import { PERMISSIONS } from '@/lib/permissions'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -64,6 +66,9 @@ export default function BoardPage() {
 
   // Fetch active sprint - board only shows tickets in the active sprint
   const { data: activeSprint } = useActiveSprint(projectId)
+
+  // Check permission to create tickets
+  const canCreateTickets = useHasPermission(projectId, PERMISSIONS.TICKETS_CREATE)
 
   // Connect to real-time updates (after initial load)
   useRealtime(projectId, _hasHydrated && columnsLoaded && !ticketsLoading)
@@ -277,20 +282,22 @@ export default function BoardPage() {
         </div>
 
         {/* Create ticket - auto-assign to active sprint */}
-        <Button
-          size="sm"
-          variant="primary"
-          onClick={() => {
-            if (activeSprint) {
-              openCreateTicketWithData({ sprintId: activeSprint.id })
-            } else {
-              setCreateTicketOpen(true)
-            }
-          }}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          <span className="hidden sm:inline">New Ticket</span>
-        </Button>
+        {canCreateTickets && (
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => {
+              if (activeSprint) {
+                openCreateTicketWithData({ sprintId: activeSprint.id })
+              } else {
+                setCreateTicketOpen(true)
+              }
+            }}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">New Ticket</span>
+          </Button>
+        )}
       </div>
 
       {/* Sprint header + filters */}

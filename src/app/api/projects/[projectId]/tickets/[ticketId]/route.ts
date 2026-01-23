@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
-import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership, requireTicketPermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { TICKET_SELECT_FULL, transformTicket } from '@/lib/prisma-selects'
@@ -50,7 +50,7 @@ export async function GET(
     const { projectId, ticketId } = await params
 
     // Check project membership
-    await requireProjectMember(user.id, projectId)
+    await requireMembership(user.id, projectId)
 
     const ticket = await db.ticket.findFirst({
       where: { id: ticketId, projectId },
@@ -79,18 +79,18 @@ export async function PATCH(
     const user = await requireAuth()
     const { projectId, ticketId } = await params
 
-    // Check project membership
-    await requireProjectMember(user.id, projectId)
-
-    // Check if ticket exists and belongs to project
+    // Check if ticket exists and belongs to project, get creator for permission check
     const existingTicket = await db.ticket.findFirst({
       where: { id: ticketId, projectId },
-      select: { id: true, columnId: true },
+      select: { id: true, columnId: true, creatorId: true },
     })
 
     if (!existingTicket) {
       return notFoundError('Ticket')
     }
+
+    // Check ticket edit permission (own ticket or any ticket)
+    await requireTicketPermission(user.id, projectId, existingTicket.creatorId, 'edit')
 
     const body = await request.json()
     const parsed = updateTicketSchema.safeParse(body)
@@ -218,18 +218,18 @@ export async function DELETE(
     const user = await requireAuth()
     const { projectId, ticketId } = await params
 
-    // Check project membership
-    await requireProjectMember(user.id, projectId)
-
-    // Check if ticket exists and belongs to project
+    // Check if ticket exists and belongs to project, get creator for permission check
     const ticket = await db.ticket.findFirst({
       where: { id: ticketId, projectId },
-      select: { id: true },
+      select: { id: true, creatorId: true },
     })
 
     if (!ticket) {
       return notFoundError('Ticket')
     }
+
+    // Check ticket delete permission (own ticket or any ticket)
+    await requireTicketPermission(user.id, projectId, ticket.creatorId, 'delete')
 
     // Delete the ticket (cascades to watchers, comments, attachments, etc.)
     await db.ticket.delete({

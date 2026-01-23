@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
-import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { getSystemSettings } from '@/lib/system-settings'
@@ -31,7 +31,7 @@ export async function GET(
     const user = await requireAuth()
     const { projectId, ticketId } = await params
 
-    await requireProjectMember(user.id, projectId)
+    await requireMembership(user.id, projectId)
 
     // Verify ticket exists and belongs to project
     const ticket = await db.ticket.findFirst({
@@ -67,7 +67,7 @@ export async function POST(
     const user = await requireAuth()
     const { projectId, ticketId } = await params
 
-    await requireProjectMember(user.id, projectId)
+    await requireMembership(user.id, projectId)
 
     // Verify ticket exists and belongs to project
     const ticket = await db.ticket.findFirst({

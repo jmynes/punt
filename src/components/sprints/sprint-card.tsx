@@ -20,6 +20,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useHasPermission } from '@/hooks/use-permissions'
+import { PERMISSIONS } from '@/lib/permissions'
 import {
   formatDaysRemaining,
   getSprintStatusColor,
@@ -40,13 +42,9 @@ interface SprintCardProps {
 /**
  * Card component displaying sprint information and actions.
  */
-export function SprintCard({
-  sprint,
-  projectId: _projectId,
-  ticketCount = 0,
-  onDelete,
-}: SprintCardProps) {
+export function SprintCard({ sprint, projectId, ticketCount = 0, onDelete }: SprintCardProps) {
   const { openSprintEdit, openSprintStart, openSprintComplete } = useUIStore()
+  const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
 
   const isPlanning = sprint.status === 'planning'
   const isActive = sprint.status === 'active'
@@ -89,59 +87,61 @@ export function SprintCard({
           )}
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-zinc-400 hover:text-zinc-100"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-700">
-            <DropdownMenuItem
-              onClick={() => openSprintEdit(sprint.id)}
-              className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
-            >
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit Sprint
-            </DropdownMenuItem>
-
-            {isPlanning && (
+        {canManageSprints && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-zinc-400 hover:text-zinc-100"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-700">
               <DropdownMenuItem
-                onClick={() => openSprintStart(sprint.id)}
+                onClick={() => openSprintEdit(sprint.id)}
                 className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
               >
-                <Play className="h-4 w-4 mr-2" />
-                Start Sprint
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit Sprint
               </DropdownMenuItem>
-            )}
 
-            {isActive && (
-              <DropdownMenuItem
-                onClick={() => openSprintComplete(sprint.id)}
-                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Complete Sprint
-              </DropdownMenuItem>
-            )}
-
-            {isPlanning && onDelete && (
-              <>
-                <DropdownMenuSeparator className="bg-zinc-700" />
+              {isPlanning && (
                 <DropdownMenuItem
-                  onClick={() => onDelete(sprint.id)}
-                  className="text-red-400 focus:bg-red-900/20 focus:text-red-400"
+                  onClick={() => openSprintStart(sprint.id)}
+                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Sprint
+                  <Play className="h-4 w-4 mr-2" />
+                  Start Sprint
                 </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              )}
+
+              {isActive && (
+                <DropdownMenuItem
+                  onClick={() => openSprintComplete(sprint.id)}
+                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Complete Sprint
+                </DropdownMenuItem>
+              )}
+
+              {isPlanning && onDelete && (
+                <>
+                  <DropdownMenuSeparator className="bg-zinc-700" />
+                  <DropdownMenuItem
+                    onClick={() => onDelete(sprint.id)}
+                    className="text-red-400 focus:bg-red-900/20 focus:text-red-400"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Sprint
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-3">

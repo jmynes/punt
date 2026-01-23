@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { NextResponse } from 'next/server'
 import { handleApiError, notFoundError } from '@/lib/api-utils'
-import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { logger } from '@/lib/logger'
@@ -11,6 +11,7 @@ import { getFileStorage } from '@/lib/upload-storage'
  * DELETE /api/projects/[projectId]/tickets/[ticketId]/attachments/[attachmentId]
  * Remove an attachment from a ticket and delete the file from disk
  * Requires project membership
+ * TODO: Add uploaderId to Attachment model for ownership-based permission checking
  */
 export async function DELETE(
   request: Request,
@@ -20,7 +21,7 @@ export async function DELETE(
     const user = await requireAuth()
     const { projectId, ticketId, attachmentId } = await params
 
-    await requireProjectMember(user.id, projectId)
+    await requireMembership(user.id, projectId)
 
     // Verify ticket exists and belongs to project
     const ticket = await db.ticket.findFirst({

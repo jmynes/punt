@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership, requirePermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
+import { PERMISSIONS } from '@/lib/permissions'
 import { LABEL_SELECT } from '@/lib/prisma-selects'
 
 // Predefined colors for auto-assignment when creating labels
@@ -45,7 +46,7 @@ export async function GET(
     const { projectId } = await params
 
     // Check project membership
-    await requireProjectMember(user.id, projectId)
+    await requireMembership(user.id, projectId)
 
     const labels = await db.label.findMany({
       where: { projectId },
@@ -81,8 +82,8 @@ export async function POST(
     const user = await requireAuth()
     const { projectId } = await params
 
-    // Check project membership
-    await requireProjectMember(user.id, projectId)
+    // Check label management permission
+    await requirePermission(user.id, projectId, PERMISSIONS.LABELS_MANAGE)
 
     const body = await request.json()
     const result = createLabelSchema.safeParse(body)

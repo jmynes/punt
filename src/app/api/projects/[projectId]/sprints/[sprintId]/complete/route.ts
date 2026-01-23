@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
-import { requireAuth, requireProjectAdmin } from '@/lib/auth-helpers'
+import { requireAuth, requirePermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
+import { PERMISSIONS } from '@/lib/permissions'
 import { SPRINT_SELECT_FULL, SPRINT_SELECT_SUMMARY } from '@/lib/prisma-selects'
 import { generateNextSprintName, isCompletedColumn } from '@/lib/sprint-utils'
 
@@ -30,7 +31,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const user = await requireAuth()
     const { projectId, sprintId } = await params
 
-    await requireProjectAdmin(user.id, projectId)
+    await requirePermission(user.id, projectId, PERMISSIONS.SPRINTS_MANAGE)
 
     const body = await request.json()
     const result = completeSprintSchema.safeParse(body)

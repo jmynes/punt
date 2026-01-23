@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { handleApiError, validationError } from '@/lib/api-utils'
-import { requireAuth, requireProjectAdmin, requireProjectMember } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership, requirePermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
+import { PERMISSIONS } from '@/lib/permissions'
 import { SPRINT_SELECT_FULL } from '@/lib/prisma-selects'
 
 const createSprintSchema = z.object({
@@ -27,7 +28,7 @@ export async function GET(
     const { projectId } = await params
 
     // Check project membership
-    await requireProjectMember(user.id, projectId)
+    await requireMembership(user.id, projectId)
 
     const sprints = await db.sprint.findMany({
       where: { projectId },
@@ -72,8 +73,8 @@ export async function POST(
     const user = await requireAuth()
     const { projectId } = await params
 
-    // Check project admin role
-    await requireProjectAdmin(user.id, projectId)
+    // Check sprint management permission
+    await requirePermission(user.id, projectId, PERMISSIONS.SPRINTS_MANAGE)
 
     const body = await request.json()
     const result = createSprintSchema.safeParse(body)

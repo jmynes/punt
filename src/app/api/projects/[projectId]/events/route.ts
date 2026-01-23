@@ -1,4 +1,4 @@
-import { requireAuth, requireProjectMember } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership } from '@/lib/auth-helpers'
 import { type LabelEvent, projectEvents, type SprintEvent, type TicketEvent } from '@/lib/events'
 
 /**
@@ -15,7 +15,7 @@ export async function GET(
     const { projectId } = await params
 
     // Check project membership
-    await requireProjectMember(user.id, projectId)
+    await requireMembership(user.id, projectId)
 
     // Check connection limits
     if (!projectEvents.canUserConnect(user.id)) {
