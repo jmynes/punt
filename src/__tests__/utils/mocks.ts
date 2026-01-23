@@ -29,9 +29,11 @@ export const createMockLabel = (overrides?: Partial<LabelSummary>): LabelSummary
 export const createMockSprint = (overrides?: Partial<SprintSummary>): SprintSummary => ({
   id: 'sprint-1',
   name: 'Sprint 1',
-  isActive: true,
+  status: 'active',
   startDate: new Date('2024-01-01'),
   endDate: new Date('2024-01-14'),
+  goal: null,
+  budget: null,
   ...overrides,
 })
 
@@ -63,9 +65,13 @@ export const createMockTicket = (overrides?: Partial<TicketWithRelations>): Tick
     creatorId: defaultUser.id,
     sprintId: defaultSprint.id,
     parentId: null,
+    isCarriedOver: false,
+    carriedFromSprintId: null,
+    carriedOverCount: 0,
     assignee: null,
     creator: defaultUser,
     sprint: defaultSprint,
+    carriedFromSprint: null,
     labels: [],
     watchers: [],
     _count: {

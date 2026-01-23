@@ -23,6 +23,7 @@ export const SPRINT_SELECT_SUMMARY = {
   startDate: true,
   endDate: true,
   goal: true,
+  budget: true,
 } as const
 
 /**
@@ -35,6 +36,7 @@ export const SPRINT_SELECT_FULL = {
   startDate: true,
   endDate: true,
   status: true,
+  budget: true,
   completedAt: true,
   completedById: true,
   completedTicketCount: true,

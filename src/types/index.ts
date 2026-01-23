@@ -88,10 +88,12 @@ export interface SprintSummary {
   startDate: Date | null
   endDate: Date | null
   goal?: string | null
+  budget?: number | null
 }
 
 // Full sprint with completion metrics
 export interface SprintWithMetrics extends SprintSummary {
+  budget: number | null
   completedAt: Date | null
   completedById: string | null
   completedTicketCount: number | null

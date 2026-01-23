@@ -108,6 +108,7 @@ export function useCreateSprint(projectId: string) {
       goal?: string | null
       startDate?: Date | null
       endDate?: Date | null
+      budget?: number | null
     }) => {
       const res = await fetch(`/api/projects/${projectId}/sprints`, {
         method: 'POST',
@@ -149,6 +150,7 @@ export function useUpdateSprint(projectId: string) {
       goal?: string | null
       startDate?: Date | null
       endDate?: Date | null
+      budget?: number | null
     }) => {
       const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}`, {
         method: 'PATCH',

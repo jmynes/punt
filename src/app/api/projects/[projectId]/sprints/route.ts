@@ -11,6 +11,7 @@ const createSprintSchema = z.object({
   goal: z.string().max(500).optional().nullable(),
   startDate: z.coerce.date().optional().nullable(),
   endDate: z.coerce.date().optional().nullable(),
+  budget: z.number().int().min(1).max(9999).optional().nullable(),
 })
 
 /**
@@ -81,7 +82,7 @@ export async function POST(
       return validationError(result)
     }
 
-    const { name, goal, startDate, endDate } = result.data
+    const { name, goal, startDate, endDate, budget } = result.data
 
     // Create the sprint with planning status
     const sprint = await db.sprint.create({
@@ -90,6 +91,7 @@ export async function POST(
         goal,
         startDate,
         endDate,
+        budget,
         status: 'planning',
         projectId,
       },

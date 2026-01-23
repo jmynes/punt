@@ -4,12 +4,14 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { format } from 'date-fns'
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   CalendarDays,
   ChevronDown,
   ChevronRight,
   Clock,
+  Flame,
   MoreHorizontal,
   Pencil,
   Play,
@@ -383,12 +385,16 @@ export function SprintSection({
 
         {/* Stats */}
         <div className="flex items-center gap-4 text-xs">
-          {/* Story points */}
-          <div className="flex items-center gap-1.5 text-zinc-400">
-            <TrendingUp className="h-3.5 w-3.5" />
-            <span className="font-medium">{totalPoints}</span>
-            <span className="text-zinc-600">pts</span>
-          </div>
+          {/* Story points with budget */}
+          {sprint?.budget ? (
+            <BudgetIndicator totalPoints={totalPoints} budget={sprint.budget} />
+          ) : (
+            <div className="flex items-center gap-1.5 text-zinc-400">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span className="font-medium">{totalPoints}</span>
+              <span className="text-zinc-600">pts</span>
+            </div>
+          )}
 
           {/* Ticket count */}
           <div className="flex items-center gap-1.5">
@@ -604,5 +610,63 @@ export function SprintSection({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Compact budget indicator for sprint section header
+ */
+function BudgetIndicator({ totalPoints, budget }: { totalPoints: number; budget: number }) {
+  const percent = Math.round((totalPoints / budget) * 100)
+  const overBudget = totalPoints > budget
+  const overAmount = overBudget ? totalPoints - budget : 0
+
+  // Determine status
+  let status: 'under' | 'approaching' | 'over' | 'critical' = 'under'
+  if (percent > 120) status = 'critical'
+  else if (percent > 100) status = 'over'
+  else if (percent > 80) status = 'approaching'
+
+  const statusColors = {
+    under: 'text-emerald-400',
+    approaching: 'text-amber-400',
+    over: 'text-orange-400',
+    critical: 'text-red-400',
+  }
+
+  const StatusIcon = status === 'critical' ? Flame : status === 'over' ? AlertTriangle : null
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className={cn('flex items-center gap-1.5', statusColors[status])}>
+          {StatusIcon && <StatusIcon className="h-3.5 w-3.5" />}
+          {!StatusIcon && <TrendingUp className="h-3.5 w-3.5" />}
+          <span className="font-medium">{totalPoints}</span>
+          <span className="text-zinc-600">/</span>
+          <span className="text-zinc-500">{budget}</span>
+          <span className="text-zinc-600">pts</span>
+          {overBudget && (
+            <span
+              className={cn(
+                'px-1 py-0.5 rounded text-[10px] font-bold',
+                status === 'critical' ? 'bg-red-500/20' : 'bg-orange-500/20',
+              )}
+            >
+              +{overAmount}
+            </span>
+          )}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700 text-zinc-100">
+        <p className="text-xs">
+          {overBudget ? (
+            <span className={statusColors[status]}>{overAmount} points over budget</span>
+          ) : (
+            <span>{budget - totalPoints} points remaining in budget</span>
+          )}
+        </p>
+      </TooltipContent>
+    </Tooltip>
   )
 }

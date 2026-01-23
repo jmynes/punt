@@ -159,6 +159,9 @@ model Sprint {
   startDate DateTime?
   endDate   DateTime?
 
+  // Budget: expected story points capacity (optional)
+  budget    Int?
+
   // Status replaces isActive: planning, active, completed
   status    String    @default("planning")
 

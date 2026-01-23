@@ -11,6 +11,7 @@ const updateSprintSchema = z.object({
   goal: z.string().max(500).optional().nullable(),
   startDate: z.coerce.date().optional().nullable(),
   endDate: z.coerce.date().optional().nullable(),
+  budget: z.number().int().min(1).max(9999).optional().nullable(),
 })
 
 type RouteParams = { params: Promise<{ projectId: string; sprintId: string }> }
@@ -69,7 +70,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return validationError(result)
     }
 
-    const { name, goal, startDate, endDate } = result.data
+    const { name, goal, startDate, endDate, budget } = result.data
 
     // For completed sprints, only allow name and goal updates
     if (
@@ -86,6 +87,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         ...(goal !== undefined && { goal }),
         ...(startDate !== undefined && { startDate }),
         ...(endDate !== undefined && { endDate }),
+        ...(budget !== undefined && { budget }),
       },
       select: SPRINT_SELECT_FULL,
     })

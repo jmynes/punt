@@ -26,6 +26,7 @@ interface FormData {
   goal: string
   startDate: Date | null
   endDate: Date | null
+  budget: string
 }
 
 const DEFAULT_FORM: FormData = {
@@ -33,6 +34,7 @@ const DEFAULT_FORM: FormData = {
   goal: '',
   startDate: null,
   endDate: null,
+  budget: '',
 }
 
 interface SprintCreateDialogProps {
@@ -79,12 +81,16 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
   const handleSubmit = useCallback(async () => {
     if (!formData.name.trim()) return
 
+    const budgetValue = formData.budget.trim()
+    const budget = budgetValue ? Number.parseInt(budgetValue, 10) : null
+
     createSprint.mutate(
       {
         name: formData.name.trim(),
         goal: formData.goal.trim() || null,
         startDate: formData.startDate,
         endDate: formData.endDate,
+        budget: budget && !Number.isNaN(budget) ? budget : null,
       },
       {
         onSuccess: () => {
@@ -137,6 +143,27 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
               rows={2}
               disabled={createSprint.isPending}
             />
+          </div>
+
+          {/* Story Point Budget */}
+          <div className="space-y-2">
+            <Label htmlFor="sprint-budget" className="text-zinc-300">
+              Story Point Budget
+            </Label>
+            <Input
+              id="sprint-budget"
+              type="number"
+              min={1}
+              max={9999}
+              value={formData.budget}
+              onChange={(e) => setFormData((prev) => ({ ...prev, budget: e.target.value }))}
+              placeholder="Expected capacity (optional)"
+              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+              disabled={createSprint.isPending}
+            />
+            <p className="text-xs text-zinc-500">
+              Set a target for how many story points to complete this sprint
+            </p>
           </div>
 
           {/* Dates */}

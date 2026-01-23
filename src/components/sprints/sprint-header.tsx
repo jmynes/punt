@@ -2,10 +2,12 @@
 
 import { format } from 'date-fns'
 import {
+  AlertTriangle,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
   Clock,
+  Flame,
   Plus,
   Target,
   TrendingUp,
@@ -29,6 +31,20 @@ import {
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
+
+/**
+ * Get budget status info for visual styling
+ */
+function getBudgetStatus(totalPoints: number, budget: number | null | undefined) {
+  if (!budget || budget <= 0) return { status: 'none' as const, percent: 0 }
+
+  const percent = Math.round((totalPoints / budget) * 100)
+
+  if (percent <= 80) return { status: 'under' as const, percent }
+  if (percent <= 100) return { status: 'approaching' as const, percent }
+  if (percent <= 120) return { status: 'over' as const, percent }
+  return { status: 'critical' as const, percent }
+}
 
 interface SprintHeaderProps {
   projectId: string
@@ -221,30 +237,41 @@ export function SprintHeader({
 
         {/* Right: Progress and stats */}
         <div className="flex items-center gap-6">
-          {/* Story points summary */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="hidden lg:flex items-center gap-4">
-                <div className="text-right">
-                  <div className="flex items-center gap-1 text-xs text-zinc-500">
-                    <TrendingUp className="h-3 w-3" />
-                    Story Points
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-lg font-bold text-emerald-400">{completedPoints}</span>
-                    <span className="text-zinc-600">/</span>
-                    <span className="text-sm text-zinc-400">{totalPoints}</span>
+          {/* Budget tracker - only show if budget is set */}
+          {activeSprint.budget && (
+            <BudgetTracker
+              totalPoints={totalPoints}
+              completedPoints={completedPoints}
+              budget={activeSprint.budget}
+            />
+          )}
+
+          {/* Story points summary - show simplified if no budget */}
+          {!activeSprint.budget && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="hidden lg:flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="flex items-center gap-1 text-xs text-zinc-500">
+                      <TrendingUp className="h-3 w-3" />
+                      Story Points
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-lg font-bold text-emerald-400">{completedPoints}</span>
+                      <span className="text-zinc-600">/</span>
+                      <span className="text-sm text-zinc-400">{totalPoints}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p className="text-xs">
-                {completedPoints} of {totalPoints} story points completed
-                {remainingPoints > 0 && ` (${remainingPoints} remaining)`}
-              </p>
-            </TooltipContent>
-          </Tooltip>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs">
+                  {completedPoints} of {totalPoints} story points completed
+                  {remainingPoints > 0 && ` (${remainingPoints} remaining)`}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Progress visualization */}
           <div className="flex items-center gap-4">
@@ -318,5 +345,177 @@ export function SprintHeader({
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * Budget tracker component with visual indicators for over-budget status
+ */
+function BudgetTracker({
+  totalPoints,
+  completedPoints,
+  budget,
+}: {
+  totalPoints: number
+  completedPoints: number
+  budget: number
+}) {
+  const { status, percent } = getBudgetStatus(totalPoints, budget)
+  const overBudget = totalPoints > budget
+  const overAmount = overBudget ? totalPoints - budget : 0
+
+  // Status-based styling
+  const statusConfig = {
+    under: {
+      barColor: 'bg-emerald-500',
+      textColor: 'text-emerald-400',
+      bgColor: 'bg-emerald-500/10',
+      borderColor: 'border-emerald-500/30',
+      icon: null,
+      label: 'On track',
+    },
+    approaching: {
+      barColor: 'bg-amber-500',
+      textColor: 'text-amber-400',
+      bgColor: 'bg-amber-500/10',
+      borderColor: 'border-amber-500/30',
+      icon: null,
+      label: 'Near capacity',
+    },
+    over: {
+      barColor: 'bg-orange-500',
+      textColor: 'text-orange-400',
+      bgColor: 'bg-orange-500/10',
+      borderColor: 'border-orange-500/30',
+      icon: AlertTriangle,
+      label: 'Over budget',
+    },
+    critical: {
+      barColor: 'bg-red-500',
+      textColor: 'text-red-400',
+      bgColor: 'bg-red-500/10',
+      borderColor: 'border-red-500/30',
+      icon: Flame,
+      label: 'Way over',
+    },
+    none: {
+      barColor: 'bg-zinc-500',
+      textColor: 'text-zinc-400',
+      bgColor: 'bg-zinc-500/10',
+      borderColor: 'border-zinc-500/30',
+      icon: null,
+      label: '',
+    },
+  }
+
+  const config = statusConfig[status]
+  const StatusIcon = config.icon
+
+  // Calculate bar widths
+  const committedWidth = Math.min(percent, 100)
+  const overflowWidth = percent > 100 ? Math.min(percent - 100, 50) : 0
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          className={cn(
+            'hidden lg:flex items-center gap-3 px-3 py-2 rounded-lg border transition-all',
+            config.bgColor,
+            config.borderColor,
+            overBudget && 'animate-pulse-subtle',
+          )}
+        >
+          {/* Status icon for over budget */}
+          {StatusIcon && (
+            <StatusIcon
+              className={cn(
+                'h-4 w-4 flex-shrink-0',
+                config.textColor,
+                status === 'critical' && 'animate-bounce',
+              )}
+            />
+          )}
+
+          {/* Budget bar visualization */}
+          <div className="flex flex-col gap-1 min-w-[100px]">
+            <div className="flex items-center justify-between text-[10px] font-medium">
+              <span className={cn(config.textColor, 'uppercase tracking-wider')}>Budget</span>
+              <span className={cn(config.textColor)}>
+                {totalPoints}/{budget} SP
+              </span>
+            </div>
+
+            {/* Progress bar */}
+            <div className="relative h-1.5 bg-zinc-800 rounded-full overflow-visible">
+              {/* Committed portion (up to 100%) */}
+              <div
+                className={cn(
+                  'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                  config.barColor,
+                )}
+                style={{ width: `${committedWidth}%` }}
+              />
+
+              {/* Overflow indicator (beyond 100%) */}
+              {overBudget && (
+                <div
+                  className={cn(
+                    'absolute inset-y-0 rounded-r-full transition-all duration-500',
+                    status === 'critical' ? 'bg-red-500' : 'bg-orange-500',
+                  )}
+                  style={{
+                    left: '100%',
+                    width: `${overflowWidth}%`,
+                  }}
+                />
+              )}
+
+              {/* Budget line marker at 100% */}
+              <div
+                className={cn(
+                  'absolute top-1/2 -translate-y-1/2 w-0.5 h-3 rounded-full',
+                  overBudget ? 'bg-zinc-400' : 'bg-zinc-600',
+                )}
+                style={{ left: '100%' }}
+              />
+            </div>
+          </div>
+
+          {/* Over budget badge */}
+          {overBudget && (
+            <div
+              className={cn(
+                'flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                status === 'critical'
+                  ? 'bg-red-500/20 text-red-400'
+                  : 'bg-orange-500/20 text-orange-400',
+              )}
+            >
+              +{overAmount}
+            </div>
+          )}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-xs bg-zinc-900 border-zinc-700 text-zinc-100">
+        <div className="space-y-1">
+          <p className="font-medium">
+            {overBudget ? (
+              <span className={config.textColor}>{overAmount} points over budget</span>
+            ) : (
+              <span>{budget - totalPoints} points remaining in budget</span>
+            )}
+          </p>
+          <p className="text-xs text-zinc-400">
+            {completedPoints} completed / {totalPoints} committed / {budget} budgeted
+          </p>
+          {overBudget && (
+            <p className="text-xs text-zinc-500">
+              Consider moving lower-priority items to backlog or increasing the budget
+            </p>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
   )
 }

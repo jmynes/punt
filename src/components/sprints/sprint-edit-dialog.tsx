@@ -26,6 +26,7 @@ interface FormData {
   goal: string
   startDate: Date | null
   endDate: Date | null
+  budget: string
 }
 
 const DEFAULT_FORM: FormData = {
@@ -33,6 +34,7 @@ const DEFAULT_FORM: FormData = {
   goal: '',
   startDate: null,
   endDate: null,
+  budget: '',
 }
 
 interface SprintEditDialogProps {
@@ -56,6 +58,7 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
         goal: sprint.goal || '',
         startDate: sprint.startDate ? new Date(sprint.startDate) : null,
         endDate: sprint.endDate ? new Date(sprint.endDate) : null,
+        budget: sprint.budget?.toString() || '',
       })
     }
   }, [sprint, sprintEditOpen])
@@ -79,6 +82,9 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
   const handleSubmit = useCallback(async () => {
     if (!formData.name.trim() || !sprintEditId) return
 
+    const budgetValue = formData.budget.trim()
+    const budget = budgetValue ? Number.parseInt(budgetValue, 10) : null
+
     updateSprint.mutate(
       {
         sprintId: sprintEditId,
@@ -86,6 +92,7 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
         goal: formData.goal.trim() || null,
         startDate: formData.startDate,
         endDate: formData.endDate,
+        budget: budget && !Number.isNaN(budget) ? budget : null,
       },
       {
         onSuccess: () => {
@@ -103,7 +110,8 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
       formData.startDate?.getTime() !==
         (sprint.startDate ? new Date(sprint.startDate).getTime() : undefined) ||
       formData.endDate?.getTime() !==
-        (sprint.endDate ? new Date(sprint.endDate).getTime() : undefined))
+        (sprint.endDate ? new Date(sprint.endDate).getTime() : undefined) ||
+      formData.budget !== (sprint.budget?.toString() || ''))
 
   return (
     <Dialog open={sprintEditOpen} onOpenChange={handleOpenChange}>
@@ -146,6 +154,27 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
               rows={2}
               disabled={updateSprint.isPending}
             />
+          </div>
+
+          {/* Story Point Budget */}
+          <div className="space-y-2">
+            <Label htmlFor="sprint-budget" className="text-zinc-300">
+              Story Point Budget
+            </Label>
+            <Input
+              id="sprint-budget"
+              type="number"
+              min={1}
+              max={9999}
+              value={formData.budget}
+              onChange={(e) => setFormData((prev) => ({ ...prev, budget: e.target.value }))}
+              placeholder="Expected capacity (optional)"
+              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+              disabled={updateSprint.isPending}
+            />
+            <p className="text-xs text-zinc-500">
+              Set a target for how many story points to complete this sprint
+            </p>
           </div>
 
           {/* Dates */}
