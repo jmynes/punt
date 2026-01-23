@@ -158,7 +158,18 @@ export function EmailSettingsForm() {
                 <Label className="text-zinc-300">Email Provider</Label>
                 <Select
                   value={emailProvider}
-                  onValueChange={(v) => setEmailProvider(v as EmailProviderType)}
+                  onValueChange={(v) => {
+                    const newProvider = v as EmailProviderType
+                    setEmailProvider(newProvider)
+                    if (newProvider === 'resend' && !emailFromAddress) {
+                      setEmailFromAddress('punt-noreply@resend.dev')
+                    } else if (
+                      newProvider !== 'resend' &&
+                      emailFromAddress === 'punt-noreply@resend.dev'
+                    ) {
+                      setEmailFromAddress('')
+                    }
+                  }}
                 >
                   <SelectTrigger className="w-full bg-zinc-800 border-zinc-700 text-zinc-100">
                     <SelectValue placeholder="Select provider" />
@@ -190,7 +201,9 @@ export function EmailSettingsForm() {
                   <Input
                     id="emailFromAddress"
                     type="email"
-                    placeholder="noreply@example.com"
+                    placeholder={
+                      emailProvider === 'resend' ? 'punt-noreply@resend.dev' : 'noreply@example.com'
+                    }
                     value={emailFromAddress}
                     onChange={(e) => setEmailFromAddress(e.target.value)}
                     className="bg-zinc-800 border-zinc-700 text-zinc-100"
