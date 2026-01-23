@@ -11,6 +11,8 @@ export const RATE_LIMITS: Record<string, RateLimitConfig> = {
   'auth/register': { limit: 5, windowMs: 60 * 60 * 1000 }, // 5 attempts per hour
   'auth/forgot-password': { limit: 3, windowMs: 60 * 60 * 1000 }, // 3 attempts per hour per email
   'auth/reset-password': { limit: 5, windowMs: 15 * 60 * 1000 }, // 5 attempts per 15 min
+  'auth/send-verification': { limit: 3, windowMs: 60 * 60 * 1000 }, // 3 per hour per user
+  'auth/verify-email': { limit: 10, windowMs: 15 * 60 * 1000 }, // 10 per 15 min per IP
   'admin/users': { limit: 20, windowMs: 60 * 1000 }, // 20 per minute
   'admin/email-test': { limit: 5, windowMs: 15 * 60 * 1000 }, // 5 test emails per 15 min
   'me/password': { limit: 5, windowMs: 15 * 60 * 1000 }, // 5 attempts per 15 min

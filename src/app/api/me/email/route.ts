@@ -2,6 +2,15 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import {
+  generateToken,
+  getAppUrl,
+  getExpirationDate,
+  hashToken,
+  isEmailFeatureEnabled,
+  sendVerificationEmail,
+  TOKEN_EXPIRY,
+} from '@/lib/email'
 import { projectEvents } from '@/lib/events'
 import { verifyPassword } from '@/lib/password'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
@@ -72,10 +81,16 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Email already in use' }, { status: 400 })
     }
 
-    // Update email
+    // Check if email verification is enabled
+    const isVerificationEnabled = await isEmailFeatureEnabled('verification')
+
+    // Update email (clear emailVerified if verification is enabled)
     const updatedUser = await db.user.update({
       where: { id: currentUser.id },
-      data: { email },
+      data: {
+        email,
+        emailVerified: isVerificationEnabled ? null : undefined,
+      },
       select: {
         id: true,
         email: true,
@@ -86,6 +101,40 @@ export async function PATCH(request: Request) {
         updatedAt: true,
       },
     })
+
+    // Send verification email if enabled
+    if (isVerificationEnabled) {
+      // Delete any existing verification tokens
+      await db.emailVerificationToken.deleteMany({
+        where: { userId: currentUser.id },
+      })
+
+      // Generate new verification token
+      const token = generateToken()
+      const tokenHash = hashToken(token)
+      const expiresAt = getExpirationDate(TOKEN_EXPIRY.EMAIL_VERIFICATION)
+
+      await db.emailVerificationToken.create({
+        data: {
+          tokenHash,
+          userId: currentUser.id,
+          email,
+          expiresAt,
+        },
+      })
+
+      // Send verification email to new address
+      const appUrl = getAppUrl()
+      const verifyUrl = `${appUrl}/verify-email?token=${token}`
+
+      sendVerificationEmail(email, {
+        verifyUrl,
+        email,
+        expiresInMinutes: Math.round(TOKEN_EXPIRY.EMAIL_VERIFICATION / (60 * 1000)),
+      }).catch((err) => {
+        console.error('Failed to send verification email:', err)
+      })
+    }
 
     // Emit SSE event for email update
     const tabId = request.headers.get('x-tab-id') || undefined

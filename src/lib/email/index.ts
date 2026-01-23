@@ -10,12 +10,14 @@ import { NoopProvider } from './providers/noop-provider'
 import { ResendProvider } from './providers/resend-provider'
 import { SmtpProvider } from './providers/smtp-provider'
 import { getAppName, getAppUrl, getEmailSettings } from './settings'
+import { EmailVerificationEmail } from './templates/email-verification'
 import { PasswordResetEmail } from './templates/password-reset'
 import { TestEmail } from './templates/test-email'
 import type {
   EmailMessage,
   EmailProvider,
   EmailSettings,
+  EmailVerificationProps,
   PasswordResetEmailProps,
   SendEmailResult,
   TestEmailProps,
@@ -118,6 +120,37 @@ export async function sendPasswordResetEmail(
   return sendEmail({
     to,
     subject: `Reset your ${appName} password`,
+    html,
+  })
+}
+
+/**
+ * Send an email verification email
+ */
+export async function sendVerificationEmail(
+  to: string,
+  props: Omit<EmailVerificationProps, 'appName' | 'appUrl'>,
+): Promise<SendEmailResult> {
+  const settings = await getEmailSettings()
+
+  if (!settings.emailVerification) {
+    return { success: false, error: 'Email verification is disabled' }
+  }
+
+  const appName = getAppName()
+  const appUrl = getAppUrl()
+
+  const html = await renderTemplate(
+    EmailVerificationEmail({
+      ...props,
+      appName,
+      appUrl,
+    }),
+  )
+
+  return sendEmail({
+    to,
+    subject: `Verify your email for ${appName}`,
     html,
   })
 }

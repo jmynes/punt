@@ -363,13 +363,14 @@ export function EmailSettingsForm() {
                   checked={emailVerification}
                   onCheckedChange={(checked) => setEmailVerification(checked === true)}
                   className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                  disabled
                 />
                 <div>
-                  <Label htmlFor="emailVerification" className="text-zinc-400 cursor-not-allowed">
+                  <Label htmlFor="emailVerification" className="text-zinc-300 cursor-pointer">
                     Email Verification
                   </Label>
-                  <p className="text-xs text-zinc-500">Verify email addresses (coming soon)</p>
+                  <p className="text-xs text-zinc-500">
+                    Prompt users to verify their email addresses
+                  </p>
                 </div>
               </div>
 

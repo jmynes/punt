@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
+import {
+  generateToken,
+  getAppUrl,
+  getExpirationDate,
+  hashToken,
+  isEmailFeatureEnabled,
+  sendVerificationEmail,
+  TOKEN_EXPIRY,
+} from '@/lib/email'
 import { hashPassword, validatePasswordStrength } from '@/lib/password'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
@@ -103,6 +112,39 @@ export async function POST(request: Request) {
           email: true,
         },
       })
+
+      // Send verification email if enabled and email provided
+      if (email) {
+        const isVerificationEnabled = await isEmailFeatureEnabled('verification')
+        if (isVerificationEnabled) {
+          // Generate verification token
+          const token = generateToken()
+          const tokenHash = hashToken(token)
+          const expiresAt = getExpirationDate(TOKEN_EXPIRY.EMAIL_VERIFICATION)
+
+          await db.emailVerificationToken.create({
+            data: {
+              tokenHash,
+              userId: user.id,
+              email,
+              expiresAt,
+            },
+          })
+
+          // Send verification email (don't wait, don't fail registration)
+          const appUrl = getAppUrl()
+          const verifyUrl = `${appUrl}/verify-email?token=${token}`
+
+          sendVerificationEmail(email, {
+            verifyUrl,
+            userName: name,
+            email,
+            expiresInMinutes: Math.round(TOKEN_EXPIRY.EMAIL_VERIFICATION / (60 * 1000)),
+          }).catch((err) => {
+            console.error('Failed to send verification email:', err)
+          })
+        }
+      }
 
       return NextResponse.json({
         success: true,
