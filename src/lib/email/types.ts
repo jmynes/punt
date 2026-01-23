@@ -119,3 +119,29 @@ export interface SendEmailResult {
   error?: string
   messageId?: string
 }
+
+/**
+ * Sanitize an email display name to prevent header injection attacks.
+ * Removes or escapes characters that could be used to:
+ * - Break out of quoted strings (")
+ * - Inject fake email addresses (< >)
+ * - Inject new headers (\r \n)
+ * - Escape sequences (\)
+ *
+ * @param name The display name to sanitize
+ * @returns Sanitized display name safe for email headers
+ */
+export function sanitizeEmailDisplayName(name: string): string {
+  if (!name) return ''
+
+  // Remove characters that could be used for header injection
+  // - \r\n: Header injection (most critical)
+  // - < >: Could inject email addresses
+  // - " \: Could break quoted-string format
+  return name
+    .replace(/[\r\n]/g, '') // Remove newlines (header injection)
+    .replace(/[<>]/g, '') // Remove angle brackets (email injection)
+    .replace(/["\\]/g, '') // Remove quotes and backslash (format breaking)
+    .trim()
+    .slice(0, 100) // Enforce max length
+}

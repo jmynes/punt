@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import { logger } from '@/lib/logger'
 import type { EmailMessage, EmailProvider, EmailSettings } from '../types'
+import { sanitizeEmailDisplayName } from '../types'
 
 /**
  * Resend email provider
@@ -34,8 +35,9 @@ export class ResendProvider implements EmailProvider {
     }
 
     try {
-      const from = this.settings.emailFromName
-        ? `${this.settings.emailFromName} <${this.settings.emailFromAddress}>`
+      const sanitizedName = sanitizeEmailDisplayName(this.settings.emailFromName)
+      const from = sanitizedName
+        ? `${sanitizedName} <${this.settings.emailFromAddress}>`
         : this.settings.emailFromAddress
 
       const { data, error } = await this.client.emails.send({
