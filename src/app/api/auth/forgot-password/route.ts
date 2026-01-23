@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
     // Always return success response to prevent email enumeration
     // But only send email if user exists
-    if (user && user.email) {
+    if (user?.email) {
       // Delete any existing password reset tokens for this user
       await db.passwordResetToken.deleteMany({
         where: { userId: user.id },

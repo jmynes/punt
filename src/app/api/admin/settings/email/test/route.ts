@@ -21,7 +21,7 @@ const TestEmailSchema = z.object({
  */
 export async function POST(request: Request) {
   try {
-    const user = await requireSystemAdmin()
+    await requireSystemAdmin()
 
     // Rate limit test emails
     const clientIp = getClientIp(request)

@@ -1,5 +1,3 @@
-import type { ReactElement } from 'react'
-
 /**
  * Email message structure for sending
  */

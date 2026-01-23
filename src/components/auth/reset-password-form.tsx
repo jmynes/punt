@@ -2,7 +2,7 @@
 
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, XCircle } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,6 @@ import { Label } from '@/components/ui/label'
 type TokenStatus = 'loading' | 'valid' | 'invalid' | 'expired' | 'used'
 
 export function ResetPasswordForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
 
