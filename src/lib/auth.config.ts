@@ -1,5 +1,8 @@
 import type { NextAuthConfig } from 'next-auth'
 
+// Check if demo mode is enabled (build-time check, safe for edge runtime)
+const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
 /**
  * Auth configuration for proxy (route protection)
  * This config is used by proxy.ts (runs on Node.js runtime in Next.js 16+)
@@ -11,6 +14,11 @@ export const authConfig: NextAuthConfig = {
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
+      // Demo mode: allow all routes without authentication
+      if (isDemoMode) {
+        return true
+      }
+
       const isLoggedIn = !!auth?.user
       const isOnAuthPage =
         nextUrl.pathname === '/login' ||

@@ -2,14 +2,21 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { DEMO_USER_SUMMARY, isDemoMode } from '@/lib/demo'
 import type { UserSummary } from '@/types'
 
 /**
  * Get the current authenticated user
  * Returns null if not authenticated
+ * In demo mode, always returns the demo user
  */
 export function useCurrentUser(): UserSummary | null {
   const { data: session, status } = useSession()
+
+  // Demo mode: always return demo user
+  if (isDemoMode()) {
+    return DEMO_USER_SUMMARY
+  }
 
   if (status === 'loading' || !session?.user) {
     return null
@@ -26,9 +33,18 @@ export function useCurrentUser(): UserSummary | null {
 
 /**
  * Check if the current user is authenticated
+ * In demo mode, always returns authenticated
  */
 export function useIsAuthenticated(): { isAuthenticated: boolean; isLoading: boolean } {
   const { status } = useSession()
+
+  // Demo mode: always authenticated
+  if (isDemoMode()) {
+    return {
+      isAuthenticated: true,
+      isLoading: false,
+    }
+  }
 
   return {
     isAuthenticated: status === 'authenticated',
@@ -38,9 +54,18 @@ export function useIsAuthenticated(): { isAuthenticated: boolean; isLoading: boo
 
 /**
  * Check if the current user is a system admin
+ * In demo mode, returns false (demo user is not admin)
  */
 export function useIsSystemAdmin(): { isSystemAdmin: boolean; isLoading: boolean } {
   const { data: session, status } = useSession()
+
+  // Demo mode: demo user is not a system admin
+  if (isDemoMode()) {
+    return {
+      isSystemAdmin: false,
+      isLoading: false,
+    }
+  }
 
   return {
     isSystemAdmin: session?.user?.isSystemAdmin ?? false,

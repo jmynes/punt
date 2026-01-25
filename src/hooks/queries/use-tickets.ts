@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { getTabId } from '@/hooks/use-realtime'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { useBoardStore } from '@/stores/board-store'
 import type { Column, ColumnWithTickets, TicketFormData, TicketWithRelations } from '@/types'
 
@@ -90,6 +91,11 @@ export function useColumnsByProject(projectId: string, options?: { enabled?: boo
   const query = useQuery<Column[]>({
     queryKey: columnKeys.byProject(projectId),
     queryFn: async () => {
+      // Demo mode: return from localStorage
+      if (isDemoMode()) {
+        return demoStorage.getColumns(projectId)
+      }
+
       const res = await fetch(`/api/projects/${projectId}/columns`)
       if (!res.ok) {
         const error = await res.json()
@@ -169,6 +175,11 @@ export function useTicketsByProject(projectId: string, options?: { enabled?: boo
   const query = useQuery<TicketWithRelations[]>({
     queryKey: ticketKeys.byProject(projectId),
     queryFn: async () => {
+      // Demo mode: return from localStorage
+      if (isDemoMode()) {
+        return demoStorage.getTickets(projectId)
+      }
+
       const res = await fetch(`/api/projects/${projectId}/tickets`)
       if (!res.ok) {
         const error = await res.json()
@@ -207,6 +218,28 @@ export function useCreateTicket() {
 
   return useMutation({
     mutationFn: async ({ projectId, columnId, data }: CreateTicketInput) => {
+      // Demo mode: create in localStorage
+      if (isDemoMode()) {
+        return demoStorage.createTicket(projectId, columnId, {
+          title: data.title,
+          description: data.description,
+          type: data.type,
+          priority: data.priority,
+          storyPoints: data.storyPoints,
+          estimate: data.estimate,
+          startDate: data.startDate,
+          dueDate: data.dueDate,
+          environment: data.environment,
+          affectedVersion: data.affectedVersion,
+          fixVersion: data.fixVersion,
+          assigneeId: data.assigneeId,
+          sprintId: data.sprintId,
+          parentId: data.parentId,
+          labels: [], // TODO: handle labels
+          watchers: [], // TODO: handle watchers
+        })
+      }
+
       const res = await fetch(`/api/projects/${projectId}/tickets`, {
         method: 'POST',
         headers: {
@@ -277,6 +310,13 @@ export function useUpdateTicket() {
 
   return useMutation({
     mutationFn: async ({ projectId, ticketId, updates }: UpdateTicketInput) => {
+      // Demo mode: update in localStorage
+      if (isDemoMode()) {
+        const updated = demoStorage.updateTicket(projectId, ticketId, updates)
+        if (!updated) throw new Error('Ticket not found')
+        return updated
+      }
+
       // Convert TicketWithRelations updates to API format
       const apiUpdates: Record<string, unknown> = {}
 
@@ -383,6 +423,12 @@ export function useDeleteTicket() {
 
   return useMutation({
     mutationFn: async ({ projectId, ticketId }: DeleteTicketInput) => {
+      // Demo mode: delete from localStorage
+      if (isDemoMode()) {
+        demoStorage.deleteTicket(projectId, ticketId)
+        return { success: true }
+      }
+
       const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
         method: 'DELETE',
         headers: {
@@ -434,6 +480,16 @@ export function useMoveTicket() {
 
   return useMutation({
     mutationFn: async ({ projectId, ticketId, toColumnId, newOrder }: MoveTicketInput) => {
+      // Demo mode: update in localStorage
+      if (isDemoMode()) {
+        const updated = demoStorage.updateTicket(projectId, ticketId, {
+          columnId: toColumnId,
+          order: newOrder,
+        })
+        if (!updated) throw new Error('Ticket not found')
+        return updated
+      }
+
       const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
         method: 'PATCH',
         headers: {
@@ -491,6 +547,11 @@ export async function createTicketAPI(
   columnId: string,
   ticketData: Partial<TicketWithRelations> & { title: string },
 ): Promise<TicketWithRelations> {
+  // Demo mode: create in localStorage
+  if (isDemoMode()) {
+    return demoStorage.createTicket(projectId, columnId, ticketData)
+  }
+
   const res = await fetch(`/api/projects/${projectId}/tickets`, {
     method: 'POST',
     headers: {
@@ -529,6 +590,12 @@ export async function createTicketAPI(
  * Delete a ticket via API (imperative, for undo/redo operations)
  */
 export async function deleteTicketAPI(projectId: string, ticketId: string): Promise<void> {
+  // Demo mode: delete from localStorage
+  if (isDemoMode()) {
+    demoStorage.deleteTicket(projectId, ticketId)
+    return
+  }
+
   // Skip API call for temp IDs (pasted tickets not yet synced)
   if (ticketId.startsWith('ticket-')) {
     console.warn('Skipping API delete for temp ticket ID:', ticketId)
@@ -556,6 +623,13 @@ export async function updateTicketAPI(
   ticketId: string,
   updates: Partial<TicketWithRelations>,
 ): Promise<TicketWithRelations> {
+  // Demo mode: update in localStorage
+  if (isDemoMode()) {
+    const updated = demoStorage.updateTicket(projectId, ticketId, updates)
+    if (!updated) throw new Error('Ticket not found')
+    return updated
+  }
+
   // Convert TicketWithRelations updates to API format
   const apiUpdates: Record<string, unknown> = {}
 
@@ -763,6 +837,11 @@ export function useProjectSprints(projectId: string, options?: { enabled?: boole
   return useQuery({
     queryKey: sprintKeys.byProject(projectId),
     queryFn: async () => {
+      // Demo mode: return from localStorage
+      if (isDemoMode()) {
+        return demoStorage.getSprints(projectId)
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints`)
       if (!res.ok) {
         const error = await res.json()
@@ -804,6 +883,11 @@ export function useProjectLabels(projectId: string, options?: { enabled?: boolea
   return useQuery({
     queryKey: labelKeys.byProject(projectId),
     queryFn: async () => {
+      // Demo mode: return from localStorage
+      if (isDemoMode()) {
+        return demoStorage.getLabels(projectId)
+      }
+
       const res = await fetch(`/api/projects/${projectId}/labels`)
       if (!res.ok) {
         const error = await res.json()
@@ -832,6 +916,11 @@ export function useCreateLabel() {
 
   return useMutation({
     mutationFn: async ({ projectId, name, color }: CreateLabelInput) => {
+      // Demo mode: create in localStorage
+      if (isDemoMode()) {
+        return demoStorage.createLabel(projectId, { name, color })
+      }
+
       const res = await fetch(`/api/projects/${projectId}/labels`, {
         method: 'POST',
         headers: {
@@ -871,6 +960,12 @@ export function useDeleteLabel() {
 
   return useMutation({
     mutationFn: async ({ projectId, labelId }: DeleteLabelInput) => {
+      // Demo mode: delete from localStorage
+      if (isDemoMode()) {
+        demoStorage.deleteLabel(projectId, labelId)
+        return { success: true }
+      }
+
       const res = await fetch(`/api/projects/${projectId}/labels/${labelId}`, {
         method: 'DELETE',
         headers: {

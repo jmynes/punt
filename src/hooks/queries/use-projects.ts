@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { getTabId } from '@/hooks/use-realtime'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { type ProjectSummary, useProjectsStore } from '@/stores/projects-store'
 
 export const projectKeys = {
@@ -20,6 +21,11 @@ export function useProjects() {
   const query = useQuery<ProjectSummary[]>({
     queryKey: projectKeys.all,
     queryFn: async () => {
+      // Demo mode: return from localStorage
+      if (isDemoMode()) {
+        return demoStorage.getProjects()
+      }
+
       const res = await fetch('/api/projects')
       if (!res.ok) {
         const error = await res.json()
@@ -64,6 +70,11 @@ export function useCreateProject() {
       color: string
       description?: string
     }) => {
+      // Demo mode: create in localStorage
+      if (isDemoMode()) {
+        return demoStorage.createProject(data)
+      }
+
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: {
@@ -134,6 +145,13 @@ export function useUpdateProject() {
       color?: string
       description?: string | null
     }) => {
+      // Demo mode: update in localStorage
+      if (isDemoMode()) {
+        const updated = demoStorage.updateProject(id, data)
+        if (!updated) throw new Error('Project not found')
+        return updated
+      }
+
       const res = await fetch(`/api/projects/${id}`, {
         method: 'PATCH',
         headers: {
@@ -182,6 +200,12 @@ export function useDeleteProject() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // Demo mode: delete from localStorage
+      if (isDemoMode()) {
+        demoStorage.deleteProject(id)
+        return { success: true }
+      }
+
       const res = await fetch(`/api/projects/${id}`, {
         method: 'DELETE',
         headers: {

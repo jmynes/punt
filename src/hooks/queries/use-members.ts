@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import type { Permission, ProjectMemberWithRole } from '@/types'
 
 // Query keys for members
@@ -24,6 +25,22 @@ export function useProjectMembers(projectId: string) {
   return useQuery<ProjectMemberWithRole[]>({
     queryKey: memberKeys.byProject(projectId),
     queryFn: async () => {
+      // Demo mode: return demo member
+      if (isDemoMode()) {
+        const members = demoStorage.getMembers(projectId)
+        return members.map((m) => ({
+          id: m.id,
+          roleId: m.roleId,
+          overrides: null,
+          userId: m.userId,
+          projectId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          user: m.user,
+          role: m.role,
+        }))
+      }
+
       const res = await fetch(`/api/projects/${projectId}/members`)
       if (!res.ok) {
         const error = await res.json()
