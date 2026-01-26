@@ -13,7 +13,7 @@ import type {
   SprintSummary,
   TicketWithRelations,
 } from '@/types'
-import { DEMO_STORAGE_PREFIX, DEMO_USER } from './demo-config'
+import { DEMO_STORAGE_PREFIX, DEMO_TEAM_MEMBERS, DEMO_USER } from './demo-config'
 import {
   DEMO_COLUMNS,
   DEMO_LABELS,
@@ -21,6 +21,7 @@ import {
   DEMO_PROJECTS,
   DEMO_ROLE,
   DEMO_SPRINTS,
+  DEMO_TEAM_SUMMARIES,
   DEMO_TICKETS,
   DEMO_USER_SUMMARY,
   type DemoColumn,
@@ -498,6 +499,39 @@ class DemoStorage {
   getRoles(_projectId: string) {
     return [DEMO_ROLE]
   }
+
+  // ============================================================================
+  // Users (for admin panel)
+  // ============================================================================
+
+  getUsers(): DemoAdminUser[] {
+    // Return demo user and team members
+    const allUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
+    return allUsers.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      isSystemAdmin: user.isSystemAdmin,
+      isActive: user.isActive,
+      createdAt: user.createdAt.toISOString(),
+      lastLoginAt: user.id === DEMO_USER.id ? new Date().toISOString() : null,
+      _count: { projects: 2 },
+    }))
+  }
+}
+
+// Type for admin user list
+export interface DemoAdminUser {
+  id: string
+  name: string
+  email: string
+  avatar: string | null
+  isSystemAdmin: boolean
+  isActive: boolean
+  createdAt: string
+  lastLoginAt: string | null
+  _count: { projects: number }
 }
 
 export const demoStorage = new DemoStorage()

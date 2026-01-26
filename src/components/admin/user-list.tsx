@@ -67,6 +67,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { useAdminUndoStore } from '@/stores/admin-undo-store'
 import { CreateUserDialog } from './create-user-dialog'
 
@@ -137,6 +138,38 @@ export function UserList() {
   } = useQuery<User[]>({
     queryKey: ['admin', 'users', search, sort, sortDir, roleFilter, minProjects, maxProjects],
     queryFn: async () => {
+      // Demo mode: return demo users
+      if (isDemoMode()) {
+        let demoUsers = demoStorage.getUsers()
+
+        // Apply filters
+        if (search) {
+          const searchLower = search.toLowerCase()
+          demoUsers = demoUsers.filter(
+            (u) =>
+              u.name.toLowerCase().includes(searchLower) ||
+              u.email.toLowerCase().includes(searchLower),
+          )
+        }
+        if (roleFilter === 'admin') {
+          demoUsers = demoUsers.filter((u) => u.isSystemAdmin)
+        } else if (roleFilter === 'standard') {
+          demoUsers = demoUsers.filter((u) => !u.isSystemAdmin)
+        }
+
+        // Apply sorting
+        demoUsers.sort((a, b) => {
+          let cmp = 0
+          if (sort === 'name') cmp = a.name.localeCompare(b.name)
+          else if (sort === 'createdAt') cmp = a.createdAt.localeCompare(b.createdAt)
+          else if (sort === 'lastLoginAt')
+            cmp = (a.lastLoginAt || '').localeCompare(b.lastLoginAt || '')
+          return sortDir === 'asc' ? cmp : -cmp
+        })
+
+        return demoUsers
+      }
+
       const queryString = buildQueryString()
       const res = await fetch(`/api/admin/users?${queryString}`)
       if (!res.ok) {
@@ -159,6 +192,11 @@ export function UserList() {
 
   const updateUser = useMutation({
     mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<User> }) => {
+      if (isDemoMode()) {
+        // Demo mode: simulate success
+        toast.info('User management is read-only in demo mode')
+        return { id: userId, ...updates }
+      }
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -180,6 +218,10 @@ export function UserList() {
 
   const deleteUser = useMutation({
     mutationFn: async ({ userId, permanent }: { userId: string; permanent: boolean }) => {
+      if (isDemoMode()) {
+        toast.info('User management is read-only in demo mode')
+        return { action: 'demo' }
+      }
       const url = permanent
         ? `/api/admin/users/${userId}?permanent=true`
         : `/api/admin/users/${userId}`
@@ -191,6 +233,7 @@ export function UserList() {
       return res.json()
     },
     onSuccess: (data) => {
+      if (data.action === 'demo') return
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
       toast.success(data.action === 'deleted' ? 'User permanently deleted' : 'User disabled')
       setDeleteUserId(null)
