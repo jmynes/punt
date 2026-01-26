@@ -30,7 +30,6 @@ async function getCustomRolePermissions(): Promise<CustomRolePermissions | null>
         Owner: (parsed.Owner || []).filter(isValidPermission),
         Admin: (parsed.Admin || []).filter(isValidPermission),
         Member: (parsed.Member || []).filter(isValidPermission),
-        Viewer: (parsed.Viewer || []).filter(isValidPermission),
       }
     }
   } catch {

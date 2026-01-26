@@ -23,7 +23,7 @@ interface RolePermissionsData {
   roleNames: DefaultRoleName[]
 }
 
-const ROLE_ORDER: DefaultRoleName[] = ['Owner', 'Admin', 'Member', 'Viewer']
+const ROLE_ORDER: DefaultRoleName[] = ['Owner', 'Admin', 'Member']
 
 export function RolePermissionsForm() {
   const queryClient = useQueryClient()
@@ -183,7 +183,7 @@ export function RolePermissionsForm() {
         </CardHeader>
         <CardContent>
           {/* Role Headers */}
-          <div className="grid grid-cols-[200px_repeat(4,1fr)] gap-4 mb-4 pb-3 border-b border-zinc-800">
+          <div className="grid grid-cols-[280px_repeat(3,1fr)] gap-4 mb-4 pb-3 border-b border-zinc-800">
             <div className="text-sm font-medium text-zinc-400">Permission</div>
             {ROLE_ORDER.map((role) => (
               <div key={role} className="text-center">
@@ -198,9 +198,7 @@ export function RolePermissionsForm() {
                   {role === 'Owner' && <Shield className="h-3 w-3 mr-1" />}
                   {role}
                 </Badge>
-                <p className="text-xs text-zinc-500 mt-1 line-clamp-2">
-                  {ROLE_DESCRIPTIONS[role].split(' ').slice(0, 4).join(' ')}...
-                </p>
+                <p className="text-xs text-zinc-500 mt-1">{ROLE_DESCRIPTIONS[role]}</p>
               </div>
             ))}
           </div>
@@ -217,7 +215,7 @@ export function RolePermissionsForm() {
                   {permissions.map((perm) => (
                     <div
                       key={perm.key}
-                      className="grid grid-cols-[200px_repeat(4,1fr)] gap-4 py-2 px-3 rounded-lg hover:bg-zinc-800/50"
+                      className="grid grid-cols-[280px_repeat(3,1fr)] gap-4 py-2 px-3 rounded-lg hover:bg-zinc-800/50"
                     >
                       <div>
                         <Label className="text-sm text-zinc-200">{perm.label}</Label>

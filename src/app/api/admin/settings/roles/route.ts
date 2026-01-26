@@ -10,7 +10,6 @@ const updateRolePermissionsSchema = z.object({
   Owner: z.array(z.string()).optional(),
   Admin: z.array(z.string()).optional(),
   Member: z.array(z.string()).optional(),
-  Viewer: z.array(z.string()).optional(),
 })
 
 export type DefaultRolePermissions = {
@@ -38,7 +37,6 @@ export async function GET() {
           Owner: (parsed.Owner || ROLE_PRESETS.Owner).filter(isValidPermission),
           Admin: (parsed.Admin || ROLE_PRESETS.Admin).filter(isValidPermission),
           Member: (parsed.Member || ROLE_PRESETS.Member).filter(isValidPermission),
-          Viewer: (parsed.Viewer || ROLE_PRESETS.Viewer).filter(isValidPermission),
         }
       } catch {
         // Fall back to presets if parsing fails
@@ -96,7 +94,6 @@ export async function PATCH(request: Request) {
           Owner: current.Owner || ROLE_PRESETS.Owner,
           Admin: current.Admin || ROLE_PRESETS.Admin,
           Member: current.Member || ROLE_PRESETS.Member,
-          Viewer: current.Viewer || ROLE_PRESETS.Viewer,
         }
       } catch {
         currentPermissions = { ...ROLE_PRESETS }
@@ -111,7 +108,6 @@ export async function PATCH(request: Request) {
       Owner: updates.Owner ? updates.Owner.filter(isValidPermission) : currentPermissions.Owner,
       Admin: updates.Admin ? updates.Admin.filter(isValidPermission) : currentPermissions.Admin,
       Member: updates.Member ? updates.Member.filter(isValidPermission) : currentPermissions.Member,
-      Viewer: updates.Viewer ? updates.Viewer.filter(isValidPermission) : currentPermissions.Viewer,
     }
 
     // Owner must always have all permissions
