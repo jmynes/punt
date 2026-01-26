@@ -101,6 +101,8 @@ export interface UserEvent {
   changes?: {
     name?: string
     avatar?: string | null
+    isSystemAdmin?: boolean
+    isActive?: boolean
   }
 }
 

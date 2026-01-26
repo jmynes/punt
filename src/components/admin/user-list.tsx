@@ -67,6 +67,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { getTabId } from '@/hooks/use-realtime'
 import { useAdminUndoStore } from '@/stores/admin-undo-store'
 import { CreateUserDialog } from './create-user-dialog'
 
@@ -96,6 +97,7 @@ const sortLabels: Record<SortField, string> = {
 export function UserList() {
   const queryClient = useQueryClient()
   const currentUser = useCurrentUser()
+  const tabId = getTabId()
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkAction, setBulkAction] = useState<BulkAction>(null)
@@ -178,7 +180,7 @@ export function UserList() {
     }) => {
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
         body: JSON.stringify(updates),
       })
       if (!res.ok) {
@@ -247,7 +249,7 @@ export function UserList() {
         userIds.map((userId) =>
           fetch(`/api/admin/users/${userId}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify(updates),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
@@ -317,7 +319,7 @@ export function UserList() {
         usersToDisable.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ isActive: false }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
@@ -379,7 +381,7 @@ export function UserList() {
         usersToEnable.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ isActive: true }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
@@ -442,7 +444,7 @@ export function UserList() {
       // First verify credentials
       const verifyRes = await fetch('/api/auth/verify-credentials', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
         body: JSON.stringify({ email, password }),
       })
 
@@ -527,7 +529,7 @@ export function UserList() {
         action.users.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify(updates),
           }),
         ),
@@ -540,7 +542,7 @@ export function UserList() {
     } catch {
       toast.error('Failed to undo')
     }
-  }, [undo, queryClient])
+  }, [undo, queryClient, tabId])
 
   // Handle redo - repeat the action
   const handleRedo = useCallback(async () => {
@@ -574,7 +576,7 @@ export function UserList() {
         action.users.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify(updates),
           }),
         ),
@@ -587,7 +589,7 @@ export function UserList() {
     } catch {
       toast.error('Failed to redo')
     }
-  }, [redo, queryClient])
+  }, [redo, queryClient, tabId])
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
