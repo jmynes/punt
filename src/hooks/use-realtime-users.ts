@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { brandingKeys } from '@/hooks/queries/use-branding'
 import { getTabId } from '@/hooks/use-realtime'
-import type { BrandingEvent, UserEvent } from '@/lib/events'
+import type { BrandingEvent, SettingsEvent, UserEvent } from '@/lib/events'
 
 // Reconnection config
 const INITIAL_RECONNECT_DELAY = 1000
@@ -19,7 +19,7 @@ interface ConnectedEvent {
   listenerId: string
 }
 
-type SSEEvent = UserEvent | BrandingEvent | ConnectedEvent
+type SSEEvent = UserEvent | BrandingEvent | SettingsEvent | ConnectedEvent
 
 /**
  * Hook for real-time user profile synchronization via Server-Sent Events

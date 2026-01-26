@@ -56,7 +56,10 @@ export function RolePermissionsForm() {
         },
         body: JSON.stringify(permissions),
       })
-      if (!res.ok) throw new Error('Failed to update role permissions')
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to update role permissions')
+      }
       return res.json()
     },
     onSuccess: () => {
