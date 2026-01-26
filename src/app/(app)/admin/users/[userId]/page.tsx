@@ -100,9 +100,9 @@ export default function AdminUserProfilePage() {
 
       // Update user list cache directly
       queryClient.setQueriesData<Array<{ id: string; isSystemAdmin?: boolean }>>(
-        { queryKey: ['admin', 'users'] },
+        { queryKey: ['admin', 'users'], exact: true },
         (oldData) => {
-          if (!oldData) return oldData
+          if (!oldData || !Array.isArray(oldData)) return oldData
           return oldData.map((u) => (u.id === userId ? { ...u, isSystemAdmin: newValue } : u))
         },
       )
@@ -145,9 +145,9 @@ export default function AdminUserProfilePage() {
 
       // Update user list cache directly
       queryClient.setQueriesData<Array<{ id: string; isActive?: boolean }>>(
-        { queryKey: ['admin', 'users'] },
+        { queryKey: ['admin', 'users'], exact: true },
         (oldData) => {
-          if (!oldData) return oldData
+          if (!oldData || !Array.isArray(oldData)) return oldData
           return oldData.map((u) => (u.id === userId ? { ...u, isActive: newValue } : u))
         },
       )
