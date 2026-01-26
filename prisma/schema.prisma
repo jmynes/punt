@@ -495,6 +495,11 @@ model SystemSettings {
   emailWelcome       Boolean @default(false)
   emailVerification  Boolean @default(false)
   emailInvitations   Boolean @default(true)
+
+  // Default role permissions for new projects (JSON object)
+  // Keys: "Owner", "Admin", "Member", "Viewer"
+  // Values: array of permission strings
+  defaultRolePermissions String?
 }
 
 // Password reset tokens (for forgot password flow)
