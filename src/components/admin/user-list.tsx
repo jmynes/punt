@@ -100,6 +100,7 @@ export function UserList() {
   const tabId = getTabId()
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [lastSelectedId, setLastSelectedId] = useState<string | null>(null)
   const [bulkAction, setBulkAction] = useState<BulkAction>(null)
 
   // Bulk delete confirmation state (requires credentials)
@@ -672,7 +673,30 @@ export function UserList() {
   }
 
   // Selection helpers
-  const toggleSelect = (userId: string) => {
+  const handleSelect = (userId: string, shiftKey: boolean) => {
+    // Shift-click range selection
+    if (shiftKey && lastSelectedId && users) {
+      const userIds = users.map((u) => u.id)
+      const lastIndex = userIds.indexOf(lastSelectedId)
+      const currentIndex = userIds.indexOf(userId)
+
+      if (lastIndex !== -1 && currentIndex !== -1) {
+        const start = Math.min(lastIndex, currentIndex)
+        const end = Math.max(lastIndex, currentIndex)
+        const rangeIds = userIds.slice(start, end + 1)
+
+        setSelectedIds((prev) => {
+          const next = new Set(prev)
+          for (const id of rangeIds) {
+            next.add(id)
+          }
+          return next
+        })
+        return
+      }
+    }
+
+    // Normal toggle
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (next.has(userId)) {
@@ -682,6 +706,11 @@ export function UserList() {
       }
       return next
     })
+    setLastSelectedId(userId)
+  }
+
+  const toggleSelect = (userId: string) => {
+    handleSelect(userId, false)
   }
 
   const selectAll = () => {
@@ -706,7 +735,7 @@ export function UserList() {
     return (
       <Card
         key={user.id}
-        onClick={() => toggleSelect(user.id)}
+        onClick={(e) => handleSelect(user.id, e.shiftKey)}
         className={`border-zinc-800 bg-zinc-900/50 transition-all duration-150 cursor-pointer ${
           isSelected
             ? 'ring-1 ring-amber-500/50 bg-amber-500/5 border-amber-500/30'
