@@ -674,7 +674,7 @@ export function UserList() {
 
   // Selection helpers
   const handleSelect = (userId: string, shiftKey: boolean) => {
-    // Shift-click range selection
+    // Shift-click range selection/deselection
     if (shiftKey && lastSelectedId && users) {
       const userIds = users.map((u) => u.id)
       const lastIndex = userIds.indexOf(lastSelectedId)
@@ -687,8 +687,14 @@ export function UserList() {
 
         setSelectedIds((prev) => {
           const next = new Set(prev)
+          // Check if all in range are selected - if so, deselect them
+          const allSelected = rangeIds.every((id) => prev.has(id))
           for (const id of rangeIds) {
-            next.add(id)
+            if (allSelected) {
+              next.delete(id)
+            } else {
+              next.add(id)
+            }
           }
           return next
         })
