@@ -814,7 +814,11 @@ export function UserList() {
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+              <DropdownMenuContent
+                align="end"
+                className="bg-zinc-900 border-zinc-800"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <DropdownMenuItem
                   asChild
                   className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"

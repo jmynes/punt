@@ -74,6 +74,13 @@ export default function AdminUserProfilePage() {
     if (!user) return
 
     const newValue = !user.isSystemAdmin
+    const previousUser = user
+
+    // Optimistic update
+    queryClient.setQueryData<UserDetails>(['admin', 'users', userId], (old) =>
+      old ? { ...old, isSystemAdmin: newValue } : old,
+    )
+
     try {
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
@@ -85,12 +92,21 @@ export default function AdminUserProfilePage() {
       })
 
       if (!res.ok) {
+        // Rollback on error
+        queryClient.setQueryData(['admin', 'users', userId], previousUser)
         const data = await res.json()
         throw new Error(data.error || 'Failed to update user')
       }
 
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId] })
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      // Update user list cache directly
+      queryClient.setQueriesData<Array<{ id: string; isSystemAdmin?: boolean }>>(
+        { queryKey: ['admin', 'users'] },
+        (oldData) => {
+          if (!oldData) return oldData
+          return oldData.map((u) => (u.id === userId ? { ...u, isSystemAdmin: newValue } : u))
+        },
+      )
+
       toast.success(
         newValue ? `${user.name} is now an admin` : `${user.name} is no longer an admin`,
       )
@@ -103,6 +119,13 @@ export default function AdminUserProfilePage() {
     if (!user) return
 
     const newValue = !user.isActive
+    const previousUser = user
+
+    // Optimistic update
+    queryClient.setQueryData<UserDetails>(['admin', 'users', userId], (old) =>
+      old ? { ...old, isActive: newValue } : old,
+    )
+
     try {
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
@@ -114,12 +137,21 @@ export default function AdminUserProfilePage() {
       })
 
       if (!res.ok) {
+        // Rollback on error
+        queryClient.setQueryData(['admin', 'users', userId], previousUser)
         const data = await res.json()
         throw new Error(data.error || 'Failed to update user')
       }
 
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId] })
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      // Update user list cache directly
+      queryClient.setQueriesData<Array<{ id: string; isActive?: boolean }>>(
+        { queryKey: ['admin', 'users'] },
+        (oldData) => {
+          if (!oldData) return oldData
+          return oldData.map((u) => (u.id === userId ? { ...u, isActive: newValue } : u))
+        },
+      )
+
       toast.success(newValue ? `${user.name} has been enabled` : `${user.name} has been disabled`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update user')
