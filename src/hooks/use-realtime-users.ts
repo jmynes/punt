@@ -88,11 +88,15 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
 
         // Handle user profile updates
         if (data.type === 'user.updated') {
-          // Refresh the NextAuth session to get updated user data
-          // The profile page will handle this through stableUser state
-          updateSession()
+          // Only refresh session if the update is for the current user
+          // (Admin status changes for other users don't need session refresh)
+          // Note: We don't have access to current user ID here, so we only
+          // refresh session for profile changes (name, avatar) not admin status
+          if (data.changes?.name !== undefined || data.changes?.avatar !== undefined) {
+            updateSession()
+          }
 
-          // Also invalidate any admin user queries
+          // Always invalidate admin user queries so the list refreshes
           queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
         }
 

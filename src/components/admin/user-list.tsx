@@ -242,12 +242,27 @@ export function UserList() {
   // Bulk update mutation
   const bulkUpdateUsers = useMutation({
     mutationFn: async ({ userIds, updates }: { userIds: string[]; updates: Partial<User> }) => {
-      // Get users before update for undo tracking
-      const usersBeforeUpdate = users?.filter((u) => userIds.includes(u.id)) || []
+      // Filter to only users who actually need the change
+      let usersToUpdate = users?.filter((u) => userIds.includes(u.id)) || []
+      let skipped = 0
+
+      if ('isSystemAdmin' in updates) {
+        // Only update users whose admin status differs from the target
+        const targetAdminStatus = updates.isSystemAdmin
+        const usersNeedingChange = usersToUpdate.filter(
+          (u) => u.isSystemAdmin !== targetAdminStatus,
+        )
+        skipped = usersToUpdate.length - usersNeedingChange.length
+        usersToUpdate = usersNeedingChange
+      }
+
+      if (usersToUpdate.length === 0) {
+        return { succeeded: 0, failed: 0, skipped, updates, actualUsers: [] }
+      }
 
       const results = await Promise.allSettled(
-        userIds.map((userId) =>
-          fetch(`/api/admin/users/${userId}`, {
+        usersToUpdate.map((user) =>
+          fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify(updates),
@@ -259,14 +274,14 @@ export function UserList() {
       )
       const succeeded = results.filter((r) => r.status === 'fulfilled').length
       const failed = results.filter((r) => r.status === 'rejected').length
-      return { succeeded, failed, updates, usersBeforeUpdate }
+      return { succeeded, failed, skipped, updates, actualUsers: usersToUpdate }
     },
-    onSuccess: ({ succeeded, failed, updates, usersBeforeUpdate }) => {
+    onSuccess: ({ succeeded, failed, skipped, updates, actualUsers }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
       // Track admin changes for undo
       if ('isSystemAdmin' in updates && succeeded > 0) {
-        const userSnapshots = usersBeforeUpdate.slice(0, succeeded).map((u) => ({
+        const userSnapshots = actualUsers.slice(0, succeeded).map((u) => ({
           id: u.id,
           name: u.name,
           email: u.email,
@@ -281,6 +296,22 @@ export function UserList() {
         }
       }
 
+      // Handle case where all users were already in the target state
+      if (succeeded === 0 && skipped > 0) {
+        const state =
+          'isSystemAdmin' in updates
+            ? updates.isSystemAdmin
+              ? 'admins'
+              : 'non-admins'
+            : 'in that state'
+        toast.info(
+          `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already ${state}`,
+        )
+        setSelectedIds(new Set())
+        setBulkAction(null)
+        return
+      }
+
       // Create specific message for admin status changes
       let message: string
       if ('isSystemAdmin' in updates) {
@@ -292,8 +323,11 @@ export function UserList() {
         message = `Updated ${succeeded} user${succeeded !== 1 ? 's' : ''}`
       }
 
+      const extra =
+        skipped > 0 ? ` (${skipped} already ${updates.isSystemAdmin ? 'admin' : 'non-admin'})` : ''
+
       if (failed === 0) {
-        toast.success(`${message} (Ctrl+Z to undo)`)
+        toast.success(`${message}${extra} (Ctrl+Z to undo)`)
       } else {
         toast.warning(`${message}, failed ${failed}`)
       }
