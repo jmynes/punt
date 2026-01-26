@@ -168,10 +168,20 @@ export function UserList() {
         const error = await res.json()
         throw new Error(error.error || 'Failed to update user')
       }
-      return res.json()
+      const updatedUser = await res.json()
+      return { user: updatedUser, updates }
     },
-    onSuccess: () => {
+    onSuccess: ({ user, updates }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+
+      // Show toast for admin status changes
+      if ('isSystemAdmin' in updates) {
+        if (updates.isSystemAdmin) {
+          toast.success(`${user.name} is now an admin`)
+        } else {
+          toast.success(`${user.name} is no longer an admin`)
+        }
+      }
     },
     onError: (error) => {
       toast.error(error.message)
@@ -217,14 +227,26 @@ export function UserList() {
       )
       const succeeded = results.filter((r) => r.status === 'fulfilled').length
       const failed = results.filter((r) => r.status === 'rejected').length
-      return { succeeded, failed }
+      return { succeeded, failed, updates }
     },
-    onSuccess: ({ succeeded, failed }) => {
+    onSuccess: ({ succeeded, failed, updates }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      if (failed === 0) {
-        toast.success(`Updated ${succeeded} user${succeeded !== 1 ? 's' : ''}`)
+
+      // Create specific message for admin status changes
+      let message: string
+      if ('isSystemAdmin' in updates) {
+        const action = updates.isSystemAdmin
+          ? 'granted admin privileges to'
+          : 'removed admin privileges from'
+        message = `Successfully ${action} ${succeeded} user${succeeded !== 1 ? 's' : ''}`
       } else {
-        toast.warning(`Updated ${succeeded}, failed ${failed}`)
+        message = `Updated ${succeeded} user${succeeded !== 1 ? 's' : ''}`
+      }
+
+      if (failed === 0) {
+        toast.success(message)
+      } else {
+        toast.warning(`${message}, failed ${failed}`)
       }
       setSelectedIds(new Set())
       setBulkAction(null)
