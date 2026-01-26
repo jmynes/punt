@@ -140,6 +140,12 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
           // Invalidate branding query to fetch new branding settings
           queryClient.invalidateQueries({ queryKey: brandingKeys.all })
         }
+
+        // Handle settings updates
+        if (data.type === 'settings.roles.updated') {
+          // Invalidate role permissions query to fetch new settings
+          queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+        }
       } catch {
         // Ignore parse errors (could be keepalive comments)
       }

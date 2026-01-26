@@ -44,6 +44,11 @@ export type UserEventType = 'user.updated'
 export type BrandingEventType = 'branding.updated'
 
 /**
+ * Event types for settings operations
+ */
+export type SettingsEventType = 'settings.roles.updated'
+
+/**
  * Payload for ticket events
  */
 export interface TicketEvent {
@@ -116,12 +121,24 @@ export interface BrandingEvent {
   timestamp: number
 }
 
+/**
+ * Payload for settings events
+ */
+export interface SettingsEvent {
+  type: SettingsEventType
+  userId: string
+  tabId?: string // Optional tab ID for self-skip
+  timestamp: number
+}
+
 // Global channel for project-level events (visible to all authenticated users)
 const PROJECTS_GLOBAL_CHANNEL = 'projects:global'
 // Global channel for user profile events (visible to all authenticated users)
 const USERS_GLOBAL_CHANNEL = 'users:global'
 // Global channel for branding events (visible to all authenticated users)
 const BRANDING_GLOBAL_CHANNEL = 'branding:global'
+// Global channel for settings events (visible to all authenticated users)
+const SETTINGS_GLOBAL_CHANNEL = 'settings:global'
 
 /**
  * Event emitter for real-time updates
@@ -283,6 +300,29 @@ class ProjectEventEmitter extends EventEmitter {
    */
   getBrandingListenerCount(): number {
     return this.listenerCount(BRANDING_GLOBAL_CHANNEL)
+  }
+
+  /**
+   * Emit a settings event to all subscribers (global channel)
+   */
+  emitSettingsEvent(event: SettingsEvent) {
+    this.emit(SETTINGS_GLOBAL_CHANNEL, event)
+  }
+
+  /**
+   * Subscribe to global settings events
+   * Returns an unsubscribe function
+   */
+  subscribeToSettings(callback: (event: SettingsEvent) => void): () => void {
+    this.on(SETTINGS_GLOBAL_CHANNEL, callback)
+    return () => this.off(SETTINGS_GLOBAL_CHANNEL, callback)
+  }
+
+  /**
+   * Get the number of listeners for global settings events
+   */
+  getSettingsListenerCount(): number {
+    return this.listenerCount(SETTINGS_GLOBAL_CHANNEL)
   }
 }
 

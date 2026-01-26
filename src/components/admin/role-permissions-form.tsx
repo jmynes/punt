@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { getTabId } from '@/hooks/use-realtime'
 import {
   CATEGORY_METADATA,
   getSortedCategoriesWithPermissions,
@@ -49,7 +50,10 @@ export function RolePermissionsForm() {
     mutationFn: async (permissions: Record<string, Permission[]>) => {
       const res = await fetch('/api/admin/settings/roles', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
         body: JSON.stringify(permissions),
       })
       if (!res.ok) throw new Error('Failed to update role permissions')
@@ -69,6 +73,9 @@ export function RolePermissionsForm() {
     mutationFn: async () => {
       const res = await fetch('/api/admin/settings/roles', {
         method: 'POST',
+        headers: {
+          'X-Tab-Id': getTabId(),
+        },
       })
       if (!res.ok) throw new Error('Failed to reset role permissions')
       return res.json()

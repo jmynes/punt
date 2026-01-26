@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { ALL_PERMISSIONS, isValidPermission, type Permission } from '@/lib/permissions/constants'
 import { DEFAULT_ROLE_NAMES, type DefaultRoleName, ROLE_PRESETS } from '@/lib/permissions/presets'
 
@@ -70,7 +71,8 @@ export async function GET() {
  */
 export async function PATCH(request: Request) {
   try {
-    await requireSystemAdmin()
+    const currentUser = await requireSystemAdmin()
+    const tabId = request.headers.get('X-Tab-Id') || undefined
 
     const body = await request.json()
     const parsed = updateRolePermissionsSchema.safeParse(body)
@@ -125,6 +127,14 @@ export async function PATCH(request: Request) {
       },
     })
 
+    // Emit SSE event for real-time updates
+    projectEvents.emitSettingsEvent({
+      type: 'settings.roles.updated',
+      userId: currentUser.id,
+      tabId,
+      timestamp: Date.now(),
+    })
+
     return NextResponse.json({
       rolePermissions: newPermissions,
       message: 'Default role permissions updated successfully',
@@ -146,9 +156,10 @@ export async function PATCH(request: Request) {
 /**
  * POST /api/admin/settings/roles/reset - Reset to default presets
  */
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    await requireSystemAdmin()
+    const currentUser = await requireSystemAdmin()
+    const tabId = request.headers.get('X-Tab-Id') || undefined
 
     // Reset to default presets
     await db.systemSettings.upsert({
@@ -160,6 +171,14 @@ export async function POST() {
       update: {
         defaultRolePermissions: JSON.stringify(ROLE_PRESETS),
       },
+    })
+
+    // Emit SSE event for real-time updates
+    projectEvents.emitSettingsEvent({
+      type: 'settings.roles.updated',
+      userId: currentUser.id,
+      tabId,
+      timestamp: Date.now(),
     })
 
     return NextResponse.json({
