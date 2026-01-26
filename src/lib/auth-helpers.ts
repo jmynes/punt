@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { DEMO_USER, isDemoMode } from '@/lib/demo'
 import {
   hasAnyPermission as checkAnyPermission,
   hasPermission as checkPermission,
@@ -13,6 +14,18 @@ import {
  * Returns null if not authenticated
  */
 export async function getCurrentUser() {
+  // Demo mode: return demo user
+  if (isDemoMode()) {
+    return {
+      id: DEMO_USER.id,
+      email: DEMO_USER.email,
+      name: DEMO_USER.name,
+      avatar: DEMO_USER.avatar,
+      isSystemAdmin: DEMO_USER.isSystemAdmin,
+      isActive: DEMO_USER.isActive,
+    }
+  }
+
   const session = await auth()
 
   if (!session?.user?.id) {

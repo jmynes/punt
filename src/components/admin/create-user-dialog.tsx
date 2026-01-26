@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { isDemoMode } from '@/lib/demo'
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false)
@@ -30,6 +31,12 @@ export function CreateUserDialog() {
 
   const createUser = useMutation({
     mutationFn: async () => {
+      // Demo mode: show info toast and don't submit
+      if (isDemoMode()) {
+        toast.info('User creation is disabled in demo mode')
+        return { demo: true }
+      }
+
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,7 +48,11 @@ export function CreateUserDialog() {
       }
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data?.demo) {
+        handleClose()
+        return
+      }
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
       toast.success('User created successfully')
       handleClose()
