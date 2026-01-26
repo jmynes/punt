@@ -11,7 +11,7 @@ import type {
   TicketWithRelations,
   UserSummary,
 } from '@/types'
-import { DEMO_USER } from './demo-config'
+import { DEMO_TEAM_MEMBERS, DEMO_USER } from './demo-config'
 
 // Demo user as UserSummary
 export const DEMO_USER_SUMMARY: UserSummary = {
@@ -21,6 +21,19 @@ export const DEMO_USER_SUMMARY: UserSummary = {
   avatar: DEMO_USER.avatar,
   isSystemAdmin: DEMO_USER.isSystemAdmin,
 }
+
+// Team members as UserSummary
+export const DEMO_TEAM_SUMMARIES: UserSummary[] = DEMO_TEAM_MEMBERS.map((member) => ({
+  id: member.id,
+  name: member.name,
+  email: member.email ?? '',
+  avatar: member.avatar,
+  isSystemAdmin: member.isSystemAdmin,
+}))
+
+// Helper to get team member by index
+const getTeamMember = (index: number): UserSummary =>
+  DEMO_TEAM_SUMMARIES[index % DEMO_TEAM_SUMMARIES.length]
 
 // ============================================================================
 // Projects
@@ -231,6 +244,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     sprintId: 'demo-sprint-1-2',
     sprint: getSprint('demo-project-1', 'Sprint 2'),
     labels: [getLabel('demo-project-1', 'feature')!],
+    assigneeId: getTeamMember(0).id,
+    assignee: getTeamMember(0),
   }),
   createTicket({
     id: 'demo-ticket-1-2',
@@ -245,6 +260,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     columnId: 'demo-col-1-1',
     sprintId: 'demo-sprint-1-2',
     sprint: getSprint('demo-project-1', 'Sprint 2'),
+    assigneeId: getTeamMember(1).id,
+    assignee: getTeamMember(1),
   }),
   createTicket({
     id: 'demo-ticket-1-3',
@@ -258,6 +275,48 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     projectId: 'demo-project-1',
     columnId: 'demo-col-1-1',
     labels: [getLabel('demo-project-1', 'documentation')!],
+  }),
+  // Backlog items (no sprint)
+  createTicket({
+    id: 'demo-ticket-1-9',
+    number: 9,
+    title: 'Implement email notification system',
+    description:
+      'Build email notification infrastructure for user alerts, password resets, and marketing communications.',
+    type: 'story',
+    priority: 'medium',
+    order: 3,
+    storyPoints: 8,
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-1',
+    labels: [getLabel('demo-project-1', 'feature')!],
+  }),
+  createTicket({
+    id: 'demo-ticket-1-10',
+    number: 10,
+    title: 'Add keyboard shortcuts for power users',
+    description:
+      'Implement keyboard shortcuts for common actions like navigation, creating tickets, and quick search.',
+    type: 'task',
+    priority: 'low',
+    order: 4,
+    storyPoints: 3,
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-1',
+    labels: [getLabel('demo-project-1', 'enhancement')!],
+  }),
+  createTicket({
+    id: 'demo-ticket-1-11',
+    number: 11,
+    title: 'Research third-party integrations',
+    description:
+      'Evaluate potential integrations with Slack, GitHub, and calendar apps. Document API requirements and effort estimates.',
+    type: 'task',
+    priority: 'low',
+    order: 5,
+    storyPoints: 5,
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-1',
   }),
 
   // In Progress column
@@ -311,6 +370,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     sprintId: 'demo-sprint-1-2',
     sprint: getSprint('demo-project-1', 'Sprint 2'),
     labels: [getLabel('demo-project-1', 'documentation')!],
+    assigneeId: getTeamMember(2).id,
+    assignee: getTeamMember(2),
   }),
 
   // Done column (from completed sprint)
@@ -327,6 +388,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     columnId: 'demo-col-1-4',
     sprintId: 'demo-sprint-1-1',
     sprint: getSprint('demo-project-1', 'Sprint 1'),
+    assigneeId: DEMO_USER.id,
+    assignee: DEMO_USER_SUMMARY,
   }),
   createTicket({
     id: 'demo-ticket-1-8',
@@ -341,6 +404,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     columnId: 'demo-col-1-4',
     sprintId: 'demo-sprint-1-1',
     sprint: getSprint('demo-project-1', 'Sprint 1'),
+    assigneeId: getTeamMember(1).id,
+    assignee: getTeamMember(1),
   }),
 
   // ============================================================================
@@ -363,6 +428,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     sprint: getSprint('demo-project-2', 'Sprint 1'),
     labels: [getLabel('demo-project-2', 'bug')!, getLabel('demo-project-2', 'ui/ux')!],
     environment: 'Production',
+    assigneeId: getTeamMember(0).id,
+    assignee: getTeamMember(0),
   }),
   createTicket({
     id: 'demo-ticket-2-2',
@@ -378,6 +445,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     sprintId: 'demo-sprint-2-1',
     sprint: getSprint('demo-project-2', 'Sprint 1'),
     labels: [getLabel('demo-project-2', 'bug')!, getLabel('demo-project-2', 'ui/ux')!],
+    assigneeId: getTeamMember(2).id,
+    assignee: getTeamMember(2),
   }),
 
   // In Progress column
@@ -418,6 +487,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     sprintId: 'demo-sprint-2-1',
     sprint: getSprint('demo-project-2', 'Sprint 1'),
     labels: [getLabel('demo-project-2', 'bug')!, getLabel('demo-project-2', 'backend')!],
+    assigneeId: getTeamMember(1).id,
+    assignee: getTeamMember(1),
   }),
 
   // Done column

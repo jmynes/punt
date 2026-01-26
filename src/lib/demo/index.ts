@@ -6,7 +6,7 @@
  * with data persisted to localStorage.
  */
 
-export { DEMO_STORAGE_PREFIX, DEMO_USER, isDemoMode } from './demo-config'
+export { DEMO_STORAGE_PREFIX, DEMO_TEAM_MEMBERS, DEMO_USER, isDemoMode } from './demo-config'
 export {
   DEMO_COLUMNS,
   DEMO_LABELS,
@@ -14,6 +14,7 @@ export {
   DEMO_PROJECTS,
   DEMO_ROLE,
   DEMO_SPRINTS,
+  DEMO_TEAM_SUMMARIES,
   DEMO_TICKETS,
   DEMO_USER_SUMMARY,
   getColumnsWithTickets,

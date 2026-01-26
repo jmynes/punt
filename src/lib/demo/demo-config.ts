@@ -15,10 +15,47 @@ export const DEMO_USER = {
   name: 'Demo User',
   email: 'demo@punt.app',
   avatar: null,
-  isSystemAdmin: false,
+  isSystemAdmin: true,
   isActive: true,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 } as const
+
+// Additional demo team members
+export const DEMO_TEAM_MEMBERS = [
+  {
+    id: 'demo-user-2',
+    username: 'sarah',
+    name: 'Sarah Chen',
+    email: 'sarah@punt.app',
+    avatar: null,
+    isSystemAdmin: false,
+    isActive: true,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  },
+  {
+    id: 'demo-user-3',
+    username: 'marcus',
+    name: 'Marcus Johnson',
+    email: 'marcus@punt.app',
+    avatar: null,
+    isSystemAdmin: false,
+    isActive: true,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  },
+  {
+    id: 'demo-user-4',
+    username: 'emily',
+    name: 'Emily Rodriguez',
+    email: 'emily@punt.app',
+    avatar: null,
+    isSystemAdmin: false,
+    isActive: true,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  },
+] as const
 
 export const DEMO_STORAGE_PREFIX = 'punt-demo-'
