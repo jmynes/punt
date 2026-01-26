@@ -32,11 +32,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-zinc-950`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-zinc-950 h-screen flex flex-col overflow-hidden`}
       >
         <Providers>
           <DemoBanner />
-          {children}
+          <div className="flex-1 min-h-0 flex flex-col">{children}</div>
           <Toaster position="top-right" />
         </Providers>
       </body>

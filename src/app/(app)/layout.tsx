@@ -6,7 +6,7 @@ import { Footer, Header, MobileNav, Sidebar } from '@/components/layout'
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="relative h-screen flex flex-col overflow-hidden">
+    <div className="relative h-full flex flex-col overflow-hidden">
       <EmailVerificationBanner />
       <Header />
       <div className="flex flex-1 overflow-hidden">
