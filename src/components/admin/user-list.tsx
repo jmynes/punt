@@ -735,8 +735,14 @@ export function UserList() {
     return (
       <Card
         key={user.id}
-        onClick={(e) => handleSelect(user.id, e.shiftKey)}
-        className={`border-zinc-800 bg-zinc-900/50 transition-all duration-150 cursor-pointer select-none ${
+        onClick={(e) => {
+          if (e.shiftKey) {
+            e.preventDefault()
+            window.getSelection()?.removeAllRanges()
+          }
+          handleSelect(user.id, e.shiftKey)
+        }}
+        className={`border-zinc-800 bg-zinc-900/50 transition-all duration-150 cursor-pointer ${
           isSelected
             ? 'ring-1 ring-amber-500/50 bg-amber-500/5 border-amber-500/30'
             : 'hover:bg-zinc-900/80'
