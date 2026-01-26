@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -32,6 +32,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { getTabId } from '@/hooks/use-realtime'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import { useAdminUndoStore } from '@/stores/admin-undo-store'
 
 interface ProjectRole {
   id: string
@@ -148,6 +149,7 @@ export default function AdminUserProfilePage() {
   const params = useParams()
   const queryClient = useQueryClient()
   const userId = params.userId as string
+  const { pushMemberRoleChange, undo, redo, canUndo, canRedo } = useAdminUndoStore()
 
   const {
     data: user,
@@ -164,6 +166,102 @@ export default function AdminUserProfilePage() {
       return res.json()
     },
   })
+
+  // Helper to perform role change API call
+  const performRoleChange = useCallback(
+    async (
+      membershipId: string,
+      projectId: string,
+      roleId: string,
+      roleName: string,
+      isUndo = false,
+    ) => {
+      const res = await fetch(`/api/projects/${projectId}/members/${membershipId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify({ roleId }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to update role')
+      }
+
+      // Invalidate the cache to get fresh data
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId] })
+
+      toast.success(isUndo ? `Role reverted to ${roleName}` : `Role updated to ${roleName}`)
+    },
+    [queryClient, userId],
+  )
+
+  // Handle undo
+  const handleUndo = useCallback(async () => {
+    const action = undo()
+    if (!action) return
+
+    if (action.type === 'memberRoleChange') {
+      try {
+        await performRoleChange(
+          action.member.membershipId,
+          action.member.projectId,
+          action.member.previousRoleId,
+          action.member.previousRoleName,
+          true,
+        )
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to undo')
+        // Re-push the action since undo failed
+        pushMemberRoleChange(action.member)
+      }
+    }
+  }, [undo, performRoleChange, pushMemberRoleChange])
+
+  // Handle redo
+  const handleRedo = useCallback(async () => {
+    const action = redo()
+    if (!action) return
+
+    if (action.type === 'memberRoleChange') {
+      try {
+        await performRoleChange(
+          action.member.membershipId,
+          action.member.projectId,
+          action.member.newRoleId,
+          action.member.newRoleName,
+          false,
+        )
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to redo')
+      }
+    }
+  }, [redo, performRoleChange])
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+      const modKey = isMac ? e.metaKey : e.ctrlKey
+
+      if (modKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        if (canUndo()) {
+          handleUndo()
+        }
+      } else if (modKey && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault()
+        if (canRedo()) {
+          handleRedo()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [canUndo, canRedo, handleUndo, handleRedo])
 
   const handleToggleAdmin = async () => {
     if (!user) return
@@ -265,6 +363,9 @@ export default function AdminUserProfilePage() {
     const membership = user.projects.find((p) => p.id === membershipId)
     if (!membership || membership.roleId === newRoleId) return
 
+    const previousRoleId = membership.roleId
+    const previousRoleName = membership.role.name
+
     // Optimistic update
     queryClient.setQueryData<UserDetails>(['admin', 'users', userId], (old) => {
       if (!old) return old
@@ -295,7 +396,24 @@ export default function AdminUserProfilePage() {
         throw new Error(data.error || 'Failed to update role')
       }
 
-      toast.success(`Role updated to ${newRoleName}`)
+      // Push to undo stack
+      pushMemberRoleChange({
+        membershipId,
+        projectId,
+        targetUserId: userId,
+        userName: user.name,
+        previousRoleId,
+        previousRoleName,
+        newRoleId,
+        newRoleName,
+      })
+
+      toast.success(`Role updated to ${newRoleName}`, {
+        action: {
+          label: 'Undo',
+          onClick: handleUndo,
+        },
+      })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update role')
     }

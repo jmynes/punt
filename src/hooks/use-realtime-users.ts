@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { brandingKeys } from '@/hooks/queries/use-branding'
 import { getTabId } from '@/hooks/use-realtime'
-import type { BrandingEvent, SettingsEvent, UserEvent } from '@/lib/events'
+import type { BrandingEvent, MemberEvent, SettingsEvent, UserEvent } from '@/lib/events'
 
 // Reconnection config
 const INITIAL_RECONNECT_DELAY = 1000
@@ -19,7 +19,7 @@ interface ConnectedEvent {
   listenerId: string
 }
 
-type SSEEvent = UserEvent | BrandingEvent | SettingsEvent | ConnectedEvent
+type SSEEvent = UserEvent | BrandingEvent | SettingsEvent | MemberEvent | ConnectedEvent
 
 /**
  * Hook for real-time user profile synchronization via Server-Sent Events
@@ -145,6 +145,12 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
         if (data.type === 'settings.roles.updated') {
           // Invalidate role permissions query to fetch new settings
           queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+        }
+
+        // Handle member role updates
+        if (data.type === 'member.role.updated') {
+          // Invalidate the user details query if viewing that user's profile
+          queryClient.invalidateQueries({ queryKey: ['admin', 'users', data.targetUserId] })
         }
       } catch {
         // Ignore parse errors (could be keepalive comments)
