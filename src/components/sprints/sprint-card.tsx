@@ -198,29 +198,31 @@ export function SprintCard({ sprint, projectId, ticketCount = 0, onDelete }: Spr
           </div>
         )}
 
-        {/* Action buttons */}
-        <div className="flex gap-2 pt-2">
-          {isPlanning && (
-            <Button
-              size="sm"
-              onClick={() => openSprintStart(sprint.id)}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Play className="h-3 w-3 mr-1" />
-              Start Sprint
-            </Button>
-          )}
-          {isActive && expired && (
-            <Button
-              size="sm"
-              onClick={() => openSprintComplete(sprint.id)}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-            >
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-              Complete
-            </Button>
-          )}
-        </div>
+        {/* Action buttons - only show if user can manage sprints */}
+        {canManageSprints && (
+          <div className="flex gap-2 pt-2">
+            {isPlanning && (
+              <Button
+                size="sm"
+                onClick={() => openSprintStart(sprint.id)}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Play className="h-3 w-3 mr-1" />
+                Start Sprint
+              </Button>
+            )}
+            {isActive && expired && (
+              <Button
+                size="sm"
+                onClick={() => openSprintComplete(sprint.id)}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Complete
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
-import { requireAuth, requireMembership } from '@/lib/auth-helpers'
+import { z } from 'zod'
+import { handleApiError, validationError } from '@/lib/api-utils'
+import { requireAuth, requireMembership, requirePermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { PERMISSIONS } from '@/lib/permissions'
+
+const createColumnSchema = z.object({
+  name: z.string().min(1).max(50),
+})
 
 // Default columns to create for new projects
 // Note: "Backlog" is not a column - tickets without a sprint are in the backlog view
@@ -73,15 +80,57 @@ export async function GET(
 
     return NextResponse.json(columns)
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Unauthorized') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      if (error.message.startsWith('Forbidden:')) {
-        return NextResponse.json({ error: error.message }, { status: 403 })
-      }
+    return handleApiError(error, 'fetch columns')
+  }
+}
+
+/**
+ * POST /api/projects/[projectId]/columns - Create a new column
+ * Requires board.manage permission
+ */
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ projectId: string }> },
+) {
+  try {
+    const user = await requireAuth()
+    const { projectId } = await params
+
+    // Check board.manage permission
+    await requirePermission(user.id, projectId, PERMISSIONS.BOARD_MANAGE)
+
+    const body = await request.json()
+    const parsed = createColumnSchema.safeParse(body)
+
+    if (!parsed.success) {
+      return validationError(parsed)
     }
-    console.error('Failed to fetch columns:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+
+    // Get the highest order to append the new column
+    const lastColumn = await db.column.findFirst({
+      where: { projectId },
+      orderBy: { order: 'desc' },
+      select: { order: true },
+    })
+
+    const newOrder = (lastColumn?.order ?? -1) + 1
+
+    const column = await db.column.create({
+      data: {
+        name: parsed.data.name,
+        order: newOrder,
+        projectId,
+      },
+      select: {
+        id: true,
+        name: true,
+        order: true,
+        projectId: true,
+      },
+    })
+
+    return NextResponse.json(column, { status: 201 })
+  } catch (error) {
+    return handleApiError(error, 'create column')
   }
 }

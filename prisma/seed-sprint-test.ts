@@ -94,7 +94,7 @@ async function main() {
       name: 'Member',
       color: '#6b7280',
       position: 2,
-      permissions: '["tickets.create","tickets.manage_own"]',
+      permissions: '["tickets.create","tickets.manage_own","tickets.manage_any"]',
     },
     { name: 'Viewer', color: '#71717a', position: 3, permissions: '[]' },
   ]
