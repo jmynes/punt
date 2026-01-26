@@ -539,6 +539,9 @@ export function UserList() {
     const action = undo()
     if (!action) return
 
+    // Skip member role changes - those are handled in the user profile page
+    if (action.type === 'memberRoleChange') return
+
     try {
       let updates: Partial<User>
       let verb: string
@@ -585,6 +588,9 @@ export function UserList() {
   const handleRedo = useCallback(async () => {
     const action = redo()
     if (!action) return
+
+    // Skip member role changes - those are handled in the user profile page
+    if (action.type === 'memberRoleChange') return
 
     try {
       let updates: Partial<User>
