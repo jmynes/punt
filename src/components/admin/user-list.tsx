@@ -17,10 +17,12 @@ import {
   Square,
   Trash2,
   UserCheck,
+  User as UserIcon,
   Users,
   UserX,
   X,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -813,6 +815,16 @@ export function UserList() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+                <DropdownMenuItem
+                  asChild
+                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                >
+                  <Link href={`/admin/users/${user.id}`}>
+                    <UserIcon className="h-4 w-4 mr-2" />
+                    View profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-zinc-800" />
                 <DropdownMenuItem
                   onClick={() =>
                     updateUser.mutate({
