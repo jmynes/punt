@@ -108,7 +108,16 @@ export function UserList() {
   const [deleteError, setDeleteError] = useState('')
 
   // Undo store
-  const { pushUserDisable, pushUserEnable, undo, redo, canUndo, canRedo } = useAdminUndoStore()
+  const {
+    pushUserDisable,
+    pushUserEnable,
+    pushUserMakeAdmin,
+    pushUserRemoveAdmin,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useAdminUndoStore()
 
   // Filter and sort state
   const [search, setSearch] = useState('')
@@ -158,7 +167,15 @@ export function UserList() {
   }, [users])
 
   const updateUser = useMutation({
-    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<User> }) => {
+    mutationFn: async ({
+      userId,
+      updates,
+      previousUser,
+    }: {
+      userId: string
+      updates: Partial<User>
+      previousUser?: User
+    }) => {
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -169,17 +186,27 @@ export function UserList() {
         throw new Error(error.error || 'Failed to update user')
       }
       const updatedUser = await res.json()
-      return { user: updatedUser, updates }
+      return { user: updatedUser, updates, previousUser }
     },
-    onSuccess: ({ user, updates }) => {
+    onSuccess: ({ user, updates, previousUser }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
-      // Show toast for admin status changes
-      if ('isSystemAdmin' in updates) {
+      // Show toast for admin status changes and track for undo
+      if ('isSystemAdmin' in updates && previousUser) {
+        const userSnapshot = {
+          id: previousUser.id,
+          name: previousUser.name,
+          email: previousUser.email,
+          isSystemAdmin: previousUser.isSystemAdmin,
+          isActive: previousUser.isActive,
+        }
+
         if (updates.isSystemAdmin) {
-          toast.success(`${user.name} is now an admin`)
+          pushUserMakeAdmin([userSnapshot])
+          toast.success(`${user.name} is now an admin (Ctrl+Z to undo)`)
         } else {
-          toast.success(`${user.name} is no longer an admin`)
+          pushUserRemoveAdmin([userSnapshot])
+          toast.success(`${user.name} is no longer an admin (Ctrl+Z to undo)`)
         }
       }
     },
@@ -213,6 +240,9 @@ export function UserList() {
   // Bulk update mutation
   const bulkUpdateUsers = useMutation({
     mutationFn: async ({ userIds, updates }: { userIds: string[]; updates: Partial<User> }) => {
+      // Get users before update for undo tracking
+      const usersBeforeUpdate = users?.filter((u) => userIds.includes(u.id)) || []
+
       const results = await Promise.allSettled(
         userIds.map((userId) =>
           fetch(`/api/admin/users/${userId}`, {
@@ -227,10 +257,27 @@ export function UserList() {
       )
       const succeeded = results.filter((r) => r.status === 'fulfilled').length
       const failed = results.filter((r) => r.status === 'rejected').length
-      return { succeeded, failed, updates }
+      return { succeeded, failed, updates, usersBeforeUpdate }
     },
-    onSuccess: ({ succeeded, failed, updates }) => {
+    onSuccess: ({ succeeded, failed, updates, usersBeforeUpdate }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+
+      // Track admin changes for undo
+      if ('isSystemAdmin' in updates && succeeded > 0) {
+        const userSnapshots = usersBeforeUpdate.slice(0, succeeded).map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          isSystemAdmin: u.isSystemAdmin,
+          isActive: u.isActive,
+        }))
+
+        if (updates.isSystemAdmin) {
+          pushUserMakeAdmin(userSnapshots)
+        } else {
+          pushUserRemoveAdmin(userSnapshots)
+        }
+      }
 
       // Create specific message for admin status changes
       let message: string
@@ -244,7 +291,7 @@ export function UserList() {
       }
 
       if (failed === 0) {
-        toast.success(message)
+        toast.success(`${message} (Ctrl+Z to undo)`)
       } else {
         toast.warning(`${message}, failed ${failed}`)
       }
@@ -454,21 +501,39 @@ export function UserList() {
     if (!action) return
 
     try {
-      // Undo disable -> re-enable, Undo enable -> re-disable
-      const newIsActive = action.type === 'userDisable'
+      let updates: Partial<User>
+      let verb: string
+
+      switch (action.type) {
+        case 'userDisable':
+          updates = { isActive: true }
+          verb = 'Re-enabled'
+          break
+        case 'userEnable':
+          updates = { isActive: false }
+          verb = 'Re-disabled'
+          break
+        case 'userMakeAdmin':
+          updates = { isSystemAdmin: false }
+          verb = 'Removed admin from'
+          break
+        case 'userRemoveAdmin':
+          updates = { isSystemAdmin: true }
+          verb = 'Restored admin to'
+          break
+      }
 
       await Promise.all(
         action.users.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isActive: newIsActive }),
+            body: JSON.stringify(updates),
           }),
         ),
       )
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
-      const verb = action.type === 'userDisable' ? 'Re-enabled' : 'Re-disabled'
       toast.success(
         `${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Y to redo)`,
       )
@@ -483,21 +548,39 @@ export function UserList() {
     if (!action) return
 
     try {
-      // Redo disable -> disable again, Redo enable -> enable again
-      const newIsActive = action.type === 'userEnable'
+      let updates: Partial<User>
+      let verb: string
+
+      switch (action.type) {
+        case 'userDisable':
+          updates = { isActive: false }
+          verb = 'Re-disabled'
+          break
+        case 'userEnable':
+          updates = { isActive: true }
+          verb = 'Re-enabled'
+          break
+        case 'userMakeAdmin':
+          updates = { isSystemAdmin: true }
+          verb = 'Re-granted admin to'
+          break
+        case 'userRemoveAdmin':
+          updates = { isSystemAdmin: false }
+          verb = 'Re-removed admin from'
+          break
+      }
 
       await Promise.all(
         action.users.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isActive: newIsActive }),
+            body: JSON.stringify(updates),
           }),
         ),
       )
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
-      const verb = action.type === 'userDisable' ? 'Re-disabled' : 'Re-enabled'
       toast.success(
         `${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Z to undo)`,
       )
@@ -654,6 +737,7 @@ export function UserList() {
                     updateUser.mutate({
                       userId: user.id,
                       updates: { isSystemAdmin: !user.isSystemAdmin },
+                      previousUser: user,
                     })
                   }
                   className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"

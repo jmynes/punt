@@ -9,7 +9,7 @@ interface UserSnapshot {
 }
 
 interface AdminUndoAction {
-  type: 'userDisable' | 'userEnable'
+  type: 'userDisable' | 'userEnable' | 'userMakeAdmin' | 'userRemoveAdmin'
   users: UserSnapshot[]
   timestamp: number
 }
@@ -21,6 +21,8 @@ interface AdminUndoState {
   // Push a user status change action
   pushUserDisable: (users: UserSnapshot[]) => void
   pushUserEnable: (users: UserSnapshot[]) => void
+  pushUserMakeAdmin: (users: UserSnapshot[]) => void
+  pushUserRemoveAdmin: (users: UserSnapshot[]) => void
 
   // Undo the most recent action
   undo: () => AdminUndoAction | undefined
@@ -60,6 +62,34 @@ export const useAdminUndoStore = create<AdminUndoState>((set, get) => ({
         ...state.undoStack,
         {
           type: 'userEnable',
+          users,
+          timestamp: Date.now(),
+        },
+      ],
+      redoStack: [],
+    }))
+  },
+
+  pushUserMakeAdmin: (users) => {
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          type: 'userMakeAdmin',
+          users,
+          timestamp: Date.now(),
+        },
+      ],
+      redoStack: [],
+    }))
+  },
+
+  pushUserRemoveAdmin: (users) => {
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          type: 'userRemoveAdmin',
           users,
           timestamp: Date.now(),
         },
