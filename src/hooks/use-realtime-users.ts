@@ -96,8 +96,25 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
             updateSession()
           }
 
-          // Always invalidate admin user queries so the list refreshes
-          queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+          // Update the admin users cache directly instead of refetching
+          queryClient.setQueriesData<
+            Array<{ id: string; isSystemAdmin?: boolean; isActive?: boolean; name?: string }>
+          >({ queryKey: ['admin', 'users'] }, (oldData) => {
+            if (!oldData) return oldData
+            return oldData.map((user) => {
+              if (user.id === data.userId && data.changes) {
+                return {
+                  ...user,
+                  ...(data.changes.isSystemAdmin !== undefined && {
+                    isSystemAdmin: data.changes.isSystemAdmin,
+                  }),
+                  ...(data.changes.isActive !== undefined && { isActive: data.changes.isActive }),
+                  ...(data.changes.name !== undefined && { name: data.changes.name }),
+                }
+              }
+              return user
+            })
+          })
         }
 
         // Handle branding updates
