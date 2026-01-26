@@ -15,7 +15,12 @@ import {
   PERMISSION_METADATA,
   type Permission,
 } from '@/lib/permissions/constants'
-import { type DefaultRoleName, ROLE_COLORS, ROLE_DESCRIPTIONS } from '@/lib/permissions/presets'
+import {
+  type DefaultRoleName,
+  ROLE_COLORS,
+  ROLE_DESCRIPTIONS,
+  ROLE_PRESETS,
+} from '@/lib/permissions/presets'
 
 interface RolePermissionsData {
   rolePermissions: Record<DefaultRoleName, Permission[]>
@@ -29,6 +34,7 @@ export function RolePermissionsForm() {
   const queryClient = useQueryClient()
   const [localPermissions, setLocalPermissions] = useState<Record<string, Permission[]>>({})
   const [hasChanges, setHasChanges] = useState(false)
+  const [isAtDefaults, setIsAtDefaults] = useState(true)
 
   const { data, isLoading, error } = useQuery<RolePermissionsData>({
     queryKey: ['admin', 'settings', 'roles'],
@@ -84,7 +90,7 @@ export function RolePermissionsForm() {
     }
   }, [data])
 
-  // Check for changes
+  // Check for changes from saved state
   useEffect(() => {
     if (data?.rolePermissions) {
       const changed = Object.keys(localPermissions).some((role) => {
@@ -95,6 +101,16 @@ export function RolePermissionsForm() {
       setHasChanges(changed)
     }
   }, [localPermissions, data])
+
+  // Check if current permissions match defaults
+  useEffect(() => {
+    const matchesDefaults = ROLE_ORDER.every((role) => {
+      const current = localPermissions[role] || []
+      const defaults = ROLE_PRESETS[role] || []
+      return current.length === defaults.length && defaults.every((p) => current.includes(p))
+    })
+    setIsAtDefaults(matchesDefaults)
+  }, [localPermissions])
 
   const togglePermission = (role: DefaultRoleName, permission: Permission) => {
     // Owner always has all permissions
@@ -155,7 +171,7 @@ export function RolePermissionsForm() {
                 variant="outline"
                 size="sm"
                 onClick={handleReset}
-                disabled={resetMutation.isPending}
+                disabled={isAtDefaults || resetMutation.isPending}
                 className="border-zinc-700 text-zinc-400 hover:text-zinc-100"
               >
                 {resetMutation.isPending ? (
