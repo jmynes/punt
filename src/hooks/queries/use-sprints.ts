@@ -173,6 +173,11 @@ export function useCreateSprint(projectId: string) {
         })
         return {
           ...sprint,
+          budget: null,
+          completedAt: null,
+          completedById: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
           _count: { tickets: 0 },
           completedTicketCount: 0,
           incompleteTicketCount: 0,
@@ -229,6 +234,11 @@ export function useUpdateSprint(projectId: string) {
         if (!sprint) throw new Error('Sprint not found')
         return {
           ...sprint,
+          budget: null,
+          completedAt: null,
+          completedById: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
           _count: { tickets: 0 },
           completedTicketCount: 0,
           incompleteTicketCount: 0,
