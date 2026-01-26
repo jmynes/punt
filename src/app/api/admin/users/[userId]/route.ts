@@ -35,8 +35,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
         updatedAt: true,
         projects: {
           select: {
+            id: true, // membership ID for updating
+            roleId: true,
             role: {
               select: {
+                id: true,
                 name: true,
               },
             },
@@ -46,6 +49,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
                 name: true,
                 key: true,
                 color: true,
+                roles: {
+                  where: { isDefault: true },
+                  select: {
+                    id: true,
+                    name: true,
+                    position: true,
+                  },
+                  orderBy: { position: 'asc' },
+                },
               },
             },
           },

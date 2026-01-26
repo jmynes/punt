@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   Calendar,
+  Check,
+  ChevronsUpDown,
   FolderKanban,
   Mail,
   Shield,
@@ -14,16 +16,34 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { getTabId } from '@/hooks/use-realtime'
-import { getAvatarColor, getInitials } from '@/lib/utils'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+
+interface ProjectRole {
+  id: string
+  name: string
+  position: number
+}
 
 interface ProjectMembership {
+  id: string // membership ID
+  roleId: string
   role: {
+    id: string
     name: string
   }
   project: {
@@ -31,6 +51,7 @@ interface ProjectMembership {
     name: string
     key: string
     color: string | null
+    roles: ProjectRole[]
   }
 }
 
@@ -47,6 +68,80 @@ interface UserDetails {
   _count: {
     projects: number
   }
+}
+
+function RoleSelector({
+  membership,
+  onRoleChange,
+}: {
+  membership: ProjectMembership
+  onRoleChange: (roleId: string, roleName: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  const getRoleStyle = (roleName: string) => {
+    switch (roleName) {
+      case 'Owner':
+        return 'border-amber-500/50 text-amber-400'
+      case 'Admin':
+        return 'border-blue-500/50 text-blue-400'
+      default:
+        return 'border-zinc-600 text-zinc-400'
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(
+            'w-[110px] justify-between font-normal',
+            getRoleStyle(membership.role.name),
+          )}
+        >
+          {membership.role.name}
+          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[140px] p-0" align="end">
+        <Command>
+          <CommandList>
+            <CommandEmpty>No roles found</CommandEmpty>
+            <CommandGroup>
+              {membership.project.roles.map((role) => (
+                <CommandItem
+                  key={role.id}
+                  value={role.name}
+                  onSelect={() => {
+                    if (role.id !== membership.roleId) {
+                      onRoleChange(role.id, role.name)
+                    }
+                    setOpen(false)
+                  }}
+                  className={cn(
+                    'cursor-pointer',
+                    role.name === 'Owner' && 'text-amber-400',
+                    role.name === 'Admin' && 'text-blue-400',
+                    role.name === 'Member' && 'text-zinc-400',
+                  )}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      membership.roleId === role.id ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                  {role.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 export default function AdminUserProfilePage() {
@@ -155,6 +250,54 @@ export default function AdminUserProfilePage() {
       toast.success(newValue ? `${user.name} has been enabled` : `${user.name} has been disabled`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update user')
+    }
+  }
+
+  const handleRoleChange = async (
+    membershipId: string,
+    projectId: string,
+    newRoleId: string,
+    newRoleName: string,
+  ) => {
+    if (!user) return
+
+    const previousUser = user
+    const membership = user.projects.find((p) => p.id === membershipId)
+    if (!membership || membership.roleId === newRoleId) return
+
+    // Optimistic update
+    queryClient.setQueryData<UserDetails>(['admin', 'users', userId], (old) => {
+      if (!old) return old
+      return {
+        ...old,
+        projects: old.projects.map((p) =>
+          p.id === membershipId
+            ? { ...p, roleId: newRoleId, role: { ...p.role, id: newRoleId, name: newRoleName } }
+            : p,
+        ),
+      }
+    })
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members/${membershipId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify({ roleId: newRoleId }),
+      })
+
+      if (!res.ok) {
+        // Rollback on error
+        queryClient.setQueryData(['admin', 'users', userId], previousUser)
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to update role')
+      }
+
+      toast.success(`Role updated to ${newRoleName}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update role')
     }
   }
 
@@ -321,37 +464,38 @@ export default function AdminUserProfilePage() {
               <p className="text-zinc-500 text-sm">No project memberships</p>
             ) : (
               <div className="space-y-2">
-                {user.projects.map(({ role, project }) => (
-                  <Link
-                    key={project.id}
-                    href={`/projects/${project.id}/board`}
-                    className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg hover:bg-zinc-800 transition-colors"
+                {user.projects.map((membership) => (
+                  <div
+                    key={membership.id}
+                    className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg"
                   >
-                    <div className="flex items-center gap-3">
+                    <Link
+                      href={`/projects/${membership.project.id}/board`}
+                      className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                    >
                       <div
                         className="w-8 h-8 rounded flex items-center justify-center text-white font-semibold text-sm"
-                        style={{ backgroundColor: project.color || '#71717a' }}
+                        style={{ backgroundColor: membership.project.color || '#71717a' }}
                       >
-                        {project.key.charAt(0)}
+                        {membership.project.key.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-zinc-100 font-medium">{project.name}</p>
-                        <p className="text-zinc-500 text-sm">{project.key}</p>
+                        <p className="text-zinc-100 font-medium">{membership.project.name}</p>
+                        <p className="text-zinc-500 text-sm">{membership.project.key}</p>
                       </div>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        role.name === 'owner'
-                          ? 'border-amber-500/50 text-amber-400'
-                          : role.name === 'admin'
-                            ? 'border-blue-500/50 text-blue-400'
-                            : 'border-zinc-600 text-zinc-400'
+                    </Link>
+                    <RoleSelector
+                      membership={membership}
+                      onRoleChange={(newRoleId, newRoleName) =>
+                        handleRoleChange(
+                          membership.id,
+                          membership.project.id,
+                          newRoleId,
+                          newRoleName,
+                        )
                       }
-                    >
-                      {role.name}
-                    </Badge>
-                  </Link>
+                    />
+                  </div>
                 ))}
               </div>
             )}
