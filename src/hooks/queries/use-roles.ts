@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import type { Permission, RoleWithPermissions } from '@/types'
 
 // Query keys for roles
@@ -18,6 +19,28 @@ export function useProjectRoles(projectId: string) {
   return useQuery<RoleWithPermissions[]>({
     queryKey: roleKeys.byProject(projectId),
     queryFn: async () => {
+      // Demo mode: return demo roles
+      if (isDemoMode()) {
+        const roles = demoStorage.getRoles(projectId)
+        // Return roles with all permissions enabled for owner
+        return roles.map((role) => ({
+          ...role,
+          permissions: [
+            'tickets:create',
+            'tickets:edit',
+            'tickets:delete',
+            'tickets:assign',
+            'sprints:manage',
+            'labels:manage',
+            'members:view',
+            'members:invite',
+            'members:manage',
+            'roles:manage',
+            'project:settings',
+          ] as Permission[],
+        }))
+      }
+
       const res = await fetch(`/api/projects/${projectId}/roles`)
       if (!res.ok) {
         const error = await res.json()

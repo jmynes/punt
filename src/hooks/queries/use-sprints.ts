@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import type {
   ProjectSprintSettingsData,
   SprintCompletionOptions,
@@ -27,6 +28,20 @@ export function useProjectSprints(projectId: string) {
   return useQuery<SprintWithMetrics[]>({
     queryKey: sprintKeys.byProject(projectId),
     queryFn: async () => {
+      // Demo mode: return from localStorage
+      if (isDemoMode()) {
+        const sprints = demoStorage.getSprints(projectId)
+        // Add empty metrics for demo sprints
+        return sprints.map((s) => ({
+          ...s,
+          _count: { tickets: 0 },
+          completedTicketCount: 0,
+          incompleteTicketCount: 0,
+          completedStoryPoints: 0,
+          incompleteStoryPoints: 0,
+        }))
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints`)
       if (!res.ok) {
         const error = await res.json()
@@ -46,6 +61,20 @@ export function useActiveSprint(projectId: string) {
   return useQuery<SprintWithMetrics | null>({
     queryKey: sprintKeys.active(projectId),
     queryFn: async () => {
+      // Demo mode: return from localStorage
+      if (isDemoMode()) {
+        const sprint = demoStorage.getActiveSprint(projectId)
+        if (!sprint) return null
+        return {
+          ...sprint,
+          _count: { tickets: 0 },
+          completedTicketCount: 0,
+          incompleteTicketCount: 0,
+          completedStoryPoints: 0,
+          incompleteStoryPoints: 0,
+        }
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints/active`)
       if (!res.ok) {
         const error = await res.json()
@@ -65,6 +94,21 @@ export function useSprintDetail(projectId: string, sprintId: string) {
   return useQuery<SprintWithMetrics>({
     queryKey: sprintKeys.detail(projectId, sprintId),
     queryFn: async () => {
+      // Demo mode: return from localStorage
+      if (isDemoMode()) {
+        const sprints = demoStorage.getSprints(projectId)
+        const sprint = sprints.find((s) => s.id === sprintId)
+        if (!sprint) throw new Error('Sprint not found')
+        return {
+          ...sprint,
+          _count: { tickets: 0 },
+          completedTicketCount: 0,
+          incompleteTicketCount: 0,
+          completedStoryPoints: 0,
+          incompleteStoryPoints: 0,
+        }
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}`)
       if (!res.ok) {
         const error = await res.json()
@@ -84,6 +128,15 @@ export function useSprintSettings(projectId: string) {
   return useQuery<ProjectSprintSettingsData>({
     queryKey: sprintKeys.settings(projectId),
     queryFn: async () => {
+      // Demo mode: return default settings
+      if (isDemoMode()) {
+        return {
+          defaultSprintDuration: 14,
+          autoCarryOverIncomplete: true,
+          doneColumnIds: [],
+        }
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints/settings`)
       if (!res.ok) {
         const error = await res.json()
@@ -110,6 +163,24 @@ export function useCreateSprint(projectId: string) {
       endDate?: Date | null
       budget?: number | null
     }) => {
+      // Demo mode: create in localStorage
+      if (isDemoMode()) {
+        const sprint = demoStorage.createSprint(projectId, {
+          name: data.name,
+          goal: data.goal ?? undefined,
+          startDate: data.startDate ?? undefined,
+          endDate: data.endDate ?? undefined,
+        })
+        return {
+          ...sprint,
+          _count: { tickets: 0 },
+          completedTicketCount: 0,
+          incompleteTicketCount: 0,
+          completedStoryPoints: 0,
+          incompleteStoryPoints: 0,
+        } as SprintWithMetrics
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints`, {
         method: 'POST',
         headers: {
@@ -152,6 +223,20 @@ export function useUpdateSprint(projectId: string) {
       endDate?: Date | null
       budget?: number | null
     }) => {
+      // Demo mode: update in localStorage
+      if (isDemoMode()) {
+        const sprint = demoStorage.updateSprint(projectId, sprintId, data)
+        if (!sprint) throw new Error('Sprint not found')
+        return {
+          ...sprint,
+          _count: { tickets: 0 },
+          completedTicketCount: 0,
+          incompleteTicketCount: 0,
+          completedStoryPoints: 0,
+          incompleteStoryPoints: 0,
+        } as SprintWithMetrics
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}`, {
         method: 'PATCH',
         headers: {
@@ -186,6 +271,12 @@ export function useDeleteSprint(projectId: string) {
 
   return useMutation({
     mutationFn: async (sprintId: string) => {
+      // Demo mode: delete from localStorage
+      if (isDemoMode()) {
+        demoStorage.deleteSprint(projectId, sprintId)
+        return { success: true }
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}`, {
         method: 'DELETE',
         headers: {
@@ -356,6 +447,18 @@ export function useUpdateTicketSprint(projectId: string) {
 
   return useMutation({
     mutationFn: async ({ ticketId, sprintId }: { ticketId: string; sprintId: string | null }) => {
+      // Demo mode: update in localStorage
+      if (isDemoMode()) {
+        const sprints = demoStorage.getSprints(projectId)
+        const sprint = sprintId ? sprints.find((s) => s.id === sprintId) : null
+        const updated = demoStorage.updateTicket(projectId, ticketId, {
+          sprintId,
+          sprint: sprint ?? null,
+        })
+        if (!updated) throw new Error('Ticket not found')
+        return updated
+      }
+
       const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
         method: 'PATCH',
         headers: {

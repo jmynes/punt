@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getTabId } from '@/hooks/use-realtime'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import type { LabelSummary } from '@/types'
 
 // Query keys for labels
@@ -18,6 +19,11 @@ export function useProjectLabels(projectId: string) {
   return useQuery<LabelSummary[]>({
     queryKey: labelKeys.byProject(projectId),
     queryFn: async () => {
+      // Demo mode: return from localStorage
+      if (isDemoMode()) {
+        return demoStorage.getLabels(projectId)
+      }
+
       const res = await fetch(`/api/projects/${projectId}/labels`)
       if (!res.ok) {
         const error = await res.json()
@@ -38,6 +44,11 @@ export function useCreateLabel(projectId: string) {
 
   return useMutation({
     mutationFn: async (data: { name: string; color?: string }) => {
+      // Demo mode: create in localStorage
+      if (isDemoMode()) {
+        return demoStorage.createLabel(projectId, data)
+      }
+
       const res = await fetch(`/api/projects/${projectId}/labels`, {
         method: 'POST',
         headers: {
@@ -108,6 +119,12 @@ export function useDeleteLabel(projectId: string) {
 
   return useMutation({
     mutationFn: async (labelId: string) => {
+      // Demo mode: delete from localStorage
+      if (isDemoMode()) {
+        demoStorage.deleteLabel(projectId, labelId)
+        return { success: true }
+      }
+
       const res = await fetch(`/api/projects/${projectId}/labels/${labelId}`, {
         method: 'DELETE',
         headers: {
