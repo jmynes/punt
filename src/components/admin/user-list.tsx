@@ -318,16 +318,16 @@ export function UserList() {
       // Create specific message for admin status changes
       let message: string
       if ('isSystemAdmin' in updates) {
-        const action = updates.isSystemAdmin
-          ? 'granted admin privileges to'
-          : 'removed admin privileges from'
+        const action = updates.isSystemAdmin ? 'granted super admin to' : 'removed super admin from'
         message = `Successfully ${action} ${succeeded} user${succeeded !== 1 ? 's' : ''}`
       } else {
         message = `Updated ${succeeded} user${succeeded !== 1 ? 's' : ''}`
       }
 
       const extra =
-        skipped > 0 ? ` (${skipped} already ${updates.isSystemAdmin ? 'admin' : 'non-admin'})` : ''
+        skipped > 0
+          ? ` (${skipped} already ${updates.isSystemAdmin ? 'super admin' : 'not super admin'})`
+          : ''
 
       if (failed === 0) {
         toast.success(`${message}${extra} (Ctrl+Z to undo)`)
@@ -783,7 +783,7 @@ export function UserList() {
                 )}
                 {user.isSystemAdmin && (
                   <Badge variant="outline" className="border-amber-500 text-amber-500 text-xs">
-                    Admin
+                    Super Admin
                   </Badge>
                 )}
                 {!user.isActive && (
@@ -947,9 +947,9 @@ export function UserList() {
       case 'enable':
         return `Enable ${count} user${count !== 1 ? 's' : ''}? They will be able to log in again.`
       case 'makeAdmin':
-        return `Grant admin privileges to ${count} user${count !== 1 ? 's' : ''}?`
+        return `Grant super admin privileges to ${count} user${count !== 1 ? 's' : ''}?`
       case 'removeAdmin':
-        return `Remove admin privileges from ${count} user${count !== 1 ? 's' : ''}?`
+        return `Remove super admin privileges from ${count} user${count !== 1 ? 's' : ''}?`
       default:
         return ''
     }
@@ -1322,8 +1322,8 @@ export function UserList() {
             <AlertDialogTitle className="text-zinc-100">
               {bulkAction === 'disable' && 'Disable Users'}
               {bulkAction === 'enable' && 'Enable Users'}
-              {bulkAction === 'makeAdmin' && 'Grant Admin Privileges'}
-              {bulkAction === 'removeAdmin' && 'Remove Admin Privileges'}
+              {bulkAction === 'makeAdmin' && 'Grant Super Admin Privileges'}
+              {bulkAction === 'removeAdmin' && 'Remove Super Admin Privileges'}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
               {getBulkActionDescription()}

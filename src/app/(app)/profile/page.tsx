@@ -597,7 +597,7 @@ export default function ProfilePage() {
               {stableUser.isSystemAdmin && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg max-w-md">
                   <Shield className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm text-amber-400">System Administrator</span>
+                  <span className="text-sm text-amber-400">Super Admin</span>
                 </div>
               )}
 

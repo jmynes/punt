@@ -502,7 +502,7 @@ export default function AdminUserProfilePage() {
                     className="bg-amber-500/20 text-amber-400 border-amber-500/30"
                   >
                     <Shield className="h-3 w-3 mr-1" />
-                    Admin
+                    Super Admin
                   </Badge>
                 )}
                 {!user.isActive && (
@@ -634,11 +634,11 @@ export default function AdminUserProfilePage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-lg">
               <div>
-                <p className="font-medium text-zinc-100">System Administrator</p>
+                <p className="font-medium text-zinc-100">Super Admin</p>
                 <p className="text-sm text-zinc-400">
                   {user.isSystemAdmin
-                    ? 'Has admin access to manage all users and settings'
-                    : 'Standard user without admin privileges'}
+                    ? 'Has full access to manage all users and settings'
+                    : 'Standard user without super admin privileges'}
                 </p>
               </div>
               <Button
@@ -654,12 +654,12 @@ export default function AdminUserProfilePage() {
                 {user.isSystemAdmin ? (
                   <>
                     <ShieldOff className="h-4 w-4 mr-2" />
-                    Remove Admin
+                    Remove Super Admin
                   </>
                 ) : (
                   <>
                     <Shield className="h-4 w-4 mr-2" />
-                    Make Admin
+                    Make Super Admin
                   </>
                 )}
               </Button>

@@ -154,7 +154,7 @@ export function CreateUserDialog() {
               className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
             />
             <Label htmlFor="isSystemAdmin" className="text-zinc-300 cursor-pointer">
-              Make this user a system administrator
+              Make this user a super admin
             </Label>
           </div>
 
