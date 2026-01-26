@@ -96,11 +96,11 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
             updateSession()
           }
 
-          // Update the admin users cache directly instead of refetching
+          // Update the admin users list cache directly instead of refetching
           queryClient.setQueriesData<
             Array<{ id: string; isSystemAdmin?: boolean; isActive?: boolean; name?: string }>
-          >({ queryKey: ['admin', 'users'] }, (oldData) => {
-            if (!oldData) return oldData
+          >({ queryKey: ['admin', 'users'], exact: true }, (oldData) => {
+            if (!oldData || !Array.isArray(oldData)) return oldData
             return oldData.map((user) => {
               if (user.id === data.userId && data.changes) {
                 return {
@@ -114,6 +114,24 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
               }
               return user
             })
+          })
+
+          // Update individual user profile cache
+          queryClient.setQueryData<{
+            id: string
+            isSystemAdmin?: boolean
+            isActive?: boolean
+            name?: string
+          }>(['admin', 'users', data.userId], (oldData) => {
+            if (!oldData || !data.changes) return oldData
+            return {
+              ...oldData,
+              ...(data.changes.isSystemAdmin !== undefined && {
+                isSystemAdmin: data.changes.isSystemAdmin,
+              }),
+              ...(data.changes.isActive !== undefined && { isActive: data.changes.isActive }),
+              ...(data.changes.name !== undefined && { name: data.changes.name }),
+            }
           })
         }
 
