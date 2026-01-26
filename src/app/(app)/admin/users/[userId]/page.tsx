@@ -22,6 +22,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { getTabId } from '@/hooks/use-realtime'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 
+interface ProjectMembership {
+  role: 'owner' | 'admin' | 'member'
+  project: {
+    id: string
+    name: string
+    key: string
+    color: string | null
+  }
+}
+
 interface UserDetails {
   id: string
   email: string | null
@@ -31,6 +41,7 @@ interface UserDetails {
   isActive: boolean
   createdAt: string
   updatedAt: string
+  projects: ProjectMembership[]
   _count: {
     projects: number
   }
@@ -257,6 +268,59 @@ export default function AdminUserProfilePage() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Projects */}
+        <Card className="border-zinc-800 bg-zinc-900/50">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <FolderKanban className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-zinc-100">Projects</CardTitle>
+            </div>
+            <CardDescription className="text-zinc-500">
+              Projects this user has access to
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {user.projects.length === 0 ? (
+              <p className="text-zinc-500 text-sm">No project memberships</p>
+            ) : (
+              <div className="space-y-2">
+                {user.projects.map(({ role, project }) => (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}/board`}
+                    className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg hover:bg-zinc-800 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded flex items-center justify-center text-white font-semibold text-sm"
+                        style={{ backgroundColor: project.color || '#71717a' }}
+                      >
+                        {project.key.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-zinc-100 font-medium">{project.name}</p>
+                        <p className="text-zinc-500 text-sm">{project.key}</p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={
+                        role === 'owner'
+                          ? 'border-amber-500/50 text-amber-400'
+                          : role === 'admin'
+                            ? 'border-blue-500/50 text-blue-400'
+                            : 'border-zinc-600 text-zinc-400'
+                      }
+                    >
+                      {role}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

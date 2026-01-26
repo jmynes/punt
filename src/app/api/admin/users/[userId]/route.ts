@@ -33,6 +33,22 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        projects: {
+          select: {
+            role: true,
+            project: {
+              select: {
+                id: true,
+                name: true,
+                key: true,
+                color: true,
+              },
+            },
+          },
+          orderBy: {
+            project: { name: 'asc' },
+          },
+        },
         _count: {
           select: { projects: true },
         },
