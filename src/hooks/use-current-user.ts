@@ -11,12 +11,14 @@ import type { UserSummary } from '@/types'
  * In demo mode, always returns the demo user
  */
 export function useCurrentUser(): UserSummary | null {
-  const { data: session, status } = useSession()
-
-  // Demo mode: always return demo user
+  // Demo mode: return demo user without session hook
+  // isDemoMode() is constant based on env vars, safe to check before hooks
   if (isDemoMode()) {
     return DEMO_USER_SUMMARY
   }
+
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
+  const { data: session, status } = useSession()
 
   if (status === 'loading' || !session?.user) {
     return null
@@ -36,15 +38,12 @@ export function useCurrentUser(): UserSummary | null {
  * In demo mode, always returns authenticated
  */
 export function useIsAuthenticated(): { isAuthenticated: boolean; isLoading: boolean } {
-  const { status } = useSession()
-
-  // Demo mode: always authenticated
   if (isDemoMode()) {
-    return {
-      isAuthenticated: true,
-      isLoading: false,
-    }
+    return { isAuthenticated: true, isLoading: false }
   }
+
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
+  const { status } = useSession()
 
   return {
     isAuthenticated: status === 'authenticated',
@@ -57,15 +56,12 @@ export function useIsAuthenticated(): { isAuthenticated: boolean; isLoading: boo
  * In demo mode, returns false (demo user is not admin)
  */
 export function useIsSystemAdmin(): { isSystemAdmin: boolean; isLoading: boolean } {
-  const { data: session, status } = useSession()
-
-  // Demo mode: demo user is not a system admin
   if (isDemoMode()) {
-    return {
-      isSystemAdmin: false,
-      isLoading: false,
-    }
+    return { isSystemAdmin: false, isLoading: false }
   }
+
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
+  const { data: session, status } = useSession()
 
   return {
     isSystemAdmin: session?.user?.isSystemAdmin ?? false,

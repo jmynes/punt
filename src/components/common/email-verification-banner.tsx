@@ -6,8 +6,19 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useEmailVerificationStatus } from '@/hooks/queries/use-email-verification'
+import { isDemoMode } from '@/lib/demo'
 
+/**
+ * Wrapper that skips email verification banner in demo mode
+ */
 export function EmailVerificationBanner() {
+  if (isDemoMode()) {
+    return null
+  }
+  return <EmailVerificationBannerInner />
+}
+
+function EmailVerificationBannerInner() {
   const { data: session, status: sessionStatus } = useSession()
   const { data: verificationData, isLoading } = useEmailVerificationStatus()
   const [isDismissed, setIsDismissed] = useState(false)

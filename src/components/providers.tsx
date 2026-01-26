@@ -33,18 +33,24 @@ export function Providers({ children }: { children: ReactNode }) {
       }),
   )
 
-  const content = (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider delayDuration={300}>
-        <RealtimeUsersProvider>{children}</RealtimeUsersProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
-  )
-
-  // Demo mode: wrap with DemoInitializer, skip SessionProvider
+  // Demo mode: skip SessionProvider and RealtimeUsersProvider
   if (isDemoMode()) {
-    return <DemoInitializer>{content}</DemoInitializer>
+    return (
+      <DemoInitializer>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+        </QueryClientProvider>
+      </DemoInitializer>
+    )
   }
 
-  return <SessionProvider>{content}</SessionProvider>
+  return (
+    <SessionProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider delayDuration={300}>
+          <RealtimeUsersProvider>{children}</RealtimeUsersProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </SessionProvider>
+  )
 }
