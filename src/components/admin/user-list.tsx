@@ -706,7 +706,8 @@ export function UserList() {
     return (
       <Card
         key={user.id}
-        className={`border-zinc-800 bg-zinc-900/50 transition-all duration-150 ${
+        onClick={() => toggleSelect(user.id)}
+        className={`border-zinc-800 bg-zinc-900/50 transition-all duration-150 cursor-pointer ${
           isSelected
             ? 'ring-1 ring-amber-500/50 bg-amber-500/5 border-amber-500/30'
             : 'hover:bg-zinc-900/80'
@@ -717,6 +718,7 @@ export function UserList() {
             <Checkbox
               checked={isSelected}
               onCheckedChange={() => toggleSelect(user.id)}
+              onClick={(e) => e.stopPropagation()}
               className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
             />
             <Avatar>
@@ -763,7 +765,12 @@ export function UserList() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-100">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-zinc-400 hover:text-zinc-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
