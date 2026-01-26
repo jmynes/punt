@@ -23,7 +23,9 @@ import { getTabId } from '@/hooks/use-realtime'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 
 interface ProjectMembership {
-  role: 'owner' | 'admin' | 'member'
+  role: {
+    name: string
+  }
   project: {
     id: string
     name: string
@@ -308,14 +310,14 @@ export default function AdminUserProfilePage() {
                     <Badge
                       variant="outline"
                       className={
-                        role === 'owner'
+                        role.name === 'owner'
                           ? 'border-amber-500/50 text-amber-400'
-                          : role === 'admin'
+                          : role.name === 'admin'
                             ? 'border-blue-500/50 text-blue-400'
                             : 'border-zinc-600 text-zinc-400'
                       }
                     >
-                      {role}
+                      {role.name}
                     </Badge>
                   </Link>
                 ))}

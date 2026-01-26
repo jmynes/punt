@@ -35,7 +35,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
         updatedAt: true,
         projects: {
           select: {
-            role: true,
+            role: {
+              select: {
+                name: true,
+              },
+            },
             project: {
               select: {
                 id: true,
