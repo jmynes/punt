@@ -8,11 +8,30 @@ interface UserSnapshot {
   isActive: boolean
 }
 
-interface AdminUndoAction {
-  type: 'userDisable' | 'userEnable'
+interface MemberRoleSnapshot {
+  membershipId: string
+  projectId: string
+  targetUserId: string
+  userName: string
+  previousRoleId: string
+  previousRoleName: string
+  newRoleId: string
+  newRoleName: string
+}
+
+interface UserUndoAction {
+  type: 'userDisable' | 'userEnable' | 'userMakeAdmin' | 'userRemoveAdmin'
   users: UserSnapshot[]
   timestamp: number
 }
+
+interface MemberRoleUndoAction {
+  type: 'memberRoleChange'
+  member: MemberRoleSnapshot
+  timestamp: number
+}
+
+type AdminUndoAction = UserUndoAction | MemberRoleUndoAction
 
 interface AdminUndoState {
   undoStack: AdminUndoAction[]
@@ -21,6 +40,9 @@ interface AdminUndoState {
   // Push a user status change action
   pushUserDisable: (users: UserSnapshot[]) => void
   pushUserEnable: (users: UserSnapshot[]) => void
+  pushUserMakeAdmin: (users: UserSnapshot[]) => void
+  pushUserRemoveAdmin: (users: UserSnapshot[]) => void
+  pushMemberRoleChange: (member: MemberRoleSnapshot) => void
 
   // Undo the most recent action
   undo: () => AdminUndoAction | undefined
@@ -61,6 +83,48 @@ export const useAdminUndoStore = create<AdminUndoState>((set, get) => ({
         {
           type: 'userEnable',
           users,
+          timestamp: Date.now(),
+        },
+      ],
+      redoStack: [],
+    }))
+  },
+
+  pushUserMakeAdmin: (users) => {
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          type: 'userMakeAdmin',
+          users,
+          timestamp: Date.now(),
+        },
+      ],
+      redoStack: [],
+    }))
+  },
+
+  pushUserRemoveAdmin: (users) => {
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          type: 'userRemoveAdmin',
+          users,
+          timestamp: Date.now(),
+        },
+      ],
+      redoStack: [],
+    }))
+  },
+
+  pushMemberRoleChange: (member) => {
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          type: 'memberRoleChange',
+          member,
           timestamp: Date.now(),
         },
       ],

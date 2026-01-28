@@ -44,6 +44,16 @@ export type UserEventType = 'user.updated'
 export type BrandingEventType = 'branding.updated'
 
 /**
+ * Event types for settings operations
+ */
+export type SettingsEventType = 'settings.roles.updated'
+
+/**
+ * Event types for member operations
+ */
+export type MemberEventType = 'member.role.updated'
+
+/**
  * Payload for ticket events
  */
 export interface TicketEvent {
@@ -101,6 +111,8 @@ export interface UserEvent {
   changes?: {
     name?: string
     avatar?: string | null
+    isSystemAdmin?: boolean
+    isActive?: boolean
   }
 }
 
@@ -114,12 +126,45 @@ export interface BrandingEvent {
   timestamp: number
 }
 
+/**
+ * Payload for settings events
+ */
+export interface SettingsEvent {
+  type: SettingsEventType
+  userId: string
+  tabId?: string // Optional tab ID for self-skip
+  timestamp: number
+}
+
+/**
+ * Payload for member events
+ */
+export interface MemberEvent {
+  type: MemberEventType
+  memberId: string
+  targetUserId: string // The user whose role changed
+  projectId: string
+  userId: string // The user who made the change
+  tabId?: string // Optional tab ID for self-skip
+  timestamp: number
+  changes?: {
+    roleId?: string
+    roleName?: string
+    previousRoleId?: string
+    previousRoleName?: string
+  }
+}
+
 // Global channel for project-level events (visible to all authenticated users)
 const PROJECTS_GLOBAL_CHANNEL = 'projects:global'
 // Global channel for user profile events (visible to all authenticated users)
 const USERS_GLOBAL_CHANNEL = 'users:global'
 // Global channel for branding events (visible to all authenticated users)
 const BRANDING_GLOBAL_CHANNEL = 'branding:global'
+// Global channel for settings events (visible to all authenticated users)
+const SETTINGS_GLOBAL_CHANNEL = 'settings:global'
+// Global channel for member events (visible to all authenticated users)
+const MEMBERS_GLOBAL_CHANNEL = 'members:global'
 
 /**
  * Event emitter for real-time updates
@@ -281,6 +326,52 @@ class ProjectEventEmitter extends EventEmitter {
    */
   getBrandingListenerCount(): number {
     return this.listenerCount(BRANDING_GLOBAL_CHANNEL)
+  }
+
+  /**
+   * Emit a settings event to all subscribers (global channel)
+   */
+  emitSettingsEvent(event: SettingsEvent) {
+    this.emit(SETTINGS_GLOBAL_CHANNEL, event)
+  }
+
+  /**
+   * Subscribe to global settings events
+   * Returns an unsubscribe function
+   */
+  subscribeToSettings(callback: (event: SettingsEvent) => void): () => void {
+    this.on(SETTINGS_GLOBAL_CHANNEL, callback)
+    return () => this.off(SETTINGS_GLOBAL_CHANNEL, callback)
+  }
+
+  /**
+   * Get the number of listeners for global settings events
+   */
+  getSettingsListenerCount(): number {
+    return this.listenerCount(SETTINGS_GLOBAL_CHANNEL)
+  }
+
+  /**
+   * Emit a member event to all subscribers (global channel)
+   */
+  emitMemberEvent(event: MemberEvent) {
+    this.emit(MEMBERS_GLOBAL_CHANNEL, event)
+  }
+
+  /**
+   * Subscribe to global member events
+   * Returns an unsubscribe function
+   */
+  subscribeToMembers(callback: (event: MemberEvent) => void): () => void {
+    this.on(MEMBERS_GLOBAL_CHANNEL, callback)
+    return () => this.off(MEMBERS_GLOBAL_CHANNEL, callback)
+  }
+
+  /**
+   * Get the number of listeners for global member events
+   */
+  getMembersListenerCount(): number {
+    return this.listenerCount(MEMBERS_GLOBAL_CHANNEL)
   }
 }
 

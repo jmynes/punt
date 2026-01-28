@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { hashPassword, validatePasswordStrength } from '@/lib/password'
 
 const updateUserSchema = z.object({
@@ -32,6 +33,38 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        projects: {
+          select: {
+            id: true, // membership ID for updating
+            roleId: true,
+            role: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            project: {
+              select: {
+                id: true,
+                name: true,
+                key: true,
+                color: true,
+                roles: {
+                  where: { isDefault: true },
+                  select: {
+                    id: true,
+                    name: true,
+                    position: true,
+                  },
+                  orderBy: { position: 'asc' },
+                },
+              },
+            },
+          },
+          orderBy: {
+            project: { name: 'asc' },
+          },
+        },
         _count: {
           select: { projects: true },
         },
@@ -136,6 +169,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
         isActive: true,
         createdAt: true,
         updatedAt: true,
+      },
+    })
+
+    // Emit user event for real-time updates
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitUserEvent({
+      type: 'user.updated',
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+      changes: {
+        ...(updates.name && { name: updates.name }),
+        ...(updates.isSystemAdmin !== undefined && { isSystemAdmin: updates.isSystemAdmin }),
+        ...(updates.isActive !== undefined && { isActive: updates.isActive }),
       },
     })
 

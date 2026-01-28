@@ -103,7 +103,7 @@ export async function POST(
       )
     }
 
-    // Create attachment records
+    // Create attachment records with uploader tracking
     const created = await db.attachment.createManyAndReturn({
       data: newAttachments.map((attachment) => ({
         ticketId,
@@ -111,6 +111,7 @@ export async function POST(
         mimeType: attachment.mimeType,
         size: attachment.size,
         url: attachment.url,
+        uploaderId: user.id,
       })),
     })
 

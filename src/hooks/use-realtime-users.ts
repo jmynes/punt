@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { brandingKeys } from '@/hooks/queries/use-branding'
 import { getTabId } from '@/hooks/use-realtime'
 import { isDemoMode } from '@/lib/demo'
-import type { BrandingEvent, UserEvent } from '@/lib/events'
+import type { BrandingEvent, MemberEvent, SettingsEvent, UserEvent } from '@/lib/events'
 
 // Reconnection config
 const INITIAL_RECONNECT_DELAY = 1000
@@ -20,7 +20,7 @@ interface ConnectedEvent {
   listenerId: string
 }
 
-type SSEEvent = UserEvent | BrandingEvent | ConnectedEvent
+type SSEEvent = UserEvent | BrandingEvent | SettingsEvent | MemberEvent | ConnectedEvent
 
 /**
  * Hook for real-time user profile synchronization via Server-Sent Events
@@ -106,18 +106,69 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
 
         // Handle user profile updates
         if (data.type === 'user.updated') {
-          // Refresh the NextAuth session to get updated user data
-          // The profile page will handle this through stableUser state
-          updateSession()
+          // Only refresh session if the update is for the current user
+          // (Admin status changes for other users don't need session refresh)
+          // Note: We don't have access to current user ID here, so we only
+          // refresh session for profile changes (name, avatar) not admin status
+          if (data.changes?.name !== undefined || data.changes?.avatar !== undefined) {
+            updateSession()
+          }
 
-          // Also invalidate any admin user queries
-          queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+          // Update the admin users list cache directly instead of refetching
+          queryClient.setQueriesData<
+            Array<{ id: string; isSystemAdmin?: boolean; isActive?: boolean; name?: string }>
+          >({ queryKey: ['admin', 'users'], exact: true }, (oldData) => {
+            if (!oldData || !Array.isArray(oldData)) return oldData
+            return oldData.map((user) => {
+              if (user.id === data.userId && data.changes) {
+                return {
+                  ...user,
+                  ...(data.changes.isSystemAdmin !== undefined && {
+                    isSystemAdmin: data.changes.isSystemAdmin,
+                  }),
+                  ...(data.changes.isActive !== undefined && { isActive: data.changes.isActive }),
+                  ...(data.changes.name !== undefined && { name: data.changes.name }),
+                }
+              }
+              return user
+            })
+          })
+
+          // Update individual user profile cache
+          queryClient.setQueryData<{
+            id: string
+            isSystemAdmin?: boolean
+            isActive?: boolean
+            name?: string
+          }>(['admin', 'users', data.userId], (oldData) => {
+            if (!oldData || !data.changes) return oldData
+            return {
+              ...oldData,
+              ...(data.changes.isSystemAdmin !== undefined && {
+                isSystemAdmin: data.changes.isSystemAdmin,
+              }),
+              ...(data.changes.isActive !== undefined && { isActive: data.changes.isActive }),
+              ...(data.changes.name !== undefined && { name: data.changes.name }),
+            }
+          })
         }
 
         // Handle branding updates
         if (data.type === 'branding.updated') {
           // Invalidate branding query to fetch new branding settings
           queryClient.invalidateQueries({ queryKey: brandingKeys.all })
+        }
+
+        // Handle settings updates
+        if (data.type === 'settings.roles.updated') {
+          // Invalidate role permissions query to fetch new settings
+          queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+        }
+
+        // Handle member role updates
+        if (data.type === 'member.role.updated') {
+          // Invalidate the user details query if viewing that user's profile
+          queryClient.invalidateQueries({ queryKey: ['admin', 'users', data.targetUserId] })
         }
       } catch {
         // Ignore parse errors (could be keepalive comments)

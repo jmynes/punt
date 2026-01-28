@@ -30,6 +30,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useHasPermission } from '@/hooks/use-permissions'
+import { PERMISSIONS } from '@/lib/permissions'
 import { formatDaysRemaining, isSprintExpired } from '@/lib/sprint-utils'
 import { cn } from '@/lib/utils'
 import {
@@ -73,7 +75,7 @@ export function SprintSection({
   sprint,
   tickets,
   projectKey,
-  projectId: _projectId,
+  projectId,
   statusColumns,
   defaultExpanded = true,
   onCreateTicket,
@@ -85,6 +87,7 @@ export function SprintSection({
   const [expanded, setExpanded] = useState(defaultExpanded)
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
   const { columns } = useBacklogStore()
+  const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
   const visibleColumns = columns.filter((c) => c.visible)
 
   // Local sort state for this section only
@@ -425,7 +428,7 @@ export function SprintSection({
           )}
 
           {/* Start Sprint button for planning sprints */}
-          {isPlanning && ticketCount > 0 && (
+          {canManageSprints && isPlanning && ticketCount > 0 && (
             <Button
               size="sm"
               onClick={handleStartSprint}
@@ -437,7 +440,7 @@ export function SprintSection({
           )}
 
           {/* Complete Sprint button for expired active sprints */}
-          {isActive && expired && (
+          {canManageSprints && isActive && expired && (
             <Button
               size="sm"
               onClick={handleCompleteSprint}
@@ -447,8 +450,8 @@ export function SprintSection({
             </Button>
           )}
 
-          {/* Sprint menu */}
-          {!isBacklog && (
+          {/* Sprint menu - only show if user can manage sprints */}
+          {canManageSprints && !isBacklog && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -505,7 +508,7 @@ export function SprintSection({
           )}
 
           {/* Create Sprint button for backlog (only when no active sprint) */}
-          {isBacklog && !hasActiveSprint && (
+          {canManageSprints && isBacklog && !hasActiveSprint && (
             <Button
               size="sm"
               variant="ghost"

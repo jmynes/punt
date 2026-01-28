@@ -17,10 +17,12 @@ import {
   Square,
   Trash2,
   UserCheck,
+  User as UserIcon,
   Users,
   UserX,
   X,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -67,6 +69,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { getTabId } from '@/hooks/use-realtime'
 import { demoStorage, isDemoMode } from '@/lib/demo'
 import { useAdminUndoStore } from '@/stores/admin-undo-store'
 import { CreateUserDialog } from './create-user-dialog'
@@ -97,8 +100,10 @@ const sortLabels: Record<SortField, string> = {
 export function UserList() {
   const queryClient = useQueryClient()
   const currentUser = useCurrentUser()
+  const tabId = getTabId()
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [lastSelectedId, setLastSelectedId] = useState<string | null>(null)
   const [bulkAction, setBulkAction] = useState<BulkAction>(null)
 
   // Bulk delete confirmation state (requires credentials)
@@ -109,7 +114,16 @@ export function UserList() {
   const [deleteError, setDeleteError] = useState('')
 
   // Undo store
-  const { pushUserDisable, pushUserEnable, undo, redo, canUndo, canRedo } = useAdminUndoStore()
+  const {
+    pushUserDisable,
+    pushUserEnable,
+    pushUserMakeAdmin,
+    pushUserRemoveAdmin,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useAdminUndoStore()
 
   // Filter and sort state
   const [search, setSearch] = useState('')
@@ -191,25 +205,53 @@ export function UserList() {
   }, [users])
 
   const updateUser = useMutation({
-    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<User> }) => {
+    mutationFn: async ({
+      userId,
+      updates,
+      previousUser,
+    }: {
+      userId: string
+      updates: Partial<User>
+      previousUser?: User
+    }) => {
       if (isDemoMode()) {
         // Demo mode: simulate success
         toast.info('User management is read-only in demo mode')
-        return { id: userId, ...updates }
+        return { user: { id: userId, ...updates }, updates, previousUser }
       }
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
         body: JSON.stringify(updates),
       })
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to update user')
       }
-      return res.json()
+      const updatedUser = await res.json()
+      return { user: updatedUser, updates, previousUser }
     },
-    onSuccess: () => {
+    onSuccess: ({ user, updates, previousUser }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+
+      // Show toast for admin status changes and track for undo
+      if ('isSystemAdmin' in updates && previousUser) {
+        const userSnapshot = {
+          id: previousUser.id,
+          name: previousUser.name,
+          email: previousUser.email,
+          isSystemAdmin: previousUser.isSystemAdmin,
+          isActive: previousUser.isActive,
+        }
+
+        if (updates.isSystemAdmin) {
+          pushUserMakeAdmin([userSnapshot])
+          toast.success(`${user.name} is now an admin (Ctrl+Z to undo)`)
+        } else {
+          pushUserRemoveAdmin([userSnapshot])
+          toast.success(`${user.name} is no longer an admin (Ctrl+Z to undo)`)
+        }
+      }
     },
     onError: (error) => {
       toast.error(error.message)
@@ -246,11 +288,29 @@ export function UserList() {
   // Bulk update mutation
   const bulkUpdateUsers = useMutation({
     mutationFn: async ({ userIds, updates }: { userIds: string[]; updates: Partial<User> }) => {
+      // Filter to only users who actually need the change
+      let usersToUpdate = users?.filter((u) => userIds.includes(u.id)) || []
+      let skipped = 0
+
+      if ('isSystemAdmin' in updates) {
+        // Only update users whose admin status differs from the target
+        const targetAdminStatus = updates.isSystemAdmin
+        const usersNeedingChange = usersToUpdate.filter(
+          (u) => u.isSystemAdmin !== targetAdminStatus,
+        )
+        skipped = usersToUpdate.length - usersNeedingChange.length
+        usersToUpdate = usersNeedingChange
+      }
+
+      if (usersToUpdate.length === 0) {
+        return { succeeded: 0, failed: 0, skipped, updates, actualUsers: [] }
+      }
+
       const results = await Promise.allSettled(
-        userIds.map((userId) =>
-          fetch(`/api/admin/users/${userId}`, {
+        usersToUpdate.map((user) =>
+          fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify(updates),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
@@ -260,14 +320,62 @@ export function UserList() {
       )
       const succeeded = results.filter((r) => r.status === 'fulfilled').length
       const failed = results.filter((r) => r.status === 'rejected').length
-      return { succeeded, failed }
+      return { succeeded, failed, skipped, updates, actualUsers: usersToUpdate }
     },
-    onSuccess: ({ succeeded, failed }) => {
+    onSuccess: ({ succeeded, failed, skipped, updates, actualUsers }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      if (failed === 0) {
-        toast.success(`Updated ${succeeded} user${succeeded !== 1 ? 's' : ''}`)
+
+      // Track admin changes for undo
+      if ('isSystemAdmin' in updates && succeeded > 0) {
+        const userSnapshots = actualUsers.slice(0, succeeded).map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          isSystemAdmin: u.isSystemAdmin,
+          isActive: u.isActive,
+        }))
+
+        if (updates.isSystemAdmin) {
+          pushUserMakeAdmin(userSnapshots)
+        } else {
+          pushUserRemoveAdmin(userSnapshots)
+        }
+      }
+
+      // Handle case where all users were already in the target state
+      if (succeeded === 0 && skipped > 0) {
+        const state =
+          'isSystemAdmin' in updates
+            ? updates.isSystemAdmin
+              ? 'admins'
+              : 'non-admins'
+            : 'in that state'
+        toast.info(
+          `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already ${state}`,
+        )
+        setSelectedIds(new Set())
+        setBulkAction(null)
+        return
+      }
+
+      // Create specific message for admin status changes
+      let message: string
+      if ('isSystemAdmin' in updates) {
+        const action = updates.isSystemAdmin ? 'granted super admin to' : 'removed super admin from'
+        message = `Successfully ${action} ${succeeded} user${succeeded !== 1 ? 's' : ''}`
       } else {
-        toast.warning(`Updated ${succeeded}, failed ${failed}`)
+        message = `Updated ${succeeded} user${succeeded !== 1 ? 's' : ''}`
+      }
+
+      const extra =
+        skipped > 0
+          ? ` (${skipped} already ${updates.isSystemAdmin ? 'super admin' : 'not super admin'})`
+          : ''
+
+      if (failed === 0) {
+        toast.success(`${message}${extra} (Ctrl+Z to undo)`)
+      } else {
+        toast.warning(`${message}, failed ${failed}`)
       }
       setSelectedIds(new Set())
       setBulkAction(null)
@@ -291,7 +399,7 @@ export function UserList() {
         usersToDisable.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ isActive: false }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
@@ -353,7 +461,7 @@ export function UserList() {
         usersToEnable.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ isActive: true }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
@@ -416,7 +524,7 @@ export function UserList() {
       // First verify credentials
       const verifyRes = await fetch('/api/auth/verify-credentials', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
         body: JSON.stringify({ email, password }),
       })
 
@@ -474,58 +582,100 @@ export function UserList() {
     const action = undo()
     if (!action) return
 
+    // Skip member role changes - those are handled in the user profile page
+    if (action.type === 'memberRoleChange') return
+
     try {
-      // Undo disable -> re-enable, Undo enable -> re-disable
-      const newIsActive = action.type === 'userDisable'
+      let updates: Partial<User>
+      let verb: string
+
+      switch (action.type) {
+        case 'userDisable':
+          updates = { isActive: true }
+          verb = 'Re-enabled'
+          break
+        case 'userEnable':
+          updates = { isActive: false }
+          verb = 'Re-disabled'
+          break
+        case 'userMakeAdmin':
+          updates = { isSystemAdmin: false }
+          verb = 'Removed admin from'
+          break
+        case 'userRemoveAdmin':
+          updates = { isSystemAdmin: true }
+          verb = 'Restored admin to'
+          break
+      }
 
       await Promise.all(
         action.users.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isActive: newIsActive }),
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
+            body: JSON.stringify(updates),
           }),
         ),
       )
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
-      const verb = action.type === 'userDisable' ? 'Re-enabled' : 'Re-disabled'
       toast.success(
         `${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Y to redo)`,
       )
     } catch {
       toast.error('Failed to undo')
     }
-  }, [undo, queryClient])
+  }, [undo, queryClient, tabId])
 
   // Handle redo - repeat the action
   const handleRedo = useCallback(async () => {
     const action = redo()
     if (!action) return
 
+    // Skip member role changes - those are handled in the user profile page
+    if (action.type === 'memberRoleChange') return
+
     try {
-      // Redo disable -> disable again, Redo enable -> enable again
-      const newIsActive = action.type === 'userEnable'
+      let updates: Partial<User>
+      let verb: string
+
+      switch (action.type) {
+        case 'userDisable':
+          updates = { isActive: false }
+          verb = 'Re-disabled'
+          break
+        case 'userEnable':
+          updates = { isActive: true }
+          verb = 'Re-enabled'
+          break
+        case 'userMakeAdmin':
+          updates = { isSystemAdmin: true }
+          verb = 'Re-granted admin to'
+          break
+        case 'userRemoveAdmin':
+          updates = { isSystemAdmin: false }
+          verb = 'Re-removed admin from'
+          break
+      }
 
       await Promise.all(
         action.users.map((user) =>
           fetch(`/api/admin/users/${user.id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isActive: newIsActive }),
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
+            body: JSON.stringify(updates),
           }),
         ),
       )
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
-      const verb = action.type === 'userDisable' ? 'Re-disabled' : 'Re-enabled'
       toast.success(
         `${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Z to undo)`,
       )
     } catch {
       toast.error('Failed to redo')
     }
-  }, [redo, queryClient])
+  }, [redo, queryClient, tabId])
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -574,7 +724,36 @@ export function UserList() {
   }
 
   // Selection helpers
-  const toggleSelect = (userId: string) => {
+  const handleSelect = (userId: string, shiftKey: boolean) => {
+    // Shift-click range selection/deselection
+    if (shiftKey && lastSelectedId && users) {
+      const userIds = users.map((u) => u.id)
+      const lastIndex = userIds.indexOf(lastSelectedId)
+      const currentIndex = userIds.indexOf(userId)
+
+      if (lastIndex !== -1 && currentIndex !== -1) {
+        const start = Math.min(lastIndex, currentIndex)
+        const end = Math.max(lastIndex, currentIndex)
+        const rangeIds = userIds.slice(start, end + 1)
+
+        setSelectedIds((prev) => {
+          const next = new Set(prev)
+          // Check if all in range are selected - if so, deselect them
+          const allSelected = rangeIds.every((id) => prev.has(id))
+          for (const id of rangeIds) {
+            if (allSelected) {
+              next.delete(id)
+            } else {
+              next.add(id)
+            }
+          }
+          return next
+        })
+        return
+      }
+    }
+
+    // Normal toggle
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (next.has(userId)) {
@@ -584,6 +763,11 @@ export function UserList() {
       }
       return next
     })
+    setLastSelectedId(userId)
+  }
+
+  const toggleSelect = (userId: string) => {
+    handleSelect(userId, false)
   }
 
   const selectAll = () => {
@@ -608,7 +792,11 @@ export function UserList() {
     return (
       <Card
         key={user.id}
-        className={`border-zinc-800 bg-zinc-900/50 transition-all duration-150 ${
+        onMouseDown={(e) => {
+          if (e.shiftKey) e.preventDefault()
+        }}
+        onClick={(e) => handleSelect(user.id, e.shiftKey)}
+        className={`border-zinc-800 bg-zinc-900/50 transition-all duration-150 cursor-pointer ${
           isSelected
             ? 'ring-1 ring-amber-500/50 bg-amber-500/5 border-amber-500/30'
             : 'hover:bg-zinc-900/80'
@@ -619,6 +807,7 @@ export function UserList() {
             <Checkbox
               checked={isSelected}
               onCheckedChange={() => toggleSelect(user.id)}
+              onClick={(e) => e.stopPropagation()}
               className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
             />
             <Avatar>
@@ -637,7 +826,7 @@ export function UserList() {
                 )}
                 {user.isSystemAdmin && (
                   <Badge variant="outline" className="border-amber-500 text-amber-500 text-xs">
-                    Admin
+                    Super Admin
                   </Badge>
                 )}
                 {!user.isActive && (
@@ -665,16 +854,36 @@ export function UserList() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-zinc-100">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-zinc-400 hover:text-zinc-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+              <DropdownMenuContent
+                align="end"
+                className="bg-zinc-900 border-zinc-800"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DropdownMenuItem
+                  asChild
+                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                >
+                  <Link href={`/admin/users/${user.id}`}>
+                    <UserIcon className="h-4 w-4 mr-2" />
+                    View profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-zinc-800" />
                 <DropdownMenuItem
                   onClick={() =>
                     updateUser.mutate({
                       userId: user.id,
                       updates: { isSystemAdmin: !user.isSystemAdmin },
+                      previousUser: user,
                     })
                   }
                   className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
@@ -781,9 +990,9 @@ export function UserList() {
       case 'enable':
         return `Enable ${count} user${count !== 1 ? 's' : ''}? They will be able to log in again.`
       case 'makeAdmin':
-        return `Grant admin privileges to ${count} user${count !== 1 ? 's' : ''}?`
+        return `Grant super admin privileges to ${count} user${count !== 1 ? 's' : ''}?`
       case 'removeAdmin':
-        return `Remove admin privileges from ${count} user${count !== 1 ? 's' : ''}?`
+        return `Remove super admin privileges from ${count} user${count !== 1 ? 's' : ''}?`
       default:
         return ''
     }
@@ -1156,8 +1365,8 @@ export function UserList() {
             <AlertDialogTitle className="text-zinc-100">
               {bulkAction === 'disable' && 'Disable Users'}
               {bulkAction === 'enable' && 'Enable Users'}
-              {bulkAction === 'makeAdmin' && 'Grant Admin Privileges'}
-              {bulkAction === 'removeAdmin' && 'Remove Admin Privileges'}
+              {bulkAction === 'makeAdmin' && 'Grant Super Admin Privileges'}
+              {bulkAction === 'removeAdmin' && 'Remove Super Admin Privileges'}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
               {getBulkActionDescription()}

@@ -5,7 +5,38 @@
  */
 
 import { db } from '@/lib/db'
-import { getDefaultRoleConfigs } from './presets'
+import { isValidPermission, type Permission } from './constants'
+import { type DefaultRoleName, getDefaultRoleConfigs, ROLE_PRESETS } from './presets'
+
+type CustomRolePermissions = {
+  [K in DefaultRoleName]?: Permission[]
+}
+
+/**
+ * Get custom role permissions from system settings.
+ * Falls back to presets if not configured.
+ */
+async function getCustomRolePermissions(): Promise<CustomRolePermissions | null> {
+  try {
+    const settings = await db.systemSettings.findUnique({
+      where: { id: 'system-settings' },
+      select: { defaultRolePermissions: true },
+    })
+
+    if (settings?.defaultRolePermissions) {
+      const parsed = JSON.parse(settings.defaultRolePermissions)
+      // Validate permissions
+      return {
+        Owner: (parsed.Owner || []).filter(isValidPermission),
+        Admin: (parsed.Admin || []).filter(isValidPermission),
+        Member: (parsed.Member || []).filter(isValidPermission),
+      }
+    }
+  } catch {
+    // Fall back to presets on error
+  }
+  return null
+}
 
 /**
  * Create default roles for a project.
@@ -15,15 +46,19 @@ export async function createDefaultRolesForProject(
   projectId: string,
 ): Promise<Map<string, string>> {
   const configs = getDefaultRoleConfigs()
+  const customPermissions = await getCustomRolePermissions()
   const roleMap = new Map<string, string>()
 
   for (const config of configs) {
+    // Use custom permissions if available, otherwise use preset
+    const permissions = customPermissions?.[config.name as DefaultRoleName] ?? config.permissions
+
     const role = await db.role.create({
       data: {
         name: config.name,
         color: config.color,
         description: config.description,
-        permissions: JSON.stringify(config.permissions),
+        permissions: JSON.stringify(permissions),
         isDefault: config.isDefault,
         position: config.position,
         projectId,

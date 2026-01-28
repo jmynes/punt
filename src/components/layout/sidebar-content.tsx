@@ -160,7 +160,7 @@ export function SidebarContent({
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/users' && 'bg-zinc-800/50 text-zinc-100',
+                    pathname.startsWith('/admin/users') && 'bg-zinc-800/50 text-zinc-100',
                   )}
                 >
                   <Users className="h-3.5 w-3.5" />

@@ -49,6 +49,9 @@ model User {
 
   // Sprint relations
   completedSprints Sprint[] @relation("SprintCompleter")
+
+  // Attachment relations
+  uploadedAttachments Attachment[] @relation("Uploader")
 }
 
 // Auth.js Account model for OAuth providers (future-proofing)
@@ -408,7 +411,12 @@ model Attachment {
   ticketId String
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
+  // Track who uploaded the attachment for ownership-based permission checks
+  uploaderId String?
+  uploader   User?  @relation("Uploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+
   @@index([ticketId])
+  @@index([uploaderId])
 }
 
 // Track which sprints a ticket has been in for historical reporting
@@ -487,6 +495,11 @@ model SystemSettings {
   emailWelcome       Boolean @default(false)
   emailVerification  Boolean @default(false)
   emailInvitations   Boolean @default(true)
+
+  // Default role permissions for new projects (JSON object)
+  // Keys: "Owner", "Admin", "Member", "Viewer"
+  // Values: array of permission strings
+  defaultRolePermissions String?
 }
 
 // Password reset tokens (for forgot password flow)

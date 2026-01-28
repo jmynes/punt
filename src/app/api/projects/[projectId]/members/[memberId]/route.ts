@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { handleApiError, notFoundError } from '@/lib/api-utils'
 import { requireAuth, requirePermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import {
   canAssignRole,
   canManageMember,
@@ -236,6 +237,26 @@ export async function PATCH(
     // Parse role permissions and member overrides
     const rolePermissions = parsePermissions(member.role.permissions)
     const overridePermissions = parsePermissions(member.overrides)
+
+    // Emit SSE event for role change
+    if (roleId !== undefined && roleId !== targetMember.roleId) {
+      const tabId = request.headers.get('X-Tab-Id') || undefined
+      projectEvents.emitMemberEvent({
+        type: 'member.role.updated',
+        memberId: member.id,
+        targetUserId: member.userId,
+        projectId,
+        userId: user.id,
+        tabId,
+        timestamp: Date.now(),
+        changes: {
+          roleId: member.role.id,
+          roleName: member.role.name,
+          previousRoleId: targetMember.roleId,
+          previousRoleName: targetMember.role.name,
+        },
+      })
+    }
 
     return NextResponse.json({
       id: member.id,

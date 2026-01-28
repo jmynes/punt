@@ -44,7 +44,7 @@ export default async function AdminDashboard() {
 
           <Card className="border-zinc-800 bg-zinc-900/50">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">System Admins</CardTitle>
+              <CardTitle className="text-sm font-medium text-zinc-400">Super Admins</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-zinc-100">{adminCount}</div>

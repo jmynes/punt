@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { NextResponse } from 'next/server'
 import { handleApiError, notFoundError } from '@/lib/api-utils'
-import { requireAuth, requireMembership } from '@/lib/auth-helpers'
+import { requireAttachmentPermission, requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { logger } from '@/lib/logger'
@@ -10,8 +10,7 @@ import { getFileStorage } from '@/lib/upload-storage'
 /**
  * DELETE /api/projects/[projectId]/tickets/[ticketId]/attachments/[attachmentId]
  * Remove an attachment from a ticket and delete the file from disk
- * Requires project membership
- * TODO: Add uploaderId to Attachment model for ownership-based permission checking
+ * Requires ownership or attachments.manage_any permission
  */
 export async function DELETE(
   request: Request,
@@ -20,8 +19,6 @@ export async function DELETE(
   try {
     const user = await requireAuth()
     const { projectId, ticketId, attachmentId } = await params
-
-    await requireMembership(user.id, projectId)
 
     // Verify ticket exists and belongs to project
     const ticket = await db.ticket.findFirst({
@@ -33,14 +30,18 @@ export async function DELETE(
       return notFoundError('Ticket')
     }
 
-    // Find the attachment
+    // Find the attachment with uploader info
     const attachment = await db.attachment.findFirst({
       where: { id: attachmentId, ticketId },
+      select: { id: true, url: true, uploaderId: true },
     })
 
     if (!attachment) {
       return notFoundError('Attachment')
     }
+
+    // Check permission: uploader can delete own, or need attachments.manage_any
+    await requireAttachmentPermission(user.id, projectId, attachment.uploaderId, 'delete')
 
     // Delete the attachment record
     await db.attachment.delete({
