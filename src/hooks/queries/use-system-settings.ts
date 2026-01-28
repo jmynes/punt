@@ -16,6 +16,10 @@ export const systemSettingsKeys = {
 
 // Demo mode default settings
 const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
+  // Required SystemSettings fields
+  id: 'demo-settings',
+  updatedAt: new Date(),
+  updatedBy: null,
   // Upload settings
   maxImageSizeMB: 10,
   maxVideoSizeMB: 100,
