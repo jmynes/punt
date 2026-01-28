@@ -262,37 +262,52 @@ export class DemoDataProvider implements DataProvider {
     const sprintTickets = tickets.filter((t) => t.sprintId === sprintId)
     const doneColumns = ['Done', 'Completed']
 
+    // Track ticket disposition for the result
+    const ticketDisposition = {
+      completed: [] as string[],
+      movedToBacklog: [] as string[],
+      carriedOver: [] as string[],
+    }
+
     for (const ticket of sprintTickets) {
       const column = demoStorage.getColumns(projectId).find((c) => c.id === ticket.columnId)
       const isComplete = column && doneColumns.includes(column.name)
 
-      if (!isComplete) {
-        if (data.incompleteAction === 'backlog') {
-          demoStorage.updateTicket(projectId, ticket.id, {
-            sprintId: null,
-            sprint: null,
-          })
-        } else if (data.incompleteAction === 'carryover' && data.carryOverToSprintId) {
-          const newSprint = demoStorage
-            .getSprints(projectId)
-            .find((s) => s.id === data.carryOverToSprintId)
-          demoStorage.updateTicket(projectId, ticket.id, {
-            sprintId: data.carryOverToSprintId,
-            sprint: newSprint || null,
-            isCarriedOver: true,
-            carriedFromSprintId: sprintId,
-            carriedOverCount: (ticket.carriedOverCount || 0) + 1,
-          })
-        }
-        // 'keep' action: leave tickets in completed sprint
+      if (isComplete) {
+        ticketDisposition.completed.push(ticket.id)
+      } else if (data.incompleteAction === 'backlog') {
+        demoStorage.updateTicket(projectId, ticket.id, {
+          sprintId: null,
+          sprint: null,
+        })
+        ticketDisposition.movedToBacklog.push(ticket.id)
+      } else if (data.incompleteAction === 'carryover' && data.carryOverToSprintId) {
+        const newSprint = demoStorage
+          .getSprints(projectId)
+          .find((s) => s.id === data.carryOverToSprintId)
+        demoStorage.updateTicket(projectId, ticket.id, {
+          sprintId: data.carryOverToSprintId,
+          sprint: newSprint || null,
+          isCarriedOver: true,
+          carriedFromSprintId: sprintId,
+          carriedOverCount: (ticket.carriedOverCount || 0) + 1,
+        })
+        ticketDisposition.carriedOver.push(ticket.id)
       }
+      // 'keep' action: leave tickets in completed sprint
     }
 
     const updated = demoStorage.updateSprint(projectId, sprintId, {
       status: 'completed',
     })
     if (!updated) throw new Error('Sprint not found')
-    return updated
+
+    // Return format compatible with SprintCompletionResult
+    // The hook casts this to SprintCompletionResult which expects ticketDisposition
+    return {
+      ...updated,
+      ticketDisposition,
+    } as unknown as SprintSummary
   }
 
   async extendSprint(

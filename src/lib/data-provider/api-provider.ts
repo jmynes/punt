@@ -242,9 +242,19 @@ export class APIDataProvider implements DataProvider {
     sprintId: string,
     data: CompleteSprintInput,
   ): Promise<SprintSummary> {
+    // Convert DataProvider format to API format
+    const actionMap: Record<string, string> = {
+      backlog: 'close_to_backlog',
+      carryover: 'close_to_next',
+      keep: 'close_keep',
+    }
+    const apiData = {
+      action: actionMap[data.incompleteAction] ?? 'close_to_backlog',
+      targetSprintId: data.carryOverToSprintId ?? undefined,
+    }
     return this.fetchJson(`/api/projects/${projectId}/sprints/${sprintId}/complete`, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(apiData),
     })
   }
 
