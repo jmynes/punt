@@ -406,8 +406,17 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       tempStoryPoints !== ticket.storyPoints ||
       tempSprintId !== ticket.sprintId ||
       tempEstimate !== (ticket.estimate || '') ||
-      tempStartDate?.getTime() !== ticket.startDate?.getTime() ||
-      tempDueDate?.getTime() !== ticket.dueDate?.getTime() ||
+      tempStartDate?.getTime() !==
+        (ticket.startDate
+          ? (ticket.startDate instanceof Date
+              ? ticket.startDate
+              : new Date(ticket.startDate)
+            ).getTime()
+          : undefined) ||
+      tempDueDate?.getTime() !==
+        (ticket.dueDate
+          ? (ticket.dueDate instanceof Date ? ticket.dueDate : new Date(ticket.dueDate)).getTime()
+          : undefined) ||
       tempParentId !== ticket.parentId ||
       tempEnvironment !== (ticket.environment || '') ||
       tempAffectedVersion !== (ticket.affectedVersion || '') ||
@@ -476,10 +485,23 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     if (tempEstimate !== (ticket.estimate || '')) {
       updates.estimate = tempEstimate || null
     }
-    if (tempStartDate?.getTime() !== ticket.startDate?.getTime()) {
+    if (
+      tempStartDate?.getTime() !==
+      (ticket.startDate
+        ? (ticket.startDate instanceof Date
+            ? ticket.startDate
+            : new Date(ticket.startDate)
+          ).getTime()
+        : undefined)
+    ) {
       updates.startDate = tempStartDate
     }
-    if (tempDueDate?.getTime() !== ticket.dueDate?.getTime()) {
+    if (
+      tempDueDate?.getTime() !==
+      (ticket.dueDate
+        ? (ticket.dueDate instanceof Date ? ticket.dueDate : new Date(ticket.dueDate)).getTime()
+        : undefined)
+    ) {
       updates.dueDate = tempDueDate
     }
     if (tempParentId !== ticket.parentId) {
