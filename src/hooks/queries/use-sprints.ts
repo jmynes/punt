@@ -325,9 +325,20 @@ export function useUpdateTicketSprint(projectId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ ticketId, sprintId }: { ticketId: string; sprintId: string | null }) => {
+    mutationFn: async ({
+      ticketId,
+      sprintId,
+      order,
+    }: {
+      ticketId: string
+      sprintId: string | null
+      order?: number
+    }) => {
       const provider = getDataProvider(getTabId())
-      return provider.updateTicket(projectId, ticketId, { sprintId })
+      return provider.updateTicket(projectId, ticketId, {
+        sprintId,
+        ...(order !== undefined && { order }),
+      })
     },
     onSuccess: () => {
       // Invalidate both sprints and tickets queries

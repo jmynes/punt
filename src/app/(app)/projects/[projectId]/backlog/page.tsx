@@ -496,10 +496,19 @@ export default function BacklogPage() {
       const ticketsChangingSprint = ticketsToMove.filter((t) => t.sprintId !== targetSprintId)
       if (ticketsChangingSprint.length === 0) return
 
-      // Capture original sprint IDs for undo
-      const originalSprintIds = ticketsChangingSprint.map((t) => ({
+      // Calculate starting order for tickets in target section
+      const targetSectionKey = targetSprintId ?? 'backlog'
+      const targetSectionTickets = ticketsBySprint[targetSectionKey] ?? []
+      const maxOrderInTarget =
+        targetSectionTickets.length > 0 ? Math.max(...targetSectionTickets.map((t) => t.order)) : -1
+      const startingOrder = maxOrderInTarget + 1
+
+      // Capture original sprint IDs and orders for undo
+      const originalSprintIds = ticketsChangingSprint.map((t, index) => ({
         ticketId: t.id,
         sprintId: t.sprintId,
+        order: t.order,
+        newOrder: startingOrder + index,
       }))
 
       const fromSprints = new Set(ticketsChangingSprint.map((t) => t.sprintId ?? 'backlog'))
@@ -516,9 +525,9 @@ export default function BacklogPage() {
             : (sprints?.find((s) => s.id === Array.from(fromSprints)[0])?.name ?? 'Sprint')
           : 'multiple sprints'
 
-      // Optimistic update
-      for (const ticket of ticketsChangingSprint) {
-        updateTicket(projectId, ticket.id, { sprintId: targetSprintId })
+      // Optimistic update (sprintId and order)
+      for (const item of originalSprintIds) {
+        updateTicket(projectId, item.ticketId, { sprintId: targetSprintId, order: item.newOrder })
       }
 
       // Show undo/redo toast
@@ -532,14 +541,14 @@ export default function BacklogPage() {
         onUndo: (id) => {
           // Move entry from undo to redo stack
           useUndoStore.getState().undoByToastId(id)
-          // Revert to original sprint IDs
-          for (const { ticketId, sprintId } of originalSprintIds) {
-            updateTicket(projectId, ticketId, { sprintId })
+          // Revert to original sprint IDs and orders
+          for (const { ticketId, sprintId, order } of originalSprintIds) {
+            updateTicket(projectId, ticketId, { sprintId, order })
           }
           // Persist undo to database
           Promise.all(
-            originalSprintIds.map(({ ticketId, sprintId }) =>
-              updateTicketSprintMutation.mutateAsync({ ticketId, sprintId }),
+            originalSprintIds.map(({ ticketId, sprintId, order }) =>
+              updateTicketSprintMutation.mutateAsync({ ticketId, sprintId, order }),
             ),
           ).catch(() => {
             // Refetch will handle sync
@@ -548,14 +557,18 @@ export default function BacklogPage() {
         onRedo: (id) => {
           // Move entry from redo to undo stack
           useUndoStore.getState().redoByToastId(id)
-          // Re-apply move to target sprint
-          for (const { ticketId } of originalSprintIds) {
-            updateTicket(projectId, ticketId, { sprintId: targetSprintId })
+          // Re-apply move to target sprint with new orders
+          for (const { ticketId, newOrder } of originalSprintIds) {
+            updateTicket(projectId, ticketId, { sprintId: targetSprintId, order: newOrder })
           }
           // Persist redo to database
           Promise.all(
-            originalSprintIds.map(({ ticketId }) =>
-              updateTicketSprintMutation.mutateAsync({ ticketId, sprintId: targetSprintId }),
+            originalSprintIds.map(({ ticketId, newOrder }) =>
+              updateTicketSprintMutation.mutateAsync({
+                ticketId,
+                sprintId: targetSprintId,
+                order: newOrder,
+              }),
             ),
           ).catch(() => {
             // Refetch will handle sync
@@ -585,16 +598,17 @@ export default function BacklogPage() {
 
       // Persist to database
       Promise.all(
-        ticketsChangingSprint.map((ticket) =>
+        originalSprintIds.map(({ ticketId, newOrder }) =>
           updateTicketSprintMutation.mutateAsync({
-            ticketId: ticket.id,
+            ticketId,
             sprintId: targetSprintId,
+            order: newOrder,
           }),
         ),
       ).catch((error) => {
         // Revert on error
-        for (const { ticketId, sprintId } of originalSprintIds) {
-          updateTicket(projectId, ticketId, { sprintId })
+        for (const { ticketId, sprintId, order } of originalSprintIds) {
+          updateTicket(projectId, ticketId, { sprintId, order })
         }
         showUndoRedoToast('error', {
           title: 'Failed to move tickets',
