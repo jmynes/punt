@@ -3,6 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { projectKeys } from '@/hooks/queries/use-projects'
+import { isDemoMode } from '@/lib/demo'
 import type { ProjectEvent } from '@/lib/events'
 import { getTabId } from './use-realtime'
 
@@ -26,19 +27,33 @@ type SSEEvent = ProjectEvent | ConnectedEvent
  * Connects to the SSE endpoint for global project events and invalidates
  * React Query cache when project events are received from other users.
  *
+ * In demo mode, returns 'connected' without establishing a real connection.
+ *
  * @param enabled - Whether to enable the connection (default: true)
  * @returns Connection status for optional UI feedback
  */
 export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
+  // Demo mode: skip SSE connection, data is local only
+  if (isDemoMode()) {
+    return 'connected'
+  }
+
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const queryClient = useQueryClient()
   const tabId = getTabId()
 
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const [status, setStatus] = useState<RealtimeProjectsStatus>('disconnected')
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const eventSourceRef = useRef<EventSource | null>(null)
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const reconnectDelayRef = useRef(INITIAL_RECONNECT_DELAY)
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const mountedRef = useRef(true)
 
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const cleanup = useCallback(() => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
@@ -50,6 +65,7 @@ export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
     }
   }, [])
 
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const connect = useCallback(() => {
     if (!mountedRef.current) return
 
@@ -109,6 +125,7 @@ export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
     }
   }, [tabId, queryClient, cleanup])
 
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   useEffect(() => {
     mountedRef.current = true
 

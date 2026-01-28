@@ -767,6 +767,19 @@ export function useMoveTickets() {
 
   return useMutation({
     mutationFn: async ({ projectId, ticketIds, toColumnId, newOrder }: MoveTicketsInput) => {
+      // Demo mode: update in localStorage
+      if (isDemoMode()) {
+        const results: TicketWithRelations[] = []
+        for (let i = 0; i < ticketIds.length; i++) {
+          const updated = demoStorage.updateTicket(projectId, ticketIds[i], {
+            columnId: toColumnId,
+            order: newOrder + i,
+          })
+          if (updated) results.push(updated)
+        }
+        return results
+      }
+
       // Update all tickets in sequence (could be parallelized in future)
       const results: TicketWithRelations[] = []
 

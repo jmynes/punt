@@ -386,6 +386,31 @@ class DemoStorage {
     return newLabel
   }
 
+  updateLabel(
+    projectId: string,
+    labelId: string,
+    data: { name?: string; color?: string },
+  ): LabelSummary | null {
+    const labels = this.getLabels(projectId)
+    const index = labels.findIndex((l) => l.id === labelId)
+    if (index === -1) return null
+
+    labels[index] = { ...labels[index], ...data }
+    localStorage.setItem(KEYS.labels(projectId), JSON.stringify(labels))
+
+    // Update label in all tickets that use it
+    const tickets = this.getTickets(projectId)
+    for (const ticket of tickets) {
+      const labelIndex = ticket.labels.findIndex((l) => l.id === labelId)
+      if (labelIndex !== -1) {
+        ticket.labels[labelIndex] = { ...ticket.labels[labelIndex], ...data }
+      }
+    }
+    localStorage.setItem(KEYS.tickets(projectId), JSON.stringify(tickets))
+
+    return labels[index]
+  }
+
   deleteLabel(projectId: string, labelId: string): void {
     const labels = this.getLabels(projectId).filter((l) => l.id !== labelId)
     localStorage.setItem(KEYS.labels(projectId), JSON.stringify(labels))

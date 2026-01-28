@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useProjects } from '@/hooks/queries/use-projects'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -30,6 +31,34 @@ export default function DashboardPage() {
   const { data: serverStats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['dashboard', 'stats'],
     queryFn: async () => {
+      // Demo mode: calculate stats from localStorage
+      if (isDemoMode()) {
+        const projects = demoStorage.getProjects()
+        let openTickets = 0
+        let inProgress = 0
+        let completed = 0
+
+        for (const project of projects) {
+          const columns = demoStorage.getColumns(project.id)
+          const tickets = demoStorage.getTickets(project.id)
+
+          for (const column of columns) {
+            const colName = column.name.toLowerCase()
+            const columnTickets = tickets.filter((t) => t.columnId === column.id)
+
+            if (colName === 'done' || colName === 'completed') {
+              completed += columnTickets.length
+            } else if (colName.includes('progress') || colName === 'in progress') {
+              inProgress += columnTickets.length
+            } else {
+              openTickets += columnTickets.length
+            }
+          }
+        }
+
+        return { openTickets, inProgress, completed }
+      }
+
       const res = await fetch('/api/dashboard/stats')
       if (!res.ok) {
         throw new Error('Failed to fetch dashboard stats')

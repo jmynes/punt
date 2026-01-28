@@ -325,6 +325,29 @@ export function useStartSprint(projectId: string) {
       startDate?: Date
       endDate?: Date
     }) => {
+      // Demo mode: update sprint status in localStorage
+      if (isDemoMode()) {
+        const sprint = demoStorage.updateSprint(projectId, sprintId, {
+          status: 'active',
+          startDate: startDate ?? new Date(),
+          endDate: endDate ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        })
+        if (!sprint) throw new Error('Sprint not found')
+        return {
+          ...sprint,
+          budget: null,
+          completedAt: null,
+          completedById: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          _count: { tickets: 0 },
+          completedTicketCount: 0,
+          incompleteTicketCount: 0,
+          completedStoryPoints: 0,
+          incompleteStoryPoints: 0,
+        } as SprintWithMetrics
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}/start`, {
         method: 'POST',
         headers: {
@@ -364,6 +387,37 @@ export function useCompleteSprint(projectId: string) {
       sprintId: string
       options: Omit<SprintCompletionOptions, 'extendDays'>
     }) => {
+      // Demo mode: update sprint status and handle tickets
+      if (isDemoMode()) {
+        const sprint = demoStorage.updateSprint(projectId, sprintId, {
+          status: 'completed',
+        })
+        if (!sprint) throw new Error('Sprint not found')
+
+        // Simple demo completion - just mark complete, don't handle carryover
+        return {
+          sprint: {
+            ...sprint,
+            budget: null,
+            completedAt: new Date(),
+            completedById: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            _count: { tickets: 0 },
+            completedTicketCount: 0,
+            incompleteTicketCount: 0,
+            completedStoryPoints: 0,
+            incompleteStoryPoints: 0,
+          },
+          ticketDisposition: {
+            completed: [],
+            carriedOver: [],
+            movedToBacklog: [],
+            keptInSprint: [],
+          },
+        } as SprintCompletionResult
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}/complete`, {
         method: 'POST',
         headers: {
@@ -423,6 +477,35 @@ export function useExtendSprint(projectId: string) {
       days: number
       newEndDate?: Date
     }) => {
+      // Demo mode: extend sprint in localStorage
+      if (isDemoMode()) {
+        const sprints = demoStorage.getSprints(projectId)
+        const currentSprint = sprints.find((s) => s.id === sprintId)
+        if (!currentSprint) throw new Error('Sprint not found')
+
+        const currentEnd = currentSprint.endDate ?? new Date()
+        const extendedEnd =
+          newEndDate ?? new Date(currentEnd.getTime() + days * 24 * 60 * 60 * 1000)
+
+        const sprint = demoStorage.updateSprint(projectId, sprintId, {
+          endDate: extendedEnd,
+        })
+        if (!sprint) throw new Error('Sprint not found')
+        return {
+          ...sprint,
+          budget: null,
+          completedAt: null,
+          completedById: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          _count: { tickets: 0 },
+          completedTicketCount: 0,
+          incompleteTicketCount: 0,
+          completedStoryPoints: 0,
+          incompleteStoryPoints: 0,
+        } as SprintWithMetrics
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}/extend`, {
         method: 'POST',
         headers: {
@@ -500,6 +583,15 @@ export function useUpdateSprintSettings(projectId: string) {
 
   return useMutation({
     mutationFn: async (data: Partial<ProjectSprintSettingsData>) => {
+      // Demo mode: just return the data as if it was saved
+      if (isDemoMode()) {
+        return {
+          defaultSprintDuration: data.defaultSprintDuration ?? 14,
+          autoCarryOverIncomplete: data.autoCarryOverIncomplete ?? true,
+          doneColumnIds: data.doneColumnIds ?? [],
+        } as ProjectSprintSettingsData
+      }
+
       const res = await fetch(`/api/projects/${projectId}/sprints/settings`, {
         method: 'PATCH',
         headers: {

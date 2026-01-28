@@ -87,6 +87,13 @@ export function useUpdateLabel(projectId: string) {
       name?: string
       color?: string
     }) => {
+      // Demo mode: update in localStorage
+      if (isDemoMode()) {
+        const updated = demoStorage.updateLabel(projectId, labelId, data)
+        if (!updated) throw new Error('Label not found')
+        return updated
+      }
+
       const res = await fetch(`/api/projects/${projectId}/labels/${labelId}`, {
         method: 'PATCH',
         headers: {

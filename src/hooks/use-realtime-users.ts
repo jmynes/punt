@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { brandingKeys } from '@/hooks/queries/use-branding'
 import { getTabId } from '@/hooks/use-realtime'
+import { isDemoMode } from '@/lib/demo'
 import type { BrandingEvent, UserEvent } from '@/lib/events'
 
 // Reconnection config
@@ -27,23 +28,39 @@ type SSEEvent = UserEvent | BrandingEvent | ConnectedEvent
  * Connects to the SSE endpoint for user events and updates the session
  * when profile changes are received from other tabs/browsers.
  *
+ * In demo mode, returns 'connected' without establishing a real connection.
+ *
  * @param enabled - Whether to enable the connection (default: true)
  * @returns Connection status for optional UI feedback
  */
 export function useRealtimeUsers(enabled = true): RealtimeStatus {
+  // Demo mode: skip SSE connection, data is local only
+  if (isDemoMode()) {
+    return 'connected'
+  }
+
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const queryClient = useQueryClient()
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const { update: updateSession } = useSession()
   const tabId = getTabId()
 
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const [status, setStatus] = useState<RealtimeStatus>('disconnected')
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const eventSourceRef = useRef<EventSource | null>(null)
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const reconnectDelayRef = useRef(INITIAL_RECONNECT_DELAY)
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const mountedRef = useRef(true)
   // Track if we should stop reconnecting (e.g., on 401)
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const shouldStopRef = useRef(false)
 
   // Stable cleanup function
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const cleanup = useCallback(() => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
@@ -56,6 +73,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
   }, [])
 
   // Connect function - only depends on stable refs and cleanup
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const connect = useCallback(() => {
     if (!mountedRef.current || shouldStopRef.current) return
 
@@ -138,6 +156,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
   }, [tabId, queryClient, updateSession, cleanup])
 
   // Effect to manage connection lifecycle
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   useEffect(() => {
     mountedRef.current = true
     shouldStopRef.current = false
