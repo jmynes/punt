@@ -20,6 +20,8 @@ export interface MemberDetails extends ProjectMemberWithRole {
 
 /**
  * Fetch all members for a project
+ * Note: Not using DataProvider because the members-tab needs full ProjectMemberWithRole data,
+ * not just UserSummary. The DataProvider's getProjectMembers is for simpler use cases.
  */
 export function useProjectMembers(projectId: string) {
   return useQuery<ProjectMemberWithRole[]>({

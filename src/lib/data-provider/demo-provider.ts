@@ -375,8 +375,9 @@ export class DemoDataProvider implements DataProvider {
     return {
       appName: 'PUNT',
       logoUrl: null,
-      faviconUrl: null,
-      accentColor: '#f59e0b',
+      logoLetter: 'P',
+      logoGradientFrom: '#f59e0b',
+      logoGradientTo: '#ea580c',
     }
   }
 }

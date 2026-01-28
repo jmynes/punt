@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { getTabId } from '@/hooks/use-realtime'
-import { demoStorage, isDemoMode } from '@/lib/demo'
+import { getDataProvider, type ProjectSummary as ProviderProjectSummary } from '@/lib/data-provider'
 import { type ProjectSummary, useProjectsStore } from '@/stores/projects-store'
 
 export const projectKeys = {
@@ -18,21 +18,13 @@ export const projectKeys = {
 export function useProjects() {
   const { setProjects, setLoading, setError } = useProjectsStore()
 
-  const query = useQuery<ProjectSummary[]>({
+  const query = useQuery<ProviderProjectSummary[], Error, ProjectSummary[]>({
     queryKey: projectKeys.all,
     queryFn: async () => {
-      // Demo mode: return from localStorage
-      if (isDemoMode()) {
-        return demoStorage.getProjects()
-      }
-
-      const res = await fetch('/api/projects')
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch projects')
-      }
-      return res.json()
+      const provider = getDataProvider(getTabId())
+      return provider.getProjects()
     },
+    select: (data) => data as ProjectSummary[],
     staleTime: 1000 * 60, // 1 minute
   })
 
@@ -70,24 +62,8 @@ export function useCreateProject() {
       color: string
       description?: string
     }) => {
-      // Demo mode: create in localStorage
-      if (isDemoMode()) {
-        return demoStorage.createProject(data)
-      }
-
-      const res = await fetch('/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to create project')
-      }
-      return res.json() as Promise<ProjectSummary>
+      const provider = getDataProvider(getTabId())
+      return provider.createProject(data)
     },
     onMutate: async (data) => {
       // Cancel outgoing refetches
@@ -117,7 +93,7 @@ export function useCreateProject() {
       // Replace temp project with real one
       if (context?.tempProject) {
         removeProject(context.tempProject.id)
-        addProject(newProject)
+        addProject(newProject as ProjectSummary)
       }
       toast.success('Project created')
     },
@@ -145,26 +121,8 @@ export function useUpdateProject() {
       color?: string
       description?: string | null
     }) => {
-      // Demo mode: update in localStorage
-      if (isDemoMode()) {
-        const updated = demoStorage.updateProject(id, data)
-        if (!updated) throw new Error('Project not found')
-        return updated
-      }
-
-      const res = await fetch(`/api/projects/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to update project')
-      }
-      return res.json() as Promise<ProjectSummary>
+      const provider = getDataProvider(getTabId())
+      return provider.updateProject(id, data)
     },
     onMutate: async ({ id, ...data }) => {
       await queryClient.cancelQueries({ queryKey: projectKeys.all })
@@ -200,23 +158,9 @@ export function useDeleteProject() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      // Demo mode: delete from localStorage
-      if (isDemoMode()) {
-        demoStorage.deleteProject(id)
-        return { success: true }
-      }
-
-      const res = await fetch(`/api/projects/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'X-Tab-Id': getTabId(),
-        },
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to delete project')
-      }
-      return res.json()
+      const provider = getDataProvider(getTabId())
+      await provider.deleteProject(id)
+      return { success: true }
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: projectKeys.all })

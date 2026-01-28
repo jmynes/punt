@@ -158,8 +158,9 @@ export interface DashboardStats {
 export interface BrandingSettings {
   appName: string
   logoUrl: string | null
-  faviconUrl: string | null
-  accentColor: string
+  logoLetter: string
+  logoGradientFrom: string
+  logoGradientTo: string
 }
 
 export interface SprintSettings {

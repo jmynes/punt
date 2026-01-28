@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { getTabId } from '@/hooks/use-realtime'
-import { demoStorage, isDemoMode } from '@/lib/demo'
+import type { CreateTicketInput, UpdateTicketInput } from '@/lib/data-provider'
+import { getDataProvider } from '@/lib/data-provider'
 import { useBoardStore } from '@/stores/board-store'
 import type { Column, ColumnWithTickets, TicketFormData, TicketWithRelations } from '@/types'
 
@@ -20,68 +21,6 @@ export const columnKeys = {
   byProject: (projectId: string) => ['columns', 'project', projectId] as const,
 }
 
-// API response type for tickets (dates are strings from JSON)
-interface TicketAPIResponse {
-  id: string
-  number: number
-  title: string
-  description: string | null
-  type: string
-  priority: string
-  order: number
-  storyPoints: number | null
-  estimate: string | null
-  startDate: string | null
-  dueDate: string | null
-  environment: string | null
-  affectedVersion: string | null
-  fixVersion: string | null
-  createdAt: string
-  updatedAt: string
-  projectId: string
-  columnId: string
-  assigneeId: string | null
-  creatorId: string
-  sprintId: string | null
-  parentId: string | null
-  isCarriedOver: boolean
-  carriedFromSprintId: string | null
-  carriedOverCount: number
-  assignee: { id: string; name: string; email: string | null; avatar: string | null } | null
-  creator: { id: string; name: string; email: string | null; avatar: string | null }
-  sprint: {
-    id: string
-    name: string
-    status: 'planning' | 'active' | 'completed'
-    startDate: string | null
-    endDate: string | null
-    goal?: string | null
-  } | null
-  carriedFromSprint: {
-    id: string
-    name: string
-    status: 'planning' | 'active' | 'completed'
-    startDate: string | null
-    endDate: string | null
-    goal?: string | null
-  } | null
-  labels: { id: string; name: string; color: string }[]
-  watchers: { id: string; name: string; email: string | null; avatar: string | null }[]
-  _count: {
-    comments: number
-    subtasks: number
-    attachments: number
-  }
-}
-
-// API response type for columns
-interface ColumnAPIResponse {
-  id: string
-  name: string
-  order: number
-  projectId: string
-}
-
 /**
  * Fetch columns for a project (creates defaults if none exist)
  */
@@ -91,18 +30,16 @@ export function useColumnsByProject(projectId: string, options?: { enabled?: boo
   const query = useQuery<Column[]>({
     queryKey: columnKeys.byProject(projectId),
     queryFn: async () => {
-      // Demo mode: return from localStorage
-      if (isDemoMode()) {
-        return demoStorage.getColumns(projectId)
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/columns`)
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch columns')
-      }
-      const data: ColumnAPIResponse[] = await res.json()
-      return data
+      const provider = getDataProvider(getTabId())
+      // getColumnsWithTickets returns ColumnWithTickets[], but API returns just columns
+      // Extract column data without tickets for this hook
+      const columnsWithTickets = await provider.getColumnsWithTickets(projectId)
+      return columnsWithTickets.map(({ id, name, order, projectId }) => ({
+        id,
+        name,
+        order,
+        projectId,
+      }))
     },
     staleTime: 1000 * 60 * 5, // 5 minutes - columns change rarely
     enabled: options?.enabled ?? true,
@@ -132,40 +69,6 @@ export function useColumnsByProject(projectId: string, options?: { enabled?: boo
   return query
 }
 
-// Transform API response to TicketWithRelations (convert date strings to Date objects)
-function transformTicket(ticket: TicketAPIResponse): TicketWithRelations {
-  return {
-    ...ticket,
-    type: ticket.type as TicketWithRelations['type'],
-    priority: ticket.priority as TicketWithRelations['priority'],
-    startDate: ticket.startDate ? new Date(ticket.startDate) : null,
-    dueDate: ticket.dueDate ? new Date(ticket.dueDate) : null,
-    createdAt: new Date(ticket.createdAt),
-    updatedAt: new Date(ticket.updatedAt),
-    assignee: ticket.assignee ? { ...ticket.assignee, email: ticket.assignee.email ?? '' } : null,
-    creator: { ...ticket.creator, email: ticket.creator.email ?? '' },
-    sprint: ticket.sprint
-      ? {
-          ...ticket.sprint,
-          startDate: ticket.sprint.startDate ? new Date(ticket.sprint.startDate) : null,
-          endDate: ticket.sprint.endDate ? new Date(ticket.sprint.endDate) : null,
-        }
-      : null,
-    carriedFromSprint: ticket.carriedFromSprint
-      ? {
-          ...ticket.carriedFromSprint,
-          startDate: ticket.carriedFromSprint.startDate
-            ? new Date(ticket.carriedFromSprint.startDate)
-            : null,
-          endDate: ticket.carriedFromSprint.endDate
-            ? new Date(ticket.carriedFromSprint.endDate)
-            : null,
-        }
-      : null,
-    watchers: ticket.watchers.map((w) => ({ ...w, email: w.email ?? '' })),
-  }
-}
-
 /**
  * Fetch all tickets for a project and sync with board store
  */
@@ -175,18 +78,8 @@ export function useTicketsByProject(projectId: string, options?: { enabled?: boo
   const query = useQuery<TicketWithRelations[]>({
     queryKey: ticketKeys.byProject(projectId),
     queryFn: async () => {
-      // Demo mode: return from localStorage
-      if (isDemoMode()) {
-        return demoStorage.getTickets(projectId)
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/tickets`)
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch tickets')
-      }
-      const data: TicketAPIResponse[] = await res.json()
-      return data.map(transformTicket)
+      const provider = getDataProvider(getTabId())
+      return provider.getTickets(projectId)
     },
     staleTime: 1000 * 60, // 1 minute
     enabled: options?.enabled ?? true,
@@ -202,7 +95,7 @@ export function useTicketsByProject(projectId: string, options?: { enabled?: boo
   return query
 }
 
-interface CreateTicketInput {
+interface CreateTicketMutationInput {
   projectId: string
   columnId: string
   data: Partial<TicketFormData> & { title: string }
@@ -217,48 +110,24 @@ export function useCreateTicket() {
   const { addTicket, removeTicket } = useBoardStore()
 
   return useMutation({
-    mutationFn: async ({ projectId, columnId, data }: CreateTicketInput) => {
-      // Demo mode: create in localStorage
-      if (isDemoMode()) {
-        return demoStorage.createTicket(projectId, columnId, {
-          title: data.title,
-          description: data.description,
-          type: data.type,
-          priority: data.priority,
-          storyPoints: data.storyPoints,
-          estimate: data.estimate,
-          startDate: data.startDate,
-          dueDate: data.dueDate,
-          environment: data.environment,
-          affectedVersion: data.affectedVersion,
-          fixVersion: data.fixVersion,
-          assigneeId: data.assigneeId,
-          sprintId: data.sprintId,
-          parentId: data.parentId,
-          labels: [], // TODO: handle labels
-          watchers: [], // TODO: handle watchers
-        })
+    mutationFn: async ({ projectId, columnId, data }: CreateTicketMutationInput) => {
+      const provider = getDataProvider(getTabId())
+      const input: CreateTicketInput = {
+        title: data.title,
+        description: data.description,
+        type: data.type,
+        priority: data.priority,
+        columnId,
+        storyPoints: data.storyPoints,
+        estimate: data.estimate,
+        startDate: data.startDate,
+        dueDate: data.dueDate,
+        assigneeId: data.assigneeId,
+        sprintId: data.sprintId,
+        parentId: data.parentId,
+        labelIds: data.labelIds,
       }
-
-      const res = await fetch(`/api/projects/${projectId}/tickets`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify({
-          ...data,
-          columnId,
-          startDate: data.startDate?.toISOString(),
-          dueDate: data.dueDate?.toISOString(),
-        }),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to create ticket')
-      }
-      const responseData: TicketAPIResponse = await res.json()
-      return transformTicket(responseData)
+      return provider.createTicket(projectId, input)
     },
     onMutate: async ({ projectId, columnId, tempTicket }) => {
       // Cancel outgoing refetches
@@ -294,7 +163,7 @@ export function useCreateTicket() {
   })
 }
 
-interface UpdateTicketInput {
+interface UpdateTicketMutationInput {
   projectId: string
   ticketId: string
   updates: Partial<TicketWithRelations>
@@ -309,74 +178,32 @@ export function useUpdateTicket() {
   const { updateTicket: updateTicketInStore } = useBoardStore()
 
   return useMutation({
-    mutationFn: async ({ projectId, ticketId, updates }: UpdateTicketInput) => {
-      // Demo mode: update in localStorage
-      if (isDemoMode()) {
-        const updated = demoStorage.updateTicket(projectId, ticketId, updates)
-        if (!updated) throw new Error('Ticket not found')
-        return updated
-      }
+    mutationFn: async ({ projectId, ticketId, updates }: UpdateTicketMutationInput) => {
+      const provider = getDataProvider(getTabId())
 
-      // Convert TicketWithRelations updates to API format
-      const apiUpdates: Record<string, unknown> = {}
+      // Convert TicketWithRelations updates to UpdateTicketInput format
+      const apiUpdates: UpdateTicketInput = {}
 
       // Copy scalar fields
-      const scalarFields = [
-        'title',
-        'description',
-        'type',
-        'priority',
-        'columnId',
-        'order',
-        'storyPoints',
-        'estimate',
-        'environment',
-        'affectedVersion',
-        'fixVersion',
-        'assigneeId',
-        'creatorId',
-        'sprintId',
-        'parentId',
-      ]
-
-      for (const field of scalarFields) {
-        if (field in updates) {
-          apiUpdates[field] = updates[field as keyof typeof updates]
-        }
-      }
-
-      // Convert dates
-      if ('startDate' in updates) {
-        apiUpdates.startDate = updates.startDate?.toISOString() ?? null
-      }
-      if ('dueDate' in updates) {
-        apiUpdates.dueDate = updates.dueDate?.toISOString() ?? null
-      }
+      if ('title' in updates) apiUpdates.title = updates.title
+      if ('description' in updates) apiUpdates.description = updates.description
+      if ('type' in updates) apiUpdates.type = updates.type
+      if ('priority' in updates) apiUpdates.priority = updates.priority
+      if ('columnId' in updates) apiUpdates.columnId = updates.columnId
+      if ('order' in updates) apiUpdates.order = updates.order
+      if ('storyPoints' in updates) apiUpdates.storyPoints = updates.storyPoints
+      if ('estimate' in updates) apiUpdates.estimate = updates.estimate
+      if ('assigneeId' in updates) apiUpdates.assigneeId = updates.assigneeId
+      if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
+      if ('startDate' in updates) apiUpdates.startDate = updates.startDate
+      if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
 
       // Convert labels to labelIds
       if ('labels' in updates && updates.labels) {
         apiUpdates.labelIds = updates.labels.map((l) => l.id)
       }
 
-      // Convert watchers to watcherIds
-      if ('watchers' in updates && updates.watchers) {
-        apiUpdates.watcherIds = updates.watchers.map((w) => w.id)
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify(apiUpdates),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to update ticket')
-      }
-      const responseData: TicketAPIResponse = await res.json()
-      return transformTicket(responseData)
+      return provider.updateTicket(projectId, ticketId, apiUpdates)
     },
     onMutate: async ({ projectId, ticketId, updates }) => {
       // Cancel outgoing refetches
@@ -407,7 +234,7 @@ export function useUpdateTicket() {
   })
 }
 
-interface DeleteTicketInput {
+interface DeleteTicketMutationInput {
   projectId: string
   ticketId: string
   columnId: string
@@ -422,24 +249,10 @@ export function useDeleteTicket() {
   const { removeTicket, addTicket } = useBoardStore()
 
   return useMutation({
-    mutationFn: async ({ projectId, ticketId }: DeleteTicketInput) => {
-      // Demo mode: delete from localStorage
-      if (isDemoMode()) {
-        demoStorage.deleteTicket(projectId, ticketId)
-        return { success: true }
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
-        method: 'DELETE',
-        headers: {
-          'X-Tab-Id': getTabId(),
-        },
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to delete ticket')
-      }
-      return res.json()
+    mutationFn: async ({ projectId, ticketId }: DeleteTicketMutationInput) => {
+      const provider = getDataProvider(getTabId())
+      await provider.deleteTicket(projectId, ticketId)
+      return { success: true }
     },
     onMutate: async ({ projectId, ticketId, deletedTicket, columnId }) => {
       // Cancel outgoing refetches
@@ -463,7 +276,7 @@ export function useDeleteTicket() {
   })
 }
 
-interface MoveTicketInput {
+interface MoveTicketMutationInput {
   projectId: string
   ticketId: string
   fromColumnId: string
@@ -479,34 +292,12 @@ export function useMoveTicket() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ projectId, ticketId, toColumnId, newOrder }: MoveTicketInput) => {
-      // Demo mode: update in localStorage
-      if (isDemoMode()) {
-        const updated = demoStorage.updateTicket(projectId, ticketId, {
-          columnId: toColumnId,
-          order: newOrder,
-        })
-        if (!updated) throw new Error('Ticket not found')
-        return updated
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify({
-          columnId: toColumnId,
-          order: newOrder,
-        }),
+    mutationFn: async ({ projectId, ticketId, toColumnId, newOrder }: MoveTicketMutationInput) => {
+      const provider = getDataProvider(getTabId())
+      return provider.moveTicket(projectId, ticketId, {
+        columnId: toColumnId,
+        order: newOrder,
       })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to move ticket')
-      }
-      const responseData: TicketAPIResponse = await res.json()
-      return transformTicket(responseData)
     },
     onMutate: async ({ projectId }) => {
       // Store update already happened in handleDragEnd
@@ -526,7 +317,7 @@ export function useMoveTicket() {
   })
 }
 
-interface MoveTicketsInput {
+interface MoveTicketsMutationInput {
   projectId: string
   ticketIds: string[]
   toColumnId: string
@@ -547,72 +338,39 @@ export async function createTicketAPI(
   columnId: string,
   ticketData: Partial<TicketWithRelations> & { title: string },
 ): Promise<TicketWithRelations> {
-  // Demo mode: create in localStorage
-  if (isDemoMode()) {
-    return demoStorage.createTicket(projectId, columnId, ticketData)
+  const provider = getDataProvider(getTabId())
+
+  const input: CreateTicketInput = {
+    title: ticketData.title,
+    description: ticketData.description ?? null,
+    type: ticketData.type ?? 'task',
+    priority: ticketData.priority ?? 'medium',
+    columnId,
+    assigneeId: ticketData.assigneeId ?? null,
+    sprintId: ticketData.sprintId ?? null,
+    parentId: ticketData.parentId ?? null,
+    storyPoints: ticketData.storyPoints ?? null,
+    estimate: ticketData.estimate ?? null,
+    startDate: ticketData.startDate ?? null,
+    dueDate: ticketData.dueDate ?? null,
+    labelIds: ticketData.labels?.map((l) => l.id) ?? [],
   }
 
-  const res = await fetch(`/api/projects/${projectId}/tickets`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Tab-Id': getTabId(),
-    },
-    body: JSON.stringify({
-      title: ticketData.title,
-      description: ticketData.description ?? null,
-      type: ticketData.type ?? 'task',
-      priority: ticketData.priority ?? 'medium',
-      columnId,
-      assigneeId: ticketData.assigneeId ?? null,
-      sprintId: ticketData.sprintId ?? null,
-      parentId: ticketData.parentId ?? null,
-      storyPoints: ticketData.storyPoints ?? null,
-      estimate: ticketData.estimate ?? null,
-      startDate: ticketData.startDate?.toISOString?.() ?? null,
-      dueDate: ticketData.dueDate?.toISOString?.() ?? null,
-      environment: ticketData.environment ?? null,
-      affectedVersion: ticketData.affectedVersion ?? null,
-      fixVersion: ticketData.fixVersion ?? null,
-      labelIds: ticketData.labels?.map((l) => l.id) ?? [],
-      watcherIds: ticketData.watchers?.map((w) => w.id) ?? [],
-    }),
-  })
-  if (!res.ok) {
-    const error = await res.json()
-    throw new Error(error.error || 'Failed to create ticket')
-  }
-  const responseData: TicketAPIResponse = await res.json()
-  return transformTicket(responseData)
+  return provider.createTicket(projectId, input)
 }
 
 /**
  * Delete a ticket via API (imperative, for undo/redo operations)
  */
 export async function deleteTicketAPI(projectId: string, ticketId: string): Promise<void> {
-  // Demo mode: delete from localStorage
-  if (isDemoMode()) {
-    demoStorage.deleteTicket(projectId, ticketId)
-    return
-  }
-
   // Skip API call for temp IDs (pasted tickets not yet synced)
   if (ticketId.startsWith('ticket-')) {
     console.warn('Skipping API delete for temp ticket ID:', ticketId)
     return
   }
 
-  const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
-    method: 'DELETE',
-    headers: {
-      'X-Tab-Id': getTabId(),
-    },
-  })
-  if (!res.ok) {
-    const error = await res.json()
-    console.error('Delete ticket API error:', { projectId, ticketId, error })
-    throw new Error(error.error || 'Failed to delete ticket')
-  }
+  const provider = getDataProvider(getTabId())
+  await provider.deleteTicket(projectId, ticketId)
 }
 
 /**
@@ -623,53 +381,6 @@ export async function updateTicketAPI(
   ticketId: string,
   updates: Partial<TicketWithRelations>,
 ): Promise<TicketWithRelations> {
-  // Demo mode: update in localStorage
-  if (isDemoMode()) {
-    const updated = demoStorage.updateTicket(projectId, ticketId, updates)
-    if (!updated) throw new Error('Ticket not found')
-    return updated
-  }
-
-  // Convert TicketWithRelations updates to API format
-  const apiUpdates: Record<string, unknown> = {}
-
-  const scalarFields = [
-    'title',
-    'description',
-    'type',
-    'priority',
-    'columnId',
-    'order',
-    'storyPoints',
-    'estimate',
-    'environment',
-    'affectedVersion',
-    'fixVersion',
-    'assigneeId',
-    'creatorId',
-    'sprintId',
-    'parentId',
-  ]
-
-  for (const field of scalarFields) {
-    if (field in updates) {
-      apiUpdates[field] = updates[field as keyof typeof updates]
-    }
-  }
-
-  if ('startDate' in updates) {
-    apiUpdates.startDate = updates.startDate?.toISOString?.() ?? null
-  }
-  if ('dueDate' in updates) {
-    apiUpdates.dueDate = updates.dueDate?.toISOString?.() ?? null
-  }
-  if ('labels' in updates && updates.labels) {
-    apiUpdates.labelIds = updates.labels.map((l) => l.id)
-  }
-  if ('watchers' in updates && updates.watchers) {
-    apiUpdates.watcherIds = updates.watchers.map((w) => w.id)
-  }
-
   // Skip API call for temp IDs (pasted tickets not yet synced)
   if (ticketId.startsWith('ticket-')) {
     console.warn('Skipping API update for temp ticket ID:', ticketId)
@@ -677,21 +388,29 @@ export async function updateTicketAPI(
     return { id: ticketId, ...updates } as TicketWithRelations
   }
 
-  const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Tab-Id': getTabId(),
-    },
-    body: JSON.stringify(apiUpdates),
-  })
-  if (!res.ok) {
-    const error = await res.json()
-    console.error('Update ticket API error:', { projectId, ticketId, apiUpdates, error })
-    throw new Error(error.error || 'Failed to update ticket')
+  const provider = getDataProvider(getTabId())
+
+  // Convert TicketWithRelations updates to UpdateTicketInput format
+  const apiUpdates: UpdateTicketInput = {}
+
+  if ('title' in updates) apiUpdates.title = updates.title
+  if ('description' in updates) apiUpdates.description = updates.description
+  if ('type' in updates) apiUpdates.type = updates.type
+  if ('priority' in updates) apiUpdates.priority = updates.priority
+  if ('columnId' in updates) apiUpdates.columnId = updates.columnId
+  if ('order' in updates) apiUpdates.order = updates.order
+  if ('storyPoints' in updates) apiUpdates.storyPoints = updates.storyPoints
+  if ('estimate' in updates) apiUpdates.estimate = updates.estimate
+  if ('assigneeId' in updates) apiUpdates.assigneeId = updates.assigneeId
+  if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
+  if ('startDate' in updates) apiUpdates.startDate = updates.startDate
+  if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
+
+  if ('labels' in updates && updates.labels) {
+    apiUpdates.labelIds = updates.labels.map((l) => l.id)
   }
-  const responseData: TicketAPIResponse = await res.json()
-  return transformTicket(responseData)
+
+  return provider.updateTicket(projectId, ticketId, apiUpdates)
 }
 
 /**
@@ -766,45 +485,14 @@ export function useMoveTickets() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ projectId, ticketIds, toColumnId, newOrder }: MoveTicketsInput) => {
-      // Demo mode: update in localStorage
-      if (isDemoMode()) {
-        const results: TicketWithRelations[] = []
-        for (let i = 0; i < ticketIds.length; i++) {
-          const updated = demoStorage.updateTicket(projectId, ticketIds[i], {
-            columnId: toColumnId,
-            order: newOrder + i,
-          })
-          if (updated) results.push(updated)
-        }
-        return results
-      }
-
-      // Update all tickets in sequence (could be parallelized in future)
-      const results: TicketWithRelations[] = []
-
-      for (let i = 0; i < ticketIds.length; i++) {
-        const ticketId = ticketIds[i]
-        const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Tab-Id': getTabId(),
-          },
-          body: JSON.stringify({
-            columnId: toColumnId,
-            order: newOrder + i,
-          }),
-        })
-        if (!res.ok) {
-          const error = await res.json()
-          throw new Error(error.error || `Failed to move ticket ${ticketId}`)
-        }
-        const responseData: TicketAPIResponse = await res.json()
-        results.push(transformTicket(responseData))
-      }
-
-      return results
+    mutationFn: async ({
+      projectId,
+      ticketIds,
+      toColumnId,
+      newOrder,
+    }: MoveTicketsMutationInput) => {
+      const provider = getDataProvider(getTabId())
+      return provider.moveTickets(projectId, ticketIds, toColumnId, newOrder)
     },
     onMutate: async ({ projectId }) => {
       // Store update already happened in handleDragEnd
@@ -833,16 +521,6 @@ export const sprintKeys = {
   byProject: (projectId: string) => ['sprints', 'project', projectId] as const,
 }
 
-// API response type for sprints
-interface SprintAPIResponse {
-  id: string
-  name: string
-  status: 'planning' | 'active' | 'completed'
-  startDate: string | null
-  endDate: string | null
-  goal?: string | null
-}
-
 /**
  * Fetch all sprints for a project
  */
@@ -850,23 +528,8 @@ export function useProjectSprints(projectId: string, options?: { enabled?: boole
   return useQuery({
     queryKey: sprintKeys.byProject(projectId),
     queryFn: async () => {
-      // Demo mode: return from localStorage
-      if (isDemoMode()) {
-        return demoStorage.getSprints(projectId)
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/sprints`)
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch sprints')
-      }
-      const data: SprintAPIResponse[] = await res.json()
-      // Transform dates
-      return data.map((sprint) => ({
-        ...sprint,
-        startDate: sprint.startDate ? new Date(sprint.startDate) : null,
-        endDate: sprint.endDate ? new Date(sprint.endDate) : null,
-      }))
+      const provider = getDataProvider(getTabId())
+      return provider.getSprints(projectId)
     },
     staleTime: 1000 * 60 * 5, // 5 minutes - sprints change rarely
     enabled: options?.enabled ?? true,
@@ -882,13 +545,6 @@ export const labelKeys = {
   byProject: (projectId: string) => ['labels', 'project', projectId] as const,
 }
 
-// API response type for labels
-interface LabelAPIResponse {
-  id: string
-  name: string
-  color: string
-}
-
 /**
  * Fetch all labels for a project
  */
@@ -896,25 +552,15 @@ export function useProjectLabels(projectId: string, options?: { enabled?: boolea
   return useQuery({
     queryKey: labelKeys.byProject(projectId),
     queryFn: async () => {
-      // Demo mode: return from localStorage
-      if (isDemoMode()) {
-        return demoStorage.getLabels(projectId)
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/labels`)
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch labels')
-      }
-      const data: LabelAPIResponse[] = await res.json()
-      return data
+      const provider = getDataProvider(getTabId())
+      return provider.getLabels(projectId)
     },
     staleTime: 1000 * 60 * 5, // 5 minutes - labels change rarely
     enabled: options?.enabled ?? true,
   })
 }
 
-interface CreateLabelInput {
+interface CreateLabelMutationInput {
   projectId: string
   name: string
   color?: string
@@ -928,26 +574,9 @@ export function useCreateLabel() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ projectId, name, color }: CreateLabelInput) => {
-      // Demo mode: create in localStorage
-      if (isDemoMode()) {
-        return demoStorage.createLabel(projectId, { name, color })
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/labels`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify({ name, color }),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to create label')
-      }
-      const data: LabelAPIResponse = await res.json()
-      return data
+    mutationFn: async ({ projectId, name, color }: CreateLabelMutationInput) => {
+      const provider = getDataProvider(getTabId())
+      return provider.createLabel(projectId, { name, color })
     },
     onSuccess: (_data, { projectId }) => {
       // Invalidate labels query to refetch with new label
@@ -959,7 +588,7 @@ export function useCreateLabel() {
   })
 }
 
-interface DeleteLabelInput {
+interface DeleteLabelMutationInput {
   projectId: string
   labelId: string
 }
@@ -972,24 +601,10 @@ export function useDeleteLabel() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ projectId, labelId }: DeleteLabelInput) => {
-      // Demo mode: delete from localStorage
-      if (isDemoMode()) {
-        demoStorage.deleteLabel(projectId, labelId)
-        return { success: true }
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/labels/${labelId}`, {
-        method: 'DELETE',
-        headers: {
-          'X-Tab-Id': getTabId(),
-        },
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to delete label')
-      }
-      return res.json()
+    mutationFn: async ({ projectId, labelId }: DeleteLabelMutationInput) => {
+      const provider = getDataProvider(getTabId())
+      await provider.deleteLabel(projectId, labelId)
+      return { success: true }
     },
     onSuccess: (_data, { projectId }) => {
       // Invalidate labels query to refetch without deleted label

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
-import { demoStorage, isDemoMode } from '@/lib/demo'
+import { getDataProvider } from '@/lib/data-provider'
 import type {
   ProjectSprintSettingsData,
   SprintCompletionOptions,
@@ -28,26 +28,9 @@ export function useProjectSprints(projectId: string) {
   return useQuery<SprintWithMetrics[]>({
     queryKey: sprintKeys.byProject(projectId),
     queryFn: async () => {
-      // Demo mode: return from localStorage
-      if (isDemoMode()) {
-        const sprints = demoStorage.getSprints(projectId)
-        // Add empty metrics for demo sprints
-        return sprints.map((s) => ({
-          ...s,
-          _count: { tickets: 0 },
-          completedTicketCount: 0,
-          incompleteTicketCount: 0,
-          completedStoryPoints: 0,
-          incompleteStoryPoints: 0,
-        }))
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/sprints`)
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch sprints')
-      }
-      return res.json()
+      const provider = getDataProvider(getTabId())
+      // Provider returns SprintSummary but API actually returns SprintWithMetrics
+      return provider.getSprints(projectId) as Promise<SprintWithMetrics[]>
     },
     enabled: !!projectId,
     staleTime: 1000 * 60, // 1 minute
@@ -61,26 +44,9 @@ export function useActiveSprint(projectId: string) {
   return useQuery<SprintWithMetrics | null>({
     queryKey: sprintKeys.active(projectId),
     queryFn: async () => {
-      // Demo mode: return from localStorage
-      if (isDemoMode()) {
-        const sprint = demoStorage.getActiveSprint(projectId)
-        if (!sprint) return null
-        return {
-          ...sprint,
-          _count: { tickets: 0 },
-          completedTicketCount: 0,
-          incompleteTicketCount: 0,
-          completedStoryPoints: 0,
-          incompleteStoryPoints: 0,
-        }
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/sprints/active`)
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch active sprint')
-      }
-      return res.json()
+      const provider = getDataProvider(getTabId())
+      // Provider returns SprintSummary but API actually returns SprintWithMetrics
+      return provider.getActiveSprint(projectId) as Promise<SprintWithMetrics | null>
     },
     enabled: !!projectId,
     staleTime: 1000 * 30, // 30 seconds
@@ -94,27 +60,11 @@ export function useSprintDetail(projectId: string, sprintId: string) {
   return useQuery<SprintWithMetrics>({
     queryKey: sprintKeys.detail(projectId, sprintId),
     queryFn: async () => {
-      // Demo mode: return from localStorage
-      if (isDemoMode()) {
-        const sprints = demoStorage.getSprints(projectId)
-        const sprint = sprints.find((s) => s.id === sprintId)
-        if (!sprint) throw new Error('Sprint not found')
-        return {
-          ...sprint,
-          _count: { tickets: 0 },
-          completedTicketCount: 0,
-          incompleteTicketCount: 0,
-          completedStoryPoints: 0,
-          incompleteStoryPoints: 0,
-        }
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}`)
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch sprint')
-      }
-      return res.json()
+      const provider = getDataProvider(getTabId())
+      const sprints = (await provider.getSprints(projectId)) as SprintWithMetrics[]
+      const sprint = sprints.find((s) => s.id === sprintId)
+      if (!sprint) throw new Error('Sprint not found')
+      return sprint
     },
     enabled: !!projectId && !!sprintId,
     staleTime: 1000 * 60,
@@ -128,21 +78,8 @@ export function useSprintSettings(projectId: string) {
   return useQuery<ProjectSprintSettingsData>({
     queryKey: sprintKeys.settings(projectId),
     queryFn: async () => {
-      // Demo mode: return default settings
-      if (isDemoMode()) {
-        return {
-          defaultSprintDuration: 14,
-          autoCarryOverIncomplete: true,
-          doneColumnIds: [],
-        }
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/sprints/settings`)
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to fetch sprint settings')
-      }
-      return res.json()
+      const provider = getDataProvider(getTabId())
+      return provider.getSprintSettings(projectId)
     },
     enabled: !!projectId,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -163,42 +100,14 @@ export function useCreateSprint(projectId: string) {
       endDate?: Date | null
       budget?: number | null
     }) => {
-      // Demo mode: create in localStorage
-      if (isDemoMode()) {
-        const sprint = demoStorage.createSprint(projectId, {
-          name: data.name,
-          goal: data.goal ?? undefined,
-          startDate: data.startDate ?? undefined,
-          endDate: data.endDate ?? undefined,
-        })
-        return {
-          ...sprint,
-          budget: null,
-          completedAt: null,
-          completedById: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          _count: { tickets: 0 },
-          completedTicketCount: 0,
-          incompleteTicketCount: 0,
-          completedStoryPoints: 0,
-          incompleteStoryPoints: 0,
-        } as SprintWithMetrics
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/sprints`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to create sprint')
-      }
-      return res.json() as Promise<SprintWithMetrics>
+      const provider = getDataProvider(getTabId())
+      // Provider returns SprintSummary but API actually returns SprintWithMetrics
+      return provider.createSprint(projectId, {
+        name: data.name,
+        goal: data.goal ?? undefined,
+        startDate: data.startDate ?? undefined,
+        endDate: data.endDate ?? undefined,
+      }) as Promise<SprintWithMetrics>
     },
     onSuccess: () => {
       toast.success('Sprint created')
@@ -228,38 +137,14 @@ export function useUpdateSprint(projectId: string) {
       endDate?: Date | null
       budget?: number | null
     }) => {
-      // Demo mode: update in localStorage
-      if (isDemoMode()) {
-        const sprint = demoStorage.updateSprint(projectId, sprintId, data)
-        if (!sprint) throw new Error('Sprint not found')
-        return {
-          ...sprint,
-          budget: null,
-          completedAt: null,
-          completedById: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          _count: { tickets: 0 },
-          completedTicketCount: 0,
-          incompleteTicketCount: 0,
-          completedStoryPoints: 0,
-          incompleteStoryPoints: 0,
-        } as SprintWithMetrics
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to update sprint')
-      }
-      return res.json() as Promise<SprintWithMetrics>
+      const provider = getDataProvider(getTabId())
+      // Provider returns SprintSummary but API actually returns SprintWithMetrics
+      return provider.updateSprint(projectId, sprintId, {
+        name: data.name,
+        goal: data.goal ?? undefined,
+        startDate: data.startDate,
+        endDate: data.endDate,
+      }) as Promise<SprintWithMetrics>
     },
     onSuccess: (_, { sprintId }) => {
       toast.success('Sprint updated')
@@ -281,23 +166,9 @@ export function useDeleteSprint(projectId: string) {
 
   return useMutation({
     mutationFn: async (sprintId: string) => {
-      // Demo mode: delete from localStorage
-      if (isDemoMode()) {
-        demoStorage.deleteSprint(projectId, sprintId)
-        return { success: true }
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}`, {
-        method: 'DELETE',
-        headers: {
-          'X-Tab-Id': getTabId(),
-        },
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to delete sprint')
-      }
-      return res.json()
+      const provider = getDataProvider(getTabId())
+      await provider.deleteSprint(projectId, sprintId)
+      return { success: true }
     },
     onSuccess: () => {
       toast.success('Sprint deleted')
@@ -325,42 +196,12 @@ export function useStartSprint(projectId: string) {
       startDate?: Date
       endDate?: Date
     }) => {
-      // Demo mode: update sprint status in localStorage
-      if (isDemoMode()) {
-        const sprint = demoStorage.updateSprint(projectId, sprintId, {
-          status: 'active',
-          startDate: startDate ?? new Date(),
-          endDate: endDate ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        })
-        if (!sprint) throw new Error('Sprint not found')
-        return {
-          ...sprint,
-          budget: null,
-          completedAt: null,
-          completedById: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          _count: { tickets: 0 },
-          completedTicketCount: 0,
-          incompleteTicketCount: 0,
-          completedStoryPoints: 0,
-          incompleteStoryPoints: 0,
-        } as SprintWithMetrics
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}/start`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify({ startDate, endDate }),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to start sprint')
-      }
-      return res.json() as Promise<SprintWithMetrics>
+      const provider = getDataProvider(getTabId())
+      // Provider returns SprintSummary but API actually returns SprintWithMetrics
+      return provider.startSprint(projectId, sprintId, {
+        startDate,
+        endDate,
+      }) as Promise<SprintWithMetrics>
     },
     onSuccess: () => {
       toast.success('Sprint started')
@@ -387,50 +228,21 @@ export function useCompleteSprint(projectId: string) {
       sprintId: string
       options: Omit<SprintCompletionOptions, 'extendDays'>
     }) => {
-      // Demo mode: update sprint status and handle tickets
-      if (isDemoMode()) {
-        const sprint = demoStorage.updateSprint(projectId, sprintId, {
-          status: 'completed',
-        })
-        if (!sprint) throw new Error('Sprint not found')
+      const provider = getDataProvider(getTabId())
 
-        // Simple demo completion - just mark complete, don't handle carryover
-        return {
-          sprint: {
-            ...sprint,
-            budget: null,
-            completedAt: new Date(),
-            completedById: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            _count: { tickets: 0 },
-            completedTicketCount: 0,
-            incompleteTicketCount: 0,
-            completedStoryPoints: 0,
-            incompleteStoryPoints: 0,
-          },
-          ticketDisposition: {
-            completed: [],
-            carriedOver: [],
-            movedToBacklog: [],
-            keptInSprint: [],
-          },
-        } as SprintCompletionResult
+      // Map SprintCompletionOptions.action to CompleteSprintInput.incompleteAction
+      const actionMap: Record<string, 'backlog' | 'carryover' | 'keep'> = {
+        close_to_backlog: 'backlog',
+        close_to_next: 'carryover',
+        close_keep: 'keep',
       }
+      const incompleteAction = actionMap[options.action] ?? 'backlog'
 
-      const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify(options),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to complete sprint')
-      }
-      return res.json() as Promise<SprintCompletionResult>
+      // Provider returns SprintSummary but API actually returns SprintCompletionResult
+      return provider.completeSprint(projectId, sprintId, {
+        incompleteAction,
+        carryOverToSprintId: options.targetSprintId ?? null,
+      }) as unknown as Promise<SprintCompletionResult>
     },
     onSuccess: (result) => {
       const { ticketDisposition } = result
@@ -477,48 +289,22 @@ export function useExtendSprint(projectId: string) {
       days: number
       newEndDate?: Date
     }) => {
-      // Demo mode: extend sprint in localStorage
-      if (isDemoMode()) {
-        const sprints = demoStorage.getSprints(projectId)
+      const provider = getDataProvider(getTabId())
+
+      // Calculate the new end date if not provided
+      let calculatedEndDate = newEndDate
+      if (!calculatedEndDate) {
+        const sprints = (await provider.getSprints(projectId)) as SprintWithMetrics[]
         const currentSprint = sprints.find((s) => s.id === sprintId)
         if (!currentSprint) throw new Error('Sprint not found')
-
         const currentEnd = currentSprint.endDate ?? new Date()
-        const extendedEnd =
-          newEndDate ?? new Date(currentEnd.getTime() + days * 24 * 60 * 60 * 1000)
-
-        const sprint = demoStorage.updateSprint(projectId, sprintId, {
-          endDate: extendedEnd,
-        })
-        if (!sprint) throw new Error('Sprint not found')
-        return {
-          ...sprint,
-          budget: null,
-          completedAt: null,
-          completedById: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          _count: { tickets: 0 },
-          completedTicketCount: 0,
-          incompleteTicketCount: 0,
-          completedStoryPoints: 0,
-          incompleteStoryPoints: 0,
-        } as SprintWithMetrics
+        calculatedEndDate = new Date(new Date(currentEnd).getTime() + days * 24 * 60 * 60 * 1000)
       }
 
-      const res = await fetch(`/api/projects/${projectId}/sprints/${sprintId}/extend`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify({ days, newEndDate }),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to extend sprint')
-      }
-      return res.json() as Promise<SprintWithMetrics>
+      // Provider returns SprintSummary but API actually returns SprintWithMetrics
+      return provider.extendSprint(projectId, sprintId, {
+        newEndDate: calculatedEndDate,
+      }) as Promise<SprintWithMetrics>
     },
     onSuccess: (result) => {
       const endDateStr = result.endDate ? new Date(result.endDate).toLocaleDateString() : 'unknown'
@@ -540,31 +326,8 @@ export function useUpdateTicketSprint(projectId: string) {
 
   return useMutation({
     mutationFn: async ({ ticketId, sprintId }: { ticketId: string; sprintId: string | null }) => {
-      // Demo mode: update in localStorage
-      if (isDemoMode()) {
-        const sprints = demoStorage.getSprints(projectId)
-        const sprint = sprintId ? sprints.find((s) => s.id === sprintId) : null
-        const updated = demoStorage.updateTicket(projectId, ticketId, {
-          sprintId,
-          sprint: sprint ?? null,
-        })
-        if (!updated) throw new Error('Ticket not found')
-        return updated
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify({ sprintId }),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to update ticket')
-      }
-      return res.json()
+      const provider = getDataProvider(getTabId())
+      return provider.updateTicket(projectId, ticketId, { sprintId })
     },
     onSuccess: () => {
       // Invalidate both sprints and tickets queries
@@ -583,28 +346,8 @@ export function useUpdateSprintSettings(projectId: string) {
 
   return useMutation({
     mutationFn: async (data: Partial<ProjectSprintSettingsData>) => {
-      // Demo mode: just return the data as if it was saved
-      if (isDemoMode()) {
-        return {
-          defaultSprintDuration: data.defaultSprintDuration ?? 14,
-          autoCarryOverIncomplete: data.autoCarryOverIncomplete ?? true,
-          doneColumnIds: data.doneColumnIds ?? [],
-        } as ProjectSprintSettingsData
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/sprints/settings`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || 'Failed to update sprint settings')
-      }
-      return res.json() as Promise<ProjectSprintSettingsData>
+      const provider = getDataProvider(getTabId())
+      return provider.updateSprintSettings(projectId, data)
     },
     onSuccess: () => {
       toast.success('Sprint settings updated')
