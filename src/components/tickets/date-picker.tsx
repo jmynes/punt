@@ -46,7 +46,9 @@ export function DatePicker({
       column.tickets.forEach((ticket) => {
         if (ticket.dueDate) {
           hasDueDates = true
-          const ticketYear = ticket.dueDate.getFullYear()
+          // Convert to Date if it's a string (from JSON/API)
+          const dueDate = ticket.dueDate instanceof Date ? ticket.dueDate : new Date(ticket.dueDate)
+          const ticketYear = dueDate.getFullYear()
           if (ticketYear < earliestYear) {
             earliestYear = ticketYear
           }

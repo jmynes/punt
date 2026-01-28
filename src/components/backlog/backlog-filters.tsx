@@ -123,7 +123,9 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
       column.tickets.forEach((ticket) => {
         if (ticket.dueDate) {
           hasDueDates = true
-          const ticketYear = ticket.dueDate.getFullYear()
+          // Convert to Date if it's a string (from JSON/API)
+          const dueDate = ticket.dueDate instanceof Date ? ticket.dueDate : new Date(ticket.dueDate)
+          const ticketYear = dueDate.getFullYear()
           if (ticketYear < earliestYear) {
             earliestYear = ticketYear
           }
@@ -170,7 +172,9 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
     for (const col of _statusColumns) {
       for (const t of col.tickets) {
         if (t.dueDate) {
-          set.add(t.dueDate.toISOString().slice(0, 10))
+          // Convert to Date if it's a string (from JSON/API)
+          const dueDate = t.dueDate instanceof Date ? t.dueDate : new Date(t.dueDate)
+          set.add(dueDate.toISOString().slice(0, 10))
         }
       }
     }

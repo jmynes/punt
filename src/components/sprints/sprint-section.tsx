@@ -174,16 +174,20 @@ export function SprintSection({
           bVal = b.estimate || ''
           break
         case 'dueDate':
-          aVal = a.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER
-          bVal = b.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER
+          aVal = a.dueDate
+            ? (a.dueDate instanceof Date ? a.dueDate : new Date(a.dueDate)).getTime()
+            : Number.MAX_SAFE_INTEGER
+          bVal = b.dueDate
+            ? (b.dueDate instanceof Date ? b.dueDate : new Date(b.dueDate)).getTime()
+            : Number.MAX_SAFE_INTEGER
           break
         case 'created':
-          aVal = a.createdAt.getTime()
-          bVal = b.createdAt.getTime()
+          aVal = (a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt)).getTime()
+          bVal = (b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt)).getTime()
           break
         case 'updated':
-          aVal = a.updatedAt.getTime()
-          bVal = b.updatedAt.getTime()
+          aVal = (a.updatedAt instanceof Date ? a.updatedAt : new Date(a.updatedAt)).getTime()
+          bVal = (b.updatedAt instanceof Date ? b.updatedAt : new Date(b.updatedAt)).getTime()
           break
         case 'parent':
           aVal = a.parentId || 'zzz'
