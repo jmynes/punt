@@ -75,14 +75,16 @@ export function useIsSystemAdmin(): { isSystemAdmin: boolean; isLoading: boolean
  * In demo mode, returns demo user and team members
  */
 export function useProjectMembers(projectId?: string): UserSummary[] {
+  // Demo mode: always return demo members (no API call needed)
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
+  if (isDemoMode()) {
+    return [DEMO_USER_SUMMARY, ...DEMO_TEAM_SUMMARIES]
+  }
+
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const { data } = useQuery({
     queryKey: ['project', projectId, 'members'],
     queryFn: async () => {
-      // Demo mode: return demo user and team members
-      if (isDemoMode()) {
-        return [DEMO_USER_SUMMARY, ...DEMO_TEAM_SUMMARIES]
-      }
-
       const res = await fetch(`/api/projects/${projectId}/members`)
       if (!res.ok) {
         throw new Error('Failed to fetch project members')

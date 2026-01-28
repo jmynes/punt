@@ -1,7 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  DEMO_MEMBERS,
   useCurrentUser,
   useIsAuthenticated,
   useIsSystemAdmin,
@@ -141,9 +140,9 @@ describe('useIsSystemAdmin', () => {
 })
 
 describe('useProjectMembers', () => {
-  it('should return demo members as fallback', () => {
+  it('should return empty array when no projectId provided (non-demo mode)', () => {
     const { result } = renderHook(() => useProjectMembers())
-    expect(result.current).toEqual(DEMO_MEMBERS)
-    expect(result.current).toHaveLength(4)
+    // Without projectId, query is disabled and returns empty array
+    expect(result.current).toEqual([])
   })
 })
