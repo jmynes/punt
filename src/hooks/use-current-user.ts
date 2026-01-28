@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
-import { DEMO_USER_SUMMARY, isDemoMode } from '@/lib/demo'
+import { DEMO_TEAM_SUMMARIES, DEMO_USER_SUMMARY, isDemoMode } from '@/lib/demo'
 import type { UserSummary } from '@/types'
 
 /**
@@ -72,11 +72,17 @@ export function useIsSystemAdmin(): { isSystemAdmin: boolean; isLoading: boolean
 /**
  * Get project members (fetched from API)
  * Returns empty array while loading
+ * In demo mode, returns demo user and team members
  */
 export function useProjectMembers(projectId?: string): UserSummary[] {
   const { data } = useQuery({
     queryKey: ['project', projectId, 'members'],
     queryFn: async () => {
+      // Demo mode: return demo user and team members
+      if (isDemoMode()) {
+        return [DEMO_USER_SUMMARY, ...DEMO_TEAM_SUMMARIES]
+      }
+
       const res = await fetch(`/api/projects/${projectId}/members`)
       if (!res.ok) {
         throw new Error('Failed to fetch project members')

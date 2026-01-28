@@ -2,6 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
+import { DEMO_ROLE, isDemoMode } from '@/lib/demo'
+import { ALL_PERMISSIONS } from '@/lib/permissions/constants'
 import type { Permission, RoleSummary } from '@/types'
 import { useCurrentUser } from './use-current-user'
 
@@ -19,6 +21,7 @@ interface MyPermissionsResponse {
 
 /**
  * Fetch current user's effective permissions in a project
+ * In demo mode, returns full permissions (owner role)
  */
 export function useMyPermissions(projectId: string) {
   const user = useCurrentUser()
@@ -26,6 +29,16 @@ export function useMyPermissions(projectId: string) {
   return useQuery<MyPermissionsResponse>({
     queryKey: permissionKeys.myPermissions(projectId),
     queryFn: async () => {
+      // Demo mode: return full permissions as owner
+      if (isDemoMode()) {
+        return {
+          permissions: ALL_PERMISSIONS,
+          role: DEMO_ROLE as RoleSummary,
+          overrides: [],
+          isSystemAdmin: true,
+        }
+      }
+
       const res = await fetch(`/api/projects/${projectId}/my-permissions`)
       if (!res.ok) {
         const error = await res.json()
