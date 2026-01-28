@@ -4,40 +4,27 @@ import { render } from '@/__tests__/utils/test-utils'
 import { useBoardStore } from '@/stores/board-store'
 import { KanbanBoard } from '../kanban-board'
 
-// Mock the stores
-vi.mock('@/stores/board-store', () => ({
-  useBoardStore: vi.fn(),
-}))
+// Use vi.hoisted to define mocks before vi.mock runs (vi.mock is hoisted)
+const { mockBoardState, mockSelectionState, mockUiState, mockUndoState, createMockStore } =
+  vi.hoisted(() => {
+    // Helper to create a mock store with both hook and getState patterns
+    function createMockStore<T>(defaultState: T) {
+      const mockFn = vi.fn(() => defaultState)
+      ;(mockFn as ReturnType<typeof vi.fn> & { getState: ReturnType<typeof vi.fn> }).getState =
+        vi.fn(() => defaultState)
+      ;(mockFn as ReturnType<typeof vi.fn> & { setState: ReturnType<typeof vi.fn> }).setState =
+        vi.fn()
+      ;(mockFn as ReturnType<typeof vi.fn> & { subscribe: ReturnType<typeof vi.fn> }).subscribe =
+        vi.fn(() => () => {})
+      return mockFn as ReturnType<typeof vi.fn> & {
+        getState: ReturnType<typeof vi.fn>
+        setState: ReturnType<typeof vi.fn>
+        subscribe: ReturnType<typeof vi.fn>
+      }
+    }
 
-vi.mock('@/stores/selection-store', () => ({
-  useSelectionStore: vi.fn(() => ({
-    selectedTicketIds: new Set(),
-    clearSelection: vi.fn(),
-    isSelected: vi.fn(() => false),
-    selectTicket: vi.fn(),
-    toggleTicket: vi.fn(),
-    selectRange: vi.fn(),
-  })),
-}))
-
-vi.mock('@/stores/ui-store', () => ({
-  useUIStore: vi.fn(() => ({
-    setCreateTicketOpen: vi.fn(),
-  })),
-}))
-
-vi.mock('@/stores/undo-store', () => ({
-  useUndoStore: vi.fn(() => ({
-    pushMove: vi.fn(),
-  })),
-}))
-
-describe('KanbanBoard', () => {
-  const mockColumns = createMockColumns()
-
-  beforeEach(() => {
-    vi.mocked(useBoardStore).mockReturnValue({
-      getColumns: vi.fn(() => mockColumns),
+    const mockBoardState = {
+      getColumns: vi.fn(() => []),
       moveTicket: vi.fn(),
       moveTickets: vi.fn(),
       reorderTicket: vi.fn(),
@@ -49,7 +36,73 @@ describe('KanbanBoard', () => {
       updateTicket: vi.fn(),
       addTicket: vi.fn(),
       removeTicket: vi.fn(),
-    })
+    }
+
+    const mockSelectionState = {
+      selectedTicketIds: new Set<string>(),
+      clearSelection: vi.fn(),
+      isSelected: vi.fn(() => false),
+      selectTicket: vi.fn(),
+      toggleTicket: vi.fn(),
+      selectRange: vi.fn(),
+      copiedTicketIds: null,
+      ticketOrigins: new Map(),
+      lastSelectedId: null,
+      setLastSelectedId: vi.fn(),
+      setCopiedTickets: vi.fn(),
+      clearCopiedTickets: vi.fn(),
+    }
+
+    const mockUiState = {
+      setCreateTicketOpen: vi.fn(),
+      createTicketOpen: false,
+      ticketDetailOpen: false,
+      setTicketDetailOpen: vi.fn(),
+      activeTicketId: null,
+      setActiveTicketId: vi.fn(),
+      prefillTicketData: null,
+      openCreateTicketWithData: vi.fn(),
+    }
+
+    const mockUndoState = {
+      pushMove: vi.fn(),
+      pushDelete: vi.fn(),
+      undo: vi.fn(),
+      redo: vi.fn(),
+      canUndo: false,
+      canRedo: false,
+    }
+
+    return { mockBoardState, mockSelectionState, mockUiState, mockUndoState, createMockStore }
+  })
+
+// Mock the stores
+vi.mock('@/stores/board-store', () => ({
+  useBoardStore: createMockStore(mockBoardState),
+}))
+
+vi.mock('@/stores/selection-store', () => ({
+  useSelectionStore: createMockStore(mockSelectionState),
+}))
+
+vi.mock('@/stores/ui-store', () => ({
+  useUIStore: createMockStore(mockUiState),
+}))
+
+vi.mock('@/stores/undo-store', () => ({
+  useUndoStore: createMockStore(mockUndoState),
+}))
+
+describe('KanbanBoard', () => {
+  const mockColumns = createMockColumns()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Update the mock to return columns
+    mockBoardState.getColumns = vi.fn(() => mockColumns)
+    // Update both the hook return and getState return
+    vi.mocked(useBoardStore).mockReturnValue(mockBoardState)
+    vi.mocked(useBoardStore.getState).mockReturnValue(mockBoardState)
   })
 
   it('should render board with columns', () => {
