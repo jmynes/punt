@@ -45,6 +45,25 @@ Key files:
 
 ## Architecture
 
+### Demo Mode
+
+When `NEXT_PUBLIC_DEMO_MODE=true`, the app runs entirely client-side:
+- No database connection required
+- All data stored in localStorage (prefixed with `punt-demo-`)
+- Auto-authenticated as a demo user with admin privileges
+- Uses `DemoDataProvider` instead of `APIDataProvider`
+
+**Key files:**
+- `src/lib/demo/demo-config.ts` - Demo mode detection (`isDemoMode()`) and demo user definitions
+- `src/lib/demo/demo-storage.ts` - localStorage-based data storage
+- `src/lib/demo/demo-data.ts` - Initial demo data (projects, tickets, sprints)
+- `src/lib/data-provider/demo-provider.ts` - DataProvider implementation for demo mode
+- `src/lib/data-provider/api-provider.ts` - DataProvider implementation for production (API calls)
+- `src/lib/data-provider/index.ts` - Factory function `getDataProvider()` that returns the appropriate provider
+
+**Data Provider Pattern:**
+All data operations go through the `DataProvider` interface, which abstracts whether data comes from the API or localStorage. Components use React Query hooks (`src/hooks/queries/`) that internally call `getDataProvider()`.
+
 ### Authentication (NextAuth.js v5)
 
 **Key files:**
@@ -274,6 +293,8 @@ src/
 ├── hooks/                  # useCurrentUser, useMediaQuery, queries/
 ├── lib/                    # auth.ts, password.ts, rate-limit.ts, db.ts, logger.ts, api-utils.ts, constants.ts
 │   ├── actions/            # Unified action modules (paste-tickets.ts, delete-tickets.ts)
+│   ├── data-provider/      # DataProvider abstraction (api-provider.ts, demo-provider.ts)
+│   ├── demo/               # Demo mode (demo-config.ts, demo-storage.ts, demo-data.ts)
 │   ├── events.ts           # SSE event emitter
 │   ├── sprint-utils.ts     # Sprint helpers (generateNextSprintName, isCompletedColumn)
 │   └── system-settings.ts  # Dynamic upload config
@@ -360,3 +381,12 @@ Available actions:
 - Logger: `logger.debug()`, `logger.info()`, `logger.warn()`, `logger.error()`, `logger.measure()`
 - Enable via `NEXT_PUBLIC_DEBUG=true`
 - Window globals in dev: `window.boardStore`, `window.undoStore`
+
+### Deployment
+
+**Railway:**
+- `railway.toml` configures Nixpacks builder with pnpm
+- `.node-version` specifies Node.js 20 (required by Next.js 16)
+- Required env vars for demo mode: `NEXT_PUBLIC_DEMO_MODE=true`, `AUTH_SECRET`, `AUTH_TRUST_HOST=true`, `DATABASE_URL` (dummy value for Prisma generation)
+
+**Node.js requirement:** Next.js 16 requires Node.js >= 20.9.0. The `engines` field in `package.json` enforces this.

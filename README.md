@@ -22,9 +22,13 @@ PUNT is a lightweight, local-first issue tracking system for teams who want the 
 - File attachments with configurable limits
 - Dark UI
 
+## Try the Demo
+
+**[Live Demo](https://punt-demo-production.up.railway.app)** — No account required. Data is stored in your browser's localStorage.
+
 ## Requirements
 
-- Node.js 22+
+- Node.js 20.9+
 - pnpm 9+
 
 ## Quick Start
@@ -60,14 +64,33 @@ Open [http://localhost:3000](http://localhost:3000) and log in.
 | `AUTH_SECRET` | Secret for JWT signing | Required |
 | `TRUST_PROXY` | Trust `X-Forwarded-For` for rate limiting | `false` |
 | `NEXT_PUBLIC_DEBUG` | Enable debug logging | `false` |
+| `NEXT_PUBLIC_DEMO_MODE` | Run in demo mode (no database) | `false` |
 
 Only enable `TRUST_PROXY` when running behind a trusted reverse proxy.
+
+### Demo Mode
+
+Set `NEXT_PUBLIC_DEMO_MODE=true` to run without a database. All data is stored in the browser's localStorage. Useful for demos and trying out the interface.
 
 ## Production
 
 ```bash
 pnpm build
 pnpm start
+```
+
+### Railway Deployment
+
+A `railway.toml` is included for easy deployment to [Railway](https://railway.app):
+
+```bash
+railway link
+railway variables --set "NEXT_PUBLIC_DEMO_MODE=true"
+railway variables --set "AUTH_SECRET=$(openssl rand -base64 32)"
+railway variables --set "AUTH_TRUST_HOST=true"
+railway variables --set "DATABASE_URL=file:./dummy.db"  # Required for build
+railway up
+railway domain
 ```
 
 ## Development
