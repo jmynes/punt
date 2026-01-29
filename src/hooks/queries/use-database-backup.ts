@@ -169,3 +169,50 @@ export function isZipContent(base64Content: string): boolean {
   // ZIP magic bytes in base64: "UEsD" corresponds to 0x50 0x4B 0x03 0x04
   return base64Content.startsWith('UEsD')
 }
+
+export interface WipeDatabaseParams {
+  username: string
+  password: string
+  confirmText: string
+}
+
+/**
+ * Wipe the database and create a fresh admin user
+ */
+export function useWipeDatabase() {
+  return useMutation({
+    mutationFn: async (params: WipeDatabaseParams) => {
+      if (isDemoMode()) {
+        toast.info('Database wipe is disabled in demo mode')
+        throw new Error('Demo mode')
+      }
+
+      const res = await fetch('/api/admin/database/wipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to wipe database')
+      }
+
+      return res.json()
+    },
+    onSuccess: () => {
+      toast.success('Database wiped successfully. Redirecting to login...')
+      // Redirect to login after a short delay
+      setTimeout(() => {
+        window.location.href = '/login'
+      }, 1500)
+    },
+    onError: (err) => {
+      if (err.message !== 'Demo mode') {
+        toast.error(err.message)
+      }
+    },
+  })
+}

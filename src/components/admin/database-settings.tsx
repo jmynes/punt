@@ -10,6 +10,7 @@ import {
   Loader2,
   Lock,
   Paperclip,
+  Trash2,
   Upload,
 } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
@@ -25,6 +26,7 @@ import {
   useExportDatabase,
 } from '@/hooks/queries/use-database-backup'
 import { DatabaseImportDialog } from './database-import-dialog'
+import { DatabaseWipeDialog } from './database-wipe-dialog'
 
 function PasswordStrengthIndicator({ password }: { password: string }) {
   if (!password) return null
@@ -74,6 +76,7 @@ export function DatabaseSettings() {
   const [isZip, setIsZip] = useState(false)
   const [isEncrypted, setIsEncrypted] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
+  const [showWipeDialog, setShowWipeDialog] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const exportMutation = useExportDatabase()
@@ -327,6 +330,41 @@ export function DatabaseSettings() {
         </CardContent>
       </Card>
 
+      {/* Wipe Section */}
+      <Card className="border-red-900/50 bg-zinc-900/50">
+        <CardHeader>
+          <CardTitle className="text-zinc-100 flex items-center gap-2">
+            <Trash2 className="h-5 w-5 text-red-400" />
+            Wipe Database
+          </CardTitle>
+          <CardDescription className="text-zinc-400">
+            Delete all data and start fresh with a new admin account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Warning Banner */}
+          <div className="flex items-start gap-3 p-4 bg-red-900/20 border border-red-800 rounded-lg">
+            <AlertTriangle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium text-red-400">Danger Zone</p>
+              <p className="text-red-300/80 mt-1">
+                This will permanently delete all users, projects, tickets, and settings. Make sure
+                you have exported a backup first if you need to preserve any data.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setShowWipeDialog(true)}
+            variant="destructive"
+            className="w-full sm:w-auto"
+          >
+            <Trash2 className="h-4 w-4" />
+            Wipe Database
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Import Dialog */}
       {showImportDialog && importFileBase64 && (
         <DatabaseImportDialog
@@ -338,6 +376,9 @@ export function DatabaseSettings() {
           onComplete={handleImportComplete}
         />
       )}
+
+      {/* Wipe Dialog */}
+      <DatabaseWipeDialog open={showWipeDialog} onOpenChange={setShowWipeDialog} />
     </div>
   )
 }
