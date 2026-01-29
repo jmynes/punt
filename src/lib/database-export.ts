@@ -8,7 +8,7 @@
 
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import AdmZip from 'adm-zip'
+import JSZip from 'jszip'
 import { encrypt } from '@/lib/crypto'
 import { db } from '@/lib/db'
 import {
@@ -276,11 +276,11 @@ export async function createDatabaseExportZip(
     avatars: [],
   }
 
-  // Create ZIP archive using adm-zip
-  const zip = new AdmZip()
+  // Create ZIP archive using jszip
+  const zip = new JSZip()
 
   // Add the JSON backup
-  zip.addFile('backup.json', Buffer.from(JSON.stringify(backupJson, null, 2), 'utf8'))
+  zip.file('backup.json', JSON.stringify(backupJson, null, 2))
 
   // Add attachment files if requested
   if (options.includeAttachments) {
@@ -294,7 +294,7 @@ export async function createDatabaseExportZip(
           // Store in files/ directory, preserving the URL structure
           const archivePath = `files${attachment.url}`
           const fileContent = readFileSync(filePath)
-          zip.addFile(archivePath, fileContent)
+          zip.file(archivePath, fileContent)
         }
       }
     }
@@ -312,14 +312,14 @@ export async function createDatabaseExportZip(
           // Store in files/ directory, preserving the URL structure
           const archivePath = `files${user.avatar}`
           const fileContent = readFileSync(filePath)
-          zip.addFile(archivePath, fileContent)
+          zip.file(archivePath, fileContent)
         }
       }
     }
   }
 
   // Get the ZIP buffer
-  const buffer = zip.toBuffer()
+  const buffer = await zip.generateAsync({ type: 'nodebuffer' })
 
   return { buffer, manifest }
 }

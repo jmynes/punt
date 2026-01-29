@@ -8,7 +8,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import AdmZip from 'adm-zip'
+import JSZip from 'jszip'
 import { decrypt } from '@/lib/crypto'
 import { db } from '@/lib/db'
 import {
@@ -64,18 +64,18 @@ interface ParsedBackup {
 /**
  * Extracts and parses backup.json from a ZIP buffer
  */
-function extractBackupJsonFromZip(
+async function extractBackupJsonFromZip(
   zipBuffer: Buffer,
   password?: string,
-): { success: true; parsed: ParsedBackup } | ImportError {
-  const zip = new AdmZip(zipBuffer)
-  const backupEntry = zip.getEntry('backup.json')
+): Promise<{ success: true; parsed: ParsedBackup } | ImportError> {
+  const zip = await JSZip.loadAsync(zipBuffer)
+  const backupEntry = zip.file('backup.json')
 
   if (!backupEntry) {
     return { success: false, error: 'backup.json not found in ZIP archive' }
   }
 
-  const backupJson = zip.readAsText(backupEntry)
+  const backupJson = await backupEntry.async('string')
 
   return parseBackupJson(backupJson, password)
 }
@@ -184,10 +184,10 @@ export function isZipFile(buffer: Buffer): boolean {
 /**
  * Parses the export file content (ZIP or JSON)
  */
-export function parseExportFile(
+export async function parseExportFile(
   content: string | Buffer,
   password?: string,
-):
+): Promise<
   | {
       success: true
       data: ExportData
@@ -195,13 +195,14 @@ export function parseExportFile(
       isZip: boolean
       zipBuffer?: Buffer
     }
-  | ImportError {
+  | ImportError
+> {
   // Convert string to buffer if needed
   const buffer = typeof content === 'string' ? Buffer.from(content, 'utf8') : content
 
   // Check if it's a ZIP file
   if (isZipFile(buffer)) {
-    const result = extractBackupJsonFromZip(buffer, password)
+    const result = await extractBackupJsonFromZip(buffer, password)
     if (!result.success) return result
     return {
       success: true,
@@ -266,25 +267,26 @@ async function restoreFilesFromZip(
     missingFiles: [] as string[],
   }
 
-  const zip = new AdmZip(zipBuffer)
-  const fileMap = new Map<string, Buffer>()
+  const zip = await JSZip.loadAsync(zipBuffer)
+  const fileMap = new Map<string, JSZip.JSZipObject>()
 
   // Build map of files in the ZIP
-  for (const entry of zip.getEntries()) {
-    if (entry.entryName.startsWith('files/')) {
+  zip.forEach((relativePath, file) => {
+    if (relativePath.startsWith('files/') && !file.dir) {
       // Map to URL path (files/uploads/foo.jpg -> /uploads/foo.jpg)
-      const urlPath = entry.entryName.replace(/^files/, '')
-      fileMap.set(urlPath, entry.getData())
+      const urlPath = relativePath.replace(/^files/, '')
+      fileMap.set(urlPath, file)
     }
-  }
+  })
 
   // Restore attachment files
   if (options?.includeAttachments) {
     for (const attachment of data.attachments) {
       if (attachment.url) {
-        const fileBuffer = fileMap.get(attachment.url)
-        if (fileBuffer) {
+        const zipFile = fileMap.get(attachment.url)
+        if (zipFile) {
           try {
+            const fileBuffer = await zipFile.async('nodebuffer')
             const destPath = join(process.cwd(), 'public', attachment.url.slice(1))
             await mkdir(dirname(destPath), { recursive: true })
             await writeFile(destPath, fileBuffer)
@@ -305,9 +307,10 @@ async function restoreFilesFromZip(
   if (options?.includeAvatars) {
     for (const user of data.users) {
       if (user.avatar) {
-        const fileBuffer = fileMap.get(user.avatar)
-        if (fileBuffer) {
+        const zipFile = fileMap.get(user.avatar)
+        if (zipFile) {
           try {
+            const fileBuffer = await zipFile.async('nodebuffer')
             const destPath = join(process.cwd(), 'public', user.avatar.slice(1))
             await mkdir(dirname(destPath), { recursive: true })
             await writeFile(destPath, fileBuffer)

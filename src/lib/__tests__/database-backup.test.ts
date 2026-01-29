@@ -10,8 +10,7 @@
 
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import AdmZip from 'adm-zip'
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { decrypt, encrypt } from '@/lib/crypto'
 import {
   createDatabaseExport,
@@ -410,7 +409,7 @@ describe('Database Backup/Restore', () => {
         const exportFile = await createDatabaseExport('test-user-1')
         const content = JSON.stringify(exportFile)
 
-        const result = parseExportFile(content)
+        const result = await parseExportFile(content)
 
         expect(result.success).toBe(true)
         if (result.success) {
@@ -424,7 +423,7 @@ describe('Database Backup/Restore', () => {
         const exportFile = await createEncryptedDatabaseExport('test-user-1', password)
         const content = JSON.stringify(exportFile)
 
-        const result = parseExportFile(content, password)
+        const result = await parseExportFile(content, password)
 
         expect(result.success).toBe(true)
         if (result.success) {
@@ -436,7 +435,7 @@ describe('Database Backup/Restore', () => {
         const exportFile = await createEncryptedDatabaseExport('test-user-1', 'TestPassword123!')
         const content = JSON.stringify(exportFile)
 
-        const result = parseExportFile(content)
+        const result = await parseExportFile(content)
 
         expect(result.success).toBe(false)
         if (!result.success) {
@@ -448,7 +447,7 @@ describe('Database Backup/Restore', () => {
         const exportFile = await createEncryptedDatabaseExport('test-user-1', 'TestPassword123!')
         const content = JSON.stringify(exportFile)
 
-        const result = parseExportFile(content, 'WrongPassword!')
+        const result = await parseExportFile(content, 'WrongPassword!')
 
         expect(result.success).toBe(false)
         if (!result.success) {
@@ -456,13 +455,10 @@ describe('Database Backup/Restore', () => {
         }
       })
 
-      // Note: parseExportFile ZIP tests are skipped due to adm-zip/vitest environment
-      // incompatibility where getData() returns empty buffers. The ZIP creation works
-      // correctly (verified with system unzip).
-      it.skip('should parse ZIP export', async () => {
+      it('should parse ZIP export', async () => {
         const { buffer } = await createDatabaseExportZip('test-user-1')
 
-        const result = parseExportFile(buffer)
+        const result = await parseExportFile(buffer)
 
         expect(result.success).toBe(true)
         if (result.success) {
@@ -472,8 +468,8 @@ describe('Database Backup/Restore', () => {
         }
       })
 
-      it('should fail on invalid JSON', () => {
-        const result = parseExportFile('not valid json')
+      it('should fail on invalid JSON', async () => {
+        const result = await parseExportFile('not valid json')
 
         expect(result.success).toBe(false)
         if (!result.success) {
@@ -481,8 +477,8 @@ describe('Database Backup/Restore', () => {
         }
       })
 
-      it('should fail on invalid export structure', () => {
-        const result = parseExportFile('{"foo": "bar"}')
+      it('should fail on invalid export structure', async () => {
+        const result = await parseExportFile('{"foo": "bar"}')
 
         expect(result.success).toBe(false)
       })
@@ -570,7 +566,7 @@ describe('Database Backup/Restore', () => {
 
       await cleanupTestData()
 
-      const parseResult = parseExportFile(content)
+      const parseResult = await parseExportFile(content)
       expect(parseResult.success).toBe(true)
 
       if (parseResult.success) {
@@ -590,7 +586,7 @@ describe('Database Backup/Restore', () => {
 
       await cleanupTestData()
 
-      const parseResult = parseExportFile(content, password)
+      const parseResult = await parseExportFile(content, password)
       expect(parseResult.success).toBe(true)
 
       if (parseResult.success) {
@@ -603,15 +599,12 @@ describe('Database Backup/Restore', () => {
       }
     })
 
-    // Note: ZIP round-trip tests are skipped due to adm-zip/vitest environment
-    // incompatibility. ZIP creation and extraction work correctly (verified with
-    // system unzip and in actual browser/API usage).
-    it.skip('should round-trip ZIP export/import', async () => {
+    it('should round-trip ZIP export/import', async () => {
       const { buffer } = await createDatabaseExportZip('test-user-1')
 
       await cleanupTestData()
 
-      const parseResult = parseExportFile(buffer)
+      const parseResult = await parseExportFile(buffer)
       expect(parseResult.success).toBe(true)
 
       if (parseResult.success) {
@@ -624,13 +617,13 @@ describe('Database Backup/Restore', () => {
       }
     })
 
-    it.skip('should round-trip encrypted ZIP export/import', async () => {
+    it('should round-trip encrypted ZIP export/import', async () => {
       const password = 'SecurePassword123!'
       const { buffer } = await createDatabaseExportZip('test-user-1', { password })
 
       await cleanupTestData()
 
-      const parseResult = parseExportFile(buffer, password)
+      const parseResult = await parseExportFile(buffer, password)
       expect(parseResult.success).toBe(true)
 
       if (parseResult.success) {

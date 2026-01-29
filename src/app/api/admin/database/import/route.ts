@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, validationError } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
-import { type ImportResult, importDatabase, parseExportFile } from '@/lib/database-import'
+import { importDatabase, parseExportFile } from '@/lib/database-import'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
 
