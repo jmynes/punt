@@ -6,10 +6,9 @@
  * Optionally includes attachment files and profile pictures in a ZIP archive.
  */
 
-import { createReadStream, existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { PassThrough } from 'node:stream'
-import archiver from 'archiver'
+import AdmZip from 'adm-zip'
 import { encrypt } from '@/lib/crypto'
 import { db } from '@/lib/db'
 import {
@@ -263,12 +262,12 @@ function createBackupJson(
 
 /**
  * Creates a ZIP archive containing the backup JSON and optionally files
- * Returns a readable stream of the ZIP content
+ * Returns a Buffer of the ZIP content
  */
 export async function createDatabaseExportZip(
   userId: string,
   options: ExportOptions = {},
-): Promise<{ stream: PassThrough; manifest: FileManifest }> {
+): Promise<{ buffer: Buffer; manifest: FileManifest }> {
   const data = await exportDatabase()
   const backupJson = createBackupJson(data, userId, options)
 
@@ -277,16 +276,11 @@ export async function createDatabaseExportZip(
     avatars: [],
   }
 
-  // Create archive
-  const archive = archiver('zip', {
-    zlib: { level: 9 }, // Maximum compression
-  })
-
-  const passThrough = new PassThrough()
-  archive.pipe(passThrough)
+  // Create ZIP archive using adm-zip
+  const zip = new AdmZip()
 
   // Add the JSON backup
-  archive.append(JSON.stringify(backupJson, null, 2), { name: 'backup.json' })
+  zip.addFile('backup.json', Buffer.from(JSON.stringify(backupJson, null, 2), 'utf8'))
 
   // Add attachment files if requested
   if (options.includeAttachments) {
@@ -299,7 +293,8 @@ export async function createDatabaseExportZip(
         if (exists) {
           // Store in files/ directory, preserving the URL structure
           const archivePath = `files${attachment.url}`
-          archive.append(createReadStream(filePath), { name: archivePath })
+          const fileContent = readFileSync(filePath)
+          zip.addFile(archivePath, fileContent)
         }
       }
     }
@@ -316,16 +311,17 @@ export async function createDatabaseExportZip(
         if (exists) {
           // Store in files/ directory, preserving the URL structure
           const archivePath = `files${user.avatar}`
-          archive.append(createReadStream(filePath), { name: archivePath })
+          const fileContent = readFileSync(filePath)
+          zip.addFile(archivePath, fileContent)
         }
       }
     }
   }
 
-  // Finalize the archive
-  archive.finalize()
+  // Get the ZIP buffer
+  const buffer = zip.toBuffer()
 
-  return { stream: passThrough, manifest }
+  return { buffer, manifest }
 }
 
 /**

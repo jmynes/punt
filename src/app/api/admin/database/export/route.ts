@@ -1,4 +1,3 @@
-import { Readable } from 'node:stream'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { handleApiError, validationError } from '@/lib/api-utils'
@@ -51,7 +50,7 @@ export async function POST(request: Request) {
 
     if (includeFiles) {
       // Create ZIP with files
-      const { stream } = await createDatabaseExportZip(user.id, {
+      const { buffer } = await createDatabaseExportZip(user.id, {
         password,
         includeAttachments,
         includeAvatars,
@@ -59,10 +58,7 @@ export async function POST(request: Request) {
 
       const filename = generateExportFilename(true)
 
-      // Convert PassThrough stream to web ReadableStream
-      const webStream = Readable.toWeb(stream) as ReadableStream
-
-      return new NextResponse(webStream, {
+      return new NextResponse(new Uint8Array(buffer), {
         status: 200,
         headers: {
           'Content-Type': 'application/zip',
