@@ -9,7 +9,7 @@ import {
 } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
-import { hashPassword, validatePasswordStrength } from '@/lib/password'
+import { hashPassword, validatePasswordStrength, verifyPassword } from '@/lib/password'
 import { USER_SELECT_ADMIN_LIST, USER_SELECT_CREATED } from '@/lib/prisma-selects'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
@@ -26,6 +26,7 @@ const createUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   password: z.string().min(1, 'Password is required'),
   isSystemAdmin: z.boolean().optional().default(false),
+  confirmPassword: z.string().min(1, 'Your password is required to confirm this action'),
 })
 
 /**
@@ -107,7 +108,7 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    await requireSystemAdmin()
+    const admin = await requireSystemAdmin()
 
     // Rate limiting
     const ip = getClientIp(request)
@@ -123,7 +124,22 @@ export async function POST(request: Request) {
       return validationError(parsed)
     }
 
-    const { username, email, name, password, isSystemAdmin } = parsed.data
+    const { username, email, name, password, isSystemAdmin, confirmPassword } = parsed.data
+
+    // Verify the admin's password
+    const adminUser = await db.user.findUnique({
+      where: { id: admin.id },
+      select: { passwordHash: true },
+    })
+
+    if (!adminUser?.passwordHash) {
+      return badRequestError('Unable to verify your identity')
+    }
+
+    const isValidPassword = await verifyPassword(confirmPassword, adminUser.passwordHash)
+    if (!isValidPassword) {
+      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
+    }
 
     // Validate password strength
     const passwordValidation = validatePasswordStrength(password)

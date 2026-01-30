@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Eye, EyeOff, Loader2, UserPlus } from 'lucide-react'
+import { AlertTriangle, Eye, EyeOff, Loader2, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -28,6 +28,8 @@ export function CreateUserDialog() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isSystemAdmin, setIsSystemAdmin] = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const queryClient = useQueryClient()
 
   const createUser = useMutation({
@@ -47,6 +49,7 @@ export function CreateUserDialog() {
           email: email || undefined,
           password,
           isSystemAdmin,
+          confirmPassword,
         }),
       })
       if (!res.ok) {
@@ -77,6 +80,8 @@ export function CreateUserDialog() {
     setPassword('')
     setShowPassword(false)
     setIsSystemAdmin(false)
+    setConfirmPassword('')
+    setShowConfirmPassword(false)
   }
 
   return (
@@ -179,16 +184,56 @@ export function CreateUserDialog() {
             </p>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <Checkbox
-              id="isSystemAdmin"
-              checked={isSystemAdmin}
-              onCheckedChange={(checked) => setIsSystemAdmin(checked === true)}
-              className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
-            />
-            <Label htmlFor="isSystemAdmin" className="text-zinc-300 cursor-pointer">
-              Make this user a super admin
+          <div className="space-y-2">
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="isSystemAdmin"
+                checked={isSystemAdmin}
+                onCheckedChange={(checked) => setIsSystemAdmin(checked === true)}
+                className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
+              />
+              <Label htmlFor="isSystemAdmin" className="text-zinc-300 cursor-pointer">
+                Make this user a super admin
+              </Label>
+            </div>
+            {isSystemAdmin && (
+              <div className="flex items-start gap-2 p-3 rounded-md bg-amber-950/30 border border-amber-900/50">
+                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-200/80">
+                  Super admins have full system access including managing all users, projects, and
+                  system settings. Only grant this privilege to trusted individuals.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-zinc-800 pt-4 space-y-2">
+            <Label htmlFor="confirmPassword" className="text-zinc-300">
+              Your Password<span className="text-amber-500 ml-1">*</span>
             </Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Enter your password to confirm"
+                required
+                className="border-zinc-700 bg-zinc-800 text-zinc-100 pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3 text-zinc-500 hover:text-zinc-300"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Enter your password to authorize creating this user.
+            </p>
           </div>
 
           <DialogFooter>
