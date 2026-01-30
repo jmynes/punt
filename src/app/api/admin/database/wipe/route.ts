@@ -10,6 +10,7 @@ import { hash } from 'bcryptjs'
 import { z } from 'zod'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { validatePasswordStrength, verifyPassword } from '@/lib/password'
 
 const WipeRequestSchema = z.object({
@@ -114,6 +115,14 @@ export async function POST(request: Request) {
         timeout: 60_000, // 1 minute timeout
       },
     )
+
+    // Emit database event for real-time updates
+    // This notifies other browser tabs/windows to refresh/logout
+    projectEvents.emitDatabaseEvent({
+      type: 'database.wiped',
+      userId: currentAdmin.id,
+      timestamp: Date.now(),
+    })
 
     return Response.json({
       success: true,

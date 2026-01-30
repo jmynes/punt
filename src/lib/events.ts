@@ -54,6 +54,11 @@ export type SettingsEventType = 'settings.roles.updated'
 export type MemberEventType = 'member.role.updated'
 
 /**
+ * Event types for database operations
+ */
+export type DatabaseEventType = 'database.projects.wiped' | 'database.wiped'
+
+/**
  * Payload for ticket events
  */
 export interface TicketEvent {
@@ -155,6 +160,16 @@ export interface MemberEvent {
   }
 }
 
+/**
+ * Payload for database events
+ */
+export interface DatabaseEvent {
+  type: DatabaseEventType
+  userId: string // The admin who performed the action
+  tabId?: string // Optional tab ID for self-skip
+  timestamp: number
+}
+
 // Global channel for project-level events (visible to all authenticated users)
 const PROJECTS_GLOBAL_CHANNEL = 'projects:global'
 // Global channel for user profile events (visible to all authenticated users)
@@ -165,6 +180,8 @@ const BRANDING_GLOBAL_CHANNEL = 'branding:global'
 const SETTINGS_GLOBAL_CHANNEL = 'settings:global'
 // Global channel for member events (visible to all authenticated users)
 const MEMBERS_GLOBAL_CHANNEL = 'members:global'
+// Global channel for database events (visible to all authenticated users)
+const DATABASE_GLOBAL_CHANNEL = 'database:global'
 
 /**
  * Event emitter for real-time updates
@@ -372,6 +389,29 @@ class ProjectEventEmitter extends EventEmitter {
    */
   getMembersListenerCount(): number {
     return this.listenerCount(MEMBERS_GLOBAL_CHANNEL)
+  }
+
+  /**
+   * Emit a database event to all subscribers (global channel)
+   */
+  emitDatabaseEvent(event: DatabaseEvent) {
+    this.emit(DATABASE_GLOBAL_CHANNEL, event)
+  }
+
+  /**
+   * Subscribe to global database events
+   * Returns an unsubscribe function
+   */
+  subscribeToDatabase(callback: (event: DatabaseEvent) => void): () => void {
+    this.on(DATABASE_GLOBAL_CHANNEL, callback)
+    return () => this.off(DATABASE_GLOBAL_CHANNEL, callback)
+  }
+
+  /**
+   * Get the number of listeners for global database events
+   */
+  getDatabaseListenerCount(): number {
+    return this.listenerCount(DATABASE_GLOBAL_CHANNEL)
   }
 }
 

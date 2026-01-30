@@ -9,6 +9,7 @@
 import { z } from 'zod'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { verifyPassword } from '@/lib/password'
 
 const WipeProjectsRequestSchema = z.object({
@@ -95,6 +96,13 @@ export async function POST(request: Request) {
         timeout: 60_000, // 1 minute timeout
       },
     )
+
+    // Emit database event for real-time updates
+    projectEvents.emitDatabaseEvent({
+      type: 'database.projects.wiped',
+      userId: currentAdmin.id,
+      timestamp: Date.now(),
+    })
 
     return Response.json({
       success: true,

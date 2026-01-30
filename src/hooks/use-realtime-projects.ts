@@ -1,10 +1,11 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
+import { signOut } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { projectKeys } from '@/hooks/queries/use-projects'
 import { isDemoMode } from '@/lib/demo'
-import type { ProjectEvent } from '@/lib/events'
+import type { DatabaseEvent, ProjectEvent } from '@/lib/events'
 import { getTabId } from './use-realtime'
 
 // Reconnection config
@@ -19,7 +20,7 @@ interface ConnectedEvent {
   userId: string
 }
 
-type SSEEvent = ProjectEvent | ConnectedEvent
+type SSEEvent = ProjectEvent | DatabaseEvent | ConnectedEvent
 
 /**
  * Hook for real-time synchronization of project list via Server-Sent Events
@@ -90,6 +91,21 @@ export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
         // Handle connection confirmation
         if (data.type === 'connected') {
           setStatus('connected')
+          return
+        }
+
+        // Handle database wipe events
+        if (data.type === 'database.wiped') {
+          // Full database was wiped - force sign out
+          // Skip tab check since all tabs need to sign out
+          signOut({ callbackUrl: '/login' })
+          return
+        }
+
+        if (data.type === 'database.projects.wiped') {
+          // All projects were wiped - invalidate all queries
+          // Skip tab check since all tabs need to refresh
+          queryClient.invalidateQueries()
           return
         }
 

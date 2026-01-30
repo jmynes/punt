@@ -1,5 +1,5 @@
 import { requireAuth } from '@/lib/auth-helpers'
-import { type ProjectEvent, projectEvents } from '@/lib/events'
+import { type DatabaseEvent, type ProjectEvent, projectEvents } from '@/lib/events'
 
 /**
  * GET /api/projects/events - Server-Sent Events endpoint for project list changes
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
         )
 
         // Subscribe to global project events
-        const handleEvent = (event: ProjectEvent) => {
+        const handleProjectEvent = (event: ProjectEvent) => {
           try {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
           } catch {
@@ -28,7 +28,17 @@ export async function GET(request: Request) {
           }
         }
 
-        const unsubscribe = projectEvents.subscribeToProjects(handleEvent)
+        // Subscribe to database events (wipe operations)
+        const handleDatabaseEvent = (event: DatabaseEvent) => {
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
+          } catch {
+            // Stream may be closed, ignore
+          }
+        }
+
+        const unsubscribeProjects = projectEvents.subscribeToProjects(handleProjectEvent)
+        const unsubscribeDatabase = projectEvents.subscribeToDatabase(handleDatabaseEvent)
 
         // Send keepalive comment every 30 seconds to prevent timeout
         const keepaliveInterval = setInterval(() => {
@@ -41,7 +51,8 @@ export async function GET(request: Request) {
 
         // Cleanup on client disconnect
         request.signal.addEventListener('abort', () => {
-          unsubscribe()
+          unsubscribeProjects()
+          unsubscribeDatabase()
           clearInterval(keepaliveInterval)
           try {
             controller.close()
