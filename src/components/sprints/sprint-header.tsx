@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useActiveSprint } from '@/hooks/queries/use-sprints'
+import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import {
@@ -65,7 +65,13 @@ export function SprintHeader({
   columns = [],
   className,
 }: SprintHeaderProps) {
-  const { data: activeSprint, isLoading } = useActiveSprint(projectId)
+  const { data: sprints, isLoading } = useProjectSprints(projectId)
+
+  // Find current sprint: prefer active, fall back to planning
+  const activeSprint =
+    sprints?.find((s) => s.status === 'active') ||
+    sprints?.find((s) => s.status === 'planning') ||
+    null
   const { setSprintCreateOpen, openSprintComplete } = useUIStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
 

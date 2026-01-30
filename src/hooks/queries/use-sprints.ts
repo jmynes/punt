@@ -111,7 +111,8 @@ export function useCreateSprint(projectId: string) {
     },
     onSuccess: () => {
       toast.success('Sprint created')
-      queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
+      // Invalidate all sprint-related queries (broader invalidation to ensure UI updates)
+      queryClient.invalidateQueries({ queryKey: ['sprints'] })
     },
     onError: (err) => {
       toast.error(err.message)

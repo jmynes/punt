@@ -8,7 +8,7 @@ import { KanbanBoard } from '@/components/board'
 import { SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
-import { useActiveSprint } from '@/hooks/queries/use-sprints'
+import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -65,8 +65,19 @@ export default function BoardPage() {
     enabled: _hasHydrated && columnsLoaded,
   })
 
-  // Fetch active sprint - board only shows tickets in the active sprint
-  const { data: activeSprint } = useActiveSprint(projectId)
+  // Fetch all sprints - board shows active sprint, or planning sprint if no active
+  const { data: sprints } = useProjectSprints(projectId)
+
+  // Determine which sprint to show on the board (active > planning)
+  const activeSprint = useMemo(() => {
+    if (!sprints) return null
+    // Prefer active sprint
+    const active = sprints.find((s) => s.status === 'active')
+    if (active) return active
+    // Fall back to first planning sprint
+    const planning = sprints.find((s) => s.status === 'planning')
+    return planning || null
+  }, [sprints])
 
   // Check permission to create tickets
   const canCreateTickets = useHasPermission(projectId, PERMISSIONS.TICKETS_CREATE)
@@ -90,18 +101,18 @@ export default function BoardPage() {
   }, [clearSelection, setActiveTicketId, hasTicketParam])
 
   // Apply filters to columns
-  // Board view only shows tickets in the active sprint
+  // Board view shows tickets in the current sprint (active or planning)
   const filteredColumns = useMemo((): ColumnWithTickets[] => {
     return columns.map((col) => ({
       ...col,
       tickets: col.tickets.filter((ticket) => {
-        // BOARD ONLY: Filter to active sprint first
-        // If there's an active sprint, only show tickets in that sprint
-        // If there's no active sprint, show no tickets (board is sprint-focused)
+        // BOARD ONLY: Filter to current sprint (active or planning)
+        // If there's a sprint, only show tickets in that sprint
+        // If there's no sprint, show no tickets (board is sprint-focused)
         if (activeSprint) {
           if (ticket.sprintId !== activeSprint.id) return false
         } else {
-          // No active sprint - board shows nothing
+          // No sprint - board shows nothing
           return false
         }
 
@@ -284,8 +295,8 @@ export default function BoardPage() {
             </h1>
             <p className="text-sm text-zinc-500">
               {activeSprint
-                ? 'Drag and drop tickets to update their status'
-                : 'Start a sprint to see tickets on the board'}
+                ? `Drag and drop tickets to update their status${activeSprint.status === 'planning' ? ' (planning sprint)' : ''}`
+                : 'Create a sprint to see tickets on the board'}
             </p>
           </div>
         </div>
