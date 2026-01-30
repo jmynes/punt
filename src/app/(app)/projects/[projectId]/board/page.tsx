@@ -32,11 +32,11 @@ export default function BoardPage() {
 
   const { getColumns, _hasHydrated } = useBoardStore()
   const {
-    setCreateTicketOpen,
     setActiveProjectId,
     activeTicketId,
     setActiveTicketId,
     openCreateTicketWithData,
+    setSprintCreateOpen,
   } = useUIStore()
   const { clearSelection } = useSelectionStore()
   const {
@@ -290,16 +290,22 @@ export default function BoardPage() {
           </div>
         </div>
 
-        {/* Create ticket - auto-assign to active sprint */}
+        {/* Create ticket - auto-assign to active sprint and To Do column */}
         {canCreateTickets && (
           <Button
             size="sm"
             variant="primary"
             onClick={() => {
               if (activeSprint) {
-                openCreateTicketWithData({ sprintId: activeSprint.id })
+                // Find the "To Do" column (or first column as fallback)
+                const todoColumn = columns.find((c) => c.name === 'To Do') || columns[0]
+                openCreateTicketWithData({
+                  sprintId: activeSprint.id,
+                  columnId: todoColumn?.id,
+                })
               } else {
-                setCreateTicketOpen(true)
+                // No active sprint - prompt to create one first
+                setSprintCreateOpen(true)
               }
             }}
           >
@@ -327,6 +333,7 @@ export default function BoardPage() {
             projectKey={projectKey}
             projectId={projectId}
             filteredColumns={filteredColumns}
+            activeSprintId={activeSprint?.id}
           />
         </div>
       </div>

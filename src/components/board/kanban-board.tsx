@@ -29,9 +29,15 @@ interface KanbanBoardProps {
   projectKey: string
   projectId: string
   filteredColumns: ColumnWithTickets[]
+  activeSprintId?: string | null
 }
 
-export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBoardProps) {
+export function KanbanBoard({
+  projectKey,
+  projectId,
+  filteredColumns,
+  activeSprintId = null,
+}: KanbanBoardProps) {
   const { getColumns, moveTicket, moveTickets, reorderTicket, reorderTickets, _hasHydrated } =
     useBoardStore()
   const { setCreateTicketOpen } = useUIStore()
@@ -458,6 +464,7 @@ export function KanbanBoard({ projectKey, projectId, filteredColumns }: KanbanBo
               activeDragTarget={
                 insertPosition?.columnId === column.id ? insertPosition.index : null
               }
+              activeSprintId={activeSprintId}
             />
           ))}
         </div>

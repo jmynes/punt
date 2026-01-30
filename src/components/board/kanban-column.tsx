@@ -17,6 +17,7 @@ interface KanbanColumnProps {
   dragSelectionIds?: string[]
   activeTicketId?: string | null
   activeDragTarget?: number | null
+  activeSprintId?: string | null
 }
 
 export function KanbanColumn({
@@ -25,8 +26,19 @@ export function KanbanColumn({
   dragSelectionIds = [],
   activeTicketId = null,
   activeDragTarget = null,
+  activeSprintId = null,
 }: KanbanColumnProps) {
-  const { openCreateTicketWithData } = useUIStore()
+  const { openCreateTicketWithData, setSprintCreateOpen } = useUIStore()
+
+  // Handle creating a ticket - requires active sprint on board view
+  const handleCreateTicket = () => {
+    if (activeSprintId) {
+      openCreateTicketWithData({ columnId: column.id, sprintId: activeSprintId })
+    } else {
+      // No active sprint - prompt to create one first
+      setSprintCreateOpen(true)
+    }
+  }
 
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
@@ -73,7 +85,7 @@ export function KanbanColumn({
             variant="ghost"
             size="icon"
             className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
-            onClick={() => openCreateTicketWithData({ columnId: column.id })}
+            onClick={handleCreateTicket}
           >
             <Plus className="h-3.5 w-3.5" />
           </Button>
@@ -159,7 +171,7 @@ export function KanbanColumn({
         <Button
           variant="ghost"
           className="w-full justify-start gap-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
-          onClick={() => openCreateTicketWithData({ columnId: column.id })}
+          onClick={handleCreateTicket}
         >
           <Plus className="h-4 w-4" />
           Add ticket
