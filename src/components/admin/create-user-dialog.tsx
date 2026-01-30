@@ -22,6 +22,7 @@ import { isDemoMode } from '@/lib/demo'
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false)
+  const [username, setUsername] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -40,7 +41,13 @@ export function CreateUserDialog() {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, isSystemAdmin }),
+        body: JSON.stringify({
+          username,
+          name,
+          email: email || undefined,
+          password,
+          isSystemAdmin,
+        }),
       })
       if (!res.ok) {
         const error = await res.json()
@@ -64,6 +71,7 @@ export function CreateUserDialog() {
 
   function handleClose() {
     setOpen(false)
+    setUsername('')
     setName('')
     setEmail('')
     setPassword('')
@@ -96,8 +104,25 @@ export function CreateUserDialog() {
           autoComplete="off"
         >
           <div className="space-y-2">
+            <Label htmlFor="username" className="text-zinc-300">
+              Username<span className="text-amber-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase())}
+              placeholder="johndoe"
+              required
+              className="border-zinc-700 bg-zinc-800 text-zinc-100"
+            />
+            <p className="text-xs text-zinc-500">
+              3-30 characters, letters, numbers, underscores, and hyphens only.
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="name" className="text-zinc-300">
-              Name
+              Display Name<span className="text-amber-500 ml-1">*</span>
             </Label>
             <Input
               id="name"
@@ -105,7 +130,6 @@ export function CreateUserDialog() {
               onChange={(e) => setName(e.target.value)}
               placeholder="John Doe"
               required
-              autoComplete="off"
               className="border-zinc-700 bg-zinc-800 text-zinc-100"
             />
           </div>
@@ -113,6 +137,7 @@ export function CreateUserDialog() {
           <div className="space-y-2">
             <Label htmlFor="email" className="text-zinc-300">
               Email
+              <span className="text-zinc-500 ml-2 text-xs font-normal">(optional)</span>
             </Label>
             <Input
               id="email"
@@ -120,15 +145,13 @@ export function CreateUserDialog() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="john@example.com"
-              required
-              autoComplete="off"
               className="border-zinc-700 bg-zinc-800 text-zinc-100"
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="password" className="text-zinc-300">
-              Password
+              Password<span className="text-amber-500 ml-1">*</span>
             </Label>
             <div className="relative">
               <Input

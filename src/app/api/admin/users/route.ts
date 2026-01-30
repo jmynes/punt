@@ -22,7 +22,7 @@ const createUserSchema = z.object({
       /^[a-zA-Z0-9_-]+$/,
       'Username can only contain letters, numbers, underscores, and hyphens',
     ),
-  email: z.string().email(),
+  email: z.string().email().optional().or(z.literal('')),
   name: z.string().min(1, 'Name is required'),
   password: z.string().min(1, 'Password is required'),
   isSystemAdmin: z.boolean().optional().default(false),
@@ -140,13 +140,15 @@ export async function POST(request: Request) {
       return badRequestError('Username already exists')
     }
 
-    // Check if email already exists
-    const existingEmail = await db.user.findUnique({
-      where: { email },
-    })
+    // Check if email already exists (only if provided)
+    if (email) {
+      const existingEmail = await db.user.findUnique({
+        where: { email },
+      })
 
-    if (existingEmail) {
-      return badRequestError('Email already exists')
+      if (existingEmail) {
+        return badRequestError('Email already exists')
+      }
     }
 
     // Hash password and create user
@@ -155,7 +157,7 @@ export async function POST(request: Request) {
     const user = await db.user.create({
       data: {
         username,
-        email,
+        email: email || null,
         name,
         passwordHash,
         isSystemAdmin,
