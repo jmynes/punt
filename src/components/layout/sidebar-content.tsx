@@ -246,7 +246,7 @@ export function SidebarContent({
               projects.map((project) => {
                 const isActive = activeProjectId === project.id
                 const isExpanded = expandedProjectIds.has(project.id)
-                const isOnProjectPage = pathname.startsWith(`/projects/${project.id}`)
+                const isOnProjectPage = pathname.startsWith(`/projects/${project.key}`)
                 return (
                   <div key={project.id}>
                     <div className="relative flex items-center">
@@ -262,7 +262,7 @@ export function SidebarContent({
                         )}
                       </button>
                       <Link
-                        href={`/projects/${project.id}/board`}
+                        href={`/projects/${project.key}/board`}
                         onClick={() => {
                           onSetActiveProjectId(project.id)
                           handleLinkClick()
@@ -322,13 +322,13 @@ export function SidebarContent({
                     {/* Project sub-nav */}
                     {isExpanded && (
                       <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-                        <Link href={`/projects/${project.id}/board`} onClick={handleLinkClick}>
+                        <Link href={`/projects/${project.key}/board`} onClick={handleLinkClick}>
                           <Button
                             variant="ghost"
                             size="sm"
                             className={cn(
                               'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
-                              pathname === `/projects/${project.id}/board` &&
+                              pathname === `/projects/${project.key}/board` &&
                                 'bg-zinc-800/50 text-zinc-100',
                             )}
                           >
@@ -336,13 +336,13 @@ export function SidebarContent({
                             Board
                           </Button>
                         </Link>
-                        <Link href={`/projects/${project.id}/backlog`} onClick={handleLinkClick}>
+                        <Link href={`/projects/${project.key}/backlog`} onClick={handleLinkClick}>
                           <Button
                             variant="ghost"
                             size="sm"
                             className={cn(
                               'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
-                              pathname === `/projects/${project.id}/backlog` &&
+                              pathname === `/projects/${project.key}/backlog` &&
                                 'bg-zinc-800/50 text-zinc-100',
                             )}
                           >
@@ -350,13 +350,13 @@ export function SidebarContent({
                             Backlog
                           </Button>
                         </Link>
-                        <Link href={`/projects/${project.id}/sprints`} onClick={handleLinkClick}>
+                        <Link href={`/projects/${project.key}/sprints`} onClick={handleLinkClick}>
                           <Button
                             variant="ghost"
                             size="sm"
                             className={cn(
                               'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
-                              pathname === `/projects/${project.id}/sprints` &&
+                              pathname === `/projects/${project.key}/sprints` &&
                                 'bg-zinc-800/50 text-zinc-100',
                             )}
                           >

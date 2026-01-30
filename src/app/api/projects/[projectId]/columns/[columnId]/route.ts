@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { handleApiError, notFoundError, validationError } from '@/lib/api-utils'
-import { requireAuth, requirePermission } from '@/lib/auth-helpers'
+import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { PERMISSIONS } from '@/lib/permissions'
 
@@ -20,7 +20,8 @@ export async function PATCH(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId, columnId } = await params
+    const { projectId: projectKey, columnId } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check board.manage permission
     await requirePermission(user.id, projectId, PERMISSIONS.BOARD_MANAGE)
@@ -77,7 +78,8 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId, columnId } = await params
+    const { projectId: projectKey, columnId } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check board.manage permission
     await requirePermission(user.id, projectId, PERMISSIONS.BOARD_MANAGE)

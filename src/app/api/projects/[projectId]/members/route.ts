@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAuth, requireMembership } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 
 /**
@@ -12,7 +12,8 @@ export async function GET(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check project membership
     await requireMembership(user.id, projectId)

@@ -223,7 +223,7 @@ export default function DashboardPage() {
                   return (
                     <Link
                       key={project.id}
-                      href={`/projects/${project.id}/board`}
+                      href={`/projects/${project.key}/board`}
                       className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/30 hover:bg-zinc-800/50 transition-colors group"
                     >
                       <div

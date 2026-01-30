@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
-import { requireAuth, requireMembership, requireTicketPermission } from '@/lib/auth-helpers'
+import {
+  requireAuth,
+  requireMembership,
+  requireProjectByKey,
+  requireTicketPermission,
+} from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { TICKET_SELECT_FULL, transformTicket } from '@/lib/prisma-selects'
@@ -47,7 +52,8 @@ export async function GET(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId, ticketId } = await params
+    const { projectId: projectKey, ticketId } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check project membership
     await requireMembership(user.id, projectId)
@@ -77,7 +83,8 @@ export async function PATCH(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId, ticketId } = await params
+    const { projectId: projectKey, ticketId } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check if ticket exists and belongs to project, get creator for permission check
     const existingTicket = await db.ticket.findFirst({
@@ -216,7 +223,8 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId, ticketId } = await params
+    const { projectId: projectKey, ticketId } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check if ticket exists and belongs to project, get creator for permission check
     const ticket = await db.ticket.findFirst({

@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, validationError } from '@/lib/api-utils'
-import { requireAuth, requireMembership, requirePermission } from '@/lib/auth-helpers'
+import {
+  requireAuth,
+  requireMembership,
+  requirePermission,
+  requireProjectByKey,
+} from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -46,7 +51,8 @@ export async function GET(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check project membership
     await requireMembership(user.id, projectId)
@@ -73,7 +79,8 @@ export async function POST(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check ticket creation permission
     await requirePermission(user.id, projectId, PERMISSIONS.TICKETS_CREATE)

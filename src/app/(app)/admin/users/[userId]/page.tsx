@@ -588,7 +588,7 @@ export default function AdminUserProfilePage() {
                     className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg"
                   >
                     <Link
-                      href={`/projects/${membership.project.id}/board`}
+                      href={`/projects/${membership.project.key}/board`}
                       className="flex items-center gap-3 hover:opacity-80 transition-opacity"
                     >
                       <div

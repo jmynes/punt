@@ -75,10 +75,10 @@ const customCollisionDetection: CollisionDetection = (args) => {
 export default function BacklogPage() {
   const params = useParams()
   const router = useRouter()
-  const projectId = params.projectId as string
-  const { getProject, isLoading: projectsLoading } = useProjectsStore()
-  const project = getProject(projectId)
-  const projectKey = project?.key || 'PROJ'
+  const projectKey = params.projectId as string // URL now uses project key
+  const { getProjectByKey, isLoading: projectsLoading } = useProjectsStore()
+  const project = getProjectByKey(projectKey)
+  const projectId = project?.id || projectKey // Use ID if found, fallback to key for API calls
 
   const { getColumns, updateTicket, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
@@ -676,7 +676,9 @@ export default function BacklogPage() {
             <List className="h-5 w-5 text-zinc-400" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-zinc-100">{projectKey} Backlog</h1>
+            <h1 className="text-xl font-semibold text-zinc-100">
+              {project?.key || projectKey} Backlog
+            </h1>
             <p className="text-sm text-zinc-500">
               View and manage all tickets in a configurable list
             </p>

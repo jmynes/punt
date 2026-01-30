@@ -100,6 +100,41 @@ export async function getProjectMembership(userId: string, projectId: string) {
 }
 
 /**
+ * Resolve a project key (e.g., "PUNT") to its database ID
+ * Returns the project ID if found, null otherwise
+ */
+export async function resolveProjectKey(keyOrId: string): Promise<string | null> {
+  // First try to find by exact key match (keys are stored uppercase)
+  const projectByKey = await db.project.findUnique({
+    where: { key: keyOrId.toUpperCase() },
+    select: { id: true },
+  })
+
+  if (projectByKey) {
+    return projectByKey.id
+  }
+
+  // Fallback: check if it's a valid project ID (for backwards compatibility)
+  const projectById = await db.project.findUnique({
+    where: { id: keyOrId },
+    select: { id: true },
+  })
+
+  return projectById?.id ?? null
+}
+
+/**
+ * Resolve a project key to ID, throwing 404 if not found
+ */
+export async function requireProjectByKey(keyOrId: string): Promise<string> {
+  const projectId = await resolveProjectKey(keyOrId)
+  if (!projectId) {
+    throw new Error('Project not found')
+  }
+  return projectId
+}
+
+/**
  * Require project membership - throws if not a member
  * System admins have unrestricted access to all projects
  */

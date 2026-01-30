@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-utils'
-import { requireAuth, requireMembership } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { SPRINT_SELECT_FULL } from '@/lib/prisma-selects'
 
@@ -14,7 +14,8 @@ type RouteParams = { params: Promise<{ projectId: string }> }
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     await requireMembership(user.id, projectId)
 

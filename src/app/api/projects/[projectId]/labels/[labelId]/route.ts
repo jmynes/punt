@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireAuth, requirePermission } from '@/lib/auth-helpers'
+import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -15,7 +15,8 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId, labelId } = await params
+    const { projectId: projectKey, labelId } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check label management permission
     await requirePermission(user.id, projectId, PERMISSIONS.LABELS_MANAGE)

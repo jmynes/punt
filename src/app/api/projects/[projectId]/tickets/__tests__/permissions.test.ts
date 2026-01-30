@@ -37,6 +37,8 @@ vi.mock('@/lib/auth-helpers', async (importOriginal) => {
   return {
     ...original,
     requireAuth: vi.fn(),
+    // Mock requireProjectByKey to return the key as-is (tests use IDs)
+    requireProjectByKey: vi.fn().mockImplementation(async (key: string) => key),
   }
 })
 

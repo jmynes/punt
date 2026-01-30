@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { handleApiError, notFoundError } from '@/lib/api-utils'
-import { requireAuth, requirePermission } from '@/lib/auth-helpers'
+import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { isMember, isValidPermission, PERMISSIONS, parsePermissions } from '@/lib/permissions'
 
@@ -27,7 +27,8 @@ export async function GET(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId, roleId } = await params
+    const { projectId: projectKey, roleId } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check membership
     const membershipExists = await isMember(user.id, projectId)
@@ -84,7 +85,8 @@ export async function PATCH(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId, roleId } = await params
+    const { projectId: projectKey, roleId } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Require permission to manage roles
     await requirePermission(user.id, projectId, PERMISSIONS.MEMBERS_ADMIN)
@@ -187,7 +189,8 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId, roleId } = await params
+    const { projectId: projectKey, roleId } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Require permission to manage roles
     await requirePermission(user.id, projectId, PERMISSIONS.MEMBERS_ADMIN)

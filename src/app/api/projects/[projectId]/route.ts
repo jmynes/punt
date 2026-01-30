@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAuth, requireMembership, requirePermission } from '@/lib/auth-helpers'
+import {
+  requireAuth,
+  requireMembership,
+  requirePermission,
+  requireProjectByKey,
+} from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -25,7 +30,10 @@ export async function GET(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+
+    // Resolve project key to ID
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check project membership
     await requireMembership(user.id, projectId)
@@ -63,6 +71,9 @@ export async function GET(
       if (error.message === 'Unauthorized') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
+      if (error.message === 'Project not found') {
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      }
       if (error.message.startsWith('Forbidden:')) {
         return NextResponse.json({ error: error.message }, { status: 403 })
       }
@@ -82,7 +93,10 @@ export async function PATCH(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+
+    // Resolve project key to ID
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check project settings permission
     await requirePermission(user.id, projectId, PERMISSIONS.PROJECT_SETTINGS)
@@ -157,6 +171,9 @@ export async function PATCH(
       if (error.message === 'Unauthorized') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
+      if (error.message === 'Project not found') {
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      }
       if (error.message.startsWith('Forbidden:')) {
         return NextResponse.json({ error: error.message }, { status: 403 })
       }
@@ -176,7 +193,10 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+
+    // Resolve project key to ID
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check project delete permission
     await requirePermission(user.id, projectId, PERMISSIONS.PROJECT_DELETE)
@@ -211,6 +231,9 @@ export async function DELETE(
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 })
       }
       if (error.message.startsWith('Forbidden:')) {
         return NextResponse.json({ error: error.message }, { status: 403 })

@@ -124,7 +124,7 @@ export function CreateProjectDialog() {
           handleClose()
           // Navigate to the new project and set it as active
           setActiveProjectId(newProject.id)
-          router.push(`/projects/${newProject.id}/board`)
+          router.push(`/projects/${newProject.key}/board`)
         },
         onError: (error) => {
           if (error.message.includes('key already exists')) {

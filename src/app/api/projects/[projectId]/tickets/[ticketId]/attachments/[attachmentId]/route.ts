@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { NextResponse } from 'next/server'
 import { handleApiError, notFoundError } from '@/lib/api-utils'
-import { requireAttachmentPermission, requireAuth } from '@/lib/auth-helpers'
+import { requireAttachmentPermission, requireAuth, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { logger } from '@/lib/logger'
@@ -18,7 +18,8 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId, ticketId, attachmentId } = await params
+    const { projectId: projectKey, ticketId, attachmentId } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Verify ticket exists and belongs to project
     const ticket = await db.ticket.findFirst({

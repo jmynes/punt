@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-utils'
-import { requireAuth } from '@/lib/auth-helpers'
+import { requireAuth, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { getEffectivePermissions, parsePermissions } from '@/lib/permissions'
 
@@ -14,7 +14,8 @@ export async function GET(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Get effective permissions
     const { permissions, membership, isSystemAdmin } = await getEffectivePermissions(

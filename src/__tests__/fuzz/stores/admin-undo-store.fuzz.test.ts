@@ -262,17 +262,15 @@ describe('Admin Undo Store Fuzz Tests', () => {
         fc.property(fc.boolean(), (shouldPush) => {
           resetStore()
           if (shouldPush) {
-            useAdminUndoStore
-              .getState()
-              .pushUserDisable([
-                {
-                  id: '1',
-                  name: 'Test',
-                  email: 'test@test.com',
-                  isSystemAdmin: false,
-                  isActive: true,
-                },
-              ])
+            useAdminUndoStore.getState().pushUserDisable([
+              {
+                id: '1',
+                name: 'Test',
+                email: 'test@test.com',
+                isSystemAdmin: false,
+                isActive: true,
+              },
+            ])
           }
 
           const canUndo = useAdminUndoStore.getState().canUndo()
@@ -287,17 +285,15 @@ describe('Admin Undo Store Fuzz Tests', () => {
       fc.assert(
         fc.property(fc.boolean(), (shouldUndo) => {
           resetStore()
-          useAdminUndoStore
-            .getState()
-            .pushUserDisable([
-              {
-                id: '1',
-                name: 'Test',
-                email: 'test@test.com',
-                isSystemAdmin: false,
-                isActive: true,
-              },
-            ])
+          useAdminUndoStore.getState().pushUserDisable([
+            {
+              id: '1',
+              name: 'Test',
+              email: 'test@test.com',
+              isSystemAdmin: false,
+              isActive: true,
+            },
+          ])
           if (shouldUndo) {
             useAdminUndoStore.getState().undo()
           }

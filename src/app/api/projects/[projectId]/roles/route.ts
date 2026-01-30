@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { handleApiError, validationError } from '@/lib/api-utils'
-import { requireAuth, requirePermission } from '@/lib/auth-helpers'
+import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { isMember, isValidPermission, PERMISSIONS, parsePermissions } from '@/lib/permissions'
 
@@ -24,7 +24,8 @@ export async function GET(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check membership (any member can view roles)
     const membershipExists = await isMember(user.id, projectId)
@@ -82,7 +83,8 @@ export async function POST(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Require permission to create roles
     await requirePermission(user.id, projectId, PERMISSIONS.MEMBERS_ADMIN)

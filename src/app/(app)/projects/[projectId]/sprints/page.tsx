@@ -15,10 +15,10 @@ import { useUIStore } from '@/stores/ui-store'
 export default function SprintPlanningPage() {
   const params = useParams()
   const router = useRouter()
-  const projectId = params.projectId as string
-  const { getProject, isLoading: projectsLoading } = useProjectsStore()
-  const project = getProject(projectId)
-  const projectKey = project?.key || 'PROJ'
+  const projectKey = params.projectId as string // URL now uses project key
+  const { getProjectByKey, isLoading: projectsLoading } = useProjectsStore()
+  const project = getProjectByKey(projectKey)
+  const projectId = project?.id || projectKey // Use ID if found, fallback to key for API calls
 
   const { getColumns, _hasHydrated } = useBoardStore()
   const { setActiveProjectId, activeTicketId, setActiveTicketId } = useUIStore()
@@ -112,7 +112,9 @@ export default function SprintPlanningPage() {
             <Target className="h-5 w-5 text-blue-400" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-zinc-100">{projectKey} Sprint Planning</h1>
+            <h1 className="text-xl font-semibold text-zinc-100">
+              {project?.key || projectKey} Sprint Planning
+            </h1>
             <p className="text-sm text-zinc-500">
               Plan your sprints and organize work across iterations
             </p>

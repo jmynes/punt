@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
-import { requireAuth, requirePermission } from '@/lib/auth-helpers'
+import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -24,7 +24,8 @@ type RouteParams = { params: Promise<{ projectId: string; sprintId: string }> }
 export async function POST(request: Request, { params }: RouteParams) {
   try {
     const user = await requireAuth()
-    const { projectId, sprintId } = await params
+    const { projectId: projectKey, sprintId } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     await requirePermission(user.id, projectId, PERMISSIONS.SPRINTS_MANAGE)
 

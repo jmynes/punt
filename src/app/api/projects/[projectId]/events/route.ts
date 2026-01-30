@@ -1,4 +1,4 @@
-import { requireAuth, requireMembership } from '@/lib/auth-helpers'
+import { requireAuth, requireMembership, requireProjectByKey } from '@/lib/auth-helpers'
 import { type LabelEvent, projectEvents, type SprintEvent, type TicketEvent } from '@/lib/events'
 
 /**
@@ -12,7 +12,8 @@ export async function GET(
 ) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     // Check project membership
     await requireMembership(user.id, projectId)

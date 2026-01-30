@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { handleApiError, validationError } from '@/lib/api-utils'
-import { requireAuth, requireMembership, requirePermission } from '@/lib/auth-helpers'
+import {
+  requireAuth,
+  requireMembership,
+  requirePermission,
+  requireProjectByKey,
+} from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { PERMISSIONS } from '@/lib/permissions'
 
@@ -21,7 +26,8 @@ type RouteParams = { params: Promise<{ projectId: string }> }
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     await requireMembership(user.id, projectId)
 
@@ -60,7 +66,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const user = await requireAuth()
-    const { projectId } = await params
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
 
     await requirePermission(user.id, projectId, PERMISSIONS.SPRINTS_MANAGE)
 
