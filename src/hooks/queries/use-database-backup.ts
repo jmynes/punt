@@ -9,6 +9,7 @@ export interface ExportOptions {
   password?: string
   includeAttachments?: boolean
   includeAvatars?: boolean
+  confirmPassword: string
 }
 
 /**
@@ -16,7 +17,7 @@ export interface ExportOptions {
  */
 export function useExportDatabase() {
   return useMutation({
-    mutationFn: async (options: ExportOptions = {}) => {
+    mutationFn: async (options: ExportOptions) => {
       if (isDemoMode()) {
         toast.info('Database export is disabled in demo mode')
         return null
@@ -86,7 +87,7 @@ export function useExportDatabase() {
 export interface ImportDatabaseParams {
   content: string // Base64 encoded
   decryptionPassword?: string
-  email: string
+  username: string
   password: string
   confirmText: string
 }
@@ -171,6 +172,7 @@ export function isZipContent(base64Content: string): boolean {
 }
 
 export interface WipeDatabaseParams {
+  currentPassword: string
   username: string
   password: string
   confirmText: string

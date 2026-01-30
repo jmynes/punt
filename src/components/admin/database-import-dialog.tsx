@@ -53,7 +53,7 @@ export function DatabaseImportDialog({
   const [decryptionPassword, setDecryptionPassword] = useState('')
   const [showDecryptionPassword, setShowDecryptionPassword] = useState(false)
   const [needsPassword, setNeedsPassword] = useState(initialIsEncrypted)
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [confirmText, setConfirmText] = useState('')
@@ -88,7 +88,7 @@ export function DatabaseImportDialog({
       const params: ImportDatabaseParams = {
         content: fileContent,
         decryptionPassword: needsPassword ? decryptionPassword : undefined,
-        email,
+        username,
         password,
         confirmText,
       }
@@ -124,7 +124,7 @@ export function DatabaseImportDialog({
     // Reset state
     setStep('warning')
     setDecryptionPassword('')
-    setEmail('')
+    setUsername('')
     setPassword('')
     setConfirmText('')
     setResult(null)
@@ -243,15 +243,15 @@ export function DatabaseImportDialog({
 
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-zinc-300">
-                  Email
+                <Label htmlFor="username" className="text-zinc-300">
+                  Username
                 </Label>
                 <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Your username"
                   className="bg-zinc-800 border-zinc-700 text-zinc-100"
                 />
               </div>
@@ -284,7 +284,7 @@ export function DatabaseImportDialog({
               <Button variant="outline" onClick={handleBack}>
                 Back
               </Button>
-              <Button variant="destructive" onClick={handleNext} disabled={!email || !password}>
+              <Button variant="destructive" onClick={handleNext} disabled={!username || !password}>
                 Continue
                 <ChevronRight className="h-4 w-4" />
               </Button>

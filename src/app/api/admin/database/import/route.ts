@@ -12,7 +12,7 @@ const ImportRequestSchema = z.object({
   // Password for decryption (if encrypted)
   decryptionPassword: z.string().optional(),
   // Admin credentials for verification
-  email: z.string().email(),
+  username: z.string().min(1),
   password: z.string().min(1),
   // Confirmation string
   confirmText: z.string(),
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       return validationError(result)
     }
 
-    const { content, decryptionPassword, email, password, confirmText } = result.data
+    const { content, decryptionPassword, username, password, confirmText } = result.data
 
     // Verify confirmation text
     if (confirmText !== REQUIRED_CONFIRMATION) {
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     // Verify admin credentials
     const adminUser = await db.user.findUnique({
-      where: { email },
+      where: { username },
       select: { id: true, passwordHash: true, isSystemAdmin: true },
     })
 

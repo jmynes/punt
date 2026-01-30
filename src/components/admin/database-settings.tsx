@@ -7,7 +7,6 @@ import {
   Eye,
   EyeOff,
   FileImage,
-  Loader2,
   Lock,
   Paperclip,
   Trash2,
@@ -23,8 +22,8 @@ import {
   checkIfExportEncrypted,
   fileToBase64,
   isZipContent,
-  useExportDatabase,
 } from '@/hooks/queries/use-database-backup'
+import { DatabaseExportDialog } from './database-export-dialog'
 import { DatabaseImportDialog } from './database-import-dialog'
 import { DatabaseWipeDialog } from './database-wipe-dialog'
 
@@ -75,18 +74,19 @@ export function DatabaseSettings() {
   const [importFileBase64, setImportFileBase64] = useState<string | null>(null)
   const [isZip, setIsZip] = useState(false)
   const [isEncrypted, setIsEncrypted] = useState(false)
+  const [showExportDialog, setShowExportDialog] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [showWipeDialog, setShowWipeDialog] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const exportMutation = useExportDatabase()
+  const handleExportClick = () => {
+    setShowExportDialog(true)
+  }
 
-  const handleExport = () => {
-    exportMutation.mutate({
-      password: exportPassword || undefined,
-      includeAttachments,
-      includeAvatars,
-    })
+  const handleExportComplete = () => {
+    setExportPassword('')
+    setIncludeAttachments(false)
+    setIncludeAvatars(false)
   }
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -234,23 +234,9 @@ export function DatabaseSettings() {
             )}
           </div>
 
-          <Button
-            onClick={handleExport}
-            disabled={exportMutation.isPending}
-            variant="primary"
-            className="w-full sm:w-auto"
-          >
-            {exportMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Exporting...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4" />
-                Export Database
-              </>
-            )}
+          <Button onClick={handleExportClick} variant="primary" className="w-full sm:w-auto">
+            <Download className="h-4 w-4" />
+            Export Database
           </Button>
         </CardContent>
       </Card>
@@ -364,6 +350,18 @@ export function DatabaseSettings() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Export Dialog */}
+      <DatabaseExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        exportOptions={{
+          password: exportPassword || undefined,
+          includeAttachments,
+          includeAvatars,
+        }}
+        onComplete={handleExportComplete}
+      />
 
       {/* Import Dialog */}
       {showImportDialog && importFileBase64 && (

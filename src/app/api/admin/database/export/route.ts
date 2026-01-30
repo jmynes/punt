@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { handleApiError, validationError } from '@/lib/api-utils'
+import { badRequestError, handleApiError, validationError } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import {
   createDatabaseExport,
@@ -8,11 +8,14 @@ import {
   createEncryptedDatabaseExport,
   generateExportFilename,
 } from '@/lib/database-export'
+import { db } from '@/lib/db'
+import { verifyPassword } from '@/lib/password'
 
 const ExportRequestSchema = z.object({
   password: z.string().optional(),
   includeAttachments: z.boolean().optional(),
   includeAvatars: z.boolean().optional(),
+  confirmPassword: z.string().min(1, 'Your password is required to confirm this action'),
 })
 
 /**
@@ -45,7 +48,23 @@ export async function POST(request: Request) {
       return validationError(result)
     }
 
-    const { password, includeAttachments, includeAvatars } = result.data
+    const { password, includeAttachments, includeAvatars, confirmPassword } = result.data
+
+    // Verify the admin's password
+    const adminUser = await db.user.findUnique({
+      where: { id: user.id },
+      select: { passwordHash: true },
+    })
+
+    if (!adminUser?.passwordHash) {
+      return badRequestError('Unable to verify your identity')
+    }
+
+    const isValidPassword = await verifyPassword(confirmPassword, adminUser.passwordHash)
+    if (!isValidPassword) {
+      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
+    }
+
     const includeFiles = includeAttachments || includeAvatars
 
     if (includeFiles) {

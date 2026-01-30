@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle, Eye, EyeOff, Loader2, Lock, Trash2, User } from 'lucide-react'
+import { AlertTriangle, Eye, EyeOff, Loader2, Lock, Shield, Trash2, User } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,10 +19,12 @@ interface DatabaseWipeDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-type Step = 'warning' | 'credentials' | 'confirm' | 'wiping'
+type Step = 'warning' | 'verify' | 'credentials' | 'confirm' | 'wiping'
 
 export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogProps) {
   const [step, setStep] = useState<Step>('warning')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -32,6 +34,8 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
 
   const resetState = () => {
     setStep('warning')
+    setCurrentPassword('')
+    setShowCurrentPassword(false)
     setUsername('')
     setPassword('')
     setShowPassword(false)
@@ -49,6 +53,7 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
     setStep('wiping')
     try {
       await wipeMutation.mutateAsync({
+        currentPassword,
         username,
         password,
         confirmText,
@@ -72,6 +77,7 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
           </DialogTitle>
           <DialogDescription className="text-zinc-400">
             {step === 'warning' && 'This will permanently delete all data.'}
+            {step === 'verify' && 'Verify your identity to continue.'}
             {step === 'credentials' && 'Set up the new admin account.'}
             {step === 'confirm' && 'Confirm the wipe operation.'}
             {step === 'wiping' && 'Wiping database...'}
@@ -101,8 +107,63 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
                 <Button variant="outline" onClick={() => handleOpenChange(false)}>
                   Cancel
                 </Button>
-                <Button variant="destructive" onClick={() => setStep('credentials')}>
+                <Button variant="destructive" onClick={() => setStep('verify')}>
                   I Understand, Continue
+                </Button>
+              </div>
+            </>
+          )}
+
+          {step === 'verify' && (
+            <>
+              <div className="flex items-start gap-3 p-4 bg-amber-900/20 border border-amber-800 rounded-lg">
+                <Shield className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-400">Identity Verification Required</p>
+                  <p className="text-amber-300/80 mt-1">
+                    Enter your current password to authorize this destructive action.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="current-password" className="text-zinc-300">
+                  Your Current Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <Input
+                    id="current-password"
+                    type="text"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10 ${!showCurrentPassword ? 'password-mask' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setStep('warning')}>
+                  Back
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setStep('credentials')}
+                  disabled={!currentPassword}
+                >
+                  Continue
                 </Button>
               </div>
             </>
@@ -166,7 +227,7 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setStep('warning')}>
+                <Button variant="outline" onClick={() => setStep('verify')}>
                   Back
                 </Button>
                 <Button

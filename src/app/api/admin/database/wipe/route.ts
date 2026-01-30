@@ -10,9 +10,12 @@ import { hash } from 'bcryptjs'
 import { z } from 'zod'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
-import { validatePasswordStrength } from '@/lib/password'
+import { validatePasswordStrength, verifyPassword } from '@/lib/password'
 
 const WipeRequestSchema = z.object({
+  // Current admin's password for verification
+  currentPassword: z.string().min(1, 'Your current password is required'),
+  // New admin credentials
   username: z
     .string()
     .min(3, 'Username must be at least 3 characters')
@@ -28,7 +31,7 @@ const WipeRequestSchema = z.object({
 export async function POST(request: Request) {
   try {
     // Require system admin
-    await requireSystemAdmin()
+    const currentAdmin = await requireSystemAdmin()
 
     const body = await request.json()
     const result = WipeRequestSchema.safeParse(body)
@@ -37,7 +40,22 @@ export async function POST(request: Request) {
       return Response.json({ error: result.error.issues[0].message }, { status: 400 })
     }
 
-    const { username, password, confirmText } = result.data
+    const { currentPassword, username, password, confirmText } = result.data
+
+    // Verify the current admin's password
+    const adminUser = await db.user.findUnique({
+      where: { id: currentAdmin.id },
+      select: { passwordHash: true },
+    })
+
+    if (!adminUser?.passwordHash) {
+      return Response.json({ error: 'Unable to verify your identity' }, { status: 400 })
+    }
+
+    const isValidPassword = await verifyPassword(currentPassword, adminUser.passwordHash)
+    if (!isValidPassword) {
+      return Response.json({ error: 'Incorrect password' }, { status: 401 })
+    }
 
     // Verify confirmation text
     if (confirmText !== 'WIPE ALL DATA') {
