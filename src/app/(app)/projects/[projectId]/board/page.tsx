@@ -13,6 +13,7 @@ import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-ti
 import { useHasPermission } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
+import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
 import { PERMISSIONS } from '@/lib/permissions'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
@@ -76,11 +77,17 @@ export default function BoardPage() {
   // Get columns for this project
   const columns = getColumns(projectId)
 
+  // URL ↔ drawer sync for shareable ticket links
+  const { hasTicketParam } = useTicketUrlSync(projectId)
+
   // Clear selection and active ticket when entering this page
+  // (unless URL has a ticket param that should open the drawer)
   useEffect(() => {
     clearSelection()
-    setActiveTicketId(null)
-  }, [clearSelection, setActiveTicketId])
+    if (!hasTicketParam()) {
+      setActiveTicketId(null)
+    }
+  }, [clearSelection, setActiveTicketId, hasTicketParam])
 
   // Apply filters to columns
   // Board view only shows tickets in the active sprint

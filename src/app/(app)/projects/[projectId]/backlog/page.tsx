@@ -31,6 +31,7 @@ import {
 import { useHasPermission } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
+import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBacklogStore } from '@/stores/backlog-store'
@@ -109,6 +110,9 @@ export default function BacklogPage() {
     sprintId: string | null | undefined
   }>({ type: undefined, sprintId: undefined })
 
+  // URL ↔ drawer sync for shareable ticket links
+  const { hasTicketParam } = useTicketUrlSync(projectId)
+
   // DnD sensors - shared across sprint sections and backlog table
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -157,10 +161,13 @@ export default function BacklogPage() {
   const initializedProjectsRef = useRef<Set<string>>(new Set())
 
   // Clear selection and active ticket when entering this page
+  // (unless URL has a ticket param that should open the drawer)
   useEffect(() => {
     clearSelection()
-    setActiveTicketId(null)
-  }, [clearSelection, setActiveTicketId])
+    if (!hasTicketParam()) {
+      setActiveTicketId(null)
+    }
+  }, [clearSelection, setActiveTicketId, hasTicketParam])
 
   // Set active project after hydration
   useEffect(() => {

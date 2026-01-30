@@ -7,6 +7,7 @@ import { SprintBacklogView, SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -40,11 +41,17 @@ export default function SprintPlanningPage() {
   // Get columns for this project
   const columns = getColumns(projectId)
 
+  // URL ↔ drawer sync for shareable ticket links
+  const { hasTicketParam } = useTicketUrlSync(projectId)
+
   // Clear selection when entering this page
+  // (unless URL has a ticket param that should open the drawer)
   useEffect(() => {
     clearSelection()
-    setActiveTicketId(null)
-  }, [clearSelection, setActiveTicketId])
+    if (!hasTicketParam()) {
+      setActiveTicketId(null)
+    }
+  }, [clearSelection, setActiveTicketId, hasTicketParam])
 
   // Track which projects have been initialized to prevent re-running
   const initializedProjectsRef = useRef<Set<string>>(new Set())
