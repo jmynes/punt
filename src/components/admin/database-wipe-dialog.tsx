@@ -150,7 +150,6 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Minimum 12 characters"
                       className="bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10"
-                      autoComplete="new-password"
                     />
                     <button
                       type="button"

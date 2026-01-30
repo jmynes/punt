@@ -190,11 +190,11 @@ export function DatabaseImportDialog({
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                     <Input
                       id="decryptionPassword"
-                      type={showDecryptionPassword ? 'text' : 'password'}
+                      type="text"
                       value={decryptionPassword}
                       onChange={(e) => setDecryptionPassword(e.target.value)}
                       placeholder="Enter the backup encryption password"
-                      className="bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10"
+                      className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10 ${!showDecryptionPassword ? 'password-mask' : ''}`}
                     />
                     <button
                       type="button"
@@ -263,11 +263,11 @@ export function DatabaseImportDialog({
                 <div className="relative">
                   <Input
                     id="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type="text"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Your password"
-                    className="bg-zinc-800 border-zinc-700 text-zinc-100 pr-10"
+                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pr-10 ${!showPassword ? 'password-mask' : ''}`}
                   />
                   <button
                     type="button"

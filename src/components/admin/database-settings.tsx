@@ -212,11 +212,11 @@ export function DatabaseSettings() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
               <Input
                 id="exportPassword"
-                type={showExportPassword ? 'text' : 'password'}
+                type="text"
                 value={exportPassword}
                 onChange={(e) => setExportPassword(e.target.value)}
                 placeholder="Leave empty for unencrypted backup"
-                className="bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10"
+                className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10 ${!showExportPassword ? 'password-mask' : ''}`}
               />
               <button
                 type="button"

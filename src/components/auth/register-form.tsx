@@ -132,7 +132,6 @@ export function RegisterForm() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value.toLowerCase())}
                 required
-                autoComplete="username"
                 autoFocus
                 className={`h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-600 focus:ring-amber-600/20 transition-colors ${
                   username && !isValidUsername ? 'border-red-600 focus:border-red-600' : ''
@@ -159,7 +158,6 @@ export function RegisterForm() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                autoComplete="name"
                 className="h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-600 focus:ring-amber-600/20 transition-colors"
               />
             </div>
@@ -175,7 +173,6 @@ export function RegisterForm() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
                 className={`h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-600 focus:ring-amber-600/20 transition-colors ${
                   email && !isValidEmail ? 'border-red-600 focus:border-red-600' : ''
                 }`}
@@ -206,7 +203,6 @@ export function RegisterForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  autoComplete="new-password"
                   className="h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 pr-11 focus:border-amber-600 focus:ring-amber-600/20 transition-colors"
                 />
                 <Button
@@ -260,7 +256,6 @@ export function RegisterForm() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  autoComplete="new-password"
                   className={`h-11 border-zinc-700 bg-zinc-800/50 text-zinc-100 placeholder:text-zinc-500 pr-11 focus:border-amber-600 focus:ring-amber-600/20 transition-colors ${
                     confirmPassword && !passwordsMatch ? 'border-red-600 focus:border-red-600' : ''
                   }`}

@@ -139,7 +139,6 @@ export function CreateUserDialog() {
                 placeholder="At least 12 characters"
                 required
                 minLength={12}
-                autoComplete="new-password"
                 className="border-zinc-700 bg-zinc-800 text-zinc-100 pr-10"
               />
               <Button

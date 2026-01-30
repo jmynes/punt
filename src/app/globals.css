@@ -106,6 +106,12 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* Text-based password masking (avoids browser password detection) */
+.password-mask {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
 /* Custom scrollbar */
 @layer utilities {
   .scrollbar-thin {
