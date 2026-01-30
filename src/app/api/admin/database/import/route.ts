@@ -4,6 +4,7 @@ import { badRequestError, handleApiError, validationError } from '@/lib/api-util
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { importDatabase, parseExportFile } from '@/lib/database-import'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { verifyPassword } from '@/lib/password'
 
 const ImportRequestSchema = z.object({
@@ -85,6 +86,14 @@ export async function POST(request: Request) {
     const importResult = await importDatabase(parseResult.data, {
       zipBuffer: parseResult.isZip ? parseResult.zipBuffer : undefined,
       exportOptions: parseResult.options,
+    })
+
+    // Emit database event for real-time updates
+    // This notifies other browser tabs/windows to sign out
+    projectEvents.emitDatabaseEvent({
+      type: 'database.wiped',
+      userId: currentUser.id,
+      timestamp: Date.now(),
     })
 
     return NextResponse.json(importResult)
