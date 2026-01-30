@@ -88,26 +88,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         })
 
-        if (dbUser?.isActive) {
-          // Check if password was changed after token was issued
-          if (dbUser.passwordChangedAt && token.iat) {
-            const passwordChangedAtSeconds = Math.floor(dbUser.passwordChangedAt.getTime() / 1000)
-            // If password was changed after token was issued, invalidate session
-            if (passwordChangedAtSeconds > (token.iat as number)) {
-              // Return empty token to force re-authentication
-              return { ...token, id: undefined, invalidated: true }
-            }
-          }
+        if (!dbUser) {
+          // User no longer exists (e.g., after database wipe), invalidate session
+          return { ...token, id: undefined, invalidated: true }
+        }
 
-          token.name = dbUser.name
-          token.email = dbUser.email
-          token.username = dbUser.username
-          token.isSystemAdmin = dbUser.isSystemAdmin
-          token.avatar = dbUser.avatar
-        } else if (dbUser && !dbUser.isActive) {
+        if (!dbUser.isActive) {
           // User is deactivated, invalidate session
           return { ...token, id: undefined, invalidated: true }
         }
+
+        // Check if password was changed after token was issued
+        if (dbUser.passwordChangedAt && token.iat) {
+          const passwordChangedAtSeconds = Math.floor(dbUser.passwordChangedAt.getTime() / 1000)
+          // If password was changed after token was issued, invalidate session
+          if (passwordChangedAtSeconds > (token.iat as number)) {
+            // Return empty token to force re-authentication
+            return { ...token, id: undefined, invalidated: true }
+          }
+        }
+
+        token.name = dbUser.name
+        token.email = dbUser.email
+        token.username = dbUser.username
+        token.isSystemAdmin = dbUser.isSystemAdmin
+        token.avatar = dbUser.avatar
       }
 
       return token
