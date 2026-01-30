@@ -13,6 +13,7 @@ import {
   Shield,
   Trash2,
 } from 'lucide-react'
+import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -117,8 +118,10 @@ export function DatabaseImportDialog({
 
     if (step === 'success') {
       onComplete()
-      // Reload the page to reflect new data
-      window.location.href = '/admin/settings?tab=database'
+      // Sign out to clear the session cookie and redirect to login
+      // The imported database has different users, so current session is invalid
+      signOut({ callbackUrl: '/login' })
+      return
     }
 
     // Reset state

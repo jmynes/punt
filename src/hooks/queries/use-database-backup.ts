@@ -1,6 +1,7 @@
 'use client'
 
 import { useMutation } from '@tanstack/react-query'
+import { signOut } from 'next-auth/react'
 import { toast } from 'sonner'
 import type { ImportResult } from '@/lib/database-import'
 import { isDemoMode } from '@/lib/demo'
@@ -206,9 +207,9 @@ export function useWipeDatabase() {
     },
     onSuccess: () => {
       toast.success('Database wiped successfully. Redirecting to login...')
-      // Redirect to login after a short delay
+      // Sign out to clear the session cookie, then redirect to login
       setTimeout(() => {
-        window.location.href = '/login'
+        signOut({ callbackUrl: '/login' })
       }, 1500)
     },
     onError: (err) => {
