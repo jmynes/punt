@@ -139,9 +139,13 @@ All data operations go through the `DataProvider` interface, which abstracts whe
 - `GET/PATCH /api/projects/[projectId]/sprints/settings` - Sprint settings (default duration, auto-carryover, done columns)
 
 **Admin (`/api/admin`) - requires `isSystemAdmin`:**
-- `GET/POST /api/admin/users` - List/create users (with filtering/sorting)
+- `GET/POST /api/admin/users` - List/create users (with filtering/sorting, requires password confirmation)
 - `GET/PATCH/DELETE /api/admin/users/[userId]` - Manage user (self-demotion prevented)
 - `GET/PATCH /api/admin/settings` - System settings (upload limits, allowed file types)
+- `POST /api/admin/database/export` - Export database (requires password confirmation)
+- `POST /api/admin/database/import` - Import database backup (requires password confirmation, replaces all data)
+- `POST /api/admin/database/wipe` - Wipe entire database, create new admin (requires password confirmation)
+- `POST /api/admin/database/wipe-projects` - Wipe all projects, keep users (requires password confirmation)
 
 **File Upload:**
 - `GET/POST /api/upload` - Get config/upload files (validates type/size against SystemSettings)
@@ -164,9 +168,11 @@ Events are broadcast via Server-Sent Events for multi-tab/multi-user sync.
 - `label.created`, `label.deleted`
 - `project.created`, `project.updated`, `project.deleted`
 - `user.updated`
+- `database.wiped` - Full database wipe or import (forces sign out on all tabs)
+- `database.projects.wiped` - All projects wiped (invalidates all queries)
 
 **Key files:**
-- `src/lib/events.ts` - In-memory event emitter with `subscribeToProject()`, `emitTicketEvent()`, `emitProjectEvent()`, `emitLabelEvent()`
+- `src/lib/events.ts` - In-memory event emitter with `subscribeToProject()`, `emitTicketEvent()`, `emitProjectEvent()`, `emitLabelEvent()`, `emitDatabaseEvent()`
 - Events include `tabId` (via `X-Tab-Id` header) to skip echoing back to originating client
 - 30-second keepalive comments prevent connection timeout
 - `X-Accel-Buffering: no` header disables nginx buffering

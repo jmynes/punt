@@ -701,4 +701,54 @@ describe('Database Backup/Restore', () => {
       expect(DatabaseExportSchema.safeParse(invalid).success).toBe(false)
     })
   })
+
+  describe('Wipe Projects (Keep Users)', () => {
+    it('should delete all projects while keeping users', async () => {
+      // Verify initial state
+      const usersBefore = await db.user.findMany()
+      const projectsBefore = await db.project.findMany()
+      const ticketsBefore = await db.ticket.findMany()
+
+      expect(usersBefore).toHaveLength(1)
+      expect(projectsBefore).toHaveLength(1)
+      expect(ticketsBefore).toHaveLength(1)
+
+      // Wipe projects (simulating what the API does)
+      await db.$transaction(async (tx) => {
+        await tx.ticketSprintHistory.deleteMany()
+        await tx.attachment.deleteMany()
+        await tx.ticketEdit.deleteMany()
+        await tx.comment.deleteMany()
+        await tx.ticketWatcher.deleteMany()
+        await tx.ticketLink.deleteMany()
+        await tx.ticket.deleteMany()
+        await tx.projectSprintSettings.deleteMany()
+        await tx.projectMember.deleteMany()
+        await tx.sprint.deleteMany()
+        await tx.label.deleteMany()
+        await tx.column.deleteMany()
+        await tx.role.deleteMany()
+        await tx.invitation.deleteMany()
+        await tx.project.deleteMany()
+      })
+
+      // Verify projects are deleted
+      const projectsAfter = await db.project.findMany()
+      const ticketsAfter = await db.ticket.findMany()
+      const labelsAfter = await db.label.findMany()
+      const columnsAfter = await db.column.findMany()
+
+      expect(projectsAfter).toHaveLength(0)
+      expect(ticketsAfter).toHaveLength(0)
+      expect(labelsAfter).toHaveLength(0)
+      expect(columnsAfter).toHaveLength(0)
+
+      // Verify users are preserved
+      const usersAfter = await db.user.findMany()
+      expect(usersAfter).toHaveLength(1)
+      expect(usersAfter[0].id).toBe(TEST_USER.id)
+      expect(usersAfter[0].username).toBe(TEST_USER.username)
+      expect(usersAfter[0].isSystemAdmin).toBe(TEST_USER.isSystemAdmin)
+    })
+  })
 })
