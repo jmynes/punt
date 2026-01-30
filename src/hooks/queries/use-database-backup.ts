@@ -172,6 +172,58 @@ export function isZipContent(base64Content: string): boolean {
   return base64Content.startsWith('UEsD')
 }
 
+export interface WipeProjectsParams {
+  confirmPassword: string
+  confirmText: string
+}
+
+export interface WipeProjectsResult {
+  success: boolean
+  message: string
+  counts: {
+    projects: number
+    tickets: number
+    sprints: number
+    labels: number
+    comments: number
+    attachments: number
+  }
+}
+
+/**
+ * Wipe all projects while keeping user accounts
+ */
+export function useWipeProjects() {
+  return useMutation({
+    mutationFn: async (params: WipeProjectsParams): Promise<WipeProjectsResult> => {
+      if (isDemoMode()) {
+        toast.info('Project wipe is disabled in demo mode')
+        throw new Error('Demo mode')
+      }
+
+      const res = await fetch('/api/admin/database/wipe-projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to wipe projects')
+      }
+
+      return res.json()
+    },
+    onError: (err) => {
+      if (err.message !== 'Demo mode') {
+        toast.error(err.message)
+      }
+    },
+  })
+}
+
 export interface WipeDatabaseParams {
   currentPassword: string
   username: string

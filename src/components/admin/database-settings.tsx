@@ -7,6 +7,7 @@ import {
   Eye,
   EyeOff,
   FileImage,
+  FolderX,
   Lock,
   Paperclip,
   Trash2,
@@ -26,6 +27,7 @@ import {
 import { DatabaseExportDialog } from './database-export-dialog'
 import { DatabaseImportDialog } from './database-import-dialog'
 import { DatabaseWipeDialog } from './database-wipe-dialog'
+import { DatabaseWipeProjectsDialog } from './database-wipe-projects-dialog'
 
 function PasswordStrengthIndicator({ password }: { password: string }) {
   if (!password) return null
@@ -76,6 +78,7 @@ export function DatabaseSettings() {
   const [isEncrypted, setIsEncrypted] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
+  const [showWipeProjectsDialog, setShowWipeProjectsDialog] = useState(false)
   const [showWipeDialog, setShowWipeDialog] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -316,12 +319,47 @@ export function DatabaseSettings() {
         </CardContent>
       </Card>
 
-      {/* Wipe Section */}
+      {/* Wipe Projects Section */}
+      <Card className="border-amber-900/50 bg-zinc-900/50">
+        <CardHeader>
+          <CardTitle className="text-zinc-100 flex items-center gap-2">
+            <FolderX className="h-5 w-5 text-amber-400" />
+            Wipe All Projects
+          </CardTitle>
+          <CardDescription className="text-zinc-400">
+            Delete all projects, tickets, and sprints while keeping user accounts.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Warning Banner */}
+          <div className="flex items-start gap-3 p-4 bg-amber-900/20 border border-amber-800 rounded-lg">
+            <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium text-amber-400">Warning</p>
+              <p className="text-amber-300/80 mt-1">
+                This will delete all projects, tickets, sprints, labels, and related data. User
+                accounts and system settings will be preserved.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setShowWipeProjectsDialog(true)}
+            variant="destructive"
+            className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700"
+          >
+            <FolderX className="h-4 w-4" />
+            Wipe All Projects
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Wipe Database Section */}
       <Card className="border-red-900/50 bg-zinc-900/50">
         <CardHeader>
           <CardTitle className="text-zinc-100 flex items-center gap-2">
             <Trash2 className="h-5 w-5 text-red-400" />
-            Wipe Database
+            Wipe Entire Database
           </CardTitle>
           <CardDescription className="text-zinc-400">
             Delete all data and start fresh with a new admin account.
@@ -346,7 +384,7 @@ export function DatabaseSettings() {
             className="w-full sm:w-auto"
           >
             <Trash2 className="h-4 w-4" />
-            Wipe Database
+            Wipe Entire Database
           </Button>
         </CardContent>
       </Card>
@@ -375,7 +413,13 @@ export function DatabaseSettings() {
         />
       )}
 
-      {/* Wipe Dialog */}
+      {/* Wipe Projects Dialog */}
+      <DatabaseWipeProjectsDialog
+        open={showWipeProjectsDialog}
+        onOpenChange={setShowWipeProjectsDialog}
+      />
+
+      {/* Wipe Database Dialog */}
       <DatabaseWipeDialog open={showWipeDialog} onOpenChange={setShowWipeDialog} />
     </div>
   )
