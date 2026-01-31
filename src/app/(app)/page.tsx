@@ -20,7 +20,7 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const { setCreateTicketOpen, setCreateProjectOpen } = useUIStore()
+  const { setCreateProjectOpen } = useUIStore()
   const hasShownRedirectToast = useRef(false)
 
   // Fetch projects from database
@@ -134,17 +134,7 @@ export default function DashboardPage() {
 
       {/* Quick actions */}
       <div className="flex flex-wrap gap-3 mb-8">
-        {projects.length > 0 && (
-          <Button variant="primary" onClick={() => setCreateTicketOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Ticket
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
-          onClick={() => setCreateProjectOpen(true)}
-        >
+        <Button variant="primary" onClick={() => setCreateProjectOpen(true)}>
           <FolderKanban className="h-4 w-4 mr-2" />
           New Project
         </Button>
