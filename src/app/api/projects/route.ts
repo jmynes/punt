@@ -147,10 +147,11 @@ export async function POST(request: Request) {
     // Create default roles for the project
     const roleMap = await createDefaultRolesForProject(project.id)
     const ownerRoleId = roleMap.get(DEFAULT_ROLE_NAMES.OWNER)
+    const adminRoleId = roleMap.get(DEFAULT_ROLE_NAMES.ADMIN)
 
-    if (!ownerRoleId) {
+    if (!ownerRoleId || !adminRoleId) {
       // This should never happen, but handle it gracefully
-      throw new Error('Failed to create Owner role')
+      throw new Error('Failed to create default roles')
     }
 
     // Add the creator as an Owner
@@ -161,6 +162,26 @@ export async function POST(request: Request) {
         roleId: ownerRoleId,
       },
     })
+
+    // Add all other system admins as Admin members
+    const otherSystemAdmins = await db.user.findMany({
+      where: {
+        isSystemAdmin: true,
+        isActive: true,
+        id: { not: user.id },
+      },
+      select: { id: true },
+    })
+
+    if (otherSystemAdmins.length > 0) {
+      await db.projectMember.createMany({
+        data: otherSystemAdmins.map((admin) => ({
+          userId: admin.id,
+          projectId: project.id,
+          roleId: adminRoleId,
+        })),
+      })
+    }
 
     // Emit real-time event for other clients
     const tabId = request.headers.get('X-Tab-Id') || undefined

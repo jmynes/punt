@@ -150,6 +150,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
       passwordHash = await hashPassword(updates.password)
     }
 
+    // Check if user is being promoted to system admin
+    const becomingSystemAdmin = updates.isSystemAdmin === true && !existingUser.isSystemAdmin
+
     // Update user
     const user = await db.user.update({
       where: { id: userId },
@@ -171,6 +174,43 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
         updatedAt: true,
       },
     })
+
+    // If user became a system admin, add them to all projects they're not already in
+    if (becomingSystemAdmin) {
+      // Get projects the user is already a member of
+      const existingMemberships = await db.projectMember.findMany({
+        where: { userId },
+        select: { projectId: true },
+      })
+      const existingProjectIds = existingMemberships.map((m) => m.projectId)
+
+      // Get all projects the user is not a member of
+      const projectsToJoin = await db.project.findMany({
+        where: { id: { notIn: existingProjectIds } },
+        select: {
+          id: true,
+          roles: {
+            where: { name: 'Admin', isDefault: true },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      })
+
+      // Add user to each project with Admin role
+      for (const project of projectsToJoin) {
+        const adminRole = project.roles[0]
+        if (adminRole) {
+          await db.projectMember.create({
+            data: {
+              userId,
+              projectId: project.id,
+              roleId: adminRole.id,
+            },
+          })
+        }
+      }
+    }
 
     // Emit user event for real-time updates
     const tabId = request.headers.get('X-Tab-Id') || undefined
