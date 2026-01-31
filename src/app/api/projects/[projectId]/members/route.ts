@@ -43,6 +43,23 @@ export async function GET(
       orderBy: [{ role: { position: 'asc' } }, { user: { name: 'asc' } }],
     })
 
+    // Get system admins who aren't already explicit members
+    const memberUserIds = members.map((m) => m.userId)
+    const systemAdmins = await db.user.findMany({
+      where: {
+        isSystemAdmin: true,
+        isActive: true,
+        id: { notIn: memberUserIds },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+      },
+      orderBy: { name: 'asc' },
+    })
+
     // Format response to include role details
     const membersWithRoles = members.map((m) => ({
       id: m.id,
@@ -56,7 +73,27 @@ export async function GET(
       role: m.role,
     }))
 
-    return NextResponse.json(membersWithRoles)
+    // Add system admins as virtual members (no explicit membership record)
+    const systemAdminMembers = systemAdmins.map((admin) => ({
+      id: `sysadmin-${admin.id}`,
+      userId: admin.id,
+      projectId,
+      roleId: null,
+      overrides: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      user: admin,
+      role: {
+        id: 'system-admin',
+        name: 'System Admin',
+        color: '#ef4444',
+        description: 'System administrator with full access',
+        position: -1,
+        isDefault: false,
+      },
+    }))
+
+    return NextResponse.json([...membersWithRoles, ...systemAdminMembers])
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
