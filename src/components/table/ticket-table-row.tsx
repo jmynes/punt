@@ -156,11 +156,11 @@ export function TicketTableRow({
           ref={setNodeRef}
           data-ticket-row
           data-ticket-id={ticket.id}
-          onClick={handleClick}
-          onKeyDown={handleKeyDown}
           className={rowClassName}
           {...attributes}
           {...listeners}
+          onClick={handleClick}
+          onKeyDown={handleKeyDown}
         >
           {/* Drag handle */}
           <td className="w-8 px-1 py-2">

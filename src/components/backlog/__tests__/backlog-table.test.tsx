@@ -90,6 +90,7 @@ describe('BacklogTable', () => {
       _hasHydrated: true,
       setHasHydrated: vi.fn(),
       updateTicket: vi.fn(),
+      updateTickets: vi.fn(),
       addTicket: vi.fn(),
       removeTicket: vi.fn(),
     })

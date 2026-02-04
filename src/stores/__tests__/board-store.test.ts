@@ -241,6 +241,144 @@ describe('Board Store', () => {
     })
   })
 
+  describe('updateTickets', () => {
+    it('should update multiple tickets in a single state change', () => {
+      const ticket1 = createMockTicket({ id: 'ticket-1', title: 'Ticket 1', order: 0 })
+      const ticket2 = createMockTicket({ id: 'ticket-2', title: 'Ticket 2', order: 1 })
+      const ticket3 = createMockTicket({ id: 'ticket-3', title: 'Ticket 3', order: 2 })
+      useBoardStore.getState().setColumns(PROJECT_ID, [
+        {
+          id: 'col-1',
+          name: 'To Do',
+          order: 0,
+          projectId: PROJECT_ID,
+          tickets: [ticket1, ticket2, ticket3],
+        },
+      ])
+
+      useBoardStore.getState().updateTickets(PROJECT_ID, [
+        { ticketId: 'ticket-1', updates: { title: 'Updated 1' } },
+        { ticketId: 'ticket-2', updates: { title: 'Updated 2' } },
+        { ticketId: 'ticket-3', updates: { title: 'Updated 3' } },
+      ])
+
+      const columns = useBoardStore.getState().getColumns(PROJECT_ID)
+      expect(columns[0].tickets[0].title).toBe('Updated 1')
+      expect(columns[0].tickets[1].title).toBe('Updated 2')
+      expect(columns[0].tickets[2].title).toBe('Updated 3')
+    })
+
+    it('should update sprintId and order for multiple tickets', () => {
+      const ticket1 = createMockTicket({ id: 'ticket-1', sprintId: 'sprint-1', order: 0 })
+      const ticket2 = createMockTicket({ id: 'ticket-2', sprintId: 'sprint-1', order: 1 })
+      useBoardStore.getState().setColumns(PROJECT_ID, [
+        {
+          id: 'col-1',
+          name: 'To Do',
+          order: 0,
+          projectId: PROJECT_ID,
+          tickets: [ticket1, ticket2],
+        },
+      ])
+
+      useBoardStore.getState().updateTickets(PROJECT_ID, [
+        { ticketId: 'ticket-1', updates: { sprintId: null, order: 5 } },
+        { ticketId: 'ticket-2', updates: { sprintId: null, order: 6 } },
+      ])
+
+      const columns = useBoardStore.getState().getColumns(PROJECT_ID)
+      expect(columns[0].tickets[0].sprintId).toBeNull()
+      expect(columns[0].tickets[0].order).toBe(5)
+      expect(columns[0].tickets[1].sprintId).toBeNull()
+      expect(columns[0].tickets[1].order).toBe(6)
+    })
+
+    it('should handle empty updates array', () => {
+      const ticket = createMockTicket({ id: 'ticket-1', title: 'Original' })
+      useBoardStore
+        .getState()
+        .setColumns(PROJECT_ID, [
+          { id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [ticket] },
+        ])
+
+      useBoardStore.getState().updateTickets(PROJECT_ID, [])
+
+      const columns = useBoardStore.getState().getColumns(PROJECT_ID)
+      expect(columns[0].tickets[0].title).toBe('Original')
+    })
+
+    it('should handle column changes for multiple tickets', () => {
+      const ticket1 = createMockTicket({ id: 'ticket-1', columnId: 'col-1', order: 0 })
+      const ticket2 = createMockTicket({ id: 'ticket-2', columnId: 'col-1', order: 1 })
+      useBoardStore.getState().setColumns(PROJECT_ID, [
+        {
+          id: 'col-1',
+          name: 'To Do',
+          order: 0,
+          projectId: PROJECT_ID,
+          tickets: [ticket1, ticket2],
+        },
+        { id: 'col-2', name: 'Done', order: 1, projectId: PROJECT_ID, tickets: [] },
+      ])
+
+      useBoardStore.getState().updateTickets(PROJECT_ID, [
+        { ticketId: 'ticket-1', updates: { columnId: 'col-2', order: 0 } },
+        { ticketId: 'ticket-2', updates: { columnId: 'col-2', order: 1 } },
+      ])
+
+      const columns = useBoardStore.getState().getColumns(PROJECT_ID)
+      expect(columns[0].tickets).toHaveLength(0)
+      expect(columns[1].tickets).toHaveLength(2)
+      expect(columns[1].tickets[0].id).toBe('ticket-1')
+      expect(columns[1].tickets[1].id).toBe('ticket-2')
+    })
+
+    it('should handle mixed updates (some with column change, some without)', () => {
+      const ticket1 = createMockTicket({ id: 'ticket-1', columnId: 'col-1', title: 'T1' })
+      const ticket2 = createMockTicket({ id: 'ticket-2', columnId: 'col-1', title: 'T2' })
+      useBoardStore.getState().setColumns(PROJECT_ID, [
+        {
+          id: 'col-1',
+          name: 'To Do',
+          order: 0,
+          projectId: PROJECT_ID,
+          tickets: [ticket1, ticket2],
+        },
+        { id: 'col-2', name: 'Done', order: 1, projectId: PROJECT_ID, tickets: [] },
+      ])
+
+      useBoardStore.getState().updateTickets(PROJECT_ID, [
+        { ticketId: 'ticket-1', updates: { columnId: 'col-2', order: 0 } }, // Column change
+        { ticketId: 'ticket-2', updates: { title: 'Updated T2' } }, // No column change
+      ])
+
+      const columns = useBoardStore.getState().getColumns(PROJECT_ID)
+      expect(columns[0].tickets).toHaveLength(1)
+      expect(columns[0].tickets[0].id).toBe('ticket-2')
+      expect(columns[0].tickets[0].title).toBe('Updated T2')
+      expect(columns[1].tickets).toHaveLength(1)
+      expect(columns[1].tickets[0].id).toBe('ticket-1')
+    })
+
+    it('should skip updates for non-existent tickets', () => {
+      const ticket = createMockTicket({ id: 'ticket-1', title: 'Original' })
+      useBoardStore
+        .getState()
+        .setColumns(PROJECT_ID, [
+          { id: 'col-1', name: 'To Do', order: 0, projectId: PROJECT_ID, tickets: [ticket] },
+        ])
+
+      // Should not throw
+      useBoardStore.getState().updateTickets(PROJECT_ID, [
+        { ticketId: 'ticket-1', updates: { title: 'Updated' } },
+        { ticketId: 'non-existent', updates: { title: 'Ignored' } },
+      ])
+
+      const columns = useBoardStore.getState().getColumns(PROJECT_ID)
+      expect(columns[0].tickets[0].title).toBe('Updated')
+    })
+  })
+
   describe('addTicket', () => {
     it('should add a ticket to the specified column', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
