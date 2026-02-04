@@ -21,7 +21,7 @@ import {
 } from '@dnd-kit/sortable'
 import { Settings2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { DropZone } from '@/components/sprints/drop-indicator'
+import { DropIndicator, DropZone } from '@/components/sprints/drop-indicator'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { type SortConfig, useBacklogStore } from '@/stores/backlog-store'
@@ -44,8 +44,8 @@ interface BacklogTableProps {
   onDragEnd?: (event: DragEndEvent) => void
   /** IDs of tickets being dragged (for external DnD mode) */
   externalDraggingIds?: string[]
-  /** ID of ticket being hovered over for drop (for external DnD mode) */
-  externalDropTargetId?: string | null
+  /** Insert index for drop indicator (for external DnD mode) - same as SprintSection */
+  dropPosition?: number | null
 }
 
 export function BacklogTable({
@@ -57,7 +57,7 @@ export function BacklogTable({
   onDragStart: externalDragStart,
   onDragEnd: externalDragEnd,
   externalDraggingIds = [],
-  externalDropTargetId = null,
+  dropPosition: externalDropPosition = null,
 }: BacklogTableProps) {
   const {
     columns,
@@ -408,14 +408,13 @@ export function BacklogTable({
   // Get selection store
   const { selectedTicketIds, clearSelection, isSelected } = useSelectionStore()
 
-  // Droppable for empty backlog (allows dropping when there are no tickets)
-  const { setNodeRef: setEmptyDropRef, isOver: isOverEmptyBacklog } = useDroppable({
+  // Droppable for backlog section (allows dropping at end of list or when empty)
+  const { setNodeRef: setBacklogDropRef, isOver: isOverBacklog } = useDroppable({
     id: 'backlog',
     data: {
       type: 'sprint-section',
       sprintId: null,
     },
-    disabled: filteredTickets.length > 0,
   })
 
   // Handle drag start - track dragging tickets and clear selection if needed
@@ -604,16 +603,9 @@ export function BacklogTable({
             const isBeingDragged = activeDraggingIds.includes(ticket.id)
 
             // Determine if drop indicator should show before this ticket
-            let showIndicator = false
-            if (!isBeingDragged) {
-              if (useExternalDnd) {
-                // External mode: show indicator if this ticket is the drop target
-                showIndicator = ticket.id === externalDropTargetId
-              } else {
-                // Internal mode: use numeric index
-                showIndicator = index === dropPosition
-              }
-            }
+            // Use unified index-based logic for both internal and external modes
+            const activeDropPosition = useExternalDnd ? externalDropPosition : dropPosition
+            const showIndicator = !isBeingDragged && index === activeDropPosition
 
             return (
               <BacklogRow
@@ -630,6 +622,23 @@ export function BacklogTable({
               />
             )
           })}
+          {/* Drop indicator at end of list */}
+          {(() => {
+            const activeDraggingIds = useExternalDnd ? externalDraggingIds : draggingTicketIds
+            const activeDropPosition = useExternalDnd ? externalDropPosition : dropPosition
+            const showEndIndicator =
+              activeDropPosition !== null &&
+              activeDropPosition >= filteredTickets.length &&
+              filteredTickets.length > 0
+
+            return showEndIndicator ? (
+              <tr>
+                <td colSpan={visibleColumns.length + 1} className="p-0">
+                  <DropIndicator itemCount={activeDraggingIds.length} />
+                </td>
+              </tr>
+            ) : null
+          })()}
         </tbody>
       </SortableContext>
     </table>
@@ -662,32 +671,37 @@ export function BacklogTable({
           }
         }}
       >
-        {useExternalDnd ? (
-          // When using external DnD, just render the sortable contexts (parent provides DndContext)
-          tableContent
-        ) : (
-          // When using internal DnD, wrap with our own DndContext
-          <DndContext
-            id="backlog-dnd"
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
-          >
-            {tableContent}
-          </DndContext>
-        )}
+        <div ref={setBacklogDropRef} className="flex min-h-full flex-col">
+          {useExternalDnd ? (
+            // When using external DnD, just render the sortable contexts (parent provides DndContext)
+            tableContent
+          ) : (
+            // When using internal DnD, wrap with our own DndContext
+            <DndContext
+              id="backlog-dnd"
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+            >
+              {tableContent}
+            </DndContext>
+          )}
 
-        {filteredTickets.length === 0 && (
-          <div ref={setEmptyDropRef} className="p-4">
-            <DropZone
-              isActive={isOverEmptyBacklog}
-              itemCount={useExternalDnd ? externalDraggingIds.length : draggingTicketIds.length}
-              message="Drag tickets here to add them to the backlog"
-            />
-          </div>
-        )}
+          {filteredTickets.length === 0 ? (
+            <div className="p-4">
+              <DropZone
+                isActive={isOverBacklog || externalDropPosition !== null}
+                itemCount={useExternalDnd ? externalDraggingIds.length : draggingTicketIds.length}
+                message="Drag tickets here to add them to the backlog"
+              />
+            </div>
+          ) : (
+            // Spacer to fill remaining space - acts as drop zone for "end of list"
+            <div className="min-h-16 flex-1" />
+          )}
+        </div>
 
         <ScrollBar orientation="horizontal" />
       </ScrollArea>

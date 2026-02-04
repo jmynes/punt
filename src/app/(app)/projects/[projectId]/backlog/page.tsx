@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  type Collision,
   type CollisionDetection,
   DndContext,
   type DragEndEvent,
@@ -43,34 +44,209 @@ import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
 
 /**
- * Custom collision detection that handles both cross-section drops and internal reordering.
- * Priority: ticket/row items (for reordering) > sprint-sections (for cross-section moves)
+ * Pointer-based collision detection for intuitive drag-and-drop.
+ * Uses cursor Y position to determine drop target, allowing drops below the last item.
+ *
+ * Algorithm:
+ * 1. Collect all ticket/row droppables sorted by Y position
+ * 2. Find where cursor Y falls relative to row midpoints
+ * 3. Return collision with insertIndex metadata for precise positioning
  */
-const customCollisionDetection: CollisionDetection = (args) => {
-  // Get all collisions using rect intersection (most reliable for sortable items)
-  const rectCollisions = rectIntersection(args)
+const createPointerCollisionDetection = (
+  ticketsBySprint: Record<string, { id: string }[]>,
+): CollisionDetection => {
+  return (args) => {
+    const { pointerCoordinates, droppableRects, droppableContainers } = args
 
-  // Find ticket/row collisions for internal reordering
-  const ticketCollision = rectCollisions.find((collision) => {
-    const type = collision.data?.droppableContainer?.data?.current?.type
-    return type === 'ticket' || type === 'backlog-ticket'
-  })
+    // Fallback to rect intersection for keyboard navigation
+    if (!pointerCoordinates) {
+      return rectIntersection(args)
+    }
 
-  if (ticketCollision) {
-    return [ticketCollision]
+    const cursorY = pointerCoordinates.y
+    const cursorX = pointerCoordinates.x
+
+    // Collect all ticket droppables with their rects and section info
+    type DroppableInfo = {
+      id: string
+      rect: { top: number; bottom: number; left: number; right: number }
+      sectionId: string
+      type: 'ticket' | 'backlog-ticket'
+      index: number
+    }
+
+    const ticketDroppables: DroppableInfo[] = []
+    const sectionDroppables: {
+      id: string
+      rect: { top: number; bottom: number; left: number; right: number }
+      sectionId: string
+    }[] = []
+
+    for (const container of droppableContainers) {
+      const rect = droppableRects.get(container.id)
+      if (!rect) continue
+
+      const type = container.data.current?.type as string | undefined
+      const sectionId = (container.data.current?.sprintId as string | null) ?? 'backlog'
+
+      if (type === 'ticket' || type === 'backlog-ticket') {
+        // Find the index of this ticket in its section
+        const sectionTickets = ticketsBySprint[sectionId] ?? []
+        const ticketId = container.id as string
+        const index = sectionTickets.findIndex((t) => t.id === ticketId)
+
+        ticketDroppables.push({
+          id: ticketId,
+          rect: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right },
+          sectionId,
+          type: type as 'ticket' | 'backlog-ticket',
+          index: index >= 0 ? index : sectionTickets.length,
+        })
+      } else if (type === 'sprint-section') {
+        sectionDroppables.push({
+          id: container.id as string,
+          rect: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right },
+          sectionId,
+        })
+      }
+    }
+
+    // Sort tickets by Y position (top to bottom)
+    ticketDroppables.sort((a, b) => a.rect.top - b.rect.top)
+
+    // Group tickets by section for within-section calculations
+    const ticketsBySection: Record<string, DroppableInfo[]> = {}
+    for (const t of ticketDroppables) {
+      if (!ticketsBySection[t.sectionId]) ticketsBySection[t.sectionId] = []
+      ticketsBySection[t.sectionId].push(t)
+    }
+
+    // First, check if cursor is within any section's ticket area
+    for (const [sectionId, sectionTickets] of Object.entries(ticketsBySection)) {
+      if (sectionTickets.length === 0) continue
+
+      // Sort by Y position within section
+      sectionTickets.sort((a, b) => a.rect.top - b.rect.top)
+
+      const firstTicket = sectionTickets[0]
+      const lastTicket = sectionTickets[sectionTickets.length - 1]
+
+      // Check if cursor X is within the ticket area (with some padding)
+      const isWithinXBounds =
+        cursorX >= firstTicket.rect.left - 50 && cursorX <= firstTicket.rect.right + 50
+
+      if (!isWithinXBounds) continue
+
+      // Check if cursor is within the vertical bounds of this section's tickets
+      // (from top of first ticket to bottom of last ticket, plus some padding below)
+      const sectionTop = firstTicket.rect.top
+      const sectionBottom = lastTicket.rect.bottom + 100 // Extra padding below last item
+
+      if (cursorY >= sectionTop && cursorY <= sectionBottom) {
+        // Find insertion point based on cursor Y vs row midpoints
+        for (let i = 0; i < sectionTickets.length; i++) {
+          const ticket = sectionTickets[i]
+          const midpoint = (ticket.rect.top + ticket.rect.bottom) / 2
+
+          if (cursorY < midpoint) {
+            // Insert BEFORE this ticket
+            const collision: Collision = {
+              id: ticket.id,
+              data: {
+                droppableContainer: {
+                  id: ticket.id,
+                  data: {
+                    current: {
+                      type: ticket.type,
+                      sectionId,
+                      insertIndex: ticket.index,
+                    },
+                  },
+                },
+              },
+            }
+            return [collision]
+          }
+        }
+
+        // Cursor is below all tickets in this section - insert at end
+        const lastTicketInSection = sectionTickets[sectionTickets.length - 1]
+        const sectionTicketCount = ticketsBySprint[sectionId]?.length ?? 0
+
+        // Return the section container as target with insert at end
+        const sectionContainer = sectionDroppables.find((s) => s.sectionId === sectionId)
+        if (sectionContainer) {
+          const collision: Collision = {
+            id: sectionContainer.id,
+            data: {
+              droppableContainer: {
+                id: sectionContainer.id,
+                data: {
+                  current: {
+                    type: 'sprint-section',
+                    sprintId: sectionId === 'backlog' ? null : sectionId,
+                    sectionId,
+                    insertIndex: sectionTicketCount,
+                  },
+                },
+              },
+            },
+          }
+          return [collision]
+        }
+
+        // Fallback: return last ticket with index pointing to end
+        const collision: Collision = {
+          id: lastTicketInSection.id,
+          data: {
+            droppableContainer: {
+              id: lastTicketInSection.id,
+              data: {
+                current: {
+                  type: lastTicketInSection.type,
+                  sectionId,
+                  insertIndex: sectionTicketCount,
+                },
+              },
+            },
+          },
+        }
+        return [collision]
+      }
+    }
+
+    // If not over any ticket area, check if over a section container (for empty sections)
+    for (const section of sectionDroppables) {
+      if (
+        cursorY >= section.rect.top &&
+        cursorY <= section.rect.bottom &&
+        cursorX >= section.rect.left &&
+        cursorX <= section.rect.right
+      ) {
+        const sectionTicketCount = ticketsBySprint[section.sectionId]?.length ?? 0
+        const collision: Collision = {
+          id: section.id,
+          data: {
+            droppableContainer: {
+              id: section.id,
+              data: {
+                current: {
+                  type: 'sprint-section',
+                  sprintId: section.sectionId === 'backlog' ? null : section.sectionId,
+                  sectionId: section.sectionId,
+                  insertIndex: sectionTicketCount,
+                },
+              },
+            },
+          },
+        }
+        return [collision]
+      }
+    }
+
+    // Fallback to rect intersection
+    return rectIntersection(args)
   }
-
-  // Find sprint-section collision for cross-section moves
-  const sprintCollision = rectCollisions.find(
-    (collision) => collision.data?.droppableContainer?.data?.current?.type === 'sprint-section',
-  )
-
-  if (sprintCollision) {
-    return [sprintCollision]
-  }
-
-  // Fallback to all rect collisions
-  return rectCollisions
 }
 
 export default function BacklogPage() {
@@ -98,8 +274,8 @@ export default function BacklogPage() {
   // Drag state for sprint sections and backlog table
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
   const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
-  const [backlogDropTargetId, setBacklogDropTargetId] = useState<string | null>(null)
-  const [sprintDropPosition, setSprintDropPosition] = useState<{
+  // Unified drop position: sectionId + insertIndex for all sections (sprints and backlog)
+  const [dropPosition, setDropPosition] = useState<{
     sectionId: string
     insertIndex: number
   } | null>(null)
@@ -263,8 +439,7 @@ export default function BacklogPage() {
     (event: DragOverEvent) => {
       const { over } = event
       if (!over) {
-        setBacklogDropTargetId(null)
-        setSprintDropPosition(null)
+        setDropPosition(null)
         return
       }
 
@@ -272,46 +447,42 @@ export default function BacklogPage() {
       const overType = over.data.current?.type
       const draggedIds = draggedIdsRef.current
 
-      // Track drop target for backlog tickets
-      if (overType === 'backlog-ticket') {
-        setSprintDropPosition(null)
-        if (draggedIds.includes(overId)) {
-          setBacklogDropTargetId(null)
-          return
-        }
-        setBacklogDropTargetId(overId)
+      // If hovering over a dragged ticket, don't show indicator
+      if (draggedIds.includes(overId)) {
+        setDropPosition(null)
         return
       }
 
-      // Track drop position for sprint tickets
-      if (overType === 'ticket') {
-        setBacklogDropTargetId(null)
-        if (draggedIds.includes(overId)) {
-          setSprintDropPosition(null)
-          return
-        }
+      // Extract section and insert index from collision data
+      // The pointer collision detection already calculated this
+      const sectionId = (over.data.current?.sectionId as string) ?? 'backlog'
+      const insertIndex = over.data.current?.insertIndex as number | undefined
 
-        // Find which sprint contains this ticket
-        for (const [sectionId, sectionTickets] of Object.entries(ticketsBySprint)) {
+      if (insertIndex !== undefined) {
+        setDropPosition({ sectionId, insertIndex })
+        return
+      }
+
+      // Fallback: calculate insert index from ticket position
+      if (overType === 'ticket' || overType === 'backlog-ticket') {
+        for (const [section, sectionTickets] of Object.entries(ticketsBySprint)) {
           const ticketIndex = sectionTickets.findIndex((t) => t.id === overId)
           if (ticketIndex !== -1) {
-            setSprintDropPosition({ sectionId, insertIndex: ticketIndex })
+            setDropPosition({ sectionId: section, insertIndex: ticketIndex })
             return
           }
         }
       }
 
-      // Hovering over sprint section (empty area)
+      // Hovering over sprint section (empty area or end of list)
       if (overType === 'sprint-section') {
-        setBacklogDropTargetId(null)
-        const sectionId = (over.data.current?.sprintId as string | null) ?? 'backlog'
-        const sectionTickets = ticketsBySprint[sectionId] ?? []
-        setSprintDropPosition({ sectionId, insertIndex: sectionTickets.length })
+        const sprintId = (over.data.current?.sprintId as string | null) ?? 'backlog'
+        const sectionTickets = ticketsBySprint[sprintId] ?? []
+        setDropPosition({ sectionId: sprintId, insertIndex: sectionTickets.length })
         return
       }
 
-      setBacklogDropTargetId(null)
-      setSprintDropPosition(null)
+      setDropPosition(null)
     },
     [ticketsBySprint],
   )
@@ -324,8 +495,7 @@ export default function BacklogPage() {
       // Clean up all drag state
       setActiveTicket(null)
       setDraggingTicketIds([])
-      setBacklogDropTargetId(null)
-      setSprintDropPosition(null)
+      setDropPosition(null)
       draggedIdsRef.current = []
 
       if (!over) return
@@ -706,7 +876,7 @@ export default function BacklogPage() {
       <DndContext
         id="unified-backlog-dnd"
         sensors={sensors}
-        collisionDetection={customCollisionDetection}
+        collisionDetection={createPointerCollisionDetection(ticketsBySprint)}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
@@ -726,9 +896,7 @@ export default function BacklogPage() {
                 defaultExpanded={true}
                 draggingTicketIds={draggingTicketIds}
                 dropPosition={
-                  sprintDropPosition?.sectionId === sprint.id
-                    ? sprintDropPosition.insertIndex
-                    : null
+                  dropPosition?.sectionId === sprint.id ? dropPosition.insertIndex : null
                 }
               />
             ))}
@@ -745,9 +913,7 @@ export default function BacklogPage() {
                 defaultExpanded={true}
                 draggingTicketIds={draggingTicketIds}
                 dropPosition={
-                  sprintDropPosition?.sectionId === sprint.id
-                    ? sprintDropPosition.insertIndex
-                    : null
+                  dropPosition?.sectionId === sprint.id ? dropPosition.insertIndex : null
                 }
               />
             ))}
@@ -763,7 +929,7 @@ export default function BacklogPage() {
             projectId={projectId}
             useExternalDnd={true}
             externalDraggingIds={draggingTicketIds}
-            externalDropTargetId={backlogDropTargetId}
+            dropPosition={dropPosition?.sectionId === 'backlog' ? dropPosition.insertIndex : null}
           />
         </div>
 
