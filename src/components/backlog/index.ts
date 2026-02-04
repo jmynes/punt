@@ -1,5 +1,4 @@
 export { BacklogFilters } from './backlog-filters'
 export { BacklogHeader } from './backlog-header'
-export { BacklogRow } from './backlog-row'
 export { BacklogTable } from './backlog-table'
 export { ColumnConfig } from './column-config'

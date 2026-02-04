@@ -28,8 +28,8 @@ import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
+import { TicketTableRow } from '../table'
 import { SprintSection } from './sprint-section'
-import { SprintTableRow } from './sprint-table-row'
 
 interface SprintBacklogViewProps {
   projectId: string
@@ -587,10 +587,15 @@ export function SprintBacklogView({
           <div className="w-full max-w-4xl">
             {draggingTicketIds.length > 1 ? (
               <div className="relative">
-                <SprintTableRow
+                <TicketTableRow
                   ticket={activeTicket}
-                  projectKey={projectKey}
-                  statusColumns={statusColumns}
+                  context={{
+                    sectionId: activeTicket.sprintId ?? 'backlog',
+                    sprintId: activeTicket.sprintId,
+                    projectKey,
+                    projectId,
+                    statusColumns,
+                  }}
                   columns={visibleColumns}
                   allTicketIds={[]}
                   isOverlay
@@ -600,10 +605,15 @@ export function SprintBacklogView({
                 </div>
               </div>
             ) : (
-              <SprintTableRow
+              <TicketTableRow
                 ticket={activeTicket}
-                projectKey={projectKey}
-                statusColumns={statusColumns}
+                context={{
+                  sectionId: activeTicket.sprintId ?? 'backlog',
+                  sprintId: activeTicket.sprintId,
+                  projectKey,
+                  projectId,
+                  statusColumns,
+                }}
                 columns={visibleColumns}
                 allTicketIds={[]}
                 isOverlay

@@ -1,12 +1,9 @@
 'use client'
 
 import { useDroppable } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { format } from 'date-fns'
 import {
   AlertTriangle,
-  ArrowDown,
-  ArrowUp,
   CalendarDays,
   ChevronDown,
   ChevronRight,
@@ -21,6 +18,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
+import { DropZone, type TableContext, TicketTable } from '@/components/table'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -47,8 +45,6 @@ import type {
   SprintWithMetrics,
   TicketWithRelations,
 } from '@/types'
-import { DropIndicator, DropZone } from './drop-indicator'
-import { SprintTableRow } from './sprint-table-row'
 
 interface SprintSectionProps {
   sprint: SprintWithMetrics | null // null = backlog
@@ -88,13 +84,12 @@ export function SprintSection({
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
   const { columns } = useBacklogStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
-  const visibleColumns = columns.filter((c) => c.visible)
 
   // Local sort state for this section only
   const [sort, setSort] = useState<SortConfig | null>(null)
 
   const handleToggleSort = useCallback(
-    (columnId: BacklogColumnId) => {
+    (columnId: string) => {
       const column = columns.find((c) => c.id === columnId)
       if (!column?.sortable) return
 
@@ -102,11 +97,11 @@ export function SprintSection({
         if (prev?.column === columnId) {
           // Toggle direction or clear
           if (prev.direction === 'asc') {
-            return { column: columnId, direction: 'desc' as SortDirection }
+            return { column: columnId as BacklogColumnId, direction: 'desc' as SortDirection }
           }
           return null
         }
-        return { column: columnId, direction: 'asc' as SortDirection }
+        return { column: columnId as BacklogColumnId, direction: 'asc' as SortDirection }
       })
     },
     [columns],
@@ -242,6 +237,18 @@ export function SprintSection({
 
   // Ticket IDs for sortable context - use sorted order
   const ticketIds = sortedTickets.map((t) => t.id)
+
+  // Create table context for the unified TicketTable component
+  const tableContext: TableContext = useMemo(
+    () => ({
+      sectionId: sprint?.id ?? 'backlog',
+      sprintId: sprint?.id ?? null,
+      projectKey,
+      projectId,
+      statusColumns,
+    }),
+    [sprint?.id, projectKey, projectId, statusColumns],
+  )
 
   const handleStartSprint = useCallback(() => {
     if (sprint) openSprintStart(sprint.id)
@@ -541,77 +548,17 @@ export function SprintSection({
             />
           ) : (
             <div className="relative">
-              <table className="w-full border-collapse">
-                <thead className="text-left text-xs text-zinc-500 uppercase tracking-wider">
-                  <tr className="border-b border-zinc-800/50">
-                    <th className="w-8" />
-                    {visibleColumns.map((column) => {
-                      const isSorted = sort?.column === column.id
-                      return (
-                        <th
-                          key={column.id}
-                          style={{
-                            width: column.width || undefined,
-                            minWidth: column.minWidth,
-                          }}
-                          className={cn(
-                            'px-3 py-2 select-none whitespace-nowrap',
-                            column.sortable && 'cursor-pointer hover:text-zinc-200',
-                          )}
-                          onClick={column.sortable ? () => handleToggleSort(column.id) : undefined}
-                        >
-                          <div className="flex items-center gap-1">
-                            <span className={cn(column.sortable && 'hover:underline')}>
-                              {column.label}
-                            </span>
-                            {isSorted && (
-                              <span className="text-amber-500">
-                                {sort.direction === 'asc' ? (
-                                  <ArrowUp className="h-3 w-3" />
-                                ) : (
-                                  <ArrowDown className="h-3 w-3" />
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        </th>
-                      )
-                    })}
-                  </tr>
-                </thead>
-                <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
-                  <tbody>
-                    {sortedTickets.map((ticket, index) => {
-                      const isBeingDragged = draggingTicketIds.includes(ticket.id)
-                      // Show drop indicator before this ticket if this is the drop position
-                      // Don't show indicator on the dragged ticket itself
-                      const showIndicator = !isBeingDragged && index === dropPosition
-
-                      return (
-                        <SprintTableRow
-                          key={ticket.id}
-                          ticket={ticket}
-                          projectKey={projectKey}
-                          statusColumns={statusColumns}
-                          columns={visibleColumns}
-                          allTicketIds={ticketIds}
-                          isBeingDragged={isBeingDragged}
-                          showDropIndicator={showIndicator}
-                          draggingCount={draggingCount}
-                        />
-                      )
-                    })}
-                    {/* Drop indicator at end of list */}
-                    {dropPosition !== null && dropPosition >= sortedTickets.length && (
-                      <tr>
-                        <td colSpan={visibleColumns.length + 1} className="p-0">
-                          <DropIndicator itemCount={draggingCount} />
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </SortableContext>
-              </table>
+              <TicketTable
+                context={tableContext}
+                tickets={sortedTickets}
+                columns={columns}
+                allTicketIds={ticketIds}
+                draggingTicketIds={draggingTicketIds}
+                dropPosition={dropPosition}
+                showHeader={true}
+                sort={sort}
+                onToggleSort={handleToggleSort}
+              />
             </div>
           )}
         </div>

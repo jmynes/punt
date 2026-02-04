@@ -17,11 +17,10 @@ import {
   horizontalListSortingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { Settings2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { DropIndicator, DropZone } from '@/components/sprints/drop-indicator'
+import { DropZone, type TableContext, TicketTable } from '@/components/table'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { type SortConfig, useBacklogStore } from '@/stores/backlog-store'
@@ -29,7 +28,6 @@ import { useSelectionStore } from '@/stores/selection-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { BacklogFilters } from './backlog-filters'
 import { BacklogHeader } from './backlog-header'
-import { BacklogRow } from './backlog-row'
 
 interface BacklogTableProps {
   tickets: TicketWithRelations[]
@@ -570,78 +568,53 @@ export function BacklogTable({
     }
   }
 
-  // Get status name from columnId
-  const getStatusName = (columnId: string) => {
-    const col = statusColumns.find((c) => c.id === columnId)
-    return col?.name || 'Unknown'
-  }
-
   const ticketIds = filteredTickets.map((t) => t.id)
+
+  // Create table context for the unified TicketTable component
+  const tableContext: TableContext = useMemo(
+    () => ({
+      sectionId: 'backlog',
+      sprintId: null,
+      projectKey,
+      projectId,
+      statusColumns,
+    }),
+    [projectKey, projectId, statusColumns],
+  )
+
+  // Determine active drag state for rendering
+  const activeDraggingIds = useExternalDnd ? externalDraggingIds : draggingTicketIds
+  const activeDropPosition = useExternalDnd ? externalDropPosition : dropPosition
 
   // Table content (shared between internal and external DnD modes)
   const tableContent = (
-    <table className="w-full border-collapse">
+    <div>
       {/* Header with column reordering */}
-      <thead className="sticky top-0 z-10 bg-zinc-900">
-        <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-          <tr className="border-b border-zinc-800">
-            {/* Empty cell for drag handle column */}
-            <th className="w-8" />
-            {visibleColumns.map((column) => (
-              <BacklogHeader key={column.id} column={column} />
-            ))}
-          </tr>
-        </SortableContext>
-      </thead>
+      <table className="w-full border-collapse">
+        <thead className="sticky top-0 z-10 bg-zinc-900">
+          <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
+            <tr className="border-b border-zinc-800">
+              {/* Empty cell for drag handle column */}
+              <th className="w-8" />
+              {visibleColumns.map((column) => (
+                <BacklogHeader key={column.id} column={column} />
+              ))}
+            </tr>
+          </SortableContext>
+        </thead>
+      </table>
 
-      {/* Body with row reordering - disabled when sorted */}
-      <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
-        <tbody>
-          {filteredTickets.map((ticket, index) => {
-            // Use external state when using external DnD, otherwise use internal state
-            const activeDraggingIds = useExternalDnd ? externalDraggingIds : draggingTicketIds
-            const isBeingDragged = activeDraggingIds.includes(ticket.id)
-
-            // Determine if drop indicator should show before this ticket
-            // Use unified index-based logic for both internal and external modes
-            const activeDropPosition = useExternalDnd ? externalDropPosition : dropPosition
-            const showIndicator = !isBeingDragged && index === activeDropPosition
-
-            return (
-              <BacklogRow
-                key={ticket.id}
-                ticket={ticket}
-                projectKey={projectKey}
-                columns={visibleColumns}
-                getStatusName={getStatusName}
-                isDraggable={true}
-                allTicketIds={ticketIds}
-                isBeingDragged={isBeingDragged}
-                showDropIndicator={showIndicator}
-                draggingCount={activeDraggingIds.length}
-              />
-            )
-          })}
-          {/* Drop indicator at end of list */}
-          {(() => {
-            const activeDraggingIds = useExternalDnd ? externalDraggingIds : draggingTicketIds
-            const activeDropPosition = useExternalDnd ? externalDropPosition : dropPosition
-            const showEndIndicator =
-              activeDropPosition !== null &&
-              activeDropPosition >= filteredTickets.length &&
-              filteredTickets.length > 0
-
-            return showEndIndicator ? (
-              <tr>
-                <td colSpan={visibleColumns.length + 1} className="p-0">
-                  <DropIndicator itemCount={activeDraggingIds.length} />
-                </td>
-              </tr>
-            ) : null
-          })()}
-        </tbody>
-      </SortableContext>
-    </table>
+      {/* Body with row reordering using unified TicketTable */}
+      <TicketTable
+        context={tableContext}
+        tickets={filteredTickets}
+        columns={columns}
+        allTicketIds={ticketIds}
+        draggingTicketIds={activeDraggingIds}
+        dropPosition={activeDropPosition}
+        showHeader={false}
+      />
+    </div>
   )
 
   return (

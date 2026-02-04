@@ -20,7 +20,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BacklogTable, ColumnConfig } from '@/components/backlog'
 import { SprintSection } from '@/components/sprints'
-import { SprintTableRow } from '@/components/sprints/sprint-table-row'
+import { type TableContext, TicketTableRow } from '@/components/table'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { useProjectSprints, useUpdateTicketSprint } from '@/hooks/queries/use-sprints'
@@ -1027,10 +1027,15 @@ export default function BacklogPage() {
             <div className="w-full max-w-4xl">
               {draggingTicketIds.length > 1 ? (
                 <div className="relative">
-                  <SprintTableRow
+                  <TicketTableRow
                     ticket={activeTicket}
-                    projectKey={projectKey}
-                    statusColumns={columns}
+                    context={{
+                      sectionId: activeTicket.sprintId ?? 'backlog',
+                      sprintId: activeTicket.sprintId,
+                      projectKey,
+                      projectId,
+                      statusColumns: columns,
+                    }}
                     columns={backlogColumns.filter((c) => c.visible)}
                     allTicketIds={[]}
                     isOverlay
@@ -1040,10 +1045,15 @@ export default function BacklogPage() {
                   </div>
                 </div>
               ) : (
-                <SprintTableRow
+                <TicketTableRow
                   ticket={activeTicket}
-                  projectKey={projectKey}
-                  statusColumns={columns}
+                  context={{
+                    sectionId: activeTicket.sprintId ?? 'backlog',
+                    sprintId: activeTicket.sprintId,
+                    projectKey,
+                    projectId,
+                    statusColumns: columns,
+                  }}
                   columns={backlogColumns.filter((c) => c.visible)}
                   allTicketIds={[]}
                   isOverlay
