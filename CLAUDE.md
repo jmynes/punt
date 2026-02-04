@@ -181,7 +181,7 @@ Events are broadcast via Server-Sent Events for multi-tab/multi-user sync.
 
 All client-side state lives in Zustand stores with localStorage persistence:
 
-- **board-store**: Kanban columns/tickets per project. Key pattern: `projects: Record<projectId, ColumnWithTickets[]>`. Use `getColumns(projectId)` to access. Custom date revival on hydration. Validates localStorage data structure during rehydration to prevent crashes from corrupted data.
+- **board-store**: Kanban columns/tickets per project. Key pattern: `projects: Record<projectId, ColumnWithTickets[]>`. Use `getColumns(projectId)` to access. `updateTickets()` for atomic batch updates (prevents visual glitches during undo/redo). Custom date revival on hydration. Validates localStorage data structure during rehydration to prevent crashes from corrupted data.
 - **backlog-store**: Backlog view config (15 columns, multi-filter support, sorting). Filters by type/priority/status/assignee/labels/sprint/story-points/due-date.
 - **sprint-store**: Sprint-related state for sprint planning view.
 - **undo-store**: Undo/redo stack for all reversible actions (delete, move, paste, update, ticketCreate, projectCreate/Delete). Each action has `toastId` for UI feedback.
@@ -234,8 +234,14 @@ Types generated to `@/generated/prisma/client`, re-exported with relations from 
 - **Admin**: `UserList` with React Query, admin toggle (self-prevention), enable/disable users. `AdminSettingsForm` for upload config.
 - **Profile**: `AvatarUpload`, `ProfileForm`, `PasswordChange` components.
 - **Board**: `KanbanBoard` orchestrates dnd-kit with `KanbanColumn` and `KanbanCard`. Multi-select drag shows overlay.
-- **Backlog**: `BacklogTable` with configurable columns, sorting headers, filtering dropdowns.
-- **Sprints**: `SprintList`, `SprintCard`, `SprintCreateDialog`, `SprintStartDialog`, `SprintCompleteDialog`, `CarryoverBadge`.
+- **Table**: Unified table components in `src/components/table/` shared by backlog and sprint views:
+  - `TicketTable` - Main table component with drag-and-drop support
+  - `TicketTableRow` - Row with selection (click/Ctrl/Shift), keyboard nav, drag state
+  - `TicketTableHeader` - Sortable column headers
+  - `TicketCell` - Cell renderer for all 15 column types
+  - `DropIndicator` - Visual drop target indicator
+- **Backlog**: `BacklogTable` wraps `TicketTable` with filtering, sorting, and column configuration.
+- **Sprints**: `SprintSection` wraps `TicketTable`. Also: `SprintList`, `SprintCard`, `SprintCreateDialog`, `SprintStartDialog`, `SprintCompleteDialog`, `CarryoverBadge`.
 - **Tickets**: `TicketForm` with comprehensive fields, `TypeSelect`, `PrioritySelect`, `CustomImageDialog`.
 - **UI**: shadcn/ui components in `src/components/ui/`.
 
@@ -285,13 +291,14 @@ src/
 ├── components/
 │   ├── admin/              # User management, settings
 │   ├── auth/               # Login/register forms
-│   ├── backlog/            # Table view
+│   ├── backlog/            # Backlog view (uses table/)
 │   ├── board/              # Kanban (dnd-kit)
 │   ├── common/             # Shared components (avatars, badges, etc.)
 │   ├── layout/             # Sidebar, header, navigation
 │   ├── profile/            # Profile editing
 │   ├── projects/           # Project cards, forms
-│   ├── sprints/            # Sprint components
+│   ├── sprints/            # Sprint view (uses table/)
+│   ├── table/              # Unified table components (TicketTable, TicketTableRow, TicketCell)
 │   ├── tickets/            # Ticket dialogs, forms
 │   └── ui/                 # shadcn/ui
 ├── generated/              # Prisma-generated client (auto-generated)
