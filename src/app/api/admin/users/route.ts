@@ -182,6 +182,33 @@ export async function POST(request: Request) {
       select: USER_SELECT_CREATED,
     })
 
+    // If user is a system admin, add them to all existing projects
+    if (isSystemAdmin) {
+      const projects = await db.project.findMany({
+        select: {
+          id: true,
+          roles: {
+            where: { name: 'Admin', isDefault: true },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      })
+
+      for (const project of projects) {
+        const adminRole = project.roles[0]
+        if (adminRole) {
+          await db.projectMember.create({
+            data: {
+              userId: user.id,
+              projectId: project.id,
+              roleId: adminRole.id,
+            },
+          })
+        }
+      }
+    }
+
     return NextResponse.json(user, { status: 201 })
   } catch (error) {
     return handleApiError(error, 'create user')
