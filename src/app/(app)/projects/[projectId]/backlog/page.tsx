@@ -14,7 +14,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { List, Loader2, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -125,7 +125,7 @@ const createPointerCollisionDetection = (
     for (const [sectionId, sectionTickets] of Object.entries(ticketsBySection)) {
       if (sectionTickets.length === 0) continue
 
-      // Sort by Y position within section
+      // Sort by Y position within section - this gives us the VISUAL order
       sectionTickets.sort((a, b) => a.rect.top - b.rect.top)
 
       const firstTicket = sectionTickets[0]
@@ -144,12 +144,13 @@ const createPointerCollisionDetection = (
 
       if (cursorY >= sectionTop && cursorY <= sectionBottom) {
         // Find insertion point based on cursor Y vs row midpoints
+        // IMPORTANT: Use loop index 'i' as insertIndex (visual position), not ticket.index (data position)
         for (let i = 0; i < sectionTickets.length; i++) {
           const ticket = sectionTickets[i]
           const midpoint = (ticket.rect.top + ticket.rect.bottom) / 2
 
           if (cursorY < midpoint) {
-            // Insert BEFORE this ticket
+            // Insert BEFORE this ticket at visual position i
             const collision: Collision = {
               id: ticket.id,
               data: {
@@ -159,7 +160,7 @@ const createPointerCollisionDetection = (
                     current: {
                       type: ticket.type,
                       sectionId,
-                      insertIndex: ticket.index,
+                      insertIndex: i, // Visual position, not data index
                     },
                   },
                 },
@@ -171,7 +172,8 @@ const createPointerCollisionDetection = (
 
         // Cursor is below all tickets in this section - insert at end
         const lastTicketInSection = sectionTickets[sectionTickets.length - 1]
-        const sectionTicketCount = ticketsBySprint[sectionId]?.length ?? 0
+        // Use visual count (Y-sorted array length), not data array length
+        const visualTicketCount = sectionTickets.length
 
         // Return the section container as target with insert at end
         const sectionContainer = sectionDroppables.find((s) => s.sectionId === sectionId)
@@ -186,7 +188,7 @@ const createPointerCollisionDetection = (
                     type: 'sprint-section',
                     sprintId: sectionId === 'backlog' ? null : sectionId,
                     sectionId,
-                    insertIndex: sectionTicketCount,
+                    insertIndex: visualTicketCount,
                   },
                 },
               },
@@ -205,7 +207,7 @@ const createPointerCollisionDetection = (
                 current: {
                   type: lastTicketInSection.type,
                   sectionId,
-                  insertIndex: sectionTicketCount,
+                  insertIndex: visualTicketCount,
                 },
               },
             },
@@ -223,7 +225,8 @@ const createPointerCollisionDetection = (
         cursorX >= section.rect.left &&
         cursorX <= section.rect.right
       ) {
-        const sectionTicketCount = ticketsBySprint[section.sectionId]?.length ?? 0
+        // Use visual count from ticketsBySection (droppables found), not data array
+        const visualTicketCount = ticketsBySection[section.sectionId]?.length ?? 0
         const collision: Collision = {
           id: section.id,
           data: {
@@ -234,7 +237,7 @@ const createPointerCollisionDetection = (
                   type: 'sprint-section',
                   sprintId: section.sectionId === 'backlog' ? null : section.sectionId,
                   sectionId: section.sectionId,
-                  insertIndex: sectionTicketCount,
+                  insertIndex: visualTicketCount,
                 },
               },
             },
@@ -260,7 +263,7 @@ export default function BacklogPage() {
   const { getColumns, updateTicket, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
     useUIStore()
-  const { clearSelection, selectedTicketIds, isSelected } = useSelectionStore()
+  const { clearSelection, selectedTicketIds } = useSelectionStore()
   const {
     columns: backlogColumns,
     setBacklogOrder,
@@ -502,13 +505,10 @@ export default function BacklogPage() {
 
       const activeId = active.id as string
       const overId = over.id as string
-      // Use captured drag data from ref (active.data.current may be empty if sortable was filtered out)
-      const activeType = activeDragDataRef.current.type || active.data.current?.type
       // Normalize null/undefined sprint IDs to null for comparison
       const activeSprintId =
         activeDragDataRef.current.sprintId ?? active.data.current?.sprintId ?? null
       const overType = over.data.current?.type
-      const overSprintId = over.data.current?.sprintId ?? null
 
       // Clear the captured drag data
       activeDragDataRef.current = { type: undefined, sprintId: undefined }
@@ -528,71 +528,97 @@ export default function BacklogPage() {
         return
       }
 
-      // Case 2: Row reordering within backlog (backlog-ticket to backlog-ticket)
-      // Manual reordering clears the active sort via hasManualOrder in BacklogTable
-      if (
-        activeType === 'backlog-ticket' &&
-        overType === 'backlog-ticket' &&
-        activeSprintId === overSprintId
-      ) {
-        const rawBacklogTickets = ticketsBySprint.backlog ?? []
-        const selectedIds = Array.from(selectedTicketIds)
+      // Determine target section from over data
+      let targetSprintId: string | null = null
+      if (overType === 'sprint-section') {
+        targetSprintId = over.data.current?.sprintId as string | null
+      } else if (overType === 'ticket') {
+        targetSprintId = over.data.current?.sprintId as string | null
+      } else if (overType === 'backlog-ticket') {
+        targetSprintId = null
+      } else {
+        return
+      }
 
-        // Apply existing backlog order to maintain current view order
-        const existingOrder = backlogOrder[projectId] || []
-        const orderSet = new Set(existingOrder)
-        const orderedTickets = existingOrder
-          .map((id) => rawBacklogTickets.find((t) => t.id === id))
-          .filter(Boolean) as typeof rawBacklogTickets
-        const remainingTickets = rawBacklogTickets.filter((t) => !orderSet.has(t.id))
-        const backlogTickets = [...orderedTickets, ...remainingTickets]
+      // Get insertion index from collision data (calculated by pointer collision detection)
+      const collisionInsertIndex = over.data.current?.insertIndex as number | undefined
+      const insertAt = collisionInsertIndex ?? dropPosition?.insertIndex
 
-        let newOrderedTickets: typeof backlogTickets = []
+      // Determine if this is same-section reorder or cross-section move
+      const isSameSection = activeSprintId === targetSprintId
+      const targetSectionKey = targetSprintId ?? 'backlog'
 
-        // Multi-drag reordering
-        if (selectedIds.length > 1 && isSelected(activeId)) {
-          const selectedSet = new Set(selectedIds)
-          const remaining = backlogTickets.filter((t) => !selectedSet.has(t.id))
-          const selectedInOrder = backlogTickets.filter((t) => selectedSet.has(t.id))
+      // Helper to adjust insert index for removed items
+      // The collision detection gives insertIndex in the ORIGINAL list (with dragged items)
+      // We need to convert it to an index in the FILTERED list (without dragged items)
+      const adjustInsertIndexForRemovedItems = (
+        originalInsertAt: number,
+        originalList: { id: string }[],
+        draggedIdSet: Set<string>,
+      ): number => {
+        // Count how many dragged items are at positions BEFORE the insert index
+        let adjustment = 0
+        for (let i = 0; i < originalInsertAt && i < originalList.length; i++) {
+          if (draggedIdSet.has(originalList[i].id)) {
+            adjustment++
+          }
+        }
+        return originalInsertAt - adjustment
+      }
 
-          let insertIndex = remaining.findIndex((t) => t.id === overId)
-          if (insertIndex === -1) insertIndex = remaining.length
-          if (selectedSet.has(overId)) insertIndex = remaining.length
+      const draggedIdSet = new Set(draggedIds)
 
-          newOrderedTickets = [
-            ...remaining.slice(0, insertIndex),
-            ...selectedInOrder,
-            ...remaining.slice(insertIndex),
+      // Case A: Same-section reordering (within sprint or within backlog)
+      if (isSameSection) {
+        // Handle backlog reordering (uses local backlogOrder state)
+        if (targetSectionKey === 'backlog') {
+          const rawBacklogTickets = ticketsBySprint.backlog ?? []
+
+          // Apply existing backlog order to maintain current view order
+          const existingOrder = backlogOrder[projectId] || []
+          const orderSet = new Set(existingOrder)
+          const orderedTickets = existingOrder
+            .map((id) => rawBacklogTickets.find((t) => t.id === id))
+            .filter(Boolean) as typeof rawBacklogTickets
+          const remainingTickets = rawBacklogTickets.filter((t) => !orderSet.has(t.id))
+          const backlogTickets = [...orderedTickets, ...remainingTickets]
+
+          // Remove dragged tickets and reinsert at target position
+          const ticketsWithoutDragged = backlogTickets.filter((t) => !draggedIdSet.has(t.id))
+          const draggedInOrder = backlogTickets.filter((t) => draggedIdSet.has(t.id))
+
+          // Calculate insert position in the filtered list, adjusting for removed items
+          const rawInsertAt = insertAt ?? backlogTickets.length
+          const effectiveInsertAt = adjustInsertIndexForRemovedItems(
+            rawInsertAt,
+            backlogTickets,
+            draggedIdSet,
+          )
+
+          const newOrderedTickets = [
+            ...ticketsWithoutDragged.slice(0, effectiveInsertAt),
+            ...draggedInOrder,
+            ...ticketsWithoutDragged.slice(effectiveInsertAt),
           ]
 
           setBacklogOrder(
             projectId,
             newOrderedTickets.map((t) => t.id),
           )
-          clearSelection()
-        } else {
-          // Single drag reordering
-          const oldIndex = backlogTickets.findIndex((t) => t.id === activeId)
-          const newIndex = backlogTickets.findIndex((t) => t.id === overId)
 
-          if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-            newOrderedTickets = arrayMove(backlogTickets, oldIndex, newIndex)
-            setBacklogOrder(
-              projectId,
-              newOrderedTickets.map((t) => t.id),
-            )
+          if (draggedIds.length > 1) {
+            clearSelection()
           }
-        }
 
-        // Persist order changes to API (triggers SSE for other clients)
-        if (newOrderedTickets.length > 0) {
+          // Persist order changes to API
           const ticketsToUpdate: { id: string; order: number }[] = []
-          newOrderedTickets.forEach((ticket, index) => {
-            if (ticket.order !== index) {
-              updateTicket(projectId, ticket.id, { order: index })
-              ticketsToUpdate.push({ id: ticket.id, order: index })
+          for (let i = 0; i < newOrderedTickets.length; i++) {
+            const ticket = newOrderedTickets[i]
+            if (ticket.order !== i) {
+              updateTicket(projectId, ticket.id, { order: i })
+              ticketsToUpdate.push({ id: ticket.id, order: i })
             }
-          })
+          }
 
           if (ticketsToUpdate.length > 0) {
             ;(async () => {
@@ -605,67 +631,54 @@ export default function BacklogPage() {
               }
             })()
           }
+          return
         }
+
+        // Handle sprint reordering
+        const sectionTickets = ticketsBySprint[targetSectionKey] ?? []
+
+        // Remove dragged tickets and reinsert at target position
+        const ticketsWithoutDragged = sectionTickets.filter((t) => !draggedIdSet.has(t.id))
+        const draggedInOrder = sectionTickets.filter((t) => draggedIdSet.has(t.id))
+
+        // Calculate insert position in the filtered list, adjusting for removed items
+        const rawInsertAt = insertAt ?? sectionTickets.length
+        const effectiveInsertAt = adjustInsertIndexForRemovedItems(
+          rawInsertAt,
+          sectionTickets,
+          draggedIdSet,
+        )
+
+        const reordered = [
+          ...ticketsWithoutDragged.slice(0, effectiveInsertAt),
+          ...draggedInOrder,
+          ...ticketsWithoutDragged.slice(effectiveInsertAt),
+        ]
+
+        // Update order for each ticket based on new position
+        const ticketsToUpdate: { id: string; order: number }[] = []
+        for (let i = 0; i < reordered.length; i++) {
+          const ticket = reordered[i]
+          if (ticket.order !== i) {
+            updateTicket(projectId, ticket.id, { order: i })
+            ticketsToUpdate.push({ id: ticket.id, order: i })
+          }
+        }
+        // Persist to API
+        ;(async () => {
+          try {
+            for (const { id, order } of ticketsToUpdate) {
+              await updateTicketAPI(projectId, id, { order })
+            }
+          } catch (err) {
+            console.error('Failed to persist ticket reorder:', err)
+          }
+        })()
         return
       }
 
-      // Case 2b: Row reordering within sprint (ticket to ticket, same sprint)
-      if (activeType === 'ticket' && overType === 'ticket' && activeSprintId === overSprintId) {
-        const sectionKey = activeSprintId ?? 'backlog'
-        const sectionTickets = ticketsBySprint[sectionKey] ?? []
-
-        // Skip if dropped on self
-        if (activeId === overId) return
-
-        // Find indices
-        const oldIndex = sectionTickets.findIndex((t) => t.id === activeId)
-        const newIndex = sectionTickets.findIndex((t) => t.id === overId)
-
-        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-          // Calculate new order values
-          const reordered = [...sectionTickets]
-          const [moved] = reordered.splice(oldIndex, 1)
-          reordered.splice(newIndex, 0, moved)
-
-          // Update order for each ticket based on new position
-          const ticketsToUpdate: { id: string; order: number }[] = []
-          reordered.forEach((ticket, index) => {
-            if (ticket.order !== index) {
-              updateTicket(projectId, ticket.id, { order: index })
-              ticketsToUpdate.push({ id: ticket.id, order: index })
-            }
-          })
-
-          // Persist to API (triggers SSE for other clients)
-          ;(async () => {
-            try {
-              for (const { id, order } of ticketsToUpdate) {
-                await updateTicketAPI(projectId, id, { order })
-              }
-            } catch (err) {
-              console.error('Failed to persist ticket reorder:', err)
-            }
-          })()
-        }
-        return
-      }
-
-      // Case 3: Cross-section sprint assignment (ticket to sprint-section, or ticket to different sprint's ticket)
+      // Case B: Cross-section move (sprint to backlog, backlog to sprint, or sprint to sprint)
       if (draggedIds.length === 0) return
-
-      let targetSprintId: string | null = null
-
-      if (overType === 'sprint-section') {
-        targetSprintId = over.data.current?.sprintId as string | null
-      } else if (overType === 'ticket') {
-        const ticket = over.data.current?.ticket as TicketWithRelations
-        targetSprintId = ticket.sprintId
-      } else if (overType === 'backlog-ticket') {
-        // Dropped on a backlog ticket from a different section - move to backlog
-        targetSprintId = null
-      } else {
-        return
-      }
 
       const ticketsToMove = allTickets.filter((t) => draggedIds.includes(t.id))
       if (ticketsToMove.length === 0) return
@@ -673,19 +686,37 @@ export default function BacklogPage() {
       const ticketsChangingSprint = ticketsToMove.filter((t) => t.sprintId !== targetSprintId)
       if (ticketsChangingSprint.length === 0) return
 
-      // Calculate starting order for tickets in target section
-      const targetSectionKey = targetSprintId ?? 'backlog'
-      const targetSectionTickets = ticketsBySprint[targetSectionKey] ?? []
-      const maxOrderInTarget =
-        targetSectionTickets.length > 0 ? Math.max(...targetSectionTickets.map((t) => t.order)) : -1
-      const startingOrder = maxOrderInTarget + 1
+      // Get target section tickets and calculate insertion
+      // For cross-section moves, the dragged items aren't in the target section,
+      // but we still need to adjust in case any are (shouldn't happen in normal flow)
+      const targetSectionTickets = [...(ticketsBySprint[targetSectionKey] ?? [])]
+      const ticketsNotMoving = targetSectionTickets.filter((t) => !draggedIdSet.has(t.id))
+      const rawInsertAt = insertAt ?? targetSectionTickets.length
+      const effectiveInsertAt = adjustInsertIndexForRemovedItems(
+        rawInsertAt,
+        targetSectionTickets,
+        draggedIdSet,
+      )
+
+      // Insert the moved tickets at the correct position
+      const reorderedTarget = [
+        ...ticketsNotMoving.slice(0, effectiveInsertAt),
+        ...ticketsChangingSprint,
+        ...ticketsNotMoving.slice(effectiveInsertAt),
+      ]
+
+      // Create a map of ticket ID to new order
+      const newOrderMap = new Map<string, number>()
+      for (let idx = 0; idx < reorderedTarget.length; idx++) {
+        newOrderMap.set(reorderedTarget[idx].id, idx)
+      }
 
       // Capture original sprint IDs and orders for undo
-      const originalSprintIds = ticketsChangingSprint.map((t, index) => ({
+      const originalSprintIds = ticketsChangingSprint.map((t) => ({
         ticketId: t.id,
         sprintId: t.sprintId,
         order: t.order,
-        newOrder: startingOrder + index,
+        newOrder: newOrderMap.get(t.id) ?? t.order,
       }))
 
       const fromSprints = new Set(ticketsChangingSprint.map((t) => t.sprintId ?? 'backlog'))
@@ -702,9 +733,23 @@ export default function BacklogPage() {
             : (sprints?.find((s) => s.id === Array.from(fromSprints)[0])?.name ?? 'Sprint')
           : 'multiple sprints'
 
-      // Optimistic update (sprintId and order)
+      // Calculate which existing tickets in target section need order updates
+      const existingTicketsToReorder: { id: string; oldOrder: number; newOrder: number }[] = []
+      for (const ticket of ticketsNotMoving) {
+        const newOrder = newOrderMap.get(ticket.id)
+        if (newOrder !== undefined && newOrder !== ticket.order) {
+          existingTicketsToReorder.push({ id: ticket.id, oldOrder: ticket.order, newOrder })
+        }
+      }
+
+      // Optimistic update (sprintId and order for moved tickets)
       for (const item of originalSprintIds) {
         updateTicket(projectId, item.ticketId, { sprintId: targetSprintId, order: item.newOrder })
+      }
+
+      // Optimistic update for existing tickets that need reordering
+      for (const item of existingTicketsToReorder) {
+        updateTicket(projectId, item.id, { order: item.newOrder })
       }
 
       // Show undo/redo toast
@@ -718,16 +763,23 @@ export default function BacklogPage() {
         onUndo: (id) => {
           // Move entry from undo to redo stack
           useUndoStore.getState().undoByToastId(id)
-          // Revert to original sprint IDs and orders
+          // Revert to original sprint IDs and orders for moved tickets
           for (const { ticketId, sprintId, order } of originalSprintIds) {
             updateTicket(projectId, ticketId, { sprintId, order })
           }
+          // Revert order changes for existing tickets in target section
+          for (const { id: ticketId, oldOrder } of existingTicketsToReorder) {
+            updateTicket(projectId, ticketId, { order: oldOrder })
+          }
           // Persist undo to database
-          Promise.all(
-            originalSprintIds.map(({ ticketId, sprintId, order }) =>
+          Promise.all([
+            ...originalSprintIds.map(({ ticketId, sprintId, order }) =>
               updateTicketSprintMutation.mutateAsync({ ticketId, sprintId, order }),
             ),
-          ).catch(() => {
+            ...existingTicketsToReorder.map(({ id: ticketId, oldOrder }) =>
+              updateTicketAPI(projectId, ticketId, { order: oldOrder }),
+            ),
+          ]).catch(() => {
             // Refetch will handle sync
           })
         },
@@ -738,16 +790,23 @@ export default function BacklogPage() {
           for (const { ticketId, newOrder } of originalSprintIds) {
             updateTicket(projectId, ticketId, { sprintId: targetSprintId, order: newOrder })
           }
+          // Re-apply order changes for existing tickets in target section
+          for (const { id: ticketId, newOrder } of existingTicketsToReorder) {
+            updateTicket(projectId, ticketId, { order: newOrder })
+          }
           // Persist redo to database
-          Promise.all(
-            originalSprintIds.map(({ ticketId, newOrder }) =>
+          Promise.all([
+            ...originalSprintIds.map(({ ticketId, newOrder }) =>
               updateTicketSprintMutation.mutateAsync({
                 ticketId,
                 sprintId: targetSprintId,
                 order: newOrder,
               }),
             ),
-          ).catch(() => {
+            ...existingTicketsToReorder.map(({ id: ticketId, newOrder }) =>
+              updateTicketAPI(projectId, ticketId, { order: newOrder }),
+            ),
+          ]).catch(() => {
             // Refetch will handle sync
           })
         },
@@ -773,19 +832,25 @@ export default function BacklogPage() {
         toastId,
       )
 
-      // Persist to database
-      Promise.all(
-        originalSprintIds.map(({ ticketId, newOrder }) =>
+      // Persist to database (moved tickets + reordered existing tickets)
+      Promise.all([
+        ...originalSprintIds.map(({ ticketId, newOrder }) =>
           updateTicketSprintMutation.mutateAsync({
             ticketId,
             sprintId: targetSprintId,
             order: newOrder,
           }),
         ),
-      ).catch((error) => {
+        ...existingTicketsToReorder.map(({ id: ticketId, newOrder }) =>
+          updateTicketAPI(projectId, ticketId, { order: newOrder }),
+        ),
+      ]).catch((error) => {
         // Revert on error
         for (const { ticketId, sprintId, order } of originalSprintIds) {
           updateTicket(projectId, ticketId, { sprintId, order })
+        }
+        for (const { id: ticketId, oldOrder } of existingTicketsToReorder) {
+          updateTicket(projectId, ticketId, { order: oldOrder })
         }
         showUndoRedoToast('error', {
           title: 'Failed to move tickets',
@@ -805,10 +870,9 @@ export default function BacklogPage() {
       reorderColumns,
       ticketsBySprint,
       backlogOrder,
-      selectedTicketIds,
-      isSelected,
       setBacklogOrder,
       clearSelection,
+      dropPosition,
     ],
   )
 
