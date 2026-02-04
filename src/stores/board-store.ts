@@ -104,6 +104,12 @@ interface BoardState {
   // Update a single ticket
   updateTicket: (projectId: string, ticketId: string, updates: Partial<TicketWithRelations>) => void
 
+  // Update multiple tickets in a single state change (for batch operations)
+  updateTickets: (
+    projectId: string,
+    updates: Array<{ ticketId: string; updates: Partial<TicketWithRelations> }>,
+  ) => void
+
   // Add a new ticket
   addTicket: (projectId: string, columnId: string, ticket: TicketWithRelations) => void
 
@@ -473,6 +479,79 @@ export const useBoardStore = create<BoardState>()(
 
           return {
             projects: { ...state.projects, [projectId]: newColumns },
+          }
+        }),
+
+      updateTickets: (projectId, updates) =>
+        set((state) => {
+          logger.debug('Batch updating tickets', { projectId, count: updates.length })
+
+          let columns = state.getColumns(projectId)
+
+          // Apply all updates in a single pass
+          for (const { ticketId, updates: ticketUpdates } of updates) {
+            // Check if this is a column change (status change)
+            if (ticketUpdates.columnId) {
+              const currentColumn = columns.find((col) =>
+                col.tickets.some((t) => t.id === ticketId),
+              )
+
+              if (currentColumn && currentColumn.id !== ticketUpdates.columnId) {
+                // This is a column change - move the ticket
+                const targetColumn = columns.find((col) => col.id === ticketUpdates.columnId)
+                if (!targetColumn) {
+                  logger.warn('Target column not found for ticket move', {
+                    projectId,
+                    ticketId,
+                    targetColumnId: ticketUpdates.columnId,
+                  })
+                  continue
+                }
+
+                const ticket = currentColumn.tickets.find((t) => t.id === ticketId)
+                if (!ticket) {
+                  logger.warn('Ticket not found in source column', {
+                    projectId,
+                    ticketId,
+                    sourceColumnId: currentColumn.id,
+                  })
+                  continue
+                }
+
+                const updatedTicket = { ...ticket, ...ticketUpdates }
+
+                columns = columns.map((column) => {
+                  if (column.id === currentColumn.id) {
+                    // Remove from source column
+                    return {
+                      ...column,
+                      tickets: column.tickets.filter((t) => t.id !== ticketId),
+                    }
+                  }
+                  if (column.id === ticketUpdates.columnId) {
+                    // Add to target column at specified order or end
+                    const order = ticketUpdates.order ?? column.tickets.length
+                    const newTickets = [...column.tickets]
+                    newTickets.splice(order, 0, updatedTicket)
+                    return { ...column, tickets: newTickets }
+                  }
+                  return column
+                })
+                continue
+              }
+            }
+
+            // Regular update (no column change)
+            columns = columns.map((column) => ({
+              ...column,
+              tickets: column.tickets.map((ticket) =>
+                ticket.id === ticketId ? { ...ticket, ...ticketUpdates } : ticket,
+              ),
+            }))
+          }
+
+          return {
+            projects: { ...state.projects, [projectId]: columns },
           }
         }),
 

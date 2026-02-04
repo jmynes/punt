@@ -20,7 +20,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BacklogTable, ColumnConfig } from '@/components/backlog'
 import { SprintSection } from '@/components/sprints'
-import { type TableContext, TicketTableRow } from '@/components/table'
+import { TicketTableRow } from '@/components/table'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
 import { useProjectSprints, useUpdateTicketSprint } from '@/hooks/queries/use-sprints'
@@ -284,7 +284,7 @@ export default function BacklogPage() {
   const project = getProjectByKey(projectKey)
   const projectId = project?.id || projectKey // Use ID if found, fallback to key for API calls
 
-  const { getColumns, updateTicket, _hasHydrated } = useBoardStore()
+  const { getColumns, updateTicket, updateTickets, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen, setActiveProjectId, activeTicketId, setActiveTicketId } =
     useUIStore()
   const { clearSelection, selectedTicketIds } = useSelectionStore()
@@ -780,15 +780,18 @@ export default function BacklogPage() {
         }
       }
 
-      // Optimistic update (sprintId and order for moved tickets)
-      for (const item of originalSprintIds) {
-        updateTicket(projectId, item.ticketId, { sprintId: targetSprintId, order: item.newOrder })
-      }
-
-      // Optimistic update for existing tickets that need reordering
-      for (const item of existingTicketsToReorder) {
-        updateTicket(projectId, item.id, { order: item.newOrder })
-      }
+      // Optimistic update - batch all ticket updates in a single state change
+      const allUpdates = [
+        ...originalSprintIds.map((item) => ({
+          ticketId: item.ticketId,
+          updates: { sprintId: targetSprintId, order: item.newOrder },
+        })),
+        ...existingTicketsToReorder.map((item) => ({
+          ticketId: item.id,
+          updates: { order: item.newOrder },
+        })),
+      ]
+      updateTickets(projectId, allUpdates)
 
       // When moving TO backlog, also update backlogOrder to preserve visual position
       // Capture original order for undo
@@ -809,14 +812,18 @@ export default function BacklogPage() {
         onUndo: (id) => {
           // Move entry from undo to redo stack
           useUndoStore.getState().undoByToastId(id)
-          // Revert to original sprint IDs and orders for moved tickets
-          for (const { ticketId, sprintId, order } of originalSprintIds) {
-            updateTicket(projectId, ticketId, { sprintId, order })
-          }
-          // Revert order changes for existing tickets in target section
-          for (const { id: ticketId, oldOrder } of existingTicketsToReorder) {
-            updateTicket(projectId, ticketId, { order: oldOrder })
-          }
+          // Revert all tickets in a single state change
+          const undoUpdates = [
+            ...originalSprintIds.map(({ ticketId, sprintId, order }) => ({
+              ticketId,
+              updates: { sprintId, order },
+            })),
+            ...existingTicketsToReorder.map(({ id: ticketId, oldOrder }) => ({
+              ticketId,
+              updates: { order: oldOrder },
+            })),
+          ]
+          useBoardStore.getState().updateTickets(projectId, undoUpdates)
           // Restore original backlog order if we moved to backlog
           if (targetSectionKey === 'backlog') {
             setBacklogOrder(projectId, originalBacklogOrder)
@@ -836,14 +843,18 @@ export default function BacklogPage() {
         onRedo: (id) => {
           // Move entry from redo to undo stack
           useUndoStore.getState().redoByToastId(id)
-          // Re-apply move to target sprint with new orders
-          for (const { ticketId, newOrder } of originalSprintIds) {
-            updateTicket(projectId, ticketId, { sprintId: targetSprintId, order: newOrder })
-          }
-          // Re-apply order changes for existing tickets in target section
-          for (const { id: ticketId, newOrder } of existingTicketsToReorder) {
-            updateTicket(projectId, ticketId, { order: newOrder })
-          }
+          // Re-apply all updates in a single state change
+          const redoUpdates = [
+            ...originalSprintIds.map(({ ticketId, newOrder }) => ({
+              ticketId,
+              updates: { sprintId: targetSprintId, order: newOrder },
+            })),
+            ...existingTicketsToReorder.map(({ id: ticketId, newOrder }) => ({
+              ticketId,
+              updates: { order: newOrder },
+            })),
+          ]
+          useBoardStore.getState().updateTickets(projectId, redoUpdates)
           // Re-apply new backlog order if we moved to backlog
           if (targetSectionKey === 'backlog') {
             const newBacklogOrder = reorderedTarget.map((t) => t.id)
@@ -900,13 +911,18 @@ export default function BacklogPage() {
           updateTicketAPI(projectId, ticketId, { order: newOrder }),
         ),
       ]).catch((error) => {
-        // Revert on error
-        for (const { ticketId, sprintId, order } of originalSprintIds) {
-          updateTicket(projectId, ticketId, { sprintId, order })
-        }
-        for (const { id: ticketId, oldOrder } of existingTicketsToReorder) {
-          updateTicket(projectId, ticketId, { order: oldOrder })
-        }
+        // Revert on error - batch all reverts in a single state change
+        const revertUpdates = [
+          ...originalSprintIds.map(({ ticketId, sprintId, order }) => ({
+            ticketId,
+            updates: { sprintId, order },
+          })),
+          ...existingTicketsToReorder.map(({ id: ticketId, oldOrder }) => ({
+            ticketId,
+            updates: { order: oldOrder },
+          })),
+        ]
+        useBoardStore.getState().updateTickets(projectId, revertUpdates)
         showUndoRedoToast('error', {
           title: 'Failed to move tickets',
           description: error.message,
@@ -928,6 +944,7 @@ export default function BacklogPage() {
       setBacklogOrder,
       clearSelection,
       dropPosition,
+      updateTickets,
     ],
   )
 
