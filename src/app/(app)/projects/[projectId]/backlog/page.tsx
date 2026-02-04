@@ -142,6 +142,30 @@ const createPointerCollisionDetection = (
       const sectionTop = firstTicket.rect.top
       const sectionBottom = lastTicket.rect.bottom + 100 // Extra padding below last item
 
+      // Check if cursor is ABOVE the first ticket (e.g., over column headers)
+      // This should target index 0 (top of list), not end of list
+      const sectionContainer = sectionDroppables.find((s) => s.sectionId === sectionId)
+      if (sectionContainer && cursorY < sectionTop && cursorY >= sectionContainer.rect.top) {
+        // Cursor is above tickets but within section container (header area)
+        // Target the start of the list
+        const collision: Collision = {
+          id: firstTicket.id,
+          data: {
+            droppableContainer: {
+              id: firstTicket.id,
+              data: {
+                current: {
+                  type: firstTicket.type,
+                  sectionId,
+                  insertIndex: 0, // Insert at start
+                },
+              },
+            },
+          },
+        }
+        return [collision]
+      }
+
       if (cursorY >= sectionTop && cursorY <= sectionBottom) {
         // Find insertion point based on cursor Y vs row midpoints
         // IMPORTANT: Use loop index 'i' as insertIndex (visual position), not ticket.index (data position)
