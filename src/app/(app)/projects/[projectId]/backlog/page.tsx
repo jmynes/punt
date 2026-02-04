@@ -713,7 +713,21 @@ export default function BacklogPage() {
       // Get target section tickets and calculate insertion
       // For cross-section moves, the dragged items aren't in the target section,
       // but we still need to adjust in case any are (shouldn't happen in normal flow)
-      const targetSectionTickets = [...(ticketsBySprint[targetSectionKey] ?? [])]
+      // IMPORTANT: For backlog, use visual order (backlogOrder) not data order (ticketsBySprint)
+      // because the collision detection returns insertIndex based on visual position
+      let targetSectionTickets: typeof allTickets
+      if (targetSectionKey === 'backlog') {
+        const rawBacklogTickets = ticketsBySprint.backlog ?? []
+        const existingOrder = backlogOrder[projectId] || []
+        const orderSet = new Set(existingOrder)
+        const orderedTickets = existingOrder
+          .map((id) => rawBacklogTickets.find((t) => t.id === id))
+          .filter(Boolean) as typeof rawBacklogTickets
+        const remainingTickets = rawBacklogTickets.filter((t) => !orderSet.has(t.id))
+        targetSectionTickets = [...orderedTickets, ...remainingTickets]
+      } else {
+        targetSectionTickets = [...(ticketsBySprint[targetSectionKey] ?? [])]
+      }
       const ticketsNotMoving = targetSectionTickets.filter((t) => !draggedIdSet.has(t.id))
       const rawInsertAt = insertAt ?? targetSectionTickets.length
       const effectiveInsertAt = adjustInsertIndexForRemovedItems(
@@ -776,6 +790,14 @@ export default function BacklogPage() {
         updateTicket(projectId, item.id, { order: item.newOrder })
       }
 
+      // When moving TO backlog, also update backlogOrder to preserve visual position
+      // Capture original order for undo
+      const originalBacklogOrder = backlogOrder[projectId] || []
+      if (targetSectionKey === 'backlog') {
+        const newBacklogOrder = reorderedTarget.map((t) => t.id)
+        setBacklogOrder(projectId, newBacklogOrder)
+      }
+
       // Show undo/redo toast
       const toastId = showUndoRedoToast('success', {
         title:
@@ -794,6 +816,10 @@ export default function BacklogPage() {
           // Revert order changes for existing tickets in target section
           for (const { id: ticketId, oldOrder } of existingTicketsToReorder) {
             updateTicket(projectId, ticketId, { order: oldOrder })
+          }
+          // Restore original backlog order if we moved to backlog
+          if (targetSectionKey === 'backlog') {
+            setBacklogOrder(projectId, originalBacklogOrder)
           }
           // Persist undo to database
           Promise.all([
@@ -817,6 +843,11 @@ export default function BacklogPage() {
           // Re-apply order changes for existing tickets in target section
           for (const { id: ticketId, newOrder } of existingTicketsToReorder) {
             updateTicket(projectId, ticketId, { order: newOrder })
+          }
+          // Re-apply new backlog order if we moved to backlog
+          if (targetSectionKey === 'backlog') {
+            const newBacklogOrder = reorderedTarget.map((t) => t.id)
+            setBacklogOrder(projectId, newBacklogOrder)
           }
           // Persist redo to database
           Promise.all([
