@@ -1,6 +1,31 @@
+/**
+ * Per-file test setup - runs before each test file
+ */
+
 import '@testing-library/jest-dom'
 import { cleanup } from '@testing-library/react'
-import { afterEach, vi } from 'vitest'
+import { afterEach, beforeAll, vi } from 'vitest'
+
+// ============================================================================
+// CRITICAL SAFETY CHECK: Prevent tests from using production database
+// ============================================================================
+// This check runs at import time to fail fast if misconfigured.
+// The database-backup tests wipe ALL data - this prevents catastrophic data loss.
+const dbUrl = process.env.DATABASE_URL || ''
+if (dbUrl && !dbUrl.includes('test.db')) {
+  throw new Error(
+    `\n` +
+      `${'='.repeat(70)}\n` +
+      `🚨 CRITICAL: Tests are configured to use production database!\n` +
+      `${'='.repeat(70)}\n\n` +
+      `   DATABASE_URL: ${dbUrl}\n\n` +
+      `   This would WIPE ALL YOUR DATA. Tests have been stopped.\n\n` +
+      `   To fix this:\n` +
+      `   1. Ensure .env.test exists with DATABASE_URL="file:./test.db"\n` +
+      `   2. Run tests with: pnpm test\n\n` +
+      `${'='.repeat(70)}\n`,
+  )
+}
 
 // Mock @stitches/core to avoid CSS parsing issues in jsdom
 // This affects @codesandbox/sandpack-react which uses @stitches/core

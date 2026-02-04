@@ -1,12 +1,20 @@
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
+// Load test environment variables BEFORE any other imports
+// This ensures DATABASE_URL points to test.db, not production
+import { config } from 'dotenv'
 import { defineConfig } from 'vitest/config'
+
+config({ path: '.env.test' })
 
 export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
     environment: 'jsdom',
+    // Global setup runs once before all tests - sets up isolated test database
+    globalSetup: ['./src/__tests__/global-setup.ts'],
+    // Per-file setup for React Testing Library, mocks, etc.
     setupFiles: ['./src/__tests__/setup.ts'],
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: [
