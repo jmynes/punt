@@ -8,6 +8,7 @@ import {
   type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
+  useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -20,6 +21,7 @@ import {
 } from '@dnd-kit/sortable'
 import { Settings2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DropZone } from '@/components/sprints/drop-indicator'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { type SortConfig, useBacklogStore } from '@/stores/backlog-store'
@@ -406,6 +408,16 @@ export function BacklogTable({
   // Get selection store
   const { selectedTicketIds, clearSelection, isSelected } = useSelectionStore()
 
+  // Droppable for empty backlog (allows dropping when there are no tickets)
+  const { setNodeRef: setEmptyDropRef, isOver: isOverEmptyBacklog } = useDroppable({
+    id: 'backlog',
+    data: {
+      type: 'sprint-section',
+      sprintId: null,
+    },
+    disabled: filteredTickets.length > 0,
+  })
+
   // Handle drag start - track dragging tickets and clear selection if needed
   function handleDragStart(event: DragStartEvent) {
     const { active } = event
@@ -668,8 +680,12 @@ export function BacklogTable({
         )}
 
         {filteredTickets.length === 0 && (
-          <div className="flex h-40 items-center justify-center text-zinc-500">
-            No tickets found
+          <div ref={setEmptyDropRef} className="p-4">
+            <DropZone
+              isActive={isOverEmptyBacklog}
+              itemCount={useExternalDnd ? externalDraggingIds.length : draggingTicketIds.length}
+              message="Drag tickets here to add them to the backlog"
+            />
           </div>
         )}
 
