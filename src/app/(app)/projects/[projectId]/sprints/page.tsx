@@ -42,7 +42,7 @@ export default function SprintPlanningPage() {
   const columns = getColumns(projectId)
 
   // URL ↔ drawer sync for shareable ticket links
-  const { hasTicketParam } = useTicketUrlSync(projectId)
+  const { hasTicketParam } = useTicketUrlSync(projectKey)
 
   // Clear selection when entering this page
   // (unless URL has a ticket param that should open the drawer)

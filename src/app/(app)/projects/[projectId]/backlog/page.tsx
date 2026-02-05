@@ -314,7 +314,7 @@ export default function BacklogPage() {
   }>({ type: undefined, sprintId: undefined })
 
   // URL ↔ drawer sync for shareable ticket links
-  const { hasTicketParam } = useTicketUrlSync(projectId)
+  const { hasTicketParam } = useTicketUrlSync(projectKey)
 
   // DnD sensors - shared across sprint sections and backlog table
   const sensors = useSensors(

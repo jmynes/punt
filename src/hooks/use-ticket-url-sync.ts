@@ -12,8 +12,10 @@ import { useUIStore } from '@/stores/ui-store'
  * - Reads `?ticket=PUNT-1` from URL on mount and opens the drawer
  * - Updates URL when `activeTicketId` changes (for shareable links)
  * - Handles sync without infinite loops via ref flag
+ *
+ * @param projectKey - The project key (e.g., "PUNT"), not the internal ID
  */
-export function useTicketUrlSync(projectId: string) {
+export function useTicketUrlSync(projectKey: string) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -27,13 +29,13 @@ export function useTicketUrlSync(projectId: string) {
   // Track if we've processed the initial URL param
   const hasProcessedUrlRef = useRef(false)
 
-  // Get all tickets for this project
-  const columns = getColumns(projectId)
-  const allTickets = columns.flatMap((col) => col.tickets)
+  // Get project by key to get internal ID for store lookups
+  const project = getProjectByKey(projectKey)
+  const projectId = project?.id
 
-  // Get project key for URL formatting
-  const project = getProjectByKey(projectId) || { key: projectId }
-  const projectKey = project.key
+  // Get all tickets for this project
+  const columns = projectId ? getColumns(projectId) : []
+  const allTickets = columns.flatMap((col) => col.tickets)
 
   /**
    * Parse ticket key from URL param and find matching ticket

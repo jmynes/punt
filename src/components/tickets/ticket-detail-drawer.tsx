@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import type * as React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -791,7 +792,19 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Share2 className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => {
+                    const url = `${window.location.origin}${window.location.pathname}?ticket=${ticketKey}`
+                    navigator.clipboard.writeText(url)
+                    toast.success('Link copied to clipboard', {
+                      description: ticketKey,
+                    })
+                  }}
+                  title="Copy link to ticket"
+                >
                   <Link2 className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
