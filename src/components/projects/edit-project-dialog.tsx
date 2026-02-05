@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, Trash2 } from 'lucide-react'
+import { AlertTriangle, Loader2, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -61,7 +61,10 @@ export function EditProjectDialog() {
     description: '',
     color: PROJECT_COLORS[0],
   })
+  const [originalKey, setOriginalKey] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const keyChanged = formData.key !== originalKey && originalKey !== ''
 
   // Load project data when dialog opens
   useEffect(() => {
@@ -74,6 +77,7 @@ export function EditProjectDialog() {
           description: project.description || '',
           color: project.color,
         })
+        setOriginalKey(project.key)
       }
     }
   }, [editProjectOpen, editProjectId, getProject])
@@ -88,6 +92,7 @@ export function EditProjectDialog() {
         description: '',
         color: PROJECT_COLORS[0],
       })
+      setOriginalKey('')
     }, 200)
   }, [closeEditProject])
 
@@ -103,13 +108,15 @@ export function EditProjectDialog() {
       {
         id: editProjectId,
         name: formData.name.trim(),
+        key: keyChanged ? formData.key.toUpperCase() : undefined,
         description: formData.description.trim() || undefined,
         color: formData.color,
       },
       {
         onSuccess: () => {
+          const newKey = keyChanged ? formData.key.toUpperCase() : originalKey
           toast.success('Project updated', {
-            description: `${formData.name.trim()} (${formData.key})`,
+            description: `${formData.name.trim()} (${newKey})`,
             duration: 4000,
           })
           handleClose()
@@ -121,7 +128,7 @@ export function EditProjectDialog() {
         },
       },
     )
-  }, [editProjectId, formData, updateProject, handleClose])
+  }, [editProjectId, formData, keyChanged, originalKey, updateProject, handleClose])
 
   const handleDelete = useCallback(async () => {
     if (!editProjectId) return
@@ -148,7 +155,7 @@ export function EditProjectDialog() {
     })
   }, [editProjectId, getProject, deleteProject, handleClose])
 
-  const isValid = formData.name.trim().length > 0
+  const isValid = formData.name.trim().length > 0 && formData.key.length > 0
   const isPending = updateProject.isPending || deleteProject.isPending
 
   return (
@@ -158,7 +165,7 @@ export function EditProjectDialog() {
           <DialogHeader>
             <DialogTitle className="text-xl text-zinc-100">Edit Project</DialogTitle>
             <DialogDescription className="text-zinc-500">
-              Update project details. The project key cannot be changed.
+              Update project details and settings.
             </DialogDescription>
           </DialogHeader>
 
@@ -179,21 +186,44 @@ export function EditProjectDialog() {
               />
             </div>
 
-            {/* Project Key (read-only) */}
+            {/* Project Key */}
             <div className="space-y-2">
               <Label htmlFor="edit-project-key" className="text-zinc-300">
-                Project Key
+                Project Key <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="edit-project-key"
                 value={formData.key}
-                className="bg-zinc-900 border-zinc-700 text-zinc-500 uppercase cursor-not-allowed"
-                disabled
-                readOnly
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                  }))
+                }
+                maxLength={10}
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 uppercase"
+                disabled={isPending}
               />
-              <p className="text-xs text-zinc-500">
-                Project key cannot be changed as it&apos;s used in ticket IDs
-              </p>
+              {keyChanged ? (
+                <div className="flex items-start gap-2 p-3 rounded-md bg-amber-950/30 border border-amber-900/50">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-200/80">
+                    <p className="font-medium text-amber-400 mb-1">
+                      Changing the project key will rename all tickets
+                    </p>
+                    <p>
+                      {originalKey}-123 → {formData.key}-123
+                    </p>
+                    <p className="mt-1 text-amber-200/60">
+                      External links and bookmarks to existing tickets will break.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500">
+                  1-10 characters. Used in ticket IDs (e.g., {formData.key}-123)
+                </p>
+              )}
             </div>
 
             {/* Description */}
