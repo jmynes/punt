@@ -8,15 +8,12 @@ import {
   ChevronUp,
   Clock,
   Copy,
-  Eye,
   Layers,
   Lightbulb,
   Link2,
   MessageSquare,
-  MoreHorizontal,
   Paperclip,
   RotateCcw,
-  Share2,
   Trash2,
   X,
   Zap,
@@ -788,32 +785,21 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <TypeBadge type={ticket.type} size="md" />
                 <SheetTitle className="text-base font-mono text-zinc-400">{ticketKey}</SheetTitle>
               </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Share2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => {
-                    const url = `${window.location.origin}${window.location.pathname}?ticket=${ticketKey}`
-                    navigator.clipboard.writeText(url)
-                    toast.success('Link copied to clipboard', {
-                      description: ticketKey,
-                    })
-                  }}
-                  title="Copy link to ticket"
-                >
-                  <Link2 className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => {
+                  const url = `${window.location.origin}${window.location.pathname}?ticket=${ticketKey}`
+                  navigator.clipboard.writeText(url)
+                  toast.success('Link copied to clipboard', {
+                    description: ticketKey,
+                  })
+                }}
+                title="Copy link to ticket"
+              >
+                <Link2 className="h-4 w-4" />
+              </Button>
             </div>
             <SheetDescription className="sr-only">Ticket details for {ticketKey}</SheetDescription>
           </SheetHeader>
