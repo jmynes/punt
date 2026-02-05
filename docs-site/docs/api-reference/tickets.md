@@ -325,3 +325,132 @@ DELETE /api/projects/[projectId]/tickets
 | `High` | Important, should be addressed soon |
 | `Medium` | Normal priority (default) |
 | `Low` | Can be addressed when time permits |
+
+## Ticket Links
+
+Link related tickets to track dependencies and relationships.
+
+### Link Types
+
+| Type | Inverse | Description |
+|------|---------|-------------|
+| `blocks` | `is_blocked_by` | This ticket blocks another |
+| `is_blocked_by` | `blocks` | This ticket is blocked by another |
+| `relates_to` | `relates_to` | General relationship |
+| `duplicates` | `is_duplicated_by` | This ticket duplicates another |
+| `is_duplicated_by` | `duplicates` | This ticket is duplicated by another |
+| `clones` | `is_cloned_by` | This ticket was cloned from another |
+| `is_cloned_by` | `clones` | This ticket was cloned to create another |
+
+### Create Link
+
+```http
+POST /api/projects/[projectId]/tickets/[ticketId]/links
+```
+
+#### Request Body
+
+```json
+{
+  "targetTicketId": "clx1tkt2",
+  "linkType": "blocks"
+}
+```
+
+### Remove Link
+
+```http
+DELETE /api/projects/[projectId]/tickets/[ticketId]/links/[linkId]
+```
+
+## Ticket Comments
+
+Add comments to tickets for discussion and updates.
+
+### List Comments
+
+```http
+GET /api/projects/[projectId]/tickets/[ticketId]/comments
+```
+
+#### Response
+
+```json
+[
+  {
+    "id": "clx1cmt1",
+    "content": "This needs more details.",
+    "author": {
+      "id": "clx1user1",
+      "name": "John Doe",
+      "avatar": "/uploads/avatars/abc.webp"
+    },
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-15T10:30:00.000Z"
+  }
+]
+```
+
+### Add Comment
+
+```http
+POST /api/projects/[projectId]/tickets/[ticketId]/comments
+```
+
+#### Request Body
+
+```json
+{
+  "content": "This needs more details."
+}
+```
+
+### Update Comment
+
+```http
+PATCH /api/projects/[projectId]/tickets/[ticketId]/comments/[commentId]
+```
+
+#### Request Body
+
+```json
+{
+  "content": "Updated comment text."
+}
+```
+
+### Delete Comment
+
+```http
+DELETE /api/projects/[projectId]/tickets/[ticketId]/comments/[commentId]
+```
+
+## Ticket History
+
+View the edit history of a ticket.
+
+### Get History
+
+```http
+GET /api/projects/[projectId]/tickets/[ticketId]/history
+```
+
+#### Response
+
+```json
+[
+  {
+    "id": "clx1edit1",
+    "field": "priority",
+    "oldValue": "Medium",
+    "newValue": "High",
+    "changedBy": {
+      "id": "clx1user1",
+      "name": "John Doe"
+    },
+    "changedAt": "2024-01-15T10:30:00.000Z"
+  }
+]
+```
+
+Tracked fields include: title, description, type, priority, assignee, sprint, story points, dates, and more.

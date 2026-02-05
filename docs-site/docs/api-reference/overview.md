@@ -122,7 +122,7 @@ PUNT provides Server-Sent Events (SSE) endpoints for real-time updates:
 - `/api/projects/events` - Project list events
 - `/api/users/events` - User profile events
 
-See the individual API sections for SSE event documentation.
+See [Real-time Events API](/api-reference/realtime) for detailed SSE documentation.
 
 ## API Sections
 
@@ -130,3 +130,6 @@ See the individual API sections for SSE event documentation.
 - [Projects](/api-reference/projects) - Project CRUD operations
 - [Tickets](/api-reference/tickets) - Ticket management
 - [Sprints](/api-reference/sprints) - Sprint planning and management
+- [Admin](/api-reference/admin) - User management and system settings (admin only)
+- [File Upload](/api-reference/upload) - File upload configuration and handling
+- [Real-time Events](/api-reference/realtime) - Server-Sent Events for live updates

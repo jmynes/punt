@@ -75,6 +75,11 @@ const config: Config = {
           label: 'API Reference',
         },
         {
+          to: '/deployment/overview',
+          position: 'left',
+          label: 'Deployment',
+        },
+        {
           href: 'https://github.com/jmynes/punt',
           label: 'GitHub',
           position: 'right',
@@ -98,6 +103,10 @@ const config: Config = {
             {
               label: 'API Reference',
               to: '/api-reference/overview',
+            },
+            {
+              label: 'Deployment',
+              to: '/deployment/overview',
             },
           ],
         },

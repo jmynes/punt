@@ -20,7 +20,7 @@ slug: /
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+ (required by Next.js 16)
 - pnpm (recommended) or npm
 
 ### Installation
@@ -40,12 +40,24 @@ pnpm db:push
 pnpm dev
 ```
 
+The development server starts with Turbopack on port 3000.
+
 ### First Steps
 
 1. Open your browser to `http://localhost:3000`
-2. Register a new account
+2. Register a new account (first user automatically becomes system admin)
 3. Create your first project
 4. Start adding tickets to your board!
+
+### Demo Mode
+
+PUNT also supports a client-side demo mode for trying out features without a database:
+
+```bash
+NEXT_PUBLIC_DEMO_MODE=true pnpm dev
+```
+
+See the [Demo Mode](/user-guide/demo-mode) guide for details.
 
 ## Architecture Overview
 
@@ -65,4 +77,7 @@ PUNT follows a modern full-stack architecture:
 - [Authentication Guide](/user-guide/authentication) - Learn about login, registration, and user management
 - [Projects](/user-guide/projects) - Create and manage projects
 - [Kanban Board](/user-guide/kanban-board) - Master the drag-and-drop board
+- [Admin Panel](/user-guide/admin) - System administration and user management
+- [Demo Mode](/user-guide/demo-mode) - Try PUNT without a database
+- [Deployment](/deployment/overview) - Deploy PUNT to production
 - [API Reference](/api-reference/overview) - Integrate with PUNT programmatically
