@@ -8,8 +8,11 @@ import {
   ChevronDown,
   Clock,
   Flame,
+  Pencil,
+  Play,
   Plus,
   Target,
+  Trash2,
   TrendingUp,
   Zap,
 } from 'lucide-react'
@@ -18,10 +21,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useProjectSprints } from '@/hooks/queries/use-sprints'
+import { useDeleteSprint, useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import {
@@ -72,8 +76,12 @@ export function SprintHeader({
     sprints?.find((s) => s.status === 'active') ||
     sprints?.find((s) => s.status === 'planning') ||
     null
-  const { setSprintCreateOpen, openSprintComplete } = useUIStore()
+  const { setSprintCreateOpen, openSprintComplete, openSprintEdit, openSprintStart } = useUIStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
+  const deleteSprint = useDeleteSprint(projectId)
+
+  const isPlanning = activeSprint?.status === 'planning'
+  const isActive = activeSprint?.status === 'active'
 
   if (isLoading) {
     return <div className={cn('h-16 bg-zinc-900/50 rounded-xl animate-pulse', className)} />
@@ -135,14 +143,55 @@ export function SprintHeader({
   // For now, show estimated remaining work indicator
   const remainingPoints = totalPoints - completedPoints
 
+  // Color scheme: orange for expired, blue for planning, green for active
+  const getColorScheme = () => {
+    if (expired) return 'orange'
+    if (isPlanning) return 'blue'
+    return 'emerald'
+  }
+  const colorScheme = getColorScheme()
+
+  const colorClasses = {
+    orange: {
+      gradient: 'from-orange-950/40 via-orange-900/20 to-zinc-900/40 border-orange-500/30',
+      radial: 'from-orange-500/20 via-transparent to-transparent',
+      icon: 'bg-orange-500/20 border border-orange-500/30',
+      iconText: 'text-orange-400',
+      pulse: 'bg-orange-500',
+      badge: 'bg-orange-500/20 text-orange-400',
+      progress: 'stroke-orange-500',
+      text: 'text-orange-400',
+    },
+    blue: {
+      gradient: 'from-blue-950/40 via-blue-900/20 to-zinc-900/40 border-blue-500/20',
+      radial: 'from-blue-500/20 via-transparent to-transparent',
+      icon: 'bg-blue-500/20 border border-blue-500/30',
+      iconText: 'text-blue-400',
+      pulse: 'bg-blue-500',
+      badge: 'bg-blue-500/20 text-blue-400',
+      progress: 'stroke-blue-500',
+      text: 'text-blue-400',
+    },
+    emerald: {
+      gradient: 'from-emerald-950/40 via-emerald-900/20 to-zinc-900/40 border-emerald-500/20',
+      radial: 'from-emerald-500/20 via-transparent to-transparent',
+      icon: 'bg-emerald-500/20 border border-emerald-500/30',
+      iconText: 'text-emerald-400',
+      pulse: 'bg-emerald-500',
+      badge: 'bg-emerald-500/20 text-emerald-400',
+      progress: 'stroke-emerald-500',
+      text: 'text-emerald-400',
+    },
+  }
+
+  const colors = colorClasses[colorScheme]
+
   return (
     <div
       className={cn(
         'relative overflow-hidden rounded-xl',
         'bg-gradient-to-r',
-        expired
-          ? 'from-orange-950/40 via-orange-900/20 to-zinc-900/40 border-orange-500/30'
-          : 'from-emerald-950/40 via-emerald-900/20 to-zinc-900/40 border-emerald-500/20',
+        colors.gradient,
         'border',
         className,
       )}
@@ -152,9 +201,7 @@ export function SprintHeader({
         className={cn(
           'absolute inset-0 opacity-30',
           'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))]',
-          expired
-            ? 'from-orange-500/20 via-transparent to-transparent'
-            : 'from-emerald-500/20 via-transparent to-transparent',
+          colors.radial,
         )}
       />
 
@@ -163,21 +210,14 @@ export function SprintHeader({
         <div className="flex items-center gap-4 min-w-0">
           {/* Sprint icon with status indicator */}
           <div className="relative">
-            <div
-              className={cn(
-                'p-2.5 rounded-xl',
-                expired
-                  ? 'bg-orange-500/20 border border-orange-500/30'
-                  : 'bg-emerald-500/20 border border-emerald-500/30',
-              )}
-            >
-              <Zap className={cn('h-5 w-5', expired ? 'text-orange-400' : 'text-emerald-400')} />
+            <div className={cn('p-2.5 rounded-xl', colors.icon)}>
+              <Zap className={cn('h-5 w-5', colors.iconText)} />
             </div>
-            {/* Pulse indicator for active */}
+            {/* Pulse indicator */}
             <span
               className={cn(
-                'absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full',
-                expired ? 'bg-orange-500 animate-pulse' : 'bg-emerald-500 animate-pulse',
+                'absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full animate-pulse',
+                colors.pulse,
               )}
             />
           </div>
@@ -195,9 +235,7 @@ export function SprintHeader({
                     <span
                       className={cn(
                         'px-2 py-0.5 text-[10px] font-semibold rounded-full uppercase tracking-wider',
-                        expired
-                          ? 'bg-orange-500/20 text-orange-400'
-                          : 'bg-emerald-500/20 text-emerald-400',
+                        colors.badge,
                       )}
                     >
                       {expired ? 'Overdue' : getSprintStatusLabel(activeSprint.status)}
@@ -214,13 +252,48 @@ export function SprintHeader({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56 bg-zinc-900 border-zinc-700">
               {canManageSprints && (
-                <DropdownMenuItem
-                  onClick={() => openSprintComplete(activeSprint.id)}
-                  className="text-zinc-300 focus:bg-zinc-800"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Complete Sprint
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem
+                    onClick={() => openSprintEdit(activeSprint.id)}
+                    className="text-zinc-300 focus:bg-zinc-800"
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit Sprint
+                  </DropdownMenuItem>
+
+                  {isPlanning && (
+                    <DropdownMenuItem
+                      onClick={() => openSprintStart(activeSprint.id)}
+                      className="text-zinc-300 focus:bg-zinc-800"
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      Start Sprint
+                    </DropdownMenuItem>
+                  )}
+
+                  {isActive && (
+                    <DropdownMenuItem
+                      onClick={() => openSprintComplete(activeSprint.id)}
+                      className="text-zinc-300 focus:bg-zinc-800"
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Complete Sprint
+                    </DropdownMenuItem>
+                  )}
+
+                  {isPlanning && (
+                    <>
+                      <DropdownMenuSeparator className="bg-zinc-700" />
+                      <DropdownMenuItem
+                        onClick={() => deleteSprint.mutate(activeSprint.id)}
+                        className="text-red-400 focus:bg-red-900/20"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Sprint
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -270,7 +343,9 @@ export function SprintHeader({
                       Story Points
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-lg font-bold text-emerald-400">{completedPoints}</span>
+                      <span className={cn('text-lg font-bold', colors.text)}>
+                        {completedPoints}
+                      </span>
                       <span className="text-zinc-600">/</span>
                       <span className="text-sm text-zinc-400">{totalPoints}</span>
                     </div>
@@ -306,24 +381,14 @@ export function SprintHeader({
                   cy="24"
                   r="20"
                   fill="none"
-                  className={cn(
-                    'transition-all duration-500',
-                    expired ? 'stroke-orange-500' : 'stroke-emerald-500',
-                  )}
+                  className={cn('transition-all duration-500', colors.progress)}
                   strokeWidth="4"
                   strokeLinecap="round"
                   strokeDasharray={`${progressPercent * 1.256} 125.6`}
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span
-                  className={cn(
-                    'text-xs font-bold',
-                    expired ? 'text-orange-400' : 'text-emerald-400',
-                  )}
-                >
-                  {progressPercent}%
-                </span>
+                <span className={cn('text-xs font-bold', colors.text)}>{progressPercent}%</span>
               </div>
             </div>
 
@@ -331,14 +396,7 @@ export function SprintHeader({
             <div className="text-right">
               <div className="text-xs text-zinc-500">Issues</div>
               <div className="flex items-center gap-1">
-                <span
-                  className={cn(
-                    'text-lg font-bold',
-                    expired ? 'text-orange-400' : 'text-emerald-400',
-                  )}
-                >
-                  {completedCount}
-                </span>
+                <span className={cn('text-lg font-bold', colors.text)}>{completedCount}</span>
                 <span className="text-zinc-600">/</span>
                 <span className="text-sm text-zinc-400">{totalCount}</span>
               </div>
