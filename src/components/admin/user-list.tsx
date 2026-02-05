@@ -232,6 +232,7 @@ export function UserList() {
       return { user: updatedUser, updates, previousUser }
     },
     onSuccess: ({ user, updates, previousUser }) => {
+      if (isDemoMode()) return
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
       // Show toast for admin status changes and track for undo
