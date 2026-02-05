@@ -149,7 +149,7 @@ model ProjectMember {
 
   // Role relation (replaces old string role field)
   roleId String
-  role   Role   @relation(fields: [roleId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   // Optional per-member permission overrides (additive to role permissions)
   // JSON array of permission strings, e.g., ["sprints.manage", "labels.manage"]
