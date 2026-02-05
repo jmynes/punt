@@ -100,24 +100,19 @@ export function CreateUserDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            createUser.mutate()
-          }}
-          className="space-y-4 py-4"
-          autoComplete="off"
-        >
+        {/* Using div instead of form to prevent browser password manager detection */}
+        <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-zinc-300">
+            <Label htmlFor="create-user-username" className="text-zinc-300">
               Username<span className="text-amber-500 ml-1">*</span>
             </Label>
             <Input
-              id="username"
+              id="create-user-username"
+              type="text"
+              autoComplete="off"
               value={username}
               onChange={(e) => setUsername(e.target.value.toLowerCase())}
               placeholder="johndoe"
-              required
               className="border-zinc-700 bg-zinc-800 text-zinc-100"
             />
             <p className="text-xs text-zinc-500">
@@ -126,27 +121,29 @@ export function CreateUserDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-zinc-300">
+            <Label htmlFor="create-user-name" className="text-zinc-300">
               Display Name<span className="text-amber-500 ml-1">*</span>
             </Label>
             <Input
-              id="name"
+              id="create-user-name"
+              type="text"
+              autoComplete="off"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="John Doe"
-              required
               className="border-zinc-700 bg-zinc-800 text-zinc-100"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-zinc-300">
+            <Label htmlFor="create-user-email" className="text-zinc-300">
               Email
               <span className="text-zinc-500 ml-2 text-xs font-normal">(optional)</span>
             </Label>
             <Input
-              id="email"
-              type="email"
+              id="create-user-email"
+              type="text"
+              autoComplete="off"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="john@example.com"
@@ -155,19 +152,18 @@ export function CreateUserDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-zinc-300">
+            <Label htmlFor="create-user-password" className="text-zinc-300">
               Password<span className="text-amber-500 ml-1">*</span>
             </Label>
             <div className="relative">
               <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
+                id="create-user-password"
+                type="text"
+                autoComplete="off"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 12 characters"
-                required
-                minLength={12}
-                className="border-zinc-700 bg-zinc-800 text-zinc-100 pr-10"
+                className={`border-zinc-700 bg-zinc-800 text-zinc-100 pr-10 ${!showPassword ? 'password-mask' : ''}`}
               />
               <Button
                 type="button"
@@ -208,18 +204,18 @@ export function CreateUserDialog() {
           </div>
 
           <div className="border-t border-zinc-800 pt-4 space-y-2">
-            <Label htmlFor="confirmPassword" className="text-zinc-300">
+            <Label htmlFor="create-user-confirm" className="text-zinc-300">
               Your Password<span className="text-amber-500 ml-1">*</span>
             </Label>
             <div className="relative">
               <Input
-                id="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
+                id="create-user-confirm"
+                type="text"
+                autoComplete="off"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Enter your password to confirm"
-                required
-                className="border-zinc-700 bg-zinc-800 text-zinc-100 pr-10"
+                className={`border-zinc-700 bg-zinc-800 text-zinc-100 pr-10 ${!showConfirmPassword ? 'password-mask' : ''}`}
               />
               <Button
                 type="button"
@@ -240,7 +236,12 @@ export function CreateUserDialog() {
             <Button type="button" variant="ghost" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" disabled={createUser.isPending}>
+            <Button
+              type="button"
+              variant="primary"
+              disabled={createUser.isPending || !username || !name || !password || !confirmPassword}
+              onClick={() => createUser.mutate()}
+            >
               {createUser.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -251,7 +252,7 @@ export function CreateUserDialog() {
               )}
             </Button>
           </DialogFooter>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   )

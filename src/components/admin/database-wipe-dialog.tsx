@@ -134,7 +134,9 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                   <Input
                     id="current-password"
+                    name="admin-confirm-password"
                     type="text"
+                    autoComplete="off"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="Enter your password"
@@ -206,7 +208,9 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                     <Input
                       id="wipe-password"
+                      name="new-admin-password"
                       type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Minimum 12 characters"

@@ -74,7 +74,9 @@ export function DatabaseExportDialog({
             <div className="relative">
               <Input
                 id="confirmPassword"
+                name="admin-confirm-password"
                 type="text"
+                autoComplete="off"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Enter your password"

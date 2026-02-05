@@ -144,7 +144,9 @@ export function DatabaseWipeProjectsDialog({
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                   <Input
                     id="wipe-projects-password"
+                    name="admin-confirm-password"
                     type="text"
+                    autoComplete="off"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Enter your password"

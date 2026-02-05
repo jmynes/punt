@@ -193,7 +193,9 @@ export function DatabaseImportDialog({
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                     <Input
                       id="decryptionPassword"
+                      name="backup-decryption-password"
                       type="text"
+                      autoComplete="off"
                       value={decryptionPassword}
                       onChange={(e) => setDecryptionPassword(e.target.value)}
                       placeholder="Enter the backup encryption password"
@@ -251,7 +253,9 @@ export function DatabaseImportDialog({
                 </Label>
                 <Input
                   id="username"
+                  name="admin-verify-username"
                   type="text"
+                  autoComplete="off"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Your username"
@@ -266,7 +270,9 @@ export function DatabaseImportDialog({
                 <div className="relative">
                   <Input
                     id="password"
+                    name="admin-verify-password"
                     type="text"
+                    autoComplete="off"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Your password"
