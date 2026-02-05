@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { EmailVerificationBanner } from '@/components/common/email-verification-banner'
 import { Dialogs } from '@/components/dialogs'
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
-import { Footer, Header, MobileNav, Sidebar } from '@/components/layout'
+import { Footer, Header, MobileNav, MobileNotice, Sidebar } from '@/components/layout'
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
@@ -17,6 +17,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
       <MobileNav />
+      <MobileNotice />
       <Dialogs />
       <KeyboardShortcuts />
     </div>
