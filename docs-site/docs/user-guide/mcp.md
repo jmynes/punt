@@ -55,6 +55,21 @@ cd /path/to/punt/mcp
 pnpm install
 ```
 
+### Generate Your API Key
+
+Each user needs their own API key to authenticate MCP requests. The key ties MCP actions to your user account.
+
+1. Log in to PUNT in your web browser
+2. Generate a key using the API:
+   ```bash
+   curl -X POST http://localhost:3000/api/me/mcp-key \
+     -H "Cookie: authjs.session-token=YOUR_SESSION_COOKIE"
+   ```
+3. Save the returned `apiKey` — it will only be shown once
+
+To revoke your key: `DELETE /api/me/mcp-key`
+To check if you have a key: `GET /api/me/mcp-key`
+
 ### Configure Your MCP Client
 
 Add PUNT to your MCP client's configuration. The exact location depends on your client:
@@ -68,7 +83,10 @@ Add PUNT to your MCP client's configuration. The exact location depends on your 
       "type": "stdio",
       "command": "pnpm",
       "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
-      "cwd": "/path/to/punt"
+      "cwd": "/path/to/punt",
+      "env": {
+        "MCP_API_KEY": "your-api-key-here"
+      }
     }
   }
 }
@@ -82,7 +100,10 @@ Add PUNT to your MCP client's configuration. The exact location depends on your 
     "punt": {
       "type": "stdio",
       "command": "pnpm",
-      "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"]
+      "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
+      "env": {
+        "MCP_API_KEY": "your-api-key-here"
+      }
     }
   }
 }
@@ -550,12 +571,21 @@ Delete a column (moves tickets to another column).
 
 1. Ensure dependencies are installed: `cd mcp && pnpm install`
 2. Check the command path in your MCP config
-3. Verify PUNT's database exists at `prisma/dev.db`
+3. Verify PUNT is running at the configured `MCP_BASE_URL` (default: `http://localhost:3000`)
+
+### "Unauthorized" or "Invalid API key"
+
+1. Ensure `MCP_API_KEY` is set in your MCP config's `env` section
+2. Verify the key was generated via `POST /api/me/mcp-key`
+3. Check that your user account is still active
 
 ### "Project not found"
 
 Project keys are case-insensitive but must match exactly. Use `list_projects` to see available projects.
 
-### Changes not appearing in the UI
+### Real-time Updates
 
-The MCP server writes directly to the database. Refresh your browser or the changes will appear on the next data fetch.
+MCP changes appear instantly in the PUNT web UI via Server-Sent Events (SSE). If updates aren't appearing:
+1. Check the browser console for SSE connection errors
+2. Verify the PUNT dev server is running
+3. Try refreshing the page to re-establish the SSE connection

@@ -107,7 +107,7 @@ Pre-commit hooks automatically lint staged files.
 
 ## Conversational Ticket Management (MCP)
 
-PUNT includes an [MCP server](https://modelcontextprotocol.io/) that enables conversational ticket management through AI assistants like Claude.
+PUNT includes an [MCP server](https://modelcontextprotocol.io/) that enables conversational ticket management through AI assistants like Claude. Changes appear instantly in the UI via real-time SSE updates.
 
 ```
 You: "Create a bug ticket for the login page not loading"
@@ -122,7 +122,15 @@ AI:  Created PUNT-42: Login page not loading
    cd mcp && pnpm install
    ```
 
-2. Add to your MCP client config (e.g., Claude Desktop):
+2. Generate your API key (requires PUNT to be running):
+   ```bash
+   # Log in to PUNT web UI, then:
+   curl -X POST http://localhost:3000/api/me/mcp-key \
+     -H "Cookie: authjs.session-token=YOUR_SESSION_COOKIE"
+   # Save the returned apiKey - it won't be shown again
+   ```
+
+3. Add to your MCP client config (e.g., Claude Desktop):
    ```json
    {
      "mcpServers": {
@@ -130,7 +138,10 @@ AI:  Created PUNT-42: Login page not loading
          "type": "stdio",
          "command": "pnpm",
          "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
-         "cwd": "/path/to/punt"
+         "cwd": "/path/to/punt",
+         "env": {
+           "MCP_API_KEY": "your-api-key-here"
+         }
        }
      }
    }
@@ -139,8 +150,11 @@ AI:  Created PUNT-42: Login page not loading
 ### Available Operations
 
 - **Tickets**: get, list, create, update, move, delete
-- **Projects**: list, get details
-- **Sprints**: list, get with tickets
+- **Projects**: list, get, create, update, delete
+- **Sprints**: list, get, create, update, start, complete, delete
+- **Members**: list, add, remove, change role
+- **Labels**: list, create, update, delete, add/remove from tickets
+- **Columns**: list, create, rename, reorder, delete
 
 See the [MCP documentation](https://jmynes.github.io/punt/user-guide/mcp) for detailed usage.
 

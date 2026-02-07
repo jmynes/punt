@@ -393,32 +393,44 @@ Available actions:
 
 PUNT includes an MCP (Model Context Protocol) server for conversational ticket management. Located in `mcp/`.
 
-**Available tools:**
-| Tool | Description |
-|------|-------------|
-| `get_ticket` | Get ticket by key (e.g., PUNT-2) |
-| `list_tickets` | List tickets with filters (project, column, priority, assignee, sprint) |
-| `create_ticket` | Create a new ticket |
-| `update_ticket` | Update ticket fields |
-| `move_ticket` | Move to column/sprint |
-| `delete_ticket` | Delete a ticket |
-| `list_projects` | List all projects |
-| `get_project` | Get project with columns |
-| `list_sprints` | List sprints for project |
-| `get_sprint` | Get sprint with tickets |
+**Architecture:** The MCP server calls PUNT's API endpoints (not direct Prisma), enabling:
+- **Real-time SSE updates**: Changes made via MCP appear instantly in the UI without refresh
+- **Per-user authentication**: Each user generates their own API key via `POST /api/me/mcp-key`
+- **Consistent permissions**: MCP requests use the same authorization as web UI
+
+**Authentication:**
+1. User generates API key: `POST /api/me/mcp-key` (requires web auth)
+2. Key stored in database (`User.mcpApiKey` field)
+3. MCP sends key via `X-MCP-API-Key` header
+4. API routes validate key via `getMcpUser()` in `auth-helpers.ts`
+
+**Available tools (31 total):**
+| Category | Tools |
+|----------|-------|
+| Tickets | `get_ticket`, `list_tickets`, `create_ticket`, `update_ticket`, `move_ticket`, `delete_ticket` |
+| Projects | `list_projects`, `get_project`, `create_project`, `update_project`, `delete_project` |
+| Sprints | `list_sprints`, `get_sprint`, `create_sprint`, `update_sprint`, `start_sprint`, `complete_sprint`, `delete_sprint` |
+| Members | `list_members`, `add_member`, `remove_member`, `change_member_role`, `list_users` |
+| Labels | `list_labels`, `create_label`, `update_label`, `delete_label`, `add_label_to_ticket`, `remove_label_from_ticket` |
+| Columns | `list_columns`, `create_column`, `rename_column`, `reorder_column`, `delete_column` |
 
 **Key files:**
-- `mcp/src/index.ts` - Server entry point
+- `mcp/src/index.ts` - Server entry point, tool registrations
+- `mcp/src/api-client.ts` - HTTP client for PUNT API calls
 - `mcp/src/tools/tickets.ts` - Ticket CRUD tools
-- `mcp/src/tools/projects.ts` - Project tools
-- `mcp/src/tools/sprints.ts` - Sprint tools
+- `mcp/src/tools/projects.ts` - Project/member/column tools
+- `mcp/src/tools/sprints.ts` - Sprint lifecycle tools
+- `mcp/src/tools/labels.ts` - Label management tools
 - `mcp/src/utils.ts` - Formatting helpers (markdown output)
-- `mcp/src/db.ts` - Prisma client (reuses parent's generated client)
+
+**Environment:**
+- `MCP_API_KEY` - User's API key (from `/api/me/mcp-key`)
+- `MCP_BASE_URL` - PUNT server URL (default: `http://localhost:3000`)
 
 **Running the MCP server:**
 ```bash
 cd mcp && pnpm install  # First time only
-pnpm --dir mcp exec tsx src/index.ts
+MCP_API_KEY=your-key pnpm --dir mcp exec tsx src/index.ts
 ```
 
 **Configuration** (`.mcp.json`):
@@ -428,7 +440,10 @@ pnpm --dir mcp exec tsx src/index.ts
     "punt": {
       "type": "stdio",
       "command": "pnpm",
-      "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"]
+      "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
+      "env": {
+        "MCP_API_KEY": "your-api-key-here"
+      }
     }
   }
 }
