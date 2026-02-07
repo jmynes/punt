@@ -1,9 +1,9 @@
 {
   "mcpServers": {
-    "atlassian": {
+    "punt": {
       "type": "stdio",
-      "command": "bunx",
-      "args": ["mcp-remote", "https://mcp.atlassian.com/v1/mcp"]
+      "command": "pnpm",
+      "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"]
     }
   }
 }
