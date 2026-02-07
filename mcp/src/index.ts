@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+import { resolve } from 'node:path'
+import { config } from 'dotenv'
+
+// Load .env from parent directory (where the main PUNT app lives)
+config({ path: resolve(import.meta.dirname, '../../.env') })
+
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { registerColumnTools } from './tools/columns.js'

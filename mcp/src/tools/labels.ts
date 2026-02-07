@@ -1,26 +1,36 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { db } from '../db.js'
+import {
+  createLabel,
+  deleteLabel,
+  type LabelData,
+  listLabels,
+  listTickets,
+  updateTicket,
+} from '../api-client.js'
 import { errorResponse, textResponse } from '../utils.js'
 
-// Default colors for new labels
-const LABEL_COLORS = [
-  '#ef4444',
-  '#f97316',
-  '#f59e0b',
-  '#eab308',
-  '#84cc16',
-  '#22c55e',
-  '#14b8a6',
-  '#06b6d4',
-  '#0ea5e9',
-  '#3b82f6',
-  '#6366f1',
-  '#8b5cf6',
-  '#a855f7',
-  '#d946ef',
-  '#ec4899',
-]
+/**
+ * Format a list of labels for display
+ */
+function formatLabelList(labels: LabelData[], projectKey: string): string {
+  if (labels.length === 0) {
+    return `No labels defined in ${projectKey}.`
+  }
+
+  const lines: string[] = []
+  lines.push(`# Labels in ${projectKey}`)
+  lines.push('')
+  lines.push('| Name | Color |')
+  lines.push('|------|-------|')
+  for (const label of labels) {
+    lines.push(`| ${label.name} | ${label.color} |`)
+  }
+  lines.push('')
+  lines.push(`Total: ${labels.length} label(s)`)
+
+  return lines.join('\n')
+}
 
 export function registerLabelTools(server: McpServer) {
   // list_labels - List labels for a project
@@ -31,45 +41,12 @@ export function registerLabelTools(server: McpServer) {
       projectKey: z.string().describe('Project key (e.g., PUNT)'),
     },
     async ({ projectKey }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: {
-          id: true,
-          key: true,
-          name: true,
-          labels: {
-            select: {
-              id: true,
-              name: true,
-              color: true,
-              _count: { select: { tickets: true } },
-            },
-            orderBy: { name: 'asc' },
-          },
-        },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      const result = await listLabels(projectKey)
+      if (result.error) {
+        return errorResponse(result.error)
       }
 
-      const lines: string[] = []
-      lines.push(`# Labels in ${project.key}: ${project.name}`)
-      lines.push('')
-
-      if (project.labels.length === 0) {
-        lines.push('No labels defined.')
-      } else {
-        lines.push('| Name | Color | Tickets |')
-        lines.push('|------|-------|---------|')
-        for (const label of project.labels) {
-          lines.push(`| ${label.name} | ${label.color} | ${label._count.tickets} |`)
-        }
-        lines.push('')
-        lines.push(`Total: ${project.labels.length} label(s)`)
-      }
-
-      return textResponse(lines.join('\n'))
+      return textResponse(formatLabelList(result.data || [], projectKey.toUpperCase()))
     },
   )
 
@@ -83,45 +60,15 @@ export function registerLabelTools(server: McpServer) {
       color: z.string().optional().describe('Label color (hex, e.g., #3b82f6)'),
     },
     async ({ projectKey, name, color }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: {
-          id: true,
-          key: true,
-          _count: { select: { labels: true } },
-        },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      const result = await createLabel(projectKey, { name, color })
+      if (result.error) {
+        return errorResponse(result.error)
       }
 
-      // Check for duplicate name
-      const existing = await db.label.findFirst({
-        where: { projectId: project.id, name },
-        select: { id: true },
-      })
-      if (existing) {
-        return errorResponse(`Label already exists: ${name}`)
-      }
-
-      // Pick a color if not specified (cycle through palette)
-      const labelColor = color || LABEL_COLORS[project._count.labels % LABEL_COLORS.length]
-
-      const label = await db.label.create({
-        data: {
-          name,
-          color: labelColor,
-          projectId: project.id,
-        },
-        select: {
-          id: true,
-          name: true,
-          color: true,
-        },
-      })
-
-      return textResponse(`Created label "${label.name}" (${label.color}) in ${project.key}`)
+      const label = result.data!
+      return textResponse(
+        `Created label "${label.name}" (${label.color}) in ${projectKey.toUpperCase()}`,
+      )
     },
   )
 
@@ -136,50 +83,42 @@ export function registerLabelTools(server: McpServer) {
       color: z.string().optional().describe('New color (hex)'),
     },
     async ({ projectKey, labelName, name, color }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: { id: true, key: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // List labels to find the one to update
+      const listResult = await listLabels(projectKey)
+      if (listResult.error) {
+        return errorResponse(listResult.error)
       }
 
-      const label = await db.label.findFirst({
-        where: { projectId: project.id, name: { contains: labelName } },
-        select: { id: true, name: true, color: true },
-      })
+      const label = listResult.data?.find((l) =>
+        l.name.toLowerCase().includes(labelName.toLowerCase()),
+      )
 
       if (!label) {
         return errorResponse(`Label not found: ${labelName}`)
       }
 
-      const data: Record<string, unknown> = {}
-      if (name !== undefined) data.name = name
-      if (color !== undefined) data.color = color
-
-      if (Object.keys(data).length === 0) {
+      if (name === undefined && color === undefined) {
         return errorResponse('No changes specified')
       }
 
-      // Check for name conflict if renaming
-      if (name && name !== label.name) {
-        const conflict = await db.label.findFirst({
-          where: { projectId: project.id, name },
-          select: { id: true },
-        })
-        if (conflict) {
-          return errorResponse(`Label name already exists: ${name}`)
-        }
+      // Note: Label update API doesn't exist yet - this would need to be added
+      // For now, we can delete and recreate with new values
+      const newName = name ?? label.name
+      const newColor = color ?? label.color
+
+      // Delete old label
+      const deleteResult = await deleteLabel(projectKey, label.id)
+      if (deleteResult.error) {
+        return errorResponse(deleteResult.error)
       }
 
-      const updated = await db.label.update({
-        where: { id: label.id },
-        data,
-        select: { id: true, name: true, color: true },
-      })
+      // Create new label with updated values
+      const createResult = await createLabel(projectKey, { name: newName, color: newColor })
+      if (createResult.error) {
+        return errorResponse(createResult.error)
+      }
 
-      return textResponse(`Updated label: "${label.name}" → "${updated.name}" (${updated.color})`)
+      return textResponse(`Updated label: "${label.name}" → "${newName}" (${newColor})`)
     },
   )
 
@@ -192,29 +131,26 @@ export function registerLabelTools(server: McpServer) {
       labelName: z.string().describe('Label name to delete'),
     },
     async ({ projectKey, labelName }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: { id: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // List labels to find the one to delete
+      const listResult = await listLabels(projectKey)
+      if (listResult.error) {
+        return errorResponse(listResult.error)
       }
 
-      const label = await db.label.findFirst({
-        where: { projectId: project.id, name: { contains: labelName } },
-        select: { id: true, name: true, _count: { select: { tickets: true } } },
-      })
+      const label = listResult.data?.find((l) =>
+        l.name.toLowerCase().includes(labelName.toLowerCase()),
+      )
 
       if (!label) {
         return errorResponse(`Label not found: ${labelName}`)
       }
 
-      await db.label.delete({ where: { id: label.id } })
+      const result = await deleteLabel(projectKey, label.id)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
-      return textResponse(
-        `Deleted label "${label.name}" (was on ${label._count.tickets} ticket(s))`,
-      )
+      return textResponse(`Deleted label "${label.name}"`)
     },
   )
 
@@ -235,46 +171,46 @@ export function registerLabelTools(server: McpServer) {
       const [, projectKey, numberStr] = match
       const number = parseInt(numberStr, 10)
 
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: { id: true, key: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // Get labels for the project
+      const labelsResult = await listLabels(projectKey)
+      if (labelsResult.error) {
+        return errorResponse(labelsResult.error)
       }
 
-      const ticket = await db.ticket.findFirst({
-        where: { projectId: project.id, number },
-        select: { id: true, number: true, labels: { select: { id: true } } },
-      })
-
-      if (!ticket) {
-        return errorResponse(`Ticket not found: ${ticketKey}`)
-      }
-
-      const label = await db.label.findFirst({
-        where: { projectId: project.id, name: { contains: labelName } },
-        select: { id: true, name: true },
-      })
+      const label = labelsResult.data?.find((l) =>
+        l.name.toLowerCase().includes(labelName.toLowerCase()),
+      )
 
       if (!label) {
         return errorResponse(`Label not found: ${labelName}`)
       }
 
+      // Get the ticket
+      const ticketsResult = await listTickets(projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
+      }
+
+      const ticket = ticketsResult.data?.find((t) => t.number === number)
+      if (!ticket) {
+        return errorResponse(`Ticket not found: ${ticketKey}`)
+      }
+
       // Check if already has label
       if (ticket.labels.some((l) => l.id === label.id)) {
         return errorResponse(
-          `Ticket ${project.key}-${ticket.number} already has label "${label.name}"`,
+          `Ticket ${projectKey.toUpperCase()}-${number} already has label "${label.name}"`,
         )
       }
 
-      await db.ticket.update({
-        where: { id: ticket.id },
-        data: { labels: { connect: { id: label.id } } },
-      })
+      // Add the label by updating ticket with new labelIds
+      const newLabelIds = [...ticket.labels.map((l) => l.id), label.id]
+      const updateResult = await updateTicket(projectKey, ticket.id, { labelIds: newLabelIds })
+      if (updateResult.error) {
+        return errorResponse(updateResult.error)
+      }
 
-      return textResponse(`Added label "${label.name}" to ${project.key}-${ticket.number}`)
+      return textResponse(`Added label "${label.name}" to ${projectKey.toUpperCase()}-${number}`)
     },
   )
 
@@ -295,40 +231,38 @@ export function registerLabelTools(server: McpServer) {
       const [, projectKey, numberStr] = match
       const number = parseInt(numberStr, 10)
 
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: { id: true, key: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // Get the ticket
+      const ticketsResult = await listTickets(projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
       }
 
-      const ticket = await db.ticket.findFirst({
-        where: { projectId: project.id, number },
-        select: { id: true, number: true, labels: { select: { id: true, name: true } } },
-      })
-
+      const ticket = ticketsResult.data?.find((t) => t.number === number)
       if (!ticket) {
         return errorResponse(`Ticket not found: ${ticketKey}`)
       }
 
+      // Find the label on the ticket
       const label = ticket.labels.find((l) =>
         l.name.toLowerCase().includes(labelName.toLowerCase()),
       )
 
       if (!label) {
         return errorResponse(
-          `Ticket ${project.key}-${ticket.number} does not have label "${labelName}"`,
+          `Ticket ${projectKey.toUpperCase()}-${number} does not have label "${labelName}"`,
         )
       }
 
-      await db.ticket.update({
-        where: { id: ticket.id },
-        data: { labels: { disconnect: { id: label.id } } },
-      })
+      // Remove the label by updating ticket with filtered labelIds
+      const newLabelIds = ticket.labels.filter((l) => l.id !== label.id).map((l) => l.id)
+      const updateResult = await updateTicket(projectKey, ticket.id, { labelIds: newLabelIds })
+      if (updateResult.error) {
+        return errorResponse(updateResult.error)
+      }
 
-      return textResponse(`Removed label "${label.name}" from ${project.key}-${ticket.number}`)
+      return textResponse(
+        `Removed label "${label.name}" from ${projectKey.toUpperCase()}-${number}`,
+      )
     },
   )
 }

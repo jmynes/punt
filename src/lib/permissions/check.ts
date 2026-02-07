@@ -39,6 +39,15 @@ export async function getEffectivePermissions(
   userId: string,
   projectId: string,
 ): Promise<EffectivePermissions> {
+  // MCP service user has all permissions (system admin)
+  if (userId === 'mcp-service') {
+    return {
+      permissions: new Set(ALL_PERMISSIONS),
+      membership: null,
+      isSystemAdmin: true,
+    }
+  }
+
   // Check if user is a system admin
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -138,6 +147,11 @@ export async function hasAllPermissions(
  * System admins are considered virtual members.
  */
 export async function isMember(userId: string, projectId: string): Promise<boolean> {
+  // MCP service user is always considered a member (system admin)
+  if (userId === 'mcp-service') {
+    return true
+  }
+
   // Check system admin first
   const user = await db.user.findUnique({
     where: { id: userId },

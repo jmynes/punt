@@ -3,6 +3,9 @@ import type { NextAuthConfig } from 'next-auth'
 // Check if demo mode is enabled (build-time check, safe for edge runtime)
 const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
+// MCP API key for internal service authentication
+const MCP_API_KEY = process.env.MCP_API_KEY
+
 /**
  * Auth configuration for proxy (route protection)
  * This config is used by proxy.ts (runs on Node.js runtime in Next.js 16+)
@@ -13,10 +16,18 @@ export const authConfig: NextAuthConfig = {
     signIn: '/login',
   },
   callbacks: {
-    authorized({ auth, request: { nextUrl } }) {
+    authorized({ auth, request: { nextUrl, headers } }) {
       // Demo mode: allow all routes without authentication
       if (isDemoMode) {
         return true
+      }
+
+      // Allow MCP API key authentication for API routes
+      if (MCP_API_KEY && nextUrl.pathname.startsWith('/api/')) {
+        const apiKey = headers.get('X-MCP-API-Key')
+        if (apiKey && apiKey === MCP_API_KEY) {
+          return true
+        }
       }
 
       const isLoggedIn = !!auth?.user
