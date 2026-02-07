@@ -138,7 +138,6 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
   }, [_statusColumns])
 
   const visibleColumns = columns.filter((c) => c.visible)
-  const labelsVisible = visibleColumns.some((c) => c.id === 'labels')
   const pointsVisible = visibleColumns.some((c) => c.id === 'storyPoints')
   const dueVisible = visibleColumns.some((c) => c.id === 'dueDate')
   const statusVisible = visibleColumns.some((c) => c.id === 'status')
@@ -339,56 +338,6 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                     </DropdownMenuCheckboxItem>
                   )
                 })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )
-        case 'labels':
-          if (!labelsVisible) return null
-          return (
-            <DropdownMenu key="labels">
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  <Layers className="mr-2 h-4 w-4 text-purple-400" />
-                  Labels
-                  {filterByLabels.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {filterByLabels.length}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuLabel>Filter by labels</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {labelOptions.length === 0 && (
-                  <DropdownMenuLabel className="text-xs text-zinc-500">
-                    No labels found
-                  </DropdownMenuLabel>
-                )}
-                {labelOptions.map((label) => (
-                  <DropdownMenuCheckboxItem
-                    key={label.id}
-                    checked={filterByLabels.includes(label.id)}
-                    onCheckedChange={() => toggleLabel(label.id)}
-                  >
-                    <Badge
-                      variant="outline"
-                      className="mr-2 text-[10px] px-1.5 py-0 border-zinc-700"
-                      style={
-                        label.color
-                          ? {
-                              borderColor: label.color,
-                              color: label.color,
-                              backgroundColor: `${label.color}20`,
-                            }
-                          : undefined
-                      }
-                    >
-                      {label.name}
-                    </Badge>
-                    <span className="capitalize">{label.name}</span>
-                  </DropdownMenuCheckboxItem>
-                ))}
               </DropdownMenuContent>
             </DropdownMenu>
           )
@@ -843,9 +792,58 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
     })
     .filter((btn): btn is React.ReactElement => Boolean(btn))
 
+  // Labels filter - always visible (not tied to column visibility)
+  const labelsFilter = (
+    <DropdownMenu key="labels">
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="shrink-0">
+          <Layers className="mr-2 h-4 w-4 text-purple-400" />
+          Labels
+          {filterByLabels.length > 0 && (
+            <Badge variant="secondary" className="ml-2">
+              {filterByLabels.length}
+            </Badge>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuLabel>Filter by labels</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {labelOptions.length === 0 && (
+          <DropdownMenuLabel className="text-xs text-zinc-500">No labels found</DropdownMenuLabel>
+        )}
+        {labelOptions.map((label) => (
+          <DropdownMenuCheckboxItem
+            key={label.id}
+            checked={filterByLabels.includes(label.id)}
+            onCheckedChange={() => toggleLabel(label.id)}
+          >
+            <Badge
+              variant="outline"
+              className="mr-2 text-[10px] px-1.5 py-0 border-zinc-700"
+              style={
+                label.color
+                  ? {
+                      borderColor: label.color,
+                      color: label.color,
+                      backgroundColor: `${label.color}20`,
+                    }
+                  : undefined
+              }
+            >
+              {label.name}
+            </Badge>
+            <span className="capitalize">{label.name}</span>
+          </DropdownMenuCheckboxItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
   return (
     <div className="flex flex-1 items-center gap-3">
       {filterButtons}
+      {labelsFilter}
 
       {/* Search (aligned with filters) */}
       <div className="relative max-w-xs flex-1">
