@@ -171,8 +171,35 @@ export function registerTicketTools(server: McpServer) {
       column: z.string().optional().describe('Column name (defaults to first column)'),
       assignee: z.string().optional().describe('Assignee name'),
       storyPoints: z.number().min(0).optional().describe('Story points'),
+      estimate: z.string().optional().describe('Time estimate (e.g., "2h", "1d")'),
+      startDate: z.string().optional().describe('Start date (ISO format: YYYY-MM-DD)'),
+      dueDate: z.string().optional().describe('Due date (ISO format: YYYY-MM-DD)'),
+      labels: z.array(z.string()).optional().describe('Label names to assign'),
+      sprint: z.string().optional().describe('Sprint name to assign to'),
+      parent: z.string().optional().describe('Parent ticket key for subtasks'),
+      environment: z.string().optional().describe('Environment (e.g., "Production")'),
+      affectedVersion: z.string().optional().describe('Affected version'),
+      fixVersion: z.string().optional().describe('Fix version'),
     },
-    async ({ projectKey, title, type, priority, description, column, assignee, storyPoints }) => {
+    async ({
+      projectKey,
+      title,
+      type,
+      priority,
+      description,
+      column,
+      assignee,
+      storyPoints,
+      estimate,
+      startDate,
+      dueDate,
+      labels,
+      sprint,
+      parent,
+      environment,
+      affectedVersion,
+      fixVersion,
+    }) => {
       // Find project
       const project = await db.project.findUnique({
         where: { key: projectKey.toUpperCase() },
@@ -220,6 +247,52 @@ export function registerTicketTools(server: McpServer) {
         assigneeId = user.id
       }
 
+      // Get sprint if specified
+      let sprintId: string | null = null
+      if (sprint) {
+        const sp = await db.sprint.findFirst({
+          where: { projectId: project.id, name: { contains: sprint } },
+          select: { id: true },
+        })
+        if (!sp) {
+          return errorResponse(`Sprint not found: ${sprint}`)
+        }
+        sprintId = sp.id
+      }
+
+      // Get parent ticket if specified
+      let parentId: string | null = null
+      if (parent) {
+        const parsed = parseTicketKey(parent)
+        if (!parsed) {
+          return errorResponse(`Invalid parent ticket key: ${parent}`)
+        }
+        const parentTicket = await db.ticket.findFirst({
+          where: { projectId: project.id, number: parsed.number },
+          select: { id: true },
+        })
+        if (!parentTicket) {
+          return errorResponse(`Parent ticket not found: ${parent}`)
+        }
+        parentId = parentTicket.id
+      }
+
+      // Get label IDs if specified
+      let labelIds: string[] = []
+      if (labels && labels.length > 0) {
+        const foundLabels = await db.label.findMany({
+          where: {
+            projectId: project.id,
+            name: { in: labels },
+          },
+          select: { id: true },
+        })
+        labelIds = foundLabels.map((l) => l.id)
+        if (labelIds.length !== labels.length) {
+          return errorResponse(`Some labels not found. Available labels in project needed.`)
+        }
+      }
+
       // Get next ticket number atomically
       const ticket = await db.$transaction(async (tx) => {
         const lastTicket = await tx.ticket.findFirst({
@@ -246,9 +319,18 @@ export function registerTicketTools(server: McpServer) {
             priority,
             order: (lastInColumn?.order ?? -1) + 1,
             storyPoints: storyPoints ?? null,
+            estimate: estimate ?? null,
+            startDate: startDate ? new Date(startDate) : null,
+            dueDate: dueDate ? new Date(dueDate) : null,
+            environment: environment ?? null,
+            affectedVersion: affectedVersion ?? null,
+            fixVersion: fixVersion ?? null,
             projectId: project.id,
             columnId,
             assigneeId,
+            sprintId,
+            parentId,
+            labels: labelIds.length > 0 ? { connect: labelIds.map((id) => ({ id })) } : undefined,
           },
           select: TICKET_SELECT,
         })
@@ -275,8 +357,40 @@ export function registerTicketTools(server: McpServer) {
       type: z.enum(['epic', 'story', 'task', 'bug', 'subtask']).optional().describe('New type'),
       assignee: z.string().nullable().optional().describe('New assignee name (null to unassign)'),
       storyPoints: z.number().min(0).nullable().optional().describe('New story points'),
+      estimate: z.string().nullable().optional().describe('Time estimate (e.g., "2h", "1d")'),
+      startDate: z
+        .string()
+        .nullable()
+        .optional()
+        .describe('Start date (ISO: YYYY-MM-DD, null to clear)'),
+      dueDate: z
+        .string()
+        .nullable()
+        .optional()
+        .describe('Due date (ISO: YYYY-MM-DD, null to clear)'),
+      labels: z.array(z.string()).optional().describe('Label names (replaces existing)'),
+      environment: z.string().nullable().optional().describe('Environment'),
+      affectedVersion: z.string().nullable().optional().describe('Affected version'),
+      fixVersion: z.string().nullable().optional().describe('Fix version'),
+      parent: z.string().nullable().optional().describe('Parent ticket key (null to remove)'),
     },
-    async ({ key, title, description, priority, type, assignee, storyPoints }) => {
+    async ({
+      key,
+      title,
+      description,
+      priority,
+      type,
+      assignee,
+      storyPoints,
+      estimate,
+      startDate,
+      dueDate,
+      labels,
+      environment,
+      affectedVersion,
+      fixVersion,
+      parent,
+    }) => {
       const parsed = parseTicketKey(key)
       if (!parsed) {
         return errorResponse(`Invalid ticket key format: ${key}`)
@@ -293,7 +407,7 @@ export function registerTicketTools(server: McpServer) {
 
       const existingTicket = await db.ticket.findFirst({
         where: { projectId: project.id, number: parsed.number },
-        select: { id: true },
+        select: { id: true, labels: { select: { id: true } } },
       })
 
       if (!existingTicket) {
@@ -307,6 +421,12 @@ export function registerTicketTools(server: McpServer) {
       if (priority !== undefined) data.priority = priority
       if (type !== undefined) data.type = type
       if (storyPoints !== undefined) data.storyPoints = storyPoints
+      if (estimate !== undefined) data.estimate = estimate
+      if (startDate !== undefined) data.startDate = startDate ? new Date(startDate) : null
+      if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null
+      if (environment !== undefined) data.environment = environment
+      if (affectedVersion !== undefined) data.affectedVersion = affectedVersion
+      if (fixVersion !== undefined) data.fixVersion = fixVersion
 
       // Handle assignee
       if (assignee !== undefined) {
@@ -321,6 +441,38 @@ export function registerTicketTools(server: McpServer) {
             return errorResponse(`User not found: ${assignee}`)
           }
           data.assigneeId = user.id
+        }
+      }
+
+      // Handle parent
+      if (parent !== undefined) {
+        if (parent === null) {
+          data.parentId = null
+        } else {
+          const parentParsed = parseTicketKey(parent)
+          if (!parentParsed) {
+            return errorResponse(`Invalid parent ticket key: ${parent}`)
+          }
+          const parentTicket = await db.ticket.findFirst({
+            where: { projectId: project.id, number: parentParsed.number },
+            select: { id: true },
+          })
+          if (!parentTicket) {
+            return errorResponse(`Parent ticket not found: ${parent}`)
+          }
+          data.parentId = parentTicket.id
+        }
+      }
+
+      // Handle labels - replace all
+      if (labels !== undefined) {
+        const foundLabels = await db.label.findMany({
+          where: { projectId: project.id, name: { in: labels } },
+          select: { id: true },
+        })
+        data.labels = {
+          disconnect: existingTicket.labels.map((l) => ({ id: l.id })),
+          connect: foundLabels.map((l) => ({ id: l.id })),
         }
       }
 

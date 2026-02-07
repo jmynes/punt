@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { registerColumnTools } from './tools/columns.js'
+import { registerLabelTools } from './tools/labels.js'
+import { registerMemberTools } from './tools/members.js'
 import { registerProjectTools } from './tools/projects.js'
 import { registerSprintTools } from './tools/sprints.js'
 import { registerTicketTools } from './tools/tickets.js'
@@ -14,6 +17,9 @@ const server = new McpServer({
 registerTicketTools(server)
 registerProjectTools(server)
 registerSprintTools(server)
+registerMemberTools(server)
+registerLabelTools(server)
+registerColumnTools(server)
 
 // Connect via stdio
 const transport = new StdioServerTransport()
