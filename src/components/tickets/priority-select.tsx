@@ -43,7 +43,7 @@ export function PrioritySelect({ value, onChange, disabled }: PrioritySelectProp
         </SelectValue>
       </SelectTrigger>
       <SelectContent className="bg-zinc-900 border-zinc-700">
-        {PRIORITIES.map((priority) => {
+        {[...PRIORITIES].reverse().map((priority) => {
           const cfg = priorityConfig[priority]
           const PriorityIcon = cfg.icon
           return (

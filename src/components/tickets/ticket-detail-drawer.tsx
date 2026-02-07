@@ -937,7 +937,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
-                    {PRIORITIES.map((priority) => (
+                    {[...PRIORITIES].reverse().map((priority) => (
                       <DropdownMenuCheckboxItem
                         key={priority}
                         checked={tempPriority === priority}
