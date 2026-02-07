@@ -389,6 +389,51 @@ Available actions:
 - `pasteTickets({ projectId, columns, options?, onComplete? })` - Paste copied tickets
 - `deleteTickets({ projectId, tickets, options?, onComplete? })` - Delete tickets with undo
 
+### MCP Server
+
+PUNT includes an MCP (Model Context Protocol) server for conversational ticket management. Located in `mcp/`.
+
+**Available tools:**
+| Tool | Description |
+|------|-------------|
+| `get_ticket` | Get ticket by key (e.g., PUNT-2) |
+| `list_tickets` | List tickets with filters (project, column, priority, assignee, sprint) |
+| `create_ticket` | Create a new ticket |
+| `update_ticket` | Update ticket fields |
+| `move_ticket` | Move to column/sprint |
+| `delete_ticket` | Delete a ticket |
+| `list_projects` | List all projects |
+| `get_project` | Get project with columns |
+| `list_sprints` | List sprints for project |
+| `get_sprint` | Get sprint with tickets |
+
+**Key files:**
+- `mcp/src/index.ts` - Server entry point
+- `mcp/src/tools/tickets.ts` - Ticket CRUD tools
+- `mcp/src/tools/projects.ts` - Project tools
+- `mcp/src/tools/sprints.ts` - Sprint tools
+- `mcp/src/utils.ts` - Formatting helpers (markdown output)
+- `mcp/src/db.ts` - Prisma client (reuses parent's generated client)
+
+**Running the MCP server:**
+```bash
+cd mcp && pnpm install  # First time only
+pnpm --dir mcp exec tsx src/index.ts
+```
+
+**Configuration** (`.mcp.json`):
+```json
+{
+  "mcpServers": {
+    "punt": {
+      "type": "stdio",
+      "command": "pnpm",
+      "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"]
+    }
+  }
+}
+```
+
 ### Debugging
 
 - Logger: `logger.debug()`, `logger.info()`, `logger.warn()`, `logger.error()`, `logger.measure()`

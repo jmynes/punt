@@ -20,6 +20,7 @@ PUNT is a lightweight, local-first issue tracking system for teams who want the 
 - Real-time sync via Server-Sent Events
 - Role-based project access (owner, admin, member)
 - File attachments with configurable limits
+- **Conversational ticket management via MCP** — Create and manage tickets through natural language
 - Dark UI
 
 ## Try the Demo
@@ -103,6 +104,45 @@ pnpm db:studio    # Open database browser
 ```
 
 Pre-commit hooks automatically lint staged files.
+
+## Conversational Ticket Management (MCP)
+
+PUNT includes an [MCP server](https://modelcontextprotocol.io/) that enables conversational ticket management through AI assistants like Claude.
+
+```
+You: "Create a bug ticket for the login page not loading"
+AI:  Created PUNT-42: Login page not loading
+     Type: bug | Priority: medium | Status: To Do
+```
+
+### Setup
+
+1. Install dependencies:
+   ```bash
+   cd mcp && pnpm install
+   ```
+
+2. Add to your MCP client config (e.g., Claude Desktop):
+   ```json
+   {
+     "mcpServers": {
+       "punt": {
+         "type": "stdio",
+         "command": "pnpm",
+         "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
+         "cwd": "/path/to/punt"
+       }
+     }
+   }
+   ```
+
+### Available Operations
+
+- **Tickets**: get, list, create, update, move, delete
+- **Projects**: list, get details
+- **Sprints**: list, get with tickets
+
+See the [MCP documentation](https://jmynes.github.io/punt/user-guide/mcp) for detailed usage.
 
 ## Documentation
 
