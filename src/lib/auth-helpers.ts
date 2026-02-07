@@ -11,38 +11,34 @@ import {
 } from '@/lib/permissions'
 
 /**
- * MCP API Key for internal service authentication.
- * When set, requests with matching X-MCP-API-Key header bypass normal auth.
- * The MCP user acts as a system admin for full access.
- */
-const MCP_API_KEY = process.env.MCP_API_KEY
-
-/**
- * Virtual MCP user for internal API calls.
- * This user is used when authenticating via MCP_API_KEY.
- */
-const MCP_USER = {
-  id: 'mcp-service',
-  email: null,
-  name: 'MCP Service',
-  avatar: null,
-  isSystemAdmin: true,
-  isActive: true,
-}
-
-/**
- * Check if the current request is authenticated via MCP API key
+ * Check if the current request is authenticated via MCP API key.
+ * Looks up the user by their mcpApiKey field in the database.
+ * Returns the user if found and active, null otherwise.
  */
 async function getMcpUser() {
-  if (!MCP_API_KEY) {
-    return null
-  }
-
   const headersList = await headers()
   const apiKey = headersList.get('X-MCP-API-Key')
 
-  if (apiKey && apiKey === MCP_API_KEY) {
-    return MCP_USER
+  if (!apiKey) {
+    return null
+  }
+
+  // Look up user by their MCP API key
+  const user = await db.user.findUnique({
+    where: { mcpApiKey: apiKey },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      avatar: true,
+      isSystemAdmin: true,
+      isActive: true,
+    },
+  })
+
+  // Only return active users
+  if (user && user.isActive) {
+    return user
   }
 
   return null
@@ -126,11 +122,6 @@ export async function requireSystemAdmin() {
  * Check if a user is a system admin
  */
 async function isUserSystemAdmin(userId: string): Promise<boolean> {
-  // MCP service user is always a system admin
-  if (userId === 'mcp-service') {
-    return true
-  }
-
   const user = await db.user.findUnique({
     where: { id: userId },
     select: { isSystemAdmin: true },
