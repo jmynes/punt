@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { DEMO_USER, isDemoMode } from '@/lib/demo'
@@ -10,10 +11,50 @@ import {
 } from '@/lib/permissions'
 
 /**
+ * Check if the current request is authenticated via MCP API key.
+ * Looks up the user by their mcpApiKey field in the database.
+ * Returns the user if found and active, null otherwise.
+ */
+async function getMcpUser() {
+  const headersList = await headers()
+  const apiKey = headersList.get('X-MCP-API-Key')
+
+  if (!apiKey) {
+    return null
+  }
+
+  // Look up user by their MCP API key
+  const user = await db.user.findUnique({
+    where: { mcpApiKey: apiKey },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      avatar: true,
+      isSystemAdmin: true,
+      isActive: true,
+    },
+  })
+
+  // Only return active users
+  if (user && user.isActive) {
+    return user
+  }
+
+  return null
+}
+
+/**
  * Get the current user from server-side session
  * Returns null if not authenticated
  */
 export async function getCurrentUser() {
+  // Check for MCP API key first (internal service calls)
+  const mcpUser = await getMcpUser()
+  if (mcpUser) {
+    return mcpUser
+  }
+
   // Demo mode: return demo user
   if (isDemoMode()) {
     return {

@@ -13,10 +13,19 @@ export const authConfig: NextAuthConfig = {
     signIn: '/login',
   },
   callbacks: {
-    authorized({ auth, request: { nextUrl } }) {
+    authorized({ auth, request: { nextUrl, headers } }) {
       // Demo mode: allow all routes without authentication
       if (isDemoMode) {
         return true
+      }
+
+      // Allow requests with MCP API key header through to API routes
+      // Actual key validation happens in getMcpUser() via database lookup
+      if (nextUrl.pathname.startsWith('/api/')) {
+        const apiKey = headers.get('X-MCP-API-Key')
+        if (apiKey) {
+          return true
+        }
       }
 
       const isLoggedIn = !!auth?.user

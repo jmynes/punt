@@ -100,6 +100,12 @@ export const TICKET_SELECT_FULL = {
   isCarriedOver: true,
   carriedFromSprintId: true,
   carriedOverCount: true,
+  column: {
+    select: { id: true, name: true },
+  },
+  project: {
+    select: { id: true, key: true, name: true },
+  },
   assignee: {
     select: USER_SELECT_SUMMARY,
   },

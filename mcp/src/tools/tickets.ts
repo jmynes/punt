@@ -1,51 +1,107 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { db } from '../db.js'
 import {
-  errorResponse,
-  formatTicket,
-  formatTicketList,
-  parseTicketKey,
-  textResponse,
-} from '../utils.js'
+  createTicket,
+  deleteTicket,
+  listColumns,
+  listLabels,
+  listSprints,
+  listTickets,
+  listUsers,
+  type TicketData,
+  updateTicket,
+} from '../api-client.js'
+import { errorResponse, parseTicketKey, textResponse } from '../utils.js'
 
-// Prisma select patterns
-const USER_SELECT = { id: true, name: true, email: true, avatar: true }
-const LABEL_SELECT = { id: true, name: true, color: true }
-const SPRINT_SELECT = {
-  id: true,
-  name: true,
-  status: true,
-  startDate: true,
-  endDate: true,
-  goal: true,
+/**
+ * Format a ticket for display
+ * @param ticket - The ticket data
+ * @param projectKey - Project key (optional, uses ticket.project.key if available)
+ */
+function formatTicket(ticket: TicketData, projectKey?: string): string {
+  const lines: string[] = []
+  const key = projectKey || ticket.project?.key || 'UNKNOWN'
+
+  lines.push(`# ${key}-${ticket.number}: ${ticket.title}`)
+  lines.push('')
+  lines.push('| Field | Value |')
+  lines.push('|-------|-------|')
+  lines.push(`| Type | ${ticket.type} |`)
+  lines.push(`| Priority | ${ticket.priority} |`)
+  lines.push(`| Status | ${ticket.column.name} |`)
+
+  if (ticket.sprint) {
+    lines.push(`| Sprint | ${ticket.sprint.name} (${ticket.sprint.status}) |`)
+  }
+
+  if (ticket.storyPoints !== null) {
+    lines.push(`| Story Points | ${ticket.storyPoints} |`)
+  }
+
+  if (ticket.assignee) {
+    lines.push(`| Assignee | ${ticket.assignee.name} |`)
+  }
+
+  if (ticket.creator) {
+    lines.push(`| Creator | ${ticket.creator.name} |`)
+  }
+
+  if (ticket.labels.length > 0) {
+    lines.push(`| Labels | ${ticket.labels.map((l) => l.name).join(', ')} |`)
+  }
+
+  if (ticket.estimate) {
+    lines.push(`| Estimate | ${ticket.estimate} |`)
+  }
+
+  if (ticket.startDate) {
+    lines.push(`| Start Date | ${new Date(ticket.startDate).toISOString().split('T')[0]} |`)
+  }
+
+  if (ticket.dueDate) {
+    lines.push(`| Due Date | ${new Date(ticket.dueDate).toISOString().split('T')[0]} |`)
+  }
+
+  if (ticket.description) {
+    lines.push('')
+    lines.push('## Description')
+    lines.push('')
+    lines.push(ticket.description)
+  }
+
+  return lines.join('\n')
 }
 
-const TICKET_SELECT = {
-  id: true,
-  number: true,
-  title: true,
-  description: true,
-  type: true,
-  priority: true,
-  order: true,
-  storyPoints: true,
-  estimate: true,
-  startDate: true,
-  dueDate: true,
-  environment: true,
-  affectedVersion: true,
-  fixVersion: true,
-  createdAt: true,
-  updatedAt: true,
-  projectId: true,
-  columnId: true,
-  assignee: { select: USER_SELECT },
-  creator: { select: USER_SELECT },
-  column: { select: { id: true, name: true, order: true } },
-  sprint: { select: SPRINT_SELECT },
-  labels: { select: LABEL_SELECT },
-  project: { select: { id: true, key: true, name: true } },
+/**
+ * Format a list of tickets for display
+ * @param tickets - The tickets to format
+ * @param projectKey - Project key (optional, uses ticket.project.key if available)
+ */
+function formatTicketList(tickets: TicketData[], projectKey?: string): string {
+  if (tickets.length === 0) {
+    return 'No tickets found.'
+  }
+
+  const lines: string[] = []
+  lines.push('| Key | Title | Type | Priority | Status | Sprint | Assignee | Points |')
+  lines.push('|-----|-------|------|----------|--------|--------|----------|--------|')
+
+  for (const t of tickets) {
+    const key = `${projectKey || t.project?.key || 'UNKNOWN'}-${t.number}`
+    const title = t.title.length > 45 ? `${t.title.slice(0, 45)}...` : t.title
+    const sprint = t.sprint?.name || '-'
+    const assignee = t.assignee?.name || '-'
+    const points = t.storyPoints ?? 1
+
+    lines.push(
+      `| ${key} | ${title} | ${t.type} | ${t.priority} | ${t.column.name} | ${sprint} | ${assignee} | ${points} |`,
+    )
+  }
+
+  lines.push('')
+  lines.push(`Total: ${tickets.length} ticket(s)`)
+
+  return lines.join('\n')
 }
 
 export function registerTicketTools(server: McpServer) {
@@ -62,28 +118,17 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(`Invalid ticket key format: ${key}. Expected format: PROJECT-123`)
       }
 
-      const project = await db.project.findUnique({
-        where: { key: parsed.projectKey },
-        select: { id: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${parsed.projectKey}`)
+      const result = await listTickets(parsed.projectKey)
+      if (result.error) {
+        return errorResponse(result.error)
       }
 
-      const ticket = await db.ticket.findFirst({
-        where: {
-          projectId: project.id,
-          number: parsed.number,
-        },
-        select: TICKET_SELECT,
-      })
-
+      const ticket = result.data?.find((t) => t.number === parsed.number)
       if (!ticket) {
         return errorResponse(`Ticket not found: ${key}`)
       }
 
-      return textResponse(formatTicket(ticket))
+      return textResponse(formatTicket(ticket, parsed.projectKey.toUpperCase()))
     },
   )
 
@@ -92,7 +137,7 @@ export function registerTicketTools(server: McpServer) {
     'list_tickets',
     'List tickets with optional filters',
     {
-      projectKey: z.string().optional().describe('Filter by project key (e.g., PUNT)'),
+      projectKey: z.string().describe('Project key (e.g., PUNT)'),
       column: z.string().optional().describe('Filter by column name (e.g., "In Progress")'),
       priority: z
         .enum(['lowest', 'low', 'medium', 'high', 'highest', 'critical'])
@@ -107,48 +152,36 @@ export function registerTicketTools(server: McpServer) {
       limit: z.number().min(1).max(100).default(20).describe('Max results to return'),
     },
     async ({ projectKey, column, priority, type, assignee, sprint, limit }) => {
-      // Build where clause
-      const where: Record<string, unknown> = {}
-
-      if (projectKey) {
-        const project = await db.project.findUnique({
-          where: { key: projectKey.toUpperCase() },
-          select: { id: true },
-        })
-        if (!project) {
-          return errorResponse(`Project not found: ${projectKey}`)
-        }
-        where.projectId = project.id
+      const result = await listTickets(projectKey)
+      if (result.error) {
+        return errorResponse(result.error)
       }
 
+      let tickets = result.data || []
+
+      // Apply filters
       if (column) {
-        where.column = { name: { contains: column } }
+        tickets = tickets.filter((t) => t.column.name.toLowerCase().includes(column.toLowerCase()))
       }
-
       if (priority) {
-        where.priority = priority
+        tickets = tickets.filter((t) => t.priority === priority)
       }
-
       if (type) {
-        where.type = type
+        tickets = tickets.filter((t) => t.type === type)
       }
-
       if (assignee) {
-        where.assignee = { name: { contains: assignee } }
+        tickets = tickets.filter((t) =>
+          t.assignee?.name.toLowerCase().includes(assignee.toLowerCase()),
+        )
       }
-
       if (sprint) {
-        where.sprint = { name: { contains: sprint } }
+        tickets = tickets.filter((t) => t.sprint?.name.toLowerCase().includes(sprint.toLowerCase()))
       }
 
-      const tickets = await db.ticket.findMany({
-        where,
-        select: TICKET_SELECT,
-        orderBy: [{ project: { key: 'asc' } }, { number: 'desc' }],
-        take: limit,
-      })
+      // Apply limit
+      tickets = tickets.slice(0, limit)
 
-      return textResponse(formatTicketList(tickets))
+      return textResponse(formatTicketList(tickets, projectKey.toUpperCase()))
     },
   )
 
@@ -176,7 +209,6 @@ export function registerTicketTools(server: McpServer) {
       dueDate: z.string().optional().describe('Due date (ISO format: YYYY-MM-DD)'),
       labels: z.array(z.string()).optional().describe('Label names to assign'),
       sprint: z.string().optional().describe('Sprint name to assign to'),
-      parent: z.string().optional().describe('Parent ticket key for subtasks'),
       environment: z.string().optional().describe('Environment (e.g., "Production")'),
       affectedVersion: z.string().optional().describe('Affected version'),
       fixVersion: z.string().optional().describe('Fix version'),
@@ -195,149 +227,110 @@ export function registerTicketTools(server: McpServer) {
       dueDate,
       labels,
       sprint,
-      parent,
       environment,
       affectedVersion,
       fixVersion,
     }) => {
-      // Find project
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: {
-          id: true,
-          key: true,
-          columns: { orderBy: { order: 'asc' }, take: 1, select: { id: true } },
-        },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // Get columns to find columnId
+      const columnsResult = await listColumns(projectKey)
+      if (columnsResult.error) {
+        return errorResponse(columnsResult.error)
       }
 
-      // Get column
+      const columns = columnsResult.data || []
+      if (columns.length === 0) {
+        return errorResponse('No columns found in project')
+      }
+
+      // Find column by name or use first
       let columnId: string
       if (column) {
-        const col = await db.column.findFirst({
-          where: {
-            projectId: project.id,
-            name: { contains: column },
-          },
-          select: { id: true },
-        })
+        const col = columns.find((c) => c.name.toLowerCase().includes(column.toLowerCase()))
         if (!col) {
           return errorResponse(`Column not found: ${column}`)
         }
         columnId = col.id
-      } else if (project.columns[0]) {
-        columnId = project.columns[0].id
       } else {
-        return errorResponse('No columns found in project')
+        columnId = columns[0].id
       }
 
-      // Get assignee if specified
-      let assigneeId: string | null = null
+      // Get assignee ID if specified
+      let assigneeId: string | undefined
       if (assignee) {
-        const user = await db.user.findFirst({
-          where: { name: { contains: assignee } },
-          select: { id: true },
-        })
+        const usersResult = await listUsers()
+        if (usersResult.error) {
+          return errorResponse(usersResult.error)
+        }
+        const user = usersResult.data?.find((u) =>
+          u.name.toLowerCase().includes(assignee.toLowerCase()),
+        )
         if (!user) {
           return errorResponse(`User not found: ${assignee}`)
         }
         assigneeId = user.id
       }
 
-      // Get sprint if specified
-      let sprintId: string | null = null
+      // Get sprint ID if specified
+      let sprintId: string | undefined
       if (sprint) {
-        const sp = await db.sprint.findFirst({
-          where: { projectId: project.id, name: { contains: sprint } },
-          select: { id: true },
-        })
+        const sprintsResult = await listSprints(projectKey)
+        if (sprintsResult.error) {
+          return errorResponse(sprintsResult.error)
+        }
+        const sp = sprintsResult.data?.find((s) =>
+          s.name.toLowerCase().includes(sprint.toLowerCase()),
+        )
         if (!sp) {
           return errorResponse(`Sprint not found: ${sprint}`)
         }
         sprintId = sp.id
       }
 
-      // Get parent ticket if specified
-      let parentId: string | null = null
-      if (parent) {
-        const parsed = parseTicketKey(parent)
-        if (!parsed) {
-          return errorResponse(`Invalid parent ticket key: ${parent}`)
-        }
-        const parentTicket = await db.ticket.findFirst({
-          where: { projectId: project.id, number: parsed.number },
-          select: { id: true },
-        })
-        if (!parentTicket) {
-          return errorResponse(`Parent ticket not found: ${parent}`)
-        }
-        parentId = parentTicket.id
-      }
-
       // Get label IDs if specified
-      let labelIds: string[] = []
+      let labelIds: string[] | undefined
       if (labels && labels.length > 0) {
-        const foundLabels = await db.label.findMany({
-          where: {
-            projectId: project.id,
-            name: { in: labels },
-          },
-          select: { id: true },
-        })
-        labelIds = foundLabels.map((l) => l.id)
-        if (labelIds.length !== labels.length) {
-          return errorResponse(`Some labels not found. Available labels in project needed.`)
+        const labelsResult = await listLabels(projectKey)
+        if (labelsResult.error) {
+          return errorResponse(labelsResult.error)
+        }
+        labelIds = []
+        for (const labelName of labels) {
+          const label = labelsResult.data?.find(
+            (l) => l.name.toLowerCase() === labelName.toLowerCase(),
+          )
+          if (!label) {
+            return errorResponse(`Label not found: ${labelName}`)
+          }
+          labelIds.push(label.id)
         }
       }
 
-      // Get next ticket number atomically
-      const ticket = await db.$transaction(async (tx) => {
-        const lastTicket = await tx.ticket.findFirst({
-          where: { projectId: project.id },
-          orderBy: { number: 'desc' },
-          select: { number: true },
-        })
-
-        const nextNumber = (lastTicket?.number ?? 0) + 1
-
-        // Get max order in column
-        const lastInColumn = await tx.ticket.findFirst({
-          where: { columnId },
-          orderBy: { order: 'desc' },
-          select: { order: true },
-        })
-
-        return tx.ticket.create({
-          data: {
-            number: nextNumber,
-            title,
-            description: description ?? null,
-            type,
-            priority,
-            order: (lastInColumn?.order ?? -1) + 1,
-            storyPoints: storyPoints ?? null,
-            estimate: estimate ?? null,
-            startDate: startDate ? new Date(startDate) : null,
-            dueDate: dueDate ? new Date(dueDate) : null,
-            environment: environment ?? null,
-            affectedVersion: affectedVersion ?? null,
-            fixVersion: fixVersion ?? null,
-            projectId: project.id,
-            columnId,
-            assigneeId,
-            sprintId,
-            parentId,
-            labels: labelIds.length > 0 ? { connect: labelIds.map((id) => ({ id })) } : undefined,
-          },
-          select: TICKET_SELECT,
-        })
+      const result = await createTicket(projectKey, {
+        title,
+        description: description || null,
+        type,
+        priority,
+        columnId,
+        assigneeId: assigneeId || null,
+        sprintId: sprintId || null,
+        storyPoints: storyPoints || null,
+        estimate: estimate || null,
+        startDate: startDate || null,
+        dueDate: dueDate || null,
+        environment: environment || null,
+        affectedVersion: affectedVersion || null,
+        fixVersion: fixVersion || null,
+        labelIds,
       })
 
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      const ticket = result.data!
+      const upperKey = projectKey.toUpperCase()
       return textResponse(
-        `Created ticket ${project.key}-${ticket.number}\n\n${formatTicket(ticket)}`,
+        `Created ticket ${upperKey}-${ticket.number}\n\n${formatTicket(ticket, upperKey)}`,
       )
     },
   )
@@ -357,22 +350,15 @@ export function registerTicketTools(server: McpServer) {
       type: z.enum(['epic', 'story', 'task', 'bug', 'subtask']).optional().describe('New type'),
       assignee: z.string().nullable().optional().describe('New assignee name (null to unassign)'),
       storyPoints: z.number().min(0).nullable().optional().describe('New story points'),
-      estimate: z.string().nullable().optional().describe('Time estimate (e.g., "2h", "1d")'),
-      startDate: z
-        .string()
-        .nullable()
-        .optional()
-        .describe('Start date (ISO: YYYY-MM-DD, null to clear)'),
-      dueDate: z
-        .string()
-        .nullable()
-        .optional()
-        .describe('Due date (ISO: YYYY-MM-DD, null to clear)'),
+      estimate: z.string().nullable().optional().describe('Time estimate'),
+      startDate: z.string().nullable().optional().describe('Start date (null to clear)'),
+      dueDate: z.string().nullable().optional().describe('Due date (null to clear)'),
       labels: z.array(z.string()).optional().describe('Label names (replaces existing)'),
+      column: z.string().optional().describe('Move to column'),
+      sprint: z.string().nullable().optional().describe('Sprint name (null for backlog)'),
       environment: z.string().nullable().optional().describe('Environment'),
       affectedVersion: z.string().nullable().optional().describe('Affected version'),
       fixVersion: z.string().nullable().optional().describe('Fix version'),
-      parent: z.string().nullable().optional().describe('Parent ticket key (null to remove)'),
     },
     async ({
       key,
@@ -386,103 +372,124 @@ export function registerTicketTools(server: McpServer) {
       startDate,
       dueDate,
       labels,
+      column,
+      sprint,
       environment,
       affectedVersion,
       fixVersion,
-      parent,
     }) => {
       const parsed = parseTicketKey(key)
       if (!parsed) {
         return errorResponse(`Invalid ticket key format: ${key}`)
       }
 
-      const project = await db.project.findUnique({
-        where: { key: parsed.projectKey },
-        select: { id: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${parsed.projectKey}`)
+      // Get the ticket to find its ID
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
       }
 
-      const existingTicket = await db.ticket.findFirst({
-        where: { projectId: project.id, number: parsed.number },
-        select: { id: true, labels: { select: { id: true } } },
-      })
-
+      const existingTicket = ticketsResult.data?.find((t) => t.number === parsed.number)
       if (!existingTicket) {
         return errorResponse(`Ticket not found: ${key}`)
       }
 
       // Build update data
-      const data: Record<string, unknown> = {}
-      if (title !== undefined) data.title = title
-      if (description !== undefined) data.description = description
-      if (priority !== undefined) data.priority = priority
-      if (type !== undefined) data.type = type
-      if (storyPoints !== undefined) data.storyPoints = storyPoints
-      if (estimate !== undefined) data.estimate = estimate
-      if (startDate !== undefined) data.startDate = startDate ? new Date(startDate) : null
-      if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null
-      if (environment !== undefined) data.environment = environment
-      if (affectedVersion !== undefined) data.affectedVersion = affectedVersion
-      if (fixVersion !== undefined) data.fixVersion = fixVersion
+      const updateData: Record<string, unknown> = {}
+
+      if (title !== undefined) updateData.title = title
+      if (description !== undefined) updateData.description = description
+      if (priority !== undefined) updateData.priority = priority
+      if (type !== undefined) updateData.type = type
+      if (storyPoints !== undefined) updateData.storyPoints = storyPoints
+      if (estimate !== undefined) updateData.estimate = estimate
+      if (startDate !== undefined) updateData.startDate = startDate
+      if (dueDate !== undefined) updateData.dueDate = dueDate
+      if (environment !== undefined) updateData.environment = environment
+      if (affectedVersion !== undefined) updateData.affectedVersion = affectedVersion
+      if (fixVersion !== undefined) updateData.fixVersion = fixVersion
+
+      // Handle column
+      if (column !== undefined) {
+        const columnsResult = await listColumns(parsed.projectKey)
+        if (columnsResult.error) {
+          return errorResponse(columnsResult.error)
+        }
+        const col = columnsResult.data?.find((c) =>
+          c.name.toLowerCase().includes(column.toLowerCase()),
+        )
+        if (!col) {
+          return errorResponse(`Column not found: ${column}`)
+        }
+        updateData.columnId = col.id
+      }
 
       // Handle assignee
       if (assignee !== undefined) {
         if (assignee === null) {
-          data.assigneeId = null
+          updateData.assigneeId = null
         } else {
-          const user = await db.user.findFirst({
-            where: { name: { contains: assignee } },
-            select: { id: true },
-          })
+          const usersResult = await listUsers()
+          if (usersResult.error) {
+            return errorResponse(usersResult.error)
+          }
+          const user = usersResult.data?.find((u) =>
+            u.name.toLowerCase().includes(assignee.toLowerCase()),
+          )
           if (!user) {
             return errorResponse(`User not found: ${assignee}`)
           }
-          data.assigneeId = user.id
+          updateData.assigneeId = user.id
         }
       }
 
-      // Handle parent
-      if (parent !== undefined) {
-        if (parent === null) {
-          data.parentId = null
+      // Handle sprint
+      if (sprint !== undefined) {
+        if (sprint === null) {
+          updateData.sprintId = null
         } else {
-          const parentParsed = parseTicketKey(parent)
-          if (!parentParsed) {
-            return errorResponse(`Invalid parent ticket key: ${parent}`)
+          const sprintsResult = await listSprints(parsed.projectKey)
+          if (sprintsResult.error) {
+            return errorResponse(sprintsResult.error)
           }
-          const parentTicket = await db.ticket.findFirst({
-            where: { projectId: project.id, number: parentParsed.number },
-            select: { id: true },
-          })
-          if (!parentTicket) {
-            return errorResponse(`Parent ticket not found: ${parent}`)
+          const sp = sprintsResult.data?.find((s) =>
+            s.name.toLowerCase().includes(sprint.toLowerCase()),
+          )
+          if (!sp) {
+            return errorResponse(`Sprint not found: ${sprint}`)
           }
-          data.parentId = parentTicket.id
+          updateData.sprintId = sp.id
         }
       }
 
-      // Handle labels - replace all
+      // Handle labels
       if (labels !== undefined) {
-        const foundLabels = await db.label.findMany({
-          where: { projectId: project.id, name: { in: labels } },
-          select: { id: true },
-        })
-        data.labels = {
-          disconnect: existingTicket.labels.map((l) => ({ id: l.id })),
-          connect: foundLabels.map((l) => ({ id: l.id })),
+        const labelsResult = await listLabels(parsed.projectKey)
+        if (labelsResult.error) {
+          return errorResponse(labelsResult.error)
         }
+        const labelIds: string[] = []
+        for (const labelName of labels) {
+          const label = labelsResult.data?.find(
+            (l) => l.name.toLowerCase() === labelName.toLowerCase(),
+          )
+          if (!label) {
+            return errorResponse(`Label not found: ${labelName}`)
+          }
+          labelIds.push(label.id)
+        }
+        updateData.labelIds = labelIds
       }
 
-      const ticket = await db.ticket.update({
-        where: { id: existingTicket.id },
-        data,
-        select: TICKET_SELECT,
-      })
+      const result = await updateTicket(parsed.projectKey, existingTicket.id, updateData)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
-      return textResponse(`Updated ticket ${key}\n\n${formatTicket(ticket)}`)
+      const ticket = result.data!
+      return textResponse(
+        `Updated ticket ${key}\n\n${formatTicket(ticket, parsed.projectKey.toUpperCase())}`,
+      )
     },
   )
 
@@ -505,84 +512,70 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(`Invalid ticket key format: ${key}`)
       }
 
-      const project = await db.project.findUnique({
-        where: { key: parsed.projectKey },
-        select: { id: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${parsed.projectKey}`)
+      // Get the ticket to find its ID
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
       }
 
-      const existingTicket = await db.ticket.findFirst({
-        where: { projectId: project.id, number: parsed.number },
-        select: { id: true },
-      })
-
+      const existingTicket = ticketsResult.data?.find((t) => t.number === parsed.number)
       if (!existingTicket) {
         return errorResponse(`Ticket not found: ${key}`)
       }
 
-      const data: Record<string, unknown> = {}
+      const updateData: Record<string, unknown> = {}
       const changes: string[] = []
 
       // Handle column move
       if (column) {
-        const col = await db.column.findFirst({
-          where: {
-            projectId: project.id,
-            name: { contains: column },
-          },
-          select: { id: true, name: true },
-        })
+        const columnsResult = await listColumns(parsed.projectKey)
+        if (columnsResult.error) {
+          return errorResponse(columnsResult.error)
+        }
+        const col = columnsResult.data?.find((c) =>
+          c.name.toLowerCase().includes(column.toLowerCase()),
+        )
         if (!col) {
           return errorResponse(`Column not found: ${column}`)
         }
-
-        // Get order at end of target column
-        const lastInColumn = await db.ticket.findFirst({
-          where: { columnId: col.id },
-          orderBy: { order: 'desc' },
-          select: { order: true },
-        })
-
-        data.columnId = col.id
-        data.order = (lastInColumn?.order ?? -1) + 1
+        updateData.columnId = col.id
         changes.push(`column → ${col.name}`)
       }
 
       // Handle sprint move
       if (sprint !== undefined) {
         if (sprint === null) {
-          data.sprintId = null
+          updateData.sprintId = null
           changes.push('sprint → backlog')
         } else {
-          const sp = await db.sprint.findFirst({
-            where: {
-              projectId: project.id,
-              name: { contains: sprint },
-            },
-            select: { id: true, name: true },
-          })
+          const sprintsResult = await listSprints(parsed.projectKey)
+          if (sprintsResult.error) {
+            return errorResponse(sprintsResult.error)
+          }
+          const sp = sprintsResult.data?.find((s) =>
+            s.name.toLowerCase().includes(sprint.toLowerCase()),
+          )
           if (!sp) {
             return errorResponse(`Sprint not found: ${sprint}`)
           }
-          data.sprintId = sp.id
+          updateData.sprintId = sp.id
           changes.push(`sprint → ${sp.name}`)
         }
       }
 
-      if (Object.keys(data).length === 0) {
+      if (Object.keys(updateData).length === 0) {
         return errorResponse('No changes specified. Provide column or sprint.')
       }
 
-      const ticket = await db.ticket.update({
-        where: { id: existingTicket.id },
-        data,
-        select: TICKET_SELECT,
-      })
+      const result = await updateTicket(parsed.projectKey, existingTicket.id, updateData)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
-      return textResponse(`Moved ${key}: ${changes.join(', ')}\n\n${formatTicket(ticket)}`)
+      const ticket = result.data!
+      return textResponse(
+        `Moved ${key}: ${changes.join(', ')}\n\n${formatTicket(ticket, parsed.projectKey.toUpperCase())}`,
+      )
     },
   )
 
@@ -599,37 +592,23 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(`Invalid ticket key format: ${key}`)
       }
 
-      const project = await db.project.findUnique({
-        where: { key: parsed.projectKey },
-        select: { id: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${parsed.projectKey}`)
+      // Get the ticket to find its ID and title
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
       }
 
-      const ticket = await db.ticket.findFirst({
-        where: { projectId: project.id, number: parsed.number },
-        select: { id: true, title: true },
-      })
-
-      if (!ticket) {
+      const existingTicket = ticketsResult.data?.find((t) => t.number === parsed.number)
+      if (!existingTicket) {
         return errorResponse(`Ticket not found: ${key}`)
       }
 
-      // Delete related records first
-      await db.ticketWatcher.deleteMany({ where: { ticketId: ticket.id } })
-      await db.comment.deleteMany({ where: { ticketId: ticket.id } })
-      await db.attachment.deleteMany({ where: { ticketId: ticket.id } })
-      await db.ticketEdit.deleteMany({ where: { ticketId: ticket.id } })
-      await db.ticketLink.deleteMany({
-        where: { OR: [{ fromTicketId: ticket.id }, { toTicketId: ticket.id }] },
-      })
-      await db.ticketSprintHistory.deleteMany({ where: { ticketId: ticket.id } })
+      const result = await deleteTicket(parsed.projectKey, existingTicket.id)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
-      await db.ticket.delete({ where: { id: ticket.id } })
-
-      return textResponse(`Deleted ${key}: ${ticket.title}`)
+      return textResponse(`Deleted ${key}: ${existingTicket.title}`)
     },
   )
 }

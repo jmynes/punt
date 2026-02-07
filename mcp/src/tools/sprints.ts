@@ -1,7 +1,94 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { db } from '../db.js'
-import { errorResponse, formatSprint, formatSprintList, textResponse } from '../utils.js'
+import {
+  completeSprint,
+  createSprint,
+  deleteSprint,
+  getSprint,
+  listSprints,
+  type SprintData,
+  startSprint,
+  updateSprint,
+} from '../api-client.js'
+import { errorResponse, textResponse } from '../utils.js'
+
+/**
+ * Format a sprint for display
+ */
+function formatSprint(sprint: SprintData, projectKey?: string): string {
+  const lines: string[] = []
+
+  lines.push(`# ${sprint.name}`)
+  lines.push('')
+  lines.push('| Field | Value |')
+  lines.push('|-------|-------|')
+  lines.push(`| Status | ${sprint.status} |`)
+
+  if (sprint.goal) {
+    lines.push(`| Goal | ${sprint.goal} |`)
+  }
+
+  if (sprint.startDate) {
+    lines.push(`| Start | ${new Date(sprint.startDate).toISOString().split('T')[0]} |`)
+  }
+
+  if (sprint.endDate) {
+    lines.push(`| End | ${new Date(sprint.endDate).toISOString().split('T')[0]} |`)
+  }
+
+  if (sprint.budget !== null) {
+    lines.push(`| Capacity | ${sprint.budget} points |`)
+  }
+
+  if (sprint.tickets && sprint.tickets.length > 0) {
+    lines.push('')
+    lines.push('## Tickets')
+    lines.push('')
+    lines.push('| Key | Title | Type | Priority | Status | Assignee | Points |')
+    lines.push('|-----|-------|------|----------|--------|----------|--------|')
+
+    for (const t of sprint.tickets) {
+      const key = projectKey ? `${projectKey}-${t.number}` : `#${t.number}`
+      const title = t.title.length > 35 ? `${t.title.slice(0, 35)}...` : t.title
+      const assignee = t.assignee?.name || '-'
+      const points = t.storyPoints ?? 1
+
+      lines.push(
+        `| ${key} | ${title} | ${t.type} | ${t.priority} | ${t.column.name} | ${assignee} | ${points} |`,
+      )
+    }
+
+    lines.push('')
+    lines.push(`Total: ${sprint.tickets.length} ticket(s)`)
+  }
+
+  return lines.join('\n')
+}
+
+/**
+ * Format a list of sprints for display
+ */
+function formatSprintList(sprints: SprintData[]): string {
+  if (sprints.length === 0) {
+    return 'No sprints found.'
+  }
+
+  const lines: string[] = []
+  lines.push('| Name | Status | Goal | Start | End |')
+  lines.push('|------|--------|------|-------|-----|')
+
+  for (const s of sprints) {
+    const goal = s.goal || '-'
+    const start = s.startDate ? new Date(s.startDate).toISOString().split('T')[0] : '-'
+    const end = s.endDate ? new Date(s.endDate).toISOString().split('T')[0] : '-'
+    lines.push(`| ${s.name} | ${s.status} | ${goal} | ${start} | ${end} |`)
+  }
+
+  lines.push('')
+  lines.push(`Total: ${sprints.length} sprint(s)`)
+
+  return lines.join('\n')
+}
 
 export function registerSprintTools(server: McpServer) {
   // list_sprints - List sprints for a project
@@ -13,34 +100,17 @@ export function registerSprintTools(server: McpServer) {
       status: z.enum(['planning', 'active', 'completed']).optional().describe('Filter by status'),
     },
     async ({ projectKey, status }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: { id: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      const result = await listSprints(projectKey)
+      if (result.error) {
+        return errorResponse(result.error)
       }
 
-      const where: Record<string, unknown> = { projectId: project.id }
+      let sprints = result.data || []
+
+      // Filter by status if specified
       if (status) {
-        where.status = status
+        sprints = sprints.filter((s) => s.status === status)
       }
-
-      const sprints = await db.sprint.findMany({
-        where,
-        select: {
-          id: true,
-          name: true,
-          status: true,
-          goal: true,
-          startDate: true,
-          endDate: true,
-          budget: true,
-          _count: { select: { tickets: true } },
-        },
-        orderBy: [{ status: 'asc' }, { startDate: 'desc' }, { name: 'asc' }],
-      })
 
       return textResponse(formatSprintList(sprints))
     },
@@ -55,53 +125,27 @@ export function registerSprintTools(server: McpServer) {
       sprintName: z.string().describe('Sprint name'),
     },
     async ({ projectKey, sprintName }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: { id: true, key: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // First list sprints to find the sprint by name
+      const listResult = await listSprints(projectKey)
+      if (listResult.error) {
+        return errorResponse(listResult.error)
       }
 
-      const sprint = await db.sprint.findFirst({
-        where: {
-          projectId: project.id,
-          name: { contains: sprintName },
-        },
-        select: {
-          id: true,
-          name: true,
-          status: true,
-          goal: true,
-          startDate: true,
-          endDate: true,
-          budget: true,
-          completedTicketCount: true,
-          incompleteTicketCount: true,
-          completedStoryPoints: true,
-          incompleteStoryPoints: true,
-          tickets: {
-            select: {
-              id: true,
-              number: true,
-              title: true,
-              type: true,
-              priority: true,
-              storyPoints: true,
-              column: { select: { name: true } },
-              assignee: { select: { name: true } },
-            },
-            orderBy: [{ column: { order: 'asc' } }, { order: 'asc' }],
-          },
-        },
-      })
+      const sprint = listResult.data?.find((s) =>
+        s.name.toLowerCase().includes(sprintName.toLowerCase()),
+      )
 
       if (!sprint) {
         return errorResponse(`Sprint not found: ${sprintName}`)
       }
 
-      return textResponse(formatSprint({ ...sprint, project }))
+      // Get full sprint details
+      const result = await getSprint(projectKey, sprint.id)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      return textResponse(formatSprint(result.data!, projectKey.toUpperCase()))
     },
   )
 
@@ -118,48 +162,20 @@ export function registerSprintTools(server: McpServer) {
       budget: z.number().min(0).optional().describe('Story points capacity'),
     },
     async ({ projectKey, name, goal, startDate, endDate, budget }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: { id: true, key: true },
+      const result = await createSprint(projectKey, {
+        name,
+        goal: goal || null,
+        startDate: startDate || null,
+        endDate: endDate || null,
+        budget: budget || null,
       })
 
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      if (result.error) {
+        return errorResponse(result.error)
       }
 
-      // Check for duplicate name
-      const existing = await db.sprint.findFirst({
-        where: { projectId: project.id, name },
-        select: { id: true },
-      })
-      if (existing) {
-        return errorResponse(`Sprint already exists: ${name}`)
-      }
-
-      const sprint = await db.sprint.create({
-        data: {
-          name,
-          goal: goal || null,
-          startDate: startDate ? new Date(startDate) : null,
-          endDate: endDate ? new Date(endDate) : null,
-          budget: budget || null,
-          status: 'planning',
-          projectId: project.id,
-        },
-        select: {
-          id: true,
-          name: true,
-          status: true,
-          goal: true,
-          startDate: true,
-          endDate: true,
-          budget: true,
-        },
-      })
-
-      return textResponse(
-        `Created sprint "${sprint.name}"\n\n${formatSprint({ ...sprint, project, tickets: [] })}`,
-      )
+      const sprint = result.data!
+      return textResponse(`Created sprint "${sprint.name}"\n\n${formatSprint(sprint)}`)
     },
   )
 
@@ -177,52 +193,38 @@ export function registerSprintTools(server: McpServer) {
       budget: z.number().min(0).nullable().optional().describe('New capacity'),
     },
     async ({ projectKey, sprintName, name, goal, startDate, endDate, budget }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: { id: true, key: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // Find sprint by name
+      const listResult = await listSprints(projectKey)
+      if (listResult.error) {
+        return errorResponse(listResult.error)
       }
 
-      const sprint = await db.sprint.findFirst({
-        where: { projectId: project.id, name: { contains: sprintName } },
-        select: { id: true },
-      })
+      const sprint = listResult.data?.find((s) =>
+        s.name.toLowerCase().includes(sprintName.toLowerCase()),
+      )
 
       if (!sprint) {
         return errorResponse(`Sprint not found: ${sprintName}`)
       }
 
-      const data: Record<string, unknown> = {}
-      if (name !== undefined) data.name = name
-      if (goal !== undefined) data.goal = goal
-      if (startDate !== undefined) data.startDate = startDate ? new Date(startDate) : null
-      if (endDate !== undefined) data.endDate = endDate ? new Date(endDate) : null
-      if (budget !== undefined) data.budget = budget
+      const updateData: Record<string, unknown> = {}
+      if (name !== undefined) updateData.name = name
+      if (goal !== undefined) updateData.goal = goal
+      if (startDate !== undefined) updateData.startDate = startDate
+      if (endDate !== undefined) updateData.endDate = endDate
+      if (budget !== undefined) updateData.budget = budget
 
-      if (Object.keys(data).length === 0) {
+      if (Object.keys(updateData).length === 0) {
         return errorResponse('No changes specified')
       }
 
-      const updated = await db.sprint.update({
-        where: { id: sprint.id },
-        data,
-        select: {
-          id: true,
-          name: true,
-          status: true,
-          goal: true,
-          startDate: true,
-          endDate: true,
-          budget: true,
-        },
-      })
+      const result = await updateSprint(projectKey, sprint.id, updateData)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
-      return textResponse(
-        `Updated sprint "${updated.name}"\n\n${formatSprint({ ...updated, project, tickets: [] })}`,
-      )
+      const updated = result.data!
+      return textResponse(`Updated sprint "${updated.name}"\n\n${formatSprint(updated)}`)
     },
   )
 
@@ -237,19 +239,15 @@ export function registerSprintTools(server: McpServer) {
       endDate: z.string().optional().describe('End date'),
     },
     async ({ projectKey, sprintName, startDate, endDate }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: { id: true, key: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // Find sprint by name
+      const listResult = await listSprints(projectKey)
+      if (listResult.error) {
+        return errorResponse(listResult.error)
       }
 
-      const sprint = await db.sprint.findFirst({
-        where: { projectId: project.id, name: { contains: sprintName } },
-        select: { id: true, status: true, name: true },
-      })
+      const sprint = listResult.data?.find((s) =>
+        s.name.toLowerCase().includes(sprintName.toLowerCase()),
+      )
 
       if (!sprint) {
         return errorResponse(`Sprint not found: ${sprintName}`)
@@ -259,37 +257,15 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(`Sprint "${sprint.name}" is already ${sprint.status}`)
       }
 
-      // Check for existing active sprint
-      const activeSprint = await db.sprint.findFirst({
-        where: { projectId: project.id, status: 'active' },
-        select: { name: true },
-      })
-
-      if (activeSprint) {
-        return errorResponse(`Cannot start sprint: "${activeSprint.name}" is already active`)
+      const result = await startSprint(projectKey, sprint.id, { startDate, endDate })
+      if (result.error) {
+        return errorResponse(result.error)
       }
 
-      const updated = await db.sprint.update({
-        where: { id: sprint.id },
-        data: {
-          status: 'active',
-          startDate: startDate ? new Date(startDate) : new Date(),
-          endDate: endDate ? new Date(endDate) : undefined,
-        },
-        select: {
-          id: true,
-          name: true,
-          status: true,
-          goal: true,
-          startDate: true,
-          endDate: true,
-          budget: true,
-          _count: { select: { tickets: true } },
-        },
-      })
-
+      const started = result.data!
+      const ticketCount = started.tickets?.length || 0
       return textResponse(
-        `Started sprint "${updated.name}" with ${updated._count.tickets} tickets\n\n${formatSprint({ ...updated, project, tickets: [] })}`,
+        `Started sprint "${started.name}" with ${ticketCount} tickets\n\n${formatSprint(started)}`,
       )
     },
   )
@@ -307,30 +283,15 @@ export function registerSprintTools(server: McpServer) {
         .describe('Where to move incomplete tickets'),
     },
     async ({ projectKey, sprintName, moveIncompleteTo }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: {
-          id: true,
-          key: true,
-          sprintSettings: { select: { doneColumnIds: true } },
-        },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // Find sprint by name
+      const listResult = await listSprints(projectKey)
+      if (listResult.error) {
+        return errorResponse(listResult.error)
       }
 
-      const sprint = await db.sprint.findFirst({
-        where: { projectId: project.id, name: { contains: sprintName } },
-        select: {
-          id: true,
-          status: true,
-          name: true,
-          tickets: {
-            select: { id: true, columnId: true, storyPoints: true },
-          },
-        },
-      })
+      const sprint = listResult.data?.find((s) =>
+        s.name.toLowerCase().includes(sprintName.toLowerCase()),
+      )
 
       if (!sprint) {
         return errorResponse(`Sprint not found: ${sprintName}`)
@@ -340,66 +301,14 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(`Sprint "${sprint.name}" is not active (status: ${sprint.status})`)
       }
 
-      // Parse done column IDs
-      const doneColumnIds: string[] = project.sprintSettings?.doneColumnIds
-        ? JSON.parse(project.sprintSettings.doneColumnIds as string)
-        : []
-
-      // Separate completed and incomplete tickets
-      const completedTickets = sprint.tickets.filter((t) => doneColumnIds.includes(t.columnId))
-      const incompleteTickets = sprint.tickets.filter((t) => !doneColumnIds.includes(t.columnId))
-
-      // Calculate metrics
-      const completedCount = completedTickets.length
-      const incompleteCount = incompleteTickets.length
-      const completedPoints = completedTickets.reduce((sum, t) => sum + (t.storyPoints || 0), 0)
-      const incompletePoints = incompleteTickets.reduce((sum, t) => sum + (t.storyPoints || 0), 0)
-
-      // Find next sprint if needed
-      let nextSprintId: string | null = null
-      if (moveIncompleteTo === 'next' && incompleteTickets.length > 0) {
-        const nextSprint = await db.sprint.findFirst({
-          where: { projectId: project.id, status: 'planning' },
-          orderBy: { createdAt: 'asc' },
-          select: { id: true },
-        })
-        nextSprintId = nextSprint?.id || null
+      const result = await completeSprint(projectKey, sprint.id, { moveIncompleteTo })
+      if (result.error) {
+        return errorResponse(result.error)
       }
 
-      // Update sprint and tickets
-      await db.$transaction(async (tx) => {
-        // Complete the sprint
-        await tx.sprint.update({
-          where: { id: sprint.id },
-          data: {
-            status: 'completed',
-            completedAt: new Date(),
-            completedTicketCount: completedCount,
-            incompleteTicketCount: incompleteCount,
-            completedStoryPoints: completedPoints,
-            incompleteStoryPoints: incompletePoints,
-          },
-        })
-
-        // Move incomplete tickets
-        if (incompleteTickets.length > 0) {
-          await tx.ticket.updateMany({
-            where: { id: { in: incompleteTickets.map((t) => t.id) } },
-            data: {
-              sprintId: nextSprintId,
-              isCarriedOver: nextSprintId !== null,
-              carriedFromSprintId: nextSprintId !== null ? sprint.id : null,
-            },
-          })
-        }
-      })
-
-      const destination = moveIncompleteTo === 'next' && nextSprintId ? 'next sprint' : 'backlog'
-
+      const destination = moveIncompleteTo === 'next' ? 'next sprint' : 'backlog'
       return textResponse(
-        `Completed sprint "${sprint.name}"\n\n` +
-          `- Completed: ${completedCount} tickets (${completedPoints} points)\n` +
-          `- Incomplete: ${incompleteCount} tickets (${incompletePoints} points) → ${destination}`,
+        `Completed sprint "${sprint.name}"\n\nIncomplete tickets moved to ${destination}`,
       )
     },
   )
@@ -418,42 +327,28 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse('Set confirm=true to delete the sprint')
       }
 
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: { id: true },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // Find sprint by name
+      const listResult = await listSprints(projectKey)
+      if (listResult.error) {
+        return errorResponse(listResult.error)
       }
 
-      const sprint = await db.sprint.findFirst({
-        where: { projectId: project.id, name: { contains: sprintName } },
-        select: { id: true, name: true, _count: { select: { tickets: true } } },
-      })
+      const sprint = listResult.data?.find((s) =>
+        s.name.toLowerCase().includes(sprintName.toLowerCase()),
+      )
 
       if (!sprint) {
         return errorResponse(`Sprint not found: ${sprintName}`)
       }
 
-      await db.$transaction(async (tx) => {
-        // Move tickets to backlog
-        await tx.ticket.updateMany({
-          where: { sprintId: sprint.id },
-          data: { sprintId: null },
-        })
+      const result = await deleteSprint(projectKey, sprint.id)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
-        // Delete sprint history
-        await tx.ticketSprintHistory.deleteMany({
-          where: { sprintId: sprint.id },
-        })
-
-        // Delete the sprint
-        await tx.sprint.delete({ where: { id: sprint.id } })
-      })
-
+      const ticketCount = sprint.tickets?.length || 0
       return textResponse(
-        `Deleted sprint "${sprint.name}" (${sprint._count.tickets} tickets moved to backlog)`,
+        `Deleted sprint "${sprint.name}" (${ticketCount} tickets moved to backlog)`,
       )
     },
   )

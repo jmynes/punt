@@ -1,29 +1,80 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { db } from '../db.js'
-import { errorResponse, formatProject, formatProjectList, textResponse } from '../utils.js'
+import {
+  createProject,
+  deleteProject,
+  getProject,
+  listProjects,
+  type ProjectData,
+  updateProject,
+} from '../api-client.js'
+import { errorResponse, textResponse } from '../utils.js'
 
-// Default columns for new projects
-const DEFAULT_COLUMNS = ['To Do', 'In Progress', 'In Review', 'Done']
+/**
+ * Format a project for display
+ */
+function formatProject(project: ProjectData): string {
+  const lines: string[] = []
+  lines.push(`# ${project.key}: ${project.name}`)
+  lines.push('')
+  if (project.description) {
+    lines.push(project.description)
+    lines.push('')
+  }
+  lines.push('| Field | Value |')
+  lines.push('|-------|-------|')
+  lines.push(`| Color | ${project.color} |`)
+  if (project._count) {
+    lines.push(`| Tickets | ${project._count.tickets} |`)
+    lines.push(`| Members | ${project._count.members} |`)
+  }
 
-// Default colors for projects
-const PROJECT_COLORS = [
-  '#ef4444',
-  '#f97316',
-  '#f59e0b',
-  '#eab308',
-  '#84cc16',
-  '#22c55e',
-  '#14b8a6',
-  '#06b6d4',
-  '#0ea5e9',
-  '#3b82f6',
-  '#6366f1',
-  '#8b5cf6',
-  '#a855f7',
-  '#d946ef',
-  '#ec4899',
-]
+  if (project.columns && project.columns.length > 0) {
+    lines.push('')
+    lines.push('## Columns')
+    lines.push('')
+    for (const col of project.columns) {
+      lines.push(`${col.order + 1}. ${col.name}`)
+    }
+  }
+
+  if (project.members && project.members.length > 0) {
+    lines.push('')
+    lines.push('## Members')
+    lines.push('')
+    lines.push('| Name | Role |')
+    lines.push('|------|------|')
+    for (const m of project.members) {
+      lines.push(`| ${m.user.name} | ${m.role.name} |`)
+    }
+  }
+
+  return lines.join('\n')
+}
+
+/**
+ * Format a list of projects for display
+ */
+function formatProjectList(projects: ProjectData[]): string {
+  if (projects.length === 0) {
+    return 'No projects found.'
+  }
+
+  const lines: string[] = []
+  lines.push('| Key | Name | Tickets | Members |')
+  lines.push('|-----|------|---------|---------|')
+
+  for (const p of projects) {
+    const tickets = p._count?.tickets ?? 0
+    const members = p._count?.members ?? 0
+    lines.push(`| ${p.key} | ${p.name} | ${tickets} | ${members} |`)
+  }
+
+  lines.push('')
+  lines.push(`Total: ${projects.length} project(s)`)
+
+  return lines.join('\n')
+}
 
 export function registerProjectTools(server: McpServer) {
   // list_projects - List all projects
@@ -34,21 +85,12 @@ export function registerProjectTools(server: McpServer) {
       limit: z.number().min(1).max(100).default(20).describe('Max results to return'),
     },
     async ({ limit }) => {
-      const projects = await db.project.findMany({
-        select: {
-          id: true,
-          key: true,
-          name: true,
-          description: true,
-          color: true,
-          _count: {
-            select: { tickets: true, members: true },
-          },
-        },
-        orderBy: { name: 'asc' },
-        take: limit,
-      })
+      const result = await listProjects()
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
+      const projects = (result.data || []).slice(0, limit)
       return textResponse(formatProjectList(projects))
     },
   )
@@ -61,69 +103,12 @@ export function registerProjectTools(server: McpServer) {
       key: z.string().describe('Project key (e.g., PUNT)'),
     },
     async ({ key }) => {
-      const project = await db.project.findUnique({
-        where: { key: key.toUpperCase() },
-        select: {
-          id: true,
-          key: true,
-          name: true,
-          description: true,
-          color: true,
-          columns: {
-            select: { id: true, name: true, order: true },
-            orderBy: { order: 'asc' },
-          },
-          members: {
-            select: {
-              user: { select: { id: true, name: true, email: true } },
-              role: { select: { name: true } },
-            },
-          },
-          _count: {
-            select: { tickets: true, members: true },
-          },
-        },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${key}`)
+      const result = await getProject(key)
+      if (result.error) {
+        return errorResponse(result.error)
       }
 
-      // Format with members
-      const lines: string[] = []
-      lines.push(`# ${project.key}: ${project.name}`)
-      lines.push('')
-      if (project.description) {
-        lines.push(project.description)
-        lines.push('')
-      }
-      lines.push('| Field | Value |')
-      lines.push('|-------|-------|')
-      lines.push(`| Color | ${project.color} |`)
-      lines.push(`| Tickets | ${project._count.tickets} |`)
-      lines.push(`| Members | ${project._count.members} |`)
-
-      if (project.columns.length > 0) {
-        lines.push('')
-        lines.push('## Columns')
-        lines.push('')
-        for (const col of project.columns) {
-          lines.push(`${col.order + 1}. ${col.name}`)
-        }
-      }
-
-      if (project.members.length > 0) {
-        lines.push('')
-        lines.push('## Members')
-        lines.push('')
-        lines.push('| Name | Role |')
-        lines.push('|------|------|')
-        for (const m of project.members) {
-          lines.push(`| ${m.user.name} | ${m.role.name} |`)
-        }
-      }
-
-      return textResponse(lines.join('\n'))
+      return textResponse(formatProject(result.data!))
     },
   )
 
@@ -138,56 +123,18 @@ export function registerProjectTools(server: McpServer) {
       color: z.string().optional().describe('Project color (hex, e.g., #3b82f6)'),
     },
     async ({ name, key, description, color }) => {
-      const projectKey = key.toUpperCase()
-
-      // Validate key format
-      if (!/^[A-Z][A-Z0-9]*$/.test(projectKey)) {
-        return errorResponse(
-          'Project key must start with a letter and contain only letters/numbers',
-        )
-      }
-
-      // Check if key already exists
-      const existing = await db.project.findUnique({
-        where: { key: projectKey },
-        select: { id: true },
-      })
-      if (existing) {
-        return errorResponse(`Project key already exists: ${projectKey}`)
-      }
-
-      // Pick a random color if not specified
-      const projectColor =
-        color || PROJECT_COLORS[Math.floor(Math.random() * PROJECT_COLORS.length)]
-
-      // Create project with default columns
-      const project = await db.project.create({
-        data: {
-          name,
-          key: projectKey,
-          description: description || null,
-          color: projectColor,
-          columns: {
-            create: DEFAULT_COLUMNS.map((colName, index) => ({
-              name: colName,
-              order: index,
-            })),
-          },
-        },
-        select: {
-          id: true,
-          key: true,
-          name: true,
-          description: true,
-          color: true,
-          columns: {
-            select: { name: true, order: true },
-            orderBy: { order: 'asc' },
-          },
-          _count: { select: { tickets: true, members: true } },
-        },
+      const result = await createProject({
+        name,
+        key: key.toUpperCase(),
+        description,
+        color,
       })
 
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      const project = result.data!
       return textResponse(`Created project ${project.key}\n\n${formatProject(project)}`)
     },
   )
@@ -203,42 +150,22 @@ export function registerProjectTools(server: McpServer) {
       color: z.string().optional().describe('New color (hex)'),
     },
     async ({ key, name, description, color }) => {
-      const project = await db.project.findUnique({
-        where: { key: key.toUpperCase() },
-        select: { id: true },
-      })
+      const updateData: Record<string, unknown> = {}
+      if (name !== undefined) updateData.name = name
+      if (description !== undefined) updateData.description = description
+      if (color !== undefined) updateData.color = color
 
-      if (!project) {
-        return errorResponse(`Project not found: ${key}`)
-      }
-
-      const data: Record<string, unknown> = {}
-      if (name !== undefined) data.name = name
-      if (description !== undefined) data.description = description
-      if (color !== undefined) data.color = color
-
-      if (Object.keys(data).length === 0) {
+      if (Object.keys(updateData).length === 0) {
         return errorResponse('No changes specified')
       }
 
-      const updated = await db.project.update({
-        where: { id: project.id },
-        data,
-        select: {
-          id: true,
-          key: true,
-          name: true,
-          description: true,
-          color: true,
-          columns: {
-            select: { name: true, order: true },
-            orderBy: { order: 'asc' },
-          },
-          _count: { select: { tickets: true, members: true } },
-        },
-      })
+      const result = await updateProject(key, updateData)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
-      return textResponse(`Updated project ${updated.key}\n\n${formatProject(updated)}`)
+      const project = result.data!
+      return textResponse(`Updated project ${project.key}\n\n${formatProject(project)}`)
     },
   )
 
@@ -255,70 +182,20 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse('Set confirm=true to delete the project')
       }
 
-      const project = await db.project.findUnique({
-        where: { key: key.toUpperCase() },
-        select: { id: true, name: true, _count: { select: { tickets: true } } },
-      })
-
-      if (!project) {
-        return errorResponse(`Project not found: ${key}`)
+      // Get project info first for the response
+      const projectResult = await getProject(key)
+      if (projectResult.error) {
+        return errorResponse(projectResult.error)
       }
 
-      // Delete in order due to foreign key constraints
-      await db.$transaction(async (tx) => {
-        // Delete ticket-related data
-        await tx.ticketWatcher.deleteMany({
-          where: { ticket: { projectId: project.id } },
-        })
-        await tx.comment.deleteMany({
-          where: { ticket: { projectId: project.id } },
-        })
-        await tx.attachment.deleteMany({
-          where: { ticket: { projectId: project.id } },
-        })
-        await tx.ticketEdit.deleteMany({
-          where: { ticket: { projectId: project.id } },
-        })
-        await tx.ticketLink.deleteMany({
-          where: {
-            OR: [
-              { fromTicket: { projectId: project.id } },
-              { toTicket: { projectId: project.id } },
-            ],
-          },
-        })
-        await tx.ticketSprintHistory.deleteMany({
-          where: { ticket: { projectId: project.id } },
-        })
-
-        // Delete tickets
-        await tx.ticket.deleteMany({ where: { projectId: project.id } })
-
-        // Delete sprints
-        await tx.sprint.deleteMany({ where: { projectId: project.id } })
-
-        // Delete labels
-        await tx.label.deleteMany({ where: { projectId: project.id } })
-
-        // Delete columns
-        await tx.column.deleteMany({ where: { projectId: project.id } })
-
-        // Delete members and roles
-        await tx.projectMember.deleteMany({ where: { projectId: project.id } })
-        await tx.role.deleteMany({ where: { projectId: project.id } })
-
-        // Delete sprint settings
-        await tx.projectSprintSettings.deleteMany({ where: { projectId: project.id } })
-
-        // Delete invitations
-        await tx.invitation.deleteMany({ where: { projectId: project.id } })
-
-        // Finally delete the project
-        await tx.project.delete({ where: { id: project.id } })
-      })
+      const project = projectResult.data!
+      const result = await deleteProject(key)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
       return textResponse(
-        `Deleted project ${key}: ${project.name} (${project._count.tickets} tickets removed)`,
+        `Deleted project ${key}: ${project.name} (${project._count?.tickets || 0} tickets removed)`,
       )
     },
   )
