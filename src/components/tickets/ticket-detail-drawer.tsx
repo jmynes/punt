@@ -97,6 +97,7 @@ import { DatePicker } from './date-picker'
 import { DescriptionEditor } from './description-editor'
 import { FileUpload } from './file-upload'
 import { LabelSelect } from './label-select'
+import { MarkdownViewer } from './markdown-viewer'
 import { ParentSelect } from './parent-select'
 import { UserSelect } from './user-select'
 
@@ -1066,11 +1067,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 ) : (
                   <button
                     type="button"
-                    className="w-full text-left rounded-md bg-zinc-900/50 p-4 text-sm text-zinc-300 whitespace-pre-wrap cursor-pointer hover:bg-amber-500/15 min-h-[60px]"
+                    className="w-full text-left rounded-md bg-zinc-900/50 p-4 cursor-pointer hover:bg-amber-500/15 min-h-[60px]"
                     onClick={() => startEditing('description')}
                   >
-                    {ticket.description || (
-                      <span className="text-zinc-500 italic">No description provided</span>
+                    {ticket.description ? (
+                      <MarkdownViewer markdown={ticket.description} />
+                    ) : (
+                      <span className="text-zinc-500 italic text-sm">No description provided</span>
                     )}
                   </button>
                 )}
