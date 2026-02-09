@@ -203,28 +203,34 @@ export function useAddMember(projectId: string) {
  * Fetch available users (not in the project)
  */
 export function useAvailableUsers(projectId: string, search = '') {
-  return useQuery<Array<{ id: string; name: string; email: string | null; avatar: string | null }>>(
-    {
-      queryKey: [...availableUserKeys.byProject(projectId), search],
-      queryFn: async () => {
-        // Demo mode: no available users
-        if (isDemoMode()) {
-          return []
-        }
+  return useQuery<
+    Array<{
+      id: string
+      name: string
+      email: string | null
+      avatar: string | null
+      avatarColor: string | null
+    }>
+  >({
+    queryKey: [...availableUserKeys.byProject(projectId), search],
+    queryFn: async () => {
+      // Demo mode: no available users
+      if (isDemoMode()) {
+        return []
+      }
 
-        const url = new URL(`/api/projects/${projectId}/available-users`, window.location.origin)
-        if (search) {
-          url.searchParams.set('search', search)
-        }
-        const res = await fetch(url.toString())
-        if (!res.ok) {
-          const error = await res.json()
-          throw new Error(error.error || 'Failed to fetch available users')
-        }
-        return res.json()
-      },
-      enabled: !!projectId,
-      staleTime: 1000 * 30, // 30 seconds
+      const url = new URL(`/api/projects/${projectId}/available-users`, window.location.origin)
+      if (search) {
+        url.searchParams.set('search', search)
+      }
+      const res = await fetch(url.toString())
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to fetch available users')
+      }
+      return res.json()
     },
-  )
+    enabled: !!projectId,
+    staleTime: 1000 * 30, // 30 seconds
+  })
 }

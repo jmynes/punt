@@ -45,7 +45,13 @@ interface AddMemberDialogProps {
 }
 
 interface PendingMember {
-  user: { id: string; name: string; email: string | null; avatar: string | null }
+  user: {
+    id: string
+    name: string
+    email: string | null
+    avatar: string | null
+    avatarColor: string | null
+  }
   roleId: string
 }
 
