@@ -427,7 +427,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
                         onChange={(e) => handleFieldChange('description', e.target.value)}
                         placeholder="Describe what this role can do..."
                         disabled={!canManageRoles}
-                        className="bg-zinc-800/50 resize-none"
+                        className="bg-zinc-800/50 resize-none border-zinc-700 hover:border-zinc-500"
                         rows={2}
                       />
                     </div>
