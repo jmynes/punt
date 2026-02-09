@@ -160,6 +160,7 @@ export function MembersTab({ projectId }: MembersTabProps) {
             <AlertDialogAction
               onClick={handleRemoveMember}
               className="bg-red-600 hover:bg-red-700 text-white"
+              autoFocus
             >
               Remove
             </AlertDialogAction>
