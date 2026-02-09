@@ -12,7 +12,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { AddMemberDialog } from '@/components/projects/permissions/add-member-dialog'
 import {
@@ -50,6 +50,11 @@ import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn, getAvatarColor } from '@/lib/utils'
+import {
+  type BulkMemberRoleSnapshot,
+  type MemberSnapshot,
+  useAdminUndoStore,
+} from '@/stores/admin-undo-store'
 import type { ProjectMemberWithRole } from '@/types'
 
 interface MembersTabProps {
@@ -62,6 +67,9 @@ export function MembersTab({ projectId }: MembersTabProps) {
   const updateMember = useUpdateMember(projectId)
   const currentUser = useCurrentUser()
   const queryClient = useQueryClient()
+
+  const { undo, redo, canUndo, canRedo, pushMemberRemove, pushBulkMemberRoleChange } =
+    useAdminUndoStore()
 
   const canManageMembers = useHasPermission(projectId, PERMISSIONS.MEMBERS_MANAGE)
 
@@ -173,6 +181,17 @@ export function MembersTab({ projectId }: MembersTabProps) {
 
   const handleRemoveMember = async () => {
     if (!removingMember) return
+
+    // Capture snapshot for undo
+    const memberSnapshot: MemberSnapshot = {
+      membershipId: removingMember.id,
+      projectId,
+      userId: removingMember.userId,
+      userName: removingMember.user.name,
+      roleId: removingMember.roleId,
+      roleName: removingMember.role.name,
+    }
+
     try {
       const res = await fetch(`/api/projects/${projectId}/members/${removingMember.id}`, {
         method: 'DELETE',
@@ -185,7 +204,11 @@ export function MembersTab({ projectId }: MembersTabProps) {
       queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
       queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
-      toast.success('Member removed')
+
+      // Push to undo stack
+      pushMemberRemove(projectId, [memberSnapshot])
+
+      toast.success('Member removed (Ctrl+Z to undo)')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to remove member')
     }
@@ -193,10 +216,27 @@ export function MembersTab({ projectId }: MembersTabProps) {
   }
 
   const handleBulkRemove = async () => {
-    if (selectedIds.size === 0) return
+    if (selectedIds.size === 0 || !members) return
 
     setIsRemoving(true)
     const count = selectedIds.size
+
+    // Capture member snapshots for undo
+    const removedMembers: MemberSnapshot[] = [...selectedIds]
+      .map((memberId) => {
+        const member = members.find((m) => m.id === memberId)
+        if (!member) return null
+        return {
+          membershipId: member.id,
+          projectId,
+          userId: member.userId,
+          userName: member.user.name,
+          roleId: member.roleId,
+          roleName: member.role.name,
+        }
+      })
+      .filter((m): m is MemberSnapshot => m !== null)
+
     try {
       await Promise.all(
         [...selectedIds].map(async (memberId) => {
@@ -213,7 +253,11 @@ export function MembersTab({ projectId }: MembersTabProps) {
       queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
       queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
-      toast.success(`Removed ${count} member${count !== 1 ? 's' : ''}`)
+
+      // Push to undo stack
+      pushMemberRemove(projectId, removedMembers)
+
+      toast.success(`Removed ${count} member${count !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
       setSelectedIds(new Set())
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to remove members')
@@ -224,11 +268,30 @@ export function MembersTab({ projectId }: MembersTabProps) {
   }
 
   const handleBulkRoleChange = async (roleId: string) => {
-    if (selectedIds.size === 0) return
+    if (selectedIds.size === 0 || !members) return
 
     setIsChangingRole(true)
     const count = selectedIds.size
-    const roleName = roles?.find((r) => r.id === roleId)?.name || 'role'
+    const newRole = roles?.find((r) => r.id === roleId)
+    const roleName = newRole?.name || 'role'
+
+    // Capture member snapshots for undo (with previous roles)
+    const roleChanges: BulkMemberRoleSnapshot[] = [...selectedIds]
+      .map((memberId) => {
+        const member = members.find((m) => m.id === memberId)
+        if (!member) return null
+        return {
+          membershipId: member.id,
+          userId: member.userId,
+          userName: member.user.name,
+          previousRoleId: member.roleId,
+          previousRoleName: member.role.name,
+          newRoleId: roleId,
+          newRoleName: roleName,
+        }
+      })
+      .filter((m): m is BulkMemberRoleSnapshot => m !== null)
+
     try {
       await Promise.all(
         [...selectedIds].map(async (memberId) => {
@@ -248,7 +311,11 @@ export function MembersTab({ projectId }: MembersTabProps) {
       )
       queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
-      toast.success(`Set ${count} member${count !== 1 ? 's' : ''} to ${roleName}`)
+
+      // Push to undo stack
+      pushBulkMemberRoleChange(projectId, roleChanges)
+
+      toast.success(`Set ${count} member${count !== 1 ? 's' : ''} to ${roleName} (Ctrl+Z to undo)`)
       setSelectedIds(new Set())
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update roles')
@@ -256,6 +323,185 @@ export function MembersTab({ projectId }: MembersTabProps) {
       setIsChangingRole(false)
     }
   }
+
+  // Invalidate queries helper
+  const invalidateMemberQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
+    queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
+    queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
+  }, [queryClient, projectId])
+
+  // Handle undo
+  const handleUndo = useCallback(async () => {
+    const action = undo()
+    if (!action) return
+
+    // Only handle member actions for this project
+    if (action.type === 'memberRemove' && action.projectId === projectId) {
+      // Re-add removed members
+      try {
+        await Promise.all(
+          action.members.map(async (member) => {
+            const res = await fetch(`/api/projects/${projectId}/members`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ userId: member.userId, roleId: member.roleId }),
+            })
+            if (!res.ok) throw new Error('Failed to restore member')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Restored ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to restore members')
+      }
+    } else if (action.type === 'memberAdd' && action.projectId === projectId) {
+      // Remove re-added members
+      try {
+        // We need to find their current membership IDs
+        const currentMembers = members || []
+        await Promise.all(
+          action.members.map(async (member) => {
+            const current = currentMembers.find((m) => m.userId === member.userId)
+            if (!current) return
+            const res = await fetch(`/api/projects/${projectId}/members/${current.id}`, {
+              method: 'DELETE',
+              headers: { 'X-Tab-Id': getTabId() },
+            })
+            if (!res.ok) throw new Error('Failed to remove member')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Removed ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to remove members')
+      }
+    } else if (action.type === 'bulkMemberRoleChange' && action.projectId === projectId) {
+      // Restore previous roles
+      try {
+        await Promise.all(
+          action.members.map(async (member) => {
+            const res = await fetch(`/api/projects/${projectId}/members/${member.membershipId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ roleId: member.previousRoleId }),
+            })
+            if (!res.ok) throw new Error('Failed to restore role')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Restored roles for ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to restore roles')
+      }
+    }
+  }, [undo, projectId, members, invalidateMemberQueries])
+
+  // Handle redo
+  const handleRedo = useCallback(async () => {
+    const action = redo()
+    if (!action) return
+
+    // Only handle member actions for this project
+    if (action.type === 'memberRemove' && action.projectId === projectId) {
+      // Re-remove members
+      try {
+        const currentMembers = members || []
+        await Promise.all(
+          action.members.map(async (member) => {
+            const current = currentMembers.find((m) => m.userId === member.userId)
+            if (!current) return
+            const res = await fetch(`/api/projects/${projectId}/members/${current.id}`, {
+              method: 'DELETE',
+              headers: { 'X-Tab-Id': getTabId() },
+            })
+            if (!res.ok) throw new Error('Failed to remove member')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Removed ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to remove members')
+      }
+    } else if (action.type === 'memberAdd' && action.projectId === projectId) {
+      // Re-add members
+      try {
+        await Promise.all(
+          action.members.map(async (member) => {
+            const res = await fetch(`/api/projects/${projectId}/members`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ userId: member.userId, roleId: member.roleId }),
+            })
+            if (!res.ok) throw new Error('Failed to add member')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Added ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to add members')
+      }
+    } else if (action.type === 'bulkMemberRoleChange' && action.projectId === projectId) {
+      // Re-apply new roles
+      try {
+        await Promise.all(
+          action.members.map(async (member) => {
+            const res = await fetch(`/api/projects/${projectId}/members/${member.membershipId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ roleId: member.newRoleId }),
+            })
+            if (!res.ok) throw new Error('Failed to update role')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Updated roles for ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to update roles')
+      }
+    }
+  }, [redo, projectId, members, invalidateMemberQueries])
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        if (canUndo()) handleUndo()
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault()
+        if (canRedo()) handleRedo()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleUndo, handleRedo, canUndo, canRedo])
 
   const isLoading = membersLoading || rolesLoading
 

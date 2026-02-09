@@ -37,6 +37,7 @@ import { availableUserKeys, memberKeys, useAvailableUsers } from '@/hooks/querie
 import { useProjectRoles } from '@/hooks/queries/use-roles'
 import { getTabId } from '@/hooks/use-realtime'
 import { cn, getAvatarColor } from '@/lib/utils'
+import { type MemberSnapshot, useAdminUndoStore } from '@/stores/admin-undo-store'
 
 interface AddMemberDialogProps {
   projectId: string
@@ -59,6 +60,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
   const queryClient = useQueryClient()
   const { data: availableUsers, isLoading: usersLoading } = useAvailableUsers(projectId, search)
   const { data: roles, isLoading: rolesLoading } = useProjectRoles(projectId)
+  const { pushMemberAdd } = useAdminUndoStore()
 
   // Find default role (Member role, or first non-Owner role)
   const defaultRole =
@@ -110,9 +112,13 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
 
     setIsSubmitting(true)
     const count = pendingMembers.length
+
+    // Get role names for snapshots
+    const getRoleName = (roleId: string) => roles?.find((r) => r.id === roleId)?.name || 'Member'
+
     try {
       // Add all members in parallel (direct API calls to avoid per-member toasts)
-      await Promise.all(
+      const results = await Promise.all(
         pendingMembers.map(async (member) => {
           const res = await fetch(`/api/projects/${projectId}/members`, {
             method: 'POST',
@@ -126,7 +132,8 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
             const error = await res.json()
             throw new Error(error.error || 'Failed to add member')
           }
-          return res.json()
+          const data = await res.json()
+          return { member, membershipId: data.id }
         }),
       )
 
@@ -135,8 +142,21 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
       queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
       queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
 
+      // Create snapshots for undo
+      const memberSnapshots: MemberSnapshot[] = results.map(({ member, membershipId }) => ({
+        membershipId,
+        projectId,
+        userId: member.user.id,
+        userName: member.user.name,
+        roleId: member.roleId,
+        roleName: getRoleName(member.roleId),
+      }))
+
+      // Push to undo stack
+      pushMemberAdd(projectId, memberSnapshots)
+
       // Single toast for all members
-      toast.success(`Added ${count} member${count !== 1 ? 's' : ''}`)
+      toast.success(`Added ${count} member${count !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
       handleOpenChange(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add members')

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-interface UserSnapshot {
+export interface UserSnapshot {
   id: string
   name: string
   email: string
@@ -8,10 +8,29 @@ interface UserSnapshot {
   isActive: boolean
 }
 
-interface MemberRoleSnapshot {
+export interface MemberRoleSnapshot {
   membershipId: string
   projectId: string
   targetUserId: string
+  userName: string
+  previousRoleId: string
+  previousRoleName: string
+  newRoleId: string
+  newRoleName: string
+}
+
+export interface MemberSnapshot {
+  membershipId: string
+  projectId: string
+  userId: string
+  userName: string
+  roleId: string
+  roleName: string
+}
+
+export interface BulkMemberRoleSnapshot {
+  membershipId: string
+  userId: string
   userName: string
   previousRoleId: string
   previousRoleName: string
@@ -31,7 +50,33 @@ interface MemberRoleUndoAction {
   timestamp: number
 }
 
-type AdminUndoAction = UserUndoAction | MemberRoleUndoAction
+interface MemberAddUndoAction {
+  type: 'memberAdd'
+  projectId: string
+  members: MemberSnapshot[]
+  timestamp: number
+}
+
+interface MemberRemoveUndoAction {
+  type: 'memberRemove'
+  projectId: string
+  members: MemberSnapshot[]
+  timestamp: number
+}
+
+interface BulkMemberRoleUndoAction {
+  type: 'bulkMemberRoleChange'
+  projectId: string
+  members: BulkMemberRoleSnapshot[]
+  timestamp: number
+}
+
+type AdminUndoAction =
+  | UserUndoAction
+  | MemberRoleUndoAction
+  | MemberAddUndoAction
+  | MemberRemoveUndoAction
+  | BulkMemberRoleUndoAction
 
 interface AdminUndoState {
   undoStack: AdminUndoAction[]
@@ -43,6 +88,9 @@ interface AdminUndoState {
   pushUserMakeAdmin: (users: UserSnapshot[]) => void
   pushUserRemoveAdmin: (users: UserSnapshot[]) => void
   pushMemberRoleChange: (member: MemberRoleSnapshot) => void
+  pushMemberAdd: (projectId: string, members: MemberSnapshot[]) => void
+  pushMemberRemove: (projectId: string, members: MemberSnapshot[]) => void
+  pushBulkMemberRoleChange: (projectId: string, members: BulkMemberRoleSnapshot[]) => void
 
   // Undo the most recent action
   undo: () => AdminUndoAction | undefined
@@ -125,6 +173,51 @@ export const useAdminUndoStore = create<AdminUndoState>((set, get) => ({
         {
           type: 'memberRoleChange',
           member,
+          timestamp: Date.now(),
+        },
+      ],
+      redoStack: [],
+    }))
+  },
+
+  pushMemberAdd: (projectId, members) => {
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          type: 'memberAdd',
+          projectId,
+          members,
+          timestamp: Date.now(),
+        },
+      ],
+      redoStack: [],
+    }))
+  },
+
+  pushMemberRemove: (projectId, members) => {
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          type: 'memberRemove',
+          projectId,
+          members,
+          timestamp: Date.now(),
+        },
+      ],
+      redoStack: [],
+    }))
+  },
+
+  pushBulkMemberRoleChange: (projectId, members) => {
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          type: 'bulkMemberRoleChange',
+          projectId,
+          members,
           timestamp: Date.now(),
         },
       ],

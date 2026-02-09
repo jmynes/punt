@@ -1,5 +1,6 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRightLeft,
   Copy,
@@ -45,11 +46,10 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  useAddMember,
+  availableUserKeys,
+  memberKeys,
   useAvailableUsers,
   useProjectMembers,
-  useRemoveMember,
-  useUpdateMember,
 } from '@/hooks/queries/use-members'
 import {
   useCreateRole,
@@ -59,8 +59,14 @@ import {
 } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
+import { getTabId } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import {
+  type BulkMemberRoleSnapshot,
+  type MemberSnapshot,
+  useAdminUndoStore,
+} from '@/stores/admin-undo-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { Permission, RoleWithPermissions } from '@/types'
 import { PermissionGrid } from './permission-grid'
@@ -88,9 +94,17 @@ export function RolesTab({ projectId }: RolesTabProps) {
   const createRole = useCreateRole(projectId)
   const updateRole = useUpdateRole(projectId)
   const deleteRole = useDeleteRole(projectId)
-  const updateMember = useUpdateMember(projectId)
-  const removeMember = useRemoveMember(projectId)
-  const addMember = useAddMember(projectId)
+  const queryClient = useQueryClient()
+
+  const {
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    pushMemberAdd,
+    pushMemberRemove,
+    pushBulkMemberRoleChange,
+  } = useAdminUndoStore()
 
   const canManageRoles = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
   const currentUser = useCurrentUser()
@@ -175,6 +189,278 @@ export function RolesTab({ projectId }: RolesTabProps) {
 
     return [...otherRoleMembers, ...newUsers]
   }, [addMemberSearch, members, selectedRoleId, roles, availableUsers])
+
+  // Invalidate member queries helper
+  const invalidateMemberQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
+    queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
+    queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
+  }, [queryClient, projectId])
+
+  // Member action handlers with undo support
+  const handleAddMemberToRole = useCallback(
+    async (userId: string, userName: string, roleId: string) => {
+      const roleName = roles?.find((r) => r.id === roleId)?.name || 'role'
+      try {
+        const res = await fetch(`/api/projects/${projectId}/members`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tab-Id': getTabId(),
+          },
+          body: JSON.stringify({ userId, roleId }),
+        })
+        if (!res.ok) throw new Error('Failed to add member')
+        const data = await res.json()
+        invalidateMemberQueries()
+
+        const snapshot: MemberSnapshot = {
+          membershipId: data.id,
+          projectId,
+          userId,
+          userName,
+          roleId,
+          roleName,
+        }
+        pushMemberAdd(projectId, [snapshot])
+        toast.success(`Added ${userName} as ${roleName} (Ctrl+Z to undo)`)
+      } catch {
+        toast.error('Failed to add member')
+      }
+    },
+    [projectId, roles, invalidateMemberQueries, pushMemberAdd],
+  )
+
+  const handleChangeMemberRole = useCallback(
+    async (
+      memberId: string,
+      userId: string,
+      userName: string,
+      previousRoleId: string,
+      newRoleId: string,
+    ) => {
+      const previousRoleName = roles?.find((r) => r.id === previousRoleId)?.name || 'role'
+      const newRoleName = roles?.find((r) => r.id === newRoleId)?.name || 'role'
+      try {
+        const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tab-Id': getTabId(),
+          },
+          body: JSON.stringify({ roleId: newRoleId }),
+        })
+        if (!res.ok) throw new Error('Failed to update role')
+        invalidateMemberQueries()
+
+        const snapshot: BulkMemberRoleSnapshot = {
+          membershipId: memberId,
+          userId,
+          userName,
+          previousRoleId,
+          previousRoleName,
+          newRoleId,
+          newRoleName,
+        }
+        pushBulkMemberRoleChange(projectId, [snapshot])
+        toast.success(`Changed ${userName} to ${newRoleName} (Ctrl+Z to undo)`)
+      } catch {
+        toast.error('Failed to update role')
+      }
+    },
+    [projectId, roles, invalidateMemberQueries, pushBulkMemberRoleChange],
+  )
+
+  const handleRemoveMemberFromRole = useCallback(
+    async (memberId: string, userId: string, userName: string, roleId: string) => {
+      const roleName = roles?.find((r) => r.id === roleId)?.name || 'role'
+      try {
+        const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+          method: 'DELETE',
+          headers: { 'X-Tab-Id': getTabId() },
+        })
+        if (!res.ok) throw new Error('Failed to remove member')
+        invalidateMemberQueries()
+
+        const snapshot: MemberSnapshot = {
+          membershipId: memberId,
+          projectId,
+          userId,
+          userName,
+          roleId,
+          roleName,
+        }
+        pushMemberRemove(projectId, [snapshot])
+        toast.success(`Removed ${userName} (Ctrl+Z to undo)`)
+      } catch {
+        toast.error('Failed to remove member')
+      }
+    },
+    [projectId, roles, invalidateMemberQueries, pushMemberRemove],
+  )
+
+  // Handle undo
+  const handleUndo = useCallback(async () => {
+    const action = undo()
+    if (!action) return
+
+    if (action.type === 'memberRemove' && action.projectId === projectId) {
+      try {
+        await Promise.all(
+          action.members.map(async (member) => {
+            const res = await fetch(`/api/projects/${projectId}/members`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ userId: member.userId, roleId: member.roleId }),
+            })
+            if (!res.ok) throw new Error('Failed to restore member')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Restored ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to restore members')
+      }
+    } else if (action.type === 'memberAdd' && action.projectId === projectId) {
+      try {
+        const currentMembers = members || []
+        await Promise.all(
+          action.members.map(async (member) => {
+            const current = currentMembers.find((m) => m.userId === member.userId)
+            if (!current) return
+            const res = await fetch(`/api/projects/${projectId}/members/${current.id}`, {
+              method: 'DELETE',
+              headers: { 'X-Tab-Id': getTabId() },
+            })
+            if (!res.ok) throw new Error('Failed to remove member')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Removed ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to remove members')
+      }
+    } else if (action.type === 'bulkMemberRoleChange' && action.projectId === projectId) {
+      try {
+        await Promise.all(
+          action.members.map(async (member) => {
+            const res = await fetch(`/api/projects/${projectId}/members/${member.membershipId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ roleId: member.previousRoleId }),
+            })
+            if (!res.ok) throw new Error('Failed to restore role')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Restored roles for ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to restore roles')
+      }
+    }
+  }, [undo, projectId, members, invalidateMemberQueries])
+
+  // Handle redo
+  const handleRedo = useCallback(async () => {
+    const action = redo()
+    if (!action) return
+
+    if (action.type === 'memberRemove' && action.projectId === projectId) {
+      try {
+        const currentMembers = members || []
+        await Promise.all(
+          action.members.map(async (member) => {
+            const current = currentMembers.find((m) => m.userId === member.userId)
+            if (!current) return
+            const res = await fetch(`/api/projects/${projectId}/members/${current.id}`, {
+              method: 'DELETE',
+              headers: { 'X-Tab-Id': getTabId() },
+            })
+            if (!res.ok) throw new Error('Failed to remove member')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Removed ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to remove members')
+      }
+    } else if (action.type === 'memberAdd' && action.projectId === projectId) {
+      try {
+        await Promise.all(
+          action.members.map(async (member) => {
+            const res = await fetch(`/api/projects/${projectId}/members`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ userId: member.userId, roleId: member.roleId }),
+            })
+            if (!res.ok) throw new Error('Failed to add member')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Added ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to add members')
+      }
+    } else if (action.type === 'bulkMemberRoleChange' && action.projectId === projectId) {
+      try {
+        await Promise.all(
+          action.members.map(async (member) => {
+            const res = await fetch(`/api/projects/${projectId}/members/${member.membershipId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ roleId: member.newRoleId }),
+            })
+            if (!res.ok) throw new Error('Failed to update role')
+          }),
+        )
+        invalidateMemberQueries()
+        toast.success(
+          `Updated roles for ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
+        )
+      } catch {
+        toast.error('Failed to update roles')
+      }
+    }
+  }, [redo, projectId, members, invalidateMemberQueries])
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        if (canUndo()) handleUndo()
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault()
+        if (canRedo()) handleRedo()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleUndo, handleRedo, canUndo, canRedo])
 
   // Load role data into form
   const loadRoleData = useCallback((role: RoleWithPermissions) => {
@@ -672,13 +958,20 @@ export function RolesTab({ projectId }: RolesTabProps) {
                                   key={user.id}
                                   type="button"
                                   onClick={() => {
-                                    if (user.isExistingMember && user.memberId) {
-                                      updateMember.mutate({
-                                        memberId: user.memberId,
-                                        roleId: selectedRoleId,
-                                      })
+                                    if (
+                                      user.isExistingMember &&
+                                      user.memberId &&
+                                      user.currentRole
+                                    ) {
+                                      handleChangeMemberRole(
+                                        user.memberId,
+                                        user.id,
+                                        user.name,
+                                        user.currentRole.id,
+                                        selectedRoleId,
+                                      )
                                     } else {
-                                      addMember.mutate({ userId: user.id, roleId: selectedRoleId })
+                                      handleAddMemberToRole(user.id, user.name, selectedRoleId)
                                     }
                                     setAddMemberSearch('')
                                   }}
@@ -811,10 +1104,13 @@ export function RolesTab({ projectId }: RolesTabProps) {
                                             <DropdownMenuItem
                                               key={role.id}
                                               onClick={() =>
-                                                updateMember.mutate({
-                                                  memberId: member.id,
-                                                  roleId: role.id,
-                                                })
+                                                handleChangeMemberRole(
+                                                  member.id,
+                                                  member.userId,
+                                                  member.user.name,
+                                                  member.roleId,
+                                                  role.id,
+                                                )
                                               }
                                               className="gap-2"
                                             >
@@ -831,8 +1127,14 @@ export function RolesTab({ projectId }: RolesTabProps) {
                                   <Button
                                     variant="ghost"
                                     size="icon-sm"
-                                    onClick={() => removeMember.mutate(member.id)}
-                                    disabled={removeMember.isPending}
+                                    onClick={() =>
+                                      handleRemoveMemberFromRole(
+                                        member.id,
+                                        member.userId,
+                                        member.user.name,
+                                        member.roleId,
+                                      )
+                                    }
                                     className="text-zinc-500 hover:text-red-400 hover:bg-red-900/20"
                                   >
                                     <X className="h-4 w-4" />
