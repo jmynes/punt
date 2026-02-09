@@ -8,7 +8,7 @@ import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
-import { useUIStore } from '@/stores/ui-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets } from '@/types'
 import type { ActionOptions, DeleteResult, TicketWithColumn } from './types'
@@ -75,7 +75,7 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
 
   // Format ticket IDs for notification
   const ticketKeys = tickets.map(({ ticket }) => formatTicketId(ticket))
-  const showUndo = useUIStore.getState().showUndoButtons ?? showUndoButtons
+  const showUndo = useSettingsStore.getState().showUndoButtons ?? showUndoButtons
 
   let currentId: string | number | undefined
 
