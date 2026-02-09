@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Avatar colors that work well with white text
-const AVATAR_COLORS = [
+export const AVATAR_COLORS = [
   '#dc2626', // red-600
   '#ea580c', // orange-600
   '#d97706', // amber-600

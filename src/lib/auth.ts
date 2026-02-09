@@ -82,6 +82,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             email: true,
             name: true,
             avatar: true,
+            avatarColor: true,
             isSystemAdmin: true,
             isActive: true,
             passwordChangedAt: true,
@@ -113,6 +114,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.username = dbUser.username
         token.isSystemAdmin = dbUser.isSystemAdmin
         token.avatar = dbUser.avatar
+        token.avatarColor = dbUser.avatarColor
       }
 
       return token
@@ -130,6 +132,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.username = token.username as string
         session.user.isSystemAdmin = token.isSystemAdmin as boolean
         session.user.avatar = token.avatar as string | null
+        session.user.avatarColor = token.avatarColor as string | null
       }
 
       return session
@@ -148,6 +151,7 @@ declare module 'next-auth' {
       image?: string | null
       isSystemAdmin: boolean
       avatar: string | null
+      avatarColor: string | null
     }
   }
 
@@ -155,5 +159,6 @@ declare module 'next-auth' {
     username?: string
     isSystemAdmin?: boolean
     avatar?: string | null
+    avatarColor?: string | null
   }
 }

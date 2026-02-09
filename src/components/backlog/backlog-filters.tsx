@@ -774,7 +774,10 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                         <AvatarImage src={user.avatar || undefined} />
                         <AvatarFallback
                           className="text-[10px] text-white font-medium"
-                          style={{ backgroundColor: getAvatarColor(user.id || user.name) }}
+                          style={{
+                            backgroundColor:
+                              user.avatarColor || getAvatarColor(user.id || user.name),
+                          }}
                         >
                           {getInitials(user.name)}
                         </AvatarFallback>

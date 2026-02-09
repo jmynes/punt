@@ -69,7 +69,9 @@ export function UserSelect({
                   <AvatarFallback
                     className="text-xs text-white font-medium"
                     style={{
-                      backgroundColor: getAvatarColor(selectedUser.id || selectedUser.name),
+                      backgroundColor:
+                        selectedUser.avatarColor ||
+                        getAvatarColor(selectedUser.id || selectedUser.name),
                     }}
                   >
                     {getInitials(selectedUser.name)}
@@ -132,7 +134,9 @@ export function UserSelect({
                       <AvatarImage src={user.avatar || undefined} />
                       <AvatarFallback
                         className="text-xs text-white font-medium"
-                        style={{ backgroundColor: getAvatarColor(user.id || user.name) }}
+                        style={{
+                          backgroundColor: user.avatarColor || getAvatarColor(user.id || user.name),
+                        }}
                       >
                         {getInitials(user.name)}
                       </AvatarFallback>

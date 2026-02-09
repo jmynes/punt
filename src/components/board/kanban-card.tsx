@@ -214,7 +214,9 @@ export function KanbanCard({
                 <AvatarFallback
                   className="text-white text-[10px] font-medium"
                   style={{
-                    backgroundColor: getAvatarColor(ticket.assignee.id || ticket.assignee.name),
+                    backgroundColor:
+                      ticket.assignee.avatarColor ||
+                      getAvatarColor(ticket.assignee.id || ticket.assignee.name),
                   }}
                 >
                   {getInitials(ticket.assignee.name)}

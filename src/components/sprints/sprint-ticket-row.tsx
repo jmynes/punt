@@ -207,7 +207,12 @@ export function SprintTicketRow({
               <AvatarImage src={ticket.assignee.avatar} alt={ticket.assignee.name} />
             ) : null}
             <AvatarFallback
-              className={cn('text-[10px] font-medium', getAvatarColor(ticket.assignee.name))}
+              className="text-[10px] font-medium text-white"
+              style={{
+                backgroundColor:
+                  ticket.assignee.avatarColor ||
+                  getAvatarColor(ticket.assignee.id || ticket.assignee.name),
+              }}
             >
               {getInitials(ticket.assignee.name)}
             </AvatarFallback>

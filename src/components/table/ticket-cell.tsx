@@ -61,7 +61,9 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
             <AvatarFallback
               className="text-[10px] text-white font-medium"
               style={{
-                backgroundColor: getAvatarColor(ticket.assignee.id || ticket.assignee.name),
+                backgroundColor:
+                  ticket.assignee.avatarColor ||
+                  getAvatarColor(ticket.assignee.id || ticket.assignee.name),
               }}
             >
               {getInitials(ticket.assignee.name)}
@@ -88,7 +90,9 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
             <AvatarFallback
               className="text-[10px] text-white font-medium"
               style={{
-                backgroundColor: getAvatarColor(ticket.creator.id || ticket.creator.name),
+                backgroundColor:
+                  ticket.creator?.avatarColor ||
+                  getAvatarColor(ticket.creator.id || ticket.creator.name),
               }}
             >
               {getInitials(ticket.creator.name)}

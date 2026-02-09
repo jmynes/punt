@@ -980,8 +980,11 @@ export function RolesTab({ projectId }: RolesTabProps) {
                                   <Avatar className="h-6 w-6">
                                     <AvatarImage src={user.avatar || undefined} alt={user.name} />
                                     <AvatarFallback
-                                      className="text-xs"
-                                      style={{ backgroundColor: getAvatarColor(user.id) }}
+                                      className="text-xs text-white"
+                                      style={{
+                                        backgroundColor:
+                                          user.avatarColor || getAvatarColor(user.id),
+                                      }}
                                     >
                                       {getInitials(user.name)}
                                     </AvatarFallback>
@@ -1055,11 +1058,11 @@ export function RolesTab({ projectId }: RolesTabProps) {
                                     alt={member.user.name}
                                   />
                                   <AvatarFallback
-                                    className="text-xs font-medium"
+                                    className="text-xs font-medium text-white"
                                     style={{
-                                      backgroundColor: getAvatarColor(
-                                        member.user.id || member.user.name,
-                                      ),
+                                      backgroundColor:
+                                        member.user.avatarColor ||
+                                        getAvatarColor(member.user.id || member.user.name),
                                     }}
                                   >
                                     {getInitials(member.user.name)}

@@ -245,7 +245,8 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                                   <AvatarFallback
                                     className="text-[10px] text-white font-medium"
                                     style={{
-                                      backgroundColor: getAvatarColor(user.id || user.name),
+                                      backgroundColor:
+                                        user.avatarColor || getAvatarColor(user.id || user.name),
                                     }}
                                   >
                                     {user.name.slice(0, 2).toUpperCase()}
@@ -287,7 +288,9 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                         <AvatarFallback
                           className="text-xs text-white font-medium"
                           style={{
-                            backgroundColor: getAvatarColor(member.user.id || member.user.name),
+                            backgroundColor:
+                              member.user.avatarColor ||
+                              getAvatarColor(member.user.id || member.user.name),
                           }}
                         >
                           {member.user.name.slice(0, 2).toUpperCase()}

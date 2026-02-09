@@ -814,7 +814,10 @@ function MemberCard({
             <AvatarImage src={member.user.avatar || undefined} alt={member.user.name} />
             <AvatarFallback
               className="text-white font-medium"
-              style={{ backgroundColor: getAvatarColor(member.user.id || member.user.name) }}
+              style={{
+                backgroundColor:
+                  member.user.avatarColor || getAvatarColor(member.user.id || member.user.name),
+              }}
             >
               {initials}
             </AvatarFallback>

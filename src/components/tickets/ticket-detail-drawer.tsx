@@ -1300,7 +1300,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                         <AvatarImage src={watcher.avatar || undefined} />
                         <AvatarFallback
                           className="text-xs text-white font-medium"
-                          style={{ backgroundColor: getAvatarColor(watcher.id || watcher.name) }}
+                          style={{
+                            backgroundColor:
+                              watcher.avatarColor || getAvatarColor(watcher.id || watcher.name),
+                          }}
                         >
                           {getInitials(watcher.name)}
                         </AvatarFallback>
