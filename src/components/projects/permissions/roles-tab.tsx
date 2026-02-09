@@ -358,7 +358,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
                       value={editName}
                       onChange={(e) => handleFieldChange('name', e.target.value)}
                       placeholder="Role name..."
-                      className="text-lg font-semibold bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-zinc-500"
+                      className="!text-lg font-semibold bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-zinc-500"
                     />
                   ) : (
                     <CardTitle className="text-lg">{editName || 'New Role'}</CardTitle>
