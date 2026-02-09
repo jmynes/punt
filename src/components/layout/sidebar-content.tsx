@@ -20,6 +20,8 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useHasAnyPermission } from '@/hooks/use-permissions'
+import { PERMISSIONS } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import type { ProjectSummary } from '@/stores/projects-store'
 import type { UserSummary } from '@/types'
@@ -364,20 +366,12 @@ export function SidebarContent({
                             Sprints
                           </Button>
                         </Link>
-                        <Link href={`/projects/${project.key}/settings`} onClick={handleLinkClick}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={cn(
-                              'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
-                              pathname.startsWith(`/projects/${project.key}/settings`) &&
-                                'bg-zinc-800/50 text-zinc-100',
-                            )}
-                          >
-                            <Settings className="h-3.5 w-3.5" />
-                            Settings
-                          </Button>
-                        </Link>
+                        <ProjectSettingsLink
+                          projectId={project.id}
+                          projectKey={project.key}
+                          pathname={pathname}
+                          onClick={handleLinkClick}
+                        />
                       </div>
                     )}
                   </div>
@@ -388,5 +382,44 @@ export function SidebarContent({
         )}
       </div>
     </div>
+  )
+}
+
+// Separate component to handle permission checks for settings link
+function ProjectSettingsLink({
+  projectId,
+  projectKey,
+  pathname,
+  onClick,
+}: {
+  projectId: string
+  projectKey: string
+  pathname: string
+  onClick: () => void
+}) {
+  // Check if user has any settings-related permissions
+  const hasSettingsAccess = useHasAnyPermission(projectId, [
+    PERMISSIONS.PROJECT_SETTINGS,
+    PERMISSIONS.MEMBERS_MANAGE,
+    PERMISSIONS.MEMBERS_ADMIN,
+  ])
+
+  // Don't render if user doesn't have access (or still loading - hide by default)
+  if (!hasSettingsAccess) return null
+
+  return (
+    <Link href={`/projects/${projectKey}/settings`} onClick={onClick}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className={cn(
+          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
+          pathname.startsWith(`/projects/${projectKey}/settings`) && 'bg-zinc-800/50 text-zinc-100',
+        )}
+      >
+        <Settings className="h-3.5 w-3.5" />
+        Settings
+      </Button>
+    </Link>
   )
 }

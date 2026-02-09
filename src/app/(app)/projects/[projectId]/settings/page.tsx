@@ -7,7 +7,7 @@ import { useEffect } from 'react'
 import { MembersTab } from '@/components/projects/permissions/members-tab'
 import { RolesTab } from '@/components/projects/permissions/roles-tab'
 import { GeneralTab } from '@/components/projects/settings/general-tab'
-import { useHasPermission } from '@/hooks/use-permissions'
+import { useHasPermission, useMyPermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
@@ -41,6 +41,7 @@ export default function ProjectSettingsPage() {
   const activeTab: SettingsTab = isValidTab(tabParam) ? tabParam : 'general'
 
   // Permission checks
+  const { isLoading: permissionsLoading } = useMyPermissions(projectId)
   const canViewSettings = useHasPermission(projectId, PERMISSIONS.PROJECT_SETTINGS)
   const canManageMembers = useHasPermission(projectId, PERMISSIONS.MEMBERS_MANAGE)
   const canManageRoles = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
@@ -67,8 +68,8 @@ export default function ProjectSettingsPage() {
     return null
   }
 
-  // Wait for store hydration
-  if (!_hasHydrated) {
+  // Wait for store hydration and permissions to load
+  if (!_hasHydrated || permissionsLoading) {
     return (
       <div className="flex h-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
@@ -77,7 +78,7 @@ export default function ProjectSettingsPage() {
     )
   }
 
-  // Check if user has any access to this page
+  // Check if user has any access to this page (permissions are now loaded)
   const hasAnyAccess = canViewSettings || canManageMembers || canManageRoles
 
   if (!hasAnyAccess) {
