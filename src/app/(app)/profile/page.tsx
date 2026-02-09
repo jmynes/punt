@@ -1,12 +1,12 @@
 'use client'
 
-import { Camera, Check, KeyRound, Mail, Palette, Shield, Trash2, User } from 'lucide-react'
+import { Camera, KeyRound, Mail, Palette, Shield, Trash2, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { HexColorPicker } from 'react-colorful'
 import { toast } from 'sonner'
 import { ImageCropDialog, resizeImageForCropper } from '@/components/profile/image-crop-dialog'
+import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { getTabId } from '@/hooks/use-realtime'
 import { DEMO_USER, isDemoMode } from '@/lib/demo'
-import { AVATAR_COLORS, getAvatarColor, getInitials } from '@/lib/utils'
+import { getAvatarColor, getInitials } from '@/lib/utils'
 
 // Stable user data type
 interface UserData {
@@ -687,81 +687,19 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Color palette */}
-              <div className="space-y-2">
-                <Label className="text-zinc-300">Select a color</Label>
-                <div className="flex flex-wrap gap-2">
-                  {AVATAR_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => {
-                        setCustomAvatarColor(color)
-                        handleAvatarColorChange(color)
-                      }}
-                      disabled={avatarColorLoading}
-                      className="relative h-8 w-8 rounded-full transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: color }}
-                      title={color}
-                    >
-                      {stableUser.avatarColor === color && (
-                        <Check className="absolute inset-0 m-auto h-4 w-4 text-white" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Full color picker */}
-              <div className="space-y-2">
-                <Label className="text-zinc-300">Custom color</Label>
-                <HexColorPicker
-                  color={
-                    customAvatarColor || stableUser.avatarColor || getAvatarColor(stableUser.id)
+              {/* Color picker */}
+              <ColorPickerBody
+                activeColor={
+                  customAvatarColor || stableUser.avatarColor || getAvatarColor(stableUser.id)
+                }
+                onColorChange={setCustomAvatarColor}
+                onApply={(color) => {
+                  if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
+                    handleAvatarColorChange(color)
                   }
-                  onChange={setCustomAvatarColor}
-                  className="!w-full"
-                  style={{ height: '160px' }}
-                />
-                <div className="flex items-center gap-2">
-                  <div
-                    className="h-8 w-8 rounded-full border border-zinc-700 shrink-0"
-                    style={{
-                      backgroundColor:
-                        customAvatarColor ||
-                        stableUser.avatarColor ||
-                        getAvatarColor(stableUser.id),
-                    }}
-                  />
-                  <Input
-                    type="text"
-                    placeholder="#000000"
-                    value={customAvatarColor}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      if (val === '' || /^#?[0-9A-Fa-f]{0,6}$/.test(val)) {
-                        setCustomAvatarColor(val.startsWith('#') ? val : `#${val}`)
-                      }
-                    }}
-                    className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 font-mono"
-                    disabled={avatarColorLoading}
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="border-zinc-700 hover:bg-zinc-800"
-                    onClick={() => {
-                      if (/^#[0-9A-Fa-f]{6}$/.test(customAvatarColor)) {
-                        handleAvatarColorChange(customAvatarColor)
-                      }
-                    }}
-                    disabled={avatarColorLoading || !/^#[0-9A-Fa-f]{6}$/.test(customAvatarColor)}
-                  >
-                    Apply
-                  </Button>
-                </div>
-              </div>
+                }}
+                isDisabled={avatarColorLoading}
+              />
 
               {/* Reset button */}
               {stableUser.avatarColor && (
