@@ -9,6 +9,7 @@ import { formatTicketId } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
@@ -171,7 +172,7 @@ export function pasteTickets(params: PasteTicketsParams): PasteResult {
 
   // Show undo/redo toast
   const ticketKeys = newTickets.map(({ ticket }) => formatTicketId(ticket))
-  const showUndo = useUIStore.getState().showUndoButtons ?? showUndoButtons
+  const showUndo = useSettingsStore.getState().showUndoButtons ?? showUndoButtons
 
   const toastId = showUndoRedoToast('success', {
     title: newTickets.length === 1 ? 'Ticket pasted' : `${newTickets.length} tickets pasted`,

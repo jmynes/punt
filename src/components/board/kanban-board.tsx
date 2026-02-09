@@ -19,6 +19,7 @@ import { getStatusIcon } from '@/lib/status-icons'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
@@ -237,7 +238,7 @@ export function KanbanBoard({
         ...col,
         tickets: col.tickets.map((t) => ({ ...t })),
       }))
-      const showUndo = useUIStore.getState().showUndoButtons
+      const showUndo = useSettingsStore.getState().showUndoButtons
 
       // Check for cross-column moves for undo/notification
       if (!isSameColumn) {

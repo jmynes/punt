@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { useProjectsStore } from '@/stores/projects-store'
 import { useSettingsStore } from '@/stores/settings-store'
 
 export default function PreferencesPage() {
@@ -23,7 +24,13 @@ export default function PreferencesPage() {
     setAutoSaveOnDrawerClose,
     autoSaveOnRoleEditorClose,
     setAutoSaveOnRoleEditorClose,
+    showUndoButtons,
+    setShowUndoButtons,
+    sidebarExpandedSections,
+    setSidebarSectionExpanded,
   } = useSettingsStore()
+
+  const projects = useProjectsStore((s) => s.projects)
 
   const defaultMaxYear = new Date().getFullYear() + 5
   const _currentMaxYear = ticketDateMaxYearMode === 'default' ? defaultMaxYear : ticketDateMaxYear
@@ -107,6 +114,26 @@ export default function PreferencesPage() {
                 id="auto-save-role-editor"
                 checked={autoSaveOnRoleEditorClose}
                 onCheckedChange={(checked) => setAutoSaveOnRoleEditorClose(checked === true)}
+                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+              />
+            </div>
+
+            <Separator className="bg-zinc-800" />
+
+            <div className="flex items-start justify-between space-x-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="show-undo-buttons" className="text-zinc-300">
+                  Show undo/redo buttons on toasts
+                </Label>
+                <p className="text-sm text-zinc-500">
+                  Display undo and redo action buttons on toast notifications after ticket
+                  operations
+                </p>
+              </div>
+              <Checkbox
+                id="show-undo-buttons"
+                checked={showUndoButtons}
+                onCheckedChange={(checked) => setShowUndoButtons(checked === true)}
                 className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
               />
             </div>
@@ -201,6 +228,86 @@ export default function PreferencesPage() {
                 </div>
               </RadioGroup>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Sidebar */}
+        <Card className="border-zinc-800 bg-zinc-900/50">
+          <CardHeader>
+            <CardTitle className="text-zinc-100">Sidebar</CardTitle>
+            <CardDescription className="text-zinc-500">
+              Control which settings sections are expanded by default in the sidebar
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-start justify-between space-x-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="sidebar-admin" className="text-zinc-300">
+                  Admin settings expanded
+                </Label>
+                <p className="text-sm text-zinc-500">
+                  Keep the admin settings section expanded in the sidebar
+                </p>
+              </div>
+              <Checkbox
+                id="sidebar-admin"
+                checked={sidebarExpandedSections['admin'] ?? false}
+                onCheckedChange={(checked) => setSidebarSectionExpanded('admin', checked === true)}
+                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+              />
+            </div>
+
+            {projects.length > 0 && (
+              <>
+                <Separator className="bg-zinc-800" />
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="text-zinc-300">Project settings expanded</Label>
+                      <p className="text-sm text-zinc-500">
+                        Keep project settings sections expanded in the sidebar
+                      </p>
+                    </div>
+                    <Checkbox
+                      id="sidebar-all-projects"
+                      checked={projects.every((p) => sidebarExpandedSections[p.id] ?? false)}
+                      onCheckedChange={(checked) => {
+                        for (const project of projects) {
+                          setSidebarSectionExpanded(project.id, checked === true)
+                        }
+                      }}
+                      className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                    />
+                  </div>
+                  <div className="space-y-3 mt-3">
+                    {projects.map((project) => (
+                      <div key={project.id} className="flex items-center justify-between space-x-4">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-2 w-2 rounded-full shrink-0"
+                            style={{ backgroundColor: project.color || '#6b7280' }}
+                          />
+                          <Label
+                            htmlFor={`sidebar-project-${project.id}`}
+                            className="text-sm text-zinc-400 font-normal cursor-pointer"
+                          >
+                            {project.name}
+                          </Label>
+                        </div>
+                        <Checkbox
+                          id={`sidebar-project-${project.id}`}
+                          checked={sidebarExpandedSections[project.id] ?? false}
+                          onCheckedChange={(checked) =>
+                            setSidebarSectionExpanded(project.id, checked === true)
+                          }
+                          className="border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -287,7 +287,7 @@ export function KeyboardShortcuts() {
                 ? `${ticketKeys[0]} moved ${direction}`
                 : `${ticketKeys.join(', ')} moved ${direction}`,
             duration: 5000,
-            showUndoButtons: useUIStore.getState().showUndoButtons,
+            showUndoButtons: useSettingsStore.getState().showUndoButtons,
             onUndo: async (id) => {
               const undoEntry = useUndoStore.getState().undoByToastId(id)
               if (undoEntry) {
@@ -585,7 +585,7 @@ export function KeyboardShortcuts() {
                 ? `${ticketKeys[0]} moved to ${toName}`
                 : `${ticketKeys.join(', ')} moved to ${toName}`,
             duration: 5000,
-            showUndoButtons: useUIStore.getState().showUndoButtons,
+            showUndoButtons: useSettingsStore.getState().showUndoButtons,
             onUndo: async (id) => {
               const undoEntry = useUndoStore.getState().undoByToastId(id)
               if (undoEntry) {
@@ -703,7 +703,7 @@ export function KeyboardShortcuts() {
         if (entry) {
           toast.dismiss(entry.toastId)
 
-          const showUndo = useUIStore.getState().showUndoButtons
+          const showUndo = useSettingsStore.getState().showUndoButtons
 
           if (entry.action.type === 'delete') {
             const action = entry.action
@@ -1475,7 +1475,7 @@ export function KeyboardShortcuts() {
         if (redoStore.isProcessing) return // Block while API call is in flight
         const entry = redoStore.popRedo()
         if (entry) {
-          const showUndo = useUIStore.getState().showUndoButtons
+          const showUndo = useSettingsStore.getState().showUndoButtons
 
           if (entry.action.type === 'delete') {
             const action = entry.action
