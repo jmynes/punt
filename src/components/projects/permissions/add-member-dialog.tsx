@@ -107,13 +107,15 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
 
     setIsSubmitting(true)
     try {
-      // Add all members sequentially
-      for (const member of pendingMembers) {
-        await addMember.mutateAsync({
-          userId: member.user.id,
-          roleId: member.roleId,
-        })
-      }
+      // Add all members in parallel
+      await Promise.all(
+        pendingMembers.map((member) =>
+          addMember.mutateAsync({
+            userId: member.user.id,
+            roleId: member.roleId,
+          }),
+        ),
+      )
       handleOpenChange(false)
     } finally {
       setIsSubmitting(false)
