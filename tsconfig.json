@@ -31,5 +31,5 @@
     "**/*.mts",
     "src/generated/**/*.ts"
   ],
-  "exclude": ["node_modules", "prisma/seed.ts", "docs-site"]
+  "exclude": ["node_modules", "prisma/seed.ts", "docs-site", "mcp"]
 }
