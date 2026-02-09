@@ -201,23 +201,37 @@ export async function DELETE(
     // Check project delete permission
     await requirePermission(user.id, projectId, PERMISSIONS.PROJECT_DELETE)
 
-    // Check if project exists
+    // Check if project exists and get all members (for SSE events after deletion)
     const project = await db.project.findUnique({
       where: { id: projectId },
-      select: { id: true },
+      select: {
+        id: true,
+        members: {
+          select: {
+            id: true,
+            userId: true,
+            role: { select: { id: true, name: true } },
+          },
+        },
+      },
     })
 
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
+    // Store member info before deletion (cascade will remove them)
+    const affectedMembers = project.members
+
     // Delete project (cascades to tickets, columns, members, etc.)
     await db.project.delete({
       where: { id: projectId },
     })
 
-    // Emit real-time event for other clients
+    // Emit real-time events for other clients
     const tabId = request.headers.get('X-Tab-Id') || undefined
+
+    // Emit project.deleted event for sidebar/project list updates
     projectEvents.emitProjectEvent({
       type: 'project.deleted',
       projectId,
@@ -225,6 +239,23 @@ export async function DELETE(
       tabId,
       timestamp: Date.now(),
     })
+
+    // Emit member.removed events for each affected user (for admin profile updates)
+    for (const member of affectedMembers) {
+      projectEvents.emitMemberEvent({
+        type: 'member.removed',
+        memberId: member.id,
+        targetUserId: member.userId,
+        projectId,
+        userId: user.id,
+        tabId,
+        timestamp: Date.now(),
+        changes: {
+          previousRoleId: member.role.id,
+          previousRoleName: member.role.name,
+        },
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

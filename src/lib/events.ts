@@ -52,7 +52,7 @@ export type SettingsEventType = 'settings.roles.updated'
 /**
  * Event types for member operations
  */
-export type MemberEventType = 'member.role.updated'
+export type MemberEventType = 'member.added' | 'member.removed' | 'member.role.updated'
 
 /**
  * Event types for database operations

@@ -155,7 +155,7 @@ export async function POST(request: Request) {
     }
 
     // Add the creator as an Owner
-    await db.projectMember.create({
+    const creatorMembership = await db.projectMember.create({
       data: {
         userId: user.id,
         projectId: project.id,
@@ -173,18 +173,26 @@ export async function POST(request: Request) {
       select: { id: true },
     })
 
+    // Track created memberships for SSE events
+    const adminMemberships: Array<{ id: string; userId: string }> = []
     if (otherSystemAdmins.length > 0) {
-      await db.projectMember.createMany({
-        data: otherSystemAdmins.map((admin) => ({
-          userId: admin.id,
-          projectId: project.id,
-          roleId: adminRoleId,
-        })),
-      })
+      // Create memberships one by one to get IDs for SSE events
+      for (const admin of otherSystemAdmins) {
+        const membership = await db.projectMember.create({
+          data: {
+            userId: admin.id,
+            projectId: project.id,
+            roleId: adminRoleId,
+          },
+        })
+        adminMemberships.push({ id: membership.id, userId: admin.id })
+      }
     }
 
-    // Emit real-time event for other clients
+    // Emit real-time events for other clients
     const tabId = request.headers.get('X-Tab-Id') || undefined
+
+    // Emit project.created event for sidebar/project list updates
     projectEvents.emitProjectEvent({
       type: 'project.created',
       projectId: project.id,
@@ -192,6 +200,38 @@ export async function POST(request: Request) {
       tabId,
       timestamp: Date.now(),
     })
+
+    // Emit member.added event for the creator (for admin profile updates)
+    projectEvents.emitMemberEvent({
+      type: 'member.added',
+      memberId: creatorMembership.id,
+      targetUserId: user.id,
+      projectId: project.id,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+      changes: {
+        roleId: ownerRoleId,
+        roleName: 'Owner',
+      },
+    })
+
+    // Emit member.added events for other system admins (for admin profile updates)
+    for (const membership of adminMemberships) {
+      projectEvents.emitMemberEvent({
+        type: 'member.added',
+        memberId: membership.id,
+        targetUserId: membership.userId,
+        projectId: project.id,
+        userId: user.id,
+        tabId,
+        timestamp: Date.now(),
+        changes: {
+          roleId: adminRoleId,
+          roleName: 'Admin',
+        },
+      })
+    }
 
     return NextResponse.json(
       {
