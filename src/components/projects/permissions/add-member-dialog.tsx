@@ -120,7 +120,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
     }
   }
 
-  const assignableRoles = roles?.filter((role) => role.name !== 'Owner') || []
+  const assignableRoles = roles || []
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
