@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, ChevronsUpDown, Loader2, UserPlus } from 'lucide-react'
+import { Check, ChevronsUpDown, Loader2, UserPlus, Users, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -39,12 +40,18 @@ interface AddMemberDialogProps {
   trigger?: React.ReactNode
 }
 
+interface PendingMember {
+  user: { id: string; name: string; email: string | null; avatar: string | null }
+  roleId: string
+}
+
 export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
   const [open, setOpen] = useState(false)
   const [userSearchOpen, setUserSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
-  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
+  const [pendingMembers, setPendingMembers] = useState<PendingMember[]>([])
+  const [bulkRoleId, setBulkRoleId] = useState<string>('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { data: availableUsers, isLoading: usersLoading } = useAvailableUsers(projectId, search)
   const { data: roles, isLoading: rolesLoading } = useProjectRoles(projectId)
@@ -54,31 +61,66 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
   const defaultRole =
     roles?.find((r) => r.name === 'Member') ?? roles?.find((r) => r.name !== 'Owner')
 
-  const selectedUser = availableUsers?.find((u) => u.id === selectedUserId)
+  // Filter out users already in the pending queue
+  const pendingUserIds = new Set(pendingMembers.map((m) => m.user.id))
+  const filteredAvailableUsers = availableUsers?.filter((u) => !pendingUserIds.has(u.id))
 
   const handleOpenChange = useCallback((newOpen: boolean) => {
     setOpen(newOpen)
     if (!newOpen) {
       // Reset state when closing
       setSearch('')
-      setSelectedUserId(null)
-      setSelectedRoleId(null)
+      setPendingMembers([])
+      setBulkRoleId('')
     }
   }, [])
 
-  const handleSubmit = async () => {
-    if (!selectedUserId || !selectedRoleId) return
-
-    await addMember.mutateAsync({
-      userId: selectedUserId,
-      roleId: selectedRoleId,
-    })
-
-    handleOpenChange(false)
+  const handleAddToQueue = (user: PendingMember['user']) => {
+    if (!defaultRole) return
+    setPendingMembers((prev) => [...prev, { user, roleId: defaultRole.id }])
+    setSearch('')
+    setUserSearchOpen(false)
   }
 
-  const isValid = selectedUserId && selectedRoleId
-  const isSubmitting = addMember.isPending
+  const handleAddAllUsers = () => {
+    if (!defaultRole || !filteredAvailableUsers?.length) return
+    const newMembers = filteredAvailableUsers.map((user) => ({ user, roleId: defaultRole.id }))
+    setPendingMembers((prev) => [...prev, ...newMembers])
+    setSearch('')
+  }
+
+  const handleRemoveFromQueue = (userId: string) => {
+    setPendingMembers((prev) => prev.filter((m) => m.user.id !== userId))
+  }
+
+  const handleRoleChange = (userId: string, roleId: string) => {
+    setPendingMembers((prev) => prev.map((m) => (m.user.id === userId ? { ...m, roleId } : m)))
+  }
+
+  const handleSetAllRoles = () => {
+    if (!bulkRoleId) return
+    setPendingMembers((prev) => prev.map((m) => ({ ...m, roleId: bulkRoleId })))
+  }
+
+  const handleSubmit = async () => {
+    if (pendingMembers.length === 0) return
+
+    setIsSubmitting(true)
+    try {
+      // Add all members sequentially
+      for (const member of pendingMembers) {
+        await addMember.mutateAsync({
+          userId: member.user.id,
+          roleId: member.roleId,
+        })
+      }
+      handleOpenChange(false)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const assignableRoles = roles?.filter((role) => role.name !== 'Owner') || []
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -92,17 +134,30 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add Member</DialogTitle>
+          <DialogTitle>Add Members</DialogTitle>
           <DialogDescription>
-            Add a user to this project. They will be able to access project resources based on their
-            role.
+            Search and select users to add to this project. You can add multiple users with
+            different roles.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-6 py-4">
           {/* User Search */}
-          <div className="space-y-2">
-            <Label className="text-zinc-200">User</Label>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-zinc-200">Search Users</Label>
+              {filteredAvailableUsers && filteredAvailableUsers.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-zinc-400 hover:text-zinc-200"
+                  onClick={handleAddAllUsers}
+                >
+                  <Users className="mr-1.5 h-3 w-3" />
+                  Add all ({filteredAvailableUsers.length})
+                </Button>
+              )}
+            </div>
             <Popover open={userSearchOpen} onOpenChange={setUserSearchOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -111,24 +166,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                   aria-expanded={userSearchOpen}
                   className="w-full justify-between bg-zinc-900 border-zinc-800 hover:bg-zinc-800"
                 >
-                  {selectedUser ? (
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={selectedUser.avatar || undefined} />
-                        <AvatarFallback
-                          className="text-[10px] text-white font-medium"
-                          style={{
-                            backgroundColor: getAvatarColor(selectedUser.id || selectedUser.name),
-                          }}
-                        >
-                          {selectedUser.name.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="truncate">{selectedUser.name}</span>
-                    </div>
-                  ) : (
-                    <span className="text-zinc-500">Select a user...</span>
-                  )}
+                  <span className="text-zinc-500">Search for users to add...</span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -150,18 +188,11 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                           {search ? 'No users found.' : 'Type to search for users...'}
                         </CommandEmpty>
                         <CommandGroup>
-                          {availableUsers?.map((user) => (
+                          {filteredAvailableUsers?.map((user) => (
                             <CommandItem
                               key={user.id}
                               value={user.id}
-                              onSelect={() => {
-                                setSelectedUserId(user.id)
-                                setUserSearchOpen(false)
-                                // Set default role if not already set
-                                if (!selectedRoleId && defaultRole) {
-                                  setSelectedRoleId(defaultRole.id)
-                                }
-                              }}
+                              onSelect={() => handleAddToQueue(user)}
                             >
                               <div className="flex items-center gap-2 flex-1">
                                 <Avatar className="h-6 w-6">
@@ -182,12 +213,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                                   )}
                                 </div>
                               </div>
-                              <Check
-                                className={cn(
-                                  'ml-2 h-4 w-4',
-                                  selectedUserId === user.id ? 'opacity-100' : 'opacity-0',
-                                )}
-                              />
+                              <Check className="ml-2 h-4 w-4 opacity-0" />
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -199,51 +225,127 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
             </Popover>
           </div>
 
-          {/* Role Selector */}
-          <div className="space-y-2">
-            <Label className="text-zinc-200">Role</Label>
-            <Select
-              value={selectedRoleId || ''}
-              onValueChange={(value) => setSelectedRoleId(value)}
-            >
-              <SelectTrigger className="w-full bg-zinc-900 border-zinc-800">
-                <SelectValue placeholder="Select a role..." />
-              </SelectTrigger>
-              <SelectContent>
-                {rolesLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
-                  </div>
-                ) : (
-                  roles
-                    ?.filter((role) => role.name !== 'Owner') // Can't assign Owner role via add
-                    .map((role) => (
-                      <SelectItem key={role.id} value={role.id}>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: role.color }}
-                          />
-                          <span className="shrink-0">{role.name}</span>
-                          {role.description && (
-                            <span className="text-xs text-zinc-400 truncate translate-y-px">
-                              {role.description}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Pending Members Queue */}
+          {pendingMembers.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-zinc-200">Members to add ({pendingMembers.length})</Label>
+
+              <ScrollArea className={cn(pendingMembers.length > 3 && 'h-[200px]')}>
+                <div className="space-y-2 pr-3">
+                  {pendingMembers.map((member) => (
+                    <div
+                      key={member.user.id}
+                      className="flex items-center gap-3 p-2 rounded-lg bg-zinc-900/50 border border-zinc-800"
+                    >
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={member.user.avatar || undefined} />
+                        <AvatarFallback
+                          className="text-xs text-white font-medium"
+                          style={{
+                            backgroundColor: getAvatarColor(member.user.id || member.user.name),
+                          }}
+                        >
+                          {member.user.name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-zinc-200 truncate">
+                          {member.user.name}
+                        </p>
+                        {member.user.email && (
+                          <p className="text-xs text-zinc-500 truncate">{member.user.email}</p>
+                        )}
+                      </div>
+
+                      <Select
+                        value={member.roleId}
+                        onValueChange={(value) => handleRoleChange(member.user.id, value)}
+                      >
+                        <SelectTrigger className="w-[120px] h-8 bg-zinc-800/50 border-zinc-700 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assignableRoles.map((role) => (
+                            <SelectItem key={role.id} value={role.id}>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-2 h-2 rounded-full shrink-0"
+                                  style={{ backgroundColor: role.color }}
+                                />
+                                <span>{role.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-zinc-500 hover:text-red-400 hover:bg-red-900/20"
+                        onClick={() => handleRemoveFromQueue(member.user.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {/* Bulk role assignment */}
+              {pendingMembers.length > 1 && (
+                <div className="flex items-center gap-2 pt-3 mt-1 border-t border-zinc-800">
+                  <span className="text-sm text-zinc-200 shrink-0">Set all roles to:</span>
+                  <Select value={bulkRoleId} onValueChange={setBulkRoleId}>
+                    <SelectTrigger className="flex-1 h-8 bg-zinc-800/50 border-zinc-700 text-sm">
+                      <SelectValue placeholder="Select role..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assignableRoles.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: role.color }}
+                            />
+                            <span>{role.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 shrink-0"
+                    onClick={handleSetAllRoles}
+                    disabled={!bulkRoleId}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {pendingMembers.length === 0 && !rolesLoading && (
+            <div className="text-center py-8 text-zinc-500 text-sm">
+              Search and select users above to add them to the project.
+            </div>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={!isValid || isSubmitting}>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={pendingMembers.length === 0 || isSubmitting}
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -252,7 +354,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
             ) : (
               <>
                 <UserPlus className="mr-2 h-4 w-4" />
-                Add Member
+                Add {pendingMembers.length || ''} Member{pendingMembers.length !== 1 ? 's' : ''}
               </>
             )}
           </Button>
