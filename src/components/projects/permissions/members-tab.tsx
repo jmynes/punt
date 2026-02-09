@@ -157,7 +157,10 @@ export function MembersTab({ projectId }: MembersTabProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemoveMember} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleRemoveMember}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
               Remove
             </AlertDialogAction>
           </AlertDialogFooter>
