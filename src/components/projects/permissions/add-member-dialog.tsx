@@ -219,17 +219,15 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                     ?.filter((role) => role.name !== 'Owner') // Can't assign Owner role via add
                     .map((role) => (
                       <SelectItem key={role.id} value={role.id}>
-                        <div className="flex items-start gap-2">
+                        <div className="flex items-center gap-2">
                           <div
-                            className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                            className="w-2 h-2 rounded-full"
                             style={{ backgroundColor: role.color }}
                           />
-                          <div className="flex flex-col">
-                            <span>{role.name}</span>
-                            {role.description && (
-                              <span className="text-xs text-zinc-400">{role.description}</span>
-                            )}
-                          </div>
+                          <span>{role.name}</span>
+                          {role.description && (
+                            <span className="text-xs text-zinc-500 ml-2">{role.description}</span>
+                          )}
                         </div>
                       </SelectItem>
                     ))
