@@ -274,7 +274,7 @@ export function SprintSection({
         'rounded-xl border transition-all duration-200',
         isBacklog && 'border-zinc-800 bg-zinc-900/30',
         isPlanning && 'border-blue-500/20 bg-blue-500/5',
-        isActive && !expired && 'border-green-500/30 bg-green-500/5',
+        isActive && !expired && 'border-emerald-500/30 bg-emerald-500/5',
         isActive && expired && 'border-orange-500/30 bg-orange-500/5',
         isCompleted && 'border-zinc-700 bg-zinc-900/20 opacity-75',
         // Drop target styling - subtle glow when this section is a valid drop target
@@ -315,7 +315,7 @@ export function SprintSection({
               className={cn(
                 'p-1.5 rounded-lg',
                 isPlanning && 'bg-blue-500/20',
-                isActive && !expired && 'bg-green-500/20',
+                isActive && !expired && 'bg-emerald-500/20',
                 isActive && expired && 'bg-orange-500/20',
                 isCompleted && 'bg-zinc-700',
               )}
@@ -324,7 +324,7 @@ export function SprintSection({
                 className={cn(
                   'h-4 w-4',
                   isPlanning && 'text-blue-400',
-                  isActive && !expired && 'text-green-400',
+                  isActive && !expired && 'text-emerald-400',
                   isActive && expired && 'text-orange-400',
                   isCompleted && 'text-zinc-400',
                 )}
@@ -346,7 +346,7 @@ export function SprintSection({
               className={cn(
                 'px-2 py-0.5 text-[10px] font-medium rounded-full uppercase tracking-wide',
                 isPlanning && 'bg-blue-500/20 text-blue-400',
-                isActive && !expired && 'bg-green-500/20 text-green-400',
+                isActive && !expired && 'bg-emerald-500/20 text-emerald-400',
                 isActive && expired && 'bg-orange-500/20 text-orange-400',
                 isCompleted && 'bg-zinc-700 text-zinc-400',
               )}
