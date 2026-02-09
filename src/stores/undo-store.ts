@@ -63,6 +63,9 @@ interface UndoState {
   undoStack: UndoEntry[]
   // Stack of redo entries
   redoStack: UndoEntry[]
+  // Whether an async undo/redo operation (e.g. API call) is in flight
+  isProcessing: boolean
+  setProcessing: (v: boolean) => void
 
   // Add a delete action to the undo stack
   pushDeleted: (
@@ -154,6 +157,9 @@ interface UndoState {
   // Update the toastId of an entry in the undo stack (used when a toast is replaced)
   updateUndoToastId: (oldId: string | number, newId: string | number) => void
 
+  // Update the ticket in a ticketCreate entry (used after redo re-creates with new server ID)
+  updateTicketCreateEntry: (oldTicketId: string, newTicket: TicketWithRelations) => void
+
   // Remove a specific undo entry by toastId
   removeEntry: (toastId: string | number) => void
 
@@ -168,6 +174,8 @@ interface UndoState {
 export const useUndoStore = create<UndoState>((set, get) => ({
   undoStack: [],
   redoStack: [],
+  isProcessing: false,
+  setProcessing: (v) => set({ isProcessing: v }),
 
   pushDeleted: (projectId, ticket, columnId, toastId, isRedo = false) => {
     console.debug(`[SessionLog] Action: Delete ${isRedo ? '(Redo)' : ''}`, {
@@ -472,6 +480,21 @@ export const useUndoStore = create<UndoState>((set, get) => ({
     set((state) => ({
       undoStack: state.undoStack.map((e) => (e.toastId === oldId ? { ...e, toastId: newId } : e)),
     })),
+
+  updateTicketCreateEntry: (oldTicketId, newTicket) =>
+    set((state) => {
+      const updateStack = (stack: UndoEntry[]) =>
+        stack.map((e) => {
+          if (e.action.type === 'ticketCreate' && e.action.ticket.id === oldTicketId) {
+            return { ...e, action: { ...e.action, ticket: { ...newTicket } } }
+          }
+          return e
+        })
+      return {
+        undoStack: updateStack(state.undoStack),
+        redoStack: updateStack(state.redoStack),
+      }
+    }),
 
   removeEntry: (toastId) =>
     set((state) => ({

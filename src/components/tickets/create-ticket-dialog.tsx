@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
+  createTicketAPI,
+  deleteTicketAPI,
   useCreateLabel,
   useCreateTicket,
   useDeleteLabel,
@@ -23,8 +25,11 @@ import {
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
+import { formatTicketId } from '@/lib/ticket-format'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
 import {
   DEFAULT_TICKET_FORM,
   type LabelSummary,
@@ -207,8 +212,9 @@ export function CreateTicketDialog() {
       },
     }
 
+    let serverTicket: TicketWithRelations
     try {
-      await createTicketMutation.mutateAsync({
+      serverTicket = await createTicketMutation.mutateAsync({
         projectId,
         columnId: targetColumn.id,
         data: {
@@ -236,6 +242,79 @@ export function CreateTicketDialog() {
       setIsSubmitting(false)
       return
     }
+
+    // Push undo action for the created ticket
+    const columnId = serverTicket.columnId || targetColumn.id
+    const ticketKey = formatTicketId(serverTicket)
+
+    let currentToastId: string | number | undefined
+
+    const toastId = showUndoRedoToast('success', {
+      title: 'Ticket created',
+      description: ticketKey,
+      duration: 5000,
+      showUndoButtons: true,
+      onUndo: async (id) => {
+        // Undo: delete the created ticket
+        const store = useUndoStore.getState()
+        if (store.isProcessing) return
+        const entry = store.undoByToastId(id)
+        if (entry) {
+          useBoardStore.getState().removeTicket(projectId, serverTicket.id)
+          // Delete from server (block next undo/redo until done)
+          store.setProcessing(true)
+          deleteTicketAPI(projectId, serverTicket.id)
+            .catch((err) => {
+              console.error('Failed to delete ticket on undo:', err)
+            })
+            .finally(() => {
+              useUndoStore.getState().setProcessing(false)
+            })
+        }
+      },
+      onRedo: async (id) => {
+        // Redo: re-create the ticket
+        const store = useUndoStore.getState()
+        if (store.isProcessing) return
+        const entry = store.redoByToastId(id)
+        if (entry) {
+          useBoardStore.getState().addTicket(projectId, columnId, serverTicket)
+          // Re-create on server (await to block next undo/redo)
+          store.setProcessing(true)
+          try {
+            const newServerTicket = await createTicketAPI(projectId, columnId, serverTicket)
+            const boardStore = useBoardStore.getState()
+            boardStore.removeTicket(projectId, serverTicket.id)
+            boardStore.addTicket(projectId, columnId, newServerTicket)
+            useUndoStore.getState().updateTicketCreateEntry(serverTicket.id, newServerTicket)
+            serverTicket = newServerTicket
+          } catch (err) {
+            console.error('Failed to recreate ticket on redo:', err)
+          } finally {
+            useUndoStore.getState().setProcessing(false)
+          }
+        }
+      },
+      onUndoneToast: (newId) => {
+        if (currentToastId) {
+          useUndoStore.getState().updateRedoToastId(currentToastId, newId)
+          currentToastId = newId
+        }
+      },
+      onRedoneToast: (newId) => {
+        if (currentToastId) {
+          useUndoStore.getState().updateUndoToastId(currentToastId, newId)
+          currentToastId = newId
+        }
+      },
+      undoneTitle: 'Ticket creation undone',
+      undoneDescription: ticketKey,
+      redoneTitle: 'Ticket created',
+      redoneDescription: ticketKey,
+    })
+
+    currentToastId = toastId
+    useUndoStore.getState().pushTicketCreate(projectId, serverTicket, columnId, toastId)
 
     setIsSubmitting(false)
     handleClose()
