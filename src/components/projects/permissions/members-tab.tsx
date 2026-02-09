@@ -38,7 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { memberKeys, useProjectMembers, useUpdateMember } from '@/hooks/queries/use-members'
+import {
+  availableUserKeys,
+  memberKeys,
+  useProjectMembers,
+  useUpdateMember,
+} from '@/hooks/queries/use-members'
 import { useProjectRoles } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
@@ -164,6 +169,7 @@ export function MembersTab({ projectId }: MembersTabProps) {
       }
       queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
+      queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
       toast.success('Member removed')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to remove member')
@@ -191,6 +197,7 @@ export function MembersTab({ projectId }: MembersTabProps) {
       )
       queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
+      queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
       toast.success(`Removed ${count} member${count !== 1 ? 's' : ''}`)
       setSelectedIds(new Set())
     } catch (err) {
