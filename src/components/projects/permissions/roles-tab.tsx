@@ -250,7 +250,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
   }
 
   return (
-    <div className="flex gap-6 h-[600px]">
+    <div className="flex gap-6 h-full min-h-[500px]">
       {/* Left Panel - Role List */}
       <div className="w-64 flex-shrink-0 flex flex-col">
         <div className="flex items-center justify-between mb-4">
