@@ -2,6 +2,7 @@
 
 import { Check, ChevronsUpDown, Palette, Plus, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { HexColorPicker } from 'react-colorful'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -426,11 +427,11 @@ export function LabelSelect({
                 <button
                   key={color}
                   type="button"
-                  onClick={() => handleColorChange(color)}
+                  onClick={() => setCustomColor(color)}
                   disabled={isUpdatingColor}
                   className={cn(
                     'h-8 w-8 rounded-md transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed',
-                    labelToEdit?.color === color &&
+                    (customColor || labelToEdit?.color) === color &&
                       'ring-2 ring-white ring-offset-2 ring-offset-zinc-950',
                   )}
                   style={{ backgroundColor: color }}
@@ -439,7 +440,15 @@ export function LabelSelect({
               ))}
             </div>
 
-            {/* Custom hex input */}
+            {/* Full color picker */}
+            <HexColorPicker
+              color={customColor || labelToEdit?.color || '#000000'}
+              onChange={setCustomColor}
+              className="!w-full"
+              style={{ height: '160px' }}
+            />
+
+            {/* Hex input with preview and apply */}
             <div className="flex items-center gap-2">
               <div
                 className="h-8 w-8 rounded-md border border-zinc-700 shrink-0"
@@ -462,11 +471,15 @@ export function LabelSelect({
                 type="button"
                 size="sm"
                 onClick={() => {
-                  if (/^#[0-9A-Fa-f]{6}$/.test(customColor)) {
-                    handleColorChange(customColor)
+                  const colorToApply = customColor || labelToEdit?.color
+                  if (colorToApply && /^#[0-9A-Fa-f]{6}$/.test(colorToApply)) {
+                    handleColorChange(colorToApply)
                   }
                 }}
-                disabled={isUpdatingColor || !/^#[0-9A-Fa-f]{6}$/.test(customColor)}
+                disabled={
+                  isUpdatingColor ||
+                  !/^#[0-9A-Fa-f]{6}$/.test(customColor || labelToEdit?.color || '')
+                }
               >
                 Apply
               </Button>

@@ -572,3 +572,24 @@ input[type="number"] {
 [class*="_downshiftInputWrapper_"] button:hover {
   color: rgb(244 244 245) !important; /* zinc-100 */
 }
+
+/* react-colorful dark theme overrides */
+.react-colorful {
+  border-radius: 0.5rem !important;
+  border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+}
+
+.react-colorful__saturation {
+  border-radius: 0.5rem 0.5rem 0 0 !important;
+  border-bottom: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+}
+
+.react-colorful__hue {
+  border-radius: 0 0 0.5rem 0.5rem !important;
+}
+
+.react-colorful__saturation-pointer,
+.react-colorful__hue-pointer {
+  border: 2px solid rgb(244 244 245) !important; /* zinc-100 */
+  box-shadow: 0 0 0 1px rgb(63 63 70) !important; /* zinc-700 */
+}
