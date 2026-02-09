@@ -1019,7 +1019,7 @@ export default function BacklogPage() {
       >
         {/* Sprint sections (if any sprints exist) */}
         {hasActiveSprints && (
-          <div className="flex-shrink-0 p-4 lg:px-6 space-y-3 border-b border-zinc-800">
+          <div className="flex-shrink-0 max-h-[350px] overflow-y-auto p-4 lg:px-6 space-y-3 border-b border-zinc-800">
             {/* Active Sprints */}
             {activeSprints.map((sprint) => (
               <SprintSection
