@@ -1,6 +1,6 @@
 'use client'
 
-import { Camera, KeyRound, Mail, Shield, Trash2, User } from 'lucide-react'
+import { Camera, Check, KeyRound, Mail, Palette, Shield, Trash2, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -25,7 +25,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { getTabId } from '@/hooks/use-realtime'
 import { DEMO_USER, isDemoMode } from '@/lib/demo'
-import { getAvatarColor, getInitials } from '@/lib/utils'
+import { AVATAR_COLORS, getAvatarColor, getInitials } from '@/lib/utils'
 
 // Stable user data type
 interface UserData {
@@ -33,6 +33,7 @@ interface UserData {
   name: string
   email: string | null
   avatar: string | null
+  avatarColor: string | null
   isSystemAdmin: boolean
 }
 
@@ -60,6 +61,7 @@ export default function ProfilePage() {
           name: DEMO_USER.name,
           email: DEMO_USER.email,
           avatar: DEMO_USER.avatar,
+          avatarColor: null,
           isSystemAdmin: DEMO_USER.isSystemAdmin,
         }
       : null,
@@ -77,6 +79,7 @@ export default function ProfilePage() {
         name: session.user.name,
         email: session.user.email,
         avatar: session.user.avatar,
+        avatarColor: session.user.avatarColor,
         isSystemAdmin: session.user.isSystemAdmin,
       })
     }
@@ -86,6 +89,7 @@ export default function ProfilePage() {
     session?.user?.name,
     session?.user?.email,
     session?.user?.avatar,
+    session?.user?.avatarColor,
     session?.user?.isSystemAdmin,
   ])
 
@@ -145,6 +149,9 @@ export default function ProfilePage() {
       // This handles the case where we removed avatar and session caught up
     }
   }, [session?.user?.avatar, optimisticAvatar, stableUser?.avatar])
+
+  // Avatar color state
+  const [avatarColorLoading, setAvatarColorLoading] = useState(false)
 
   // Delete account state
   const [deletePassword, setDeletePassword] = useState('')
@@ -450,6 +457,44 @@ export default function ProfilePage() {
     }
   }
 
+  const handleAvatarColorChange = async (color: string | null) => {
+    const previousColor = stableUser?.avatarColor
+    setAvatarColorLoading(true)
+
+    // Optimistic update
+    if (stableUser) {
+      setStableUser({ ...stableUser, avatarColor: color })
+    }
+
+    try {
+      const res = await fetch('/api/me', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tab-id': getTabId(),
+        },
+        body: JSON.stringify({ avatarColor: color }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        // Revert optimistic update on error
+        if (stableUser) {
+          setStableUser({ ...stableUser, avatarColor: previousColor ?? null })
+        }
+        throw new Error(data.error || 'Failed to update avatar color')
+      }
+
+      await debouncedUpdateSession()
+      toast.success(color ? 'Avatar color updated' : 'Avatar color reset to default')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update avatar color')
+    } finally {
+      setAvatarColorLoading(false)
+    }
+  }
+
   const handleDeleteAccount = async () => {
     // In demo mode, show message that this is not available
     if (isDemo) {
@@ -552,7 +597,9 @@ export default function ProfilePage() {
                   <AvatarImage src={displayAvatar || undefined} alt={displayName} />
                   <AvatarFallback
                     className="text-2xl font-semibold text-white"
-                    style={{ backgroundColor: getAvatarColor(stableUser.id) }}
+                    style={{
+                      backgroundColor: stableUser.avatarColor || getAvatarColor(stableUser.id),
+                    }}
                   >
                     {getInitials(displayName)}
                   </AvatarFallback>
@@ -598,6 +645,80 @@ export default function ProfilePage() {
                 </div>
                 <p className="text-xs text-zinc-500">JPG, PNG, GIF or WebP. Max 5MB.</p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Avatar Color */}
+        <Card className="border-zinc-800 bg-zinc-900/50">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <Palette className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-zinc-100">Avatar Color</CardTitle>
+            </div>
+            <CardDescription className="text-zinc-500">
+              Choose a background color for your fallback avatar (shown when no photo is uploaded)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Color preview */}
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16 ring-2 ring-zinc-700">
+                  <AvatarFallback
+                    className="text-xl font-semibold text-white"
+                    style={{
+                      backgroundColor: stableUser.avatarColor || getAvatarColor(stableUser.id),
+                    }}
+                  >
+                    {getInitials(displayName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-sm text-zinc-400">
+                  {stableUser.avatarColor ? (
+                    <span>
+                      Custom color: <code className="text-amber-400">{stableUser.avatarColor}</code>
+                    </span>
+                  ) : (
+                    <span>Using default color based on your ID</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Color palette */}
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Select a color</Label>
+                <div className="flex flex-wrap gap-2">
+                  {AVATAR_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => handleAvatarColorChange(color)}
+                      disabled={avatarColorLoading}
+                      className="relative h-8 w-8 rounded-full transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: color }}
+                      title={color}
+                    >
+                      {stableUser.avatarColor === color && (
+                        <Check className="absolute inset-0 m-auto h-4 w-4 text-white" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reset button */}
+              {stableUser.avatarColor && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAvatarColorChange(null)}
+                  disabled={avatarColorLoading}
+                  className="text-zinc-400 hover:text-zinc-200"
+                >
+                  Reset to default
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

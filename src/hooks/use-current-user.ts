@@ -29,6 +29,7 @@ export function useCurrentUser(): UserSummary | null {
     name: session.user.name || 'Unknown',
     email: session.user.email || '',
     avatar: session.user.avatar || null,
+    avatarColor: session.user.avatarColor || null,
     isSystemAdmin: session.user.isSystemAdmin ?? false,
   }
 }

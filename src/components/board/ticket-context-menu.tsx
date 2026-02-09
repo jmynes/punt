@@ -961,7 +961,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           <Avatar className="h-5 w-5">
                             <AvatarFallback
                               className="text-[10px] text-white font-medium"
-                              style={{ backgroundColor: getAvatarColor(currentUser.id) }}
+                              style={{
+                                backgroundColor:
+                                  currentUser.avatarColor || getAvatarColor(currentUser.id),
+                              }}
                             >
                               {getInitials(currentUser.name)}
                             </AvatarFallback>
@@ -982,7 +985,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           {m.avatar && <AvatarImage src={m.avatar} />}
                           <AvatarFallback
                             className="text-[10px] text-white font-medium"
-                            style={{ backgroundColor: getAvatarColor(m.id) }}
+                            style={{ backgroundColor: m.avatarColor || getAvatarColor(m.id) }}
                           >
                             {getInitials(m.name)}
                           </AvatarFallback>

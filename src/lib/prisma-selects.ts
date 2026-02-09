@@ -11,6 +11,7 @@ export const USER_SELECT_SUMMARY = {
   name: true,
   email: true,
   avatar: true,
+  avatarColor: true,
 } as const
 
 /**
@@ -145,7 +146,13 @@ export const TICKET_SELECT_FULL = {
  * Type for the watcher relation as returned from Prisma.
  */
 export type TicketWatcher = {
-  user: { id: string; name: string; email: string | null; avatar: string | null }
+  user: {
+    id: string
+    name: string
+    email: string | null
+    avatar: string | null
+    avatarColor: string | null
+  }
 }
 
 /**
@@ -179,6 +186,7 @@ export const USER_SELECT_ADMIN_LIST = {
   email: true,
   name: true,
   avatar: true,
+  avatarColor: true,
   isSystemAdmin: true,
   isActive: true,
   createdAt: true,
@@ -196,6 +204,7 @@ export const USER_SELECT_CREATED = {
   email: true,
   name: true,
   avatar: true,
+  avatarColor: true,
   isSystemAdmin: true,
   isActive: true,
   createdAt: true,

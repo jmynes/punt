@@ -6,7 +6,12 @@ import { DEMO_USER, isDemoMode } from '@/lib/demo/demo-config'
 import { projectEvents } from '@/lib/events'
 
 const updateProfileSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(1, 'Name is required').optional(),
+  avatarColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Invalid color format')
+    .nullable()
+    .optional(),
 })
 
 // GET /api/me - Get current user's profile
@@ -19,6 +24,7 @@ export async function GET() {
         email: DEMO_USER.email,
         name: DEMO_USER.name,
         avatar: DEMO_USER.avatar,
+        avatarColor: null,
         isSystemAdmin: DEMO_USER.isSystemAdmin,
         createdAt: DEMO_USER.createdAt,
         updatedAt: DEMO_USER.updatedAt,
@@ -39,6 +45,7 @@ export async function GET() {
         email: true,
         name: true,
         avatar: true,
+        avatarColor: true,
         isSystemAdmin: true,
         createdAt: true,
         updatedAt: true,
@@ -85,8 +92,9 @@ export async function PATCH(request: Request) {
       return NextResponse.json({
         id: DEMO_USER.id,
         email: DEMO_USER.email,
-        name: parsed.data.name,
+        name: parsed.data.name ?? DEMO_USER.name,
         avatar: DEMO_USER.avatar,
+        avatarColor: parsed.data.avatarColor ?? null,
         isSystemAdmin: DEMO_USER.isSystemAdmin,
         createdAt: DEMO_USER.createdAt,
         updatedAt: new Date(),
@@ -103,16 +111,22 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
 
-    const { name } = parsed.data
+    const { name, avatarColor } = parsed.data
+
+    // Build update data - only include fields that were provided
+    const updateData: { name?: string; avatarColor?: string | null } = {}
+    if (name !== undefined) updateData.name = name
+    if (avatarColor !== undefined) updateData.avatarColor = avatarColor
 
     const user = await db.user.update({
       where: { id: currentUser.id },
-      data: { name },
+      data: updateData,
       select: {
         id: true,
         email: true,
         name: true,
         avatar: true,
+        avatarColor: true,
         isSystemAdmin: true,
         createdAt: true,
         updatedAt: true,
@@ -126,7 +140,7 @@ export async function PATCH(request: Request) {
       userId: currentUser.id,
       tabId,
       timestamp: Date.now(),
-      changes: { name },
+      changes: updateData,
     })
 
     return NextResponse.json(user)

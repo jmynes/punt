@@ -79,6 +79,7 @@ interface User {
   name: string
   email: string
   avatar: string | null
+  avatarColor: string | null
   isSystemAdmin: boolean
   isActive: boolean
   createdAt: string
@@ -827,7 +828,10 @@ export function UserList() {
             />
             <Avatar>
               <AvatarImage src={user.avatar || undefined} />
-              <AvatarFallback className="bg-zinc-700 text-zinc-300">
+              <AvatarFallback
+                className="text-white"
+                style={user.avatarColor ? { backgroundColor: user.avatarColor } : undefined}
+              >
                 {user.name.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>

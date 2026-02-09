@@ -96,7 +96,11 @@ export function Header() {
                   <AvatarImage src={currentUser.avatar || undefined} alt={currentUser.name} />
                   <AvatarFallback
                     className="text-xs text-white font-medium"
-                    style={{ backgroundColor: getAvatarColor(currentUser.id || currentUser.name) }}
+                    style={{
+                      backgroundColor:
+                        currentUser.avatarColor ||
+                        getAvatarColor(currentUser.id || currentUser.name),
+                    }}
                   >
                     {getInitials(currentUser.name)}
                   </AvatarFallback>

@@ -488,7 +488,7 @@ export default function AdminUserProfilePage() {
               <AvatarImage src={user.avatar || undefined} alt={user.name} />
               <AvatarFallback
                 className="text-2xl font-semibold text-white"
-                style={{ backgroundColor: getAvatarColor(user.id) }}
+                style={{ backgroundColor: user.avatarColor || getAvatarColor(user.id) }}
               >
                 {getInitials(user.name)}
               </AvatarFallback>

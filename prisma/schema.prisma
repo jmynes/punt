@@ -17,6 +17,7 @@ model User {
   email       String?   @unique
   name        String
   avatar      String?
+  avatarColor String?   // Custom background color for fallback avatar
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
