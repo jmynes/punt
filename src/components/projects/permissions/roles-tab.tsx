@@ -169,23 +169,57 @@ export function RolesTab({ projectId }: RolesTabProps) {
     setHasChanges(false)
   }
 
+  // Check if form values differ from the original role
+  const checkForChanges = (
+    name: string,
+    color: string,
+    description: string,
+    permissions: Permission[],
+  ) => {
+    if (isCreating) {
+      // For new roles, any non-default values count as changes
+      return name.trim() !== '' || description.trim() !== '' || permissions.length > 0
+    }
+    if (!selectedRole) return false
+
+    const nameChanged = name !== selectedRole.name
+    const colorChanged = color !== selectedRole.color
+    const descChanged = (description || '') !== (selectedRole.description || '')
+    const permsChanged =
+      permissions.length !== selectedRole.permissions.length ||
+      permissions.some((p) => !selectedRole.permissions.includes(p)) ||
+      selectedRole.permissions.some((p) => !permissions.includes(p))
+
+    return nameChanged || colorChanged || descChanged || permsChanged
+  }
+
   // Handle form field changes
   const handleFieldChange = (field: string, value: unknown) => {
+    let newName = editName
+    let newColor = editColor
+    let newDescription = editDescription
+    let newPermissions = editPermissions
+
     switch (field) {
       case 'name':
-        setEditName(value as string)
+        newName = value as string
+        setEditName(newName)
         break
       case 'color':
-        setEditColor(value as string)
+        newColor = value as string
+        setEditColor(newColor)
         break
       case 'description':
-        setEditDescription(value as string)
+        newDescription = value as string
+        setEditDescription(newDescription)
         break
       case 'permissions':
-        setEditPermissions(value as Permission[])
+        newPermissions = value as Permission[]
+        setEditPermissions(newPermissions)
         break
     }
-    setHasChanges(true)
+
+    setHasChanges(checkForChanges(newName, newColor, newDescription, newPermissions))
   }
 
   // Save the role
