@@ -61,6 +61,7 @@ interface UserDetails {
   email: string | null
   name: string
   avatar: string | null
+  avatarColor: string | null
   isSystemAdmin: boolean
   isActive: boolean
   createdAt: string
