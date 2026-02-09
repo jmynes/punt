@@ -217,7 +217,7 @@ export function DatabaseImportDialog({
               )}
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter>
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
@@ -289,7 +289,7 @@ export function DatabaseImportDialog({
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter>
               <Button variant="outline" onClick={handleBack}>
                 Back
               </Button>
@@ -335,7 +335,7 @@ export function DatabaseImportDialog({
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter>
               <Button variant="outline" onClick={handleBack}>
                 Back
               </Button>
@@ -516,7 +516,7 @@ export function DatabaseImportDialog({
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter>
               <Button variant="outline" onClick={handleClose}>
                 Close
               </Button>

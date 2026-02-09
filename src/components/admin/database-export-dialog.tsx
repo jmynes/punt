@@ -94,7 +94,7 @@ export function DatabaseExportDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter>
           <Button variant="outline" onClick={handleClose} disabled={exportMutation.isPending}>
             Cancel
           </Button>
