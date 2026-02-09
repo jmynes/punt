@@ -9,8 +9,8 @@ import {
   List,
   Pencil,
   Plus,
-  Settings,
   Shield,
+  SlidersHorizontal,
   Target,
   Trash2,
   Users,
@@ -34,7 +34,7 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/', icon: Home },
-  { title: 'Preferences', href: '/preferences', icon: Settings },
+  { title: 'Preferences', href: '/preferences', icon: SlidersHorizontal },
 ]
 
 interface SidebarContentProps {
