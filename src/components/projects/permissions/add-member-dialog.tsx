@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select'
 import { useAddMember, useAvailableUsers } from '@/hooks/queries/use-members'
 import { useProjectRoles } from '@/hooks/queries/use-roles'
-import { cn } from '@/lib/utils'
+import { cn, getAvatarColor } from '@/lib/utils'
 
 interface AddMemberDialogProps {
   projectId: string
@@ -55,7 +55,6 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
     roles?.find((r) => r.name === 'Member') ?? roles?.find((r) => r.name !== 'Owner')
 
   const selectedUser = availableUsers?.find((u) => u.id === selectedUserId)
-  const selectedRole = roles?.find((r) => r.id === selectedRoleId)
 
   const handleOpenChange = useCallback((newOpen: boolean) => {
     setOpen(newOpen)
@@ -91,7 +90,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add Member</DialogTitle>
           <DialogDescription>
@@ -116,7 +115,12 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                     <div className="flex items-center gap-2">
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={selectedUser.avatar || undefined} />
-                        <AvatarFallback className="text-[10px] bg-zinc-700">
+                        <AvatarFallback
+                          className="text-[10px] text-white font-medium"
+                          style={{
+                            backgroundColor: getAvatarColor(selectedUser.id || selectedUser.name),
+                          }}
+                        >
                           {selectedUser.name.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -128,7 +132,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[375px] p-0" align="start">
+              <PopoverContent className="w-[460px] p-0" align="start">
                 <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Search users..."
@@ -162,14 +166,19 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                               <div className="flex items-center gap-2 flex-1">
                                 <Avatar className="h-6 w-6">
                                   <AvatarImage src={user.avatar || undefined} />
-                                  <AvatarFallback className="text-[10px] bg-zinc-700">
+                                  <AvatarFallback
+                                    className="text-[10px] text-white font-medium"
+                                    style={{
+                                      backgroundColor: getAvatarColor(user.id || user.name),
+                                    }}
+                                  >
                                     {user.name.slice(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-sm">{user.name}</p>
                                   {user.email && (
-                                    <p className="truncate text-xs text-zinc-500">{user.email}</p>
+                                    <p className="truncate text-xs text-zinc-400">{user.email}</p>
                                   )}
                                 </div>
                               </div>
@@ -198,17 +207,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
               onValueChange={(value) => setSelectedRoleId(value)}
             >
               <SelectTrigger className="w-full bg-zinc-900 border-zinc-800">
-                {selectedRole ? (
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: selectedRole.color }}
-                    />
-                    <SelectValue />
-                  </div>
-                ) : (
-                  <span className="text-zinc-500">Select a role...</span>
-                )}
+                <SelectValue placeholder="Select a role..." />
               </SelectTrigger>
               <SelectContent>
                 {rolesLoading ? (
