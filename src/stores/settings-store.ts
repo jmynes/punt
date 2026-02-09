@@ -24,6 +24,15 @@ interface SettingsState {
   customColors: string[]
   addCustomColor: (color: string) => void
   removeCustomColor: (color: string) => void
+
+  // Show undo/redo buttons on toast notifications
+  showUndoButtons: boolean
+  setShowUndoButtons: (value: boolean) => void
+
+  // Sidebar settings section expanded state
+  sidebarExpandedSections: Record<string, boolean> // keyed by 'admin' or project ID
+  setSidebarSectionExpanded: (key: string, expanded: boolean) => void
+  toggleSidebarSection: (key: string) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -46,6 +55,24 @@ export const useSettingsStore = create<SettingsState>()(
       // Default: show confirmation dialog for unsaved role changes
       autoSaveOnRoleEditorClose: false,
       setAutoSaveOnRoleEditorClose: (value) => set({ autoSaveOnRoleEditorClose: value }),
+
+      // Show undo/redo buttons on toast notifications (on by default)
+      showUndoButtons: true,
+      setShowUndoButtons: (value) => set({ showUndoButtons: value }),
+
+      // Sidebar settings sections - default collapsed
+      sidebarExpandedSections: {},
+      setSidebarSectionExpanded: (key, expanded) =>
+        set((state) => ({
+          sidebarExpandedSections: { ...state.sidebarExpandedSections, [key]: expanded },
+        })),
+      toggleSidebarSection: (key) =>
+        set((state) => ({
+          sidebarExpandedSections: {
+            ...state.sidebarExpandedSections,
+            [key]: !state.sidebarExpandedSections[key],
+          },
+        })),
 
       // Custom saved colors (max 20)
       customColors: [],

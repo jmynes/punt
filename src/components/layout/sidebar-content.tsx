@@ -4,9 +4,12 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Database,
   Home,
   Layers,
   List,
+  Mail,
+  Palette,
   Pencil,
   Plus,
   Settings,
@@ -14,17 +17,19 @@ import {
   SlidersHorizontal,
   Target,
   Trash2,
+  Upload,
   Users,
 } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useHasAnyPermission } from '@/hooks/use-permissions'
+import { useHasAnyPermission, useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import type { ProjectSummary } from '@/stores/projects-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import type { UserSummary } from '@/types'
 
 interface NavItem {
@@ -37,6 +42,41 @@ const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/', icon: Home },
   { title: 'Preferences', href: '/preferences', icon: SlidersHorizontal },
 ]
+
+// Animated collapsible container for smooth expand/collapse
+function CollapsibleSection({
+  expanded,
+  children,
+}: {
+  expanded: boolean
+  children: React.ReactNode
+}) {
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState<number>(0)
+
+  // Measure content height whenever content or expansion state changes
+  const measureHeight = useCallback(() => {
+    if (contentRef.current) {
+      setHeight(contentRef.current.scrollHeight)
+    }
+  }, [])
+
+  useEffect(() => {
+    measureHeight()
+  }, [measureHeight])
+
+  // Re-measure on every render since children may have changed
+  useEffect(measureHeight)
+
+  return (
+    <div
+      className="overflow-hidden transition-[max-height] duration-200 ease-in-out"
+      style={{ maxHeight: expanded ? `${height}px` : '0px' }}
+    >
+      <div ref={contentRef}>{children}</div>
+    </div>
+  )
+}
 
 interface SidebarContentProps {
   currentUser: UserSummary | null
@@ -62,10 +102,25 @@ export function SidebarContent({
   onLinkClick,
 }: SidebarContentProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [editMode, setEditMode] = useState(false)
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set())
   const [adminExpanded, setAdminExpanded] = useState(true)
   const [projectsExpanded, setProjectsExpanded] = useState(true)
+  const { sidebarExpandedSections, toggleSidebarSection } = useSettingsStore()
+  const adminSettingsExpanded = sidebarExpandedSections['admin'] ?? false
+  const setAdminSettingsExpanded = useCallback(
+    (v: boolean) => useSettingsStore.getState().setSidebarSectionExpanded('admin', v),
+    [],
+  )
+  const isProjectSettingsExpanded = useCallback(
+    (projectId: string) => sidebarExpandedSections[projectId] ?? false,
+    [sidebarExpandedSections],
+  )
+  const toggleProjectSettingsExpanded = useCallback(
+    (projectId: string) => toggleSidebarSection(projectId),
+    [toggleSidebarSection],
+  )
 
   // Default all projects to expanded when they load
   useEffect(() => {
@@ -170,19 +225,113 @@ export function SidebarContent({
                   Users
                 </Button>
               </Link>
-              <Link href="/admin/settings" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/settings' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Settings className="h-3.5 w-3.5" />
-                  Settings
-                </Button>
-              </Link>
+              <div>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    className="h-8 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
+                    onClick={() => setAdminSettingsExpanded(!adminSettingsExpanded)}
+                  >
+                    {adminSettingsExpanded ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                  </button>
+                  <Link href="/admin/settings" onClick={handleLinkClick} className="flex-1 min-w-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+                        pathname === '/admin/settings' && 'bg-zinc-800/50 text-zinc-100',
+                      )}
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                      Settings
+                    </Button>
+                  </Link>
+                </div>
+                <CollapsibleSection expanded={adminSettingsExpanded}>
+                  <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                    <Link href="/admin/settings?tab=email" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings' &&
+                            (searchParams.get('tab') === 'email' || !searchParams.get('tab')) &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Mail className="h-3 w-3" />
+                        Email
+                      </Button>
+                    </Link>
+                    <Link href="/admin/settings?tab=branding" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings' &&
+                            searchParams.get('tab') === 'branding' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Palette className="h-3 w-3" />
+                        Branding
+                      </Button>
+                    </Link>
+                    <Link href="/admin/settings?tab=uploads" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings' &&
+                            searchParams.get('tab') === 'uploads' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Upload className="h-3 w-3" />
+                        File Uploads
+                      </Button>
+                    </Link>
+                    <Link href="/admin/settings?tab=roles" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings' &&
+                            searchParams.get('tab') === 'roles' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Shield className="h-3 w-3" />
+                        Roles
+                      </Button>
+                    </Link>
+                    <Link href="/admin/settings?tab=database" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings' &&
+                            searchParams.get('tab') === 'database' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Database className="h-3 w-3" />
+                        Database
+                      </Button>
+                    </Link>
+                  </div>
+                </CollapsibleSection>
+              </div>
             </div>
           )}
         </div>
@@ -371,6 +520,9 @@ export function SidebarContent({
                           projectId={project.id}
                           projectKey={project.key}
                           pathname={pathname}
+                          searchParams={searchParams}
+                          expanded={isProjectSettingsExpanded(project.id)}
+                          onToggleExpanded={() => toggleProjectSettingsExpanded(project.id)}
                           onClick={handleLinkClick}
                         />
                       </div>
@@ -391,11 +543,17 @@ function ProjectSettingsLink({
   projectId,
   projectKey,
   pathname,
+  searchParams,
+  expanded,
+  onToggleExpanded,
   onClick,
 }: {
   projectId: string
   projectKey: string
   pathname: string
+  searchParams: ReturnType<typeof useSearchParams>
+  expanded: boolean
+  onToggleExpanded: () => void
   onClick: () => void
 }) {
   // Check if user has any settings-related permissions
@@ -405,22 +563,96 @@ function ProjectSettingsLink({
     PERMISSIONS.MEMBERS_ADMIN,
   ])
 
+  // Check individual permissions for sub-items
+  const canViewSettings = useHasPermission(projectId, PERMISSIONS.PROJECT_SETTINGS)
+  const canManageMembers = useHasPermission(projectId, PERMISSIONS.MEMBERS_MANAGE)
+  const canManageRoles = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
+
   // Don't render if user doesn't have access (or still loading - hide by default)
   if (!hasSettingsAccess) return null
 
+  const isOnSettingsPage = pathname.startsWith(`/projects/${projectKey}/settings`)
+  const currentTab = searchParams.get('tab')
+
   return (
-    <Link href={`/projects/${projectKey}/settings`} onClick={onClick}>
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
-          pathname.startsWith(`/projects/${projectKey}/settings`) && 'bg-zinc-800/50 text-zinc-100',
-        )}
-      >
-        <Settings className="h-3.5 w-3.5" />
-        Settings
-      </Button>
-    </Link>
+    <div>
+      <div className="flex items-center">
+        <button
+          type="button"
+          className="h-8 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
+          onClick={onToggleExpanded}
+        >
+          {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        </button>
+        <Link
+          href={`/projects/${projectKey}/settings`}
+          onClick={onClick}
+          className="flex-1 min-w-0"
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+              isOnSettingsPage && 'bg-zinc-800/50 text-zinc-100',
+            )}
+          >
+            <Settings className="h-3.5 w-3.5" />
+            Settings
+          </Button>
+        </Link>
+      </div>
+      <CollapsibleSection expanded={expanded}>
+        <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+          {canViewSettings && (
+            <Link href={`/projects/${projectKey}/settings?tab=general`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  isOnSettingsPage &&
+                    (currentTab === 'general' || !currentTab) &&
+                    'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Settings className="h-3 w-3" />
+                General
+              </Button>
+            </Link>
+          )}
+          {canManageMembers && (
+            <Link href={`/projects/${projectKey}/settings?tab=members`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  isOnSettingsPage && currentTab === 'members' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Users className="h-3 w-3" />
+                Members
+              </Button>
+            </Link>
+          )}
+          {canManageRoles && (
+            <Link href={`/projects/${projectKey}/settings?tab=roles`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  isOnSettingsPage && currentTab === 'roles' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Shield className="h-3 w-3" />
+                Roles
+              </Button>
+            </Link>
+          )}
+        </div>
+      </CollapsibleSection>
+    </div>
   )
 }
