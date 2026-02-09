@@ -89,7 +89,7 @@ export async function PATCH(
     // Check if ticket exists and belongs to project, get creator for permission check
     const existingTicket = await db.ticket.findFirst({
       where: { id: ticketId, projectId },
-      select: { id: true, columnId: true, creatorId: true },
+      select: { id: true, columnId: true, sprintId: true, creatorId: true },
     })
 
     if (!existingTicket) {
@@ -194,12 +194,21 @@ export async function PATCH(
       })
 
     // Emit real-time event for other clients
-    // Use 'ticket.moved' if column changed, otherwise 'ticket.updated'
+    // Use 'ticket.moved' if column changed, 'ticket.sprint_changed' if sprint changed, otherwise 'ticket.updated'
     // Include tabId from header so the originating tab can skip the event
     const columnChanged = updateData.columnId && updateData.columnId !== existingTicket.columnId
+    const sprintChanged =
+      updateData.sprintId !== undefined && updateData.sprintId !== existingTicket.sprintId
     const tabId = request.headers.get('X-Tab-Id') || undefined
+
+    const eventType = columnChanged
+      ? 'ticket.moved'
+      : sprintChanged
+        ? 'ticket.sprint_changed'
+        : 'ticket.updated'
+
     projectEvents.emitTicketEvent({
-      type: columnChanged ? 'ticket.moved' : 'ticket.updated',
+      type: eventType,
       projectId,
       ticketId,
       userId: user.id,

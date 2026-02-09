@@ -12,6 +12,7 @@ export type TicketEventType =
   | 'ticket.updated'
   | 'ticket.deleted'
   | 'ticket.moved'
+  | 'ticket.sprint_changed'
 
 /**
  * Event types for project operations
