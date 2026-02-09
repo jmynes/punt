@@ -62,12 +62,32 @@ export function DatabaseImportDialog({
   const [error, setError] = useState<string | null>(null)
 
   const importMutation = useImportDatabase()
+  const [verifying, setVerifying] = useState(false)
+  const [credentialError, setCredentialError] = useState<string | null>(null)
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 'warning') {
       setStep('credentials')
     } else if (step === 'credentials') {
-      setStep('confirm')
+      setVerifying(true)
+      setCredentialError(null)
+      try {
+        const res = await fetch('/api/auth/verify-credentials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          setCredentialError(data.error || 'Invalid credentials')
+          return
+        }
+        setStep('confirm')
+      } catch {
+        setCredentialError('Failed to verify credentials')
+      } finally {
+        setVerifying(false)
+      }
     }
   }
 
@@ -132,6 +152,7 @@ export function DatabaseImportDialog({
     setConfirmText('')
     setResult(null)
     setError(null)
+    setCredentialError(null)
     setNeedsPassword(initialIsEncrypted)
   }
 
@@ -263,6 +284,12 @@ export function DatabaseImportDialog({
                 />
               </div>
 
+              {credentialError && (
+                <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg">
+                  <p className="text-sm text-red-300">{credentialError}</p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-zinc-300">
                   Password
@@ -293,7 +320,12 @@ export function DatabaseImportDialog({
               <Button variant="outline" onClick={handleBack}>
                 Back
               </Button>
-              <Button variant="destructive" onClick={handleNext} disabled={!username || !password}>
+              <Button
+                variant="destructive"
+                onClick={handleNext}
+                disabled={!username || !password || verifying}
+              >
+                {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Continue
                 <ChevronRight className="h-4 w-4" />
               </Button>

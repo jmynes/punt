@@ -9,25 +9,25 @@ export async function POST(request: Request) {
     const currentUser = await requireSystemAdmin()
 
     const body = await request.json()
-    const { email, password } = body
+    const { username, password } = body
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
+    if (!password) {
+      return NextResponse.json({ error: 'Password is required' }, { status: 400 })
     }
 
-    // Verify the email matches the current user
-    if (email !== currentUser.email) {
-      return NextResponse.json({ error: 'Email does not match your account' }, { status: 401 })
-    }
-
-    // Get the user's password hash from the database
+    // Get the user's username and password hash from the database
     const user = await db.user.findUnique({
       where: { id: currentUser.id },
-      select: { passwordHash: true },
+      select: { username: true, passwordHash: true },
     })
 
     if (!user || !user.passwordHash) {
       return NextResponse.json({ error: 'Unable to verify credentials' }, { status: 401 })
+    }
+
+    // If username is provided, verify it matches the current user
+    if (username && username !== user.username) {
+      return NextResponse.json({ error: 'Username does not match your account' }, { status: 401 })
     }
 
     // Verify the password
