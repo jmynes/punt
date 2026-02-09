@@ -332,76 +332,14 @@ export function SprintHeader({
             />
           )}
 
-          {/* Story points summary - show simplified if no budget */}
-          {!activeSprint.budget && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="hidden lg:flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="flex items-center gap-1 text-xs text-zinc-500">
-                      <TrendingUp className="h-3 w-3" />
-                      Story Points
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className={cn('text-lg font-bold', colors.text)}>
-                        {completedPoints}
-                      </span>
-                      <span className="text-zinc-600">/</span>
-                      <span className="text-sm text-zinc-400">{totalPoints}</span>
-                    </div>
-                  </div>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p className="text-xs">
-                  {completedPoints} of {totalPoints} story points completed
-                  {remainingPoints > 0 && ` (${remainingPoints} remaining)`}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-          {/* Progress visualization */}
-          <div className="flex items-center gap-4">
-            {/* Circular progress */}
-            <div className="relative">
-              <svg className="w-12 h-12 -rotate-90" aria-label="Sprint progress" role="img">
-                {/* Background circle */}
-                <circle
-                  cx="24"
-                  cy="24"
-                  r="20"
-                  fill="none"
-                  className="stroke-zinc-800"
-                  strokeWidth="4"
-                />
-                {/* Progress circle */}
-                <circle
-                  cx="24"
-                  cy="24"
-                  r="20"
-                  fill="none"
-                  className={cn('transition-all duration-500', colors.progress)}
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeDasharray={`${progressPercent * 1.256} 125.6`}
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className={cn('text-xs font-bold', colors.text)}>{progressPercent}%</span>
-              </div>
-            </div>
-
-            {/* Ticket count */}
-            <div className="text-right">
-              <div className="text-xs text-zinc-500">Issues</div>
-              <div className="flex items-center gap-1">
-                <span className={cn('text-lg font-bold', colors.text)}>{completedCount}</span>
-                <span className="text-zinc-600">/</span>
-                <span className="text-sm text-zinc-400">{totalCount}</span>
-              </div>
-            </div>
-          </div>
+          {/* Dual progress meters */}
+          <ProgressMeters
+            completedCount={completedCount}
+            totalCount={totalCount}
+            completedPoints={completedPoints}
+            totalPoints={totalPoints}
+            colorScheme={colorScheme}
+          />
 
           {/* Complete button when expired */}
           {expired && canManageSprints && (
@@ -415,6 +353,118 @@ export function SprintHeader({
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Dual progress meters showing issues and story points completion
+ */
+function ProgressMeters({
+  completedCount,
+  totalCount,
+  completedPoints,
+  totalPoints,
+  colorScheme,
+}: {
+  completedCount: number
+  totalCount: number
+  completedPoints: number
+  totalPoints: number
+  colorScheme: 'orange' | 'blue' | 'emerald'
+}) {
+  const issuePercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+  const pointsPercent = totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0
+
+  const progressColors = {
+    orange: 'bg-orange-500',
+    blue: 'bg-blue-500',
+    emerald: 'bg-emerald-500',
+  }
+
+  const textColors = {
+    orange: 'text-orange-400',
+    blue: 'text-blue-400',
+    emerald: 'text-emerald-400',
+  }
+
+  const progressColor = progressColors[colorScheme]
+  const textColor = textColors[colorScheme]
+
+  return (
+    <div className="hidden md:flex items-center gap-6">
+      {/* Issues progress */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex flex-col gap-1.5">
+            {/* Label row */}
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-zinc-500" />
+              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                Issues
+              </span>
+            </div>
+
+            {/* Progress bar with numbers */}
+            <div className="flex items-center gap-4">
+              <div className="h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  className={cn('h-full rounded-full transition-all duration-500', progressColor)}
+                  style={{ width: `${issuePercent}%` }}
+                />
+              </div>
+              <div className="flex items-center gap-0.5 text-xs min-w-[44px]">
+                <span className={cn('font-bold tabular-nums', textColor)}>{completedCount}</span>
+                <span className="text-zinc-600">/</span>
+                <span className="text-zinc-500 tabular-nums">{totalCount}</span>
+              </div>
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+          <p className="text-xs text-zinc-100">
+            {completedCount} of {totalCount} issues completed ({issuePercent}%)
+          </p>
+        </TooltipContent>
+      </Tooltip>
+
+      {/* Divider */}
+      <div className="h-10 w-px bg-zinc-800/60" />
+
+      {/* Story points progress */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex flex-col gap-1.5">
+            {/* Label row */}
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="h-3.5 w-3.5 text-zinc-500" />
+              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                Points
+              </span>
+            </div>
+
+            {/* Progress bar with numbers */}
+            <div className="flex items-center gap-4">
+              <div className="h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  className={cn('h-full rounded-full transition-all duration-500', progressColor)}
+                  style={{ width: `${pointsPercent}%` }}
+                />
+              </div>
+              <div className="flex items-center gap-0.5 text-xs min-w-[44px]">
+                <span className={cn('font-bold tabular-nums', textColor)}>{completedPoints}</span>
+                <span className="text-zinc-600">/</span>
+                <span className="text-zinc-500 tabular-nums">{totalPoints}</span>
+              </div>
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+          <p className="text-xs text-zinc-100">
+            {completedPoints} of {totalPoints} story points completed ({pointsPercent}%)
+          </p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   )
 }
