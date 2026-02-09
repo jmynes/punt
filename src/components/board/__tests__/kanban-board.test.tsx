@@ -36,6 +36,10 @@ const { mockBoardState, mockSelectionState, mockUiState, mockUndoState, createMo
       updateTicket: vi.fn(),
       addTicket: vi.fn(),
       removeTicket: vi.fn(),
+      collapsedColumns: {},
+      isColumnCollapsed: vi.fn(() => false),
+      toggleColumnCollapsed: vi.fn(),
+      setColumnCollapsed: vi.fn(),
     }
 
     const mockSelectionState = {

@@ -458,7 +458,9 @@ export function KanbanBoard({
             <KanbanColumn
               key={column.id}
               column={column}
+              projectId={projectId}
               projectKey={projectKey}
+              allColumns={columns}
               dragSelectionIds={draggingTicketIds}
               activeTicketId={activeTicket?.id || null}
               activeDragTarget={
