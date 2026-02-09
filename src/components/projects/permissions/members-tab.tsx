@@ -76,6 +76,7 @@ export function MembersTab({ projectId }: MembersTabProps) {
   const [removingMember, setRemovingMember] = useState<ProjectMemberWithRole | null>(null)
   const [showBulkRemoveDialog, setShowBulkRemoveDialog] = useState(false)
   const [isRemoving, setIsRemoving] = useState(false)
+  const [isChangingRole, setIsChangingRole] = useState(false)
 
   // Filter members by search
   const filteredMembers = useMemo(() => {
@@ -205,6 +206,40 @@ export function MembersTab({ projectId }: MembersTabProps) {
     } finally {
       setIsRemoving(false)
       setShowBulkRemoveDialog(false)
+    }
+  }
+
+  const handleBulkRoleChange = async (roleId: string) => {
+    if (selectedIds.size === 0) return
+
+    setIsChangingRole(true)
+    const count = selectedIds.size
+    const roleName = roles?.find((r) => r.id === roleId)?.name || 'role'
+    try {
+      await Promise.all(
+        [...selectedIds].map(async (memberId) => {
+          const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Tab-Id': getTabId(),
+            },
+            body: JSON.stringify({ roleId }),
+          })
+          if (!res.ok) {
+            const error = await res.json()
+            throw new Error(error.error || 'Failed to update role')
+          }
+        }),
+      )
+      queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
+      queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
+      toast.success(`Set ${count} member${count !== 1 ? 's' : ''} to ${roleName}`)
+      setSelectedIds(new Set())
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update roles')
+    } finally {
+      setIsChangingRole(false)
     }
   }
 
@@ -342,11 +377,37 @@ export function MembersTab({ projectId }: MembersTabProps) {
               {selectedIds.size} selected
             </span>
 
+            {/* Set Role */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-zinc-400">Set role:</span>
+              <Select value="" onValueChange={handleBulkRoleChange} disabled={isChangingRole}>
+                <SelectTrigger className="h-7 w-[110px] bg-zinc-800 border-zinc-600 text-sm">
+                  <SelectValue placeholder={isChangingRole ? 'Updating...' : 'Select...'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles?.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: role.color }}
+                        />
+                        <span>{role.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-px h-6 bg-zinc-700" />
+
             <Button
               variant="ghost"
               size="sm"
               className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
               onClick={() => setShowBulkRemoveDialog(true)}
+              disabled={isRemoving}
             >
               <UserMinus className="h-4 w-4 mr-1.5" />
               Remove
