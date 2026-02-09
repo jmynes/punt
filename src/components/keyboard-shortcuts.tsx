@@ -1292,7 +1292,10 @@ export function KeyboardShortcuts() {
                       const bs = useBoardStore.getState()
                       bs.removeTicket(undoEntry.projectId, action.ticket.id)
                       bs.addTicket(undoEntry.projectId, action.columnId, serverTicket)
-                      // Update action reference so next undo/redo uses the new server ticket
+                      // Update undo/redo store entries so next cycle uses the new server ticket ID
+                      useUndoStore
+                        .getState()
+                        .updateTicketCreateEntry(action.ticket.id, serverTicket)
                       action.ticket = serverTicket
                     })
                     .catch((err) => {

@@ -277,7 +277,8 @@ export function CreateTicketDialog() {
               const boardStore = useBoardStore.getState()
               boardStore.removeTicket(projectId, serverTicket.id)
               boardStore.addTicket(projectId, columnId, newServerTicket)
-              // Update the undo store entry with the new server ticket
+              // Update undo/redo store entries so next cycle uses the new server ticket ID
+              useUndoStore.getState().updateTicketCreateEntry(serverTicket.id, newServerTicket)
               serverTicket = newServerTicket
             })
             .catch((err) => {
