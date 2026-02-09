@@ -36,6 +36,7 @@ import { useProjectRoles } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
+import { getAvatarColor } from '@/lib/utils'
 import type { ProjectMemberWithRole } from '@/types'
 
 interface MembersTabProps {
@@ -211,7 +212,12 @@ function MemberCard({
           {/* Avatar */}
           <Avatar className="h-10 w-10">
             <AvatarImage src={member.user.avatar || undefined} alt={member.user.name} />
-            <AvatarFallback className="bg-zinc-700 text-zinc-300">{initials}</AvatarFallback>
+            <AvatarFallback
+              className="text-white font-medium"
+              style={{ backgroundColor: getAvatarColor(member.user.id || member.user.name) }}
+            >
+              {initials}
+            </AvatarFallback>
           </Avatar>
 
           {/* User info */}
@@ -219,7 +225,10 @@ function MemberCard({
             <div className="flex items-center gap-2">
               <span className="font-medium text-zinc-100">{member.user.name}</span>
               {isCurrentUser && (
-                <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500">
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
+                >
                   You
                 </Badge>
               )}
