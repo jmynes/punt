@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, MoreHorizontal, Settings, Shield, UserMinus, UserPlus } from 'lucide-react'
+import { Loader2, Settings, UserMinus, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { AddMemberDialog } from '@/components/projects/permissions/add-member-dialog'
 import {
@@ -17,13 +17,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
@@ -51,7 +44,6 @@ export function MembersTab({ projectId }: MembersTabProps) {
   const currentUser = useCurrentUser()
 
   const canManageMembers = useHasPermission(projectId, PERMISSIONS.MEMBERS_MANAGE)
-  const canManagePermissions = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
 
   const [removingMember, setRemovingMember] = useState<ProjectMemberWithRole | null>(null)
 
@@ -115,7 +107,6 @@ export function MembersTab({ projectId }: MembersTabProps) {
                     roles={roles || []}
                     isCurrentUser={true}
                     canChangeRole={canManageMembers === true}
-                    canManagePermissions={canManagePermissions === true}
                     onRoleChange={(roleId) => handleRoleChange(currentMember.id, roleId)}
                     onRemove={() => setRemovingMember(currentMember)}
                   />
@@ -138,7 +129,6 @@ export function MembersTab({ projectId }: MembersTabProps) {
                   roles={roles || []}
                   isCurrentUser={false}
                   canChangeRole={canManageMembers === true}
-                  canManagePermissions={canManagePermissions === true}
                   onRoleChange={(roleId) => handleRoleChange(member.id, roleId)}
                   onRemove={() => setRemovingMember(member)}
                 />
@@ -182,7 +172,6 @@ interface MemberCardProps {
   roles: Array<{ id: string; name: string; color: string; position: number }>
   isCurrentUser: boolean
   canChangeRole: boolean
-  canManagePermissions: boolean
   onRoleChange: (roleId: string) => void
   onRemove: () => void
 }
@@ -192,7 +181,6 @@ function MemberCard({
   roles,
   isCurrentUser,
   canChangeRole,
-  canManagePermissions,
   onRoleChange,
   onRemove,
 }: MemberCardProps) {
@@ -282,36 +270,17 @@ function MemberCard({
             </Badge>
           )}
 
-          {/* Actions dropdown */}
-          {(canChangeRole || canManagePermissions || isCurrentUser) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {canManagePermissions && (
-                  <DropdownMenuItem>
-                    <Shield className="mr-2 h-4 w-4" />
-                    Edit Permissions
-                  </DropdownMenuItem>
-                )}
-                {/* Remove/Leave option */}
-                {(canChangeRole || isCurrentUser) && (
-                  <>
-                    {canManagePermissions && <DropdownMenuSeparator />}
-                    <DropdownMenuItem
-                      onClick={onRemove}
-                      className="text-red-400 focus:text-red-400"
-                    >
-                      <UserMinus className="mr-2 h-4 w-4" />
-                      {isCurrentUser ? 'Leave Project' : 'Remove from Project'}
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* Remove button */}
+          {(canChangeRole || isCurrentUser) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-900/20"
+              onClick={onRemove}
+              title={isCurrentUser ? 'Leave Project' : 'Remove from Project'}
+            >
+              <UserMinus className="h-4 w-4" />
+            </Button>
           )}
         </div>
       </CardContent>
