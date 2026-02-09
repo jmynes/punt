@@ -25,6 +25,7 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/events', () => ({
   projectEvents: {
     emitProjectEvent: vi.fn(),
+    emitMemberEvent: vi.fn(),
   },
 }))
 
@@ -168,10 +169,11 @@ describe('Project API - Permission Tests', () => {
     it('should return 200 when user has project.delete permission', async () => {
       mockRequireAuth.mockResolvedValue(TEST_USER)
       mockHasPermission.mockResolvedValue(true)
-      mockDb.project.findUnique.mockResolvedValue({ id: TEST_PROJECT_ID })
-      ;(mockDb.$transaction as any).mockImplementation(async (fn: any) => {
-        return { id: TEST_PROJECT_ID }
+      mockDb.project.findUnique.mockResolvedValue({
+        id: TEST_PROJECT_ID,
+        members: [{ id: 'member-1', userId: TEST_USER.id, role: { id: 'role-1', name: 'owner' } }],
       })
+      mockDb.project.delete.mockResolvedValue({ id: TEST_PROJECT_ID })
 
       const response = await DELETE(createRequest('DELETE'), {
         params: Promise.resolve({ projectId: TEST_PROJECT_ID }),
