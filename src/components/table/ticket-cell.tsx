@@ -2,6 +2,7 @@
 
 import { format, isBefore, isToday } from 'date-fns'
 import { User } from 'lucide-react'
+import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -29,7 +30,7 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
     case 'title':
       return (
         <div className="flex items-center gap-2">
-          <span className="truncate font-medium">{ticket.title}</span>
+          <InlineCodeText text={ticket.title} className="truncate font-medium" />
           {ticket._count && ticket._count.subtasks > 0 && (
             <Badge variant="outline" className="shrink-0 text-xs">
               {ticket._count.subtasks} subtasks
