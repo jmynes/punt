@@ -123,6 +123,7 @@ export function useCreateTicket() {
         startDate: data.startDate,
         dueDate: data.dueDate,
         assigneeId: data.assigneeId,
+        reporterId: data.reporterId,
         sprintId: data.sprintId,
         parentId: data.parentId,
         labelIds: data.labelIds,
@@ -194,6 +195,7 @@ export function useUpdateTicket() {
       if ('storyPoints' in updates) apiUpdates.storyPoints = updates.storyPoints
       if ('estimate' in updates) apiUpdates.estimate = updates.estimate
       if ('assigneeId' in updates) apiUpdates.assigneeId = updates.assigneeId
+      if ('creatorId' in updates) apiUpdates.creatorId = updates.creatorId
       if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
       if ('startDate' in updates) apiUpdates.startDate = updates.startDate
       if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate

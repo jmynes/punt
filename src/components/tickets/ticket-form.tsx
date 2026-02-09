@@ -148,18 +148,33 @@ export function TicketForm({
 
       <Separator className="bg-zinc-800" />
 
-      {/* Assignee with Assign to Me button */}
-      <div className="space-y-2">
-        <Label className="text-zinc-300">Assignee</Label>
-        <UserSelect
-          value={data.assigneeId}
-          onChange={(value) => updateField('assigneeId', value)}
-          users={members}
-          currentUserId={currentUser?.id}
-          placeholder="Unassigned"
-          disabled={disabled}
-          showAssignToMe
-        />
+      {/* Reporter and Assignee - Row */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-zinc-300">Reporter</Label>
+          <UserSelect
+            value={data.reporterId}
+            onChange={(value) => updateField('reporterId', value)}
+            users={members}
+            currentUserId={currentUser?.id}
+            placeholder="Select reporter"
+            disabled={disabled}
+            showAssignToMe
+            allowUnassigned={false}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-zinc-300">Assignee</Label>
+          <UserSelect
+            value={data.assigneeId}
+            onChange={(value) => updateField('assigneeId', value)}
+            users={members}
+            currentUserId={currentUser?.id}
+            placeholder="Unassigned"
+            disabled={disabled}
+            showAssignToMe
+          />
+        </div>
       </div>
 
       {/* Labels */}

@@ -39,6 +39,7 @@ export interface CreateTicketInput {
   priority?: Priority
   columnId: string
   assigneeId?: string | null
+  reporterId?: string | null
   sprintId?: string | null
   storyPoints?: number | null
   estimate?: string | null
@@ -56,6 +57,7 @@ export interface UpdateTicketInput {
   columnId?: string
   order?: number
   assigneeId?: string | null
+  creatorId?: string | null
   sprintId?: string | null
   storyPoints?: number | null
   estimate?: string | null

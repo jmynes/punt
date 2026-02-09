@@ -20,7 +20,7 @@ const updateTicketSchema = z.object({
   columnId: z.string().min(1).optional(),
   order: z.number().optional(),
   assigneeId: z.string().nullable().optional(),
-  // Note: creatorId is intentionally excluded - it's set at creation and cannot be changed
+  creatorId: z.string().nullable().optional(),
   sprintId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   storyPoints: z.number().nullable().optional(),
@@ -126,6 +126,16 @@ export async function PATCH(
       })
       if (!assigneeMembership) {
         return badRequestError('Assignee must be a project member')
+      }
+    }
+
+    // Validate creatorId (reporter) is a project member (if provided and not null)
+    if (updateData.creatorId !== undefined && updateData.creatorId !== null) {
+      const reporterMembership = await db.projectMember.findUnique({
+        where: { userId_projectId: { userId: updateData.creatorId, projectId } },
+      })
+      if (!reporterMembership) {
+        return badRequestError('Reporter must be a project member')
       }
     }
 

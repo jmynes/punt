@@ -43,7 +43,7 @@ function formatTicket(ticket: TicketData, projectKey?: string): string {
   }
 
   if (ticket.creator) {
-    lines.push(`| Creator | ${ticket.creator.name} |`)
+    lines.push(`| Reporter | ${ticket.creator.name} |`)
   }
 
   if (ticket.labels.length > 0) {
@@ -203,6 +203,7 @@ export function registerTicketTools(server: McpServer) {
       description: z.string().optional().describe('Ticket description'),
       column: z.string().optional().describe('Column name (defaults to first column)'),
       assignee: z.string().optional().describe('Assignee name'),
+      reporter: z.string().optional().describe('Reporter name (defaults to authenticated user)'),
       storyPoints: z.number().min(0).optional().describe('Story points'),
       estimate: z.string().optional().describe('Time estimate (e.g., "2h", "1d")'),
       startDate: z.string().optional().describe('Start date (ISO format: YYYY-MM-DD)'),
@@ -221,6 +222,7 @@ export function registerTicketTools(server: McpServer) {
       description,
       column,
       assignee,
+      reporter,
       storyPoints,
       estimate,
       startDate,
@@ -270,6 +272,22 @@ export function registerTicketTools(server: McpServer) {
         assigneeId = user.id
       }
 
+      // Get reporter ID if specified
+      let reporterId: string | undefined
+      if (reporter) {
+        const usersResult = await listUsers()
+        if (usersResult.error) {
+          return errorResponse(usersResult.error)
+        }
+        const user = usersResult.data?.find((u) =>
+          u.name.toLowerCase().includes(reporter.toLowerCase()),
+        )
+        if (!user) {
+          return errorResponse(`User not found: ${reporter}`)
+        }
+        reporterId = user.id
+      }
+
       // Get sprint ID if specified
       let sprintId: string | undefined
       if (sprint) {
@@ -312,6 +330,7 @@ export function registerTicketTools(server: McpServer) {
         priority,
         columnId,
         assigneeId: assigneeId || null,
+        reporterId: reporterId || null,
         sprintId: sprintId || null,
         storyPoints: storyPoints || null,
         estimate: estimate || null,

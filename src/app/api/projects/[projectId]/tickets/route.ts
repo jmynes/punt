@@ -20,6 +20,7 @@ const createTicketSchema = z.object({
   priority: z.enum(['lowest', 'low', 'medium', 'high', 'highest', 'critical']).default('medium'),
   columnId: z.string().min(1),
   assigneeId: z.string().nullable().optional(),
+  reporterId: z.string().nullable().optional(),
   sprintId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   storyPoints: z.number().nullable().optional(),
@@ -92,7 +93,10 @@ export async function POST(
       return validationError(parsed)
     }
 
-    const { labelIds, watcherIds, ...ticketData } = parsed.data
+    const { labelIds, watcherIds, reporterId, ...ticketData } = parsed.data
+
+    // Determine creatorId: use reporterId if provided, otherwise default to authenticated user
+    const creatorId = reporterId ?? user.id
 
     // Verify column belongs to project
     const column = await db.column.findFirst({
@@ -101,6 +105,16 @@ export async function POST(
 
     if (!column) {
       return badRequestError('Column not found or does not belong to project')
+    }
+
+    // Validate reporterId is a project member (if provided)
+    if (reporterId) {
+      const reporterMembership = await db.projectMember.findUnique({
+        where: { userId_projectId: { userId: reporterId, projectId } },
+      })
+      if (!reporterMembership) {
+        return badRequestError('Reporter must be a project member')
+      }
     }
 
     // Validate assigneeId is a project member (if provided)
@@ -149,7 +163,7 @@ export async function POST(
           number: nextNumber,
           order: nextOrder,
           projectId,
-          creatorId: user.id,
+          creatorId,
           type: ticketData.type as IssueType,
           priority: ticketData.priority as Priority,
           labels: labelIds.length > 0 ? { connect: labelIds.map((id) => ({ id })) } : undefined,
