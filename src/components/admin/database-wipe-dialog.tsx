@@ -29,6 +29,8 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [confirmText, setConfirmText] = useState('')
+  const [verifying, setVerifying] = useState(false)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
 
   const wipeMutation = useWipeDatabase()
 
@@ -40,6 +42,7 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
     setPassword('')
     setShowPassword(false)
     setConfirmText('')
+    setVerifyError(null)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -126,6 +129,12 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
                 </div>
               </div>
 
+              {verifyError && (
+                <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg">
+                  <p className="text-sm text-red-300">{verifyError}</p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="current-password" className="text-zinc-300">
                   Your Current Password
@@ -162,9 +171,30 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={() => setStep('credentials')}
-                  disabled={!currentPassword}
+                  onClick={async () => {
+                    setVerifying(true)
+                    setVerifyError(null)
+                    try {
+                      const res = await fetch('/api/auth/verify-credentials', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: currentPassword }),
+                      })
+                      if (!res.ok) {
+                        const data = await res.json()
+                        setVerifyError(data.error || 'Invalid password')
+                        return
+                      }
+                      setStep('credentials')
+                    } catch {
+                      setVerifyError('Failed to verify credentials')
+                    } finally {
+                      setVerifying(false)
+                    }
+                  }}
+                  disabled={!currentPassword || verifying}
                 >
+                  {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Continue
                 </Button>
               </div>

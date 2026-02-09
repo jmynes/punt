@@ -33,6 +33,8 @@ export function DatabaseWipeProjectsDialog({
   const [showPassword, setShowPassword] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const [result, setResult] = useState<{ projects: number; tickets: number } | null>(null)
+  const [verifying, setVerifying] = useState(false)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
 
   const wipeMutation = useWipeProjects()
 
@@ -42,6 +44,7 @@ export function DatabaseWipeProjectsDialog({
     setShowPassword(false)
     setConfirmText('')
     setResult(null)
+    setVerifyError(null)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -136,6 +139,12 @@ export function DatabaseWipeProjectsDialog({
                 </div>
               </div>
 
+              {verifyError && (
+                <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg">
+                  <p className="text-sm text-red-300">{verifyError}</p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="wipe-projects-password" className="text-zinc-300">
                   Your Password
@@ -168,9 +177,30 @@ export function DatabaseWipeProjectsDialog({
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={() => setStep('confirm')}
-                  disabled={!confirmPassword}
+                  onClick={async () => {
+                    setVerifying(true)
+                    setVerifyError(null)
+                    try {
+                      const res = await fetch('/api/auth/verify-credentials', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: confirmPassword }),
+                      })
+                      if (!res.ok) {
+                        const data = await res.json()
+                        setVerifyError(data.error || 'Invalid password')
+                        return
+                      }
+                      setStep('confirm')
+                    } catch {
+                      setVerifyError('Failed to verify credentials')
+                    } finally {
+                      setVerifying(false)
+                    }
+                  }}
+                  disabled={!confirmPassword || verifying}
                 >
+                  {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Continue
                 </Button>
               </div>
