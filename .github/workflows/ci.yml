@@ -39,3 +39,8 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_DEMO_MODE: 'true'
