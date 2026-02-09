@@ -1292,6 +1292,8 @@ export function KeyboardShortcuts() {
                       const bs = useBoardStore.getState()
                       bs.removeTicket(undoEntry.projectId, action.ticket.id)
                       bs.addTicket(undoEntry.projectId, action.columnId, serverTicket)
+                      // Update action reference so next undo/redo uses the new server ticket
+                      action.ticket = serverTicket
                     })
                     .catch((err) => {
                       console.error('Failed to recreate ticket on redo:', err)
@@ -1893,6 +1895,8 @@ export function KeyboardShortcuts() {
                 const bs = useBoardStore.getState()
                 bs.removeTicket(entry.projectId, action.ticket.id)
                 bs.addTicket(entry.projectId, action.columnId, serverTicket)
+                // Update action reference so next undo/redo uses the new server ticket
+                action.ticket = serverTicket
               })
               .catch((err) => {
                 console.error('Failed to recreate ticket on redo:', err)
