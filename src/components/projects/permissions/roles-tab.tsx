@@ -28,6 +28,7 @@ import {
   useAvailableUsers,
   useProjectMembers,
   useRemoveMember,
+  useUpdateMember,
 } from '@/hooks/queries/use-members'
 import { useCreateRole, useProjectRoles, useUpdateRole } from '@/hooks/queries/use-roles'
 import { useHasPermission } from '@/hooks/use-permissions'
@@ -58,6 +59,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
   const { data: members, isLoading: membersLoading } = useProjectMembers(projectId)
   const createRole = useCreateRole(projectId)
   const updateRole = useUpdateRole(projectId)
+  const updateMember = useUpdateMember(projectId)
   const removeMember = useRemoveMember(projectId)
   const addMember = useAddMember(projectId)
 
@@ -96,6 +98,43 @@ export function RolesTab({ projectId }: RolesTabProps) {
     if (!selectedRoleId || !members) return []
     return members.filter((m) => m.roleId === selectedRoleId)
   }, [selectedRoleId, members])
+
+  // Combined search results: members from other roles + available users
+  const searchResults = useMemo(() => {
+    if (!addMemberSearch.trim()) return []
+    const search = addMemberSearch.toLowerCase()
+
+    // Members from other roles (will be moved)
+    const otherRoleMembers = (members || [])
+      .filter((m) => m.roleId !== selectedRoleId)
+      .filter(
+        (m) =>
+          m.user.name.toLowerCase().includes(search) ||
+          m.user.email?.toLowerCase().includes(search),
+      )
+      .map((m) => ({
+        id: m.user.id,
+        name: m.user.name,
+        email: m.user.email,
+        avatar: m.user.avatar,
+        memberId: m.id,
+        currentRole: roles?.find((r) => r.id === m.roleId),
+        isExistingMember: true as const,
+      }))
+
+    // Available users (will be added)
+    const newUsers = (availableUsers || []).map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      avatar: u.avatar,
+      memberId: null,
+      currentRole: null,
+      isExistingMember: false as const,
+    }))
+
+    return [...otherRoleMembers, ...newUsers]
+  }, [addMemberSearch, members, selectedRoleId, roles, availableUsers])
 
   // Load role data into form
   const loadRoleData = useCallback((role: RoleWithPermissions) => {
@@ -470,14 +509,21 @@ export function RolesTab({ projectId }: RolesTabProps) {
                             placeholder="Search users to add..."
                             className="bg-zinc-800/50 border-zinc-700 hover:border-zinc-500"
                           />
-                          {addMemberSearch && availableUsers && availableUsers.length > 0 && (
+                          {addMemberSearch && searchResults.length > 0 && (
                             <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-10 max-h-48 overflow-auto">
-                              {availableUsers.map((user) => (
+                              {searchResults.map((user) => (
                                 <button
                                   key={user.id}
                                   type="button"
                                   onClick={() => {
-                                    addMember.mutate({ userId: user.id, roleId: selectedRoleId })
+                                    if (user.isExistingMember && user.memberId) {
+                                      updateMember.mutate({
+                                        memberId: user.memberId,
+                                        roleId: selectedRoleId,
+                                      })
+                                    } else {
+                                      addMember.mutate({ userId: user.id, roleId: selectedRoleId })
+                                    }
                                     setAddMemberSearch('')
                                   }}
                                   className="w-full flex items-center gap-3 px-3 py-2 hover:bg-zinc-700 transition-colors text-left"
@@ -492,17 +538,33 @@ export function RolesTab({ projectId }: RolesTabProps) {
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-zinc-200 truncate">{user.name}</p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm text-zinc-200 truncate">{user.name}</p>
+                                      {user.currentRole && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-[10px] px-1.5 py-0 h-4 border-zinc-600"
+                                          style={{ color: user.currentRole.color }}
+                                        >
+                                          {user.currentRole.name}
+                                        </Badge>
+                                      )}
+                                    </div>
                                     {user.email && (
                                       <p className="text-xs text-zinc-500 truncate">{user.email}</p>
                                     )}
+                                    {user.currentRole && (
+                                      <p className="text-xs text-amber-500/70 mt-0.5">
+                                        Will move from {user.currentRole.name}
+                                      </p>
+                                    )}
                                   </div>
-                                  <UserPlus className="h-4 w-4 text-zinc-500" />
+                                  <UserPlus className="h-4 w-4 text-zinc-500 flex-shrink-0" />
                                 </button>
                               ))}
                             </div>
                           )}
-                          {addMemberSearch && availableUsers && availableUsers.length === 0 && (
+                          {addMemberSearch && searchResults.length === 0 && (
                             <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-10 px-3 py-2 text-sm text-zinc-500">
                               No users found
                             </div>
