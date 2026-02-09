@@ -353,9 +353,16 @@ export function RolesTab({ projectId }: RolesTabProps) {
               <CardHeader className="flex-shrink-0 pb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 rounded-full" style={{ backgroundColor: editColor }} />
-                  <CardTitle className="text-lg">
-                    {isCreating ? 'New Role' : selectedRole?.name}
-                  </CardTitle>
+                  {canManageRoles && !selectedRole?.isDefault ? (
+                    <Input
+                      value={editName}
+                      onChange={(e) => handleFieldChange('name', e.target.value)}
+                      placeholder="Role name..."
+                      className="text-lg font-semibold bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-zinc-500"
+                    />
+                  ) : (
+                    <CardTitle className="text-lg">{editName || 'New Role'}</CardTitle>
+                  )}
                   {selectedRole?.isDefault && (
                     <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500">
                       <Lock className="mr-1 h-3 w-3" />
@@ -373,45 +380,26 @@ export function RolesTab({ projectId }: RolesTabProps) {
               <TabsContent value="permissions" className="flex-1 min-h-0 mt-0">
                 <ScrollArea className="h-full">
                   <CardContent className="pt-0 space-y-4">
-                    {/* Role Name & Color */}
-                    <div className="grid grid-cols-[1fr,auto] gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="role-name">Role Name</Label>
-                        <Input
-                          id="role-name"
-                          value={editName}
-                          onChange={(e) => handleFieldChange('name', e.target.value)}
-                          placeholder="e.g., Moderator, Contributor"
-                          disabled={!canManageRoles || (selectedRole?.isDefault && !isCreating)}
-                          className="bg-zinc-800/50"
-                        />
-                        {selectedRole?.isDefault && (
-                          <p className="text-xs text-zinc-500">
-                            Default role names cannot be changed.
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Color</Label>
-                        <div className="flex gap-1">
-                          {ROLE_COLORS.map((c) => (
-                            <button
-                              key={c}
-                              type="button"
-                              onClick={() => handleFieldChange('color', c)}
-                              disabled={!canManageRoles}
-                              className={cn(
-                                'w-6 h-6 rounded-md transition-all',
-                                editColor === c
-                                  ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900'
-                                  : 'hover:scale-110',
-                                !canManageRoles && 'opacity-50 cursor-not-allowed',
-                              )}
-                              style={{ backgroundColor: c }}
-                            />
-                          ))}
-                        </div>
+                    {/* Color */}
+                    <div className="space-y-2">
+                      <Label>Color</Label>
+                      <div className="flex gap-1">
+                        {ROLE_COLORS.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => handleFieldChange('color', c)}
+                            disabled={!canManageRoles}
+                            className={cn(
+                              'w-6 h-6 rounded-md transition-all',
+                              editColor === c
+                                ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900'
+                                : 'hover:scale-110',
+                              !canManageRoles && 'opacity-50 cursor-not-allowed',
+                            )}
+                            style={{ backgroundColor: c }}
+                          />
+                        ))}
                       </div>
                     </div>
 
