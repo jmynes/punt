@@ -308,9 +308,49 @@ export function RolesTab({ projectId }: RolesTabProps) {
       {/* Right Panel - Role Editor */}
       <div className="flex-1 min-w-0">
         {selectedRole || isCreating ? (
-          <Card className="h-full flex flex-col bg-zinc-900/50 border-zinc-800">
-            <CardHeader className="flex-shrink-0 pb-4">
-              <div className="flex items-center justify-between">
+          <Tabs defaultValue="permissions" className="h-full flex flex-col">
+            {/* Header bar with tabs and actions */}
+            <div className="flex items-center gap-3 mb-4">
+              <TabsList className="flex-1 grid grid-cols-2 h-auto p-0 bg-transparent rounded-none gap-0">
+                <TabsTrigger
+                  value="permissions"
+                  className="!rounded-none !rounded-l-lg !border !border-zinc-700 !bg-zinc-800/50 !text-zinc-400 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-500 data-[state=active]:!text-white data-[state=active]:!border-amber-500 hover:!bg-zinc-700/50 hover:!text-zinc-200"
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  Permissions
+                </TabsTrigger>
+                <TabsTrigger
+                  value="members"
+                  className="!rounded-none !rounded-r-lg !border !border-l-0 !border-zinc-700 !bg-zinc-800/50 !text-zinc-400 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-500 data-[state=active]:!text-white data-[state=active]:!border-amber-500 hover:!bg-zinc-700/50 hover:!text-zinc-200 disabled:!opacity-50"
+                  disabled={isCreating}
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Members ({roleMembers.length})
+                </TabsTrigger>
+              </TabsList>
+
+              {canManageRoles && hasChanges && (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button variant="outline" size="sm" onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={createRole.isPending || updateRole.isPending}
+                  >
+                    {(createRole.isPending || updateRole.isPending) && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    {isCreating ? 'Create' : 'Save'}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <Card className="flex-1 flex flex-col bg-zinc-900/50 border-zinc-800 min-h-0">
+              <CardHeader className="flex-shrink-0 pb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 rounded-full" style={{ backgroundColor: editColor }} />
                   <CardTitle className="text-lg">
@@ -323,53 +363,16 @@ export function RolesTab({ projectId }: RolesTabProps) {
                     </Badge>
                   )}
                 </div>
-                {canManageRoles && hasChanges && (
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleCancel}>
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={handleSave}
-                      disabled={createRole.isPending || updateRole.isPending}
-                    >
-                      {(createRole.isPending || updateRole.isPending) && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
-                      {isCreating ? 'Create' : 'Save'}
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <CardDescription>
-                {isCreating
-                  ? 'Create a new role with custom permissions.'
-                  : `Configure permissions and manage members for this role.`}
-              </CardDescription>
-            </CardHeader>
-
-            <Tabs defaultValue="permissions" className="flex-1 flex flex-col min-h-0">
-              <div className="px-6">
-                <TabsList className="bg-zinc-800/50">
-                  <TabsTrigger value="permissions" className="data-[state=active]:bg-zinc-700">
-                    <Shield className="mr-2 h-4 w-4" />
-                    Permissions
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="members"
-                    className="data-[state=active]:bg-zinc-700"
-                    disabled={isCreating}
-                  >
-                    <Users className="mr-2 h-4 w-4" />
-                    Members ({roleMembers.length})
-                  </TabsTrigger>
-                </TabsList>
-              </div>
+                <CardDescription>
+                  {isCreating
+                    ? 'Create a new role with custom permissions.'
+                    : `Configure permissions and manage members for this role.`}
+                </CardDescription>
+              </CardHeader>
 
               <TabsContent value="permissions" className="flex-1 min-h-0 mt-0">
                 <ScrollArea className="h-full">
-                  <CardContent className="pt-4 space-y-4">
+                  <CardContent className="pt-0 space-y-4">
                     {/* Role Name & Color */}
                     <div className="grid grid-cols-[1fr,auto] gap-4">
                       <div className="space-y-2">
@@ -444,7 +447,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
 
               <TabsContent value="members" className="flex-1 min-h-0 mt-0">
                 <ScrollArea className="h-full">
-                  <CardContent className="pt-4">
+                  <CardContent className="pt-0">
                     {roleMembers.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
                         <Users className="h-12 w-12 mb-4 opacity-50" />
@@ -506,8 +509,8 @@ export function RolesTab({ projectId }: RolesTabProps) {
                   </CardContent>
                 </ScrollArea>
               </TabsContent>
-            </Tabs>
-          </Card>
+            </Card>
+          </Tabs>
         ) : (
           <div className="h-full flex items-center justify-center text-zinc-500">
             <div className="text-center">
