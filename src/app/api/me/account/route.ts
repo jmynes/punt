@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { isDemoMode } from '@/lib/demo/demo-config'
 import { verifyPassword } from '@/lib/password'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
@@ -13,6 +14,14 @@ const deleteAccountSchema = z.object({
 // DELETE /api/me/account - Delete account
 export async function DELETE(request: Request) {
   try {
+    // Handle demo mode - account deletion not available
+    if (isDemoMode()) {
+      return NextResponse.json(
+        { error: 'Account deletion is not available in demo mode' },
+        { status: 400 },
+      )
+    }
+
     const currentUser = await requireAuth()
 
     // Rate limiting

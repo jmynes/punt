@@ -2,6 +2,7 @@ import { unlink } from 'node:fs/promises'
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { isDemoMode } from '@/lib/demo/demo-config'
 import { projectEvents } from '@/lib/events'
 import { FilesystemStorage } from '@/lib/file-storage'
 import { processAvatarImage } from '@/lib/image-processing'
@@ -21,6 +22,15 @@ function generateAvatarFilename(userId: string): string {
 // POST /api/me/avatar - Upload avatar
 export async function POST(request: Request) {
   try {
+    // Handle demo mode - return success without persisting
+    if (isDemoMode()) {
+      return NextResponse.json({
+        success: true,
+        avatar: null,
+        message: 'Avatar upload simulated in demo mode (changes are not persisted)',
+      })
+    }
+
     const currentUser = await requireAuth()
 
     const formData = await request.formData()
@@ -132,6 +142,11 @@ export async function POST(request: Request) {
 // DELETE /api/me/avatar - Remove avatar
 export async function DELETE(request: Request) {
   try {
+    // Handle demo mode - return success without persisting
+    if (isDemoMode()) {
+      return NextResponse.json({ success: true })
+    }
+
     const currentUser = await requireAuth()
 
     // Get current avatar for cleanup

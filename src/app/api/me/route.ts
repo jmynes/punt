@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { DEMO_USER, isDemoMode } from '@/lib/demo/demo-config'
 import { projectEvents } from '@/lib/events'
 
 const updateProfileSchema = z.object({
@@ -11,6 +12,24 @@ const updateProfileSchema = z.object({
 // GET /api/me - Get current user's profile
 export async function GET() {
   try {
+    // Handle demo mode - return demo user data
+    if (isDemoMode()) {
+      return NextResponse.json({
+        id: DEMO_USER.id,
+        email: DEMO_USER.email,
+        name: DEMO_USER.name,
+        avatar: DEMO_USER.avatar,
+        isSystemAdmin: DEMO_USER.isSystemAdmin,
+        createdAt: DEMO_USER.createdAt,
+        updatedAt: DEMO_USER.updatedAt,
+        _count: {
+          projects: 1,
+          assignedTickets: 0,
+          createdTickets: 0,
+        },
+      })
+    }
+
     const currentUser = await requireAuth()
 
     const user = await db.user.findUnique({
@@ -54,6 +73,26 @@ export async function GET() {
 // PATCH /api/me - Update profile (name, email)
 export async function PATCH(request: Request) {
   try {
+    // Handle demo mode - return success without persisting
+    if (isDemoMode()) {
+      const body = await request.json()
+      const parsed = updateProfileSchema.safeParse(body)
+
+      if (!parsed.success) {
+        return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
+      }
+
+      return NextResponse.json({
+        id: DEMO_USER.id,
+        email: DEMO_USER.email,
+        name: parsed.data.name,
+        avatar: DEMO_USER.avatar,
+        isSystemAdmin: DEMO_USER.isSystemAdmin,
+        createdAt: DEMO_USER.createdAt,
+        updatedAt: new Date(),
+      })
+    }
+
     const currentUser = await requireAuth()
 
     const body = await request.json()

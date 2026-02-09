@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { DEMO_USER, isDemoMode } from '@/lib/demo/demo-config'
 import {
   generateToken,
   getAppUrl,
@@ -23,6 +24,26 @@ const updateEmailSchema = z.object({
 // PATCH /api/me/email - Update email address (requires password confirmation)
 export async function PATCH(request: Request) {
   try {
+    // Handle demo mode - return success without persisting
+    if (isDemoMode()) {
+      const body = await request.json()
+      const parsed = updateEmailSchema.safeParse(body)
+
+      if (!parsed.success) {
+        return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
+      }
+
+      return NextResponse.json({
+        id: DEMO_USER.id,
+        email: parsed.data.email,
+        name: DEMO_USER.name,
+        avatar: DEMO_USER.avatar,
+        isSystemAdmin: DEMO_USER.isSystemAdmin,
+        createdAt: DEMO_USER.createdAt,
+        updatedAt: new Date(),
+      })
+    }
+
     const currentUser = await requireAuth()
 
     // Rate limiting - prevents brute force password guessing via email change
