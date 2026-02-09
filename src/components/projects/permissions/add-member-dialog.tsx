@@ -221,12 +221,14 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                       <SelectItem key={role.id} value={role.id}>
                         <div className="flex items-center gap-2">
                           <div
-                            className="w-2 h-2 rounded-full"
+                            className="w-2 h-2 rounded-full shrink-0"
                             style={{ backgroundColor: role.color }}
                           />
-                          <span>{role.name}</span>
+                          <span className="shrink-0">{role.name}</span>
                           {role.description && (
-                            <span className="text-xs text-zinc-400 ml-2">{role.description}</span>
+                            <span className="text-xs text-zinc-400 truncate">
+                              {role.description}
+                            </span>
                           )}
                         </div>
                       </SelectItem>
@@ -241,7 +243,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!isValid || isSubmitting}>
+          <Button variant="primary" onClick={handleSubmit} disabled={!isValid || isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
