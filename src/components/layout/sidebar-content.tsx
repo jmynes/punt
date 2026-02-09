@@ -322,20 +322,6 @@ export function SidebarContent({
                     {/* Project sub-nav */}
                     {isExpanded && (
                       <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-                        <Link href={`/projects/${project.key}/board`} onClick={handleLinkClick}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={cn(
-                              'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
-                              pathname === `/projects/${project.key}/board` &&
-                                'bg-zinc-800/50 text-zinc-100',
-                            )}
-                          >
-                            <Layers className="h-3.5 w-3.5" />
-                            Board
-                          </Button>
-                        </Link>
                         <Link href={`/projects/${project.key}/backlog`} onClick={handleLinkClick}>
                           <Button
                             variant="ghost"
@@ -348,6 +334,20 @@ export function SidebarContent({
                           >
                             <List className="h-3.5 w-3.5" />
                             Backlog
+                          </Button>
+                        </Link>
+                        <Link href={`/projects/${project.key}/board`} onClick={handleLinkClick}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                              'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
+                              pathname === `/projects/${project.key}/board` &&
+                                'bg-zinc-800/50 text-zinc-100',
+                            )}
+                          >
+                            <Layers className="h-3.5 w-3.5" />
+                            Board
                           </Button>
                         </Link>
                         <Link href={`/projects/${project.key}/sprints`} onClick={handleLinkClick}>
