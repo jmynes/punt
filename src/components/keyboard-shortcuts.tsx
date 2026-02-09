@@ -23,6 +23,8 @@ import {
 import {
   batchCreateTicketsAPI,
   batchDeleteTicketsAPI,
+  createTicketAPI,
+  deleteTicketAPI,
   updateTicketAPI,
 } from '@/hooks/queries/use-tickets'
 import { pasteTickets } from '@/lib/actions'
@@ -1264,6 +1266,11 @@ export function KeyboardShortcuts() {
             removeTicket(entry.projectId, action.ticket.id)
             undoStore.pushRedo(entry)
 
+            // Delete from server
+            deleteTicketAPI(entry.projectId, action.ticket.id).catch((err) => {
+              console.error('Failed to delete ticket on undo:', err)
+            })
+
             const ticketKey = formatTicketId(action.ticket)
             let currentId = entry.toastId
 
@@ -1279,6 +1286,16 @@ export function KeyboardShortcuts() {
                 const undoEntry = useUndoStore.getState().redoByToastId(id)
                 if (undoEntry) {
                   addTicket(undoEntry.projectId, action.columnId, action.ticket)
+                  // Re-create on server
+                  createTicketAPI(undoEntry.projectId, action.columnId, action.ticket)
+                    .then((serverTicket) => {
+                      const bs = useBoardStore.getState()
+                      bs.removeTicket(undoEntry.projectId, action.ticket.id)
+                      bs.addTicket(undoEntry.projectId, action.columnId, serverTicket)
+                    })
+                    .catch((err) => {
+                      console.error('Failed to recreate ticket on redo:', err)
+                    })
                 }
               },
               onUndoneToast: (newId) => {
@@ -1292,6 +1309,10 @@ export function KeyboardShortcuts() {
                 const undoEntry = useUndoStore.getState().undoByToastId(id)
                 if (undoEntry) {
                   removeTicket(undoEntry.projectId, action.ticket.id)
+                  // Delete from server
+                  deleteTicketAPI(undoEntry.projectId, action.ticket.id).catch((err) => {
+                    console.error('Failed to delete ticket on undo:', err)
+                  })
                 }
               },
               onRedoneToast: (newId) => {
@@ -1866,6 +1887,17 @@ export function KeyboardShortcuts() {
             const { addTicket, removeTicket } = useBoardStore.getState()
             addTicket(entry.projectId, action.columnId, action.ticket)
 
+            // Re-create on server
+            createTicketAPI(entry.projectId, action.columnId, action.ticket)
+              .then((serverTicket) => {
+                const bs = useBoardStore.getState()
+                bs.removeTicket(entry.projectId, action.ticket.id)
+                bs.addTicket(entry.projectId, action.columnId, serverTicket)
+              })
+              .catch((err) => {
+                console.error('Failed to recreate ticket on redo:', err)
+              })
+
             const ticketKey = formatTicketId(action.ticket)
             const newToastId = toast.success('Ticket created', {
               description: ticketKey,
@@ -1876,6 +1908,10 @@ export function KeyboardShortcuts() {
                     onClick: () => {
                       removeTicket(entry.projectId, action.ticket.id)
                       redoStore.pushRedo(entry)
+                      // Delete from server
+                      deleteTicketAPI(entry.projectId, action.ticket.id).catch((err) => {
+                        console.error('Failed to delete ticket on undo:', err)
+                      })
                       toast.success('Ticket creation undone', { duration: 2000 })
                     },
                   }
