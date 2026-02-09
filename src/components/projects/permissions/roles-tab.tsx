@@ -1,6 +1,16 @@
 'use client'
 
-import { Loader2, Lock, Pencil, Plus, Shield, UserPlus, Users, X } from 'lucide-react'
+import {
+  ArrowRightLeft,
+  Loader2,
+  Lock,
+  Pencil,
+  Plus,
+  Shield,
+  UserPlus,
+  Users,
+  X,
+} from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -18,6 +28,12 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -615,15 +631,52 @@ export function RolesTab({ projectId }: RolesTabProps) {
                               </div>
                             </div>
                             {canManageRoles && (
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => removeMember.mutate(member.id)}
-                                disabled={removeMember.isPending}
-                                className="text-zinc-500 hover:text-red-400 hover:bg-red-900/20"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                {roles && roles.length > 1 && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        className="text-zinc-500 hover:text-zinc-200 hover:bg-zinc-700"
+                                      >
+                                        <ArrowRightLeft className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="min-w-[140px]">
+                                      {roles
+                                        .filter((r) => r.id !== selectedRoleId)
+                                        .map((role) => (
+                                          <DropdownMenuItem
+                                            key={role.id}
+                                            onClick={() =>
+                                              updateMember.mutate({
+                                                memberId: member.id,
+                                                roleId: role.id,
+                                              })
+                                            }
+                                            className="gap-2"
+                                          >
+                                            <div
+                                              className="w-2 h-2 rounded-full"
+                                              style={{ backgroundColor: role.color }}
+                                            />
+                                            {role.name}
+                                          </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={() => removeMember.mutate(member.id)}
+                                  disabled={removeMember.isPending}
+                                  className="text-zinc-500 hover:text-red-400 hover:bg-red-900/20"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
                             )}
                           </div>
                         ))}
