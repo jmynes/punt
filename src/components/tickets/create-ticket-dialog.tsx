@@ -256,34 +256,43 @@ export function CreateTicketDialog() {
       showUndoButtons: true,
       onUndo: async (id) => {
         // Undo: delete the created ticket
-        const entry = useUndoStore.getState().undoByToastId(id)
+        const store = useUndoStore.getState()
+        if (store.isProcessing) return
+        const entry = store.undoByToastId(id)
         if (entry) {
           useBoardStore.getState().removeTicket(projectId, serverTicket.id)
-          // Delete from server
-          deleteTicketAPI(projectId, serverTicket.id).catch((err) => {
-            console.error('Failed to delete ticket on undo:', err)
-          })
+          // Delete from server (block next undo/redo until done)
+          store.setProcessing(true)
+          deleteTicketAPI(projectId, serverTicket.id)
+            .catch((err) => {
+              console.error('Failed to delete ticket on undo:', err)
+            })
+            .finally(() => {
+              useUndoStore.getState().setProcessing(false)
+            })
         }
       },
       onRedo: async (id) => {
         // Redo: re-create the ticket
-        const entry = useUndoStore.getState().redoByToastId(id)
+        const store = useUndoStore.getState()
+        if (store.isProcessing) return
+        const entry = store.redoByToastId(id)
         if (entry) {
           useBoardStore.getState().addTicket(projectId, columnId, serverTicket)
-          // Re-create on server
-          createTicketAPI(projectId, columnId, serverTicket)
-            .then((newServerTicket) => {
-              // Replace the old ticket with the new server ticket
-              const boardStore = useBoardStore.getState()
-              boardStore.removeTicket(projectId, serverTicket.id)
-              boardStore.addTicket(projectId, columnId, newServerTicket)
-              // Update undo/redo store entries so next cycle uses the new server ticket ID
-              useUndoStore.getState().updateTicketCreateEntry(serverTicket.id, newServerTicket)
-              serverTicket = newServerTicket
-            })
-            .catch((err) => {
-              console.error('Failed to recreate ticket on redo:', err)
-            })
+          // Re-create on server (await to block next undo/redo)
+          store.setProcessing(true)
+          try {
+            const newServerTicket = await createTicketAPI(projectId, columnId, serverTicket)
+            const boardStore = useBoardStore.getState()
+            boardStore.removeTicket(projectId, serverTicket.id)
+            boardStore.addTicket(projectId, columnId, newServerTicket)
+            useUndoStore.getState().updateTicketCreateEntry(serverTicket.id, newServerTicket)
+            serverTicket = newServerTicket
+          } catch (err) {
+            console.error('Failed to recreate ticket on redo:', err)
+          } finally {
+            useUndoStore.getState().setProcessing(false)
+          }
         }
       },
       onUndoneToast: (newId) => {

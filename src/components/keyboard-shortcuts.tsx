@@ -698,6 +698,7 @@ export function KeyboardShortcuts() {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
         e.preventDefault()
         const undoStore = useUndoStore.getState()
+        if (undoStore.isProcessing) return // Block while API call is in flight
         const entry = undoStore.popUndo()
         if (entry) {
           toast.dismiss(entry.toastId)
@@ -1266,10 +1267,15 @@ export function KeyboardShortcuts() {
             removeTicket(entry.projectId, action.ticket.id)
             undoStore.pushRedo(entry)
 
-            // Delete from server
-            deleteTicketAPI(entry.projectId, action.ticket.id).catch((err) => {
-              console.error('Failed to delete ticket on undo:', err)
-            })
+            // Delete from server (await to block next undo/redo)
+            undoStore.setProcessing(true)
+            deleteTicketAPI(entry.projectId, action.ticket.id)
+              .catch((err) => {
+                console.error('Failed to delete ticket on undo:', err)
+              })
+              .finally(() => {
+                useUndoStore.getState().setProcessing(false)
+              })
 
             const ticketKey = formatTicketId(action.ticket)
             let currentId = entry.toastId
@@ -1281,26 +1287,30 @@ export function KeyboardShortcuts() {
               showUndoButtons: showUndo,
               undoLabel: 'Redo',
               redoLabel: 'Undo',
-              onUndo: (id) => {
-                // Redo (re-create)
-                const undoEntry = useUndoStore.getState().redoByToastId(id)
+              onUndo: async (id) => {
+                // Redo (re-create) - await to prevent race conditions
+                const store = useUndoStore.getState()
+                if (store.isProcessing) return
+                const undoEntry = store.redoByToastId(id)
                 if (undoEntry) {
                   addTicket(undoEntry.projectId, action.columnId, action.ticket)
-                  // Re-create on server
-                  createTicketAPI(undoEntry.projectId, action.columnId, action.ticket)
-                    .then((serverTicket) => {
-                      const bs = useBoardStore.getState()
-                      bs.removeTicket(undoEntry.projectId, action.ticket.id)
-                      bs.addTicket(undoEntry.projectId, action.columnId, serverTicket)
-                      // Update undo/redo store entries so next cycle uses the new server ticket ID
-                      useUndoStore
-                        .getState()
-                        .updateTicketCreateEntry(action.ticket.id, serverTicket)
-                      action.ticket = serverTicket
-                    })
-                    .catch((err) => {
-                      console.error('Failed to recreate ticket on redo:', err)
-                    })
+                  store.setProcessing(true)
+                  try {
+                    const serverTicket = await createTicketAPI(
+                      undoEntry.projectId,
+                      action.columnId,
+                      action.ticket,
+                    )
+                    const bs = useBoardStore.getState()
+                    bs.removeTicket(undoEntry.projectId, action.ticket.id)
+                    bs.addTicket(undoEntry.projectId, action.columnId, serverTicket)
+                    useUndoStore.getState().updateTicketCreateEntry(action.ticket.id, serverTicket)
+                    action.ticket = serverTicket
+                  } catch (err) {
+                    console.error('Failed to recreate ticket on redo:', err)
+                  } finally {
+                    useUndoStore.getState().setProcessing(false)
+                  }
                 }
               },
               onUndoneToast: (newId) => {
@@ -1309,15 +1319,21 @@ export function KeyboardShortcuts() {
                   currentId = newId
                 }
               },
-              onRedo: (id) => {
-                // Undo (delete again)
-                const undoEntry = useUndoStore.getState().undoByToastId(id)
+              onRedo: async (id) => {
+                // Undo (delete again) - await to prevent race conditions
+                const store = useUndoStore.getState()
+                if (store.isProcessing) return
+                const undoEntry = store.undoByToastId(id)
                 if (undoEntry) {
                   removeTicket(undoEntry.projectId, action.ticket.id)
-                  // Delete from server
-                  deleteTicketAPI(undoEntry.projectId, action.ticket.id).catch((err) => {
-                    console.error('Failed to delete ticket on undo:', err)
-                  })
+                  store.setProcessing(true)
+                  deleteTicketAPI(undoEntry.projectId, action.ticket.id)
+                    .catch((err) => {
+                      console.error('Failed to delete ticket on undo:', err)
+                    })
+                    .finally(() => {
+                      useUndoStore.getState().setProcessing(false)
+                    })
                 }
               },
               onRedoneToast: (newId) => {
@@ -1456,6 +1472,7 @@ export function KeyboardShortcuts() {
       if (isRedo) {
         e.preventDefault()
         const redoStore = useUndoStore.getState()
+        if (redoStore.isProcessing) return // Block while API call is in flight
         const entry = redoStore.popRedo()
         if (entry) {
           const showUndo = useUIStore.getState().showUndoButtons
@@ -1892,17 +1909,21 @@ export function KeyboardShortcuts() {
             const { addTicket, removeTicket } = useBoardStore.getState()
             addTicket(entry.projectId, action.columnId, action.ticket)
 
-            // Re-create on server
+            // Re-create on server (await to block next undo/redo)
+            redoStore.setProcessing(true)
             createTicketAPI(entry.projectId, action.columnId, action.ticket)
               .then((serverTicket) => {
                 const bs = useBoardStore.getState()
                 bs.removeTicket(entry.projectId, action.ticket.id)
                 bs.addTicket(entry.projectId, action.columnId, serverTicket)
-                // Update action reference so next undo/redo uses the new server ticket
+                useUndoStore.getState().updateTicketCreateEntry(action.ticket.id, serverTicket)
                 action.ticket = serverTicket
               })
               .catch((err) => {
                 console.error('Failed to recreate ticket on redo:', err)
+              })
+              .finally(() => {
+                useUndoStore.getState().setProcessing(false)
               })
 
             const ticketKey = formatTicketId(action.ticket)
@@ -1912,13 +1933,20 @@ export function KeyboardShortcuts() {
               action: showUndo
                 ? {
                     label: 'Undo',
-                    onClick: () => {
+                    onClick: async () => {
+                      const store = useUndoStore.getState()
+                      if (store.isProcessing) return
                       removeTicket(entry.projectId, action.ticket.id)
-                      redoStore.pushRedo(entry)
+                      store.pushRedo(entry)
                       // Delete from server
-                      deleteTicketAPI(entry.projectId, action.ticket.id).catch((err) => {
-                        console.error('Failed to delete ticket on undo:', err)
-                      })
+                      store.setProcessing(true)
+                      deleteTicketAPI(entry.projectId, action.ticket.id)
+                        .catch((err) => {
+                          console.error('Failed to delete ticket on undo:', err)
+                        })
+                        .finally(() => {
+                          useUndoStore.getState().setProcessing(false)
+                        })
                       toast.success('Ticket creation undone', { duration: 2000 })
                     },
                   }

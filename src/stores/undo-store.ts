@@ -63,6 +63,9 @@ interface UndoState {
   undoStack: UndoEntry[]
   // Stack of redo entries
   redoStack: UndoEntry[]
+  // Whether an async undo/redo operation (e.g. API call) is in flight
+  isProcessing: boolean
+  setProcessing: (v: boolean) => void
 
   // Add a delete action to the undo stack
   pushDeleted: (
@@ -171,6 +174,8 @@ interface UndoState {
 export const useUndoStore = create<UndoState>((set, get) => ({
   undoStack: [],
   redoStack: [],
+  isProcessing: false,
+  setProcessing: (v) => set({ isProcessing: v }),
 
   pushDeleted: (projectId, ticket, columnId, toastId, isRedo = false) => {
     console.debug(`[SessionLog] Action: Delete ${isRedo ? '(Redo)' : ''}`, {
