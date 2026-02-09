@@ -226,7 +226,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                           />
                           <span className="shrink-0">{role.name}</span>
                           {role.description && (
-                            <span className="text-xs text-zinc-400 truncate">
+                            <span className="text-xs text-zinc-400 truncate translate-y-px">
                               {role.description}
                             </span>
                           )}
