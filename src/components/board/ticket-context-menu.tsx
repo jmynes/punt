@@ -19,6 +19,7 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -60,7 +61,13 @@ type MenuProps = {
 export function TicketContextMenu({ ticket, children }: MenuProps) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [adjustedCoords, setAdjustedCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [adjustedSubmenuCoords, setAdjustedSubmenuCoords] = useState<{
+    x: number
+    y: number
+  } | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const submenuRef = useRef<HTMLDivElement | null>(null)
 
   const { getColumns } = useBoardStore()
   // Use the ticket's projectId directly instead of relying on activeProjectId from UI store
@@ -126,6 +133,66 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  // Adjust main menu position to stay within viewport
+  useLayoutEffect(() => {
+    if (!open || !menuRef.current) return
+
+    const menu = menuRef.current
+    const rect = menu.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const padding = 8
+
+    let x = coords.x
+    let y = coords.y
+
+    // Flip horizontally if menu extends beyond right edge
+    if (x + rect.width > viewportWidth - padding) {
+      x = Math.max(padding, viewportWidth - rect.width - padding)
+    }
+
+    // Flip vertically if menu extends beyond bottom edge
+    if (y + rect.height > viewportHeight - padding) {
+      y = Math.max(padding, viewportHeight - rect.height - padding)
+    }
+
+    setAdjustedCoords({ x, y })
+  }, [open, coords])
+
+  // Adjust submenu position to stay within viewport
+  useLayoutEffect(() => {
+    if (!submenu || !submenuRef.current) {
+      setAdjustedSubmenuCoords(null)
+      return
+    }
+
+    const menu = submenuRef.current
+    const rect = menu.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const padding = 8
+
+    let x = submenu.anchor.x + 2
+    let y = submenu.anchor.y
+
+    // Flip horizontally if submenu extends beyond right edge
+    if (x + rect.width > viewportWidth - padding) {
+      // Position to the left of the parent menu item instead
+      x = submenu.anchor.x - rect.width - 2
+      // Ensure it doesn't go off the left edge
+      if (x < padding) {
+        x = padding
+      }
+    }
+
+    // Flip vertically if submenu extends beyond bottom edge
+    if (y + rect.height > viewportHeight - padding) {
+      y = Math.max(padding, viewportHeight - rect.height - padding)
+    }
+
+    setAdjustedSubmenuCoords({ x, y })
+  }, [submenu])
 
   // Close on outside click / escape
   useEffect(() => {
@@ -829,7 +896,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       <div
         ref={menuRef}
         className="z-[200] min-w-[220px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
-        style={{ position: 'fixed', left: coords.x, top: coords.y }}
+        style={{ position: 'fixed', left: adjustedCoords.x, top: adjustedCoords.y }}
       >
         <div className="py-1 text-sm text-zinc-200 relative">
           <div className="px-3 pb-1 pt-2 text-xs uppercase text-zinc-500">
@@ -930,10 +997,11 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
           {submenu && (
             <div
+              ref={submenuRef}
               className="fixed z-[201] min-w-[200px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
               style={{
-                left: submenu.anchor.x + 2,
-                top: submenu.anchor.y,
+                left: adjustedSubmenuCoords?.x ?? submenu.anchor.x + 2,
+                top: adjustedSubmenuCoords?.y ?? submenu.anchor.y,
               }}
             >
               <div className="py-1 text-sm text-zinc-200">
