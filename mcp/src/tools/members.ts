@@ -1,5 +1,13 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
+import {
+  addMember as apiAddMember,
+  listMembers as apiListMembers,
+  listRoles as apiListRoles,
+  listUsers as apiListUsers,
+  removeMember as apiRemoveMember,
+  updateMemberRole as apiUpdateMemberRole,
+} from '../api-client.js'
 import { db } from '../db.js'
 import { errorResponse, textResponse } from '../utils.js'
 
@@ -64,8 +72,10 @@ export function registerMemberTools(server: McpServer) {
       role: z.string().default('Member').describe('Role name (e.g., Owner, Admin, Member)'),
     },
     async ({ projectKey, userName, role }) => {
+      const upperKey = projectKey.toUpperCase()
+
       const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
+        where: { key: upperKey },
         select: {
           id: true,
           key: true,
@@ -87,16 +97,6 @@ export function registerMemberTools(server: McpServer) {
         return errorResponse(`User not found: ${userName}`)
       }
 
-      // Check if already a member
-      const existing = await db.projectMember.findUnique({
-        where: { userId_projectId: { userId: user.id, projectId: project.id } },
-        select: { id: true },
-      })
-
-      if (existing) {
-        return errorResponse(`${user.name} is already a member of ${project.key}`)
-      }
-
       // Find role
       const foundRole = project.roles.find((r) => r.name.toLowerCase() === role.toLowerCase())
 
@@ -105,14 +105,12 @@ export function registerMemberTools(server: McpServer) {
         return errorResponse(`Role not found: ${role}. Available: ${availableRoles}`)
       }
 
-      // Add member
-      await db.projectMember.create({
-        data: {
-          userId: user.id,
-          projectId: project.id,
-          roleId: foundRole.id,
-        },
-      })
+      // Use the API to add the member (enforces authorization)
+      const result = await apiAddMember(upperKey, { userId: user.id, roleId: foundRole.id })
+
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
       return textResponse(`Added ${user.name} to ${project.key} as ${foundRole.name}`)
     },
@@ -127,8 +125,10 @@ export function registerMemberTools(server: McpServer) {
       userName: z.string().describe('User name to remove'),
     },
     async ({ projectKey, userName }) => {
+      const upperKey = projectKey.toUpperCase()
+
       const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
+        where: { key: upperKey },
         select: { id: true, key: true },
       })
 
@@ -149,27 +149,19 @@ export function registerMemberTools(server: McpServer) {
       // Find membership
       const member = await db.projectMember.findUnique({
         where: { userId_projectId: { userId: user.id, projectId: project.id } },
-        select: { id: true, role: { select: { name: true } } },
+        select: { id: true },
       })
 
       if (!member) {
         return errorResponse(`${user.name} is not a member of ${project.key}`)
       }
 
-      // Don't allow removing the last owner
-      if (member.role.name === 'Owner') {
-        const ownerCount = await db.projectMember.count({
-          where: {
-            projectId: project.id,
-            role: { name: 'Owner' },
-          },
-        })
-        if (ownerCount <= 1) {
-          return errorResponse('Cannot remove the last owner from a project')
-        }
-      }
+      // Use the API to remove the member (enforces authorization)
+      const result = await apiRemoveMember(upperKey, member.id)
 
-      await db.projectMember.delete({ where: { id: member.id } })
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
       return textResponse(`Removed ${user.name} from ${project.key}`)
     },
@@ -185,8 +177,11 @@ export function registerMemberTools(server: McpServer) {
       role: z.string().describe('New role name'),
     },
     async ({ projectKey, userName, role }) => {
+      const upperKey = projectKey.toUpperCase()
+
+      // Get project with roles
       const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
+        where: { key: upperKey },
         select: {
           id: true,
           key: true,
@@ -226,26 +221,17 @@ export function registerMemberTools(server: McpServer) {
         return errorResponse(`Role not found: ${role}. Available: ${availableRoles}`)
       }
 
-      // Don't allow demoting the last owner
-      if (member.role.name === 'Owner' && newRole.name !== 'Owner') {
-        const ownerCount = await db.projectMember.count({
-          where: {
-            projectId: project.id,
-            role: { name: 'Owner' },
-          },
-        })
-        if (ownerCount <= 1) {
-          return errorResponse('Cannot demote the last owner')
-        }
+      const previousRoleName = member.role.name
+
+      // Use the API to update the member role (enforces authorization)
+      const result = await apiUpdateMemberRole(upperKey, member.id, newRole.id)
+
+      if (result.error) {
+        return errorResponse(result.error)
       }
 
-      await db.projectMember.update({
-        where: { id: member.id },
-        data: { roleId: newRole.id },
-      })
-
       return textResponse(
-        `Changed ${user.name}'s role in ${project.key} from ${member.role.name} to ${newRole.name}`,
+        `Changed ${user.name}'s role in ${project.key} from ${previousRoleName} to ${newRole.name}`,
       )
     },
   )
