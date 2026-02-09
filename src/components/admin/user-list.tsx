@@ -839,7 +839,10 @@ export function UserList() {
               <div className="flex items-center gap-2">
                 <span className="font-medium text-zinc-100">{user.name}</span>
                 {isCurrentUser && (
-                  <Badge variant="outline" className="border-zinc-500 text-zinc-400 text-xs">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
+                  >
                     You
                   </Badge>
                 )}
