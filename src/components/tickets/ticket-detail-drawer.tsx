@@ -71,6 +71,7 @@ import {
   useDeleteTicket,
   useProjectLabels,
   useProjectSprints,
+  useUpdateLabel,
   useUpdateTicket,
 } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
@@ -148,6 +149,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const deleteTicketMutation = useDeleteTicket()
   const createLabelMutation = useCreateLabel()
   const deleteLabelMutation = useDeleteLabel()
+  const updateLabelMutation = useUpdateLabel()
   const addAttachmentsMutation = useAddAttachments()
   const removeAttachmentMutation = useRemoveAttachment()
 
@@ -188,6 +190,16 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       await deleteLabelMutation.mutateAsync({ projectId, labelId })
     },
     [projectId, deleteLabelMutation],
+  )
+
+  // Callback for updating label colors
+  const handleUpdateLabel = useCallback(
+    async (labelId: string, color: string): Promise<void> => {
+      if (!projectId) return
+
+      await updateLabelMutation.mutateAsync({ projectId, labelId, color })
+    },
+    [projectId, updateLabelMutation],
   )
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -1214,6 +1226,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   onChange={(value) => handleChange('labels', value)}
                   labels={availableLabels}
                   onCreateLabel={canManageLabels ? handleCreateLabel : undefined}
+                  onUpdateLabel={canManageLabels ? handleUpdateLabel : undefined}
                   onDeleteLabel={canManageLabels ? handleDeleteLabel : undefined}
                 />
               </div>
