@@ -1,7 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { ArrowLeftRight } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -36,6 +38,11 @@ export function RoleCompareDialog({ open, onOpenChange, roles }: RoleCompareDial
   const [roleAId, setRoleAId] = useState<string>(roles[0]?.id || '')
   const [roleBId, setRoleBId] = useState<string>(roles[1]?.id || '')
 
+  const handleSwap = useCallback(() => {
+    setRoleAId(roleBId)
+    setRoleBId(roleAId)
+  }, [roleAId, roleBId])
+
   const roleA = useMemo(() => roles.find((r) => r.id === roleAId), [roles, roleAId])
   const roleB = useMemo(() => roles.find((r) => r.id === roleBId), [roles, roleBId])
 
@@ -68,7 +75,7 @@ export function RoleCompareDialog({ open, onOpenChange, roles }: RoleCompareDial
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-zinc-950 border-zinc-800">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col bg-zinc-950 border-zinc-800">
         <DialogHeader>
           <DialogTitle className="text-zinc-100">Compare Roles</DialogTitle>
           <DialogDescription className="text-zinc-400">
@@ -76,11 +83,17 @@ export function RoleCompareDialog({ open, onOpenChange, roles }: RoleCompareDial
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          <div className="space-y-2">
-            <Label className="text-zinc-400">Base Role (A)</Label>
+        <div className="flex items-stretch gap-0 mt-6">
+          {/* Role A Card */}
+          <div className="flex-1 rounded-l-xl border border-zinc-800 bg-zinc-900/50 p-4 flex flex-col items-center">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-7 h-7 rounded-md bg-zinc-700 text-zinc-300 flex items-center justify-center text-sm font-bold">
+                A
+              </div>
+              <Label className="text-zinc-300 text-sm font-medium">Base Role</Label>
+            </div>
             <Select value={roleAId} onValueChange={setRoleAId}>
-              <SelectTrigger className="bg-zinc-800/50 border-zinc-700">
+              <SelectTrigger className="bg-zinc-800/70 border-zinc-700 h-11 w-44">
                 <SelectValue placeholder="Select role..." />
               </SelectTrigger>
               <SelectContent>
@@ -88,7 +101,7 @@ export function RoleCompareDialog({ open, onOpenChange, roles }: RoleCompareDial
                   <SelectItem key={role.id} value={role.id}>
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-2 h-2 rounded-full"
+                        className="w-2.5 h-2.5 rounded-full"
                         style={{ backgroundColor: role.color }}
                       />
                       {role.name}
@@ -98,10 +111,29 @@ export function RoleCompareDialog({ open, onOpenChange, roles }: RoleCompareDial
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label className="text-zinc-400">Compare To (B)</Label>
+
+          {/* Swap Button - Centered Connector */}
+          <div className="flex items-center justify-center -mx-5 z-10">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleSwap}
+              className="h-10 w-10 rounded-full border-2 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 hover:border-zinc-600 text-zinc-400 hover:text-zinc-200 shadow-lg transition-all hover:scale-105"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Role B Card */}
+          <div className="flex-1 rounded-r-xl border border-zinc-800 bg-zinc-900/50 p-4 flex flex-col items-center">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-7 h-7 rounded-md bg-zinc-700 text-zinc-300 flex items-center justify-center text-sm font-bold">
+                B
+              </div>
+              <Label className="text-zinc-300 text-sm font-medium">Compare To</Label>
+            </div>
             <Select value={roleBId} onValueChange={setRoleBId}>
-              <SelectTrigger className="bg-zinc-800/50 border-zinc-700">
+              <SelectTrigger className="bg-zinc-800/70 border-zinc-700 h-11 w-44">
                 <SelectValue placeholder="Select role..." />
               </SelectTrigger>
               <SelectContent>
@@ -109,7 +141,7 @@ export function RoleCompareDialog({ open, onOpenChange, roles }: RoleCompareDial
                   <SelectItem key={role.id} value={role.id}>
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-2 h-2 rounded-full"
+                        className="w-2.5 h-2.5 rounded-full"
                         style={{ backgroundColor: role.color }}
                       />
                       {role.name}
@@ -122,9 +154,9 @@ export function RoleCompareDialog({ open, onOpenChange, roles }: RoleCompareDial
         </div>
 
         {roleA && roleB && (
-          <div className="mt-4">
+          <div className="mt-4 flex-1 flex flex-col min-h-0">
             {/* Summary */}
-            <div className="flex items-center gap-4 mb-4 text-sm">
+            <div className="flex items-center gap-4 mb-4 text-sm flex-shrink-0">
               {hasDifferences ? (
                 <>
                   {diff.added.size > 0 && (
@@ -144,7 +176,7 @@ export function RoleCompareDialog({ open, onOpenChange, roles }: RoleCompareDial
             </div>
 
             {/* Diff View */}
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="flex-1 pr-4">
               <div className="space-y-3">
                 {categoriesWithPermissions.map(({ category, permissions }) => {
                   // Check if any permission in this category has differences
