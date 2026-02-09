@@ -540,21 +540,21 @@ function MemberCard({
         if (e.shiftKey) e.preventDefault()
       }}
       onClick={(e) => {
-        if (canSelect && !isCurrentUser) {
+        if (canSelect) {
           onSelect(e.shiftKey)
         }
       }}
       className={cn(
         'bg-zinc-900/50 border-zinc-800 transition-all duration-150',
-        canSelect && !isCurrentUser && 'cursor-pointer',
+        canSelect && 'cursor-pointer',
         isSelected && 'ring-1 ring-amber-500/50 bg-amber-500/5 border-amber-500/30',
-        canSelect && !isCurrentUser && !isSelected && 'hover:bg-zinc-900/80',
+        canSelect && !isSelected && 'hover:bg-zinc-900/80',
       )}
     >
       <CardContent className="flex items-center justify-between p-4">
         <div className="flex items-center gap-4">
           {/* Checkbox */}
-          {canSelect && !isCurrentUser && (
+          {canSelect && (
             <Checkbox
               checked={isSelected}
               onCheckedChange={() => onSelect(false)}
