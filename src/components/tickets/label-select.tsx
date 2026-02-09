@@ -2,6 +2,7 @@
 
 import { Check, ChevronsUpDown, Palette, Plus, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { HexColorPicker } from 'react-colorful'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import { useSettingsStore } from '@/stores/settings-store'
 import type { LabelSummary } from '@/types'
 
 // Predefined color palette matching the backend LABEL_COLORS
@@ -419,59 +421,16 @@ export function LabelSelect({
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <div className="space-y-4 py-2">
-            {/* Predefined color palette */}
-            <div className="flex flex-wrap gap-2">
-              {LABEL_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => handleColorChange(color)}
-                  disabled={isUpdatingColor}
-                  className={cn(
-                    'h-8 w-8 rounded-md transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed',
-                    labelToEdit?.color === color &&
-                      'ring-2 ring-white ring-offset-2 ring-offset-zinc-950',
-                  )}
-                  style={{ backgroundColor: color }}
-                  title={color}
-                />
-              ))}
-            </div>
-
-            {/* Custom hex input */}
-            <div className="flex items-center gap-2">
-              <div
-                className="h-8 w-8 rounded-md border border-zinc-700 shrink-0"
-                style={{ backgroundColor: customColor || labelToEdit?.color }}
-              />
-              <Input
-                type="text"
-                placeholder="#000000"
-                value={customColor}
-                onChange={(e) => {
-                  const val = e.target.value
-                  if (val === '' || /^#?[0-9A-Fa-f]{0,6}$/.test(val)) {
-                    setCustomColor(val.startsWith('#') ? val : `#${val}`)
-                  }
-                }}
-                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 font-mono"
-                disabled={isUpdatingColor}
-              />
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  if (/^#[0-9A-Fa-f]{6}$/.test(customColor)) {
-                    handleColorChange(customColor)
-                  }
-                }}
-                disabled={isUpdatingColor || !/^#[0-9A-Fa-f]{6}$/.test(customColor)}
-              >
-                Apply
-              </Button>
-            </div>
-          </div>
+          <ColorPickerBody
+            activeColor={customColor || labelToEdit?.color || '#000000'}
+            onColorChange={setCustomColor}
+            onApply={(color) => {
+              if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
+                handleColorChange(color)
+              }
+            }}
+            isDisabled={isUpdatingColor}
+          />
 
           <AlertDialogFooter>
             <AlertDialogCancel
@@ -483,6 +442,158 @@ export function LabelSelect({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  )
+}
+
+/**
+ * Shared color picker body with preset palette, saved custom colors,
+ * spectrum picker, and hex input. Used by label color picker and avatar color picker.
+ */
+interface ColorPickerBodyProps {
+  activeColor: string
+  onColorChange: (color: string) => void
+  onApply: (color: string) => void
+  isDisabled?: boolean
+}
+
+export function ColorPickerBody({
+  activeColor,
+  onColorChange,
+  onApply,
+  isDisabled,
+}: ColorPickerBodyProps) {
+  const { customColors, addCustomColor, removeCustomColor } = useSettingsStore()
+  const [localHex, setLocalHex] = useState(activeColor)
+
+  // Sync local hex when activeColor changes from outside (e.g. spectrum drag)
+  useEffect(() => {
+    setLocalHex(activeColor)
+  }, [activeColor])
+
+  const currentColor = activeColor
+
+  const handleSaveColor = () => {
+    if (/^#[0-9A-Fa-f]{6}$/i.test(currentColor)) {
+      addCustomColor(currentColor)
+    }
+  }
+
+  const isCurrentColorSaved =
+    customColors.includes(currentColor.toLowerCase()) ||
+    LABEL_COLORS.includes(currentColor.toLowerCase())
+
+  return (
+    <div className="space-y-4 py-2">
+      {/* Predefined color palette */}
+      <div>
+        <div className="text-xs text-zinc-500 mb-1.5">Presets</div>
+        <div className="flex flex-wrap gap-2">
+          {LABEL_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => onColorChange(color)}
+              disabled={isDisabled}
+              className={cn(
+                'h-8 w-8 rounded-md transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed',
+                currentColor.toLowerCase() === color.toLowerCase() &&
+                  'ring-2 ring-white ring-offset-2 ring-offset-zinc-950',
+              )}
+              style={{ backgroundColor: color }}
+              title={color}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Custom saved colors */}
+      {customColors.length > 0 && (
+        <div>
+          <div className="text-xs text-zinc-500 mb-1.5">Saved</div>
+          <div className="flex flex-wrap gap-2">
+            {customColors.map((color) => (
+              <div key={color} className="relative group/swatch">
+                <button
+                  type="button"
+                  onClick={() => onColorChange(color)}
+                  disabled={isDisabled}
+                  className={cn(
+                    'h-8 w-8 rounded-md transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed border border-dashed border-zinc-600',
+                    currentColor.toLowerCase() === color.toLowerCase() &&
+                      'ring-2 ring-white ring-offset-2 ring-offset-zinc-950',
+                  )}
+                  style={{ backgroundColor: color }}
+                  title={color}
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeCustomColor(color)
+                  }}
+                  className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-zinc-800 border border-zinc-600 text-zinc-400 hover:bg-red-900 hover:text-red-300 hover:border-red-700 opacity-0 group-hover/swatch:opacity-100 transition-opacity flex items-center justify-center"
+                  title="Remove saved color"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Full color picker */}
+      <HexColorPicker
+        color={currentColor}
+        onChange={onColorChange}
+        className="!w-full"
+        style={{ height: '160px' }}
+      />
+
+      {/* Hex input with preview, save, and apply */}
+      <div className="flex items-center gap-2">
+        <div
+          className="h-8 w-8 rounded-md border border-zinc-700 shrink-0"
+          style={{ backgroundColor: currentColor }}
+        />
+        <Input
+          type="text"
+          placeholder="#000000"
+          value={localHex}
+          onChange={(e) => {
+            const val = e.target.value
+            if (val === '' || /^#?[0-9A-Fa-f]{0,6}$/.test(val)) {
+              const hex = val.startsWith('#') ? val : `#${val}`
+              setLocalHex(hex)
+              if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                onColorChange(hex)
+              }
+            }
+          }}
+          className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 font-mono"
+          disabled={isDisabled}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="border-zinc-700 hover:bg-zinc-800 shrink-0"
+          onClick={handleSaveColor}
+          disabled={isDisabled || isCurrentColorSaved || !/^#[0-9A-Fa-f]{6}$/i.test(currentColor)}
+          title={isCurrentColorSaved ? 'Color already saved' : 'Save color'}
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => onApply(currentColor)}
+          disabled={isDisabled || !/^#[0-9A-Fa-f]{6}$/i.test(currentColor)}
+        >
+          Apply
+        </Button>
+      </div>
     </div>
   )
 }

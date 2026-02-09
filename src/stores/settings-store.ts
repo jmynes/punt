@@ -19,6 +19,11 @@ interface SettingsState {
   // Role editor unsaved changes behavior
   autoSaveOnRoleEditorClose: boolean
   setAutoSaveOnRoleEditorClose: (value: boolean) => void
+
+  // Custom saved colors for color pickers
+  customColors: string[]
+  addCustomColor: (color: string) => void
+  removeCustomColor: (color: string) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -41,6 +46,19 @@ export const useSettingsStore = create<SettingsState>()(
       // Default: show confirmation dialog for unsaved role changes
       autoSaveOnRoleEditorClose: false,
       setAutoSaveOnRoleEditorClose: (value) => set({ autoSaveOnRoleEditorClose: value }),
+
+      // Custom saved colors (max 20)
+      customColors: [],
+      addCustomColor: (color) =>
+        set((state) => {
+          const normalized = color.toLowerCase()
+          if (state.customColors.includes(normalized)) return state
+          return { customColors: [normalized, ...state.customColors].slice(0, 20) }
+        }),
+      removeCustomColor: (color) =>
+        set((state) => ({
+          customColors: state.customColors.filter((c) => c !== color.toLowerCase()),
+        })),
     }),
     {
       name: 'punt-settings',

@@ -1,11 +1,12 @@
 'use client'
 
-import { Camera, Check, KeyRound, Mail, Palette, Shield, Trash2, User } from 'lucide-react'
+import { Camera, KeyRound, Mail, Palette, Shield, Trash2, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ImageCropDialog, resizeImageForCropper } from '@/components/profile/image-crop-dialog'
+import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +26,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { getTabId } from '@/hooks/use-realtime'
 import { DEMO_USER, isDemoMode } from '@/lib/demo'
-import { AVATAR_COLORS, getAvatarColor, getInitials } from '@/lib/utils'
+import { getAvatarColor, getInitials } from '@/lib/utils'
 
 // Stable user data type
 interface UserData {
@@ -152,6 +153,7 @@ export default function ProfilePage() {
 
   // Avatar color state
   const [avatarColorLoading, setAvatarColorLoading] = useState(false)
+  const [customAvatarColor, setCustomAvatarColor] = useState('')
 
   // Delete account state
   const [deletePassword, setDeletePassword] = useState('')
@@ -685,34 +687,29 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Color palette */}
-              <div className="space-y-2">
-                <Label className="text-zinc-300">Select a color</Label>
-                <div className="flex flex-wrap gap-2">
-                  {AVATAR_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => handleAvatarColorChange(color)}
-                      disabled={avatarColorLoading}
-                      className="relative h-8 w-8 rounded-full transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: color }}
-                      title={color}
-                    >
-                      {stableUser.avatarColor === color && (
-                        <Check className="absolute inset-0 m-auto h-4 w-4 text-white" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Color picker */}
+              <ColorPickerBody
+                activeColor={
+                  customAvatarColor || stableUser.avatarColor || getAvatarColor(stableUser.id)
+                }
+                onColorChange={setCustomAvatarColor}
+                onApply={(color) => {
+                  if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
+                    handleAvatarColorChange(color)
+                  }
+                }}
+                isDisabled={avatarColorLoading}
+              />
 
               {/* Reset button */}
               {stableUser.avatarColor && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleAvatarColorChange(null)}
+                  onClick={() => {
+                    setCustomAvatarColor('')
+                    handleAvatarColorChange(null)
+                  }}
                   disabled={avatarColorLoading}
                   className="text-zinc-400 hover:text-zinc-200"
                 >
