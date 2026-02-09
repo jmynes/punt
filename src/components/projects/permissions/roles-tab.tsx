@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, Lock, Plus, Shield, Users } from 'lucide-react'
+import { Loader2, Lock, Pencil, Plus, Shield, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -345,7 +345,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
           <Tabs defaultValue="permissions" className="h-full flex flex-col">
             {/* Tab bar */}
             <div className="mb-4">
-              <TabsList className="grid grid-cols-2 h-auto p-0 bg-transparent rounded-none gap-0">
+              <TabsList className="w-full grid grid-cols-2 h-auto p-0 bg-transparent rounded-none gap-0">
                 <TabsTrigger
                   value="permissions"
                   className="!rounded-none !rounded-l-lg !border !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
@@ -369,12 +369,18 @@ export function RolesTab({ projectId }: RolesTabProps) {
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 rounded-full" style={{ backgroundColor: editColor }} />
                   {canManageRoles && !selectedRole?.isDefault ? (
-                    <Input
-                      value={editName}
-                      onChange={(e) => handleFieldChange('name', e.target.value)}
-                      placeholder="Role name..."
-                      className="!text-lg font-semibold bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-zinc-500"
-                    />
+                    <div className="group/title relative flex items-center gap-2 flex-1 min-w-0">
+                      <div className="relative">
+                        <Input
+                          value={editName}
+                          onChange={(e) => handleFieldChange('name', e.target.value)}
+                          placeholder="Role name..."
+                          className="!text-lg font-semibold bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-zinc-500 cursor-text"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 h-px bg-zinc-700 group-hover/title:bg-zinc-500 group-focus-within/title:bg-amber-500 transition-colors" />
+                      </div>
+                      <Pencil className="h-3.5 w-3.5 text-zinc-600 group-hover/title:text-zinc-400 group-focus-within/title:text-amber-500 transition-colors flex-shrink-0" />
+                    </div>
                   ) : (
                     <CardTitle className="text-lg">{editName || 'New Role'}</CardTitle>
                   )}
