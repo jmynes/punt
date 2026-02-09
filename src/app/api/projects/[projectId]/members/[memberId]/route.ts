@@ -134,38 +134,45 @@ export async function PATCH(
 
     // Check permissions for role change
     if (roleId !== undefined && roleId !== targetMember.roleId) {
-      // Need members.manage permission
-      await requirePermission(user.id, projectId, PERMISSIONS.MEMBERS_MANAGE)
-
-      // Can't change your own role
-      if (targetMember.userId === user.id) {
-        return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 })
-      }
-
-      // Check if user can manage this member (hierarchy check)
-      const canManage = await canManageMember(user.id, targetMember.userId, projectId)
-      if (!canManage) {
-        return NextResponse.json(
-          { error: 'Cannot modify members with equal or higher rank' },
-          { status: 403 },
-        )
-      }
-
-      // Check if user can assign the target role
-      const canAssign = await canAssignRole(user.id, projectId, roleId)
-      if (!canAssign) {
-        return NextResponse.json(
-          { error: 'Cannot assign roles equal to or higher than your own' },
-          { status: 403 },
-        )
-      }
-
-      // Verify the role exists in this project
+      // Get the target role to check hierarchy
       const newRole = await db.role.findFirst({
         where: { id: roleId, projectId },
+        select: { id: true, name: true, position: true },
       })
       if (!newRole) {
         return NextResponse.json({ error: 'Invalid role for this project' }, { status: 400 })
+      }
+
+      // Self role change: only allow demotion (moving to higher position number = lower rank)
+      if (targetMember.userId === user.id) {
+        if (newRole.position <= targetMember.role.position) {
+          return NextResponse.json(
+            { error: 'Cannot promote yourself to a higher or equal rank' },
+            { status: 400 },
+          )
+        }
+        // Self-demotion is allowed, skip other permission checks
+      } else {
+        // Changing someone else's role - need members.manage permission
+        await requirePermission(user.id, projectId, PERMISSIONS.MEMBERS_MANAGE)
+
+        // Check if user can manage this member (hierarchy check)
+        const canManage = await canManageMember(user.id, targetMember.userId, projectId)
+        if (!canManage) {
+          return NextResponse.json(
+            { error: 'Cannot modify members with equal or higher rank' },
+            { status: 403 },
+          )
+        }
+
+        // Check if user can assign the target role
+        const canAssign = await canAssignRole(user.id, projectId, roleId)
+        if (!canAssign) {
+          return NextResponse.json(
+            { error: 'Cannot assign roles equal to or higher than your own' },
+            { status: 403 },
+          )
+        }
       }
 
       // Check we're not removing the last Owner
