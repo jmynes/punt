@@ -1,7 +1,9 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronsUpDown, Loader2, UserPlus, Users, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
+import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,8 +33,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useAddMember, useAvailableUsers } from '@/hooks/queries/use-members'
+import { availableUserKeys, memberKeys, useAvailableUsers } from '@/hooks/queries/use-members'
 import { useProjectRoles } from '@/hooks/queries/use-roles'
+import { getTabId } from '@/lib/tab-id'
 import { cn, getAvatarColor } from '@/lib/utils'
 
 interface AddMemberDialogProps {
@@ -53,9 +56,9 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
   const [bulkRoleId, setBulkRoleId] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const queryClient = useQueryClient()
   const { data: availableUsers, isLoading: usersLoading } = useAvailableUsers(projectId, search)
   const { data: roles, isLoading: rolesLoading } = useProjectRoles(projectId)
-  const addMember = useAddMember(projectId)
 
   // Find default role (Member role, or first non-Owner role)
   const defaultRole =
@@ -106,17 +109,37 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
     if (pendingMembers.length === 0) return
 
     setIsSubmitting(true)
+    const count = pendingMembers.length
     try {
-      // Add all members in parallel
+      // Add all members in parallel (direct API calls to avoid per-member toasts)
       await Promise.all(
-        pendingMembers.map((member) =>
-          addMember.mutateAsync({
-            userId: member.user.id,
-            roleId: member.roleId,
-          }),
-        ),
+        pendingMembers.map(async (member) => {
+          const res = await fetch(`/api/projects/${projectId}/members`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Tab-Id': getTabId(),
+            },
+            body: JSON.stringify({ userId: member.user.id, roleId: member.roleId }),
+          })
+          if (!res.ok) {
+            const error = await res.json()
+            throw new Error(error.error || 'Failed to add member')
+          }
+          return res.json()
+        }),
       )
+
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
+      queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
+      queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
+
+      // Single toast for all members
+      toast.success(`Added ${count} member${count !== 1 ? 's' : ''}`)
       handleOpenChange(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add members')
     } finally {
       setIsSubmitting(false)
     }
