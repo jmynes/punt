@@ -115,7 +115,7 @@ export const maliciousString = fc.oneof(
  */
 export const urlLike = fc.oneof(
   // Valid relative paths
-  fc.constantFrom('/dashboard', '/projects/123', '/settings', '/'),
+  fc.constantFrom('/dashboard', '/projects/123', '/preferences', '/'),
   fc.string({ minLength: 1 }).map((s) => `/${s.replace(/[^a-zA-Z0-9-_/]/g, '')}`),
   // Protocol-relative URLs (should be blocked)
   fc.constantFrom('//evil.com', '//google.com/path', '///test'),

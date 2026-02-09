@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
 
-export default function SettingsPage() {
+export default function PreferencesPage() {
   const {
     openSinglePastedTicket,
     setOpenSinglePastedTicket,
@@ -42,7 +42,7 @@ export default function SettingsPage() {
         {/* Header */}
         <div className="flex items-center gap-3">
           <Settings className="h-6 w-6 text-amber-500" />
-          <h1 className="text-2xl font-semibold text-zinc-100">Settings</h1>
+          <h1 className="text-2xl font-semibold text-zinc-100">Preferences</h1>
         </div>
 
         {/* Ticket Behavior */}
