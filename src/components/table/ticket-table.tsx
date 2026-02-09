@@ -24,6 +24,7 @@ export function TicketTable({
   showHeader = true,
   sort,
   onToggleSort,
+  enableColumnReorder = false,
   overlayTicket,
 }: TicketTableProps) {
   const visibleColumns = useMemo(() => columns.filter((c) => c.visible), [columns])
@@ -49,7 +50,7 @@ export function TicketTable({
           columns={visibleColumns}
           sort={sort}
           onToggleSort={onToggleSort}
-          enableColumnReorder={false}
+          enableColumnReorder={enableColumnReorder}
         />
       )}
 
