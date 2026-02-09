@@ -9,6 +9,7 @@ import {
   List,
   Pencil,
   Plus,
+  Settings,
   Shield,
   SlidersHorizontal,
   Target,
