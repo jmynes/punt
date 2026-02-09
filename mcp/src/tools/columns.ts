@@ -1,5 +1,11 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
+import {
+  createColumn as apiCreateColumn,
+  deleteColumn as apiDeleteColumn,
+  listColumns as apiListColumns,
+  updateColumn as apiUpdateColumn,
+} from '../api-client.js'
 import { db } from '../db.js'
 import { errorResponse, textResponse } from '../utils.js'
 
@@ -64,57 +70,27 @@ export function registerColumnTools(server: McpServer) {
       position: z.number().optional().describe('Position (1-based). Defaults to end.'),
     },
     async ({ projectKey, name, position }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: {
-          id: true,
-          key: true,
-          columns: {
-            select: { id: true, name: true, order: true },
-            orderBy: { order: 'asc' },
-          },
-        },
-      })
+      const upperKey = projectKey.toUpperCase()
 
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // Get current columns to calculate order
+      const columnsResult = await apiListColumns(upperKey)
+      if (columnsResult.error) {
+        return errorResponse(columnsResult.error)
       }
 
-      // Check for duplicate name
-      if (project.columns.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
-        return errorResponse(`Column already exists: ${name}`)
-      }
-
-      const columnCount = project.columns.length
+      const columns = columnsResult.data || []
+      const columnCount = columns.length
       // Convert 1-based position to 0-based order
       const targetOrder = position ? Math.max(0, Math.min(position - 1, columnCount)) : columnCount
 
-      // Shift columns at or after target position
-      await db.$transaction(async (tx) => {
-        if (targetOrder < columnCount) {
-          // Shift columns down
-          for (const col of project.columns) {
-            if (col.order >= targetOrder) {
-              await tx.column.update({
-                where: { id: col.id },
-                data: { order: col.order + 1 },
-              })
-            }
-          }
-        }
+      // Use the API to create the column (enforces authorization)
+      const result = await apiCreateColumn(upperKey, { name, order: targetOrder })
 
-        await tx.column.create({
-          data: {
-            name,
-            order: targetOrder,
-            projectId: project.id,
-          },
-        })
-      })
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
-      return textResponse(
-        `Created column "${name}" at position ${targetOrder + 1} in ${project.key}`,
-      )
+      return textResponse(`Created column "${name}" at position ${targetOrder + 1} in ${upperKey}`)
     },
   )
 
@@ -128,40 +104,27 @@ export function registerColumnTools(server: McpServer) {
       newName: z.string().min(1).describe('New column name'),
     },
     async ({ projectKey, columnName, newName }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: {
-          id: true,
-          key: true,
-          columns: { select: { id: true, name: true } },
-        },
-      })
+      const upperKey = projectKey.toUpperCase()
 
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // Get columns to find the one to rename
+      const columnsResult = await apiListColumns(upperKey)
+      if (columnsResult.error) {
+        return errorResponse(columnsResult.error)
       }
 
-      const column = project.columns.find((c) =>
-        c.name.toLowerCase().includes(columnName.toLowerCase()),
-      )
+      const columns = columnsResult.data || []
+      const column = columns.find((c) => c.name.toLowerCase().includes(columnName.toLowerCase()))
 
       if (!column) {
         return errorResponse(`Column not found: ${columnName}`)
       }
 
-      // Check for name conflict
-      if (
-        project.columns.some(
-          (c) => c.id !== column.id && c.name.toLowerCase() === newName.toLowerCase(),
-        )
-      ) {
-        return errorResponse(`Column name already exists: ${newName}`)
-      }
+      // Use the API to update the column (enforces authorization)
+      const result = await apiUpdateColumn(upperKey, column.id, { name: newName })
 
-      await db.column.update({
-        where: { id: column.id },
-        data: { name: newName },
-      })
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
       return textResponse(`Renamed column: "${column.name}" → "${newName}"`)
     },
@@ -177,65 +140,34 @@ export function registerColumnTools(server: McpServer) {
       position: z.number().min(1).describe('New position (1-based)'),
     },
     async ({ projectKey, columnName, position }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: {
-          id: true,
-          key: true,
-          columns: {
-            select: { id: true, name: true, order: true },
-            orderBy: { order: 'asc' },
-          },
-        },
-      })
+      const upperKey = projectKey.toUpperCase()
 
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // Get columns to find the one to move
+      const columnsResult = await apiListColumns(upperKey)
+      if (columnsResult.error) {
+        return errorResponse(columnsResult.error)
       }
 
-      const column = project.columns.find((c) =>
-        c.name.toLowerCase().includes(columnName.toLowerCase()),
-      )
+      const columns = columnsResult.data || []
+      const column = columns.find((c) => c.name.toLowerCase().includes(columnName.toLowerCase()))
 
       if (!column) {
         return errorResponse(`Column not found: ${columnName}`)
       }
 
       const currentOrder = column.order
-      const targetOrder = Math.max(0, Math.min(position - 1, project.columns.length - 1))
+      const targetOrder = Math.max(0, Math.min(position - 1, columns.length - 1))
 
       if (currentOrder === targetOrder) {
         return textResponse(`Column "${column.name}" is already at position ${position}`)
       }
 
-      await db.$transaction(async (tx) => {
-        if (targetOrder > currentOrder) {
-          // Moving down: shift columns between current and target up
-          for (const col of project.columns) {
-            if (col.order > currentOrder && col.order <= targetOrder) {
-              await tx.column.update({
-                where: { id: col.id },
-                data: { order: col.order - 1 },
-              })
-            }
-          }
-        } else {
-          // Moving up: shift columns between target and current down
-          for (const col of project.columns) {
-            if (col.order >= targetOrder && col.order < currentOrder) {
-              await tx.column.update({
-                where: { id: col.id },
-                data: { order: col.order + 1 },
-              })
-            }
-          }
-        }
+      // Use the API to update the column order (enforces authorization)
+      const result = await apiUpdateColumn(upperKey, column.id, { order: targetOrder })
 
-        await tx.column.update({
-          where: { id: column.id },
-          data: { order: targetOrder },
-        })
-      })
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
       return textResponse(
         `Moved column "${column.name}" from position ${currentOrder + 1} to ${targetOrder + 1}`,
@@ -253,35 +185,27 @@ export function registerColumnTools(server: McpServer) {
       moveTicketsTo: z.string().describe('Column to move tickets to'),
     },
     async ({ projectKey, columnName, moveTicketsTo }) => {
-      const project = await db.project.findUnique({
-        where: { key: projectKey.toUpperCase() },
-        select: {
-          id: true,
-          key: true,
-          columns: {
-            select: { id: true, name: true, order: true, _count: { select: { tickets: true } } },
-            orderBy: { order: 'asc' },
-          },
-        },
-      })
+      const upperKey = projectKey.toUpperCase()
 
-      if (!project) {
-        return errorResponse(`Project not found: ${projectKey}`)
+      // Get columns to find source and target
+      const columnsResult = await apiListColumns(upperKey)
+      if (columnsResult.error) {
+        return errorResponse(columnsResult.error)
       }
 
-      if (project.columns.length <= 1) {
+      const columns = columnsResult.data || []
+
+      if (columns.length <= 1) {
         return errorResponse('Cannot delete the last column')
       }
 
-      const column = project.columns.find((c) =>
-        c.name.toLowerCase().includes(columnName.toLowerCase()),
-      )
+      const column = columns.find((c) => c.name.toLowerCase().includes(columnName.toLowerCase()))
 
       if (!column) {
         return errorResponse(`Column not found: ${columnName}`)
       }
 
-      const targetColumn = project.columns.find(
+      const targetColumn = columns.find(
         (c) => c.id !== column.id && c.name.toLowerCase().includes(moveTicketsTo.toLowerCase()),
       )
 
@@ -289,33 +213,15 @@ export function registerColumnTools(server: McpServer) {
         return errorResponse(`Target column not found: ${moveTicketsTo}`)
       }
 
-      const ticketCount = column._count.tickets
+      // Use the API to delete the column (enforces authorization)
+      const result = await apiDeleteColumn(upperKey, column.id, targetColumn.id)
 
-      await db.$transaction(async (tx) => {
-        // Move tickets
-        if (ticketCount > 0) {
-          await tx.ticket.updateMany({
-            where: { columnId: column.id },
-            data: { columnId: targetColumn.id },
-          })
-        }
-
-        // Delete the column
-        await tx.column.delete({ where: { id: column.id } })
-
-        // Reorder remaining columns
-        for (const col of project.columns) {
-          if (col.order > column.order) {
-            await tx.column.update({
-              where: { id: col.id },
-              data: { order: col.order - 1 },
-            })
-          }
-        }
-      })
+      if (result.error) {
+        return errorResponse(result.error)
+      }
 
       return textResponse(
-        `Deleted column "${column.name}" (${ticketCount} ticket(s) moved to "${targetColumn.name}")`,
+        `Deleted column "${column.name}" (tickets moved to "${targetColumn.name}")`,
       )
     },
   )

@@ -214,6 +214,35 @@ export async function listColumns(projectKey: string) {
   return apiRequest<ColumnData[]>('GET', `/api/projects/${projectKey}/columns`)
 }
 
+export interface CreateColumnInput {
+  name: string
+  order?: number
+}
+
+export async function createColumn(projectKey: string, data: CreateColumnInput) {
+  return apiRequest<ColumnData>('POST', `/api/projects/${projectKey}/columns`, data)
+}
+
+export interface UpdateColumnInput {
+  name?: string
+  order?: number
+}
+
+export async function updateColumn(projectKey: string, columnId: string, data: UpdateColumnInput) {
+  return apiRequest<ColumnData>('PATCH', `/api/projects/${projectKey}/columns/${columnId}`, data)
+}
+
+export async function deleteColumn(
+  projectKey: string,
+  columnId: string,
+  moveTicketsToColumnId: string,
+) {
+  return apiRequest<void>(
+    'DELETE',
+    `/api/projects/${projectKey}/columns/${columnId}?moveTicketsTo=${moveTicketsToColumnId}`,
+  )
+}
+
 // ============================================================================
 // Sprints API
 // ============================================================================

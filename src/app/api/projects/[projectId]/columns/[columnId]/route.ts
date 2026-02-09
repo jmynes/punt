@@ -70,10 +70,11 @@ export async function PATCH(
 /**
  * DELETE /api/projects/[projectId]/columns/[columnId] - Delete a column
  * Requires board.manage permission
- * Note: Tickets in this column must be moved first
+ * Query params:
+ *   - moveTicketsTo: column ID to move tickets to (required if column has tickets)
  */
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ projectId: string; columnId: string }> },
 ) {
   try {
@@ -83,6 +84,10 @@ export async function DELETE(
 
     // Check board.manage permission
     await requirePermission(user.id, projectId, PERMISSIONS.BOARD_MANAGE)
+
+    // Get moveTicketsTo from query params
+    const url = new URL(request.url)
+    const moveTicketsTo = url.searchParams.get('moveTicketsTo')
 
     // Verify column exists and belongs to project
     const existingColumn = await db.column.findFirst({
@@ -96,12 +101,30 @@ export async function DELETE(
 
     // Check if column has tickets
     if (existingColumn._count.tickets > 0) {
-      return NextResponse.json(
-        {
-          error: `Cannot delete column with ${existingColumn._count.tickets} ticket(s). Move or delete tickets first.`,
-        },
-        { status: 400 },
-      )
+      if (!moveTicketsTo) {
+        return NextResponse.json(
+          {
+            error: `Column has ${existingColumn._count.tickets} ticket(s). Provide moveTicketsTo parameter.`,
+          },
+          { status: 400 },
+        )
+      }
+
+      // Verify target column exists and belongs to project
+      const targetColumn = await db.column.findFirst({
+        where: { id: moveTicketsTo, projectId },
+      })
+
+      if (!targetColumn) {
+        return NextResponse.json({ error: 'Target column not found' }, { status: 400 })
+      }
+
+      if (targetColumn.id === columnId) {
+        return NextResponse.json(
+          { error: 'Cannot move tickets to the same column' },
+          { status: 400 },
+        )
+      }
     }
 
     // Get the count of columns to prevent deleting the last one
@@ -116,8 +139,19 @@ export async function DELETE(
       )
     }
 
-    await db.column.delete({
-      where: { id: columnId },
+    // Use transaction to move tickets and delete column
+    await db.$transaction(async (tx) => {
+      // Move tickets if needed
+      if (existingColumn._count.tickets > 0 && moveTicketsTo) {
+        await tx.ticket.updateMany({
+          where: { columnId },
+          data: { columnId: moveTicketsTo },
+        })
+      }
+
+      await tx.column.delete({
+        where: { id: columnId },
+      })
     })
 
     return NextResponse.json({ success: true })
