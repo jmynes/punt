@@ -107,7 +107,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const multi = selectedIds.length > 1
   const [submenu, setSubmenu] = useState<null | {
     id: 'priority' | 'assign' | 'send' | 'points' | 'sprint'
-    anchor: { x: number; y: number; height: number }
+    anchor: { x: number; y: number; height: number; left: number }
   }>(null)
 
   // Fetch sprints for add to sprint menu
@@ -178,8 +178,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
     // Flip horizontally if submenu extends beyond right edge
     if (x + rect.width > viewportWidth - padding) {
-      // Position to the left of the parent menu item instead
-      x = submenu.anchor.x - rect.width - 2
+      // Position to the left of the parent menu instead (left edge of parent - submenu width - gap)
+      x = submenu.anchor.left - rect.width - 2
       // Ensure it doesn't go off the left edge
       if (x < padding) {
         x = padding
@@ -884,7 +884,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const openSubmenu =
     (id: 'priority' | 'assign' | 'send' | 'points' | 'sprint') => (e: React.MouseEvent) => {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-      setSubmenu({ id, anchor: { x: rect.right, y: rect.top, height: rect.height } })
+      setSubmenu({
+        id,
+        anchor: { x: rect.right, y: rect.top, height: rect.height, left: rect.left },
+      })
     }
 
   const closeSubmenu = () => setSubmenu(null)
