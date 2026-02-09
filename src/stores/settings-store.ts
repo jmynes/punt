@@ -24,6 +24,11 @@ interface SettingsState {
   customColors: string[]
   addCustomColor: (color: string) => void
   removeCustomColor: (color: string) => void
+
+  // Sidebar settings section expanded state
+  sidebarExpandedSections: Record<string, boolean> // keyed by 'admin' or project ID
+  setSidebarSectionExpanded: (key: string, expanded: boolean) => void
+  toggleSidebarSection: (key: string) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -46,6 +51,20 @@ export const useSettingsStore = create<SettingsState>()(
       // Default: show confirmation dialog for unsaved role changes
       autoSaveOnRoleEditorClose: false,
       setAutoSaveOnRoleEditorClose: (value) => set({ autoSaveOnRoleEditorClose: value }),
+
+      // Sidebar settings sections - default collapsed
+      sidebarExpandedSections: {},
+      setSidebarSectionExpanded: (key, expanded) =>
+        set((state) => ({
+          sidebarExpandedSections: { ...state.sidebarExpandedSections, [key]: expanded },
+        })),
+      toggleSidebarSection: (key) =>
+        set((state) => ({
+          sidebarExpandedSections: {
+            ...state.sidebarExpandedSections,
+            [key]: !state.sidebarExpandedSections[key],
+          },
+        })),
 
       // Custom saved colors (max 20)
       customColors: [],

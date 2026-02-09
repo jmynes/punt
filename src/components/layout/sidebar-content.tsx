@@ -29,6 +29,7 @@ import { useHasAnyPermission, useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import type { ProjectSummary } from '@/stores/projects-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import type { UserSummary } from '@/types'
 
 interface NavItem {
@@ -106,22 +107,20 @@ export function SidebarContent({
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set())
   const [adminExpanded, setAdminExpanded] = useState(true)
   const [projectsExpanded, setProjectsExpanded] = useState(true)
-  const [adminSettingsExpanded, setAdminSettingsExpanded] = useState(false)
-  const [expandedProjectSettingsIds, setExpandedProjectSettingsIds] = useState<Set<string>>(
-    new Set(),
+  const { sidebarExpandedSections, toggleSidebarSection } = useSettingsStore()
+  const adminSettingsExpanded = sidebarExpandedSections['admin'] ?? false
+  const setAdminSettingsExpanded = useCallback(
+    (v: boolean) => useSettingsStore.getState().setSidebarSectionExpanded('admin', v),
+    [],
   )
-
-  const toggleProjectSettingsExpanded = useCallback((projectId: string) => {
-    setExpandedProjectSettingsIds((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(projectId)) {
-        newSet.delete(projectId)
-      } else {
-        newSet.add(projectId)
-      }
-      return newSet
-    })
-  }, [])
+  const isProjectSettingsExpanded = useCallback(
+    (projectId: string) => sidebarExpandedSections[projectId] ?? false,
+    [sidebarExpandedSections],
+  )
+  const toggleProjectSettingsExpanded = useCallback(
+    (projectId: string) => toggleSidebarSection(projectId),
+    [toggleSidebarSection],
+  )
 
   // Default all projects to expanded when they load
   useEffect(() => {
@@ -522,7 +521,7 @@ export function SidebarContent({
                           projectKey={project.key}
                           pathname={pathname}
                           searchParams={searchParams}
-                          expanded={expandedProjectSettingsIds.has(project.id)}
+                          expanded={isProjectSettingsExpanded(project.id)}
                           onToggleExpanded={() => toggleProjectSettingsExpanded(project.id)}
                           onClick={handleLinkClick}
                         />
