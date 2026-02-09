@@ -314,14 +314,14 @@ export function RolesTab({ projectId }: RolesTabProps) {
               <TabsList className="flex-1 grid grid-cols-2 h-auto p-0 bg-transparent rounded-none gap-0">
                 <TabsTrigger
                   value="permissions"
-                  className="!rounded-none !rounded-l-lg !border !border-zinc-700 !bg-zinc-800/50 !text-zinc-400 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-500 data-[state=active]:!text-white data-[state=active]:!border-amber-500 hover:!bg-zinc-700/50 hover:!text-zinc-200"
+                  className="!rounded-none !rounded-l-lg !border !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
                 >
                   <Shield className="mr-2 h-4 w-4" />
                   Permissions
                 </TabsTrigger>
                 <TabsTrigger
                   value="members"
-                  className="!rounded-none !rounded-r-lg !border !border-l-0 !border-zinc-700 !bg-zinc-800/50 !text-zinc-400 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-500 data-[state=active]:!text-white data-[state=active]:!border-amber-500 hover:!bg-zinc-700/50 hover:!text-zinc-200 disabled:!opacity-50"
+                  className="!rounded-none !rounded-r-lg !border !border-l-0 !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white disabled:!opacity-50"
                   disabled={isCreating}
                 >
                   <Users className="mr-2 h-4 w-4" />
