@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, Lock, Pencil, Plus, Shield, Users } from 'lucide-react'
+import { Loader2, Lock, Pencil, Plus, Shield, UserPlus, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -23,7 +23,12 @@ import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { useProjectMembers, useUpdateMember } from '@/hooks/queries/use-members'
+import {
+  useAddMember,
+  useAvailableUsers,
+  useProjectMembers,
+  useRemoveMember,
+} from '@/hooks/queries/use-members'
 import { useCreateRole, useProjectRoles, useUpdateRole } from '@/hooks/queries/use-roles'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -53,12 +58,17 @@ export function RolesTab({ projectId }: RolesTabProps) {
   const { data: members, isLoading: membersLoading } = useProjectMembers(projectId)
   const createRole = useCreateRole(projectId)
   const updateRole = useUpdateRole(projectId)
-  const updateMember = useUpdateMember(projectId)
+  const removeMember = useRemoveMember(projectId)
+  const addMember = useAddMember(projectId)
 
   const canManageRoles = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
 
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [addMemberSearch, setAddMemberSearch] = useState('')
+
+  // Available users for adding to this role
+  const { data: availableUsers } = useAvailableUsers(projectId, addMemberSearch)
 
   // Form state for editing
   const [editName, setEditName] = useState('')
@@ -267,14 +277,6 @@ export function RolesTab({ projectId }: RolesTabProps) {
     }
   }
 
-  // Change member's role
-  const handleChangeMemberRole = async (memberId: string, newRoleId: string) => {
-    await updateMember.mutateAsync({
-      memberId,
-      roleId: newRoleId,
-    })
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -456,17 +458,69 @@ export function RolesTab({ projectId }: RolesTabProps) {
 
               <TabsContent value="members" className="flex-1 min-h-0 mt-0">
                 <ScrollArea className="h-full">
-                  <CardContent className="pt-0">
+                  <CardContent className="pt-0 space-y-4">
+                    {/* Add member section */}
+                    {canManageRoles && selectedRoleId && (
+                      <div className="space-y-2">
+                        <Label>Add member to this role</Label>
+                        <div className="relative">
+                          <Input
+                            value={addMemberSearch}
+                            onChange={(e) => setAddMemberSearch(e.target.value)}
+                            placeholder="Search users to add..."
+                            className="bg-zinc-800/50 border-zinc-700 hover:border-zinc-500"
+                          />
+                          {addMemberSearch && availableUsers && availableUsers.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-10 max-h-48 overflow-auto">
+                              {availableUsers.map((user) => (
+                                <button
+                                  key={user.id}
+                                  type="button"
+                                  onClick={() => {
+                                    addMember.mutate({ userId: user.id, roleId: selectedRoleId })
+                                    setAddMemberSearch('')
+                                  }}
+                                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-zinc-700 transition-colors text-left"
+                                >
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={user.avatar || undefined} alt={user.name} />
+                                    <AvatarFallback
+                                      className="text-xs"
+                                      style={{ backgroundColor: getAvatarColor(user.id) }}
+                                    >
+                                      {getInitials(user.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-zinc-200 truncate">{user.name}</p>
+                                    {user.email && (
+                                      <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                                    )}
+                                  </div>
+                                  <UserPlus className="h-4 w-4 text-zinc-500" />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {addMemberSearch && availableUsers && availableUsers.length === 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-10 px-3 py-2 text-sm text-zinc-500">
+                              No users found
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Members list */}
                     {roleMembers.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
                         <Users className="h-12 w-12 mb-4 opacity-50" />
                         <p className="text-sm">No members with this role</p>
-                        <p className="text-xs mt-1">
-                          Assign this role to members in the Members tab
-                        </p>
+                        <p className="text-xs mt-1">Use the search above to add members</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
+                        <Label>Members ({roleMembers.length})</Label>
                         {roleMembers.map((member) => (
                           <div
                             key={member.id}
@@ -498,18 +552,16 @@ export function RolesTab({ projectId }: RolesTabProps) {
                                 )}
                               </div>
                             </div>
-                            {canManageRoles && roles && roles.length > 1 && (
-                              <select
-                                value={member.roleId}
-                                onChange={(e) => handleChangeMemberRole(member.id, e.target.value)}
-                                className="text-xs bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-zinc-300"
+                            {canManageRoles && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => removeMember.mutate(member.id)}
+                                disabled={removeMember.isPending}
+                                className="text-zinc-500 hover:text-red-400 hover:bg-red-900/20"
                               >
-                                {roles.map((r) => (
-                                  <option key={r.id} value={r.id}>
-                                    {r.name}
-                                  </option>
-                                ))}
-                              </select>
+                                <X className="h-4 w-4" />
+                              </Button>
                             )}
                           </div>
                         ))}
