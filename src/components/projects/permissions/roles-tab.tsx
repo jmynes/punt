@@ -309,9 +309,9 @@ export function RolesTab({ projectId }: RolesTabProps) {
       <div className="flex-1 min-w-0">
         {selectedRole || isCreating ? (
           <Tabs defaultValue="permissions" className="h-full flex flex-col">
-            {/* Header bar with tabs and actions */}
-            <div className="flex items-center gap-3 mb-4">
-              <TabsList className="flex-1 grid grid-cols-2 h-auto p-0 bg-transparent rounded-none gap-0">
+            {/* Tab bar */}
+            <div className="mb-4">
+              <TabsList className="grid grid-cols-2 h-auto p-0 bg-transparent rounded-none gap-0">
                 <TabsTrigger
                   value="permissions"
                   className="!rounded-none !rounded-l-lg !border !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
@@ -328,25 +328,6 @@ export function RolesTab({ projectId }: RolesTabProps) {
                   Members ({roleMembers.length})
                 </TabsTrigger>
               </TabsList>
-
-              {canManageRoles && hasChanges && (
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Button variant="outline" size="sm" onClick={handleCancel}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={createRole.isPending || updateRole.isPending}
-                  >
-                    {(createRole.isPending || updateRole.isPending) && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    {isCreating ? 'Create' : 'Save'}
-                  </Button>
-                </div>
-              )}
             </div>
 
             <Card className="flex-1 flex flex-col bg-zinc-900/50 border-zinc-800 min-h-0">
@@ -497,6 +478,29 @@ export function RolesTab({ projectId }: RolesTabProps) {
                   </CardContent>
                 </ScrollArea>
               </TabsContent>
+
+              {/* Footer bar with save/cancel actions */}
+              {canManageRoles && hasChanges && (
+                <div className="flex-shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-t border-zinc-800 bg-zinc-900/80">
+                  <p className="text-sm text-zinc-400">You have unsaved changes</p>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={handleCancel}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={createRole.isPending || updateRole.isPending}
+                    >
+                      {(createRole.isPending || updateRole.isPending) && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {isCreating ? 'Create Role' : 'Save Changes'}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
           </Tabs>
         ) : (
