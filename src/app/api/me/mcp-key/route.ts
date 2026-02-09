@@ -6,7 +6,7 @@ import { db } from '@/lib/db'
 
 /**
  * GET /api/me/mcp-key - Get current MCP API key status
- * Returns whether user has an MCP key (not the key itself for security)
+ * Returns whether user has an MCP key and a hint (last 4 chars) for identification
  */
 export async function GET() {
   try {
@@ -19,8 +19,7 @@ export async function GET() {
 
     return NextResponse.json({
       hasKey: !!user?.mcpApiKey,
-      // Only show partial key for identification (first 8 chars)
-      keyPreview: user?.mcpApiKey ? `${user.mcpApiKey.slice(0, 8)}...` : null,
+      keyHint: user?.mcpApiKey ? user.mcpApiKey.slice(-4) : null,
     })
   } catch (error) {
     return handleApiError(error, 'get MCP key status')
@@ -29,14 +28,15 @@ export async function GET() {
 
 /**
  * POST /api/me/mcp-key - Generate a new MCP API key
+ * Format: mcp_ + 64 hex chars (from crypto.randomBytes(32))
  * Replaces any existing key
  */
 export async function POST() {
   try {
     const currentUser = await requireAuth()
 
-    // Generate a secure random API key (32 bytes = 44 chars base64)
-    const apiKey = randomBytes(32).toString('base64url')
+    // Generate a secure random API key: mcp_ prefix + 64 hex chars
+    const apiKey = `mcp_${randomBytes(32).toString('hex')}`
 
     await db.user.update({
       where: { id: currentUser.id },

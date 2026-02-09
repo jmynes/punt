@@ -1,6 +1,18 @@
 'use client'
 
-import { Camera, KeyRound, Mail, Palette, Shield, Trash2, User } from 'lucide-react'
+import {
+  Camera,
+  ClipboardCopy,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Mail,
+  Palette,
+  Shield,
+  Terminal,
+  Trash2,
+  User,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -155,6 +167,14 @@ export default function ProfilePage() {
   const [avatarColorLoading, setAvatarColorLoading] = useState(false)
   const [customAvatarColor, setCustomAvatarColor] = useState('')
 
+  // MCP API key state
+  const [mcpKeyLoading, setMcpKeyLoading] = useState(false)
+  const [mcpHasKey, setMcpHasKey] = useState(false)
+  const [mcpKeyHint, setMcpKeyHint] = useState<string | null>(null)
+  const [mcpNewKey, setMcpNewKey] = useState<string | null>(null)
+  const [mcpKeyVisible, setMcpKeyVisible] = useState(false)
+  const [mcpKeyFetched, setMcpKeyFetched] = useState(false)
+
   // Delete account state
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
@@ -168,6 +188,25 @@ export default function ProfilePage() {
       }
     }
   }, [])
+
+  // Fetch MCP key status on mount (non-demo only)
+  useEffect(() => {
+    if (isDemo || mcpKeyFetched) return
+    const fetchMcpKeyStatus = async () => {
+      try {
+        const res = await fetch('/api/me/mcp-key')
+        if (res.ok) {
+          const data = await res.json()
+          setMcpHasKey(data.hasKey)
+          setMcpKeyHint(data.keyHint)
+          setMcpKeyFetched(true)
+        }
+      } catch {
+        // Silently fail - user will see default state
+      }
+    }
+    fetchMcpKeyStatus()
+  }, [isDemo, mcpKeyFetched])
 
   // Debounced session update to prevent race conditions
   const pendingUpdateRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -494,6 +533,66 @@ export default function ProfilePage() {
       toast.error(error instanceof Error ? error.message : 'Failed to update avatar color')
     } finally {
       setAvatarColorLoading(false)
+    }
+  }
+
+  const handleGenerateMcpKey = async () => {
+    setMcpKeyLoading(true)
+    try {
+      const res = await fetch('/api/me/mcp-key', {
+        method: 'POST',
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to generate API key')
+      }
+
+      setMcpNewKey(data.apiKey)
+      setMcpKeyVisible(true)
+      setMcpHasKey(true)
+      setMcpKeyHint(data.apiKey.slice(-4))
+      toast.success('MCP API key generated')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to generate API key')
+    } finally {
+      setMcpKeyLoading(false)
+    }
+  }
+
+  const handleRevokeMcpKey = async () => {
+    setMcpKeyLoading(true)
+    try {
+      const res = await fetch('/api/me/mcp-key', {
+        method: 'DELETE',
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to revoke API key')
+      }
+
+      setMcpHasKey(false)
+      setMcpKeyHint(null)
+      setMcpNewKey(null)
+      setMcpKeyVisible(false)
+      toast.success('MCP API key revoked')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to revoke API key')
+    } finally {
+      setMcpKeyLoading(false)
+    }
+  }
+
+  const handleCopyMcpKey = async () => {
+    if (!mcpNewKey) return
+    try {
+      await navigator.clipboard.writeText(mcpNewKey)
+      toast.success('API key copied to clipboard')
+    } catch {
+      toast.error('Failed to copy to clipboard')
     }
   }
 
@@ -891,6 +990,189 @@ export default function ProfilePage() {
             </form>
           </CardContent>
         </Card>
+
+        {/* MCP API Key */}
+        {!isDemo && (
+          <Card className="border-zinc-800 bg-zinc-900/50">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
+                <Terminal className="h-5 w-5 text-amber-500" />
+                <CardTitle className="text-zinc-100">MCP API Key</CardTitle>
+              </div>
+              <CardDescription className="text-zinc-500">
+                Generate an API key to use with the MCP (Model Context Protocol) server for
+                conversational ticket management via AI assistants like Claude
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Current key status */}
+              {mcpHasKey && !mcpNewKey && (
+                <div className="flex items-center gap-3 px-3 py-2 bg-zinc-800/50 border border-zinc-700 rounded-lg">
+                  <KeyRound className="h-4 w-4 text-emerald-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-300">
+                      Active key ending in{' '}
+                      <code className="text-amber-400 font-mono">...{mcpKeyHint}</code>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Newly generated key display */}
+              {mcpNewKey && (
+                <div className="space-y-3">
+                  <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <p className="text-sm text-amber-400 font-medium mb-1">
+                      Save this key now -- it will not be shown again
+                    </p>
+                    <p className="text-xs text-amber-400/70">
+                      If you lose this key, you will need to generate a new one.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 relative">
+                      <Input
+                        readOnly
+                        value={mcpKeyVisible ? mcpNewKey : mcpNewKey.replace(/./g, '\u2022')}
+                        className="bg-zinc-900 border-zinc-700 font-mono text-sm pr-20"
+                      />
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-zinc-400 hover:text-zinc-200"
+                          onClick={() => setMcpKeyVisible(!mcpKeyVisible)}
+                          title={mcpKeyVisible ? 'Hide key' : 'Show key'}
+                        >
+                          {mcpKeyVisible ? (
+                            <EyeOff className="h-3.5 w-3.5" />
+                          ) : (
+                            <Eye className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-zinc-400 hover:text-zinc-200"
+                          onClick={handleCopyMcpKey}
+                          title="Copy to clipboard"
+                        >
+                          <ClipboardCopy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex flex-wrap gap-2">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-zinc-700 hover:bg-zinc-800 hover:border-amber-500/50"
+                      disabled={mcpKeyLoading}
+                    >
+                      <KeyRound className="h-4 w-4 mr-2" />
+                      {mcpHasKey ? 'Regenerate Key' : 'Generate Key'}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-zinc-100">
+                        {mcpHasKey ? 'Regenerate MCP API Key?' : 'Generate MCP API Key?'}
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-zinc-400">
+                        {mcpHasKey
+                          ? 'This will invalidate your current API key. Any MCP server using the old key will stop working and will need to be reconfigured with the new key.'
+                          : 'A new API key will be generated. You will only see the full key once, so make sure to copy and save it.'}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleGenerateMcpKey}
+                        className="bg-amber-600 hover:bg-amber-700 text-white"
+                      >
+                        {mcpHasKey ? 'Regenerate' : 'Generate'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                {mcpHasKey && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-zinc-400 hover:text-red-400"
+                        disabled={mcpKeyLoading}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Revoke Key
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-zinc-100">
+                          Revoke MCP API Key?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400">
+                          This will permanently delete your API key. Any MCP server using this key
+                          will immediately lose access.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleRevokeMcpKey}
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          Revoke Key
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
+
+              {/* Configuration instructions */}
+              <div className="bg-zinc-800/50 rounded-lg p-3 text-xs text-zinc-400 space-y-2">
+                <p className="font-medium text-zinc-300">How to configure MCP</p>
+                <p>
+                  Add the following to your <code className="text-amber-400">.mcp.json</code> file
+                  to connect an AI assistant to PUNT:
+                </p>
+                <pre className="bg-zinc-900 rounded p-2 overflow-x-auto text-zinc-300">
+                  {`{
+  "mcpServers": {
+    "punt": {
+      "type": "stdio",
+      "command": "pnpm",
+      "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
+      "env": {
+        "MCP_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}`}
+                </pre>
+                <p>
+                  Replace <code className="text-amber-400">your-api-key-here</code> with the
+                  generated key. The MCP server enables AI assistants to create, update, and manage
+                  tickets conversationally.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Separator className="bg-zinc-800" />
 
