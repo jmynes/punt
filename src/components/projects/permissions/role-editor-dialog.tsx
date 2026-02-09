@@ -1,8 +1,19 @@
 'use client'
 
 import { Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -15,6 +26,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { Permission } from '@/lib/permissions'
+import { useSettingsStore } from '@/stores/settings-store'
 import { PermissionGrid } from './permission-grid'
 
 // Preset colors for role badges
@@ -59,6 +71,10 @@ export function RoleEditorDialog({
   const [permissions, setPermissions] = useState<Permission[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showUnsavedChangesConfirm, setShowUnsavedChangesConfirm] = useState(false)
+  const [rememberPreference, setRememberPreference] = useState(false)
+
+  const { autoSaveOnRoleEditorClose, setAutoSaveOnRoleEditorClose } = useSettingsStore()
 
   // Reset form when dialog opens/closes or initialData changes
   useEffect(() => {
@@ -75,6 +91,39 @@ export function RoleEditorDialog({
     }
     setError(null)
   }, [open, initialData])
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!open) return false
+
+    if (isEditing && initialData) {
+      return (
+        name !== initialData.name ||
+        color !== initialData.color ||
+        description !== initialData.description ||
+        JSON.stringify([...permissions].sort()) !==
+          JSON.stringify([...initialData.permissions].sort())
+      )
+    }
+    // For create mode, check if any field has been filled
+    return name.trim() !== '' || description.trim() !== '' || permissions.length > 0
+  }, [open, isEditing, initialData, name, color, description, permissions])
+
+  // Handle dialog close with unsaved changes check
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && hasUnsavedChanges) {
+      if (autoSaveOnRoleEditorClose) {
+        // Auto-save is enabled, save and close
+        handleSave()
+      } else {
+        // Show confirmation dialog
+        setRememberPreference(false)
+        setShowUnsavedChangesConfirm(true)
+      }
+    } else {
+      onOpenChange(newOpen)
+    }
+  }
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -101,103 +150,176 @@ export function RoleEditorDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? `Edit Role: ${initialData?.name}` : 'Create New Role'}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? 'Modify the role settings and permissions.'
-              : 'Create a custom role with specific permissions.'}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing ? `Edit Role: ${initialData?.name}` : 'Create New Role'}
+            </DialogTitle>
+            <DialogDescription>
+              {isEditing
+                ? 'Modify the role settings and permissions.'
+                : 'Create a custom role with specific permissions.'}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Name and Color */}
-          <div className="grid grid-cols-[1fr,auto] gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Role Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Moderator, Contributor"
-                disabled={isSaving || (isEditing && isDefault)}
-                className="bg-zinc-800/50"
-              />
-              {isEditing && isDefault && (
-                <p className="text-xs text-zinc-500">Default role names cannot be changed.</p>
-              )}
-            </div>
+          <div className="space-y-6 py-4">
+            {/* Name and Color */}
+            <div className="grid grid-cols-[1fr,auto] gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Role Name</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Moderator, Contributor"
+                  disabled={isSaving || (isEditing && isDefault)}
+                  className="bg-zinc-800/50"
+                />
+                {isEditing && isDefault && (
+                  <p className="text-xs text-zinc-500">Default role names cannot be changed.</p>
+                )}
+              </div>
 
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <div className="flex gap-1">
-                {ROLE_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setColor(c)}
-                    disabled={isSaving}
-                    className={`w-7 h-7 rounded-md transition-all ${
-                      color === c
-                        ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900'
-                        : 'hover:scale-110'
-                    }`}
-                    style={{ backgroundColor: c }}
-                    aria-label={`Select color ${c}`}
-                  />
-                ))}
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <div className="flex gap-1">
+                  {ROLE_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      disabled={isSaving}
+                      className={`w-7 h-7 rounded-md transition-all ${
+                        color === c
+                          ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900'
+                          : 'hover:scale-110'
+                      }`}
+                      style={{ backgroundColor: c }}
+                      aria-label={`Select color ${c}`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description (optional)</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe what this role can do..."
-              disabled={isSaving}
-              className="bg-zinc-800/50 resize-none"
-              rows={2}
-            />
-          </div>
-
-          {/* Permissions */}
-          <div className="space-y-2">
-            <Label>Permissions</Label>
-            <p className="text-xs text-zinc-500 mb-3">
-              Select the actions members with this role can perform.
-            </p>
-            <PermissionGrid
-              selectedPermissions={permissions}
-              onChange={setPermissions}
-              disabled={isSaving}
-            />
-          </div>
-
-          {error && (
-            <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-md p-3">
-              {error}
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (optional)</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe what this role can do..."
+                disabled={isSaving}
+                className="bg-zinc-800/50 resize-none"
+                rows={2}
+              />
             </div>
-          )}
-        </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? 'Save Changes' : 'Create Role'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {/* Permissions */}
+            <div className="space-y-2">
+              <Label>Permissions</Label>
+              <p className="text-xs text-zinc-500 mb-3">
+                Select the actions members with this role can perform.
+              </p>
+              <PermissionGrid
+                selectedPermissions={permissions}
+                onChange={setPermissions}
+                disabled={isSaving}
+              />
+            </div>
+
+            {error && (
+              <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-md p-3">
+                {error}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isEditing ? 'Save Changes' : 'Create Role'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unsaved changes confirmation dialog */}
+      <AlertDialog
+        open={showUnsavedChangesConfirm}
+        onOpenChange={(dialogOpen) => {
+          if (!dialogOpen) {
+            setShowUnsavedChangesConfirm(false)
+            setRememberPreference(false)
+          }
+        }}
+      >
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              You have unsaved changes to this role. What would you like to do?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember-role-preference"
+                checked={rememberPreference}
+                onCheckedChange={(checked) => setRememberPreference(checked === true)}
+                className="border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+              />
+              <Label
+                htmlFor="remember-role-preference"
+                className="text-sm text-zinc-300 cursor-pointer select-none"
+              >
+                Remember my preference to save and close
+              </Label>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+              onClick={() => {
+                setShowUnsavedChangesConfirm(false)
+                setRememberPreference(false)
+              }}
+            >
+              Go Back
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowUnsavedChangesConfirm(false)
+                setRememberPreference(false)
+                onOpenChange(false)
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Discard
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                if (rememberPreference) {
+                  setAutoSaveOnRoleEditorClose(true)
+                }
+                handleSave()
+                setShowUnsavedChangesConfirm(false)
+                setRememberPreference(false)
+              }}
+              className="bg-amber-600 hover:bg-amber-500 text-white"
+            >
+              Save and Close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

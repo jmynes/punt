@@ -364,6 +364,20 @@ export function SidebarContent({
                             Sprints
                           </Button>
                         </Link>
+                        <Link href={`/projects/${project.key}/settings`} onClick={handleLinkClick}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                              'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
+                              pathname.startsWith(`/projects/${project.key}/settings`) &&
+                                'bg-zinc-800/50 text-zinc-100',
+                            )}
+                          >
+                            <Settings className="h-3.5 w-3.5" />
+                            Settings
+                          </Button>
+                        </Link>
                       </div>
                     )}
                   </div>

@@ -2,6 +2,7 @@
 
 import { Loader2, MoreHorizontal, Settings, Shield, UserMinus, UserPlus } from 'lucide-react'
 import { useState } from 'react'
+import { AddMemberDialog } from '@/components/projects/permissions/add-member-dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,27 +85,66 @@ export function MembersTab({ projectId }: MembersTabProps) {
           </p>
         </div>
         {canManageMembers && (
-          <Button>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Invite
-          </Button>
+          <AddMemberDialog
+            projectId={projectId}
+            trigger={
+              <Button variant="primary">
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add Member
+              </Button>
+            }
+          />
         )}
       </div>
 
       {/* Members List */}
       <div className="space-y-2">
-        {members?.map((member) => (
-          <MemberCard
-            key={member.id}
-            member={member}
-            roles={roles || []}
-            isCurrentUser={member.userId === currentUser?.id}
-            canChangeRole={canManageMembers === true}
-            canManagePermissions={canManagePermissions === true}
-            onRoleChange={(roleId) => handleRoleChange(member.id, roleId)}
-            onRemove={() => setRemovingMember(member)}
-          />
-        ))}
+        {/* Current user section */}
+        {(() => {
+          const currentMember = members?.find((m) => m.userId === currentUser?.id)
+          const otherMembers = members?.filter((m) => m.userId !== currentUser?.id) || []
+
+          return (
+            <>
+              {currentMember && (
+                <>
+                  <MemberCard
+                    key={currentMember.id}
+                    member={currentMember}
+                    roles={roles || []}
+                    isCurrentUser={true}
+                    canChangeRole={canManageMembers === true}
+                    canManagePermissions={canManagePermissions === true}
+                    onRoleChange={(roleId) => handleRoleChange(currentMember.id, roleId)}
+                    onRemove={() => setRemovingMember(currentMember)}
+                  />
+                  {otherMembers.length > 0 && (
+                    <div className="flex items-center gap-3 py-3">
+                      <div className="flex-1 h-px bg-zinc-800" />
+                      <span className="text-xs text-zinc-600 uppercase tracking-wider">
+                        Other Members
+                      </span>
+                      <div className="flex-1 h-px bg-zinc-800" />
+                    </div>
+                  )}
+                </>
+              )}
+              {/* Other members */}
+              {otherMembers.map((member) => (
+                <MemberCard
+                  key={member.id}
+                  member={member}
+                  roles={roles || []}
+                  isCurrentUser={false}
+                  canChangeRole={canManageMembers === true}
+                  canManagePermissions={canManagePermissions === true}
+                  onRoleChange={(roleId) => handleRoleChange(member.id, roleId)}
+                  onRemove={() => setRemovingMember(member)}
+                />
+              ))}
+            </>
+          )
+        })()}
 
         {members?.length === 0 && (
           <div className="text-center py-12 text-zinc-500">No members found.</div>
@@ -200,16 +240,10 @@ function MemberCard({
         {/* Role & Actions */}
         <div className="flex items-center gap-3">
           {/* Role selector or badge */}
-          {canChangeRole && !isCurrentUser ? (
+          {canChangeRole ? (
             <Select value={member.roleId} onValueChange={onRoleChange}>
               <SelectTrigger className="w-[140px] bg-zinc-800/50">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: member.role.color }}
-                  />
-                  <SelectValue />
-                </div>
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {roles.map((role) => (
@@ -240,7 +274,7 @@ function MemberCard({
           )}
 
           {/* Actions dropdown */}
-          {(canChangeRole || canManagePermissions) && !isCurrentUser && (
+          {(canChangeRole || canManagePermissions || isCurrentUser) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -254,32 +288,21 @@ function MemberCard({
                     Edit Permissions
                   </DropdownMenuItem>
                 )}
-                {canChangeRole && (
+                {/* Remove/Leave option */}
+                {(canChangeRole || isCurrentUser) && (
                   <>
-                    <DropdownMenuSeparator />
+                    {canManagePermissions && <DropdownMenuSeparator />}
                     <DropdownMenuItem
                       onClick={onRemove}
                       className="text-red-400 focus:text-red-400"
                     >
                       <UserMinus className="mr-2 h-4 w-4" />
-                      Remove from Project
+                      {isCurrentUser ? 'Leave Project' : 'Remove from Project'}
                     </DropdownMenuItem>
                   </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
-
-          {/* Leave button for current user */}
-          {isCurrentUser && member.role.name !== 'Owner' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRemove}
-              className="text-zinc-400 hover:text-red-400"
-            >
-              Leave
-            </Button>
           )}
         </div>
       </CardContent>

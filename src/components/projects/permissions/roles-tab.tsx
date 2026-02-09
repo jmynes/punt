@@ -1,32 +1,11 @@
 'use client'
 
-import { Loader2, Lock, MoreHorizontal, Pencil, Plus, Shield, Trash2, Users } from 'lucide-react'
+import { Loader2, Lock, Pencil, Plus, Shield, Users } from 'lucide-react'
 import { useState } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  useCreateRole,
-  useDeleteRole,
-  useProjectRoles,
-  useUpdateRole,
-} from '@/hooks/queries/use-roles'
+import { useCreateRole, useProjectRoles, useUpdateRole } from '@/hooks/queries/use-roles'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import type { RoleWithPermissions } from '@/types'
@@ -40,13 +19,11 @@ export function RolesTab({ projectId }: RolesTabProps) {
   const { data: roles, isLoading } = useProjectRoles(projectId)
   const createRole = useCreateRole(projectId)
   const updateRole = useUpdateRole(projectId)
-  const deleteRole = useDeleteRole(projectId)
 
   const canManageRoles = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<RoleWithPermissions | null>(null)
-  const [deletingRole, setDeletingRole] = useState<RoleWithPermissions | null>(null)
 
   const handleCreateRole = async (data: RoleFormData) => {
     await createRole.mutateAsync(data)
@@ -58,12 +35,6 @@ export function RolesTab({ projectId }: RolesTabProps) {
       roleId: editingRole.id,
       ...data,
     })
-  }
-
-  const handleDeleteRole = async () => {
-    if (!deletingRole) return
-    await deleteRole.mutateAsync(deletingRole.id)
-    setDeletingRole(null)
   }
 
   if (isLoading) {
@@ -85,7 +56,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
           </p>
         </div>
         {canManageRoles && (
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Button variant="primary" onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             New Role
           </Button>
@@ -100,7 +71,6 @@ export function RolesTab({ projectId }: RolesTabProps) {
             role={role}
             canEdit={canManageRoles === true}
             onEdit={() => setEditingRole(role)}
-            onDelete={() => setDeletingRole(role)}
           />
         ))}
 
@@ -136,25 +106,6 @@ export function RolesTab({ projectId }: RolesTabProps) {
         isEditing
         isDefault={editingRole?.isDefault}
       />
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deletingRole} onOpenChange={(open) => !open && setDeletingRole(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Role</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the role "{deletingRole?.name}"? This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteRole} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }
@@ -163,10 +114,9 @@ interface RoleCardProps {
   role: RoleWithPermissions
   canEdit: boolean
   onEdit: () => void
-  onDelete: () => void
 }
 
-function RoleCard({ role, canEdit, onEdit, onDelete }: RoleCardProps) {
+function RoleCard({ role, canEdit, onEdit }: RoleCardProps) {
   const permissionCount = role.permissions.length
   const memberCount = role.memberCount || 0
 
@@ -206,29 +156,9 @@ function RoleCard({ role, canEdit, onEdit, onDelete }: RoleCardProps) {
 
         {/* Actions */}
         {canEdit && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              {!role.isDefault && (
-                <DropdownMenuItem
-                  onClick={onDelete}
-                  className="text-red-400 focus:text-red-400"
-                  disabled={memberCount > 0}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
+            <Pencil className="h-4 w-4" />
+          </Button>
         )}
       </CardContent>
     </Card>

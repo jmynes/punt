@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { brandingKeys } from '@/hooks/queries/use-branding'
+import { availableUserKeys, memberKeys } from '@/hooks/queries/use-members'
 import { getTabId } from '@/hooks/use-realtime'
 import { isDemoMode } from '@/lib/demo'
 import type { BrandingEvent, MemberEvent, SettingsEvent, UserEvent } from '@/lib/events'
@@ -173,6 +174,12 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
         ) {
           // Invalidate the user details query if viewing that user's profile
           queryClient.invalidateQueries({ queryKey: ['admin', 'users', data.targetUserId] })
+
+          // Invalidate project members and available users caches
+          queryClient.invalidateQueries({ queryKey: memberKeys.byProject(data.projectId) })
+          queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(data.projectId) })
+          // Also invalidate roles to update member counts
+          queryClient.invalidateQueries({ queryKey: ['roles', 'project', data.projectId] })
         }
       } catch {
         // Ignore parse errors (could be keepalive comments)

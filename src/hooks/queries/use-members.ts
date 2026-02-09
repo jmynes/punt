@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { getTabId } from '@/hooks/use-realtime'
 import { demoStorage, isDemoMode } from '@/lib/demo'
 import type { Permission, ProjectMemberWithRole } from '@/types'
 
@@ -92,6 +93,7 @@ export function useUpdateMember(projectId: string) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
         },
         body: JSON.stringify(data),
       })
@@ -126,6 +128,9 @@ export function useRemoveMember(projectId: string) {
     mutationFn: async (memberId: string) => {
       const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
         method: 'DELETE',
+        headers: {
+          'X-Tab-Id': getTabId(),
+        },
       })
       if (!res.ok) {
         const error = await res.json()
@@ -138,9 +143,88 @@ export function useRemoveMember(projectId: string) {
       queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
       // Also invalidate roles to update member counts
       queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
+      // Invalidate available users as the removed member is now available
+      queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
     },
     onError: (err) => {
       toast.error(err.message)
     },
   })
+}
+
+// Query keys for available users
+export const availableUserKeys = {
+  all: ['available-users'] as const,
+  byProject: (projectId: string) => ['available-users', 'project', projectId] as const,
+}
+
+interface AddMemberData {
+  userId: string
+  roleId: string
+}
+
+/**
+ * Add a new member to the project
+ */
+export function useAddMember(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: AddMemberData) => {
+      const res = await fetch(`/api/projects/${projectId}/members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to add member')
+      }
+      return res.json() as Promise<ProjectMemberWithRole>
+    },
+    onSuccess: () => {
+      toast.success('Member added')
+      queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
+      // Also invalidate roles to update member counts
+      queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
+      // Invalidate available users as the added member is no longer available
+      queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
+    },
+    onError: (err) => {
+      toast.error(err.message)
+    },
+  })
+}
+
+/**
+ * Fetch available users (not in the project)
+ */
+export function useAvailableUsers(projectId: string, search = '') {
+  return useQuery<Array<{ id: string; name: string; email: string | null; avatar: string | null }>>(
+    {
+      queryKey: [...availableUserKeys.byProject(projectId), search],
+      queryFn: async () => {
+        // Demo mode: no available users
+        if (isDemoMode()) {
+          return []
+        }
+
+        const url = new URL(`/api/projects/${projectId}/available-users`, window.location.origin)
+        if (search) {
+          url.searchParams.set('search', search)
+        }
+        const res = await fetch(url.toString())
+        if (!res.ok) {
+          const error = await res.json()
+          throw new Error(error.error || 'Failed to fetch available users')
+        }
+        return res.json()
+      },
+      enabled: !!projectId,
+      staleTime: 1000 * 30, // 30 seconds
+    },
+  )
 }

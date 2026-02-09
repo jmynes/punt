@@ -21,6 +21,8 @@ export default function SettingsPage() {
     setTicketDateMaxYear,
     autoSaveOnDrawerClose,
     setAutoSaveOnDrawerClose,
+    autoSaveOnRoleEditorClose,
+    setAutoSaveOnRoleEditorClose,
   } = useSettingsStore()
 
   const defaultMaxYear = new Date().getFullYear() + 5
@@ -85,6 +87,26 @@ export default function SettingsPage() {
                 id="auto-save-drawer"
                 checked={autoSaveOnDrawerClose}
                 onCheckedChange={(checked) => setAutoSaveOnDrawerClose(checked === true)}
+                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+              />
+            </div>
+
+            <Separator className="bg-zinc-800" />
+
+            <div className="flex items-start justify-between space-x-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="auto-save-role-editor" className="text-zinc-300">
+                  Auto-save on role editor close
+                </Label>
+                <p className="text-sm text-zinc-500">
+                  Automatically save changes when closing the role editor dialog without showing a
+                  confirmation dialog
+                </p>
+              </div>
+              <Checkbox
+                id="auto-save-role-editor"
+                checked={autoSaveOnRoleEditorClose}
+                onCheckedChange={(checked) => setAutoSaveOnRoleEditorClose(checked === true)}
                 className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
               />
             </div>

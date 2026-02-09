@@ -15,6 +15,10 @@ interface SettingsState {
   // Ticket drawer unsaved changes behavior
   autoSaveOnDrawerClose: boolean
   setAutoSaveOnDrawerClose: (value: boolean) => void
+
+  // Role editor unsaved changes behavior
+  autoSaveOnRoleEditorClose: boolean
+  setAutoSaveOnRoleEditorClose: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -33,6 +37,10 @@ export const useSettingsStore = create<SettingsState>()(
       // Default: show confirmation dialog for unsaved changes
       autoSaveOnDrawerClose: false,
       setAutoSaveOnDrawerClose: (value) => set({ autoSaveOnDrawerClose: value }),
+
+      // Default: show confirmation dialog for unsaved role changes
+      autoSaveOnRoleEditorClose: false,
+      setAutoSaveOnRoleEditorClose: (value) => set({ autoSaveOnRoleEditorClose: value }),
     }),
     {
       name: 'punt-settings',
