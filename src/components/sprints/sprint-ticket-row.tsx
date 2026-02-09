@@ -4,6 +4,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { format, isPast, isToday } from 'date-fns'
 import { Calendar, GripVertical, MessageSquare, Paperclip, Repeat } from 'lucide-react'
+import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -115,7 +116,10 @@ export function SprintTicketRow({
       </span>
 
       {/* Title */}
-      <span className="flex-1 text-sm text-zinc-200 truncate min-w-0">{ticket.title}</span>
+      <InlineCodeText
+        text={ticket.title}
+        className="flex-1 text-sm text-zinc-200 truncate min-w-0"
+      />
 
       {/* Carryover indicator */}
       {ticket.isCarriedOver && (

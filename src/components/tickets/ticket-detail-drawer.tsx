@@ -91,6 +91,7 @@ import type {
   UploadedFileInfo,
 } from '@/types'
 import { ISSUE_TYPES, PRIORITIES } from '@/types'
+import { InlineCodeText } from '../common/inline-code'
 import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
 import type { ParentTicketOption } from './create-ticket-dialog'
@@ -856,7 +857,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     className="text-xl font-semibold text-zinc-100 cursor-pointer hover:bg-amber-500/15 rounded px-2 py-1 -mx-2"
                     onClick={() => startEditing('title')}
                   >
-                    {ticket.title}
+                    <InlineCodeText text={ticket.title} />
                   </h2>
                 )}
               </div>
@@ -1251,7 +1252,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       <span className="font-mono text-zinc-500 shrink-0">
                         {projectKey}-{parentTicket.number}
                       </span>
-                      <span className="truncate text-zinc-300">{parentTicket.title}</span>
+                      <InlineCodeText
+                        text={parentTicket.title}
+                        className="truncate text-zinc-300"
+                      />
                       <Link2 className="h-3.5 w-3.5 text-zinc-500 ml-auto shrink-0" />
                     </div>
                   </Button>
@@ -1277,7 +1281,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                           <span className="font-mono text-zinc-500 shrink-0">
                             {projectKey}-{child.number}
                           </span>
-                          <span className="truncate text-zinc-300">{child.title}</span>
+                          <InlineCodeText text={child.title} className="truncate text-zinc-300" />
                           <Link2 className="h-3.5 w-3.5 text-zinc-500 ml-auto shrink-0" />
                         </div>
                       </Button>

@@ -5,6 +5,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { format, isPast, isToday } from 'date-fns'
 import { Calendar, GripVertical, MessageSquare, Paperclip, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -126,7 +127,9 @@ export function KanbanCard({
           </div>
 
           {/* Title */}
-          <h4 className="text-sm font-medium text-zinc-200 mb-2 line-clamp-2">{ticket.title}</h4>
+          <h4 className="text-sm font-medium text-zinc-200 mb-2 line-clamp-2">
+            <InlineCodeText text={ticket.title} />
+          </h4>
 
           {/* Labels */}
           {ticket.labels.length > 0 && (
