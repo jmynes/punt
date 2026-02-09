@@ -226,7 +226,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
                           />
                           <span>{role.name}</span>
                           {role.description && (
-                            <span className="text-xs text-zinc-500 ml-2">{role.description}</span>
+                            <span className="text-xs text-zinc-400 ml-2">{role.description}</span>
                           )}
                         </div>
                       </SelectItem>
