@@ -18,6 +18,7 @@ import {
   useDeleteLabel,
   useProjectLabels,
   useProjectSprints,
+  useUpdateLabel,
 } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
@@ -57,6 +58,7 @@ export function CreateTicketDialog() {
   // Use API mutations
   const createTicketMutation = useCreateTicket()
   const createLabelMutation = useCreateLabel()
+  const updateLabelMutation = useUpdateLabel()
   const deleteLabelMutation = useDeleteLabel()
 
   // Get columns for the active project
@@ -98,6 +100,16 @@ export function CreateTicketDialog() {
       await deleteLabelMutation.mutateAsync({ projectId, labelId })
     },
     [projectId, deleteLabelMutation],
+  )
+
+  // Callback for updating label colors
+  const handleUpdateLabel = useCallback(
+    async (labelId: string, color: string): Promise<void> => {
+      if (!projectId) return
+
+      await updateLabelMutation.mutateAsync({ projectId, labelId, color })
+    },
+    [projectId, updateLabelMutation],
   )
 
   // Apply prefill data when dialog opens with clone data
@@ -262,6 +274,7 @@ export function CreateTicketDialog() {
               parentTickets={[]}
               disabled={isSubmitting}
               onCreateLabel={canManageLabels ? handleCreateLabel : undefined}
+              onUpdateLabel={canManageLabels ? handleUpdateLabel : undefined}
               onDeleteLabel={canManageLabels ? handleDeleteLabel : undefined}
             />
           </div>

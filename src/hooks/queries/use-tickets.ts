@@ -617,3 +617,32 @@ export function useDeleteLabel() {
     },
   })
 }
+
+interface UpdateLabelMutationInput {
+  projectId: string
+  labelId: string
+  color: string
+}
+
+/**
+ * Update a label's color
+ */
+export function useUpdateLabel() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ projectId, labelId, color }: UpdateLabelMutationInput) => {
+      const provider = getDataProvider(getTabId())
+      return provider.updateLabel(projectId, labelId, { color })
+    },
+    onSuccess: (_data, { projectId }) => {
+      // Invalidate labels query to refetch with updated label
+      queryClient.invalidateQueries({ queryKey: labelKeys.byProject(projectId) })
+      // Also invalidate tickets as they display label colors
+      queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+    },
+    onError: (err) => {
+      toast.error(err.message)
+    },
+  })
+}
