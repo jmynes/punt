@@ -285,7 +285,7 @@ export async function PATCH(
  * Requires members.manage permission
  */
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ projectId: string; memberId: string }> },
 ) {
   try {
@@ -299,7 +299,7 @@ export async function DELETE(
       select: {
         id: true,
         userId: true,
-        role: { select: { name: true } },
+        role: { select: { id: true, name: true } },
       },
     })
 
@@ -341,6 +341,22 @@ export async function DELETE(
     // Remove the member
     await db.projectMember.delete({
       where: { id: memberId },
+    })
+
+    // Emit SSE event for member removed
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitMemberEvent({
+      type: 'member.removed',
+      memberId,
+      targetUserId: targetMember.userId,
+      projectId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+      changes: {
+        previousRoleId: targetMember.role.id,
+        previousRoleName: targetMember.role.name,
+      },
     })
 
     return NextResponse.json({ success: true })

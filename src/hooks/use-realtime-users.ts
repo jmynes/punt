@@ -165,8 +165,12 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
           queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
         }
 
-        // Handle member role updates
-        if (data.type === 'member.role.updated') {
+        // Handle member events (added, removed, role updated)
+        if (
+          data.type === 'member.added' ||
+          data.type === 'member.removed' ||
+          data.type === 'member.role.updated'
+        ) {
           // Invalidate the user details query if viewing that user's profile
           queryClient.invalidateQueries({ queryKey: ['admin', 'users', data.targetUserId] })
         }
