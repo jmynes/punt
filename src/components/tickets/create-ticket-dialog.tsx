@@ -117,12 +117,23 @@ export function CreateTicketDialog() {
     [projectId, updateLabelMutation],
   )
 
-  // Apply prefill data when dialog opens with clone data
+  // Apply prefill data when dialog opens with clone data, and default reporter to current user
   useEffect(() => {
-    if (createTicketOpen && prefillTicketData) {
-      setFormData({ ...DEFAULT_TICKET_FORM, ...prefillTicketData })
+    if (createTicketOpen) {
+      if (prefillTicketData) {
+        setFormData({
+          ...DEFAULT_TICKET_FORM,
+          ...prefillTicketData,
+          reporterId: prefillTicketData.reporterId ?? currentUser?.id ?? null,
+        })
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          reporterId: prev.reporterId ?? currentUser?.id ?? null,
+        }))
+      }
     }
-  }, [createTicketOpen, prefillTicketData])
+  }, [createTicketOpen, prefillTicketData, currentUser?.id])
 
   const handleClose = useCallback(() => {
     setCreateTicketOpen(false)
@@ -191,7 +202,7 @@ export function CreateTicketDialog() {
       projectId,
       columnId: targetColumn.id,
       assigneeId: formData.assigneeId,
-      creatorId: currentUser.id,
+      creatorId: formData.reporterId || currentUser.id,
       sprintId: formData.sprintId,
       parentId: formData.parentId,
       isCarriedOver: false,
@@ -200,7 +211,9 @@ export function CreateTicketDialog() {
       assignee: formData.assigneeId
         ? members.find((m) => m.id === formData.assigneeId) || null
         : null,
-      creator: currentUser,
+      creator: formData.reporterId
+        ? members.find((m) => m.id === formData.reporterId) || currentUser
+        : currentUser,
       sprint: selectedSprint,
       carriedFromSprint: null,
       labels: selectedLabels,
@@ -223,6 +236,7 @@ export function CreateTicketDialog() {
           type: formData.type,
           priority: formData.priority,
           assigneeId: formData.assigneeId,
+          reporterId: formData.reporterId,
           sprintId: formData.sprintId,
           parentId: formData.parentId,
           storyPoints: formData.storyPoints,

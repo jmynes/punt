@@ -103,11 +103,18 @@ export class DemoDataProvider implements DataProvider {
       ? [DEMO_USER_SUMMARY, ...DEMO_TEAM_SUMMARIES].find((u) => u.id === data.assigneeId) || null
       : null
 
+    // Get reporter/creator if reporterId provided, default to demo user
+    const allUsers = [DEMO_USER_SUMMARY, ...DEMO_TEAM_SUMMARIES]
+    const creator = data.reporterId
+      ? allUsers.find((u) => u.id === data.reporterId) || DEMO_USER_SUMMARY
+      : DEMO_USER_SUMMARY
+
     return demoStorage.createTicket(projectId, data.columnId, {
       ...data,
       labels,
       sprint,
       assignee,
+      creator,
     })
   }
 
@@ -116,8 +123,9 @@ export class DemoDataProvider implements DataProvider {
     ticketId: string,
     data: UpdateTicketInput,
   ): Promise<TicketWithRelations> {
-    // Build the updates object
-    const updates: Partial<TicketWithRelations> = { ...data }
+    // Build the updates object (exclude creatorId from spread to avoid type conflicts)
+    const { creatorId: _creatorId, ...restData } = data
+    const updates: Partial<TicketWithRelations> = { ...restData }
 
     // Handle labels
     if (data.labelIds !== undefined) {
@@ -136,6 +144,13 @@ export class DemoDataProvider implements DataProvider {
       updates.assignee = data.assigneeId
         ? [DEMO_USER_SUMMARY, ...DEMO_TEAM_SUMMARIES].find((u) => u.id === data.assigneeId) || null
         : null
+    }
+
+    // Handle reporter/creator
+    if (data.creatorId !== undefined && data.creatorId !== null) {
+      const allUsers = [DEMO_USER_SUMMARY, ...DEMO_TEAM_SUMMARIES]
+      updates.creatorId = data.creatorId
+      updates.creator = allUsers.find((u) => u.id === data.creatorId) || DEMO_USER_SUMMARY
     }
 
     const updated = demoStorage.updateTicket(projectId, ticketId, updates)

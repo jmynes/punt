@@ -263,6 +263,7 @@ export interface TicketFormData {
   priority: Priority
   columnId?: string
   assigneeId: string | null
+  reporterId: string | null
   sprintId: string | null
   labelIds: string[]
   watcherIds: string[]
@@ -285,6 +286,7 @@ export const DEFAULT_TICKET_FORM: TicketFormData = {
   priority: 'medium',
   columnId: undefined,
   assigneeId: null,
+  reporterId: null,
   sprintId: null,
   labelIds: [],
   watcherIds: [],

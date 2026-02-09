@@ -742,6 +742,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       type: ticket.type,
       priority: ticket.priority,
       assigneeId: ticket.assigneeId,
+      reporterId: ticket.creatorId,
       sprintId: ticket.sprintId,
       labelIds: ticket.labels.map((l) => l.id),
       watcherIds: ticket.watchers.map((w) => w.id),

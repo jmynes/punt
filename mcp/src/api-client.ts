@@ -109,6 +109,7 @@ export interface CreateTicketInput {
   priority?: string
   columnId: string
   assigneeId?: string | null
+  reporterId?: string | null
   sprintId?: string | null
   parentId?: string | null
   storyPoints?: number | null
