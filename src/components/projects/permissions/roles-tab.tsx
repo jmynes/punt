@@ -2,11 +2,15 @@
 
 import {
   ArrowRightLeft,
+  Copy,
+  GitCompare,
   Loader2,
   Lock,
+  MoreVertical,
   Pencil,
   Plus,
   Shield,
+  Trash2,
   UserPlus,
   Users,
   X,
@@ -32,6 +36,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
@@ -46,7 +51,12 @@ import {
   useRemoveMember,
   useUpdateMember,
 } from '@/hooks/queries/use-members'
-import { useCreateRole, useProjectRoles, useUpdateRole } from '@/hooks/queries/use-roles'
+import {
+  useCreateRole,
+  useDeleteRole,
+  useProjectRoles,
+  useUpdateRole,
+} from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -54,6 +64,7 @@ import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { Permission, RoleWithPermissions } from '@/types'
 import { PermissionGrid } from './permission-grid'
+import { RoleCompareDialog } from './role-compare-dialog'
 
 // Preset colors for role badges
 const ROLE_COLORS = [
@@ -76,6 +87,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
   const { data: members, isLoading: membersLoading } = useProjectMembers(projectId)
   const createRole = useCreateRole(projectId)
   const updateRole = useUpdateRole(projectId)
+  const deleteRole = useDeleteRole(projectId)
   const updateMember = useUpdateMember(projectId)
   const removeMember = useRemoveMember(projectId)
   const addMember = useAddMember(projectId)
@@ -102,6 +114,16 @@ export function RolesTab({ projectId }: RolesTabProps) {
   const [pendingRole, setPendingRole] = useState<RoleWithPermissions | null>(null)
   const [rememberPreference, setRememberPreference] = useState(false)
   const { autoSaveOnRoleEditorClose, setAutoSaveOnRoleEditorClose } = useSettingsStore()
+
+  // Delete confirmation
+  const [deletingRole, setDeletingRole] = useState<RoleWithPermissions | null>(null)
+
+  // Compare roles dialog
+  const [showCompareDialog, setShowCompareDialog] = useState(false)
+
+  // Show diff while editing
+  const [showDiff, setShowDiff] = useState(false)
+  const [originalPermissions, setOriginalPermissions] = useState<Permission[]>([])
 
   const isLoading = rolesLoading || membersLoading
 
@@ -160,7 +182,9 @@ export function RolesTab({ projectId }: RolesTabProps) {
     setEditColor(role.color)
     setEditDescription(role.description || '')
     setEditPermissions(role.permissions)
+    setOriginalPermissions(role.permissions)
     setHasChanges(false)
+    setShowDiff(false)
   }, [])
 
   // Select the first role by default when roles load
@@ -334,6 +358,43 @@ export function RolesTab({ projectId }: RolesTabProps) {
     }
   }
 
+  // Clone a role
+  const handleCloneRole = async (role: RoleWithPermissions) => {
+    try {
+      const newRole = await createRole.mutateAsync({
+        name: `${role.name} (Copy)`,
+        color: role.color,
+        description: role.description || undefined,
+        permissions: role.permissions,
+      })
+      setSelectedRoleId(newRole.id)
+      setIsCreating(false)
+      loadRoleData(newRole)
+      toast.success(`Cloned role "${role.name}"`)
+    } catch {
+      // Error handled by mutation
+    }
+  }
+
+  // Delete a role
+  const handleDeleteRole = async () => {
+    if (!deletingRole) return
+    try {
+      await deleteRole.mutateAsync(deletingRole.id)
+      setDeletingRole(null)
+      // Select first available role
+      if (roles && roles.length > 1) {
+        const remainingRoles = roles.filter((r) => r.id !== deletingRole.id)
+        if (remainingRoles.length > 0) {
+          setSelectedRoleId(remainingRoles[0].id)
+          loadRoleData(remainingRoles[0])
+        }
+      }
+    } catch {
+      // Error handled by mutation
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -348,41 +409,100 @@ export function RolesTab({ projectId }: RolesTabProps) {
       <div className="w-64 flex-shrink-0 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-zinc-400">Roles</h3>
-          {canManageRoles && (
-            <Button variant="ghost" size="sm" onClick={handleStartCreate}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {roles && roles.length >= 2 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCompareDialog(true)}
+                title="Compare Roles"
+              >
+                <GitCompare className="h-4 w-4" />
+              </Button>
+            )}
+            {canManageRoles && (
+              <Button variant="ghost" size="sm" onClick={handleStartCreate}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         <ScrollArea className="flex-1">
           <div className="space-y-1 pr-3">
             {roles?.map((role) => (
-              <button
+              <div
                 key={role.id}
-                type="button"
-                onClick={() => handleSelectRole(role)}
                 className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors',
+                  'group flex items-center gap-1 rounded-md transition-colors',
                   selectedRoleId === role.id && !isCreating
-                    ? 'bg-zinc-800 text-zinc-100'
-                    : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200',
+                    ? 'bg-zinc-800'
+                    : 'hover:bg-zinc-800/50',
                 )}
               >
-                <div
-                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: role.color }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium truncate">{role.name}</span>
-                    {role.isDefault && <Lock className="h-3 w-3 text-zinc-600 flex-shrink-0" />}
+                <button
+                  type="button"
+                  onClick={() => handleSelectRole(role)}
+                  className={cn(
+                    'flex-1 flex items-center gap-3 px-3 py-2 text-left transition-colors min-w-0',
+                    selectedRoleId === role.id && !isCreating
+                      ? 'text-zinc-100'
+                      : 'text-zinc-400 hover:text-zinc-200',
+                  )}
+                >
+                  <div
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: role.color }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium truncate">{role.name}</span>
+                      {role.isDefault && <Lock className="h-3 w-3 text-zinc-600 flex-shrink-0" />}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-zinc-500">
+                      <span>{role.memberCount || 0} members</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-zinc-500">
-                    <span>{role.memberCount || 0} members</span>
-                  </div>
-                </div>
-              </button>
+                </button>
+                {canManageRoles && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="opacity-0 group-hover:opacity-100 mr-1 text-zinc-500 hover:text-zinc-200"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[140px]">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleCloneRole(role)
+                        }}
+                        disabled={createRole.isPending}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Clone
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDeletingRole(role)
+                        }}
+                        disabled={role.isDefault || (role.memberCount || 0) > 0}
+                        className="text-red-400 focus:text-red-400"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
             ))}
 
             {isCreating && (
@@ -499,7 +619,23 @@ export function RolesTab({ projectId }: RolesTabProps) {
 
                     {/* Permissions */}
                     <div className="space-y-2">
-                      <Label>Permissions</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Permissions</Label>
+                        {!isCreating && hasChanges && (
+                          <label
+                            htmlFor="show-diff"
+                            className="flex items-center gap-2 cursor-pointer select-none"
+                          >
+                            <span className="text-xs text-zinc-500">Show changes</span>
+                            <Checkbox
+                              id="show-diff"
+                              checked={showDiff}
+                              onCheckedChange={(checked) => setShowDiff(checked === true)}
+                              className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                            />
+                          </label>
+                        )}
+                      </div>
                       <p className="text-xs text-zinc-500 mb-3">
                         Select the actions members with this role can perform.
                       </p>
@@ -507,6 +643,8 @@ export function RolesTab({ projectId }: RolesTabProps) {
                         selectedPermissions={editPermissions}
                         onChange={(perms) => handleFieldChange('permissions', perms)}
                         disabled={!canManageRoles}
+                        originalPermissions={originalPermissions}
+                        showDiff={showDiff && !isCreating}
                       />
                     </div>
                   </CardContent>
@@ -825,6 +963,59 @@ export function RolesTab({ projectId }: RolesTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete role confirmation dialog */}
+      <AlertDialog open={!!deletingRole} onOpenChange={(open) => !open && setDeletingRole(null)}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">Delete Role</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              {deletingRole?.isDefault ? (
+                'Default roles cannot be deleted.'
+              ) : (deletingRole?.memberCount || 0) > 0 ? (
+                <>
+                  This role has{' '}
+                  <span className="text-zinc-200 font-medium">
+                    {deletingRole?.memberCount} member
+                    {(deletingRole?.memberCount || 0) !== 1 ? 's' : ''}
+                  </span>
+                  . Reassign them to another role before deleting.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to delete the role{' '}
+                  <span className="text-zinc-200 font-medium">"{deletingRole?.name}"</span>? This
+                  action cannot be undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+              Cancel
+            </AlertDialogCancel>
+            {!deletingRole?.isDefault && (deletingRole?.memberCount || 0) === 0 && (
+              <AlertDialogAction
+                onClick={handleDeleteRole}
+                className="bg-red-600 hover:bg-red-500 text-white"
+                disabled={deleteRole.isPending}
+              >
+                {deleteRole.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Delete Role
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Compare roles dialog */}
+      {roles && roles.length >= 2 && (
+        <RoleCompareDialog
+          open={showCompareDialog}
+          onOpenChange={setShowCompareDialog}
+          roles={roles}
+        />
+      )}
     </div>
   )
 }
