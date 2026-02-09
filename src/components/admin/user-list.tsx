@@ -583,8 +583,15 @@ export function UserList() {
     const action = undo()
     if (!action) return
 
-    // Skip member role changes - those are handled in the user profile page
-    if (action.type === 'memberRoleChange') return
+    // Skip member-related actions - those are handled elsewhere
+    if (
+      action.type === 'memberRoleChange' ||
+      action.type === 'memberAdd' ||
+      action.type === 'memberRemove' ||
+      action.type === 'bulkMemberRoleChange'
+    ) {
+      return
+    }
 
     try {
       let updates: Partial<User>
@@ -633,8 +640,15 @@ export function UserList() {
     const action = redo()
     if (!action) return
 
-    // Skip member role changes - those are handled in the user profile page
-    if (action.type === 'memberRoleChange') return
+    // Skip member-related actions - those are handled elsewhere
+    if (
+      action.type === 'memberRoleChange' ||
+      action.type === 'memberAdd' ||
+      action.type === 'memberRemove' ||
+      action.type === 'bulkMemberRoleChange'
+    ) {
+      return
+    }
 
     try {
       let updates: Partial<User>

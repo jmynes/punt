@@ -2,16 +2,29 @@ import { Settings, Shield, Users } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { db } from '@/lib/db'
+import { DEMO_TEAM_MEMBERS, DEMO_USER, isDemoMode } from '@/lib/demo/demo-config'
 
 // Force dynamic rendering - this page fetches from database
 export const dynamic = 'force-dynamic'
 
 export default async function AdminDashboard() {
-  const [userCount, adminCount, activeCount] = await Promise.all([
-    db.user.count(),
-    db.user.count({ where: { isSystemAdmin: true } }),
-    db.user.count({ where: { isActive: true } }),
-  ])
+  let userCount: number
+  let adminCount: number
+  let activeCount: number
+
+  if (isDemoMode()) {
+    // In demo mode, use hardcoded demo user counts
+    const allDemoUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
+    userCount = allDemoUsers.length
+    adminCount = allDemoUsers.filter((u) => u.isSystemAdmin).length
+    activeCount = allDemoUsers.filter((u) => u.isActive).length
+  } else {
+    ;[userCount, adminCount, activeCount] = await Promise.all([
+      db.user.count(),
+      db.user.count({ where: { isSystemAdmin: true } }),
+      db.user.count({ where: { isActive: true } }),
+    ])
+  }
 
   return (
     <div className="h-full overflow-auto p-6">
