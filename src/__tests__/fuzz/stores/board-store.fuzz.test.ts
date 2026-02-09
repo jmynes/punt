@@ -52,12 +52,13 @@ describe('Board Store Fuzz Tests', () => {
           const store = useBoardStore.getState()
           const columns = store.getColumns(projectId)
 
-          // Should return default columns (4 columns)
-          expect(columns.length).toBe(4)
+          // Should return default columns (5 columns)
+          expect(columns.length).toBe(5)
           expect(columns[0].name).toBe('To Do')
           expect(columns[1].name).toBe('In Progress')
           expect(columns[2].name).toBe('Review')
           expect(columns[3].name).toBe('Done')
+          expect(columns[4].name).toBe("Won't Fix")
         }),
         FUZZ_CONFIG.quick,
       )

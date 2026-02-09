@@ -34,7 +34,7 @@ describe('Board Store', () => {
 
     it('should return default columns for unknown project', () => {
       const columns = useBoardStore.getState().getColumns('unknown-project')
-      expect(columns).toHaveLength(4) // Default columns
+      expect(columns).toHaveLength(5) // Default columns
       expect(columns[0].name).toBe('To Do')
     })
   })

@@ -5,7 +5,16 @@ import type { ColumnWithTickets, SprintSummary, TicketWithRelations } from '@/ty
  * Used for auto-detecting completed tickets when completing sprints.
  */
 export function isCompletedColumn(columnName: string): boolean {
-  const patterns = ['done', 'complete', 'completed', 'closed', 'resolved', 'finished']
+  const patterns = [
+    'done',
+    'complete',
+    'completed',
+    'closed',
+    'resolved',
+    'finished',
+    "won't fix",
+    'wontfix',
+  ]
   return patterns.includes(columnName.trim().toLowerCase())
 }
 

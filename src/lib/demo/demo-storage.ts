@@ -165,6 +165,7 @@ class DemoStorage {
       { id: `demo-col-${Date.now()}-2`, name: 'In Progress', order: 1, projectId: newProject.id },
       { id: `demo-col-${Date.now()}-3`, name: 'Review', order: 2, projectId: newProject.id },
       { id: `demo-col-${Date.now()}-4`, name: 'Done', order: 3, projectId: newProject.id },
+      { id: `demo-col-${Date.now()}-5`, name: "Won't Fix", order: 4, projectId: newProject.id },
     ]
     localStorage.setItem(KEYS.columns(newProject.id), JSON.stringify(defaultColumns))
     localStorage.setItem(KEYS.tickets(newProject.id), JSON.stringify([]))

@@ -87,11 +87,13 @@ export const DEMO_COLUMNS: DemoColumn[] = [
   { id: 'demo-col-1-2', name: 'In Progress', order: 1, projectId: 'demo-project-1' },
   { id: 'demo-col-1-3', name: 'Review', order: 2, projectId: 'demo-project-1' },
   { id: 'demo-col-1-4', name: 'Done', order: 3, projectId: 'demo-project-1' },
+  { id: 'demo-col-1-5', name: "Won't Fix", order: 4, projectId: 'demo-project-1' },
   // Project 2: Bug Tracker
   { id: 'demo-col-2-1', name: 'To Do', order: 0, projectId: 'demo-project-2' },
   { id: 'demo-col-2-2', name: 'In Progress', order: 1, projectId: 'demo-project-2' },
   { id: 'demo-col-2-3', name: 'Review', order: 2, projectId: 'demo-project-2' },
   { id: 'demo-col-2-4', name: 'Done', order: 3, projectId: 'demo-project-2' },
+  { id: 'demo-col-2-5', name: "Won't Fix", order: 4, projectId: 'demo-project-2' },
 ]
 
 // ============================================================================

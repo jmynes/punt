@@ -21,6 +21,7 @@ const DEFAULT_COLUMNS = [
   { name: 'In Progress', order: 1 },
   { name: 'Review', order: 2 },
   { name: 'Done', order: 3 },
+  { name: "Won't Fix", order: 4 },
 ]
 
 /**

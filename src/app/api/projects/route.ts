@@ -130,6 +130,7 @@ export async function POST(request: Request) {
             { name: 'In Progress', order: 1 },
             { name: 'Review', order: 2 },
             { name: 'Done', order: 3 },
+            { name: "Won't Fix", order: 4 },
           ],
         },
       },

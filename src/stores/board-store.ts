@@ -11,6 +11,7 @@ function createDefaultColumns(projectId: string): ColumnWithTickets[] {
     { id: `${projectId}-col-2`, name: 'In Progress', order: 1, projectId, tickets: [] },
     { id: `${projectId}-col-3`, name: 'Review', order: 2, projectId, tickets: [] },
     { id: `${projectId}-col-4`, name: 'Done', order: 3, projectId, tickets: [] },
+    { id: `${projectId}-col-5`, name: "Won't Fix", order: 4, projectId, tickets: [] },
   ]
 }
 
