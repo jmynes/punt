@@ -27,7 +27,6 @@ import { type SortConfig, useBacklogStore } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { BacklogFilters } from './backlog-filters'
-import { BacklogHeader } from './backlog-header'
 
 interface BacklogTableProps {
   tickets: TicketWithRelations[]
@@ -61,6 +60,7 @@ export function BacklogTable({
     columns,
     reorderColumns,
     sort,
+    toggleSort,
     filterByType,
     filterByPriority,
     filterByStatus,
@@ -586,25 +586,17 @@ export function BacklogTable({
   const activeDraggingIds = useExternalDnd ? externalDraggingIds : draggingTicketIds
   const activeDropPosition = useExternalDnd ? externalDropPosition : dropPosition
 
+  // Handle sort toggle with proper type casting
+  const handleToggleSort = useCallback(
+    (columnId: string) => {
+      toggleSort(columnId as (typeof columns)[number]['id'])
+    },
+    [toggleSort],
+  )
+
   // Table content (shared between internal and external DnD modes)
   const tableContent = (
-    <div>
-      {/* Header with column reordering */}
-      <table className="w-full border-collapse">
-        <thead className="sticky top-0 z-10 bg-zinc-900">
-          <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-            <tr className="border-b border-zinc-800">
-              {/* Empty cell for drag handle column */}
-              <th className="w-8" />
-              {visibleColumns.map((column) => (
-                <BacklogHeader key={column.id} column={column} />
-              ))}
-            </tr>
-          </SortableContext>
-        </thead>
-      </table>
-
-      {/* Body with row reordering using unified TicketTable */}
+    <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
       <TicketTable
         context={tableContext}
         tickets={filteredTickets}
@@ -612,9 +604,12 @@ export function BacklogTable({
         allTicketIds={ticketIds}
         draggingTicketIds={activeDraggingIds}
         dropPosition={activeDropPosition}
-        showHeader={false}
+        showHeader={true}
+        sort={sort}
+        onToggleSort={handleToggleSort}
+        enableColumnReorder={true}
       />
-    </div>
+    </SortableContext>
   )
 
   return (

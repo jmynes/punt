@@ -44,6 +44,8 @@ export interface TicketTableProps {
   sort?: SortConfig | null
   /** Callback when a sortable column header is clicked */
   onToggleSort?: (columnId: string) => void
+  /** Whether columns can be reordered via drag-and-drop */
+  enableColumnReorder?: boolean
 
   // Overlay mode (for DragOverlay)
   /** If provided, renders a single ticket as overlay */
