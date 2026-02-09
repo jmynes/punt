@@ -88,6 +88,12 @@ All data operations go through the `DataProvider` interface, which abstracts whe
 - `useIsAuthenticated()` - Returns `{ isAuthenticated, isLoading }`
 - `useIsSystemAdmin()` - Returns `{ isSystemAdmin, isLoading }`
 
+**Permission hooks** (`src/hooks/use-permissions.ts`):
+- `useMyPermissions(projectId)` - Returns `{ permissions, isLoading }` for current user
+- `useHasPermission(projectId, permission)` - Returns `boolean | undefined` (undefined while loading)
+- `useHasAnyPermission(projectId, permissions[])` - Returns `boolean | undefined`
+- Used in project settings page to wait for permissions before showing content (avoids "Access Denied" flash)
+
 **Password requirements:** Min 12 chars, 1 uppercase, 1 lowercase, 1 number.
 
 **Project authorization** (`src/lib/auth-helpers.ts`):
@@ -167,12 +173,13 @@ Events are broadcast via Server-Sent Events for multi-tab/multi-user sync.
 - `ticket.created`, `ticket.updated`, `ticket.moved`, `ticket.deleted`
 - `label.created`, `label.deleted`
 - `project.created`, `project.updated`, `project.deleted`
+- `member.added`, `member.removed`, `member.role.updated` - Project membership changes
 - `user.updated`
 - `database.wiped` - Full database wipe or import (forces sign out on all tabs)
 - `database.projects.wiped` - All projects wiped (invalidates all queries)
 
 **Key files:**
-- `src/lib/events.ts` - In-memory event emitter with `subscribeToProject()`, `emitTicketEvent()`, `emitProjectEvent()`, `emitLabelEvent()`, `emitDatabaseEvent()`
+- `src/lib/events.ts` - In-memory event emitter with `subscribeToProject()`, `emitTicketEvent()`, `emitProjectEvent()`, `emitLabelEvent()`, `emitMemberEvent()`, `emitDatabaseEvent()`
 - Events include `tabId` (via `X-Tab-Id` header) to skip echoing back to originating client
 - 30-second keepalive comments prevent connection timeout
 - `X-Accel-Buffering: no` header disables nginx buffering
@@ -185,7 +192,7 @@ All client-side state lives in Zustand stores with localStorage persistence:
 - **backlog-store**: Backlog view config (15 columns, multi-filter support, sorting). Filters by type/priority/status/assignee/labels/sprint/story-points/due-date.
 - **sprint-store**: Sprint-related state for sprint planning view.
 - **undo-store**: Undo/redo stack for all reversible actions (delete, move, paste, update, ticketCreate, projectCreate/Delete). Each action has `toastId` for UI feedback.
-- **admin-undo-store**: Separate undo/redo for admin operations (user management).
+- **admin-undo-store**: Separate undo/redo for admin operations. Handles user management (enable/disable, admin toggle) and project member operations (add, remove, role changes). Supports both single and bulk operations with Ctrl+Z/Y keyboard shortcuts.
 - **selection-store**: Multi-select with `selectedTicketIds: Set<string>`, clipboard via `copiedTicketIds`, and `ticketOrigins` map for arrow key navigation.
 - **projects-store**: Project list with sequential numeric ID generation.
 - **ui-store**: Modal/drawer/sidebar visibility states and `prefillTicketData` for form pre-population.
@@ -274,7 +281,8 @@ src/
 │   ├── projects/[projectId]/
 │   │   ├── board/          # Kanban board view
 │   │   ├── backlog/        # Backlog table view
-│   │   └── sprints/        # Sprint planning view
+│   │   ├── sprints/        # Sprint planning view
+│   │   └── settings/       # Project settings (general, members, roles)
 │   ├── settings/           # Settings page
 │   ├── api/auth/           # NextAuth + register
 │   ├── api/me/             # User profile endpoints
@@ -296,7 +304,8 @@ src/
 │   ├── common/             # Shared components (avatars, badges, etc.)
 │   ├── layout/             # Sidebar, header, navigation
 │   ├── profile/            # Profile editing
-│   ├── projects/           # Project cards, forms
+│   ├── projects/           # Project cards, forms, settings
+│   │   └── permissions/    # Members tab, roles tab, role compare dialog
 │   ├── sprints/            # Sprint view (uses table/)
 │   ├── table/              # Unified table components (TicketTable, TicketTableRow, TicketCell)
 │   ├── tickets/            # Ticket dialogs, forms
