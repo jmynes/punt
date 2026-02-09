@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { isDemoMode } from '@/lib/demo/demo-config'
 import { hashPassword, validatePasswordStrength, verifyPassword } from '@/lib/password'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
@@ -13,6 +14,30 @@ const changePasswordSchema = z.object({
 // PATCH /api/me/password - Change password
 export async function PATCH(request: Request) {
   try {
+    // Handle demo mode - return success without persisting
+    if (isDemoMode()) {
+      const body = await request.json()
+      const parsed = changePasswordSchema.safeParse(body)
+
+      if (!parsed.success) {
+        return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
+      }
+
+      // Validate new password strength even in demo mode for UX consistency
+      const passwordValidation = validatePasswordStrength(parsed.data.newPassword)
+      if (!passwordValidation.valid) {
+        return NextResponse.json(
+          { error: 'Password does not meet requirements', details: passwordValidation.errors },
+          { status: 400 },
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Password changed successfully (demo mode - changes are not persisted)',
+      })
+    }
+
     const currentUser = await requireAuth()
 
     // Rate limiting

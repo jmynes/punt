@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { getTabId } from '@/hooks/use-realtime'
+import { DEMO_USER, isDemoMode } from '@/lib/demo'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 
 // Stable user data type
@@ -36,17 +37,40 @@ interface UserData {
 }
 
 export default function ProfilePage() {
-  const { data: session, status, update: updateSession } = useSession()
+  const isDemo = isDemoMode()
+
+  // In demo mode, we skip useSession entirely
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
+  const {
+    data: session,
+    status,
+    update: updateSession,
+  } = isDemo
+    ? { data: null, status: 'authenticated' as const, update: async () => null }
+    : // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
+      useSession()
+
   const _router = useRouter()
 
   // Store stable user data that persists during session refresh
-  const [stableUser, setStableUser] = useState<UserData | null>(null)
+  const [stableUser, setStableUser] = useState<UserData | null>(
+    isDemo
+      ? {
+          id: DEMO_USER.id,
+          name: DEMO_USER.name,
+          email: DEMO_USER.email,
+          avatar: DEMO_USER.avatar,
+          isSystemAdmin: DEMO_USER.isSystemAdmin,
+        }
+      : null,
+  )
 
   // Track if we're in the middle of a session update to prevent flashing
   const isUpdatingRef = useRef(false)
 
   // Update stable user when session changes (but not during our own updates)
   useEffect(() => {
+    if (isDemo) return // Skip in demo mode - already initialized
     if (session?.user?.id && !isUpdatingRef.current) {
       setStableUser({
         id: session.user.id,
@@ -57,6 +81,7 @@ export default function ProfilePage() {
       })
     }
   }, [
+    isDemo,
     session?.user?.id,
     session?.user?.name,
     session?.user?.email,
@@ -138,6 +163,9 @@ export default function ProfilePage() {
   // Debounced session update to prevent race conditions
   const pendingUpdateRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const debouncedUpdateSession = useCallback(async () => {
+    // In demo mode, skip session updates
+    if (isDemo) return
+
     // Clear any pending update
     if (pendingUpdateRef.current) {
       clearTimeout(pendingUpdateRef.current)
@@ -158,7 +186,7 @@ export default function ProfilePage() {
         }
       }, 50)
     })
-  }, [updateSession])
+  }, [isDemo, updateSession])
 
   // Determine which avatar to display
   const getDisplayAvatar = (): string | null => {
@@ -423,6 +451,12 @@ export default function ProfilePage() {
   }
 
   const handleDeleteAccount = async () => {
+    // In demo mode, show message that this is not available
+    if (isDemo) {
+      toast.error('Account deletion is not available in demo mode')
+      return
+    }
+
     if (deleteConfirmation !== 'DELETE MY ACCOUNT') {
       toast.error('Please type "DELETE MY ACCOUNT" to confirm')
       return
@@ -455,7 +489,8 @@ export default function ProfilePage() {
   }
 
   // Show loading only during initial session load, not during updates
-  if (status === 'loading' && !stableUser) {
+  // In demo mode, we're always "authenticated" with demo user
+  if (!isDemo && status === 'loading' && !stableUser) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="animate-pulse text-zinc-500">Loading...</div>
@@ -463,7 +498,7 @@ export default function ProfilePage() {
     )
   }
 
-  if (status === 'unauthenticated') {
+  if (!isDemo && status === 'unauthenticated') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-zinc-500">Please sign in to view your profile.</div>
