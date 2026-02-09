@@ -34,7 +34,7 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/', icon: Home },
-  { title: 'Settings', href: '/settings', icon: Settings },
+  { title: 'Preferences', href: '/preferences', icon: Settings },
 ]
 
 interface SidebarContentProps {
