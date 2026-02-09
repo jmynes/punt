@@ -42,8 +42,8 @@ import { memberKeys, useProjectMembers, useUpdateMember } from '@/hooks/queries/
 import { useProjectRoles } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
+import { getTabId } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
-import { getTabId } from '@/lib/tab-id'
 import { cn, getAvatarColor } from '@/lib/utils'
 import type { ProjectMemberWithRole } from '@/types'
 

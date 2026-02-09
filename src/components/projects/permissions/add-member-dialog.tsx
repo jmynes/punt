@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/select'
 import { availableUserKeys, memberKeys, useAvailableUsers } from '@/hooks/queries/use-members'
 import { useProjectRoles } from '@/hooks/queries/use-roles'
-import { getTabId } from '@/lib/tab-id'
+import { getTabId } from '@/hooks/use-realtime'
 import { cn, getAvatarColor } from '@/lib/utils'
 
 interface AddMemberDialogProps {
