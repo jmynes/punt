@@ -143,15 +143,16 @@ export async function PATCH(
         return NextResponse.json({ error: 'Invalid role for this project' }, { status: 400 })
       }
 
-      // Self role change: only allow demotion (moving to higher position number = lower rank)
+      // Self role change: only allow demotion (unless system admin)
       if (targetMember.userId === user.id) {
-        if (newRole.position <= targetMember.role.position) {
+        // System admins can self-promote within any project
+        if (!user.isSystemAdmin && newRole.position <= targetMember.role.position) {
           return NextResponse.json(
             { error: 'Cannot promote yourself to a higher or equal rank' },
             { status: 400 },
           )
         }
-        // Self-demotion is allowed, skip other permission checks
+        // Self-demotion is allowed, system admins can self-promote
       } else {
         // Changing someone else's role - need members.manage permission
         await requirePermission(user.id, projectId, PERMISSIONS.MEMBERS_MANAGE)
