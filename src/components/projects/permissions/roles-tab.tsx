@@ -60,7 +60,7 @@ import {
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
-import { PERMISSIONS } from '@/lib/permissions'
+import { ALL_PERMISSIONS, PERMISSIONS } from '@/lib/permissions'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import {
   type BulkMemberRoleSnapshot,
@@ -146,6 +146,14 @@ export function RolesTab({ projectId }: RolesTabProps) {
     if (!selectedRoleId || !roles) return null
     return roles.find((r) => r.id === selectedRoleId) || null
   }, [selectedRoleId, roles])
+
+  // Check if all permissions are currently enabled
+  const allPermissionsEnabled = useMemo(
+    () =>
+      editPermissions.length === ALL_PERMISSIONS.length &&
+      ALL_PERMISSIONS.every((p) => editPermissions.includes(p)),
+    [editPermissions],
+  )
 
   // Get members for the selected role
   const roleMembers = useMemo(() => {
@@ -907,20 +915,37 @@ export function RolesTab({ projectId }: RolesTabProps) {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>Permissions</Label>
-                        {!isCreating && hasChanges && (
-                          <label
-                            htmlFor="show-diff"
-                            className="flex items-center gap-2 cursor-pointer select-none"
-                          >
-                            <span className="text-xs text-zinc-500">Show changes</span>
-                            <Checkbox
-                              id="show-diff"
-                              checked={showDiff}
-                              onCheckedChange={(checked) => setShowDiff(checked === true)}
-                              className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                            />
-                          </label>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {!isCreating && hasChanges && (
+                            <label
+                              htmlFor="show-diff"
+                              className="flex items-center gap-2 cursor-pointer select-none"
+                            >
+                              <span className="text-xs text-zinc-500">Show changes</span>
+                              <Checkbox
+                                id="show-diff"
+                                checked={showDiff}
+                                onCheckedChange={(checked) => setShowDiff(checked === true)}
+                                className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                              />
+                            </label>
+                          )}
+                          {canManageRoles && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                handleFieldChange(
+                                  'permissions',
+                                  allPermissionsEnabled ? [] : [...ALL_PERMISSIONS],
+                                )
+                              }
+                              className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
+                            >
+                              {allPermissionsEnabled ? 'Disable All' : 'Enable All'}
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       <p className="text-xs text-zinc-500 mb-3">
                         Select the actions members with this role can perform.
