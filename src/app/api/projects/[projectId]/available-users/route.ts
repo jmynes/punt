@@ -68,6 +68,7 @@ export async function GET(
         name: true,
         email: true,
         avatar: true,
+        avatarColor: true,
       },
       orderBy: { name: 'asc' },
       take: 20, // Limit results for performance
