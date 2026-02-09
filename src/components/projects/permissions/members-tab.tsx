@@ -153,6 +153,20 @@ export function MembersTab({ projectId }: MembersTabProps) {
     setSelectedIds(new Set())
   }
 
+  // Separate handler for self-selection (no range selection support)
+  const handleSelectSelf = (_shiftKey: boolean) => {
+    if (!currentMember) return
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(currentMember.id)) {
+        next.delete(currentMember.id)
+      } else {
+        next.add(currentMember.id)
+      }
+      return next
+    })
+  }
+
   const handleRoleChange = async (memberId: string, roleId: string) => {
     await updateMember.mutateAsync({ memberId, roleId })
   }
@@ -327,10 +341,10 @@ export function MembersTab({ projectId }: MembersTabProps) {
               member={currentMember}
               roles={roles || []}
               isCurrentUser={true}
-              isSelected={false}
-              canSelect={false}
+              isSelected={selectedIds.has(currentMember.id)}
+              canSelect={canManageMembers === true}
               canChangeRole={canManageMembers === true}
-              onSelect={() => {}}
+              onSelect={(shiftKey) => handleSelectSelf(shiftKey)}
               onRoleChange={(roleId) => handleRoleChange(currentMember.id, roleId)}
               onRemove={() => setRemovingMember(currentMember)}
             />
