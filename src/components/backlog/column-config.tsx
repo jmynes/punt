@@ -127,15 +127,15 @@ export function ColumnConfig() {
 
   return (
     <Sheet open={columnConfigOpen} onOpenChange={setColumnConfigOpen}>
-      <SheetContent className="w-[400px] border-zinc-800 bg-zinc-950 sm:max-w-[400px]">
-        <SheetHeader>
+      <SheetContent className="w-[400px] border-zinc-800 bg-zinc-950 p-0 sm:max-w-[400px]">
+        <SheetHeader className="border-b border-zinc-800 px-4 pr-14 py-4">
           <SheetTitle>Configure Columns</SheetTitle>
           <SheetDescription>
             Drag to reorder columns. Toggle visibility with checkboxes.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 flex flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-4">
           {/* Stats */}
           <div className="flex items-center justify-between text-sm text-zinc-400">
             <span>
@@ -160,7 +160,7 @@ export function ColumnConfig() {
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={columnIds} strategy={verticalListSortingStrategy}>
-              <div className="flex flex-col gap-2">
+              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
                 {columns.map((column) => (
                   <SortableColumnItem
                     key={column.id}
