@@ -4,6 +4,7 @@ import { format, isBefore, isToday } from 'date-fns'
 import { User } from 'lucide-react'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
+import { ResolutionBadge } from '@/components/common/resolution-badge'
 import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -55,17 +56,7 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
 
     case 'resolution':
       return ticket.resolution ? (
-        <Badge
-          variant="outline"
-          className={cn(
-            'whitespace-nowrap text-xs',
-            ticket.resolution === 'Done'
-              ? 'border-green-600 bg-green-900/30 text-green-400'
-              : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
-          )}
-        >
-          {ticket.resolution}
-        </Badge>
+        <ResolutionBadge resolution={ticket.resolution} />
       ) : (
         <span className="text-zinc-500">&mdash;</span>
       )

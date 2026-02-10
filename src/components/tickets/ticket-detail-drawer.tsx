@@ -93,6 +93,7 @@ import type {
 import { ISSUE_TYPES, PRIORITIES, RESOLUTIONS } from '@/types'
 import { InlineCodeText } from '../common/inline-code'
 import { PriorityBadge } from '../common/priority-badge'
+import { resolutionConfig } from '../common/resolution-badge'
 import { TypeBadge } from '../common/type-badge'
 import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
@@ -1188,15 +1189,24 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       <SelectItem value="none" className="focus:bg-zinc-800 focus:text-zinc-100">
                         Unresolved
                       </SelectItem>
-                      {RESOLUTIONS.map((resolution) => (
-                        <SelectItem
-                          key={resolution}
-                          value={resolution}
-                          className="focus:bg-zinc-800 focus:text-zinc-100"
-                        >
-                          {resolution}
-                        </SelectItem>
-                      ))}
+                      {RESOLUTIONS.map((resolution) => {
+                        const config = resolutionConfig[resolution]
+                        const Icon = config?.icon
+                        return (
+                          <SelectItem
+                            key={resolution}
+                            value={resolution}
+                            className="focus:bg-zinc-800 focus:text-zinc-100"
+                          >
+                            <span className="flex items-center gap-2">
+                              {Icon && (
+                                <Icon className="h-3.5 w-3.5" style={{ color: config.color }} />
+                              )}
+                              {resolution}
+                            </span>
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

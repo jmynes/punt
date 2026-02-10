@@ -7,6 +7,7 @@ import { Calendar, GripVertical, MessageSquare, Paperclip, User } from 'lucide-r
 import { useEffect, useState } from 'react'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
+import { ResolutionBadge } from '@/components/common/resolution-badge'
 import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -134,17 +135,7 @@ export function KanbanCard({
           {/* Resolution badge */}
           {ticket.resolution && (
             <div className="mb-2">
-              <Badge
-                variant="outline"
-                className={cn(
-                  'text-[10px] px-1.5 py-0',
-                  ticket.resolution === 'Done'
-                    ? 'border-green-600 bg-green-900/30 text-green-400'
-                    : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
-                )}
-              >
-                {ticket.resolution}
-              </Badge>
+              <ResolutionBadge resolution={ticket.resolution} size="sm" />
             </div>
           )}
 
