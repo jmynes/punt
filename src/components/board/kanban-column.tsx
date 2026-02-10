@@ -5,7 +5,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { getStatusIcon } from '@/lib/status-icons'
+import { getColumnIcon } from '@/lib/status-icons'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -71,7 +71,7 @@ export function KanbanColumn({
     .filter((t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId)
     .map((t) => t.id)
 
-  const { icon: StatusIcon, color: statusColor } = getStatusIcon(column.name)
+  const { icon: StatusIcon, color: statusColor } = getColumnIcon(column.icon, column.name)
 
   // Collapsed column view
   if (collapsed) {

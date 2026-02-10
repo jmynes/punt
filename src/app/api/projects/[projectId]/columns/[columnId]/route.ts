@@ -7,6 +7,7 @@ import { PERMISSIONS } from '@/lib/permissions'
 
 const updateColumnSchema = z.object({
   name: z.string().min(1).max(50).optional(),
+  icon: z.string().max(50).nullable().optional(),
   order: z.number().int().min(0).optional(),
 })
 
@@ -42,9 +43,12 @@ export async function PATCH(
       return notFoundError('Column')
     }
 
-    const updateData: { name?: string; order?: number } = {}
+    const updateData: { name?: string; icon?: string | null; order?: number } = {}
     if (parsed.data.name !== undefined) {
       updateData.name = parsed.data.name
+    }
+    if (parsed.data.icon !== undefined) {
+      updateData.icon = parsed.data.icon
     }
     if (parsed.data.order !== undefined) {
       updateData.order = parsed.data.order
@@ -56,6 +60,7 @@ export async function PATCH(
       select: {
         id: true,
         name: true,
+        icon: true,
         order: true,
         projectId: true,
       },

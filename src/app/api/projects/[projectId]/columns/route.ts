@@ -57,6 +57,7 @@ export async function GET(
       select: {
         id: true,
         name: true,
+        icon: true,
         order: true,
         projectId: true,
       },
@@ -78,6 +79,7 @@ export async function GET(
         select: {
           id: true,
           name: true,
+          icon: true,
           order: true,
           projectId: true,
         },
@@ -131,6 +133,7 @@ export async function POST(
       select: {
         id: true,
         name: true,
+        icon: true,
         order: true,
         projectId: true,
       },

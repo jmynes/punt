@@ -50,6 +50,19 @@ type UndoAction =
       fromSprintName: string
       toSprintName: string
     }
+  | {
+      type: 'columnRename'
+      columnId: string
+      oldName: string
+      newName: string
+      oldIcon: string | null
+      newIcon: string | null
+    }
+  | {
+      type: 'columnDelete'
+      column: ColumnWithTickets
+      movedToColumnId: string
+    }
 
 interface UndoEntry {
   action: UndoAction
@@ -132,6 +145,27 @@ interface UndoState {
     projectId: string,
     ticket: TicketWithRelations,
     columnId: string,
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
+
+  // Add a column rename action to the undo stack
+  pushColumnRename: (
+    projectId: string,
+    columnId: string,
+    oldName: string,
+    newName: string,
+    oldIcon: string | null,
+    newIcon: string | null,
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
+
+  // Add a column delete action to the undo stack
+  pushColumnDelete: (
+    projectId: string,
+    column: ColumnWithTickets,
+    movedToColumnId: string,
     toastId: string | number,
     isRedo?: boolean,
   ) => void
@@ -387,6 +421,64 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         ...state.undoStack,
         {
           action: { type: 'ticketCreate', ticket: { ...ticket }, columnId },
+          timestamp: Date.now(),
+          toastId,
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushColumnRename: (
+    projectId,
+    columnId,
+    oldName,
+    newName,
+    oldIcon,
+    newIcon,
+    toastId,
+    isRedo = false,
+  ) => {
+    console.debug(`[SessionLog] Action: Column Rename ${isRedo ? '(Redo)' : ''}`, {
+      columnId,
+      oldName,
+      newName,
+      projectId,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: { type: 'columnRename', columnId, oldName, newName, oldIcon, newIcon },
+          timestamp: Date.now(),
+          toastId,
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushColumnDelete: (projectId, column, movedToColumnId, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Column Delete ${isRedo ? '(Redo)' : ''}`, {
+      columnId: column.id,
+      columnName: column.name,
+      ticketCount: column.tickets.length,
+      projectId,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: {
+            type: 'columnDelete',
+            column: {
+              ...column,
+              tickets: column.tickets.map((t) => ({ ...t })),
+            },
+            movedToColumnId,
+          },
           timestamp: Date.now(),
           toastId,
           projectId,

@@ -30,11 +30,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { columnKeys, ticketKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
+import { COLUMN_ICON_OPTIONS } from '@/lib/status-icons'
+import { showUndoRedoToast } from '@/lib/undo-toast'
+import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
+import { useSettingsStore } from '@/stores/settings-store'
+import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets } from '@/types'
 
 interface ColumnMenuProps {
@@ -52,6 +58,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
   // Rename state
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameValue, setRenameValue] = useState(column.name)
+  const [iconValue, setIconValue] = useState<string | null>(column.icon ?? null)
   const [renameLoading, setRenameLoading] = useState(false)
   const renameInputRef = useRef<HTMLInputElement>(null)
 
@@ -73,14 +80,18 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
 
   const handleRenameOpen = useCallback(() => {
     setRenameValue(column.name)
+    setIconValue(column.icon ?? null)
     setRenameOpen(true)
     // Focus the input after the dialog renders
     setTimeout(() => renameInputRef.current?.focus(), 50)
-  }, [column.name])
+  }, [column.name, column.icon])
 
   const handleRename = useCallback(async () => {
     const trimmedName = renameValue.trim()
-    if (!trimmedName || trimmedName === column.name) {
+    const nameChanged = trimmedName && trimmedName !== column.name
+    const iconChanged = iconValue !== (column.icon ?? null)
+
+    if (!trimmedName || (!nameChanged && !iconChanged)) {
       setRenameOpen(false)
       return
     }
@@ -93,33 +104,117 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
         ...(tabId && { 'X-Tab-Id': tabId }),
       }
 
+      const body: { name?: string; icon?: string | null } = {}
+      if (nameChanged) body.name = trimmedName
+      body.icon = iconValue
+
       const res = await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({ name: trimmedName }),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {
-        const error = await res.json().catch(() => ({ error: 'Failed to rename column' }))
-        throw new Error(error.error || 'Failed to rename column')
+        const error = await res.json().catch(() => ({ error: 'Failed to update column' }))
+        throw new Error(error.error || 'Failed to update column')
       }
 
-      // Update the board store optimistically
+      const oldName = column.name
+      const oldIcon = column.icon ?? null
+      const newName = nameChanged ? trimmedName : column.name
+      const newIcon = iconValue
+
+      // Update the board store
       const columns = getColumns(projectId)
       const updatedColumns = columns.map((c) =>
-        c.id === column.id ? { ...c, name: trimmedName } : c,
+        c.id === column.id ? { ...c, name: newName, icon: newIcon } : c,
       )
       setColumns(projectId, updatedColumns)
 
       // Invalidate column queries to refresh data
       queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
 
-      toast.success('Column renamed', {
-        description: `"${column.name}" renamed to "${trimmedName}"`,
+      const showUndo = useSettingsStore.getState().showUndoButtons
+      const description = nameChanged
+        ? `"${oldName}" renamed to "${newName}"`
+        : 'Column icon updated'
+
+      const toastId = showUndoRedoToast('success', {
+        title: 'Column updated',
+        description,
+        duration: 5000,
+        showUndoButtons: showUndo,
+        onUndo: async (id) => {
+          // Undo: revert to old name/icon
+          const undoEntry = useUndoStore.getState().undoByToastId(id)
+          if (!undoEntry) return
+          const undoStore = useUndoStore.getState()
+          undoStore.setProcessing(true)
+          try {
+            await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ name: oldName, icon: oldIcon }),
+            })
+            const bs = useBoardStore.getState()
+            const cols = bs.getColumns(projectId)
+            bs.setColumns(
+              projectId,
+              cols.map((c) => (c.id === column.id ? { ...c, name: oldName, icon: oldIcon } : c)),
+            )
+            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
+          } catch (err) {
+            console.error('Failed to undo column rename:', err)
+            toast.error('Failed to undo column update')
+          } finally {
+            useUndoStore.getState().setProcessing(false)
+          }
+        },
+        onRedo: async (id) => {
+          // Redo: re-apply new name/icon
+          const undoEntry = useUndoStore.getState().redoByToastId(id)
+          if (!undoEntry) return
+          const undoStore = useUndoStore.getState()
+          undoStore.setProcessing(true)
+          try {
+            await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ name: newName, icon: newIcon }),
+            })
+            const bs = useBoardStore.getState()
+            const cols = bs.getColumns(projectId)
+            bs.setColumns(
+              projectId,
+              cols.map((c) => (c.id === column.id ? { ...c, name: newName, icon: newIcon } : c)),
+            )
+            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
+          } catch (err) {
+            console.error('Failed to redo column rename:', err)
+            toast.error('Failed to redo column update')
+          } finally {
+            useUndoStore.getState().setProcessing(false)
+          }
+        },
+        undoneTitle: 'Column update undone',
+        undoneDescription: description,
+        redoneTitle: 'Column updated',
+        redoneDescription: description,
       })
+
+      useUndoStore
+        .getState()
+        .pushColumnRename(projectId, column.id, oldName, newName, oldIcon, newIcon, toastId)
+
       setRenameOpen(false)
     } catch (error) {
-      toast.error('Failed to rename column', {
+      toast.error('Failed to update column', {
         description: error instanceof Error ? error.message : 'An error occurred',
       })
     } finally {
@@ -127,8 +222,10 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
     }
   }, [
     renameValue,
+    iconValue,
     column.id,
     column.name,
+    column.icon,
     projectId,
     projectKey,
     getColumns,
@@ -164,10 +261,18 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
         throw new Error(error.error || 'Failed to delete column')
       }
 
-      // Update board store: remove column and move tickets
+      // Snapshot the column (with tickets) before removing from store
       const columns = getColumns(projectId)
       const deletedColumn = columns.find((c) => c.id === column.id)
-      const ticketsToMove = deletedColumn?.tickets || []
+      const snapshotColumn: ColumnWithTickets = {
+        id: column.id,
+        name: column.name,
+        icon: column.icon,
+        order: column.order,
+        projectId,
+        tickets: (deletedColumn?.tickets || []).map((t) => ({ ...t })),
+      }
+      const ticketsToMove = snapshotColumn.tickets
 
       const updatedColumns = columns
         .filter((c) => c.id !== column.id)
@@ -191,12 +296,161 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
 
       const targetColumn = otherColumns.find((c) => c.id === moveToColumnId)
-      toast.success('Column deleted', {
-        description:
-          ticketsToMove.length > 0
-            ? `"${column.name}" deleted. ${ticketsToMove.length} ticket${ticketsToMove.length === 1 ? '' : 's'} moved to "${targetColumn?.name}".`
-            : `"${column.name}" deleted.`,
+      const showUndo = useSettingsStore.getState().showUndoButtons
+      const description =
+        ticketsToMove.length > 0
+          ? `"${column.name}" deleted. ${ticketsToMove.length} ticket${ticketsToMove.length === 1 ? '' : 's'} moved to "${targetColumn?.name}".`
+          : `"${column.name}" deleted.`
+
+      const toastId = showUndoRedoToast('error', {
+        title: 'Column deleted',
+        description,
+        duration: 5000,
+        showUndoButtons: showUndo,
+        onUndo: async (id) => {
+          // Undo: recreate column and move tickets back
+          const undoEntry = useUndoStore.getState().undoByToastId(id)
+          if (!undoEntry) return
+          const undoStore = useUndoStore.getState()
+          undoStore.setProcessing(true)
+          try {
+            // Recreate column via POST
+            const createRes = await fetch(`/api/projects/${projectKey}/columns`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ name: snapshotColumn.name }),
+            })
+            if (!createRes.ok) throw new Error('Failed to recreate column')
+            const newCol = await createRes.json()
+
+            // Set icon if it was set
+            if (snapshotColumn.icon) {
+              await fetch(`/api/projects/${projectKey}/columns/${newCol.id}`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Tab-Id': getTabId(),
+                },
+                body: JSON.stringify({ icon: snapshotColumn.icon, order: snapshotColumn.order }),
+              })
+            } else if (newCol.order !== snapshotColumn.order) {
+              await fetch(`/api/projects/${projectKey}/columns/${newCol.id}`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Tab-Id': getTabId(),
+                },
+                body: JSON.stringify({ order: snapshotColumn.order }),
+              })
+            }
+
+            // Move tickets back to restored column
+            if (snapshotColumn.tickets.length > 0) {
+              for (const ticket of snapshotColumn.tickets) {
+                await fetch(`/api/projects/${projectKey}/tickets/${ticket.id}`, {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-Tab-Id': getTabId(),
+                  },
+                  body: JSON.stringify({ columnId: newCol.id }),
+                })
+              }
+            }
+
+            // Update board store
+            const bs = useBoardStore.getState()
+            const restoredColumn: ColumnWithTickets = {
+              ...snapshotColumn,
+              id: newCol.id,
+              tickets: snapshotColumn.tickets.map((t) => ({ ...t, columnId: newCol.id })),
+            }
+            const currentCols = bs.getColumns(projectId)
+            // Remove moved tickets from target column and add restored column
+            const restoredCols = currentCols.map((c) => {
+              if (c.id === moveToColumnId) {
+                const movedTicketIds = new Set(snapshotColumn.tickets.map((t) => t.id))
+                return { ...c, tickets: c.tickets.filter((t) => !movedTicketIds.has(t.id)) }
+              }
+              return c
+            })
+            // Insert at original position
+            restoredCols.splice(snapshotColumn.order, 0, restoredColumn)
+            bs.setColumns(projectId, restoredCols)
+
+            // Update snapshot column id for future redo
+            snapshotColumn.id = newCol.id
+
+            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
+            queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+          } catch (err) {
+            console.error('Failed to undo column delete:', err)
+            toast.error('Failed to undo column deletion')
+          } finally {
+            useUndoStore.getState().setProcessing(false)
+          }
+        },
+        onRedo: async (id) => {
+          // Redo: delete the column again
+          const undoEntry = useUndoStore.getState().redoByToastId(id)
+          if (!undoEntry) return
+          const undoStore = useUndoStore.getState()
+          undoStore.setProcessing(true)
+          try {
+            const deleteUrl = new URL(
+              `/api/projects/${projectKey}/columns/${snapshotColumn.id}`,
+              window.location.origin,
+            )
+            if (snapshotColumn.tickets.length > 0) {
+              deleteUrl.searchParams.set('moveTicketsTo', moveToColumnId)
+            }
+            const delRes = await fetch(deleteUrl.toString(), {
+              method: 'DELETE',
+              headers: { 'X-Tab-Id': getTabId() },
+            })
+            if (!delRes.ok) throw new Error('Failed to redo column delete')
+
+            const bs = useBoardStore.getState()
+            const cols = bs.getColumns(projectId)
+            const deletedCol = cols.find((c) => c.id === snapshotColumn.id)
+            const movedTickets = deletedCol?.tickets || []
+            bs.setColumns(
+              projectId,
+              cols
+                .filter((c) => c.id !== snapshotColumn.id)
+                .map((c) => {
+                  if (c.id === moveToColumnId && movedTickets.length > 0) {
+                    return {
+                      ...c,
+                      tickets: [
+                        ...c.tickets,
+                        ...movedTickets.map((t) => ({ ...t, columnId: moveToColumnId })),
+                      ],
+                    }
+                  }
+                  return c
+                }),
+            )
+            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
+            queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+          } catch (err) {
+            console.error('Failed to redo column delete:', err)
+            toast.error('Failed to redo column deletion')
+          } finally {
+            useUndoStore.getState().setProcessing(false)
+          }
+        },
+        undoneTitle: 'Column restored',
+        undoneDescription: `"${column.name}" restored`,
+        redoneTitle: 'Column deleted',
+        redoneDescription: description,
       })
+
+      useUndoStore.getState().pushColumnDelete(projectId, snapshotColumn, moveToColumnId, toastId)
+
       setDeleteOpen(false)
     } catch (error) {
       toast.error('Failed to delete column', {
@@ -261,12 +515,12 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       <AlertDialog open={renameOpen} onOpenChange={setRenameOpen}>
         <AlertDialogContent className="bg-zinc-900 border-zinc-700">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Rename column</AlertDialogTitle>
+            <AlertDialogTitle className="text-zinc-100">Edit column</AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
-              Enter a new name for the &quot;{column.name}&quot; column.
+              Update the name and icon for the &quot;{column.name}&quot; column.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-2">
+          <div className="space-y-3 py-2">
             <Input
               ref={renameInputRef}
               value={renameValue}
@@ -282,6 +536,44 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
               className="bg-zinc-800 border-zinc-700 text-zinc-100"
               disabled={renameLoading}
             />
+            <div>
+              <span className="text-sm font-medium text-zinc-300 mb-2 block">Icon</span>
+              <div className="grid grid-cols-7 gap-1">
+                {COLUMN_ICON_OPTIONS.map((opt) => {
+                  const Icon = opt.icon
+                  const isSelected = iconValue === opt.name
+                  return (
+                    <Tooltip key={opt.name}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => setIconValue(isSelected ? null : opt.name)}
+                          className={cn(
+                            'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+                            isSelected
+                              ? 'bg-amber-600/20 ring-1 ring-amber-500'
+                              : 'hover:bg-zinc-800',
+                          )}
+                          disabled={renameLoading}
+                        >
+                          <Icon
+                            className={cn('h-4 w-4', isSelected ? opt.color : 'text-zinc-400')}
+                          />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        {opt.name}
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">
+                {iconValue
+                  ? 'Click selected icon to clear'
+                  : 'No icon selected — auto-detected from name'}
+              </p>
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel
@@ -295,10 +587,14 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                 e.preventDefault()
                 handleRename()
               }}
-              disabled={renameLoading || !renameValue.trim() || renameValue.trim() === column.name}
+              disabled={
+                renameLoading ||
+                !renameValue.trim() ||
+                (renameValue.trim() === column.name && iconValue === (column.icon ?? null))
+              }
               className="bg-amber-600 hover:bg-amber-700 text-white"
             >
-              {renameLoading ? 'Renaming...' : 'Rename'}
+              {renameLoading ? 'Saving...' : 'Save'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -321,7 +617,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                   . Select a column to move them to.
                 </>
               )}
-              {column.tickets.length === 0 && ' This action cannot be undone.'}
+              {column.tickets.length === 0 && ' You can undo this with Ctrl+Z.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
 

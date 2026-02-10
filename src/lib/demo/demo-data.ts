@@ -77,6 +77,7 @@ export const DEMO_PROJECTS: DemoProject[] = [
 export interface DemoColumn {
   id: string
   name: string
+  icon?: string | null
   order: number
   projectId: string
 }
@@ -199,12 +200,10 @@ function createTicket(
 }
 
 // Helper to get labels by project and name
-function getLabel(projectId: string, name: string): LabelSummary | undefined {
+function getLabel(projectId: string, name: string): LabelSummary {
   const label = DEMO_LABELS.find((l) => l.projectId === projectId && l.name === name)
-  if (label) {
-    return { id: label.id, name: label.name, color: label.color }
-  }
-  return undefined
+  if (!label) throw new Error(`Demo label "${name}" not found for project ${projectId}`)
+  return { id: label.id, name: label.name, color: label.color }
 }
 
 // Helper to get sprint by project
@@ -243,7 +242,7 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     columnId: 'demo-col-1-1',
     sprintId: 'demo-sprint-1-2',
     sprint: getSprint('demo-project-1', 'Sprint 2'),
-    labels: [getLabel('demo-project-1', 'feature')!],
+    labels: [getLabel('demo-project-1', 'feature')],
     assigneeId: getTeamMember(0).id,
     assignee: getTeamMember(0),
   }),
@@ -274,7 +273,7 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     storyPoints: 8,
     projectId: 'demo-project-1',
     columnId: 'demo-col-1-1',
-    labels: [getLabel('demo-project-1', 'documentation')!],
+    labels: [getLabel('demo-project-1', 'documentation')],
   }),
   // Backlog items (no sprint)
   createTicket({
@@ -289,7 +288,7 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     storyPoints: 8,
     projectId: 'demo-project-1',
     columnId: 'demo-col-1-1',
-    labels: [getLabel('demo-project-1', 'feature')!],
+    labels: [getLabel('demo-project-1', 'feature')],
   }),
   createTicket({
     id: 'demo-ticket-1-10',
@@ -303,7 +302,7 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     storyPoints: 3,
     projectId: 'demo-project-1',
     columnId: 'demo-col-1-1',
-    labels: [getLabel('demo-project-1', 'enhancement')!],
+    labels: [getLabel('demo-project-1', 'enhancement')],
   }),
   createTicket({
     id: 'demo-ticket-1-11',
@@ -336,7 +335,7 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     sprint: getSprint('demo-project-1', 'Sprint 2'),
     assigneeId: DEMO_USER.id,
     assignee: DEMO_USER_SUMMARY,
-    labels: [getLabel('demo-project-1', 'feature')!, getLabel('demo-project-1', 'urgent')!],
+    labels: [getLabel('demo-project-1', 'feature'), getLabel('demo-project-1', 'urgent')],
   }),
   createTicket({
     id: 'demo-ticket-1-5',
@@ -369,7 +368,7 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     columnId: 'demo-col-1-3',
     sprintId: 'demo-sprint-1-2',
     sprint: getSprint('demo-project-1', 'Sprint 2'),
-    labels: [getLabel('demo-project-1', 'documentation')!],
+    labels: [getLabel('demo-project-1', 'documentation')],
     assigneeId: getTeamMember(2).id,
     assignee: getTeamMember(2),
   }),
@@ -426,7 +425,7 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     columnId: 'demo-col-2-1',
     sprintId: 'demo-sprint-2-1',
     sprint: getSprint('demo-project-2', 'Sprint 1'),
-    labels: [getLabel('demo-project-2', 'bug')!, getLabel('demo-project-2', 'ui/ux')!],
+    labels: [getLabel('demo-project-2', 'bug'), getLabel('demo-project-2', 'ui/ux')],
     environment: 'Production',
     assigneeId: getTeamMember(0).id,
     assignee: getTeamMember(0),
@@ -444,7 +443,7 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     columnId: 'demo-col-2-1',
     sprintId: 'demo-sprint-2-1',
     sprint: getSprint('demo-project-2', 'Sprint 1'),
-    labels: [getLabel('demo-project-2', 'bug')!, getLabel('demo-project-2', 'ui/ux')!],
+    labels: [getLabel('demo-project-2', 'bug'), getLabel('demo-project-2', 'ui/ux')],
     assigneeId: getTeamMember(2).id,
     assignee: getTeamMember(2),
   }),
@@ -466,9 +465,9 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     assigneeId: DEMO_USER.id,
     assignee: DEMO_USER_SUMMARY,
     labels: [
-      getLabel('demo-project-2', 'critical')!,
-      getLabel('demo-project-2', 'performance')!,
-      getLabel('demo-project-2', 'backend')!,
+      getLabel('demo-project-2', 'critical'),
+      getLabel('demo-project-2', 'performance'),
+      getLabel('demo-project-2', 'backend'),
     ],
     environment: 'Production',
   }),
@@ -486,7 +485,7 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     columnId: 'demo-col-2-3',
     sprintId: 'demo-sprint-2-1',
     sprint: getSprint('demo-project-2', 'Sprint 1'),
-    labels: [getLabel('demo-project-2', 'bug')!, getLabel('demo-project-2', 'backend')!],
+    labels: [getLabel('demo-project-2', 'bug'), getLabel('demo-project-2', 'backend')],
     assigneeId: getTeamMember(1).id,
     assignee: getTeamMember(1),
   }),
@@ -502,7 +501,7 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     order: 0,
     projectId: 'demo-project-2',
     columnId: 'demo-col-2-4',
-    labels: [getLabel('demo-project-2', 'bug')!, getLabel('demo-project-2', 'ui/ux')!],
+    labels: [getLabel('demo-project-2', 'bug'), getLabel('demo-project-2', 'ui/ux')],
   }),
   createTicket({
     id: 'demo-ticket-2-6',
@@ -514,7 +513,7 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     order: 1,
     projectId: 'demo-project-2',
     columnId: 'demo-col-2-4',
-    labels: [getLabel('demo-project-2', 'bug')!],
+    labels: [getLabel('demo-project-2', 'bug')],
   }),
 ]
 
@@ -529,6 +528,7 @@ export function getColumnsWithTickets(projectId: string): ColumnWithTickets[] {
   return projectColumns.map((col) => ({
     id: col.id,
     name: col.name,
+    icon: col.icon ?? null,
     order: col.order,
     projectId: col.projectId,
     tickets: projectTickets.filter((t) => t.columnId === col.id).sort((a, b) => a.order - b.order),
