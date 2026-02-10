@@ -34,10 +34,11 @@ export function useColumnsByProject(projectId: string, options?: { enabled?: boo
       // getColumnsWithTickets returns ColumnWithTickets[], but API returns just columns
       // Extract column data without tickets for this hook
       const columnsWithTickets = await provider.getColumnsWithTickets(projectId)
-      return columnsWithTickets.map(({ id, name, icon, order, projectId }) => ({
+      return columnsWithTickets.map(({ id, name, icon, color, order, projectId }) => ({
         id,
         name,
         icon: icon ?? null,
+        color: color ?? null,
         order,
         projectId,
       }))

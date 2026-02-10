@@ -35,7 +35,7 @@ import { columnKeys, ticketKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
-import { COLUMN_ICON_OPTIONS } from '@/lib/status-icons'
+import { COLUMN_COLOR_OPTIONS, COLUMN_ICON_OPTIONS, getColumnIcon } from '@/lib/status-icons'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
@@ -59,6 +59,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameValue, setRenameValue] = useState(column.name)
   const [iconValue, setIconValue] = useState<string | null>(column.icon ?? null)
+  const [colorValue, setColorValue] = useState<string | null>(column.color ?? null)
   const [renameLoading, setRenameLoading] = useState(false)
   const renameInputRef = useRef<HTMLInputElement>(null)
 
@@ -81,17 +82,19 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
   const handleRenameOpen = useCallback(() => {
     setRenameValue(column.name)
     setIconValue(column.icon ?? null)
+    setColorValue(column.color ?? null)
     setRenameOpen(true)
     // Focus the input after the dialog renders
     setTimeout(() => renameInputRef.current?.focus(), 50)
-  }, [column.name, column.icon])
+  }, [column.name, column.icon, column.color])
 
   const handleRename = useCallback(async () => {
     const trimmedName = renameValue.trim()
     const nameChanged = trimmedName && trimmedName !== column.name
     const iconChanged = iconValue !== (column.icon ?? null)
+    const colorChanged = colorValue !== (column.color ?? null)
 
-    if (!trimmedName || (!nameChanged && !iconChanged)) {
+    if (!trimmedName || (!nameChanged && !iconChanged && !colorChanged)) {
       setRenameOpen(false)
       return
     }
@@ -104,9 +107,10 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
         ...(tabId && { 'X-Tab-Id': tabId }),
       }
 
-      const body: { name?: string; icon?: string | null } = {}
+      const body: { name?: string; icon?: string | null; color?: string | null } = {}
       if (nameChanged) body.name = trimmedName
       body.icon = iconValue
+      body.color = colorValue
 
       const res = await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
         method: 'PATCH',
@@ -121,13 +125,15 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
 
       const oldName = column.name
       const oldIcon = column.icon ?? null
+      const oldColor = column.color ?? null
       const newName = nameChanged ? trimmedName : column.name
       const newIcon = iconValue
+      const newColor = colorValue
 
       // Update the board store
       const columns = getColumns(projectId)
       const updatedColumns = columns.map((c) =>
-        c.id === column.id ? { ...c, name: newName, icon: newIcon } : c,
+        c.id === column.id ? { ...c, name: newName, icon: newIcon, color: newColor } : c,
       )
       setColumns(projectId, updatedColumns)
 
@@ -137,7 +143,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       const showUndo = useSettingsStore.getState().showUndoButtons
       const description = nameChanged
         ? `"${oldName}" renamed to "${newName}"`
-        : 'Column icon updated'
+        : 'Column appearance updated'
 
       const toastId = showUndoRedoToast('success', {
         title: 'Column updated',
@@ -157,13 +163,15 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                 'Content-Type': 'application/json',
                 'X-Tab-Id': getTabId(),
               },
-              body: JSON.stringify({ name: oldName, icon: oldIcon }),
+              body: JSON.stringify({ name: oldName, icon: oldIcon, color: oldColor }),
             })
             const bs = useBoardStore.getState()
             const cols = bs.getColumns(projectId)
             bs.setColumns(
               projectId,
-              cols.map((c) => (c.id === column.id ? { ...c, name: oldName, icon: oldIcon } : c)),
+              cols.map((c) =>
+                c.id === column.id ? { ...c, name: oldName, icon: oldIcon, color: oldColor } : c,
+              ),
             )
             queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
           } catch (err) {
@@ -186,13 +194,15 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                 'Content-Type': 'application/json',
                 'X-Tab-Id': getTabId(),
               },
-              body: JSON.stringify({ name: newName, icon: newIcon }),
+              body: JSON.stringify({ name: newName, icon: newIcon, color: newColor }),
             })
             const bs = useBoardStore.getState()
             const cols = bs.getColumns(projectId)
             bs.setColumns(
               projectId,
-              cols.map((c) => (c.id === column.id ? { ...c, name: newName, icon: newIcon } : c)),
+              cols.map((c) =>
+                c.id === column.id ? { ...c, name: newName, icon: newIcon, color: newColor } : c,
+              ),
             )
             queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
           } catch (err) {
@@ -210,7 +220,17 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
 
       useUndoStore
         .getState()
-        .pushColumnRename(projectId, column.id, oldName, newName, oldIcon, newIcon, toastId)
+        .pushColumnRename(
+          projectId,
+          column.id,
+          oldName,
+          newName,
+          oldIcon,
+          newIcon,
+          oldColor,
+          newColor,
+          toastId,
+        )
 
       setRenameOpen(false)
     } catch (error) {
@@ -223,9 +243,11 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
   }, [
     renameValue,
     iconValue,
+    colorValue,
     column.id,
     column.name,
     column.icon,
+    column.color,
     projectId,
     projectKey,
     getColumns,
@@ -268,6 +290,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
         id: column.id,
         name: column.name,
         icon: column.icon,
+        color: column.color,
         order: column.order,
         projectId,
         tickets: (deletedColumn?.tickets || []).map((t) => ({ ...t })),
@@ -326,15 +349,19 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
             if (!createRes.ok) throw new Error('Failed to recreate column')
             const newCol = await createRes.json()
 
-            // Set icon if it was set
-            if (snapshotColumn.icon) {
+            // Set icon/color if they were set
+            if (snapshotColumn.icon || snapshotColumn.color) {
               await fetch(`/api/projects/${projectKey}/columns/${newCol.id}`, {
                 method: 'PATCH',
                 headers: {
                   'Content-Type': 'application/json',
                   'X-Tab-Id': getTabId(),
                 },
-                body: JSON.stringify({ icon: snapshotColumn.icon, order: snapshotColumn.order }),
+                body: JSON.stringify({
+                  icon: snapshotColumn.icon,
+                  color: snapshotColumn.color,
+                  order: snapshotColumn.order,
+                }),
               })
             } else if (newCol.order !== snapshotColumn.order) {
               await fetch(`/api/projects/${projectKey}/columns/${newCol.id}`, {
@@ -542,6 +569,10 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                 {COLUMN_ICON_OPTIONS.map((opt) => {
                   const Icon = opt.icon
                   const isSelected = iconValue === opt.name
+                  // Show selected icons in the chosen color, or their default color
+                  const resolvedColor = isSelected
+                    ? getColumnIcon(opt.name, undefined, colorValue).color
+                    : 'text-zinc-400'
                   return (
                     <Tooltip key={opt.name}>
                       <TooltipTrigger asChild>
@@ -556,9 +587,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                           )}
                           disabled={renameLoading}
                         >
-                          <Icon
-                            className={cn('h-4 w-4', isSelected ? opt.color : 'text-zinc-400')}
-                          />
+                          <Icon className={cn('h-4 w-4', resolvedColor)} />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="text-xs">
@@ -572,6 +601,46 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                 {iconValue
                   ? 'Click selected icon to clear'
                   : 'No icon selected — auto-detected from name'}
+              </p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-zinc-300 mb-2 block">Color</span>
+              <div className="flex flex-wrap gap-1">
+                {COLUMN_COLOR_OPTIONS.map((opt) => {
+                  const isSelected = colorValue === opt.name
+                  return (
+                    <Tooltip key={opt.name}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => setColorValue(isSelected ? null : opt.name)}
+                          className={cn(
+                            'flex items-center justify-center h-7 w-7 rounded-full transition-all',
+                            isSelected
+                              ? 'ring-2 ring-offset-1 ring-offset-zinc-900 ring-amber-500'
+                              : 'hover:scale-110',
+                          )}
+                          disabled={renameLoading}
+                        >
+                          <div
+                            className={cn(
+                              'h-4 w-4 rounded-full',
+                              opt.color.replace('text-', 'bg-'),
+                            )}
+                          />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        {opt.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">
+                {colorValue
+                  ? 'Click selected color to clear'
+                  : 'No color selected — auto-detected from icon'}
               </p>
             </div>
           </div>
@@ -590,7 +659,9 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
               disabled={
                 renameLoading ||
                 !renameValue.trim() ||
-                (renameValue.trim() === column.name && iconValue === (column.icon ?? null))
+                (renameValue.trim() === column.name &&
+                  iconValue === (column.icon ?? null) &&
+                  colorValue === (column.color ?? null))
               }
               className="bg-amber-600 hover:bg-amber-700 text-white"
             >

@@ -1470,7 +1470,9 @@ export function KeyboardShortcuts() {
             boardStore.setColumns(
               entry.projectId,
               cols.map((c) =>
-                c.id === action.columnId ? { ...c, name: action.oldName, icon: action.oldIcon } : c,
+                c.id === action.columnId
+                  ? { ...c, name: action.oldName, icon: action.oldIcon, color: action.oldColor }
+                  : c,
               ),
             )
             undoStore.pushRedo(entry)
@@ -1486,7 +1488,11 @@ export function KeyboardShortcuts() {
                     'Content-Type': 'application/json',
                     ...(tabId && { 'X-Tab-Id': tabId }),
                   },
-                  body: JSON.stringify({ name: action.oldName, icon: action.oldIcon }),
+                  body: JSON.stringify({
+                    name: action.oldName,
+                    icon: action.oldIcon,
+                    color: action.oldColor,
+                  }),
                 })
                 queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
               } catch (err) {
@@ -1517,7 +1523,12 @@ export function KeyboardShortcuts() {
                     redoEntry.projectId,
                     c.map((col) =>
                       col.id === action.columnId
-                        ? { ...col, name: action.newName, icon: action.newIcon }
+                        ? {
+                            ...col,
+                            name: action.newName,
+                            icon: action.newIcon,
+                            color: action.newColor,
+                          }
                         : col,
                     ),
                   )
@@ -1528,7 +1539,11 @@ export function KeyboardShortcuts() {
                       'Content-Type': 'application/json',
                       ...(tabId && { 'X-Tab-Id': tabId }),
                     },
-                    body: JSON.stringify({ name: action.newName, icon: action.newIcon }),
+                    body: JSON.stringify({
+                      name: action.newName,
+                      icon: action.newIcon,
+                      color: action.newColor,
+                    }),
                   })
                   queryClient.invalidateQueries({
                     queryKey: columnKeys.byProject(redoEntry.projectId),
@@ -1563,7 +1578,11 @@ export function KeyboardShortcuts() {
                       'Content-Type': 'application/json',
                       ...(tabId && { 'X-Tab-Id': tabId }),
                     },
-                    body: JSON.stringify({ name: action.oldName, icon: action.oldIcon }),
+                    body: JSON.stringify({
+                      name: action.oldName,
+                      icon: action.oldIcon,
+                      color: action.oldColor,
+                    }),
                   })
                   queryClient.invalidateQueries({
                     queryKey: columnKeys.byProject(undoEntry2.projectId),
@@ -2403,7 +2422,9 @@ export function KeyboardShortcuts() {
             boardStore.setColumns(
               entry.projectId,
               cols.map((c) =>
-                c.id === action.columnId ? { ...c, name: action.newName, icon: action.newIcon } : c,
+                c.id === action.columnId
+                  ? { ...c, name: action.newName, icon: action.newIcon, color: action.newColor }
+                  : c,
               ),
             )
 
@@ -2417,7 +2438,11 @@ export function KeyboardShortcuts() {
                     'Content-Type': 'application/json',
                     ...(tabId && { 'X-Tab-Id': tabId }),
                   },
-                  body: JSON.stringify({ name: action.newName, icon: action.newIcon }),
+                  body: JSON.stringify({
+                    name: action.newName,
+                    icon: action.newIcon,
+                    color: action.newColor,
+                  }),
                 })
                 queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
               } catch (err) {
@@ -2455,7 +2480,11 @@ export function KeyboardShortcuts() {
                             'Content-Type': 'application/json',
                             ...(tabId && { 'X-Tab-Id': tabId }),
                           },
-                          body: JSON.stringify({ name: action.oldName, icon: action.oldIcon }),
+                          body: JSON.stringify({
+                            name: action.oldName,
+                            icon: action.oldIcon,
+                            color: action.oldColor,
+                          }),
                         })
                         queryClient.invalidateQueries({
                           queryKey: columnKeys.byProject(entry.projectId),
@@ -2478,6 +2507,8 @@ export function KeyboardShortcuts() {
               action.newName,
               action.oldIcon,
               action.newIcon,
+              action.oldColor,
+              action.newColor,
               newToastId,
               true,
             )

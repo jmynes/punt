@@ -71,7 +71,11 @@ export function KanbanColumn({
     .filter((t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId)
     .map((t) => t.id)
 
-  const { icon: StatusIcon, color: statusColor } = getColumnIcon(column.icon, column.name)
+  const { icon: StatusIcon, color: statusColor } = getColumnIcon(
+    column.icon,
+    column.name,
+    column.color,
+  )
 
   // Collapsed column view
   if (collapsed) {

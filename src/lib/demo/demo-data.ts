@@ -78,6 +78,7 @@ export interface DemoColumn {
   id: string
   name: string
   icon?: string | null
+  color?: string | null
   order: number
   projectId: string
 }
@@ -529,6 +530,7 @@ export function getColumnsWithTickets(projectId: string): ColumnWithTickets[] {
     id: col.id,
     name: col.name,
     icon: col.icon ?? null,
+    color: col.color ?? null,
     order: col.order,
     projectId: col.projectId,
     tickets: projectTickets.filter((t) => t.columnId === col.id).sort((a, b) => a.order - b.order),

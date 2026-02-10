@@ -57,6 +57,8 @@ type UndoAction =
       newName: string
       oldIcon: string | null
       newIcon: string | null
+      oldColor: string | null
+      newColor: string | null
     }
   | {
       type: 'columnDelete'
@@ -157,6 +159,8 @@ interface UndoState {
     newName: string,
     oldIcon: string | null,
     newIcon: string | null,
+    oldColor: string | null,
+    newColor: string | null,
     toastId: string | number,
     isRedo?: boolean,
   ) => void
@@ -437,6 +441,8 @@ export const useUndoStore = create<UndoState>((set, get) => ({
     newName,
     oldIcon,
     newIcon,
+    oldColor,
+    newColor,
     toastId,
     isRedo = false,
   ) => {
@@ -450,7 +456,16 @@ export const useUndoStore = create<UndoState>((set, get) => ({
       undoStack: [
         ...state.undoStack,
         {
-          action: { type: 'columnRename', columnId, oldName, newName, oldIcon, newIcon },
+          action: {
+            type: 'columnRename',
+            columnId,
+            oldName,
+            newName,
+            oldIcon,
+            newIcon,
+            oldColor,
+            newColor,
+          },
           timestamp: Date.now(),
           toastId,
           projectId,

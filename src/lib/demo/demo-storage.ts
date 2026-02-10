@@ -214,6 +214,7 @@ class DemoStorage {
       id: col.id,
       name: col.name,
       icon: col.icon ?? null,
+      color: col.color ?? null,
       order: col.order,
       projectId: col.projectId,
       tickets: tickets.filter((t) => t.columnId === col.id).sort((a, b) => a.order - b.order),

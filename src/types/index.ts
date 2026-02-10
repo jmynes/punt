@@ -198,6 +198,7 @@ export interface ColumnWithTickets {
   id: string
   name: string
   icon?: string | null
+  color?: string | null
   order: number
   projectId: string
   tickets: TicketWithRelations[]
