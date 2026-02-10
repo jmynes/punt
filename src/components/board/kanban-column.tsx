@@ -76,6 +76,9 @@ export function KanbanColumn({
     column.name,
     column.color,
   )
+  const isHexColor = statusColor.startsWith('#')
+  const iconColorClass = isHexColor ? undefined : statusColor
+  const iconColorStyle = isHexColor ? { color: statusColor } : undefined
 
   // Collapsed column view
   if (collapsed) {
@@ -89,7 +92,11 @@ export function KanbanColumn({
         title={`${column.name} (${column.tickets.length}) - Click to expand`}
       >
         <div className="flex flex-col items-center gap-2 py-3 px-1">
-          <StatusIcon className={cn('h-4 w-4 flex-shrink-0', statusColor)} aria-hidden />
+          <StatusIcon
+            className={cn('h-4 w-4 flex-shrink-0', iconColorClass)}
+            style={iconColorStyle}
+            aria-hidden
+          />
           <span className="flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-zinc-800 text-xs text-zinc-400">
             {column.tickets.length}
           </span>
@@ -117,7 +124,11 @@ export function KanbanColumn({
       {/* Column header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
         <div className="flex items-center gap-2 select-none">
-          <StatusIcon className={cn('h-4 w-4', statusColor)} aria-hidden />
+          <StatusIcon
+            className={cn('h-4 w-4', iconColorClass)}
+            style={iconColorStyle}
+            aria-hidden
+          />
           <h3 className="font-medium text-sm text-zinc-200">{column.name}</h3>
           <span className="flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-zinc-800 text-xs text-zinc-400">
             {column.tickets.length}

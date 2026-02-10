@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { ChevronsLeftRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +36,7 @@ import { columnKeys, ticketKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
-import { COLUMN_COLOR_OPTIONS, COLUMN_ICON_OPTIONS, getColumnIcon } from '@/lib/status-icons'
+import { COLUMN_ICON_OPTIONS, getColumnIcon } from '@/lib/status-icons'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
@@ -569,10 +570,11 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                 {COLUMN_ICON_OPTIONS.map((opt) => {
                   const Icon = opt.icon
                   const isSelected = iconValue === opt.name
-                  // Show selected icons in the chosen color, or their default color
-                  const resolvedColor = isSelected
-                    ? getColumnIcon(opt.name, undefined, colorValue).color
-                    : 'text-zinc-400'
+                  // Show selected icon in the chosen custom color, or default
+                  const isHex = colorValue?.startsWith('#')
+                  const iconClass = isSelected ? (isHex ? undefined : opt.color) : 'text-zinc-400'
+                  const iconStyle =
+                    isSelected && isHex && colorValue ? { color: colorValue } : undefined
                   return (
                     <Tooltip key={opt.name}>
                       <TooltipTrigger asChild>
@@ -587,7 +589,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                           )}
                           disabled={renameLoading}
                         >
-                          <Icon className={cn('h-4 w-4', resolvedColor)} />
+                          <Icon className={cn('h-4 w-4', iconClass)} style={iconStyle} />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="text-xs">
@@ -605,38 +607,35 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
             </div>
             <div>
               <span className="text-sm font-medium text-zinc-300 mb-2 block">Color</span>
-              <div className="flex flex-wrap gap-1">
-                {COLUMN_COLOR_OPTIONS.map((opt) => {
-                  const isSelected = colorValue === opt.name
-                  return (
-                    <Tooltip key={opt.name}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => setColorValue(isSelected ? null : opt.name)}
-                          className={cn(
-                            'flex items-center justify-center h-7 w-7 rounded-full transition-all',
-                            isSelected
-                              ? 'ring-2 ring-offset-1 ring-offset-zinc-900 ring-amber-500'
-                              : 'hover:scale-110',
-                          )}
-                          disabled={renameLoading}
-                        >
-                          <div className={cn('h-4 w-4 rounded-full', opt.bg)} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="text-xs">
-                        {opt.label}
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })}
-              </div>
-              <p className="text-xs text-zinc-500 mt-1">
-                {colorValue
-                  ? 'Click selected color to clear'
-                  : 'No color selected — auto-detected from icon'}
-              </p>
+              {colorValue ? (
+                <>
+                  <ColorPickerBody
+                    activeColor={colorValue}
+                    onColorChange={setColorValue}
+                    onApply={setColorValue}
+                    isDisabled={renameLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setColorValue(null)}
+                    className="text-xs text-zinc-500 hover:text-zinc-300 mt-1"
+                  >
+                    Reset to default color
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-zinc-500 mb-2">
+                    Using auto-detected color from icon. Pick a custom color:
+                  </p>
+                  <ColorPickerBody
+                    activeColor="#3b82f6"
+                    onColorChange={setColorValue}
+                    onApply={setColorValue}
+                    isDisabled={renameLoading}
+                  />
+                </>
+              )}
             </div>
           </div>
           <AlertDialogFooter>

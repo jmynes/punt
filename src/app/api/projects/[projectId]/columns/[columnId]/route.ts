@@ -8,7 +8,11 @@ import { PERMISSIONS } from '@/lib/permissions'
 const updateColumnSchema = z.object({
   name: z.string().min(1).max(50).optional(),
   icon: z.string().max(50).nullable().optional(),
-  color: z.string().max(50).nullable().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Invalid color format')
+    .nullable()
+    .optional(),
   order: z.number().int().min(0).optional(),
 })
 

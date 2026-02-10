@@ -81,53 +81,28 @@ export const COLUMN_ICON_OPTIONS: ColumnIconOption[] = [
   { name: 'Archive', icon: Archive, color: 'text-zinc-500' },
 ]
 
-// Color options for the column color picker
-export interface ColumnColorOption {
-  name: string
-  color: string
-  bg: string
-  label: string
-}
-
-export const COLUMN_COLOR_OPTIONS: ColumnColorOption[] = [
-  { name: 'zinc', color: 'text-zinc-400', bg: 'bg-zinc-400', label: 'Gray' },
-  { name: 'blue', color: 'text-blue-300', bg: 'bg-blue-300', label: 'Blue' },
-  { name: 'cyan', color: 'text-cyan-300', bg: 'bg-cyan-300', label: 'Cyan' },
-  { name: 'emerald', color: 'text-emerald-400', bg: 'bg-emerald-400', label: 'Green' },
-  { name: 'amber', color: 'text-amber-400', bg: 'bg-amber-400', label: 'Amber' },
-  { name: 'orange', color: 'text-orange-400', bg: 'bg-orange-400', label: 'Orange' },
-  { name: 'red', color: 'text-red-400', bg: 'bg-red-400', label: 'Red' },
-  { name: 'pink', color: 'text-pink-400', bg: 'bg-pink-400', label: 'Pink' },
-  { name: 'purple', color: 'text-purple-300', bg: 'bg-purple-300', label: 'Purple' },
-  { name: 'indigo', color: 'text-indigo-400', bg: 'bg-indigo-400', label: 'Indigo' },
-  { name: 'yellow', color: 'text-yellow-300', bg: 'bg-yellow-300', label: 'Yellow' },
-  { name: 'green', color: 'text-green-400', bg: 'bg-green-400', label: 'Lime' },
-]
-
-const COLUMN_COLOR_MAP = new Map(COLUMN_COLOR_OPTIONS.map((opt) => [opt.name, opt]))
-
 // Map from icon name to the icon option (for quick lookup)
 const COLUMN_ICON_MAP = new Map(COLUMN_ICON_OPTIONS.map((opt) => [opt.name, opt]))
 
 /**
  * Get the icon for a column. Uses custom icon/color if set, otherwise falls back
  * to the name-based heuristic.
+ *
+ * When `hexColor` is provided (a hex string like "#3b82f6"), it is returned as the color.
+ * Components should check if color starts with "#" and use inline style instead of className.
  */
 export function getColumnIcon(
   iconName?: string | null,
   columnName?: string,
-  colorName?: string | null,
+  hexColor?: string | null,
 ): StatusIconEntry {
-  // Resolve the color override (if any)
-  const colorOverride = colorName ? COLUMN_COLOR_MAP.get(colorName)?.color : undefined
-
   if (iconName) {
     const custom = COLUMN_ICON_MAP.get(iconName)
-    if (custom) return { icon: custom.icon, color: colorOverride ?? custom.color }
+    if (custom) return { icon: custom.icon, color: hexColor ?? custom.color }
   }
   if (columnName) {
     const entry = getStatusIcon(columnName)
-    return colorOverride ? { icon: entry.icon, color: colorOverride } : entry
+    return hexColor ? { icon: entry.icon, color: hexColor } : entry
   }
-  return { icon: Circle, color: colorOverride ?? 'text-zinc-400' }
+  return { icon: Circle, color: hexColor ?? 'text-zinc-400' }
 }
