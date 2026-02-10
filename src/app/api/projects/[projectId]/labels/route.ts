@@ -43,7 +43,7 @@ const createLabelSchema = z.object({
  * Requires project membership
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ projectId: string }> },
 ) {
   try {
@@ -54,9 +54,16 @@ export async function GET(
     // Check project membership
     await requireMembership(user.id, projectId)
 
+    // Check if ticket count should be included
+    const url = new URL(request.url)
+    const includeCount = url.searchParams.get('include_count') === 'true'
+
     const labels = await db.label.findMany({
       where: { projectId },
-      select: LABEL_SELECT,
+      select: {
+        ...LABEL_SELECT,
+        ...(includeCount && { _count: { select: { tickets: true } } }),
+      },
       orderBy: { name: 'asc' },
     })
 
