@@ -18,7 +18,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
-import { Settings2 } from 'lucide-react'
+import { Settings2, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DropZone, type TableContext, TicketTable } from '@/components/table'
 import { Button } from '@/components/ui/button'
@@ -624,6 +624,11 @@ export function BacklogTable({
     </SortableContext>
   )
 
+  // Compute story points totals
+  const filteredPoints = filteredTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
+  const totalPoints = tickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
+  const isFiltered = filteredTickets.length !== tickets.length
+
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
@@ -688,9 +693,44 @@ export function BacklogTable({
 
       {/* Footer */}
       <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-2 text-sm text-zinc-500">
-        <span>
-          {filteredTickets.length} of {tickets.length} tickets
-        </span>
+        <div className="flex items-center gap-4">
+          {/* Ticket count */}
+          <span>
+            {isFiltered ? (
+              <>
+                <span className="font-medium tabular-nums text-zinc-300">
+                  {filteredTickets.length}
+                </span>
+                <span className="text-zinc-600"> / </span>
+                <span className="tabular-nums">{tickets.length}</span>{' '}
+                {tickets.length === 1 ? 'issue' : 'issues'}
+              </>
+            ) : (
+              <>
+                <span className="font-medium tabular-nums text-zinc-300">{tickets.length}</span>{' '}
+                {tickets.length === 1 ? 'issue' : 'issues'}
+              </>
+            )}
+          </span>
+
+          {/* Story points */}
+          <div className="flex items-center gap-1.5 text-zinc-400">
+            <TrendingUp className="h-3.5 w-3.5" />
+            {isFiltered ? (
+              <>
+                <span className="font-medium tabular-nums">{filteredPoints}</span>
+                <span className="text-zinc-600"> / </span>
+                <span className="tabular-nums text-zinc-500">{totalPoints}</span>
+                <span className="text-zinc-600">pts</span>
+              </>
+            ) : (
+              <>
+                <span className="font-medium tabular-nums">{totalPoints}</span>
+                <span className="text-zinc-600">pts</span>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
