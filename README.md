@@ -130,7 +130,7 @@ AI:  Created PUNT-42: Login page not loading
    # Save the returned apiKey - it won't be shown again
    ```
 
-3. Add to your MCP client config (e.g., Claude Desktop):
+3. Add to your MCP client config (e.g., Claude Desktop `claude_desktop_config.json`):
    ```json
    {
      "mcpServers": {
@@ -146,6 +146,24 @@ AI:  Created PUNT-42: Login page not loading
      }
    }
    ```
+
+   For **Claude Code**, add a `.mcp.json` in the project root (it's gitignored — do not commit API keys):
+   ```json
+   {
+     "mcpServers": {
+       "punt": {
+         "type": "stdio",
+         "command": "pnpm",
+         "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
+         "env": {
+           "MCP_API_KEY": "your-api-key-here"
+         }
+       }
+     }
+   }
+   ```
+
+   > **Note:** The MCP server requires the PUNT dev server (`pnpm dev`) to be running on port 3000.
 
 ### Available Operations
 

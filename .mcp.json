@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "punt": {
-      "type": "stdio",
-      "command": "pnpm",
-      "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"]
-    }
-  }
-}
