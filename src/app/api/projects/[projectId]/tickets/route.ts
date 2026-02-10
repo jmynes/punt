@@ -11,7 +11,7 @@ import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { PERMISSIONS } from '@/lib/permissions'
 import { TICKET_SELECT_FULL, transformTicket } from '@/lib/prisma-selects'
-import type { IssueType, Priority } from '@/types'
+import { type IssueType, type Priority, RESOLUTIONS } from '@/types'
 
 const createTicketSchema = z.object({
   title: z.string().min(1),
@@ -25,6 +25,7 @@ const createTicketSchema = z.object({
   parentId: z.string().nullable().optional(),
   storyPoints: z.number().nullable().optional(),
   estimate: z.string().nullable().optional(),
+  resolution: z.enum(RESOLUTIONS).nullable().optional(),
   startDate: z
     .string()
     .nullable()
