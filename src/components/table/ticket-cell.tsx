@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { getStatusIcon } from '@/lib/status-icons'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import type { Resolution } from '@/types'
 import type { TicketCellProps } from './types'
 
 /**
@@ -56,7 +57,7 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
 
     case 'resolution':
       return ticket.resolution ? (
-        <ResolutionBadge resolution={ticket.resolution} />
+        <ResolutionBadge resolution={ticket.resolution as Resolution} />
       ) : (
         <span className="text-zinc-500">&mdash;</span>
       )
