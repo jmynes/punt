@@ -461,6 +461,18 @@ The `.mcp.json` file lives in the project root but is **gitignored** because it 
 }
 ```
 
+### Branch & PR Naming Convention
+
+**Branch names:** `type/punt-N-short-description`
+- Examples: `fix/punt-50-context-menu-click-passthrough`, `feat/punt-12-sprint-planning`, `docs/punt-51-branch-pr-naming-convention`
+- Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
+
+**PR titles:** Include the ticket key in the title.
+- Format: `type(scope): description (PUNT-N)`
+- Examples: `fix(board): resolve context menu click passthrough (PUNT-50)`, `feat(sprints): add sprint planning view (PUNT-12)`
+
+**Commit messages:** Same convention as PR titles when tied to a ticket.
+
 ### Debugging
 
 - Logger: `logger.debug()`, `logger.info()`, `logger.warn()`, `logger.error()`, `logger.measure()`
