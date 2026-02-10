@@ -12,6 +12,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { useTicketSearch } from '@/hooks/queries/use-tickets'
+import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getColumnIcon, TAILWIND_TO_HEX } from '@/lib/status-icons'
 import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -24,10 +25,13 @@ function ColumnBadge({ column }: { column: ColumnInfo }) {
   const { icon: Icon, color } = getColumnIcon(column.icon, column.name, column.color)
   // Resolve Tailwind class colors to inline styles so they survive CommandItem's selection override
   const resolvedColor = color?.startsWith('#') ? color : tailwindColorToHex(color)
+  // Only color the text label for "done" columns; others get neutral zinc
+  const isDone = isCompletedColumn(column.name)
+  const textColor = isDone ? resolvedColor : '#a1a1aa'
   return (
     <span className="flex items-center gap-1.5 ml-auto shrink-0">
       <Icon className="h-3 w-3" style={resolvedColor ? { color: resolvedColor } : undefined} />
-      <span className="text-xs" style={resolvedColor ? { color: resolvedColor } : undefined}>
+      <span className="text-xs" style={{ color: textColor }}>
         {column.name}
       </span>
     </span>
