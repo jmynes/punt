@@ -10,7 +10,8 @@ import {
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { TICKET_SELECT_FULL, transformTicket } from '@/lib/prisma-selects'
-import type { IssueType, Priority } from '@/types'
+import { isCompletedColumn } from '@/lib/sprint-utils'
+import { type IssueType, type Priority, RESOLUTIONS } from '@/types'
 
 const updateTicketSchema = z.object({
   title: z.string().min(1).optional(),
@@ -25,6 +26,7 @@ const updateTicketSchema = z.object({
   parentId: z.string().nullable().optional(),
   storyPoints: z.number().nullable().optional(),
   estimate: z.string().nullable().optional(),
+  resolution: z.enum(RESOLUTIONS).nullable().optional(),
   startDate: z
     .string()
     .nullable()
@@ -89,7 +91,14 @@ export async function PATCH(
     // Check if ticket exists and belongs to project, get creator for permission check
     const existingTicket = await db.ticket.findFirst({
       where: { id: ticketId, projectId },
-      select: { id: true, columnId: true, sprintId: true, creatorId: true },
+      select: {
+        id: true,
+        columnId: true,
+        sprintId: true,
+        creatorId: true,
+        resolution: true,
+        column: { select: { name: true } },
+      },
     })
 
     if (!existingTicket) {
@@ -170,6 +179,47 @@ export async function PATCH(
       dbUpdateData.priority = dbUpdateData.priority as Priority
     }
 
+    // Auto-couple resolution ↔ column status
+    if (dbUpdateData.columnId) {
+      const targetCol = await db.column.findUnique({
+        where: { id: dbUpdateData.columnId as string },
+        select: { name: true },
+      })
+      if (targetCol) {
+        if (
+          isCompletedColumn(targetCol.name) &&
+          !dbUpdateData.resolution &&
+          !existingTicket.resolution
+        ) {
+          // Moving to a "done" column → auto-set resolution to "Done"
+          dbUpdateData.resolution = 'Done'
+        } else if (
+          !isCompletedColumn(targetCol.name) &&
+          dbUpdateData.resolution === undefined &&
+          existingTicket.resolution
+        ) {
+          // Moving out of a "done" column to a non-done column → clear resolution
+          dbUpdateData.resolution = null
+        }
+      }
+    }
+
+    // Setting a resolution auto-moves ticket to first "done" column (if not already there)
+    if (dbUpdateData.resolution && !dbUpdateData.columnId) {
+      const currentColName = existingTicket.column.name
+      if (!isCompletedColumn(currentColName)) {
+        const allCols = await db.column.findMany({
+          where: { projectId },
+          orderBy: { order: 'asc' },
+          select: { id: true, name: true },
+        })
+        const doneColumn = allCols.find((c) => isCompletedColumn(c.name))
+        if (doneColumn) {
+          dbUpdateData.columnId = doneColumn.id
+        }
+      }
+    }
+
     // Handle labels relation
     if (labelIds !== undefined) {
       dbUpdateData.labels = {
@@ -206,7 +256,7 @@ export async function PATCH(
     // Emit real-time event for other clients
     // Use 'ticket.moved' if column changed, 'ticket.sprint_changed' if sprint changed, otherwise 'ticket.updated'
     // Include tabId from header so the originating tab can skip the event
-    const columnChanged = updateData.columnId && updateData.columnId !== existingTicket.columnId
+    const columnChanged = dbUpdateData.columnId && dbUpdateData.columnId !== existingTicket.columnId
     const sprintChanged =
       updateData.sprintId !== undefined && updateData.sprintId !== existingTicket.sprintId
     const tabId = request.headers.get('X-Tab-Id') || undefined

@@ -5,6 +5,7 @@ import {
   Bug,
   Calendar,
   Check,
+  CheckCircle2,
   CheckSquare,
   ChevronDown,
   ChevronsDown,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react'
 import type * as React from 'react'
 import { useMemo } from 'react'
+import { resolutionConfig } from '@/components/common/resolution-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -43,7 +45,7 @@ import { getStatusIcon } from '@/lib/status-icons'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
 import type { ColumnWithTickets, IssueType, Priority } from '@/types'
-import { ISSUE_TYPES } from '@/types'
+import { ISSUE_TYPES, RESOLUTIONS } from '@/types'
 
 // Type icons
 const typeIcons: Record<IssueType, React.ComponentType<{ className?: string }>> = {
@@ -99,6 +101,8 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
     setFilterByPriority,
     filterByStatus,
     setFilterByStatus,
+    filterByResolution,
+    setFilterByResolution,
     filterByAssignee,
     setFilterByAssignee,
     filterByLabels,
@@ -184,6 +188,7 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
     filterByType.length > 0 ||
     filterByPriority.length > 0 ||
     filterByStatus.length > 0 ||
+    filterByResolution.length > 0 ||
     filterByAssignee.length > 0 ||
     filterByLabels.length > 0 ||
     filterByPoints !== null ||
@@ -215,6 +220,14 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
       setFilterByStatus(filterByStatus.filter((s) => s !== statusId))
     } else {
       setFilterByStatus([...filterByStatus, statusId])
+    }
+  }
+
+  const toggleResolution = (resolution: string) => {
+    if (filterByResolution.includes(resolution)) {
+      setFilterByResolution(filterByResolution.filter((r) => r !== resolution))
+    } else {
+      setFilterByResolution([...filterByResolution, resolution])
     }
   }
 
@@ -794,6 +807,53 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
       }
     })
     .filter((btn): btn is React.ReactElement => Boolean(btn))
+
+  // Resolution filter - always visible, inserted after status
+  const resolutionFilter = (
+    <DropdownMenu key="resolution">
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="shrink-0">
+          <CheckCircle2 className="mr-2 h-4 w-4 text-green-400" />
+          Resolution
+          {filterByResolution.length > 0 && (
+            <Badge variant="secondary" className="ml-2">
+              {filterByResolution.length}
+            </Badge>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuLabel>Filter by resolution</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuCheckboxItem
+          checked={filterByResolution.includes('unresolved')}
+          onCheckedChange={() => toggleResolution('unresolved')}
+        >
+          <span className="mr-2 h-4 w-4 inline-block" />
+          Unresolved
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator />
+        {RESOLUTIONS.map((r) => {
+          const config = resolutionConfig[r]
+          const Icon = config.icon
+          return (
+            <DropdownMenuCheckboxItem
+              key={r}
+              checked={filterByResolution.includes(r)}
+              onCheckedChange={() => toggleResolution(r)}
+            >
+              <Icon className="mr-2 h-4 w-4" style={{ color: config.color }} />
+              {r}
+            </DropdownMenuCheckboxItem>
+          )
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
+  // Insert resolution filter right after status
+  const statusIdx = filterButtons.findIndex((btn) => btn.key === 'status')
+  filterButtons.splice(statusIdx >= 0 ? statusIdx + 1 : filterButtons.length, 0, resolutionFilter)
 
   // Labels filter - always visible (not tied to column visibility)
   const labelsFilter = (

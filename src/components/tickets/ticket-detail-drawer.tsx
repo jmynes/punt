@@ -77,6 +77,7 @@ import {
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
+import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
@@ -90,9 +91,10 @@ import type {
   TicketWithRelations,
   UploadedFileInfo,
 } from '@/types'
-import { ISSUE_TYPES, PRIORITIES } from '@/types'
+import { ISSUE_TYPES, PRIORITIES, RESOLUTIONS } from '@/types'
 import { InlineCodeText } from '../common/inline-code'
 import { PriorityBadge } from '../common/priority-badge'
+import { resolutionConfig } from '../common/resolution-badge'
 import { TypeBadge } from '../common/type-badge'
 import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
@@ -228,6 +230,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [tempEnvironment, setTempEnvironment] = useState('')
   const [tempAffectedVersion, setTempAffectedVersion] = useState('')
   const [tempFixVersion, setTempFixVersion] = useState('')
+  const [tempResolution, setTempResolution] = useState<string | null>(null)
   const [tempParentId, setTempParentId] = useState<string | null>(null)
   const [tempStatusId, setTempStatusId] = useState<string | null>(null)
   const [tempCreatorId, setTempCreatorId] = useState<string | null>(null)
@@ -284,6 +287,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setTempEstimate(ticket.estimate || '')
       setTempStartDate(ticket.startDate ? new Date(ticket.startDate) : null)
       setTempDueDate(ticket.dueDate ? new Date(ticket.dueDate) : null)
+      setTempResolution(ticket.resolution || null)
       setTempEnvironment(ticket.environment || '')
       setTempAffectedVersion(ticket.affectedVersion || '')
       setTempFixVersion(ticket.fixVersion || '')
@@ -332,6 +336,15 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       case 'status': {
         const columnId = value as string
         setTempStatusId(columnId)
+        // Auto-couple: moving to done column sets resolution, moving out clears it
+        const targetCol = columns.find((c) => c.id === columnId)
+        if (targetCol) {
+          if (isCompletedColumn(targetCol.name) && !tempResolution) {
+            setTempResolution('Done')
+          } else if (!isCompletedColumn(targetCol.name) && tempResolution) {
+            setTempResolution(null)
+          }
+        }
         break
       }
       case 'type': {
@@ -399,6 +412,21 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         setTempFixVersion(version)
         break
       }
+      case 'resolution': {
+        const resolution = value as string | null
+        setTempResolution(resolution)
+        // Auto-couple: setting a resolution moves to done column, clearing leaves in place
+        if (resolution) {
+          const currentCol = columns.find((c) => c.id === tempStatusId)
+          if (currentCol && !isCompletedColumn(currentCol.name)) {
+            const doneCol = columns.find((c) => isCompletedColumn(c.name))
+            if (doneCol) {
+              setTempStatusId(doneCol.id)
+            }
+          }
+        }
+        break
+      }
       case 'attachments':
         // Attachments would be handled separately in a real implementation
         return
@@ -430,6 +458,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
           ? (ticket.dueDate instanceof Date ? ticket.dueDate : new Date(ticket.dueDate)).getTime()
           : undefined) ||
       tempParentId !== ticket.parentId ||
+      tempResolution !== (ticket.resolution || null) ||
       tempEnvironment !== (ticket.environment || '') ||
       tempAffectedVersion !== (ticket.affectedVersion || '') ||
       tempFixVersion !== (ticket.fixVersion || '') ||
@@ -450,6 +479,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     tempStartDate,
     tempDueDate,
     tempParentId,
+    tempResolution,
     tempEnvironment,
     tempAffectedVersion,
     tempFixVersion,
@@ -519,6 +549,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     if (tempParentId !== ticket.parentId) {
       updates.parentId = tempParentId
     }
+    if (tempResolution !== (ticket.resolution || null)) {
+      updates.resolution = tempResolution
+    }
     if (tempEnvironment !== (ticket.environment || '')) {
       updates.environment = tempEnvironment || null
     }
@@ -562,6 +595,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     tempStartDate,
     tempDueDate,
     tempParentId,
+    tempResolution,
     tempEnvironment,
     tempAffectedVersion,
     tempFixVersion,
@@ -652,6 +686,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       case 'fixVersion':
         updates.fixVersion = tempFixVersion || null
         break
+      case 'resolution':
+        updates.resolution = tempResolution
+        break
       case 'parent':
         updates.parentId = tempParentId
         break
@@ -709,6 +746,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setTempEstimate(ticket.estimate || '')
       setTempStartDate(ticket.startDate ? new Date(ticket.startDate) : null)
       setTempDueDate(ticket.dueDate ? new Date(ticket.dueDate) : null)
+      setTempResolution(ticket.resolution || null)
       setTempEnvironment(ticket.environment || '')
       setTempAffectedVersion(ticket.affectedVersion || '')
       setTempFixVersion(ticket.fixVersion || '')
@@ -750,6 +788,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       estimate: ticket.estimate || '',
       startDate: ticket.startDate,
       dueDate: ticket.dueDate,
+      resolution: null,
       environment: ticket.environment || '',
       affectedVersion: ticket.affectedVersion || '',
       fixVersion: ticket.fixVersion || '',
@@ -1154,6 +1193,44 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   </Select>
                 </div>
 
+                {/* Resolution */}
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Resolution</Label>
+                  <Select
+                    value={tempResolution || 'none'}
+                    onValueChange={(value) =>
+                      handleChange('resolution', value === 'none' ? null : value)
+                    }
+                  >
+                    <SelectTrigger className="w-full h-10 bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+                      <SelectValue placeholder="Unresolved" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-700">
+                      <SelectItem value="none" className="focus:bg-zinc-800 focus:text-zinc-100">
+                        Unresolved
+                      </SelectItem>
+                      {RESOLUTIONS.map((resolution) => {
+                        const config = resolutionConfig[resolution]
+                        const Icon = config?.icon
+                        return (
+                          <SelectItem
+                            key={resolution}
+                            value={resolution}
+                            className="focus:bg-zinc-800 focus:text-zinc-100"
+                          >
+                            <span className="flex items-center gap-2">
+                              {Icon && (
+                                <Icon className="h-3.5 w-3.5" style={{ color: config.color }} />
+                              )}
+                              {resolution}
+                            </span>
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Parent Epic/Story */}
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Parent Epic / Story</Label>
@@ -1164,14 +1241,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   />
                 </div>
 
-                {/* Due Date */}
+                {/* Environment */}
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">Due Date</Label>
-                  <DatePicker
-                    value={tempDueDate}
-                    onChange={(value) => handleChange('dueDate', value)}
-                    placeholder="Set due date"
-                    context="ticket-form"
+                  <Label className="text-zinc-400">Environment</Label>
+                  <Input
+                    value={tempEnvironment}
+                    onChange={(e) => handleChange('environment', e.target.value)}
+                    placeholder="e.g., Production, Staging"
+                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
                   />
                 </div>
 
@@ -1186,14 +1263,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   />
                 </div>
 
-                {/* Environment */}
+                {/* Due Date */}
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">Environment</Label>
-                  <Input
-                    value={tempEnvironment}
-                    onChange={(e) => handleChange('environment', e.target.value)}
-                    placeholder="e.g., Production, Staging"
-                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
+                  <Label className="text-zinc-400">Due Date</Label>
+                  <DatePicker
+                    value={tempDueDate}
+                    onChange={(value) => handleChange('dueDate', value)}
+                    placeholder="Set due date"
+                    context="ticket-form"
                   />
                 </div>
 

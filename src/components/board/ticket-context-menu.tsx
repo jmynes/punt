@@ -3,6 +3,7 @@
 import {
   CalendarMinus,
   CalendarPlus,
+  CheckCircle2,
   ChevronRight,
   ClipboardCopy,
   ClipboardPaste,
@@ -27,6 +28,7 @@ import {
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { PriorityBadge } from '@/components/common/priority-badge'
+import { resolutionConfig } from '@/components/common/resolution-badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +45,7 @@ import { updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { pasteTickets } from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
+import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketIds } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -52,7 +55,8 @@ import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
-import type { ColumnWithTickets, SprintSummary, TicketWithRelations } from '@/types'
+import type { ColumnWithTickets, Resolution, SprintSummary, TicketWithRelations } from '@/types'
+import { RESOLUTIONS } from '@/types'
 
 type MenuProps = {
   ticket: TicketWithRelations
@@ -107,7 +111,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const multi = selectedIds.length > 1
   const [submenu, setSubmenu] = useState<null | {
-    id: 'priority' | 'assign' | 'send' | 'points' | 'sprint'
+    id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution'
     anchor: { x: number; y: number; height: number; left: number }
   }>(null)
 
@@ -442,6 +446,73 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       updates.length === 1 ? 'Priority updated' : `${updates.length} priorities updated`,
       { description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '), duration: 3000 },
     )
+    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+    undoState.pushUpdate(projectId, updates, toastId)
+
+    setOpen(false)
+    setSubmenu(null)
+  }
+
+  const doResolution = (resolution: Resolution | null) => {
+    const updateTicket = board.updateTicket || (() => {})
+    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
+      []
+
+    // Find the first done column for auto-coupling
+    const doneCol = columns.find((c: ColumnWithTickets) => isCompletedColumn(c.name))
+
+    for (const id of selectedIds) {
+      const current = columns
+        .flatMap((c: ColumnWithTickets) => c.tickets)
+        .find((t: TicketWithRelations) => t.id === id)
+      if (!current || current.resolution === resolution) continue
+
+      // Auto-couple: setting resolution moves to done column, clearing it moves out
+      const currentCol = columns.find((c: ColumnWithTickets) => c.id === current.columnId)
+      const needsMove = resolution && currentCol && !isCompletedColumn(currentCol.name) && doneCol
+      const needsClear = !resolution && currentCol && isCompletedColumn(currentCol.name)
+
+      const after: TicketWithRelations = {
+        ...current,
+        resolution,
+        ...(needsMove && doneCol ? { columnId: doneCol.id } : {}),
+        ...(needsClear ? { resolution: null } : {}),
+      }
+      updates.push({ ticketId: id, before: current, after })
+      updateTicket(projectId, id, {
+        resolution,
+        ...(needsMove && doneCol ? { columnId: doneCol.id } : {}),
+      })
+    }
+    if (updates.length === 0) return // Persist to database (API handles auto-coupling)
+    ;(async () => {
+      try {
+        for (const update of updates) {
+          await updateTicketAPI(projectId, update.ticketId, { resolution })
+        }
+      } catch (err) {
+        console.error('Failed to persist resolution update:', err)
+      }
+    })()
+
+    const ticketKeys = formatTicketIds(
+      columns,
+      updates.map((u) => u.ticketId),
+    )
+
+    const msg =
+      updates.length === 1
+        ? resolution
+          ? `Resolution set to ${resolution}`
+          : 'Resolution cleared'
+        : resolution
+          ? `${updates.length} tickets set to ${resolution}`
+          : `Resolution cleared from ${updates.length} tickets`
+
+    const toastId = toast.success(msg, {
+      description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+      duration: 3000,
+    })
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushUpdate(projectId, updates, toastId)
 
@@ -876,7 +947,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   )
 
   const openSubmenu =
-    (id: 'priority' | 'assign' | 'send' | 'points' | 'sprint') => (e: React.MouseEvent) => {
+    (id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution') =>
+    (e: React.MouseEvent) => {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
       setSubmenu({
         id,
@@ -936,6 +1008,12 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
               label="Status"
               trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
               onMouseEnter={openSubmenu('send')}
+            />
+            <MenuButton
+              icon={<CheckCircle2 className="h-4 w-4" />}
+              label="Resolution"
+              trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+              onMouseEnter={openSubmenu('resolution')}
             />
 
             <MenuSection title="Sprint">
@@ -1105,6 +1183,46 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                         </button>
                       )
                     })}
+
+                  {submenu.id === 'resolution' &&
+                    (() => {
+                      const ticketCol = columns.find(
+                        (c: ColumnWithTickets) => c.id === ticket.columnId,
+                      )
+                      const inDoneColumn = ticketCol && isCompletedColumn(ticketCol.name)
+                      return (
+                        <>
+                          {RESOLUTIONS.map((r) => {
+                            const config = resolutionConfig[r]
+                            const Icon = config.icon
+                            return (
+                              <button
+                                key={r}
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                                onClick={() => doResolution(r)}
+                              >
+                                <Icon className="h-4 w-4" style={{ color: config.color }} />
+                                <span>{r}</span>
+                              </button>
+                            )
+                          })}
+                          {!inDoneColumn && (
+                            <>
+                              <div className="my-1 border-t border-zinc-800" />
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                                onClick={() => doResolution(null)}
+                              >
+                                <CheckCircle2 className="h-4 w-4 text-zinc-500" />
+                                <span className="text-zinc-400">Unresolved</span>
+                              </button>
+                            </>
+                          )}
+                        </>
+                      )
+                    })()}
 
                   {submenu.id === 'points' && (
                     <>

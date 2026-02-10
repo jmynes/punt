@@ -22,10 +22,12 @@ import {
   type IssueType,
   type LabelSummary,
   type Priority,
+  RESOLUTIONS,
   type SprintSummary,
   type TicketFormData,
   type UploadedFileInfo,
 } from '@/types'
+import { resolutionConfig } from '../common/resolution-badge'
 import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
 import { DescriptionEditor } from './description-editor'
@@ -349,6 +351,41 @@ export function TicketForm({
 
       {/* Additional Fields Accordion */}
       <Accordion title="Additional Fields" scrollTo="bottom">
+        {/* Resolution */}
+        <div className="space-y-2">
+          <Label className="text-zinc-300">Resolution</Label>
+          <Select
+            value={data.resolution || 'none'}
+            onValueChange={(v) => updateField('resolution', v === 'none' ? null : v)}
+            disabled={disabled}
+          >
+            <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 text-zinc-100 focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+              <SelectValue placeholder="Unresolved" />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-700">
+              <SelectItem value="none" className="focus:bg-zinc-800 focus:text-zinc-100">
+                Unresolved
+              </SelectItem>
+              {RESOLUTIONS.map((resolution) => {
+                const config = resolutionConfig[resolution]
+                const Icon = config?.icon
+                return (
+                  <SelectItem
+                    key={resolution}
+                    value={resolution}
+                    className="focus:bg-zinc-800 focus:text-zinc-100"
+                  >
+                    <span className="flex items-center gap-2">
+                      {Icon && <Icon className="h-3.5 w-3.5" style={{ color: config.color }} />}
+                      {resolution}
+                    </span>
+                  </SelectItem>
+                )
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Environment */}
         <div className="space-y-2">
           <Label htmlFor="environment" className="text-zinc-300">

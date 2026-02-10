@@ -7,6 +7,7 @@ import { Calendar, GripVertical, MessageSquare, Paperclip, User } from 'lucide-r
 import { useEffect, useState } from 'react'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
+import { ResolutionBadge } from '@/components/common/resolution-badge'
 import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -14,7 +15,7 @@ import { Card } from '@/components/ui/card'
 import { cn, getAvatarColor, getInitials, getLabelStyles } from '@/lib/utils'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
-import type { IssueType, Priority, TicketWithRelations } from '@/types'
+import type { IssueType, Priority, Resolution, TicketWithRelations } from '@/types'
 import { TicketContextMenu } from './ticket-context-menu'
 
 interface KanbanCardProps {
@@ -131,23 +132,6 @@ export function KanbanCard({
             <InlineCodeText text={ticket.title} />
           </h4>
 
-          {/* Resolution badge */}
-          {ticket.resolution && (
-            <div className="mb-2">
-              <Badge
-                variant="outline"
-                className={cn(
-                  'text-[10px] px-1.5 py-0',
-                  ticket.resolution === 'Done'
-                    ? 'border-green-600 bg-green-900/30 text-green-400'
-                    : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
-                )}
-              >
-                {ticket.resolution}
-              </Badge>
-            </div>
-          )}
-
           {/* Labels */}
           {ticket.labels.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
@@ -220,28 +204,33 @@ export function KanbanCard({
               </div>
             </div>
 
-            {/* Assignee (right side) */}
-            {ticket.assignee ? (
-              <Avatar className="h-5 w-5" title={ticket.assignee.name}>
-                <AvatarImage src={ticket.assignee.avatar || undefined} />
-                <AvatarFallback
-                  className="text-white text-[10px] font-medium"
-                  style={{
-                    backgroundColor:
-                      ticket.assignee.avatarColor ||
-                      getAvatarColor(ticket.assignee.id || ticket.assignee.name),
-                  }}
-                >
-                  {getInitials(ticket.assignee.name)}
-                </AvatarFallback>
-              </Avatar>
-            ) : (
-              <Avatar className="h-5 w-5" title="Unassigned">
-                <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
-                  <User className="h-3 w-3 text-zinc-500" />
-                </AvatarFallback>
-              </Avatar>
-            )}
+            {/* Right side: Resolution badge + Assignee */}
+            <div className="flex items-center gap-2">
+              {ticket.resolution && ticket.resolution !== 'Done' && (
+                <ResolutionBadge resolution={ticket.resolution as Resolution} size="sm" />
+              )}
+              {ticket.assignee ? (
+                <Avatar className="h-5 w-5" title={ticket.assignee.name}>
+                  <AvatarImage src={ticket.assignee.avatar || undefined} />
+                  <AvatarFallback
+                    className="text-white text-[10px] font-medium"
+                    style={{
+                      backgroundColor:
+                        ticket.assignee.avatarColor ||
+                        getAvatarColor(ticket.assignee.id || ticket.assignee.name),
+                    }}
+                  >
+                    {getInitials(ticket.assignee.name)}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <Avatar className="h-5 w-5" title="Unassigned">
+                  <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
+                    <User className="h-3 w-3 text-zinc-500" />
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
           </div>
         </div>
       </Card>

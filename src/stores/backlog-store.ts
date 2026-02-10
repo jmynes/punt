@@ -8,6 +8,7 @@ export const BACKLOG_COLUMNS = [
   'title',
   'status',
   'priority',
+  'resolution',
   'assignee',
   'reporter',
   'labels',
@@ -38,6 +39,14 @@ export const DEFAULT_COLUMNS: BacklogColumn[] = [
   { id: 'title', label: 'Summary', width: 300, minWidth: 200, visible: true, sortable: true },
   { id: 'status', label: 'Status', width: 120, minWidth: 100, visible: true, sortable: true },
   { id: 'priority', label: 'Priority', width: 100, minWidth: 80, visible: true, sortable: true },
+  {
+    id: 'resolution',
+    label: 'Resolution',
+    width: 120,
+    minWidth: 90,
+    visible: false,
+    sortable: true,
+  },
   { id: 'assignee', label: 'Assignee', width: 140, minWidth: 100, visible: true, sortable: true },
   { id: 'reporter', label: 'Reporter', width: 140, minWidth: 100, visible: false, sortable: true },
   { id: 'labels', label: 'Labels', width: 150, minWidth: 100, visible: false, sortable: false },
@@ -85,6 +94,8 @@ interface BacklogState {
   setFilterByPriority: (priorities: string[]) => void
   filterByStatus: string[]
   setFilterByStatus: (statusIds: string[]) => void
+  filterByResolution: string[]
+  setFilterByResolution: (resolutions: string[]) => void
   filterByAssignee: string[]
   setFilterByAssignee: (assignees: string[]) => void
   filterByLabels: string[]
@@ -172,6 +183,8 @@ export const useBacklogStore = create<BacklogState>()(
       setFilterByPriority: (priorities) => set({ filterByPriority: priorities }),
       filterByStatus: [],
       setFilterByStatus: (statusIds) => set({ filterByStatus: statusIds }),
+      filterByResolution: [],
+      setFilterByResolution: (resolutions) => set({ filterByResolution: resolutions }),
       filterByAssignee: [],
       setFilterByAssignee: (assignees) => set({ filterByAssignee: assignees }),
       filterByLabels: [],
@@ -194,6 +207,7 @@ export const useBacklogStore = create<BacklogState>()(
           filterByType: [],
           filterByPriority: [],
           filterByStatus: [],
+          filterByResolution: [],
           filterByAssignee: [],
           filterByLabels: [],
           filterBySprint: null,

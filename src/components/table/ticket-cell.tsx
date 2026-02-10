@@ -4,6 +4,7 @@ import { format, isBefore, isToday } from 'date-fns'
 import { User } from 'lucide-react'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
+import { ResolutionBadge } from '@/components/common/resolution-badge'
 import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -52,6 +53,13 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
 
     case 'priority':
       return <PriorityBadge priority={ticket.priority} showLabel />
+
+    case 'resolution':
+      return ticket.resolution ? (
+        <ResolutionBadge resolution={ticket.resolution} />
+      ) : (
+        <span className="text-zinc-500">&mdash;</span>
+      )
 
     case 'assignee':
       return ticket.assignee ? (

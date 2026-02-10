@@ -34,6 +34,10 @@ function formatTicket(ticket: TicketData, projectKey?: string): string {
     lines.push(`| Sprint | ${ticket.sprint.name} (${ticket.sprint.status}) |`)
   }
 
+  if (ticket.resolution) {
+    lines.push(`| Resolution | ${ticket.resolution} |`)
+  }
+
   if (ticket.storyPoints !== null) {
     lines.push(`| Story Points | ${ticket.storyPoints} |`)
   }
@@ -210,6 +214,11 @@ export function registerTicketTools(server: McpServer) {
       dueDate: z.string().optional().describe('Due date (ISO format: YYYY-MM-DD)'),
       labels: z.array(z.string()).optional().describe('Label names to assign'),
       sprint: z.string().optional().describe('Sprint name to assign to'),
+      resolution: z
+        .enum(['Done', "Won't Fix", 'Duplicate', 'Cannot Reproduce', 'Incomplete', "Won't Do"])
+        .nullable()
+        .optional()
+        .describe('Resolution (e.g., "Done", "Won\'t Fix", "Duplicate")'),
       environment: z.string().optional().describe('Environment (e.g., "Production")'),
       affectedVersion: z.string().optional().describe('Affected version'),
       fixVersion: z.string().optional().describe('Fix version'),
@@ -229,6 +238,7 @@ export function registerTicketTools(server: McpServer) {
       dueDate,
       labels,
       sprint,
+      resolution,
       environment,
       affectedVersion,
       fixVersion,
@@ -334,6 +344,7 @@ export function registerTicketTools(server: McpServer) {
         sprintId: sprintId || null,
         storyPoints: storyPoints || null,
         estimate: estimate || null,
+        resolution: resolution || null,
         startDate: startDate || null,
         dueDate: dueDate || null,
         environment: environment || null,
@@ -375,6 +386,11 @@ export function registerTicketTools(server: McpServer) {
       labels: z.array(z.string()).optional().describe('Label names (replaces existing)'),
       column: z.string().optional().describe('Move to column'),
       sprint: z.string().nullable().optional().describe('Sprint name (null for backlog)'),
+      resolution: z
+        .enum(['Done', "Won't Fix", 'Duplicate', 'Cannot Reproduce', 'Incomplete', "Won't Do"])
+        .nullable()
+        .optional()
+        .describe('Resolution'),
       environment: z.string().nullable().optional().describe('Environment'),
       affectedVersion: z.string().nullable().optional().describe('Affected version'),
       fixVersion: z.string().nullable().optional().describe('Fix version'),
@@ -393,6 +409,7 @@ export function registerTicketTools(server: McpServer) {
       labels,
       column,
       sprint,
+      resolution,
       environment,
       affectedVersion,
       fixVersion,
@@ -424,6 +441,7 @@ export function registerTicketTools(server: McpServer) {
       if (estimate !== undefined) updateData.estimate = estimate
       if (startDate !== undefined) updateData.startDate = startDate
       if (dueDate !== undefined) updateData.dueDate = dueDate
+      if (resolution !== undefined) updateData.resolution = resolution
       if (environment !== undefined) updateData.environment = environment
       if (affectedVersion !== undefined) updateData.affectedVersion = affectedVersion
       if (fixVersion !== undefined) updateData.fixVersion = fixVersion

@@ -64,6 +64,7 @@ export function BacklogTable({
     filterByType,
     filterByPriority,
     filterByStatus,
+    filterByResolution,
     filterByAssignee,
     filterByLabels,
     filterBySprint,
@@ -181,6 +182,16 @@ export function BacklogTable({
     // Status filter
     if (filterByStatus.length > 0) {
       result = result.filter((t) => filterByStatus.includes(t.columnId))
+    }
+
+    // Resolution filter
+    if (filterByResolution.length > 0) {
+      result = result.filter((t) => {
+        if (filterByResolution.includes('unresolved')) {
+          if (!t.resolution) return true
+        }
+        return t.resolution && filterByResolution.includes(t.resolution)
+      })
     }
 
     // Assignee filter
@@ -398,6 +409,7 @@ export function BacklogTable({
     filterByLabels.length,
     filterByStatus.includes,
     filterByStatus.length,
+    filterByResolution,
   ])
 
   const visibleColumns = columns.filter((c) => c.visible)

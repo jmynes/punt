@@ -59,6 +59,17 @@ export const LINK_TYPES = [
 ] as const
 export type LinkType = (typeof LINK_TYPES)[number]
 
+// Resolution values for closed/done tickets
+export const RESOLUTIONS = [
+  'Done',
+  "Won't Fix",
+  'Duplicate',
+  'Cannot Reproduce',
+  'Incomplete',
+  "Won't Do",
+] as const
+export type Resolution = (typeof RESOLUTIONS)[number]
+
 // Sprint status constants
 export const SPRINT_STATUSES = ['planning', 'active', 'completed'] as const
 export type SprintStatus = (typeof SPRINT_STATUSES)[number]
@@ -165,6 +176,7 @@ export interface TicketWithRelations {
   estimate: string | null
   startDate: Date | null
   dueDate: Date | null
+  resolution: string | null
   environment: string | null
   affectedVersion: string | null
   fixVersion: string | null
@@ -252,6 +264,7 @@ export interface TicketFormData {
   estimate: string
   startDate: Date | null
   dueDate: Date | null
+  resolution: string | null
   environment: string
   affectedVersion: string
   fixVersion: string
@@ -275,6 +288,7 @@ export const DEFAULT_TICKET_FORM: TicketFormData = {
   estimate: '',
   startDate: null,
   dueDate: null,
+  resolution: null,
   environment: '',
   affectedVersion: '',
   fixVersion: '',
