@@ -80,7 +80,7 @@ export default function AdminSettingsPage() {
             )}
           >
             <Shield className="h-4 w-4" />
-            Roles
+            Default Roles
           </Link>
           <Link
             href="/admin/settings?tab=database"
