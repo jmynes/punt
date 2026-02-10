@@ -45,6 +45,7 @@ export interface CreateTicketInput {
   estimate?: string | null
   startDate?: Date | null
   dueDate?: Date | null
+  resolution?: string | null
   labelIds?: string[]
   parentId?: string | null
 }
@@ -63,6 +64,7 @@ export interface UpdateTicketInput {
   estimate?: string | null
   startDate?: Date | null
   dueDate?: Date | null
+  resolution?: string | null
   labelIds?: string[]
 }
 
@@ -175,6 +177,11 @@ export interface SprintSettings {
 // Data Provider Interface
 // ============================================================================
 
+export interface SearchTicketsParams {
+  query: string
+  limit?: number
+}
+
 export interface DataProvider {
   // Projects
   getProjects(): Promise<ProjectSummary[]>
@@ -189,6 +196,7 @@ export interface DataProvider {
   // Tickets
   getTickets(projectId: string): Promise<TicketWithRelations[]>
   getTicket(projectId: string, ticketId: string): Promise<TicketWithRelations | null>
+  searchTickets(projectId: string, params: SearchTicketsParams): Promise<TicketWithRelations[]>
   createTicket(projectId: string, data: CreateTicketInput): Promise<TicketWithRelations>
   updateTicket(
     projectId: string,

@@ -86,6 +86,7 @@ export type {
   ProjectSummary,
   ProjectWithDetails,
   RoleSummary,
+  SearchTicketsParams,
   SprintSettings,
   StartSprintInput,
   UpdateLabelInput,

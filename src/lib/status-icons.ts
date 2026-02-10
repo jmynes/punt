@@ -106,7 +106,7 @@ export function resolveColumnIconName(
 
 // Map Tailwind text color classes to hex values for the color picker.
 // Uses LABEL_COLORS preset values where possible so the swatch gets highlighted.
-const TAILWIND_TO_HEX: Record<string, string> = {
+export const TAILWIND_TO_HEX: Record<string, string> = {
   'text-zinc-400': '#64748b', // slate preset
   'text-zinc-500': '#78716c', // stone preset
   'text-blue-300': '#3b82f6', // blue preset
