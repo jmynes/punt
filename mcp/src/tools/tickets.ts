@@ -95,7 +95,7 @@ function formatTicketList(tickets: TicketData[], projectKey?: string): string {
     const title = t.title.length > 45 ? `${t.title.slice(0, 45)}...` : t.title
     const sprint = t.sprint?.name || '-'
     const assignee = t.assignee?.name || '-'
-    const points = t.storyPoints ?? 1
+    const points = t.storyPoints ?? '-'
 
     lines.push(
       `| ${key} | ${title} | ${t.type} | ${t.priority} | ${t.column.name} | ${sprint} | ${assignee} | ${points} |`,

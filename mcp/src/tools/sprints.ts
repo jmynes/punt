@@ -51,7 +51,7 @@ function formatSprint(sprint: SprintData, projectKey?: string): string {
       const key = projectKey ? `${projectKey}-${t.number}` : `#${t.number}`
       const title = t.title.length > 35 ? `${t.title.slice(0, 35)}...` : t.title
       const assignee = t.assignee?.name || '-'
-      const points = t.storyPoints ?? 1
+      const points = t.storyPoints ?? '-'
 
       lines.push(
         `| ${key} | ${title} | ${t.type} | ${t.priority} | ${t.column.name} | ${assignee} | ${points} |`,
