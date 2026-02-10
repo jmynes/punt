@@ -12,10 +12,26 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { useTicketSearch } from '@/hooks/queries/use-tickets'
+import { getColumnIcon } from '@/lib/status-icons'
 import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { TicketWithRelations } from '@/types'
+
+type ColumnInfo = { name: string; icon?: string | null; color?: string | null }
+
+function ColumnBadge({ column }: { column: ColumnInfo }) {
+  const { icon: Icon, color } = getColumnIcon(column.icon, column.name, column.color)
+  const isHex = color?.startsWith('#')
+  return (
+    <span className="flex items-center gap-1.5 ml-auto shrink-0">
+      <Icon className={cn('h-3 w-3', !isHex && color)} style={isHex ? { color } : undefined} />
+      <span className={cn('text-xs', !isHex && color)} style={isHex ? { color } : undefined}>
+        {column.name}
+      </span>
+    </span>
+  )
+}
 
 interface TicketSearchProps {
   projectId: string
@@ -78,9 +94,8 @@ export function TicketSearch({ projectId, projectKey }: TicketSearchProps) {
     [setActiveTicketId],
   )
 
-  const getColumnName = useCallback((ticket: TicketWithRelations) => {
-    const col = (ticket as TicketWithRelations & { column?: { name: string } }).column
-    return col?.name || ''
+  const getColumn = useCallback((ticket: TicketWithRelations) => {
+    return (ticket as TicketWithRelations & { column?: ColumnInfo }).column ?? null
   }, [])
 
   return (
@@ -105,25 +120,24 @@ export function TicketSearch({ projectId, projectKey }: TicketSearchProps) {
           <CommandEmpty>No tickets found for "{debouncedQuery}"</CommandEmpty>
         ) : results && results.length > 0 ? (
           <CommandGroup heading="Tickets">
-            {results.map((ticket) => (
-              <CommandItem
-                key={ticket.id}
-                value={`${projectKey}-${ticket.number} ${ticket.title}`}
-                onSelect={() => handleSelect(ticket)}
-                className="flex items-center gap-3 py-2.5 cursor-pointer"
-              >
-                <TypeBadge type={ticket.type} size="sm" />
-                <span className="shrink-0 text-xs font-mono text-zinc-500">
-                  {projectKey}-{ticket.number}
-                </span>
-                <span className="truncate text-sm text-zinc-200">{ticket.title}</span>
-                {getColumnName(ticket) && (
-                  <span className="ml-auto shrink-0 text-xs text-zinc-600">
-                    {getColumnName(ticket)}
+            {results.map((ticket) => {
+              const column = getColumn(ticket)
+              return (
+                <CommandItem
+                  key={ticket.id}
+                  value={`${projectKey}-${ticket.number} ${ticket.title}`}
+                  onSelect={() => handleSelect(ticket)}
+                  className="flex items-center gap-3 py-2.5 cursor-pointer"
+                >
+                  <TypeBadge type={ticket.type} size="sm" />
+                  <span className="shrink-0 text-xs font-mono text-zinc-400">
+                    {projectKey}-{ticket.number}
                   </span>
-                )}
-              </CommandItem>
-            ))}
+                  <span className="truncate text-sm text-zinc-200">{ticket.title}</span>
+                  {column && <ColumnBadge column={column} />}
+                </CommandItem>
+              )
+            })}
           </CommandGroup>
         ) : null}
       </CommandList>
@@ -191,9 +205,8 @@ export function GlobalTicketSearch() {
     [setActiveTicketId],
   )
 
-  const getColumnName = useCallback((ticket: TicketWithRelations) => {
-    const col = (ticket as TicketWithRelations & { column?: { name: string } }).column
-    return col?.name || ''
+  const getColumn = useCallback((ticket: TicketWithRelations) => {
+    return (ticket as TicketWithRelations & { column?: ColumnInfo }).column ?? null
   }, [])
 
   const projectKey = currentProject?.key || ''
@@ -258,25 +271,24 @@ export function GlobalTicketSearch() {
             <CommandEmpty>No tickets found for "{debouncedQuery}"</CommandEmpty>
           ) : results && results.length > 0 ? (
             <CommandGroup heading="Tickets">
-              {results.map((ticket) => (
-                <CommandItem
-                  key={ticket.id}
-                  value={`${projectKey}-${ticket.number} ${ticket.title}`}
-                  onSelect={() => handleSelect(ticket)}
-                  className="flex items-center gap-3 py-2.5 cursor-pointer"
-                >
-                  <TypeBadge type={ticket.type} size="sm" />
-                  <span className="shrink-0 text-xs font-mono text-zinc-500">
-                    {projectKey}-{ticket.number}
-                  </span>
-                  <span className="truncate text-sm text-zinc-200">{ticket.title}</span>
-                  {getColumnName(ticket) && (
-                    <span className="ml-auto shrink-0 text-xs text-zinc-600">
-                      {getColumnName(ticket)}
+              {results.map((ticket) => {
+                const column = getColumn(ticket)
+                return (
+                  <CommandItem
+                    key={ticket.id}
+                    value={`${projectKey}-${ticket.number} ${ticket.title}`}
+                    onSelect={() => handleSelect(ticket)}
+                    className="flex items-center gap-3 py-2.5 cursor-pointer"
+                  >
+                    <TypeBadge type={ticket.type} size="sm" />
+                    <span className="shrink-0 text-xs font-mono text-zinc-400">
+                      {projectKey}-{ticket.number}
                     </span>
-                  )}
-                </CommandItem>
-              ))}
+                    <span className="truncate text-sm text-zinc-200">{ticket.title}</span>
+                    {column && <ColumnBadge column={column} />}
+                  </CommandItem>
+                )
+              })}
             </CommandGroup>
           ) : null}
         </CommandList>

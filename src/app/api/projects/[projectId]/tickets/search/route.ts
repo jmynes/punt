@@ -23,7 +23,7 @@ export async function GET(
     await requireMembership(user.id, projectId)
 
     const { searchParams } = new URL(request.url)
-    const query = searchParams.get('q')?.trim() || ''
+    const query = searchParams.get('q')?.trim().slice(0, 200) || ''
     const limit = Math.min(Number(searchParams.get('limit')) || 20, 50)
 
     if (!query) {
@@ -50,6 +50,9 @@ export async function GET(
       ticketNumber = Number.parseInt(query, 10)
     }
 
+    // Escape LIKE wildcards (% and _) so they're treated as literal characters
+    const escapedQuery = query.replace(/%/g, '\\%').replace(/_/g, '\\_')
+
     // Search using Prisma contains (maps to SQLite LIKE, case-insensitive by default)
     const tickets = await db.ticket.findMany({
       where: {
@@ -58,9 +61,9 @@ export async function GET(
           // Match by ticket number (exact)
           ...(ticketNumber !== null ? [{ number: ticketNumber }] : []),
           // Match by title (LIKE)
-          { title: { contains: query } },
+          { title: { contains: escapedQuery } },
           // Match by description (LIKE)
-          { description: { contains: query } },
+          { description: { contains: escapedQuery } },
         ],
       },
       select: TICKET_SELECT_FULL,

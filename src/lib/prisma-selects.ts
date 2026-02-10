@@ -102,7 +102,7 @@ export const TICKET_SELECT_FULL = {
   carriedFromSprintId: true,
   carriedOverCount: true,
   column: {
-    select: { id: true, name: true },
+    select: { id: true, name: true, icon: true, color: true },
   },
   project: {
     select: { id: true, key: true, name: true },
