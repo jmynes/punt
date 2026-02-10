@@ -195,21 +195,14 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     setAdjustedSubmenuCoords({ x, y })
   }, [submenu])
 
-  // Close on outside click / escape
+  // Close on escape key
   useEffect(() => {
     if (!open) return
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
-    document.addEventListener('mousedown', handleClick)
     document.addEventListener('keydown', handleEsc)
     return () => {
-      document.removeEventListener('mousedown', handleClick)
       document.removeEventListener('keydown', handleEsc)
     }
   }, [open])
@@ -893,292 +886,309 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const closeSubmenu = () => setSubmenu(null)
 
+  // Handle backdrop click: close menu without propagating to elements behind
+  const handleBackdropMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setOpen(false)
+  }, [])
+
   // Render portal content only after mount to avoid hydration mismatch
   let portalContent: ReactNode = null
   if (isMounted && open) {
     portalContent = createPortal(
-      <div
-        ref={menuRef}
-        className="z-[200] min-w-[220px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
-        style={{ position: 'fixed', left: adjustedCoords.x, top: adjustedCoords.y }}
-      >
-        <div className="py-1 text-sm text-zinc-200 relative">
-          <div className="px-3 pb-1 pt-2 text-xs uppercase text-zinc-500">
-            {multi ? `Modify ${selectedIds.length} Tasks` : 'Modify Task'}
-          </div>
-          <MenuButton
-            icon={<UserIcon className="h-4 w-4" />}
-            label="Assign"
-            trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-            onMouseEnter={openSubmenu('assign')}
-          />
-          <MenuButton
-            icon={<UserCheck className="h-4 w-4" />}
-            label="Priority"
-            trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-            onMouseEnter={openSubmenu('priority')}
-          />
-          <MenuButton
-            icon={<Hash className="h-4 w-4" />}
-            label="Points"
-            trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-            onMouseEnter={openSubmenu('points')}
-          />
-          <MenuButton
-            icon={<Send className="h-4 w-4" />}
-            label="Status"
-            trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-            onMouseEnter={openSubmenu('send')}
-          />
+      <>
+        {/* Invisible backdrop to block clicks on elements behind the menu */}
+        <div
+          className="fixed inset-0 z-[199]"
+          onMouseDown={handleBackdropMouseDown}
+          role="presentation"
+        />
+        <div
+          ref={menuRef}
+          className="z-[200] min-w-[220px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
+          style={{ position: 'fixed', left: adjustedCoords.x, top: adjustedCoords.y }}
+        >
+          <div className="py-1 text-sm text-zinc-200 relative">
+            <div className="px-3 pb-1 pt-2 text-xs uppercase text-zinc-500">
+              {multi ? `Modify ${selectedIds.length} Tasks` : 'Modify Task'}
+            </div>
+            <MenuButton
+              icon={<UserIcon className="h-4 w-4" />}
+              label="Assign"
+              trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+              onMouseEnter={openSubmenu('assign')}
+            />
+            <MenuButton
+              icon={<UserCheck className="h-4 w-4" />}
+              label="Priority"
+              trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+              onMouseEnter={openSubmenu('priority')}
+            />
+            <MenuButton
+              icon={<Hash className="h-4 w-4" />}
+              label="Points"
+              trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+              onMouseEnter={openSubmenu('points')}
+            />
+            <MenuButton
+              icon={<Send className="h-4 w-4" />}
+              label="Status"
+              trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+              onMouseEnter={openSubmenu('send')}
+            />
 
-          <MenuSection title="Sprint">
-            {/* Show Remove from Sprint if any selected ticket is in a sprint */}
-            {selectedIds.some((id: string) => {
-              const t = columns
-                .flatMap((c: ColumnWithTickets) => c.tickets)
-                .find((t: TicketWithRelations) => t.id === id)
-              return t?.sprintId
-            }) && (
-              <MenuButton
-                icon={<CalendarMinus className="h-4 w-4" />}
-                label="Remove from Sprint"
-                onMouseEnter={closeSubmenu}
-                onClick={doRemoveFromSprint}
-              />
-            )}
-            {/* Show Add to Sprint if available sprints exist */}
-            {availableSprints.length > 0 &&
-              (availableSprints.length === 1 ? (
+            <MenuSection title="Sprint">
+              {/* Show Remove from Sprint if any selected ticket is in a sprint */}
+              {selectedIds.some((id: string) => {
+                const t = columns
+                  .flatMap((c: ColumnWithTickets) => c.tickets)
+                  .find((t: TicketWithRelations) => t.id === id)
+                return t?.sprintId
+              }) && (
                 <MenuButton
-                  icon={<CalendarPlus className="h-4 w-4" />}
-                  label={`Add to ${availableSprints[0].name}`}
+                  icon={<CalendarMinus className="h-4 w-4" />}
+                  label="Remove from Sprint"
                   onMouseEnter={closeSubmenu}
-                  onClick={() => doAddToSprint(availableSprints[0])}
+                  onClick={doRemoveFromSprint}
                 />
-              ) : (
+              )}
+              {/* Show Add to Sprint if available sprints exist */}
+              {availableSprints.length > 0 &&
+                (availableSprints.length === 1 ? (
+                  <MenuButton
+                    icon={<CalendarPlus className="h-4 w-4" />}
+                    label={`Add to ${availableSprints[0].name}`}
+                    onMouseEnter={closeSubmenu}
+                    onClick={() => doAddToSprint(availableSprints[0])}
+                  />
+                ) : (
+                  <MenuButton
+                    icon={<CalendarPlus className="h-4 w-4" />}
+                    label="Add to Sprint"
+                    trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                    onMouseEnter={openSubmenu('sprint')}
+                  />
+                ))}
+              {/* Show Create Sprint only when no active sprint exists */}
+              {!hasActiveSprint && (
                 <MenuButton
-                  icon={<CalendarPlus className="h-4 w-4" />}
-                  label="Add to Sprint"
-                  trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
-                  onMouseEnter={openSubmenu('sprint')}
+                  icon={<Plus className="h-4 w-4" />}
+                  label="Create Sprint"
+                  onMouseEnter={closeSubmenu}
+                  onClick={doCreateSprint}
                 />
-              ))}
-            {/* Show Create Sprint only when no active sprint exists */}
-            {!hasActiveSprint && (
+              )}
+            </MenuSection>
+
+            <MenuSection title="Operations">
               <MenuButton
-                icon={<Plus className="h-4 w-4" />}
-                label="Create Sprint"
+                icon={<ClipboardCopy className="h-4 w-4" />}
+                label="Copy"
+                shortcut="Ctrl/Cmd + C"
                 onMouseEnter={closeSubmenu}
-                onClick={doCreateSprint}
+                onClick={doCopy}
               />
-            )}
-          </MenuSection>
+              <MenuButton
+                icon={<ClipboardPaste className="h-4 w-4" />}
+                label="Paste"
+                shortcut="Ctrl/Cmd + V"
+                onMouseEnter={closeSubmenu}
+                onClick={doPaste}
+              />
+              <MenuButton
+                icon={<Trash2 className="h-4 w-4" />}
+                label="Delete"
+                shortcut="Del"
+                destructive
+                onMouseEnter={closeSubmenu}
+                onClick={doDelete}
+              />
+            </MenuSection>
 
-          <MenuSection title="Operations">
-            <MenuButton
-              icon={<ClipboardCopy className="h-4 w-4" />}
-              label="Copy"
-              shortcut="Ctrl/Cmd + C"
-              onMouseEnter={closeSubmenu}
-              onClick={doCopy}
-            />
-            <MenuButton
-              icon={<ClipboardPaste className="h-4 w-4" />}
-              label="Paste"
-              shortcut="Ctrl/Cmd + V"
-              onMouseEnter={closeSubmenu}
-              onClick={doPaste}
-            />
-            <MenuButton
-              icon={<Trash2 className="h-4 w-4" />}
-              label="Delete"
-              shortcut="Del"
-              destructive
-              onMouseEnter={closeSubmenu}
-              onClick={doDelete}
-            />
-          </MenuSection>
-
-          {submenu && (
-            <div
-              ref={submenuRef}
-              className="fixed z-[201] min-w-[200px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
-              style={{
-                left: adjustedSubmenuCoords?.x ?? submenu.anchor.x + 2,
-                top: adjustedSubmenuCoords?.y ?? submenu.anchor.y,
-              }}
-            >
-              <div className="py-1 text-sm text-zinc-200">
-                {submenu.id === 'priority' &&
-                  (['critical', 'highest', 'high', 'medium', 'low', 'lowest'] as const).map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                      onClick={() => doPriority(p)}
-                    >
-                      <PriorityBadge priority={p} size="sm" />
-                    </button>
-                  ))}
-
-                {submenu.id === 'assign' && (
-                  <>
-                    {currentUser && (
-                      <>
+            {submenu && (
+              <div
+                ref={submenuRef}
+                className="fixed z-[201] min-w-[200px] rounded-md border border-zinc-800 bg-zinc-900 shadow-lg"
+                style={{
+                  left: adjustedSubmenuCoords?.x ?? submenu.anchor.x + 2,
+                  top: adjustedSubmenuCoords?.y ?? submenu.anchor.y,
+                }}
+              >
+                <div className="py-1 text-sm text-zinc-200">
+                  {submenu.id === 'priority' &&
+                    (['critical', 'highest', 'high', 'medium', 'low', 'lowest'] as const).map(
+                      (p) => (
                         <button
+                          key={p}
                           type="button"
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                          onClick={() => doAssign(currentUser.id)}
+                          onClick={() => doPriority(p)}
+                        >
+                          <PriorityBadge priority={p} size="sm" />
+                        </button>
+                      ),
+                    )}
+
+                  {submenu.id === 'assign' && (
+                    <>
+                      {currentUser && (
+                        <>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doAssign(currentUser.id)}
+                          >
+                            <Avatar className="h-5 w-5">
+                              <AvatarFallback
+                                className="text-[10px] text-white font-medium"
+                                style={{
+                                  backgroundColor:
+                                    currentUser.avatarColor || getAvatarColor(currentUser.id),
+                                }}
+                              >
+                                {getInitials(currentUser.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>Assign to me</span>
+                          </button>
+                          <div className="my-1 border-t border-zinc-800" />
+                        </>
+                      )}
+                      {sortedMembers.map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                          onClick={() => doAssign(m.id)}
                         >
                           <Avatar className="h-5 w-5">
+                            {m.avatar && <AvatarImage src={m.avatar} />}
                             <AvatarFallback
                               className="text-[10px] text-white font-medium"
-                              style={{
-                                backgroundColor:
-                                  currentUser.avatarColor || getAvatarColor(currentUser.id),
-                              }}
+                              style={{ backgroundColor: m.avatarColor || getAvatarColor(m.id) }}
                             >
-                              {getInitials(currentUser.name)}
+                              {getInitials(m.name)}
                             </AvatarFallback>
                           </Avatar>
-                          <span>Assign to me</span>
+                          <span>{m.name}</span>
                         </button>
-                        <div className="my-1 border-t border-zinc-800" />
-                      </>
-                    )}
-                    {sortedMembers.map((m) => (
+                      ))}
+                      <div className="my-1 border-t border-zinc-800" />
                       <button
-                        key={m.id}
                         type="button"
                         className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                        onClick={() => doAssign(m.id)}
+                        onClick={() => doAssign(null)}
                       >
                         <Avatar className="h-5 w-5">
-                          {m.avatar && <AvatarImage src={m.avatar} />}
-                          <AvatarFallback
-                            className="text-[10px] text-white font-medium"
-                            style={{ backgroundColor: m.avatarColor || getAvatarColor(m.id) }}
-                          >
-                            {getInitials(m.name)}
+                          <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
+                            <UserIcon className="h-3 w-3 text-zinc-500" />
                           </AvatarFallback>
                         </Avatar>
-                        <span>{m.name}</span>
+                        <span>Unassign</span>
                       </button>
-                    ))}
-                    <div className="my-1 border-t border-zinc-800" />
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                      onClick={() => doAssign(null)}
-                    >
-                      <Avatar className="h-5 w-5">
-                        <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
-                          <UserIcon className="h-3 w-3 text-zinc-500" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>Unassign</span>
-                    </button>
-                  </>
-                )}
+                    </>
+                  )}
 
-                {submenu.id === 'send' &&
-                  columns.map((col) => {
-                    const { icon: StatusIcon, color } = getStatusIcon(col.name)
-                    return (
-                      <button
-                        key={col.id}
-                        type="button"
-                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                        onClick={() => doSendTo(col.id)}
-                      >
-                        <StatusIcon className={`h-4 w-4 ${color}`} />
-                        <span>{col.name}</span>
-                      </button>
-                    )
-                  })}
-
-                {submenu.id === 'points' && (
-                  <>
-                    {[1, 2, 3, 4, 5].map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                        onClick={() => doPoints(p)}
-                      >
-                        <Hash className="h-4 w-4 text-green-400" />
-                        <span>
-                          {p} point{p === 1 ? '' : 's'}
-                        </span>
-                      </button>
-                    ))}
-                    {!multi && (
-                      <>
-                        <div className="my-1 border-t border-zinc-800" />
+                  {submenu.id === 'send' &&
+                    columns.map((col) => {
+                      const { icon: StatusIcon, color } = getStatusIcon(col.name)
+                      return (
                         <button
+                          key={col.id}
                           type="button"
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                          onClick={() => {
-                            uiStore.openTicketWithFocus(ticket.id, 'storyPoints')
-                            setOpen(false)
-                            setSubmenu(null)
-                          }}
+                          onClick={() => doSendTo(col.id)}
                         >
-                          <Pencil className="h-4 w-4 text-amber-400" />
-                          <span>Custom...</span>
+                          <StatusIcon className={`h-4 w-4 ${color}`} />
+                          <span>{col.name}</span>
                         </button>
-                      </>
-                    )}
-                    <div className="my-1 border-t border-zinc-800" />
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                      onClick={() => doPoints(null)}
-                    >
-                      <Hash className="h-4 w-4 text-zinc-500" />
-                      <span className="text-zinc-400">Clear points</span>
-                    </button>
-                  </>
-                )}
+                      )
+                    })}
 
-                {submenu.id === 'sprint' && (
-                  <>
-                    {availableSprints.map((sprint) => (
-                      <button
-                        key={sprint.id}
-                        type="button"
-                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                        onClick={() => doAddToSprint(sprint)}
-                      >
-                        <CalendarPlus className="h-4 w-4 text-blue-400" />
-                        <span>{sprint.name}</span>
-                        {sprint.status === 'active' && (
-                          <span className="ml-auto text-[10px] text-emerald-400 uppercase">
-                            Active
+                  {submenu.id === 'points' && (
+                    <>
+                      {[1, 2, 3, 4, 5].map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                          onClick={() => doPoints(p)}
+                        >
+                          <Hash className="h-4 w-4 text-green-400" />
+                          <span>
+                            {p} point{p === 1 ? '' : 's'}
                           </span>
-                        )}
+                        </button>
+                      ))}
+                      {!multi && (
+                        <>
+                          <div className="my-1 border-t border-zinc-800" />
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => {
+                              uiStore.openTicketWithFocus(ticket.id, 'storyPoints')
+                              setOpen(false)
+                              setSubmenu(null)
+                            }}
+                          >
+                            <Pencil className="h-4 w-4 text-amber-400" />
+                            <span>Custom...</span>
+                          </button>
+                        </>
+                      )}
+                      <div className="my-1 border-t border-zinc-800" />
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                        onClick={() => doPoints(null)}
+                      >
+                        <Hash className="h-4 w-4 text-zinc-500" />
+                        <span className="text-zinc-400">Clear points</span>
                       </button>
-                    ))}
-                    {!hasActiveSprint && (
-                      <>
-                        <div className="my-1 border-t border-zinc-800" />
+                    </>
+                  )}
+
+                  {submenu.id === 'sprint' && (
+                    <>
+                      {availableSprints.map((sprint) => (
                         <button
+                          key={sprint.id}
                           type="button"
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                          onClick={doCreateSprint}
+                          onClick={() => doAddToSprint(sprint)}
                         >
-                          <Plus className="h-4 w-4 text-zinc-400" />
-                          <span className="text-zinc-400">Create new sprint...</span>
+                          <CalendarPlus className="h-4 w-4 text-blue-400" />
+                          <span>{sprint.name}</span>
+                          {sprint.status === 'active' && (
+                            <span className="ml-auto text-[10px] text-emerald-400 uppercase">
+                              Active
+                            </span>
+                          )}
                         </button>
-                      </>
-                    )}
-                  </>
-                )}
+                      ))}
+                      {!hasActiveSprint && (
+                        <>
+                          <div className="my-1 border-t border-zinc-800" />
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={doCreateSprint}
+                          >
+                            <Plus className="h-4 w-4 text-zinc-400" />
+                            <span className="text-zinc-400">Create new sprint...</span>
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>,
+      </>,
       document.body,
     )
   }
