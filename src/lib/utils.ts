@@ -52,3 +52,109 @@ export function getInitials(name: string): string {
     .toUpperCase()
     .slice(0, 2) // Max 2 characters
 }
+
+/**
+ * Parse a hex color string to RGB components.
+ * Supports 3-char (#abc) and 6-char (#aabbcc) hex formats.
+ */
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const cleaned = hex.replace('#', '')
+  const fullHex =
+    cleaned.length === 3
+      ? cleaned
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : cleaned
+  return {
+    r: Number.parseInt(fullHex.slice(0, 2), 16),
+    g: Number.parseInt(fullHex.slice(2, 4), 16),
+    b: Number.parseInt(fullHex.slice(4, 6), 16),
+  }
+}
+
+/**
+ * Convert RGB to hex color string.
+ */
+function rgbToHex(r: number, g: number, b: number): string {
+  const toHex = (n: number) =>
+    Math.round(Math.max(0, Math.min(255, n)))
+      .toString(16)
+      .padStart(2, '0')
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+
+/**
+ * Calculate relative luminance of a color per WCAG 2.0.
+ * Returns a value between 0 (black) and 1 (white).
+ */
+function getLuminance(r: number, g: number, b: number): number {
+  const [rs, gs, bs] = [r, g, b].map((c) => {
+    const s = c / 255
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs
+}
+
+/**
+ * Get a legible text color derived from a label color for use on dark backgrounds.
+ * Lightens dark/medium colors and slightly desaturates overly vivid colors
+ * to ensure readability at small text sizes (10-12px) on dark UI backgrounds.
+ */
+export function getLabelTextColor(hex: string): string {
+  const { r, g, b } = hexToRgb(hex)
+  const luminance = getLuminance(r, g, b)
+
+  // Target minimum luminance for legible text on dark backgrounds (~zinc-900 bg).
+  // WCAG AA requires 4.5:1 contrast for small text. zinc-900 (#18181b) has
+  // luminance ~0.01, so we need text luminance of ~0.18+ for 4.5:1.
+  // We aim for ~0.25+ for comfortable reading.
+  const minLuminance = 0.25
+
+  if (luminance >= minLuminance) {
+    // Color is already bright enough - return as-is
+    return hex
+  }
+
+  // Lighten the color by mixing with white, preserving the hue.
+  // Calculate how much to mix toward white to reach target luminance.
+  // We use an iterative approach for accuracy with the non-linear sRGB gamma.
+  let lo = 0
+  let hi = 1
+  let bestHex = hex
+
+  for (let i = 0; i < 16; i++) {
+    const mid = (lo + hi) / 2
+    const mr = r + (255 - r) * mid
+    const mg = g + (255 - g) * mid
+    const mb = b + (255 - b) * mid
+    const lum = getLuminance(mr, mg, mb)
+
+    bestHex = rgbToHex(mr, mg, mb)
+
+    if (lum < minLuminance) {
+      lo = mid
+    } else {
+      hi = mid
+    }
+  }
+
+  return bestHex
+}
+
+/**
+ * Get consistent label style properties for rendering label badges.
+ * Returns an object with backgroundColor, borderColor, and color (text)
+ * that ensures legibility on dark backgrounds.
+ */
+export function getLabelStyles(labelColor: string): {
+  backgroundColor: string
+  borderColor: string
+  color: string
+} {
+  return {
+    backgroundColor: `${labelColor}20`,
+    borderColor: labelColor,
+    color: getLabelTextColor(labelColor),
+  }
+}

@@ -11,7 +11,7 @@ import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import { cn, getAvatarColor, getInitials, getLabelStyles } from '@/lib/utils'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { IssueType, Priority, TicketWithRelations } from '@/types'
@@ -131,6 +131,23 @@ export function KanbanCard({
             <InlineCodeText text={ticket.title} />
           </h4>
 
+          {/* Resolution badge */}
+          {ticket.resolution && (
+            <div className="mb-2">
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-[10px] px-1.5 py-0',
+                  ticket.resolution === 'Done'
+                    ? 'border-green-600 bg-green-900/30 text-green-400'
+                    : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
+                )}
+              >
+                {ticket.resolution}
+              </Badge>
+            </div>
+          )}
+
           {/* Labels */}
           {ticket.labels.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
@@ -139,11 +156,7 @@ export function KanbanCard({
                   key={label.id}
                   variant="outline"
                   className="text-[10px] px-1.5 py-0"
-                  style={{
-                    borderColor: label.color,
-                    color: label.color,
-                    backgroundColor: `${label.color}20`,
-                  }}
+                  style={getLabelStyles(label.color)}
                 >
                   {label.name}
                 </Badge>
