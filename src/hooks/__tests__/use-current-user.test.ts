@@ -66,6 +66,7 @@ describe('useCurrentUser', () => {
       name: 'Test User',
       email: 'test@example.com',
       avatar: '/avatar.jpg',
+      avatarColor: null,
       isSystemAdmin: false,
     })
   })
