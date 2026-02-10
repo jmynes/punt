@@ -21,14 +21,10 @@ import {
   DEMO_PROJECTS,
   DEMO_ROLE,
   DEMO_SPRINTS,
-  DEMO_TEAM_SUMMARIES,
   DEMO_TICKETS,
   DEMO_USER_SUMMARY,
   type DemoColumn,
   type DemoProject,
-  getColumnsWithTickets,
-  getProjectLabels,
-  getProjectSprints,
 } from './demo-data'
 
 // Storage keys
@@ -217,6 +213,8 @@ class DemoStorage {
     return columns.map((col) => ({
       id: col.id,
       name: col.name,
+      icon: col.icon ?? null,
+      color: col.color ?? null,
       order: col.order,
       projectId: col.projectId,
       tickets: tickets.filter((t) => t.columnId === col.id).sort((a, b) => a.order - b.order),

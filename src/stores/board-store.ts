@@ -65,6 +65,12 @@ interface BoardState {
   _hasHydrated: boolean
   setHasHydrated: (value: boolean) => void
 
+  // Collapsed columns: Record<columnId, boolean>
+  collapsedColumns: Record<string, boolean>
+  isColumnCollapsed: (columnId: string) => boolean
+  toggleColumnCollapsed: (columnId: string) => void
+  setColumnCollapsed: (columnId: string, collapsed: boolean) => void
+
   // Search/filter (per project)
   searchQueries: Record<string, string>
   getSearchQuery: (projectId: string) => string
@@ -175,6 +181,26 @@ export const useBoardStore = create<BoardState>()(
       // Hydration state
       _hasHydrated: false,
       setHasHydrated: (value) => set({ _hasHydrated: value }),
+
+      // Collapsed columns
+      collapsedColumns: {},
+      isColumnCollapsed: (columnId: string) => {
+        return get().collapsedColumns[columnId] ?? false
+      },
+      toggleColumnCollapsed: (columnId: string) =>
+        set((state) => ({
+          collapsedColumns: {
+            ...state.collapsedColumns,
+            [columnId]: !state.collapsedColumns[columnId],
+          },
+        })),
+      setColumnCollapsed: (columnId: string, collapsed: boolean) =>
+        set((state) => ({
+          collapsedColumns: {
+            ...state.collapsedColumns,
+            [columnId]: collapsed,
+          },
+        })),
 
       // Search/filter (per project)
       searchQueries: {},
@@ -588,7 +614,10 @@ export const useBoardStore = create<BoardState>()(
     {
       name: 'punt-board-storage',
       // Don't persist searchQueries or hydration state
-      partialize: (state) => ({ projects: state.projects }),
+      partialize: (state) => ({
+        projects: state.projects,
+        collapsedColumns: state.collapsedColumns,
+      }),
       // Revive Date objects when loading from storage and mark as hydrated
       onRehydrateStorage: () => (state) => {
         if (state) {

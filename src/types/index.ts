@@ -1,29 +1,8 @@
 // Import Prisma types for use within this file
-import type {
-  Attachment as PrismaAttachment,
-  Column as PrismaColumn,
-  Comment as PrismaComment,
-  Label as PrismaLabel,
-  Project as PrismaProject,
-  ProjectMember as PrismaProjectMember,
-  ProjectSprintSettings as PrismaProjectSprintSettings,
-  Role as PrismaRole,
-  Sprint as PrismaSprint,
-  Ticket as PrismaTicket,
-  TicketEdit as PrismaTicketEdit,
-  TicketLink as PrismaTicketLink,
-  TicketSprintHistory as PrismaTicketSprintHistory,
-  TicketWatcher as PrismaTicketWatcher,
-  User as PrismaUser,
-} from '@/generated/prisma'
+import type { Role as PrismaRole } from '@/generated/prisma'
 
 // Import permission types for use within this file
-import type {
-  CategoryMeta as CategoryMetaType,
-  PermissionCategory as PermissionCategoryType,
-  PermissionMeta as PermissionMetaType,
-  Permission as PermissionType,
-} from '@/lib/permissions'
+import type { Permission as PermissionType } from '@/lib/permissions'
 
 // Re-export Prisma types
 export type {
@@ -218,6 +197,8 @@ export interface TicketWithRelations {
 export interface ColumnWithTickets {
   id: string
   name: string
+  icon?: string | null
+  color?: string | null
   order: number
   projectId: string
   tickets: TicketWithRelations[]

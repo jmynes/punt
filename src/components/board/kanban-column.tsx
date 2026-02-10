@@ -2,18 +2,22 @@
 
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { MoreHorizontal, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { getStatusIcon } from '@/lib/status-icons'
+import { getColumnIcon } from '@/lib/status-icons'
 import { cn } from '@/lib/utils'
+import { useBoardStore } from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets } from '@/types'
+import { ColumnMenu } from './column-menu'
 import { KanbanCard } from './kanban-card'
 
 interface KanbanColumnProps {
   column: ColumnWithTickets
+  projectId: string
   projectKey: string
+  allColumns: ColumnWithTickets[]
   dragSelectionIds?: string[]
   activeTicketId?: string | null
   activeDragTarget?: number | null
@@ -22,13 +26,18 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({
   column,
+  projectId,
   projectKey,
+  allColumns,
   dragSelectionIds = [],
   activeTicketId = null,
   activeDragTarget = null,
   activeSprintId = null,
 }: KanbanColumnProps) {
   const { openCreateTicketWithData, setSprintCreateOpen } = useUIStore()
+  const { isColumnCollapsed, toggleColumnCollapsed } = useBoardStore()
+
+  const collapsed = isColumnCollapsed(column.id)
 
   // Handle creating a ticket - requires active sprint on board view
   const handleCreateTicket = () => {
@@ -62,7 +71,48 @@ export function KanbanColumn({
     .filter((t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId)
     .map((t) => t.id)
 
-  const { icon: StatusIcon, color: statusColor } = getStatusIcon(column.name)
+  const { icon: StatusIcon, color: statusColor } = getColumnIcon(
+    column.icon,
+    column.name,
+    column.color,
+  )
+  const isHexColor = statusColor.startsWith('#')
+  const iconColorClass = isHexColor ? undefined : statusColor
+  const iconColorStyle = isHexColor ? { color: statusColor } : undefined
+
+  // Collapsed column view
+  if (collapsed) {
+    return (
+      <div
+        className={cn(
+          'flex w-10 flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-900/30 max-h-full min-h-0 cursor-pointer hover:bg-zinc-900/50 transition-colors',
+          isOver && 'border-amber-500/50 bg-amber-500/5',
+        )}
+        onClick={() => toggleColumnCollapsed(column.id)}
+        title={`${column.name} (${column.tickets.length}) - Click to expand`}
+      >
+        <div className="flex flex-col items-center gap-2 py-3 px-1">
+          <StatusIcon
+            className={cn('h-4 w-4 flex-shrink-0', iconColorClass)}
+            style={iconColorStyle}
+            aria-hidden
+          />
+          <span className="flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-zinc-800 text-xs text-zinc-400">
+            {column.tickets.length}
+          </span>
+          <span
+            className="text-xs font-medium text-zinc-400 select-none"
+            style={{
+              writingMode: 'vertical-rl',
+              textOrientation: 'mixed',
+            }}
+          >
+            {column.name}
+          </span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -74,7 +124,11 @@ export function KanbanColumn({
       {/* Column header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
         <div className="flex items-center gap-2 select-none">
-          <StatusIcon className={cn('h-4 w-4', statusColor)} aria-hidden />
+          <StatusIcon
+            className={cn('h-4 w-4', iconColorClass)}
+            style={iconColorStyle}
+            aria-hidden
+          />
           <h3 className="font-medium text-sm text-zinc-200">{column.name}</h3>
           <span className="flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-zinc-800 text-xs text-zinc-400">
             {column.tickets.length}
@@ -89,9 +143,12 @@ export function KanbanColumn({
           >
             <Plus className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-zinc-300">
-            <MoreHorizontal className="h-3.5 w-3.5" />
-          </Button>
+          <ColumnMenu
+            column={column}
+            projectId={projectId}
+            projectKey={projectKey}
+            allColumns={allColumns}
+          />
         </div>
       </div>
 

@@ -239,8 +239,10 @@ model Sprint {
 }
 
 model Column {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   name      String
+  icon      String?
+  color     String?
   order     Int
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
