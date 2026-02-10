@@ -132,13 +132,6 @@ export function KanbanCard({
             <InlineCodeText text={ticket.title} />
           </h4>
 
-          {/* Resolution badge (only non-Done resolutions like Won't Fix, Duplicate, etc.) */}
-          {ticket.resolution && ticket.resolution !== 'Done' && (
-            <div className="mb-2">
-              <ResolutionBadge resolution={ticket.resolution as Resolution} size="sm" />
-            </div>
-          )}
-
           {/* Labels */}
           {ticket.labels.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
@@ -211,28 +204,33 @@ export function KanbanCard({
               </div>
             </div>
 
-            {/* Assignee (right side) */}
-            {ticket.assignee ? (
-              <Avatar className="h-5 w-5" title={ticket.assignee.name}>
-                <AvatarImage src={ticket.assignee.avatar || undefined} />
-                <AvatarFallback
-                  className="text-white text-[10px] font-medium"
-                  style={{
-                    backgroundColor:
-                      ticket.assignee.avatarColor ||
-                      getAvatarColor(ticket.assignee.id || ticket.assignee.name),
-                  }}
-                >
-                  {getInitials(ticket.assignee.name)}
-                </AvatarFallback>
-              </Avatar>
-            ) : (
-              <Avatar className="h-5 w-5" title="Unassigned">
-                <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
-                  <User className="h-3 w-3 text-zinc-500" />
-                </AvatarFallback>
-              </Avatar>
-            )}
+            {/* Right side: Resolution badge + Assignee */}
+            <div className="flex items-center gap-2">
+              {ticket.resolution && ticket.resolution !== 'Done' && (
+                <ResolutionBadge resolution={ticket.resolution as Resolution} size="sm" />
+              )}
+              {ticket.assignee ? (
+                <Avatar className="h-5 w-5" title={ticket.assignee.name}>
+                  <AvatarImage src={ticket.assignee.avatar || undefined} />
+                  <AvatarFallback
+                    className="text-white text-[10px] font-medium"
+                    style={{
+                      backgroundColor:
+                        ticket.assignee.avatarColor ||
+                        getAvatarColor(ticket.assignee.id || ticket.assignee.name),
+                    }}
+                  >
+                    {getInitials(ticket.assignee.name)}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <Avatar className="h-5 w-5" title="Unassigned">
+                  <AvatarFallback className="text-[10px] text-zinc-400 border border-dashed border-zinc-700 bg-transparent">
+                    <User className="h-3 w-3 text-zinc-500" />
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
           </div>
         </div>
       </Card>
