@@ -554,21 +554,36 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-3 py-2">
-            <Input
-              ref={renameInputRef}
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  handleRename()
-                }
-              }}
-              placeholder="Column name"
-              maxLength={50}
-              className="bg-zinc-800 border-zinc-700 text-zinc-100"
-              disabled={renameLoading}
-            />
+            {(() => {
+              const preview = getColumnIcon(iconValue, renameValue, colorValue)
+              const PreviewIcon = preview.icon
+              const isHex = preview.color.startsWith('#')
+              return (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center h-9 w-9 shrink-0 rounded-md bg-zinc-800 border border-zinc-700">
+                    <PreviewIcon
+                      className={cn('h-4 w-4', isHex ? undefined : preview.color)}
+                      style={isHex ? { color: preview.color } : undefined}
+                    />
+                  </div>
+                  <Input
+                    ref={renameInputRef}
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleRename()
+                      }
+                    }}
+                    placeholder="Column name"
+                    maxLength={50}
+                    className="bg-zinc-800 border-zinc-700 text-zinc-100"
+                    disabled={renameLoading}
+                  />
+                </div>
+              )
+            })()}
             <div>
               <span className="text-sm font-medium text-zinc-300 mb-2 block">Icon</span>
               <div className="grid grid-cols-7 gap-1">
