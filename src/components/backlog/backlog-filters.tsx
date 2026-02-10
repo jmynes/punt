@@ -251,21 +251,7 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
     setFilterBySprint(sprintId)
   }
 
-  // Build the list of columns to generate filter buttons for.
-  // Always include resolution right after status, even if the column isn't visible.
-  const filterableColumns = useMemo(() => {
-    const result = [...visibleColumns]
-    if (!result.some((c) => c.id === 'resolution')) {
-      const resCol = columns.find((c) => c.id === 'resolution')
-      if (resCol) {
-        const statusIdx = result.findIndex((c) => c.id === 'status')
-        result.splice(statusIdx >= 0 ? statusIdx + 1 : result.length, 0, resCol)
-      }
-    }
-    return result
-  }, [visibleColumns, columns])
-
-  const filterButtons = filterableColumns
+  const filterButtons = visibleColumns
     .map((col) => {
       switch (col.id) {
         case 'type':
@@ -332,48 +318,6 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                     {c.name}
                   </DropdownMenuCheckboxItem>
                 ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )
-        case 'resolution':
-          return (
-            <DropdownMenu key="resolution">
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  <CheckCircle2 className="mr-2 h-4 w-4 text-green-400" />
-                  Resolution
-                  {filterByResolution.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {filterByResolution.length}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuLabel>Filter by resolution</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  checked={filterByResolution.includes('unresolved')}
-                  onCheckedChange={() => toggleResolution('unresolved')}
-                >
-                  <span className="mr-2 h-4 w-4 inline-block" />
-                  Unresolved
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                {RESOLUTIONS.map((r) => {
-                  const config = resolutionConfig[r]
-                  const Icon = config.icon
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={r}
-                      checked={filterByResolution.includes(r)}
-                      onCheckedChange={() => toggleResolution(r)}
-                    >
-                      <Icon className="mr-2 h-4 w-4" style={{ color: config.color }} />
-                      {r}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
               </DropdownMenuContent>
             </DropdownMenu>
           )
@@ -863,6 +807,53 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
       }
     })
     .filter((btn): btn is React.ReactElement => Boolean(btn))
+
+  // Resolution filter - always visible, inserted after status
+  const resolutionFilter = (
+    <DropdownMenu key="resolution">
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="shrink-0">
+          <CheckCircle2 className="mr-2 h-4 w-4 text-green-400" />
+          Resolution
+          {filterByResolution.length > 0 && (
+            <Badge variant="secondary" className="ml-2">
+              {filterByResolution.length}
+            </Badge>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuLabel>Filter by resolution</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuCheckboxItem
+          checked={filterByResolution.includes('unresolved')}
+          onCheckedChange={() => toggleResolution('unresolved')}
+        >
+          <span className="mr-2 h-4 w-4 inline-block" />
+          Unresolved
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator />
+        {RESOLUTIONS.map((r) => {
+          const config = resolutionConfig[r]
+          const Icon = config.icon
+          return (
+            <DropdownMenuCheckboxItem
+              key={r}
+              checked={filterByResolution.includes(r)}
+              onCheckedChange={() => toggleResolution(r)}
+            >
+              <Icon className="mr-2 h-4 w-4" style={{ color: config.color }} />
+              {r}
+            </DropdownMenuCheckboxItem>
+          )
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
+  // Insert resolution filter right after status
+  const statusIdx = filterButtons.findIndex((btn) => btn.key === 'status')
+  filterButtons.splice(statusIdx >= 0 ? statusIdx + 1 : filterButtons.length, 0, resolutionFilter)
 
   // Labels filter - always visible (not tied to column visibility)
   const labelsFilter = (
