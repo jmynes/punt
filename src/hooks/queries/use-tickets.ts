@@ -14,6 +14,7 @@ export const ticketKeys = {
   byProject: (projectId: string) => ['tickets', 'project', projectId] as const,
   detail: (projectId: string, ticketId: string) =>
     ['tickets', 'project', projectId, ticketId] as const,
+  search: (projectId: string, query: string) => ['tickets', 'search', projectId, query] as const,
 }
 
 export const columnKeys = {
@@ -201,6 +202,7 @@ export function useUpdateTicket() {
       if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
       if ('startDate' in updates) apiUpdates.startDate = updates.startDate
       if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
+      if ('resolution' in updates) apiUpdates.resolution = updates.resolution
 
       // Convert labels to labelIds
       if ('labels' in updates && updates.labels) {
@@ -409,6 +411,7 @@ export async function updateTicketAPI(
   if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
   if ('startDate' in updates) apiUpdates.startDate = updates.startDate
   if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
+  if ('resolution' in updates) apiUpdates.resolution = updates.resolution
 
   if ('labels' in updates && updates.labels) {
     apiUpdates.labelIds = updates.labels.map((l) => l.id)
@@ -648,5 +651,26 @@ export function useUpdateLabel() {
     onError: (err) => {
       toast.error(err.message)
     },
+  })
+}
+
+// ============================================================================
+// Ticket search
+// ============================================================================
+
+/**
+ * Search tickets within a project.
+ * Only runs when query is non-empty (use with debounced input).
+ */
+export function useTicketSearch(projectId: string, query: string) {
+  return useQuery<TicketWithRelations[]>({
+    queryKey: ticketKeys.search(projectId, query),
+    queryFn: async () => {
+      const provider = getDataProvider(getTabId())
+      return provider.searchTickets(projectId, { query, limit: 20 })
+    },
+    enabled: !!projectId && query.trim().length > 0,
+    staleTime: 1000 * 30, // 30 seconds
+    placeholderData: (prev) => prev, // Keep previous results while loading
   })
 }

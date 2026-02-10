@@ -19,6 +19,7 @@ import type {
   MoveTicketInput,
   ProjectSummary,
   ProjectWithDetails,
+  SearchTicketsParams,
   SprintSettings,
   StartSprintInput,
   UpdateLabelInput,
@@ -108,6 +109,17 @@ export class APIDataProvider implements DataProvider {
     } catch {
       return null
     }
+  }
+
+  async searchTickets(
+    projectId: string,
+    params: SearchTicketsParams,
+  ): Promise<TicketWithRelations[]> {
+    const searchParams = new URLSearchParams({ q: params.query })
+    if (params.limit) {
+      searchParams.set('limit', String(params.limit))
+    }
+    return this.fetchJson(`/api/projects/${projectId}/tickets/search?${searchParams.toString()}`)
   }
 
   async createTicket(projectId: string, data: CreateTicketInput): Promise<TicketWithRelations> {

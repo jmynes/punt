@@ -21,6 +21,7 @@ import type {
   MoveTicketInput,
   ProjectSummary,
   ProjectWithDetails,
+  SearchTicketsParams,
   SprintSettings,
   StartSprintInput,
   UpdateLabelInput,
@@ -85,6 +86,57 @@ export class DemoDataProvider implements DataProvider {
 
   async getTicket(projectId: string, ticketId: string): Promise<TicketWithRelations | null> {
     return demoStorage.getTicket(projectId, ticketId)
+  }
+
+  async searchTickets(
+    projectId: string,
+    params: SearchTicketsParams,
+  ): Promise<TicketWithRelations[]> {
+    const query = params.query.trim()
+    const limit = params.limit ?? 20
+
+    if (!query) return []
+
+    const allTickets = demoStorage.getTickets(projectId)
+    const queryLower = query.toLowerCase()
+
+    // Check if query matches a ticket number
+    const project = demoStorage.getProjects().find((p) => p.id === projectId)
+    let ticketNumber: number | null = null
+    if (project) {
+      const keyPattern = new RegExp(`^${project.key}-(\\d+)$`, 'i')
+      const keyMatch = query.match(keyPattern)
+      if (keyMatch) {
+        ticketNumber = Number.parseInt(keyMatch[1], 10)
+      } else if (/^\d+$/.test(query)) {
+        ticketNumber = Number.parseInt(query, 10)
+      }
+    }
+
+    // Filter tickets that match the query
+    const matchingTickets = allTickets.filter((ticket) => {
+      if (ticketNumber !== null && ticket.number === ticketNumber) return true
+      if (ticket.title.toLowerCase().includes(queryLower)) return true
+      if (ticket.description?.toLowerCase().includes(queryLower)) return true
+      return false
+    })
+
+    // Sort by relevance: exact key match first, then title, then description
+    matchingTickets.sort((a, b) => {
+      const aIsExactKey = ticketNumber !== null && a.number === ticketNumber
+      const bIsExactKey = ticketNumber !== null && b.number === ticketNumber
+      if (aIsExactKey && !bIsExactKey) return -1
+      if (!aIsExactKey && bIsExactKey) return 1
+
+      const aTitleMatch = a.title.toLowerCase().includes(queryLower)
+      const bTitleMatch = b.title.toLowerCase().includes(queryLower)
+      if (aTitleMatch && !bTitleMatch) return -1
+      if (!aTitleMatch && bTitleMatch) return 1
+
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    })
+
+    return matchingTickets.slice(0, limit)
   }
 
   async createTicket(projectId: string, data: CreateTicketInput): Promise<TicketWithRelations> {

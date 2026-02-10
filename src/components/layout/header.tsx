@@ -1,6 +1,6 @@
 'use client'
 
-import { LogOut, Search, Settings, Shield, User } from 'lucide-react'
+import { LogOut, Settings, Shield, User } from 'lucide-react'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 import { AnimatedMenuIcon } from '@/components/ui/animated-menu-icon'
@@ -14,13 +14,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import { SidebarToggleIcon } from '@/components/ui/sidebar-toggle-icon'
 import { useBranding } from '@/hooks/queries/use-branding'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useIsMobile } from '@/hooks/use-media-query'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
+import { GlobalTicketSearch } from './ticket-search'
 
 export function Header() {
   const isMobile = useIsMobile()
@@ -75,13 +75,10 @@ export function Header() {
         </span>
       </div>
 
-      {/* Search - hidden on mobile, only show when logged in */}
+      {/* Search - show when logged in */}
       {currentUser && (
-        <div className="hidden flex-1 md:block">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-            <Input type="search" placeholder="Search tickets..." className="pl-10" />
-          </div>
+        <div className="flex flex-1 items-center">
+          <GlobalTicketSearch />
         </div>
       )}
 
