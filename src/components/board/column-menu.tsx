@@ -36,7 +36,12 @@ import { columnKeys, ticketKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
-import { COLUMN_ICON_OPTIONS, getColumnIcon, resolveColumnIconName } from '@/lib/status-icons'
+import {
+  COLUMN_ICON_OPTIONS,
+  getColumnIcon,
+  resolveColumnColor,
+  resolveColumnIconName,
+} from '@/lib/status-icons'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
@@ -83,7 +88,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
   const handleRenameOpen = useCallback(() => {
     setRenameValue(column.name)
     setIconValue(resolveColumnIconName(column.icon, column.name))
-    setColorValue(column.color ?? null)
+    setColorValue(resolveColumnColor(column.color, column.icon, column.name))
     setRenameOpen(true)
     // Focus the input after the dialog renders
     setTimeout(() => renameInputRef.current?.focus(), 50)

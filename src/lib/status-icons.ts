@@ -104,6 +104,47 @@ export function resolveColumnIconName(
   return null
 }
 
+// Map Tailwind text color classes to hex values for the color picker
+const TAILWIND_TO_HEX: Record<string, string> = {
+  'text-zinc-400': '#a1a1aa',
+  'text-zinc-500': '#71717a',
+  'text-blue-300': '#93c5fd',
+  'text-blue-400': '#60a5fa',
+  'text-cyan-300': '#67e8f9',
+  'text-amber-300': '#fcd34d',
+  'text-amber-400': '#fbbf24',
+  'text-purple-300': '#d8b4fe',
+  'text-emerald-400': '#34d399',
+  'text-red-300': '#fca5a5',
+  'text-red-400': '#f87171',
+  'text-green-400': '#4ade80',
+  'text-yellow-300': '#fde047',
+  'text-yellow-400': '#facc15',
+  'text-orange-400': '#fb923c',
+  'text-indigo-400': '#818cf8',
+}
+
+/**
+ * Resolve the default color for a column as a hex value. If the column already has
+ * a custom hex color, returns it. Otherwise converts the auto-detected Tailwind
+ * class to hex.
+ */
+export function resolveColumnColor(
+  hexColor?: string | null,
+  iconName?: string | null,
+  columnName?: string,
+): string | null {
+  if (hexColor) return hexColor
+  // Get the Tailwind class from the icon or name heuristic
+  const entry = iconName
+    ? COLUMN_ICON_MAP.get(iconName)
+    : columnName
+      ? getStatusIcon(columnName)
+      : null
+  if (entry) return TAILWIND_TO_HEX[entry.color] ?? null
+  return null
+}
+
 /**
  * Get the icon for a column. Uses custom icon/color if set, otherwise falls back
  * to the name-based heuristic.
