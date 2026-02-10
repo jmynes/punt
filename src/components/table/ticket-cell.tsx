@@ -53,6 +53,23 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
     case 'priority':
       return <PriorityBadge priority={ticket.priority} showLabel />
 
+    case 'resolution':
+      return ticket.resolution ? (
+        <Badge
+          variant="outline"
+          className={cn(
+            'whitespace-nowrap text-xs',
+            ticket.resolution === 'Done'
+              ? 'border-green-600 bg-green-900/30 text-green-400'
+              : 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
+          )}
+        >
+          {ticket.resolution}
+        </Badge>
+      ) : (
+        <span className="text-zinc-500">&mdash;</span>
+      )
+
     case 'assignee':
       return ticket.assignee ? (
         <div className="flex items-center gap-2">

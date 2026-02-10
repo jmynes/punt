@@ -76,6 +76,7 @@ export interface TicketData {
   estimate: string | null
   startDate: string | null
   dueDate: string | null
+  resolution: string | null
   environment: string | null
   affectedVersion: string | null
   fixVersion: string | null
@@ -116,6 +117,7 @@ export interface CreateTicketInput {
   estimate?: string | null
   startDate?: string | null
   dueDate?: string | null
+  resolution?: string | null
   environment?: string | null
   affectedVersion?: string | null
   fixVersion?: string | null
@@ -139,6 +141,7 @@ export interface UpdateTicketInput {
   estimate?: string | null
   startDate?: string | null
   dueDate?: string | null
+  resolution?: string | null
   environment?: string | null
   affectedVersion?: string | null
   fixVersion?: string | null

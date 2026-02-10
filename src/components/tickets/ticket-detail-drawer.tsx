@@ -90,7 +90,7 @@ import type {
   TicketWithRelations,
   UploadedFileInfo,
 } from '@/types'
-import { ISSUE_TYPES, PRIORITIES } from '@/types'
+import { ISSUE_TYPES, PRIORITIES, RESOLUTIONS } from '@/types'
 import { InlineCodeText } from '../common/inline-code'
 import { PriorityBadge } from '../common/priority-badge'
 import { TypeBadge } from '../common/type-badge'
@@ -228,6 +228,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [tempEnvironment, setTempEnvironment] = useState('')
   const [tempAffectedVersion, setTempAffectedVersion] = useState('')
   const [tempFixVersion, setTempFixVersion] = useState('')
+  const [tempResolution, setTempResolution] = useState<string | null>(null)
   const [tempParentId, setTempParentId] = useState<string | null>(null)
   const [tempStatusId, setTempStatusId] = useState<string | null>(null)
   const [tempCreatorId, setTempCreatorId] = useState<string | null>(null)
@@ -284,6 +285,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setTempEstimate(ticket.estimate || '')
       setTempStartDate(ticket.startDate ? new Date(ticket.startDate) : null)
       setTempDueDate(ticket.dueDate ? new Date(ticket.dueDate) : null)
+      setTempResolution(ticket.resolution || null)
       setTempEnvironment(ticket.environment || '')
       setTempAffectedVersion(ticket.affectedVersion || '')
       setTempFixVersion(ticket.fixVersion || '')
@@ -399,6 +401,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         setTempFixVersion(version)
         break
       }
+      case 'resolution': {
+        const resolution = value as string | null
+        setTempResolution(resolution)
+        break
+      }
       case 'attachments':
         // Attachments would be handled separately in a real implementation
         return
@@ -430,6 +437,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
           ? (ticket.dueDate instanceof Date ? ticket.dueDate : new Date(ticket.dueDate)).getTime()
           : undefined) ||
       tempParentId !== ticket.parentId ||
+      tempResolution !== (ticket.resolution || null) ||
       tempEnvironment !== (ticket.environment || '') ||
       tempAffectedVersion !== (ticket.affectedVersion || '') ||
       tempFixVersion !== (ticket.fixVersion || '') ||
@@ -450,6 +458,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     tempStartDate,
     tempDueDate,
     tempParentId,
+    tempResolution,
     tempEnvironment,
     tempAffectedVersion,
     tempFixVersion,
@@ -519,6 +528,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     if (tempParentId !== ticket.parentId) {
       updates.parentId = tempParentId
     }
+    if (tempResolution !== (ticket.resolution || null)) {
+      updates.resolution = tempResolution
+    }
     if (tempEnvironment !== (ticket.environment || '')) {
       updates.environment = tempEnvironment || null
     }
@@ -562,6 +574,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     tempStartDate,
     tempDueDate,
     tempParentId,
+    tempResolution,
     tempEnvironment,
     tempAffectedVersion,
     tempFixVersion,
@@ -652,6 +665,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       case 'fixVersion':
         updates.fixVersion = tempFixVersion || null
         break
+      case 'resolution':
+        updates.resolution = tempResolution
+        break
       case 'parent':
         updates.parentId = tempParentId
         break
@@ -709,6 +725,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setTempEstimate(ticket.estimate || '')
       setTempStartDate(ticket.startDate ? new Date(ticket.startDate) : null)
       setTempDueDate(ticket.dueDate ? new Date(ticket.dueDate) : null)
+      setTempResolution(ticket.resolution || null)
       setTempEnvironment(ticket.environment || '')
       setTempAffectedVersion(ticket.affectedVersion || '')
       setTempFixVersion(ticket.fixVersion || '')
@@ -750,6 +767,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       estimate: ticket.estimate || '',
       startDate: ticket.startDate,
       dueDate: ticket.dueDate,
+      resolution: null,
       environment: ticket.environment || '',
       affectedVersion: ticket.affectedVersion || '',
       fixVersion: ticket.fixVersion || '',
@@ -1150,6 +1168,35 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                           </SelectItem>
                         )
                       })}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Resolution */}
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Resolution</Label>
+                  <Select
+                    value={tempResolution || 'none'}
+                    onValueChange={(value) =>
+                      handleChange('resolution', value === 'none' ? null : value)
+                    }
+                  >
+                    <SelectTrigger className="w-full h-10 bg-zinc-900 border-zinc-700 text-zinc-100 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+                      <SelectValue placeholder="Unresolved" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-700">
+                      <SelectItem value="none" className="focus:bg-zinc-800 focus:text-zinc-100">
+                        Unresolved
+                      </SelectItem>
+                      {RESOLUTIONS.map((resolution) => (
+                        <SelectItem
+                          key={resolution}
+                          value={resolution}
+                          className="focus:bg-zinc-800 focus:text-zinc-100"
+                        >
+                          {resolution}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
