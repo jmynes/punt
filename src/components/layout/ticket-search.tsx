@@ -12,7 +12,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { useTicketSearch } from '@/hooks/queries/use-tickets'
-import { getColumnIcon } from '@/lib/status-icons'
+import { getColumnIcon, TAILWIND_TO_HEX } from '@/lib/status-icons'
 import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -22,15 +22,21 @@ type ColumnInfo = { name: string; icon?: string | null; color?: string | null }
 
 function ColumnBadge({ column }: { column: ColumnInfo }) {
   const { icon: Icon, color } = getColumnIcon(column.icon, column.name, column.color)
-  const isHex = color?.startsWith('#')
+  // Resolve Tailwind class colors to inline styles so they survive CommandItem's selection override
+  const resolvedColor = color?.startsWith('#') ? color : tailwindColorToHex(color)
   return (
     <span className="flex items-center gap-1.5 ml-auto shrink-0">
-      <Icon className={cn('h-3 w-3', !isHex && color)} style={isHex ? { color } : undefined} />
-      <span className={cn('text-xs', !isHex && color)} style={isHex ? { color } : undefined}>
+      <Icon className="h-3 w-3" style={resolvedColor ? { color: resolvedColor } : undefined} />
+      <span className="text-xs" style={resolvedColor ? { color: resolvedColor } : undefined}>
         {column.name}
       </span>
     </span>
   )
+}
+
+function tailwindColorToHex(className: string | undefined): string | undefined {
+  if (!className) return undefined
+  return TAILWIND_TO_HEX[className]
 }
 
 interface TicketSearchProps {
@@ -130,7 +136,7 @@ export function TicketSearch({ projectId, projectKey }: TicketSearchProps) {
                   className="flex items-center gap-3 py-2.5 cursor-pointer"
                 >
                   <TypeBadge type={ticket.type} size="sm" />
-                  <span className="shrink-0 text-xs font-mono text-zinc-400">
+                  <span className="shrink-0 text-xs font-mono" style={{ color: '#a1a1aa' }}>
                     {projectKey}-{ticket.number}
                   </span>
                   <span className="truncate text-sm text-zinc-200">{ticket.title}</span>
@@ -281,7 +287,7 @@ export function GlobalTicketSearch() {
                     className="flex items-center gap-3 py-2.5 cursor-pointer"
                   >
                     <TypeBadge type={ticket.type} size="sm" />
-                    <span className="shrink-0 text-xs font-mono text-zinc-400">
+                    <span className="shrink-0 text-xs font-mono" style={{ color: '#a1a1aa' }}>
                       {projectKey}-{ticket.number}
                     </span>
                     <span className="truncate text-sm text-zinc-200">{ticket.title}</span>
