@@ -15,6 +15,7 @@ import {
   Settings,
   Shield,
   SlidersHorizontal,
+  Tag,
   Target,
   Trash2,
   Upload,
@@ -560,12 +561,14 @@ function ProjectSettingsLink({
   const hasSettingsAccess = useHasAnyPermission(projectId, [
     PERMISSIONS.PROJECT_SETTINGS,
     PERMISSIONS.MEMBERS_MANAGE,
+    PERMISSIONS.LABELS_MANAGE,
     PERMISSIONS.MEMBERS_ADMIN,
   ])
 
   // Check individual permissions for sub-items
   const canViewSettings = useHasPermission(projectId, PERMISSIONS.PROJECT_SETTINGS)
   const canManageMembers = useHasPermission(projectId, PERMISSIONS.MEMBERS_MANAGE)
+  const canManageLabels = useHasPermission(projectId, PERMISSIONS.LABELS_MANAGE)
   const canManageRoles = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
 
   // Don't render if user doesn't have access (or still loading - hide by default)
@@ -633,6 +636,21 @@ function ProjectSettingsLink({
               >
                 <Users className="h-3 w-3" />
                 Members
+              </Button>
+            </Link>
+          )}
+          {canManageLabels && (
+            <Link href={`/projects/${projectKey}/settings?tab=labels`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  isOnSettingsPage && currentTab === 'labels' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Tag className="h-3 w-3" />
+                Labels
               </Button>
             </Link>
           )}

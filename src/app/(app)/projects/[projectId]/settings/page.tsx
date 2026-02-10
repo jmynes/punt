@@ -1,12 +1,13 @@
 'use client'
 
-import { Loader2, Settings, Shield, Users } from 'lucide-react'
+import { Loader2, Settings, Shield, Tag, Users } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
 import { MembersTab } from '@/components/projects/permissions/members-tab'
 import { RolesTab } from '@/components/projects/permissions/roles-tab'
 import { GeneralTab } from '@/components/projects/settings/general-tab'
+import { LabelsTab } from '@/components/projects/settings/labels-tab'
 import { useHasPermission, useMyPermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -15,9 +16,9 @@ import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
 
-type SettingsTab = 'general' | 'members' | 'roles'
+type SettingsTab = 'general' | 'members' | 'labels' | 'roles'
 
-const VALID_TABS: SettingsTab[] = ['general', 'members', 'roles']
+const VALID_TABS: SettingsTab[] = ['general', 'members', 'labels', 'roles']
 
 function isValidTab(tab: string | null): tab is SettingsTab {
   return tab !== null && VALID_TABS.includes(tab as SettingsTab)
@@ -44,6 +45,7 @@ export default function ProjectSettingsPage() {
   const { isLoading: permissionsLoading } = useMyPermissions(projectId)
   const canViewSettings = useHasPermission(projectId, PERMISSIONS.PROJECT_SETTINGS)
   const canManageMembers = useHasPermission(projectId, PERMISSIONS.MEMBERS_MANAGE)
+  const canManageLabels = useHasPermission(projectId, PERMISSIONS.LABELS_MANAGE)
   const canManageRoles = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
 
   // Connect to real-time updates
@@ -79,7 +81,7 @@ export default function ProjectSettingsPage() {
   }
 
   // Check if user has any access to this page (permissions are now loaded)
-  const hasAnyAccess = canViewSettings || canManageMembers || canManageRoles
+  const hasAnyAccess = canViewSettings || canManageMembers || canManageLabels || canManageRoles
 
   if (!hasAnyAccess) {
     return (
@@ -101,16 +103,26 @@ export default function ProjectSettingsPage() {
 
   // Determine which tab to show based on permissions
   // If current tab is not accessible, redirect to first accessible tab
+  // Find the first accessible tab for fallback
+  const firstAccessibleTab = (): SettingsTab => {
+    if (canViewSettings) return 'general'
+    if (canManageMembers) return 'members'
+    if (canManageLabels) return 'labels'
+    return 'roles'
+  }
+
   const getEffectiveTab = (): SettingsTab => {
     switch (activeTab) {
       case 'general':
-        return canViewSettings ? 'general' : canManageMembers ? 'members' : 'roles'
+        return canViewSettings ? 'general' : firstAccessibleTab()
       case 'members':
-        return canManageMembers ? 'members' : canViewSettings ? 'general' : 'roles'
+        return canManageMembers ? 'members' : firstAccessibleTab()
+      case 'labels':
+        return canManageLabels ? 'labels' : firstAccessibleTab()
       case 'roles':
-        return canManageRoles ? 'roles' : canViewSettings ? 'general' : 'members'
+        return canManageRoles ? 'roles' : firstAccessibleTab()
       default:
-        return canViewSettings ? 'general' : canManageMembers ? 'members' : 'roles'
+        return firstAccessibleTab()
     }
   }
 
@@ -160,6 +172,20 @@ export default function ProjectSettingsPage() {
               Members
             </Link>
           )}
+          {canManageLabels && (
+            <Link
+              href={`/projects/${projectKey}/settings?tab=labels`}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+                effectiveTab === 'labels'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Tag className="h-4 w-4" />
+              Labels
+            </Link>
+          )}
           {canManageRoles && (
             <Link
               href={`/projects/${projectKey}/settings?tab=roles`}
@@ -190,6 +216,7 @@ export default function ProjectSettingsPage() {
           />
         )}
         {effectiveTab === 'members' && <MembersTab projectId={projectId} />}
+        {effectiveTab === 'labels' && <LabelsTab projectId={projectId} />}
         {effectiveTab === 'roles' && <RolesTab projectId={projectId} />}
 
         {/* Footer spacer */}
