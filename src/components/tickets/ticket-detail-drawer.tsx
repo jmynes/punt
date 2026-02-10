@@ -1221,14 +1221,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   />
                 </div>
 
-                {/* Due Date */}
+                {/* Environment */}
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">Due Date</Label>
-                  <DatePicker
-                    value={tempDueDate}
-                    onChange={(value) => handleChange('dueDate', value)}
-                    placeholder="Set due date"
-                    context="ticket-form"
+                  <Label className="text-zinc-400">Environment</Label>
+                  <Input
+                    value={tempEnvironment}
+                    onChange={(e) => handleChange('environment', e.target.value)}
+                    placeholder="e.g., Production, Staging"
+                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
                   />
                 </div>
 
@@ -1243,14 +1243,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   />
                 </div>
 
-                {/* Environment */}
+                {/* Due Date */}
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">Environment</Label>
-                  <Input
-                    value={tempEnvironment}
-                    onChange={(e) => handleChange('environment', e.target.value)}
-                    placeholder="e.g., Production, Staging"
-                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
+                  <Label className="text-zinc-400">Due Date</Label>
+                  <DatePicker
+                    value={tempDueDate}
+                    onChange={(value) => handleChange('dueDate', value)}
+                    placeholder="Set due date"
+                    context="ticket-form"
                   />
                 </div>
 

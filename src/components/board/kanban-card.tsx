@@ -15,7 +15,7 @@ import { Card } from '@/components/ui/card'
 import { cn, getAvatarColor, getInitials, getLabelStyles } from '@/lib/utils'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
-import type { IssueType, Priority, TicketWithRelations } from '@/types'
+import type { IssueType, Priority, Resolution, TicketWithRelations } from '@/types'
 import { TicketContextMenu } from './ticket-context-menu'
 
 interface KanbanCardProps {
@@ -132,10 +132,10 @@ export function KanbanCard({
             <InlineCodeText text={ticket.title} />
           </h4>
 
-          {/* Resolution badge */}
-          {ticket.resolution && (
+          {/* Resolution badge (only non-Done resolutions like Won't Fix, Duplicate, etc.) */}
+          {ticket.resolution && ticket.resolution !== 'Done' && (
             <div className="mb-2">
-              <ResolutionBadge resolution={ticket.resolution} size="sm" />
+              <ResolutionBadge resolution={ticket.resolution as Resolution} size="sm" />
             </div>
           )}
 

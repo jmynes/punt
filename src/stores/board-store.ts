@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { logger } from '@/lib/logger'
+import { isCompletedColumn } from '@/lib/sprint-utils'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
 // Helper to create default columns for a project
@@ -243,10 +244,14 @@ export const useBoardStore = create<BoardState>()(
 
               if (!ticket) return column
 
+              const targetIsDone = isCompletedColumn(column.name)
               const updatedTicket = {
                 ...ticket,
                 columnId: toColumnId,
                 order: newOrder,
+                // Auto-couple resolution: set "Done" when moving to done, clear when moving out
+                ...(targetIsDone && !ticket.resolution ? { resolution: 'Done' as const } : {}),
+                ...(!targetIsDone && ticket.resolution ? { resolution: null } : {}),
               }
 
               const newTickets = [...column.tickets]
@@ -287,12 +292,21 @@ export const useBoardStore = create<BoardState>()(
             columnOrder: number
             ticketOrder: number
           }> = []
+          const targetColumn = columns.find((c) => c.id === toColumnId)
+          const targetIsDone = targetColumn ? isCompletedColumn(targetColumn.name) : false
+
           for (const column of columns) {
             for (const ticket of column.tickets) {
               if (ticketIds.includes(ticket.id)) {
                 const ticketIndex = column.tickets.findIndex((t) => t.id === ticket.id)
                 ticketsToMove.push({
-                  ticket: { ...ticket, columnId: toColumnId },
+                  ticket: {
+                    ...ticket,
+                    columnId: toColumnId,
+                    // Auto-couple resolution
+                    ...(targetIsDone && !ticket.resolution ? { resolution: 'Done' as const } : {}),
+                    ...(!targetIsDone && ticket.resolution ? { resolution: null } : {}),
+                  },
                   columnOrder: column.order,
                   ticketOrder: ticketIndex,
                 })
