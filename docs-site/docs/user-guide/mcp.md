@@ -92,7 +92,7 @@ Add PUNT to your MCP client's configuration. The exact location depends on your 
 }
 ```
 
-**Claude Code** (`.mcp.json` in your project):
+**Claude Code** (`.mcp.json` in the project root — gitignored, do not commit):
 
 ```json
 {
@@ -108,6 +108,10 @@ Add PUNT to your MCP client's configuration. The exact location depends on your 
   }
 }
 ```
+
+:::caution
+The `.mcp.json` file contains your API key and is gitignored. Do not commit it to version control. The MCP server also requires the PUNT dev server (`pnpm dev`) to be running on port 3000.
+:::
 
 ### Verify Connection
 

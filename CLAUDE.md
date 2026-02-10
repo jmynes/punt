@@ -442,7 +442,10 @@ cd mcp && pnpm install  # First time only
 MCP_API_KEY=your-key pnpm --dir mcp exec tsx src/index.ts
 ```
 
-**Configuration** (`.mcp.json`):
+**Configuration** (`.mcp.json` — gitignored, contains secrets):
+
+The `.mcp.json` file lives in the project root but is **gitignored** because it contains the API key. Claude Code reads it automatically per-project. The MCP server requires the dev server (`pnpm dev`) to be running on port 3000, since it calls the PUNT API. If MCP tools return HTML instead of JSON, the dev server is not running.
+
 ```json
 {
   "mcpServers": {
@@ -451,7 +454,7 @@ MCP_API_KEY=your-key pnpm --dir mcp exec tsx src/index.ts
       "command": "pnpm",
       "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
       "env": {
-        "MCP_API_KEY": "your-api-key-here"
+        "MCP_API_KEY": "<user's key from POST /api/me/mcp-key>"
       }
     }
   }

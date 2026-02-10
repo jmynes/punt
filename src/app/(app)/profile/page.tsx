@@ -1148,7 +1148,8 @@ export default function ProfilePage() {
                 <p className="font-medium text-zinc-300">How to configure MCP</p>
                 <p>
                   Add the following to your <code className="text-amber-400">.mcp.json</code> file
-                  to connect an AI assistant to PUNT:
+                  in the project root to connect an AI assistant to PUNT. This file is gitignored
+                  and should not be committed:
                 </p>
                 <pre className="bg-zinc-900 rounded p-2 overflow-x-auto text-zinc-300">
                   {`{
@@ -1166,8 +1167,7 @@ export default function ProfilePage() {
                 </pre>
                 <p>
                   Replace <code className="text-amber-400">your-api-key-here</code> with the
-                  generated key. The MCP server enables AI assistants to create, update, and manage
-                  tickets conversationally.
+                  generated key. The PUNT dev server must be running for the MCP server to work.
                 </p>
               </div>
             </CardContent>
