@@ -85,22 +85,23 @@ export const COLUMN_ICON_OPTIONS: ColumnIconOption[] = [
 export interface ColumnColorOption {
   name: string
   color: string
+  bg: string
   label: string
 }
 
 export const COLUMN_COLOR_OPTIONS: ColumnColorOption[] = [
-  { name: 'zinc', color: 'text-zinc-400', label: 'Gray' },
-  { name: 'blue', color: 'text-blue-300', label: 'Blue' },
-  { name: 'cyan', color: 'text-cyan-300', label: 'Cyan' },
-  { name: 'emerald', color: 'text-emerald-400', label: 'Green' },
-  { name: 'amber', color: 'text-amber-400', label: 'Amber' },
-  { name: 'orange', color: 'text-orange-400', label: 'Orange' },
-  { name: 'red', color: 'text-red-400', label: 'Red' },
-  { name: 'pink', color: 'text-pink-400', label: 'Pink' },
-  { name: 'purple', color: 'text-purple-300', label: 'Purple' },
-  { name: 'indigo', color: 'text-indigo-400', label: 'Indigo' },
-  { name: 'yellow', color: 'text-yellow-300', label: 'Yellow' },
-  { name: 'green', color: 'text-green-400', label: 'Lime' },
+  { name: 'zinc', color: 'text-zinc-400', bg: 'bg-zinc-400', label: 'Gray' },
+  { name: 'blue', color: 'text-blue-300', bg: 'bg-blue-300', label: 'Blue' },
+  { name: 'cyan', color: 'text-cyan-300', bg: 'bg-cyan-300', label: 'Cyan' },
+  { name: 'emerald', color: 'text-emerald-400', bg: 'bg-emerald-400', label: 'Green' },
+  { name: 'amber', color: 'text-amber-400', bg: 'bg-amber-400', label: 'Amber' },
+  { name: 'orange', color: 'text-orange-400', bg: 'bg-orange-400', label: 'Orange' },
+  { name: 'red', color: 'text-red-400', bg: 'bg-red-400', label: 'Red' },
+  { name: 'pink', color: 'text-pink-400', bg: 'bg-pink-400', label: 'Pink' },
+  { name: 'purple', color: 'text-purple-300', bg: 'bg-purple-300', label: 'Purple' },
+  { name: 'indigo', color: 'text-indigo-400', bg: 'bg-indigo-400', label: 'Indigo' },
+  { name: 'yellow', color: 'text-yellow-300', bg: 'bg-yellow-300', label: 'Yellow' },
+  { name: 'green', color: 'text-green-400', bg: 'bg-green-400', label: 'Lime' },
 ]
 
 const COLUMN_COLOR_MAP = new Map(COLUMN_COLOR_OPTIONS.map((opt) => [opt.name, opt]))

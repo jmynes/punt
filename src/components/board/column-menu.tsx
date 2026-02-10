@@ -622,12 +622,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                           )}
                           disabled={renameLoading}
                         >
-                          <div
-                            className={cn(
-                              'h-4 w-4 rounded-full',
-                              opt.color.replace('text-', 'bg-'),
-                            )}
-                          />
+                          <div className={cn('h-4 w-4 rounded-full', opt.bg)} />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="text-xs">
