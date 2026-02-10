@@ -84,6 +84,26 @@ export const COLUMN_ICON_OPTIONS: ColumnIconOption[] = [
 // Map from icon name to the icon option (for quick lookup)
 const COLUMN_ICON_MAP = new Map(COLUMN_ICON_OPTIONS.map((opt) => [opt.name, opt]))
 
+// Reverse map from LucideIcon component to icon name
+const ICON_TO_NAME = new Map(COLUMN_ICON_OPTIONS.map((opt) => [opt.icon, opt.name]))
+
+/**
+ * Resolve the effective icon name for a column. If the column has an explicit icon,
+ * returns it. Otherwise, looks up the auto-detected icon from the column name and
+ * returns the matching icon name from COLUMN_ICON_OPTIONS (if any).
+ */
+export function resolveColumnIconName(
+  iconName?: string | null,
+  columnName?: string,
+): string | null {
+  if (iconName) return iconName
+  if (columnName) {
+    const entry = getStatusIcon(columnName)
+    return ICON_TO_NAME.get(entry.icon) ?? null
+  }
+  return null
+}
+
 /**
  * Get the icon for a column. Uses custom icon/color if set, otherwise falls back
  * to the name-based heuristic.
