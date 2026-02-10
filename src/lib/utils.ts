@@ -57,8 +57,11 @@ export function getInitials(name: string): string {
  * Parse a hex color string to RGB components.
  * Supports 3-char (#abc) and 6-char (#aabbcc) hex formats.
  */
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const cleaned = hex.replace('#', '')
+  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(cleaned)) {
+    return null
+  }
   const fullHex =
     cleaned.length === 3
       ? cleaned
@@ -102,14 +105,16 @@ function getLuminance(r: number, g: number, b: number): number {
  * to ensure readability at small text sizes (10-12px) on dark UI backgrounds.
  */
 export function getLabelTextColor(hex: string): string {
-  const { r, g, b } = hexToRgb(hex)
+  const rgb = hexToRgb(hex)
+  if (!rgb) return '#ffffff'
+  const { r, g, b } = rgb
   const luminance = getLuminance(r, g, b)
+  if (Number.isNaN(luminance)) return '#ffffff'
 
   // Target minimum luminance for legible text on dark backgrounds (~zinc-900 bg).
   // WCAG AA requires 4.5:1 contrast for small text. zinc-900 (#18181b) has
-  // luminance ~0.01, so we need text luminance of ~0.18+ for 4.5:1.
-  // We aim for ~0.25+ for comfortable reading.
-  const minLuminance = 0.25
+  // luminance ~0.02. For 5:1 contrast: L_text = 5 * (0.02 + 0.05) - 0.05 = 0.3
+  const minLuminance = 0.3
 
   if (luminance >= minLuminance) {
     // Color is already bright enough - return as-is
@@ -152,6 +157,10 @@ export function getLabelStyles(labelColor: string): {
   borderColor: string
   color: string
 } {
+  const rgb = hexToRgb(labelColor)
+  if (!rgb) {
+    return { backgroundColor: '#ffffff20', borderColor: '#ffffff', color: '#ffffff' }
+  }
   return {
     backgroundColor: `${labelColor}20`,
     borderColor: labelColor,
