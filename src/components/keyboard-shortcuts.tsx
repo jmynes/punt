@@ -2725,6 +2725,19 @@ export function KeyboardShortcuts() {
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 space-y-6">
+            {/* Navigation */}
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-200 mb-2">Navigation</h3>
+              <div className="space-y-2 text-sm text-zinc-400">
+                <div className="flex items-center justify-between">
+                  <span>Search tickets</span>
+                  <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
+                    Ctrl / Cmd + K
+                  </kbd>
+                </div>
+              </div>
+            </div>
+
             {/* Selection */}
             <div>
               <h3 className="text-sm font-semibold text-zinc-200 mb-2">Selection</h3>
@@ -2770,6 +2783,25 @@ export function KeyboardShortcuts() {
                   <span>Delete selected tickets</span>
                   <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
                     Delete
+                  </kbd>
+                </div>
+              </div>
+            </div>
+
+            {/* Move Tickets */}
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-200 mb-2">Move Tickets</h3>
+              <div className="space-y-2 text-sm text-zinc-400">
+                <div className="flex items-center justify-between">
+                  <span>Reorder selected tickets up/down</span>
+                  <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
+                    Arrow Up / Down
+                  </kbd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Move selected tickets between columns</span>
+                  <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
+                    Arrow Left / Right
                   </kbd>
                 </div>
               </div>
