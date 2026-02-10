@@ -251,7 +251,21 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
     setFilterBySprint(sprintId)
   }
 
-  const filterButtons = visibleColumns
+  // Build the list of columns to generate filter buttons for.
+  // Always include resolution right after status, even if the column isn't visible.
+  const filterableColumns = useMemo(() => {
+    const result = [...visibleColumns]
+    if (!result.some((c) => c.id === 'resolution')) {
+      const resCol = columns.find((c) => c.id === 'resolution')
+      if (resCol) {
+        const statusIdx = result.findIndex((c) => c.id === 'status')
+        result.splice(statusIdx >= 0 ? statusIdx + 1 : result.length, 0, resCol)
+      }
+    }
+    return result
+  }, [visibleColumns, columns])
+
+  const filterButtons = filterableColumns
     .map((col) => {
       switch (col.id) {
         case 'type':
