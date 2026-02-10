@@ -104,25 +104,24 @@ export function resolveColumnIconName(
   return null
 }
 
-// Map Tailwind text color classes to hex values for the color picker.
-// Uses LABEL_COLORS preset values where possible so the swatch gets highlighted.
+// Map Tailwind text color classes to their actual hex values for the color picker.
 export const TAILWIND_TO_HEX: Record<string, string> = {
-  'text-zinc-400': '#64748b', // slate preset
-  'text-zinc-500': '#78716c', // stone preset
-  'text-blue-300': '#3b82f6', // blue preset
-  'text-blue-400': '#3b82f6', // blue preset
-  'text-cyan-300': '#06b6d4', // cyan preset
-  'text-amber-300': '#f59e0b', // amber preset
-  'text-amber-400': '#f59e0b', // amber preset
-  'text-purple-300': '#8b5cf6', // purple preset
-  'text-emerald-400': '#22c55e', // green preset
-  'text-red-300': '#ef4444', // red preset
-  'text-red-400': '#ef4444', // red preset
-  'text-green-400': '#22c55e', // green preset
-  'text-yellow-300': '#eab308', // yellow preset
-  'text-yellow-400': '#eab308', // yellow preset
-  'text-orange-400': '#f97316', // orange preset
-  'text-indigo-400': '#a855f7', // purple-500 preset
+  'text-zinc-400': '#a1a1aa',
+  'text-zinc-500': '#71717a',
+  'text-blue-300': '#93c5fd',
+  'text-blue-400': '#60a5fa',
+  'text-cyan-300': '#67e8f9',
+  'text-amber-300': '#fcd34d',
+  'text-amber-400': '#fbbf24',
+  'text-purple-300': '#d8b4fe',
+  'text-emerald-400': '#34d399',
+  'text-red-300': '#fca5a5',
+  'text-red-400': '#f87171',
+  'text-green-400': '#4ade80',
+  'text-yellow-300': '#fde047',
+  'text-yellow-400': '#facc15',
+  'text-orange-400': '#fb923c',
+  'text-indigo-400': '#818cf8',
 }
 
 /**
