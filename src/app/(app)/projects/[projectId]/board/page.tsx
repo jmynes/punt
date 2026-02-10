@@ -48,6 +48,7 @@ export default function BoardPage() {
     filterBySprint,
     filterByPoints,
     filterByDueDate,
+    filterByResolution,
     searchQuery,
   } = useBacklogStore()
 
@@ -135,6 +136,14 @@ export default function BoardPage() {
         // Status filter
         if (filterByStatus.length > 0 && !filterByStatus.includes(ticket.columnId)) return false
 
+        // Resolution filter
+        if (filterByResolution.length > 0) {
+          if (filterByResolution.includes('unresolved')) {
+            if (!ticket.resolution) return true
+          }
+          if (!ticket.resolution || !filterByResolution.includes(ticket.resolution)) return false
+        }
+
         // Assignee filter
         if (filterByAssignee.length > 0) {
           const ticketAssigneeId = ticket.assigneeId || 'unassigned'
@@ -200,6 +209,7 @@ export default function BoardPage() {
     filterByType,
     filterByPriority,
     filterByStatus,
+    filterByResolution,
     filterByAssignee,
     filterByLabels,
     filterBySprint,
