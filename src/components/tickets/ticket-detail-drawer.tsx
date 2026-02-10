@@ -77,6 +77,7 @@ import {
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
+import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
@@ -335,6 +336,15 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       case 'status': {
         const columnId = value as string
         setTempStatusId(columnId)
+        // Auto-couple: moving to done column sets resolution, moving out clears it
+        const targetCol = columns.find((c) => c.id === columnId)
+        if (targetCol) {
+          if (isCompletedColumn(targetCol.name) && !tempResolution) {
+            setTempResolution('Done')
+          } else if (!isCompletedColumn(targetCol.name) && tempResolution) {
+            setTempResolution(null)
+          }
+        }
         break
       }
       case 'type': {
@@ -405,6 +415,16 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       case 'resolution': {
         const resolution = value as string | null
         setTempResolution(resolution)
+        // Auto-couple: setting a resolution moves to done column, clearing leaves in place
+        if (resolution) {
+          const currentCol = columns.find((c) => c.id === tempStatusId)
+          if (currentCol && !isCompletedColumn(currentCol.name)) {
+            const doneCol = columns.find((c) => isCompletedColumn(c.name))
+            if (doneCol) {
+              setTempStatusId(doneCol.id)
+            }
+          }
+        }
         break
       }
       case 'attachments':
