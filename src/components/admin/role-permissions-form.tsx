@@ -170,7 +170,7 @@ export function RolePermissionsForm() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-zinc-100">Default Role Permissions</CardTitle>
+              <CardTitle className="text-zinc-100">Default Roles</CardTitle>
               <CardDescription className="text-zinc-400 mt-1">
                 Configure which permissions each role has when new projects are created. These
                 settings apply to new projects only.
