@@ -12,6 +12,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { AddMemberDialog } from '@/components/projects/permissions/add-member-dialog'
@@ -46,7 +47,7 @@ import {
 } from '@/hooks/queries/use-members'
 import { useProjectRoles } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
-import { useHasPermission } from '@/hooks/use-permissions'
+import { useHasPermission, useIsSystemAdmin } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn, getAvatarColor } from '@/lib/utils'
@@ -67,6 +68,7 @@ export function MembersTab({ projectId }: MembersTabProps) {
   const updateMember = useUpdateMember(projectId)
   const currentUser = useCurrentUser()
   const queryClient = useQueryClient()
+  const isSystemAdmin = useIsSystemAdmin()
 
   const { undo, redo, canUndo, canRedo, pushMemberRemove, pushBulkMemberRoleChange } =
     useAdminUndoStore()
@@ -593,6 +595,7 @@ export function MembersTab({ projectId }: MembersTabProps) {
               onSelect={(shiftKey) => handleSelectSelf(shiftKey)}
               onRoleChange={(roleId) => handleRoleChange(currentMember.id, roleId)}
               onRemove={() => setRemovingMember(currentMember)}
+              profileUrl={isSystemAdmin ? `/admin/users/${currentMember.userId}` : undefined}
             />
             {otherMembers.length > 0 && (
               <div className="flex items-center gap-3 py-3">
@@ -619,6 +622,7 @@ export function MembersTab({ projectId }: MembersTabProps) {
             onSelect={(shiftKey) => handleSelect(member.id, shiftKey)}
             onRoleChange={(roleId) => handleRoleChange(member.id, roleId)}
             onRemove={() => setRemovingMember(member)}
+            profileUrl={isSystemAdmin ? `/admin/users/${member.userId}` : undefined}
           />
         ))}
 
@@ -758,6 +762,7 @@ interface MemberCardProps {
   onSelect: (shiftKey: boolean) => void
   onRoleChange: (roleId: string) => void
   onRemove: () => void
+  profileUrl?: string
 }
 
 function MemberCard({
@@ -770,6 +775,7 @@ function MemberCard({
   onSelect,
   onRoleChange,
   onRemove,
+  profileUrl,
 }: MemberCardProps) {
   const initials = member.user.name
     .split(' ')
@@ -779,6 +785,56 @@ function MemberCard({
     .slice(0, 2)
 
   const hasOverrides = member.overrides && member.overrides.length > 0
+
+  const avatarAndName = (
+    <>
+      {/* Avatar */}
+      <Avatar className="h-10 w-10">
+        <AvatarImage src={member.user.avatar || undefined} alt={member.user.name} />
+        <AvatarFallback
+          className="text-white font-medium"
+          style={{
+            backgroundColor:
+              member.user.avatarColor || getAvatarColor(member.user.id || member.user.name),
+          }}
+        >
+          {initials}
+        </AvatarFallback>
+      </Avatar>
+
+      {/* User info */}
+      <div>
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              'font-medium text-zinc-100',
+              profileUrl && 'group-hover/profile:underline',
+            )}
+          >
+            {member.user.name}
+          </span>
+          {isCurrentUser && (
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
+            >
+              You
+            </Badge>
+          )}
+        </div>
+        <p className="text-sm text-zinc-500">{member.user.email}</p>
+        {hasOverrides && (
+          <div className="flex items-center gap-1 mt-1">
+            <Settings className="h-3 w-3 text-amber-500" />
+            <span className="text-xs text-amber-500">
+              +{(member.overrides as string[]).length} custom permission
+              {(member.overrides as string[]).length !== 1 ? 's' : ''}
+            </span>
+          </div>
+        )}
+      </div>
+    </>
+  )
 
   return (
     <Card
@@ -809,44 +865,17 @@ function MemberCard({
             />
           )}
 
-          {/* Avatar */}
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={member.user.avatar || undefined} alt={member.user.name} />
-            <AvatarFallback
-              className="text-white font-medium"
-              style={{
-                backgroundColor:
-                  member.user.avatarColor || getAvatarColor(member.user.id || member.user.name),
-              }}
+          {profileUrl ? (
+            <Link
+              href={profileUrl}
+              onClick={(e) => e.stopPropagation()}
+              className="group/profile flex items-center gap-4 text-inherit hover:text-zinc-50 transition-colors"
             >
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-
-          {/* User info */}
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-zinc-100">{member.user.name}</span>
-              {isCurrentUser && (
-                <Badge
-                  variant="outline"
-                  className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
-                >
-                  You
-                </Badge>
-              )}
-            </div>
-            <p className="text-sm text-zinc-500">{member.user.email}</p>
-            {hasOverrides && (
-              <div className="flex items-center gap-1 mt-1">
-                <Settings className="h-3 w-3 text-amber-500" />
-                <span className="text-xs text-amber-500">
-                  +{(member.overrides as string[]).length} custom permission
-                  {(member.overrides as string[]).length !== 1 ? 's' : ''}
-                </span>
-              </div>
-            )}
-          </div>
+              {avatarAndName}
+            </Link>
+          ) : (
+            <div className="flex items-center gap-4">{avatarAndName}</div>
+          )}
         </div>
 
         {/* Role & Actions */}
