@@ -107,6 +107,7 @@ export function useCreateSprint(projectId: string) {
         goal: data.goal ?? undefined,
         startDate: data.startDate ?? undefined,
         endDate: data.endDate ?? undefined,
+        budget: data.budget,
       }) as Promise<SprintWithMetrics>
     },
     onSuccess: () => {
@@ -145,6 +146,7 @@ export function useUpdateSprint(projectId: string) {
         goal: data.goal ?? undefined,
         startDate: data.startDate,
         endDate: data.endDate,
+        budget: data.budget,
       }) as Promise<SprintWithMetrics>
     },
     onSuccess: (_, { sprintId }) => {

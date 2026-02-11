@@ -460,7 +460,7 @@ class DemoStorage {
 
   createSprint(
     projectId: string,
-    data: { name: string; goal?: string; startDate?: Date; endDate?: Date },
+    data: { name: string; goal?: string; startDate?: Date; endDate?: Date; budget?: number | null },
   ): SprintSummary {
     const sprints = this.getSprints(projectId)
 
@@ -471,6 +471,7 @@ class DemoStorage {
       startDate: data.startDate ?? null,
       endDate: data.endDate ?? null,
       goal: data.goal ?? null,
+      budget: data.budget ?? null,
     }
     sprints.push(newSprint)
     localStorage.setItem(KEYS.sprints(projectId), JSON.stringify(sprints))
