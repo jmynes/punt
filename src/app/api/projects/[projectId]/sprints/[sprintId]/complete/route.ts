@@ -99,9 +99,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Handle incomplete tickets based on action
-    // Using `any` since Prisma return types don't match our interface exactly
-    // biome-ignore lint/suspicious/noExplicitAny: Prisma select return type
-    let nextSprint: any = null
+    let nextSprint: { id: string; name: string; status: string } | null = null
 
     const updatedSprint = await db.$transaction(async (tx) => {
       // Determine target for incomplete tickets

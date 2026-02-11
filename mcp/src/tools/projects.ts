@@ -6,6 +6,7 @@ import {
   getProject,
   listProjects,
   type ProjectData,
+  unwrapData,
   updateProject,
 } from '../api-client.js'
 import { errorResponse, textResponse } from '../utils.js'
@@ -160,8 +161,7 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      return textResponse(formatProjectDetail(result.data!))
+      return textResponse(formatProjectDetail(unwrapData(result)))
     },
   )
 
@@ -187,8 +187,7 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      return textResponse(formatProjectCreated(result.data!))
+      return textResponse(formatProjectCreated(unwrapData(result)))
     },
   )
 
@@ -223,11 +222,8 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      const oldProject = currentResult.data
-      const newProject = result.data
-      if (!oldProject || !newProject) {
-        return errorResponse('Unexpected empty response')
-      }
+      const oldProject = unwrapData(currentResult)
+      const newProject = unwrapData(result)
       return textResponse(formatProjectUpdated(key.toUpperCase(), oldProject, newProject))
     },
   )
@@ -250,8 +246,7 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse(projectResult.error)
       }
 
-      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      const project = projectResult.data!
+      const project = unwrapData(projectResult)
       const result = await deleteProject(key)
       if (result.error) {
         return errorResponse(result.error)

@@ -8,6 +8,7 @@ import {
   listSprints,
   type SprintData,
   startSprint,
+  unwrapData,
   updateSprint,
 } from '../api-client.js'
 import { errorResponse, formatDate, formatTicketList, textResponse } from '../utils.js'
@@ -185,8 +186,7 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      return textResponse(formatSprintDetail(result.data!, projectKey.toUpperCase()))
+      return textResponse(formatSprintDetail(unwrapData(result), projectKey.toUpperCase()))
     },
   )
 
@@ -215,8 +215,7 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      return textResponse(formatSprintCreated(result.data!))
+      return textResponse(formatSprintCreated(unwrapData(result)))
     },
   )
 
@@ -263,8 +262,7 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      return textResponse(formatSprintUpdated(sprint, result.data!))
+      return textResponse(formatSprintUpdated(sprint, unwrapData(result)))
     },
   )
 
@@ -301,8 +299,7 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      const started = result.data!
+      const started = unwrapData(result)
       const ticketCount = started.tickets?.length ?? 0
       const dateRange =
         started.startDate && started.endDate

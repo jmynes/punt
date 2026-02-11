@@ -16,6 +16,17 @@ interface ApiResponse<T> {
 }
 
 /**
+ * Narrow a successful API response to extract the data.
+ * Use after checking `result.error` to safely access `result.data`.
+ */
+export function unwrapData<T>(result: ApiResponse<T>): T {
+  if (result.data === undefined) {
+    throw new Error('Unexpected: API returned success with no data')
+  }
+  return result.data
+}
+
+/**
  * Make an authenticated request to the PUNT API
  */
 async function apiRequest<T>(

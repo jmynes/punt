@@ -39,6 +39,16 @@ const TEST_USER_ID = 'user-1'
 const TEST_PROJECT_ID = 'project-1'
 const TEST_ROLE_ID = 'role-1'
 
+/**
+ * Create a minimal mock member result with just the role position.
+ * Used for canManageMember/canAssignRole tests where Prisma select
+ * only returns { role: { position: number } }, but the mock type
+ * expects the full model. Uses createMockMembership for type compatibility.
+ */
+function mockMemberWithPosition(position: number) {
+  return createMockMembership([], null, position)
+}
+
 function createMockMembership(
   rolePermissions: Permission[],
   overrides: Permission[] | null = null,
@@ -426,12 +436,8 @@ describe('Permission Checking Utilities', () => {
         .mockResolvedValueOnce(
           createMockMembership([PERMISSIONS.MEMBERS_MANAGE], null, 0), // Owner position
         )
-        .mockResolvedValueOnce({
-          role: { position: 0 }, // Actor's position
-        } as any)
-        .mockResolvedValueOnce({
-          role: { position: 1 }, // Target's position (Admin)
-        } as any)
+        .mockResolvedValueOnce(mockMemberWithPosition(0)) // Actor's position
+        .mockResolvedValueOnce(mockMemberWithPosition(1)) // Target's position (Admin)
 
       const result = await canManageMember(actorId, targetId, TEST_PROJECT_ID)
 
@@ -444,12 +450,8 @@ describe('Permission Checking Utilities', () => {
         .mockResolvedValueOnce(
           createMockMembership([PERMISSIONS.MEMBERS_MANAGE], null, 1), // Admin position
         )
-        .mockResolvedValueOnce({
-          role: { position: 1 }, // Actor's position (Admin)
-        } as any)
-        .mockResolvedValueOnce({
-          role: { position: 0 }, // Target's position (Owner)
-        } as any)
+        .mockResolvedValueOnce(mockMemberWithPosition(1)) // Actor's position (Admin)
+        .mockResolvedValueOnce(mockMemberWithPosition(0)) // Target's position (Owner)
 
       const result = await canManageMember(actorId, targetId, TEST_PROJECT_ID)
 
@@ -462,12 +464,8 @@ describe('Permission Checking Utilities', () => {
         .mockResolvedValueOnce(
           createMockMembership([PERMISSIONS.MEMBERS_MANAGE], null, 1), // Admin position
         )
-        .mockResolvedValueOnce({
-          role: { position: 1 }, // Actor's position
-        } as any)
-        .mockResolvedValueOnce({
-          role: { position: 1 }, // Target's position (same)
-        } as any)
+        .mockResolvedValueOnce(mockMemberWithPosition(1)) // Actor's position
+        .mockResolvedValueOnce(mockMemberWithPosition(1)) // Target's position (same)
 
       const result = await canManageMember(actorId, targetId, TEST_PROJECT_ID)
 
@@ -479,7 +477,7 @@ describe('Permission Checking Utilities', () => {
       mockProjectMemberFindUnique
         .mockResolvedValueOnce(createMockMembership([PERMISSIONS.MEMBERS_MANAGE], null, 0))
         .mockResolvedValueOnce(null) // Actor not found
-        .mockResolvedValueOnce({ role: { position: 2 } } as any)
+        .mockResolvedValueOnce(mockMemberWithPosition(2))
 
       const result = await canManageMember(actorId, targetId, TEST_PROJECT_ID)
 
@@ -490,7 +488,7 @@ describe('Permission Checking Utilities', () => {
       mockUserFindUnique.mockResolvedValue({ isSystemAdmin: false })
       mockProjectMemberFindUnique
         .mockResolvedValueOnce(createMockMembership([PERMISSIONS.MEMBERS_MANAGE], null, 0))
-        .mockResolvedValueOnce({ role: { position: 0 } } as any)
+        .mockResolvedValueOnce(mockMemberWithPosition(0))
         .mockResolvedValueOnce(null) // Target not found
 
       const result = await canManageMember(actorId, targetId, TEST_PROJECT_ID)
@@ -528,9 +526,7 @@ describe('Permission Checking Utilities', () => {
         .mockResolvedValueOnce(
           createMockMembership([PERMISSIONS.MEMBERS_MANAGE], null, 0), // Owner
         )
-        .mockResolvedValueOnce({
-          role: { position: 0 }, // Actor's position
-        } as any)
+        .mockResolvedValueOnce(mockMemberWithPosition(0)) // Actor's position
       mockRoleFindUnique.mockResolvedValue({
         position: 1, // Admin position
       })
@@ -546,9 +542,7 @@ describe('Permission Checking Utilities', () => {
         .mockResolvedValueOnce(
           createMockMembership([PERMISSIONS.MEMBERS_MANAGE], null, 1), // Admin
         )
-        .mockResolvedValueOnce({
-          role: { position: 1 }, // Actor's position
-        } as any)
+        .mockResolvedValueOnce(mockMemberWithPosition(1)) // Actor's position
       mockRoleFindUnique.mockResolvedValue({
         position: 0, // Owner position
       })
@@ -564,9 +558,7 @@ describe('Permission Checking Utilities', () => {
         .mockResolvedValueOnce(
           createMockMembership([PERMISSIONS.MEMBERS_MANAGE], null, 1), // Admin
         )
-        .mockResolvedValueOnce({
-          role: { position: 1 }, // Actor's position
-        } as any)
+        .mockResolvedValueOnce(mockMemberWithPosition(1)) // Actor's position
       mockRoleFindUnique.mockResolvedValue({
         position: 1, // Same position
       })
@@ -592,7 +584,7 @@ describe('Permission Checking Utilities', () => {
       mockUserFindUnique.mockResolvedValue({ isSystemAdmin: false })
       mockProjectMemberFindUnique
         .mockResolvedValueOnce(createMockMembership([PERMISSIONS.MEMBERS_MANAGE], null, 0))
-        .mockResolvedValueOnce({ role: { position: 0 } } as any)
+        .mockResolvedValueOnce(mockMemberWithPosition(0))
       mockRoleFindUnique.mockResolvedValue(null) // Role not found
 
       const result = await canAssignRole(actorId, TEST_PROJECT_ID, targetRoleId)

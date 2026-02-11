@@ -9,6 +9,7 @@ import {
   listTickets,
   listUsers,
   type TicketData,
+  unwrapData,
   updateTicket,
 } from '../api-client.js'
 import {
@@ -435,8 +436,7 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      const ticket = result.data!
+      const ticket = unwrapData(result)
       return textResponse(formatTicketCreated(ticket, projectKey.toUpperCase()))
     },
   )
@@ -599,8 +599,7 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      const ticket = result.data!
+      const ticket = unwrapData(result)
       const upperKey = parsed.projectKey.toUpperCase()
       return textResponse(
         formatTicketUpdated(`${upperKey}-${ticket.number}`, existingTicket, ticket),

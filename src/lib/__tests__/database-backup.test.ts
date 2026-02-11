@@ -8,7 +8,6 @@
  * - Error handling
  */
 
-import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { decrypt, encrypt } from '@/lib/crypto'
@@ -248,7 +247,7 @@ describe('Database Backup/Restore', () => {
         expect(exportFile.salt).toBeDefined()
         expect(exportFile.iv).toBeDefined()
         expect(exportFile.authTag).toBeDefined()
-        expect((exportFile as any).data).toBeUndefined()
+        expect('data' in exportFile).toBe(false)
       })
 
       it('should be decryptable with correct password', async () => {
