@@ -65,8 +65,8 @@ function formatProjectList(projects: ProjectData[]): string {
   lines.push('|-----|------|---------|---------|')
 
   for (const p of projects) {
-    const tickets = p._count?.tickets ?? 0
-    const members = p._count?.members ?? 0
+    const tickets = p._count?.tickets ?? '-'
+    const members = p._count?.members ?? '-'
     lines.push(`| ${p.key} | ${p.name} | ${tickets} | ${members} |`)
   }
 
@@ -195,7 +195,7 @@ export function registerProjectTools(server: McpServer) {
       }
 
       return textResponse(
-        `Deleted project ${key}: ${project.name} (${project._count?.tickets || 0} tickets removed)`,
+        `Deleted project ${key}: ${project.name} (${project._count?.tickets ?? 0} tickets removed)`,
       )
     },
   )
