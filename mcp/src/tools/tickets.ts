@@ -14,6 +14,7 @@ import {
 import {
   errorResponse,
   formatDate,
+  formatTicket,
   formatTicketList,
   parseTicketKey,
   textResponse,
@@ -188,7 +189,12 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(`Ticket not found: ${key}`)
       }
 
-      return textResponse(formatTicketDetail(ticket, parsed.projectKey.toUpperCase()))
+      return textResponse(
+        formatTicket({
+          ...ticket,
+          project: ticket.project ?? { key: parsed.projectKey.toUpperCase(), name: '' },
+        }),
+      )
     },
   )
 
