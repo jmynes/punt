@@ -88,6 +88,7 @@ export interface CreateSprintInput {
   goal?: string
   startDate?: Date
   endDate?: Date
+  budget?: number | null
 }
 
 export interface UpdateSprintInput {
@@ -95,6 +96,7 @@ export interface UpdateSprintInput {
   goal?: string
   startDate?: Date | null
   endDate?: Date | null
+  budget?: number | null
 }
 
 export interface StartSprintInput {
