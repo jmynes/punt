@@ -3,6 +3,7 @@
 import { Loader2, Target } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef } from 'react'
+import { BacklogFilters } from '@/components/backlog'
 import { SprintBacklogView, SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
@@ -127,6 +128,11 @@ export default function SprintPlanningPage() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex-shrink-0 flex items-center gap-4 border-b border-zinc-800 px-4 py-3 lg:px-6">
+        <BacklogFilters projectId={projectId} statusColumns={columns} />
       </div>
 
       {/* Scrollable content area */}
