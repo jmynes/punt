@@ -16,6 +16,7 @@ import {
   Users,
   X,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -58,7 +59,7 @@ import {
   useUpdateRole,
 } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
-import { useHasPermission } from '@/hooks/use-permissions'
+import { useHasPermission, useIsSystemAdmin } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { ALL_PERMISSIONS, PERMISSIONS } from '@/lib/permissions'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
@@ -107,6 +108,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
   } = useAdminUndoStore()
 
   const canManageRoles = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
+  const isSystemAdmin = useIsSystemAdmin()
   const currentUser = useCurrentUser()
 
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
@@ -1078,42 +1080,85 @@ export function RolesTab({ projectId }: RolesTabProps) {
                               key={member.id}
                               className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/30 border border-zinc-800"
                             >
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage
-                                    src={member.user.avatar || undefined}
-                                    alt={member.user.name}
-                                  />
-                                  <AvatarFallback
-                                    className="text-xs font-medium text-white"
-                                    style={{
-                                      backgroundColor:
-                                        member.user.avatarColor ||
-                                        getAvatarColor(member.user.id || member.user.name),
-                                    }}
-                                  >
-                                    {getInitials(member.user.name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-sm font-medium text-zinc-200">
-                                      {member.user.name}
-                                    </p>
-                                    {isCurrentUser && (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
-                                      >
-                                        You
-                                      </Badge>
+                              {isSystemAdmin ? (
+                                <Link
+                                  href={`/admin/users/${member.userId}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="group/profile flex items-center gap-3 text-inherit hover:text-zinc-50 transition-colors"
+                                >
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage
+                                      src={member.user.avatar || undefined}
+                                      alt={member.user.name}
+                                    />
+                                    <AvatarFallback
+                                      className="text-xs font-medium text-white"
+                                      style={{
+                                        backgroundColor:
+                                          member.user.avatarColor ||
+                                          getAvatarColor(member.user.id || member.user.name),
+                                      }}
+                                    >
+                                      {getInitials(member.user.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-medium text-zinc-200 group-hover/profile:underline">
+                                        {member.user.name}
+                                      </p>
+                                      {isCurrentUser && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
+                                        >
+                                          You
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {member.user.email && (
+                                      <p className="text-xs text-zinc-500">{member.user.email}</p>
                                     )}
                                   </div>
-                                  {member.user.email && (
-                                    <p className="text-xs text-zinc-500">{member.user.email}</p>
-                                  )}
+                                </Link>
+                              ) : (
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage
+                                      src={member.user.avatar || undefined}
+                                      alt={member.user.name}
+                                    />
+                                    <AvatarFallback
+                                      className="text-xs font-medium text-white"
+                                      style={{
+                                        backgroundColor:
+                                          member.user.avatarColor ||
+                                          getAvatarColor(member.user.id || member.user.name),
+                                      }}
+                                    >
+                                      {getInitials(member.user.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-medium text-zinc-200">
+                                        {member.user.name}
+                                      </p>
+                                      {isCurrentUser && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
+                                        >
+                                          You
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {member.user.email && (
+                                      <p className="text-xs text-zinc-500">{member.user.email}</p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                               {canManageRoles && (
                                 <div className="flex items-center gap-1">
                                   {roles && roles.length > 1 && (
