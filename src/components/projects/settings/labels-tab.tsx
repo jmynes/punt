@@ -95,34 +95,25 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
     setTimeout(() => nameInputRef.current?.focus(), 50)
   }, [labels?.length])
 
-  // Check if the editor form has changes
-  const checkForChanges = useCallback(
-    (name: string, color: string) => {
-      if (isCreating) {
-        return name.trim() !== ''
-      }
-      if (!selectedLabel) return false
-      return name !== selectedLabel.name || color !== selectedLabel.color
-    },
-    [isCreating, selectedLabel],
-  )
+  // Derive hasChanges reactively from current state
+  useEffect(() => {
+    if (isCreating) {
+      setHasChanges(editName.trim() !== '')
+    } else if (selectedLabel) {
+      setHasChanges(editName !== selectedLabel.name || editColor !== selectedLabel.color)
+    } else {
+      setHasChanges(false)
+    }
+  }, [editName, editColor, isCreating, selectedLabel])
 
   // Handle field changes
-  const handleNameChange = useCallback(
-    (value: string) => {
-      setEditName(value)
-      setHasChanges(checkForChanges(value, editColor))
-    },
-    [editColor, checkForChanges],
-  )
+  const handleNameChange = useCallback((value: string) => {
+    setEditName(value)
+  }, [])
 
-  const handleColorChange = useCallback(
-    (value: string) => {
-      setEditColor(value)
-      setHasChanges(checkForChanges(editName, value))
-    },
-    [editName, checkForChanges],
-  )
+  const handleColorChange = useCallback((value: string) => {
+    setEditColor(value)
+  }, [])
 
   // Save changes (create or update)
   const handleSave = useCallback(async () => {
