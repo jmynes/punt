@@ -32,6 +32,9 @@ PUNT is a lightweight, local-first issue tracking system for teams who want the 
 - Node.js 20.9+
 - pnpm 9+
 
+**Recommended for MCP / Claude Code workflow:**
+- [GitHub CLI (`gh`)](https://cli.github.com/) — for PR creation, merging, and issue management from the terminal
+
 ## Quick Start
 
 ```bash

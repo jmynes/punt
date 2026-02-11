@@ -44,9 +44,17 @@ AI:  Started sprint "Sprint 3" with 12 tickets
 
 ### Prerequisites
 
-- PUNT installed and running
+- PUNT installed and running (`pnpm dev` on port 3000)
 - Node.js 20.9+
+- pnpm 9+
 - An MCP-compatible client (Claude Desktop, Claude Code, etc.)
+
+### Recommended Tools
+
+These are not required for basic MCP usage, but enable the full development workflow with Claude Code:
+
+- **[GitHub CLI (`gh`)](https://cli.github.com/)** — Required for creating PRs, merging, and managing issues from the terminal. Claude Code uses `gh` for all GitHub operations.
+- **[Git](https://git-scm.com/)** — For branch management and committing changes via Claude Code.
 
 ### Install Dependencies
 
