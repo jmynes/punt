@@ -399,17 +399,6 @@ export function SprintSection({
 
         {/* Stats */}
         <div className="flex items-center gap-4 text-xs">
-          {/* Story points with budget */}
-          {sprint?.budget ? (
-            <BudgetIndicator totalPoints={totalPoints} budget={sprint.budget} />
-          ) : (
-            <div className="flex items-center gap-1.5 text-zinc-400">
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span className="font-medium">{totalPoints}</span>
-              <span className="text-zinc-600">pts</span>
-            </div>
-          )}
-
           {/* Ticket count */}
           <div className="flex items-center gap-1.5">
             <span
@@ -422,6 +411,17 @@ export function SprintSection({
             </span>
             <span className="text-zinc-600">{ticketCount === 1 ? 'issue' : 'issues'}</span>
           </div>
+
+          {/* Story points with budget */}
+          {sprint?.budget ? (
+            <BudgetIndicator totalPoints={totalPoints} budget={sprint.budget} />
+          ) : (
+            <div className="flex items-center gap-1.5 text-zinc-400">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span className="font-medium">{totalPoints}</span>
+              <span className="text-zinc-600">pts</span>
+            </div>
+          )}
         </div>
 
         {/* Action buttons */}

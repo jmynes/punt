@@ -693,7 +693,7 @@ export function BacklogTable({
       </ScrollArea>
 
       {/* Footer */}
-      <div className="flex shrink-0 items-center justify-between border-t border-zinc-800 px-4 py-2 text-sm">
+      <div className="flex shrink-0 items-center justify-end border-t border-zinc-800 px-4 py-2 text-sm">
         <div className="flex items-center gap-4">
           {/* Ticket count */}
           <Tooltip>
