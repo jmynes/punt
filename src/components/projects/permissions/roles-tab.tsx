@@ -65,7 +65,7 @@ import { useHasPermission, useIsSystemAdmin } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { LABEL_COLORS } from '@/lib/constants'
 import { ALL_PERMISSIONS, PERMISSIONS } from '@/lib/permissions'
-import { type DefaultRoleName, isDefaultRoleName, ROLE_PRESETS } from '@/lib/permissions/presets'
+import { type DefaultRoleName, ROLE_POSITIONS, ROLE_PRESETS } from '@/lib/permissions/presets'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import {
   type BulkMemberRoleSnapshot,
@@ -149,15 +149,28 @@ export function RolesTab({ projectId }: RolesTabProps) {
     [editPermissions],
   )
 
+  // Map a default role's position to its preset name for permission lookup
+  const getPresetNameByPosition = useCallback((position: number): DefaultRoleName | null => {
+    const entry = Object.entries(ROLE_POSITIONS).find(([, pos]) => pos === position)
+    return entry ? (entry[0] as DefaultRoleName) : null
+  }, [])
+
   // Check if the selected role's permissions match the preset defaults
   const isAtDefaults = useMemo(() => {
-    const roleName = isCreating ? null : selectedRole?.name
-    if (!roleName || !isDefaultRoleName(roleName)) return true
-    const preset = ROLE_PRESETS[roleName as DefaultRoleName]
+    if (isCreating || !selectedRole?.isDefault) return true
+    const presetName = getPresetNameByPosition(selectedRole.position)
+    if (!presetName) return true
+    const preset = ROLE_PRESETS[presetName]
     return (
       editPermissions.length === preset.length && preset.every((p) => editPermissions.includes(p))
     )
-  }, [editPermissions, selectedRole?.name, isCreating])
+  }, [
+    editPermissions,
+    selectedRole?.isDefault,
+    selectedRole?.position,
+    isCreating,
+    getPresetNameByPosition,
+  ])
 
   // Get members for the selected role
   const roleMembers = useMemo(() => {
@@ -633,7 +646,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
       } else if (selectedRole) {
         await updateRole.mutateAsync({
           roleId: selectedRole.id,
-          name: selectedRole.isDefault ? undefined : editName.trim(),
+          name: editName.trim(),
           color: editColor,
           description: editDescription.trim() || null,
           permissions: editPermissions,
@@ -847,7 +860,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
               <CardHeader className="flex-shrink-0 pb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 rounded-full" style={{ backgroundColor: editColor }} />
-                  {canManageRoles && !selectedRole?.isDefault ? (
+                  {canManageRoles ? (
                     <div className="group/title relative flex items-center gap-2 flex-1 min-w-0">
                       <div className="relative">
                         <Input
@@ -930,23 +943,24 @@ export function RolesTab({ projectId }: RolesTabProps) {
                           )}
                           {canManageRoles &&
                             !isCreating &&
-                            selectedRole &&
-                            isDefaultRoleName(selectedRole.name) &&
-                            !isAtDefaults && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  handleFieldChange('permissions', [
-                                    ...ROLE_PRESETS[selectedRole.name as DefaultRoleName],
-                                  ])
-                                }
-                                className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
-                              >
-                                <RotateCcw className="mr-1 h-3 w-3" />
-                                Reset to Defaults
-                              </Button>
-                            )}
+                            selectedRole?.isDefault &&
+                            !isAtDefaults &&
+                            (() => {
+                              const presetName = getPresetNameByPosition(selectedRole.position)
+                              return presetName ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleFieldChange('permissions', [...ROLE_PRESETS[presetName]])
+                                  }
+                                  className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
+                                >
+                                  <RotateCcw className="mr-1 h-3 w-3" />
+                                  Reset to Defaults
+                                </Button>
+                              ) : null
+                            })()}
                           {canManageRoles && (
                             <Button
                               variant="ghost"
