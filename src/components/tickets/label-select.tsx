@@ -455,6 +455,8 @@ interface ColorPickerBodyProps {
   onColorChange: (color: string) => void
   onApply: (color: string) => void
   isDisabled?: boolean
+  /** Additional preset colors to show (e.g. column auto-detected colors) */
+  extraPresets?: string[]
 }
 
 export function ColorPickerBody({
@@ -462,6 +464,7 @@ export function ColorPickerBody({
   onColorChange,
   onApply,
   isDisabled,
+  extraPresets,
 }: ColorPickerBodyProps) {
   const { customColors, addCustomColor, removeCustomColor } = useSettingsStore()
   const [localHex, setLocalHex] = useState(activeColor)
@@ -479,9 +482,16 @@ export function ColorPickerBody({
     }
   }
 
+  // Merge extra presets (deduplicated) with standard label colors
+  const labelColorsLower = new Set(LABEL_COLORS.map((c) => c.toLowerCase()))
+  const dedupedExtras = (extraPresets ?? []).filter(
+    (c) => c && !labelColorsLower.has(c.toLowerCase()),
+  )
+  const allPresets = [...dedupedExtras, ...LABEL_COLORS]
+
   const isCurrentColorSaved =
     customColors.includes(currentColor.toLowerCase()) ||
-    LABEL_COLORS.includes(currentColor.toLowerCase())
+    allPresets.some((c) => c.toLowerCase() === currentColor.toLowerCase())
 
   return (
     <div className="space-y-4 py-2">
@@ -489,7 +499,7 @@ export function ColorPickerBody({
       <div>
         <div className="text-xs text-zinc-500 mb-1.5">Presets</div>
         <div className="flex flex-wrap gap-2">
-          {LABEL_COLORS.map((color) => (
+          {allPresets.map((color) => (
             <button
               key={color}
               type="button"
