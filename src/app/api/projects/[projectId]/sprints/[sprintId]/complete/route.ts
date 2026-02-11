@@ -99,9 +99,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     // Handle incomplete tickets based on action
-    let nextSprint: { id: string; name: string; status: string } | null = null
-
-    const updatedSprint = await db.$transaction(async (tx) => {
+    const { updatedSprint, nextSprint } = await db.$transaction(async (tx) => {
+      let createdNextSprint: { id: string; name: string; status: string } | null = null
       // Determine target for incomplete tickets
       if (action === 'close_to_next' && incompleteTickets.length > 0) {
         let targetId = targetSprintId
@@ -118,7 +117,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             select: SPRINT_SELECT_SUMMARY,
           })
           targetId = created.id
-          nextSprint = created
+          createdNextSprint = created
         } else {
           // Verify target sprint exists and is in planning status
           const target = await tx.sprint.findFirst({
@@ -128,7 +127,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (!target) {
             throw new Error('Target sprint not found or not in planning status')
           }
-          nextSprint = target
+          createdNextSprint = target
         }
 
         // Move incomplete tickets to target sprint
@@ -236,7 +235,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         select: SPRINT_SELECT_FULL,
       })
 
-      return completed
+      return { updatedSprint: completed, nextSprint: createdNextSprint }
     })
 
     // Emit sprint completed event
