@@ -442,6 +442,11 @@ PUNT includes an MCP (Model Context Protocol) server for conversational ticket m
 - `MCP_API_KEY` - User's API key (from `/api/me/mcp-key`)
 - `MCP_BASE_URL` - PUNT server URL (default: `http://localhost:3000`)
 
+**Prerequisites for full workflow:**
+- `pnpm dev` running on port 3000 (MCP calls the PUNT API)
+- [GitHub CLI (`gh`)](https://cli.github.com/) authenticated — used for PR creation, merging, and issue management
+- Git configured for the repository
+
 **Running the MCP server:**
 ```bash
 cd mcp && pnpm install  # First time only
