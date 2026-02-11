@@ -6,7 +6,7 @@
 
 import { db } from '@/lib/db'
 import { isValidPermission, type Permission } from './constants'
-import { type DefaultRoleName, getDefaultRoleConfigs, ROLE_PRESETS } from './presets'
+import { type DefaultRoleName, getDefaultRoleConfigs, ROLE_POSITIONS } from './presets'
 
 type CustomRolePermissions = {
   [K in DefaultRoleName]?: Permission[]
@@ -73,13 +73,14 @@ export async function createDefaultRolesForProject(
 /**
  * Get the Owner role for a project.
  * Creates default roles if they don't exist.
+ * Uses position instead of name to support renamed default roles.
  */
 export async function getOwnerRoleForProject(projectId: string): Promise<string> {
-  // Try to find existing Owner role
+  // Try to find existing Owner role by position (supports renamed defaults)
   const ownerRole = await db.role.findFirst({
     where: {
       projectId,
-      name: 'Owner',
+      position: ROLE_POSITIONS.Owner,
       isDefault: true,
     },
     select: { id: true },
@@ -117,12 +118,13 @@ export async function getRoleByName(
 /**
  * Get the Member role for a project.
  * This is the default role for invited users.
+ * Uses position instead of name to support renamed default roles.
  */
 export async function getMemberRoleForProject(projectId: string): Promise<string> {
   const memberRole = await db.role.findFirst({
     where: {
       projectId,
-      name: 'Member',
+      position: ROLE_POSITIONS.Member,
       isDefault: true,
     },
     select: { id: true },
