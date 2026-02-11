@@ -293,6 +293,15 @@ export const useBacklogStore = create<BacklogState>()(
         groupByEpic: state.groupByEpic,
         backlogOrder: state.backlogOrder,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return
+        // Merge any new DEFAULT_COLUMNS that don't exist in persisted state
+        const existingIds = new Set(state.columns.map((c) => c.id))
+        const newColumns = DEFAULT_COLUMNS.filter((c) => !existingIds.has(c.id))
+        if (newColumns.length > 0) {
+          state.columns = [...state.columns, ...newColumns]
+        }
+      },
     },
   ),
 )
