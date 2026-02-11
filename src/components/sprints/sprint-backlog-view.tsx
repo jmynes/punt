@@ -20,6 +20,7 @@ import {
   useUpdateTicketSprint,
 } from '@/hooks/queries/use-sprints'
 import { updateTicketAPI } from '@/hooks/queries/use-tickets'
+import { filterTickets } from '@/lib/filter-tickets'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
@@ -57,8 +58,53 @@ export function SprintBacklogView({
   const { updateTicket, getColumns } = useBoardStore()
   const statusColumns = getColumns(projectId)
   const { selectedTicketIds } = useSelectionStore()
-  const { columns: backlogColumns } = useBacklogStore()
+  const {
+    columns: backlogColumns,
+    filterByType,
+    filterByPriority,
+    filterByStatus,
+    filterByResolution,
+    filterByAssignee,
+    filterByLabels,
+    filterBySprint,
+    filterByPoints,
+    filterByDueDate,
+    searchQuery,
+    showSubtasks,
+  } = useBacklogStore()
   const visibleColumns = backlogColumns.filter((c) => c.visible)
+
+  // Apply filters from the shared backlog store
+  const filteredTickets = useMemo(() => {
+    return filterTickets(tickets, {
+      searchQuery,
+      projectKey,
+      filterByType,
+      filterByPriority,
+      filterByStatus,
+      filterByResolution,
+      filterByAssignee,
+      filterByLabels,
+      filterBySprint,
+      filterByPoints,
+      filterByDueDate,
+      showSubtasks,
+    })
+  }, [
+    tickets,
+    searchQuery,
+    projectKey,
+    filterByType,
+    filterByPriority,
+    filterByStatus,
+    filterByResolution,
+    filterByAssignee,
+    filterByLabels,
+    filterBySprint,
+    filterByPoints,
+    filterByDueDate,
+    showSubtasks,
+  ])
 
   // Drag state
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
@@ -81,7 +127,7 @@ export function SprintBacklogView({
     }),
   )
 
-  // Group tickets by sprint
+  // Group tickets by sprint (uses filtered tickets so filters apply across all sections)
   const ticketsBySprint = useMemo(() => {
     const groups: Record<string, TicketWithRelations[]> = {
       backlog: [],
@@ -92,8 +138,8 @@ export function SprintBacklogView({
       groups[sprint.id] = []
     })
 
-    // Sort tickets into groups
-    tickets.forEach((ticket) => {
+    // Sort filtered tickets into groups
+    filteredTickets.forEach((ticket) => {
       const sprintId = ticket.sprintId ?? 'backlog'
       if (groups[sprintId]) {
         groups[sprintId].push(ticket)
@@ -109,7 +155,7 @@ export function SprintBacklogView({
     })
 
     return groups
-  }, [tickets, sprints])
+  }, [filteredTickets, sprints])
 
   // Separate sprints by status
   const activeSprints = useMemo(
