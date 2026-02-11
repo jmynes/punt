@@ -10,6 +10,7 @@ import {
   MoreVertical,
   Pencil,
   Plus,
+  RotateCcw,
   Shield,
   Trash2,
   UserPlus,
@@ -61,6 +62,7 @@ import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { ALL_PERMISSIONS, PERMISSIONS } from '@/lib/permissions'
+import { type DefaultRoleName, isDefaultRoleName, ROLE_PRESETS } from '@/lib/permissions/presets'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import {
   type BulkMemberRoleSnapshot,
@@ -154,6 +156,16 @@ export function RolesTab({ projectId }: RolesTabProps) {
       ALL_PERMISSIONS.every((p) => editPermissions.includes(p)),
     [editPermissions],
   )
+
+  // Check if the selected role's permissions match the preset defaults
+  const isAtDefaults = useMemo(() => {
+    const roleName = isCreating ? null : selectedRole?.name
+    if (!roleName || !isDefaultRoleName(roleName)) return true
+    const preset = ROLE_PRESETS[roleName as DefaultRoleName]
+    return (
+      editPermissions.length === preset.length && preset.every((p) => editPermissions.includes(p))
+    )
+  }, [editPermissions, selectedRole?.name, isCreating])
 
   // Get members for the selected role
   const roleMembers = useMemo(() => {
@@ -932,6 +944,25 @@ export function RolesTab({ projectId }: RolesTabProps) {
                               />
                             </label>
                           )}
+                          {canManageRoles &&
+                            !isCreating &&
+                            selectedRole &&
+                            isDefaultRoleName(selectedRole.name) &&
+                            !isAtDefaults && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleFieldChange('permissions', [
+                                    ...ROLE_PRESETS[selectedRole.name as DefaultRoleName],
+                                  ])
+                                }
+                                className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
+                              >
+                                <RotateCcw className="mr-1 h-3 w-3" />
+                                Reset to Defaults
+                              </Button>
+                            )}
                           {canManageRoles && (
                             <Button
                               variant="ghost"
