@@ -199,11 +199,7 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
 
     case 'startDate': {
       if (!ticket.startDate) return <span className="text-zinc-500">—</span>
-      return (
-        <span className="text-sm text-zinc-400">
-          {format(ticket.startDate, 'yyyy-MM-dd')}
-        </span>
-      )
+      return <span className="text-sm text-zinc-400">{format(ticket.startDate, 'yyyy-MM-dd')}</span>
     }
 
     case 'environment':

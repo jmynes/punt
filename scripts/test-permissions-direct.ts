@@ -81,7 +81,7 @@ async function main() {
   test('Non-member is not member', false, await isMember('non-existent-user-id', projectId))
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('2. PROJECT SETTINGS PERMISSION')
   console.log('='.repeat(60))
   // ================================
@@ -103,7 +103,7 @@ async function main() {
   )
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('3. PROJECT DELETE PERMISSION')
   console.log('='.repeat(60))
   // ================================
@@ -125,7 +125,7 @@ async function main() {
   )
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('4. TICKET PERMISSIONS')
   console.log('='.repeat(60))
   // ================================
@@ -163,7 +163,7 @@ async function main() {
   )
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('5. SPRINT PERMISSIONS')
   console.log('='.repeat(60))
   // ================================
@@ -185,7 +185,7 @@ async function main() {
   )
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('6. LABEL PERMISSIONS')
   console.log('='.repeat(60))
   // ================================
@@ -207,7 +207,7 @@ async function main() {
   )
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('7. BOARD PERMISSIONS')
   console.log('='.repeat(60))
   // ================================
@@ -229,7 +229,7 @@ async function main() {
   )
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('8. MEMBER PERMISSIONS')
   console.log('='.repeat(60))
   // ================================
@@ -278,7 +278,7 @@ async function main() {
   )
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('9. MODERATION PERMISSIONS')
   console.log('='.repeat(60))
   // ================================
@@ -316,7 +316,7 @@ async function main() {
   )
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('10. SYSTEM ADMIN BYPASS')
   console.log('='.repeat(60))
   // ================================
@@ -335,7 +335,7 @@ async function main() {
 
   // System admin on a project they're NOT a member of
   const tempProject = await db.project.create({
-    data: { name: 'Temp Test Project', key: 'TMP' + Date.now() },
+    data: { name: 'Temp Test Project', key: `TMP${Date.now()}` },
   })
 
   test(
@@ -353,7 +353,7 @@ async function main() {
   await db.project.delete({ where: { id: tempProject.id } })
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('11. EFFECTIVE PERMISSIONS COUNT')
   console.log('='.repeat(60))
   // ================================
@@ -375,7 +375,7 @@ async function main() {
   test('Owner has 13 permissions (all)', true, ownerPerms.size === 13)
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('12. MEMBER MANAGEMENT HIERARCHY')
   console.log('='.repeat(60))
   // ================================
@@ -434,7 +434,7 @@ async function main() {
   }
 
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('13. OWNERSHIP-BASED PERMISSIONS')
   console.log('='.repeat(60))
   // ================================
@@ -535,7 +535,7 @@ async function main() {
   // ================================
   // SUMMARY
   // ================================
-  console.log('\n' + '='.repeat(60))
+  console.log(`\n${'='.repeat(60)}`)
   console.log('SUMMARY')
   console.log('='.repeat(60))
 

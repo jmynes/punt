@@ -116,8 +116,11 @@ async function main() {
     roleMap.set(roleConfig.name, role.id)
   }
 
+  // biome-ignore lint/style/noNonNullAssertion: roles are guaranteed to exist from upsert above
   const ownerRoleId = roleMap.get('Owner')!
+  // biome-ignore lint/style/noNonNullAssertion: roles are guaranteed to exist from upsert above
   const adminRoleId = roleMap.get('Admin')!
+  // biome-ignore lint/style/noNonNullAssertion: roles are guaranteed to exist from upsert above
   const memberRoleId = roleMap.get('Member')!
 
   // Add users as project members
@@ -186,9 +189,13 @@ async function main() {
     console.log('\nUsing existing columns')
   }
 
+  // biome-ignore lint/style/noNonNullAssertion: columns are guaranteed to exist from creation above
   const todoCol = columns.find((c) => c.name === 'To Do')!
+  // biome-ignore lint/style/noNonNullAssertion: columns are guaranteed to exist from creation above
   const inProgressCol = columns.find((c) => c.name === 'In Progress')!
+  // biome-ignore lint/style/noNonNullAssertion: columns are guaranteed to exist from creation above
   const reviewCol = columns.find((c) => c.name === 'Review')!
+  // biome-ignore lint/style/noNonNullAssertion: columns are guaranteed to exist from creation above
   const doneCol = columns.find((c) => c.name === 'Done')!
 
   // Create labels

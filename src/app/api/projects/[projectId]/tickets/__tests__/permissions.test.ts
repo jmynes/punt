@@ -63,7 +63,7 @@ const mockDb = vi.mocked(db)
 const mockRequireAuth = vi.mocked(requireAuth)
 const mockHasPermission = vi.mocked(hasPermission)
 const mockIsMember = vi.mocked(isMember)
-const mockGetEffectivePermissions = vi.mocked(getEffectivePermissions)
+const _mockGetEffectivePermissions = vi.mocked(getEffectivePermissions)
 
 // Test data
 const TEST_USER = {
@@ -196,7 +196,8 @@ describe('Ticket API - Permission Tests', () => {
         creatorId: TEST_USER.id,
         watchers: [],
       }
-      ;(mockDb.$transaction as any).mockImplementation(async (fn: any) => {
+      // biome-ignore lint/suspicious/noExplicitAny: mock typing
+      ;(mockDb.$transaction as any).mockImplementation(async (_fn: any) => {
         // Return the ticket directly since the transaction returns it
         return createdTicket
       })
@@ -228,7 +229,8 @@ describe('Ticket API - Permission Tests', () => {
         creatorId: ADMIN_USER.id,
         watchers: [],
       }
-      ;(mockDb.$transaction as any).mockImplementation(async (fn: any) => {
+      // biome-ignore lint/suspicious/noExplicitAny: mock typing
+      ;(mockDb.$transaction as any).mockImplementation(async (_fn: any) => {
         return createdTicket
       })
 

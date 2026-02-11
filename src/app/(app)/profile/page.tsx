@@ -54,7 +54,6 @@ export default function ProfilePage() {
   const isDemo = isDemoMode()
 
   // In demo mode, we skip useSession entirely
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const {
     data: session,
     status,

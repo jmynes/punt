@@ -345,7 +345,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         </div>
       )
 
-    const uiState = useUIStore.getState ? useUIStore.getState() : uiStore
+    const _uiState = useUIStore.getState ? useUIStore.getState() : uiStore
     const showUndo = useSettingsStore.getState().showUndoButtons ?? true
     const boardStateMove = useBoardStore.getState ? useBoardStore.getState() : board
     const toastId = showUndoRedoToast('success', {
@@ -676,7 +676,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       toSprintId: null,
     }))
 
-    const uiState = useUIStore.getState ? useUIStore.getState() : uiStore
+    const _uiState = useUIStore.getState ? useUIStore.getState() : uiStore
     const showUndo = useSettingsStore.getState().showUndoButtons ?? true
 
     const toastId = showUndoRedoToast('success', {
@@ -818,7 +818,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       toSprintId: targetSprint.id,
     }))
 
-    const uiState = useUIStore.getState ? useUIStore.getState() : uiStore
+    const _uiState = useUIStore.getState ? useUIStore.getState() : uiStore
     const showUndo = useSettingsStore.getState().showUndoButtons ?? true
 
     const toastId = showUndoRedoToast('success', {

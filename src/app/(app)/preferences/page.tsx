@@ -251,7 +251,7 @@ export default function PreferencesPage() {
               </div>
               <Checkbox
                 id="sidebar-admin"
-                checked={sidebarExpandedSections['admin'] ?? false}
+                checked={sidebarExpandedSections.admin ?? false}
                 onCheckedChange={(checked) => setSidebarSectionExpanded('admin', checked === true)}
                 className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
               />

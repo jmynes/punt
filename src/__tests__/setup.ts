@@ -4,7 +4,7 @@
 
 import '@testing-library/jest-dom'
 import { cleanup } from '@testing-library/react'
-import { afterEach, beforeAll, vi } from 'vitest'
+import { afterEach, vi } from 'vitest'
 
 // ============================================================================
 // CRITICAL SAFETY CHECK: Prevent tests from using production database

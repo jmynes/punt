@@ -109,7 +109,7 @@ export function SidebarContent({
   const [adminExpanded, setAdminExpanded] = useState(true)
   const [projectsExpanded, setProjectsExpanded] = useState(true)
   const { sidebarExpandedSections, toggleSidebarSection } = useSettingsStore()
-  const adminSettingsExpanded = sidebarExpandedSections['admin'] ?? false
+  const adminSettingsExpanded = sidebarExpandedSections.admin ?? false
   const setAdminSettingsExpanded = useCallback(
     (v: boolean) => useSettingsStore.getState().setSidebarSectionExpanded('admin', v),
     [],

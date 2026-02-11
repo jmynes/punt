@@ -6,7 +6,7 @@
 import * as fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { invalidUsername, usernameArb, validUsername } from '../arbitraries'
+import { invalidUsername, validUsername } from '../arbitraries'
 import { emailLike, maliciousString, passwordString } from '../arbitraries/primitives'
 import { FUZZ_CONFIG } from '../setup'
 
