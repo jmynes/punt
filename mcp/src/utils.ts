@@ -11,7 +11,16 @@ export function parseTicketKey(key: string): { projectKey: string; number: numbe
 }
 
 /**
- * Format a ticket for display as markdown
+ * Format a date for display (YYYY-MM-DD)
+ */
+export function formatDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  return d.toISOString().split('T')[0]
+}
+
+/**
+ * Format a ticket for full detail display (get_ticket).
+ * Organized into sections with compact key-value layout.
  */
 export function formatTicket(ticket: {
   number: number
@@ -21,47 +30,77 @@ export function formatTicket(ticket: {
   priority: string
   storyPoints?: number | null
   estimate?: string | null
-  startDate?: Date | null
-  dueDate?: Date | null
+  startDate?: Date | string | null
+  dueDate?: Date | string | null
+  resolution?: string | null
   environment?: string | null
+  affectedVersion?: string | null
+  fixVersion?: string | null
   column?: { name: string } | null
   sprint?: { name: string; status: string } | null
   assignee?: { name: string; email?: string | null } | null
   creator?: { name: string } | null
   labels?: { name: string; color: string }[]
-  createdAt?: Date
-  updatedAt?: Date
+  createdAt?: Date | string
+  updatedAt?: Date | string
   project?: { key: string; name: string }
 }): string {
   const projectKey = ticket.project?.key ?? 'UNKNOWN'
   const lines: string[] = []
 
-  lines.push(`# ${projectKey}-${ticket.number}: ${ticket.title}`)
+  lines.push(`## ${projectKey}-${ticket.number}: ${ticket.title}`)
   lines.push('')
 
-  // Basic info table
-  lines.push('| Field | Value |')
-  lines.push('|-------|-------|')
-  lines.push(`| Type | ${ticket.type} |`)
-  lines.push(`| Priority | ${ticket.priority} |`)
-  if (ticket.column) lines.push(`| Status | ${ticket.column.name} |`)
-  if (ticket.sprint) lines.push(`| Sprint | ${ticket.sprint.name} (${ticket.sprint.status}) |`)
-  if (ticket.storyPoints != null) lines.push(`| Story Points | ${ticket.storyPoints} |`)
-  if (ticket.estimate) lines.push(`| Estimate | ${ticket.estimate} |`)
-  if (ticket.assignee) lines.push(`| Assignee | ${ticket.assignee.name} |`)
-  if (ticket.creator) lines.push(`| Creator | ${ticket.creator.name} |`)
-  if (ticket.labels && ticket.labels.length > 0) {
-    lines.push(`| Labels | ${ticket.labels.map((l) => l.name).join(', ')} |`)
+  // Core fields
+  lines.push(`**Type:** ${ticket.type}  `)
+  lines.push(`**Priority:** ${ticket.priority}  `)
+  if (ticket.column) lines.push(`**Status:** ${ticket.column.name}  `)
+  if (ticket.resolution) lines.push(`**Resolution:** ${ticket.resolution}  `)
+
+  // People
+  if (ticket.assignee || ticket.creator) {
+    lines.push('')
+    if (ticket.assignee) lines.push(`**Assignee:** ${ticket.assignee.name}  `)
+    if (ticket.creator) lines.push(`**Reporter:** ${ticket.creator.name}  `)
   }
-  if (ticket.startDate) lines.push(`| Start Date | ${formatDate(ticket.startDate)} |`)
-  if (ticket.dueDate) lines.push(`| Due Date | ${formatDate(ticket.dueDate)} |`)
-  if (ticket.environment) lines.push(`| Environment | ${ticket.environment} |`)
+
+  // Planning
+  const planningFields: string[] = []
+  if (ticket.sprint)
+    planningFields.push(`**Sprint:** ${ticket.sprint.name} (${ticket.sprint.status})`)
+  if (ticket.storyPoints != null) planningFields.push(`**Points:** ${ticket.storyPoints}`)
+  if (ticket.estimate) planningFields.push(`**Estimate:** ${ticket.estimate}`)
+  if (planningFields.length > 0) {
+    lines.push('')
+    for (const f of planningFields) lines.push(`${f}  `)
+  }
+
+  // Dates
+  const dateFields: string[] = []
+  if (ticket.startDate) dateFields.push(`**Start:** ${formatDate(ticket.startDate)}`)
+  if (ticket.dueDate) dateFields.push(`**Due:** ${formatDate(ticket.dueDate)}`)
+  if (dateFields.length > 0) {
+    lines.push('')
+    for (const f of dateFields) lines.push(`${f}  `)
+  }
+
+  // Metadata
+  const metaFields: string[] = []
+  if (ticket.labels && ticket.labels.length > 0) {
+    metaFields.push(`**Labels:** ${ticket.labels.map((l) => l.name).join(', ')}`)
+  }
+  if (ticket.environment) metaFields.push(`**Environment:** ${ticket.environment}`)
+  if (ticket.affectedVersion) metaFields.push(`**Affected Version:** ${ticket.affectedVersion}`)
+  if (ticket.fixVersion) metaFields.push(`**Fix Version:** ${ticket.fixVersion}`)
+  if (metaFields.length > 0) {
+    lines.push('')
+    for (const f of metaFields) lines.push(`${f}  `)
+  }
 
   // Description
   if (ticket.description) {
     lines.push('')
-    lines.push('## Description')
-    lines.push('')
+    lines.push('**Description:**')
     lines.push(ticket.description)
   }
 
@@ -264,14 +303,6 @@ export function formatSprintList(
   lines.push(`Total: ${sprints.length} sprint(s)`)
 
   return lines.join('\n')
-}
-
-/**
- * Format a date for display
- */
-function formatDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
-  return d.toISOString().split('T')[0]
 }
 
 /**

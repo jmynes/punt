@@ -10,56 +10,99 @@ import {
   startSprint,
   updateSprint,
 } from '../api-client.js'
-import { errorResponse, textResponse } from '../utils.js'
+import { errorResponse, formatDate, formatTicketList, textResponse } from '../utils.js'
 
 /**
- * Format a sprint for display
+ * Format a sprint for detailed display (get_sprint).
+ * Uses compact key-value layout with ticket table.
  */
-function formatSprint(sprint: SprintData, projectKey?: string): string {
+function formatSprintDetail(sprint: SprintData, projectKey?: string): string {
   const lines: string[] = []
 
-  lines.push(`# ${sprint.name}`)
+  lines.push(`## ${sprint.name}`)
   lines.push('')
-  lines.push('| Field | Value |')
-  lines.push('|-------|-------|')
-  lines.push(`| Status | ${sprint.status} |`)
 
-  if (sprint.goal) {
-    lines.push(`| Goal | ${sprint.goal} |`)
-  }
-
-  if (sprint.startDate) {
-    lines.push(`| Start | ${new Date(sprint.startDate).toISOString().split('T')[0]} |`)
-  }
-
-  if (sprint.endDate) {
-    lines.push(`| End | ${new Date(sprint.endDate).toISOString().split('T')[0]} |`)
-  }
-
-  if (sprint.budget !== null) {
-    lines.push(`| Capacity | ${sprint.budget} points |`)
-  }
+  lines.push(`**Status:** ${sprint.status}  `)
+  if (sprint.goal) lines.push(`**Goal:** ${sprint.goal}  `)
+  if (sprint.startDate) lines.push(`**Start:** ${formatDate(sprint.startDate)}  `)
+  if (sprint.endDate) lines.push(`**End:** ${formatDate(sprint.endDate)}  `)
+  if (sprint.budget !== null) lines.push(`**Capacity:** ${sprint.budget} points  `)
 
   if (sprint.tickets && sprint.tickets.length > 0) {
     lines.push('')
-    lines.push('## Tickets')
+    lines.push(formatTicketList(sprint.tickets, projectKey))
+  } else if (sprint.tickets) {
     lines.push('')
-    lines.push('| Key | Title | Type | Priority | Status | Assignee | Points |')
-    lines.push('|-----|-------|------|----------|--------|----------|--------|')
+    lines.push('No tickets in this sprint.')
+  }
 
-    for (const t of sprint.tickets) {
-      const key = projectKey ? `${projectKey}-${t.number}` : `#${t.number}`
-      const title = t.title.length > 35 ? `${t.title.slice(0, 35)}...` : t.title
-      const assignee = t.assignee?.name ?? '-'
-      const points = t.storyPoints ?? '-'
+  return lines.join('\n')
+}
 
-      lines.push(
-        `| ${key} | ${title} | ${t.type} | ${t.priority} | ${t.column.name} | ${assignee} | ${points} |`,
-      )
+/**
+ * Format a compact summary for a newly created sprint.
+ */
+function formatSprintCreated(sprint: SprintData): string {
+  const lines: string[] = []
+  lines.push(`Created sprint **"${sprint.name}"**`)
+  lines.push('')
+
+  lines.push(`**Status:** ${sprint.status}  `)
+  if (sprint.goal) lines.push(`**Goal:** ${sprint.goal}  `)
+  if (sprint.startDate) lines.push(`**Start:** ${formatDate(sprint.startDate)}  `)
+  if (sprint.endDate) lines.push(`**End:** ${formatDate(sprint.endDate)}  `)
+  if (sprint.budget !== null) lines.push(`**Capacity:** ${sprint.budget} points  `)
+
+  return lines.join('\n')
+}
+
+/**
+ * Format a diff-style view of what changed on a sprint update.
+ */
+function formatSprintUpdated(oldSprint: SprintData, newSprint: SprintData): string {
+  const lines: string[] = []
+  lines.push(`Updated sprint **"${newSprint.name}"**`)
+  lines.push('')
+
+  const changes: string[] = []
+
+  if (oldSprint.name !== newSprint.name) {
+    changes.push(`**Name:** ${oldSprint.name} -> ${newSprint.name}`)
+  }
+  if (oldSprint.status !== newSprint.status) {
+    changes.push(`**Status:** ${oldSprint.status} -> ${newSprint.status}`)
+  }
+  if ((oldSprint.goal ?? null) !== (newSprint.goal ?? null)) {
+    if (!newSprint.goal) {
+      changes.push('**Goal:** cleared')
+    } else if (!oldSprint.goal) {
+      changes.push(`**Goal:** added "${newSprint.goal}"`)
+    } else {
+      changes.push(`**Goal:** "${oldSprint.goal}" -> "${newSprint.goal}"`)
     }
+  }
+  if ((oldSprint.startDate ?? null) !== (newSprint.startDate ?? null)) {
+    const oldVal = oldSprint.startDate ? formatDate(oldSprint.startDate) : 'none'
+    const newVal = newSprint.startDate ? formatDate(newSprint.startDate) : 'none'
+    changes.push(`**Start:** ${oldVal} -> ${newVal}`)
+  }
+  if ((oldSprint.endDate ?? null) !== (newSprint.endDate ?? null)) {
+    const oldVal = oldSprint.endDate ? formatDate(oldSprint.endDate) : 'none'
+    const newVal = newSprint.endDate ? formatDate(newSprint.endDate) : 'none'
+    changes.push(`**End:** ${oldVal} -> ${newVal}`)
+  }
+  if (oldSprint.budget !== newSprint.budget) {
+    changes.push(
+      `**Capacity:** ${oldSprint.budget ?? 'none'} -> ${newSprint.budget ?? 'none'} points`,
+    )
+  }
 
-    lines.push('')
-    lines.push(`Total: ${sprint.tickets.length} ticket(s)`)
+  if (changes.length === 0) {
+    lines.push('No changes detected.')
+  } else {
+    for (const change of changes) {
+      lines.push(`- ${change}`)
+    }
   }
 
   return lines.join('\n')
@@ -78,9 +121,9 @@ function formatSprintList(sprints: SprintData[]): string {
   lines.push('|------|--------|------|-------|-----|')
 
   for (const s of sprints) {
-    const goal = s.goal ?? '-'
-    const start = s.startDate ? new Date(s.startDate).toISOString().split('T')[0] : '-'
-    const end = s.endDate ? new Date(s.endDate).toISOString().split('T')[0] : '-'
+    const goal = s.goal ? (s.goal.length > 30 ? `${s.goal.slice(0, 27)}...` : s.goal) : '-'
+    const start = s.startDate ? formatDate(s.startDate) : '-'
+    const end = s.endDate ? formatDate(s.endDate) : '-'
     lines.push(`| ${s.name} | ${s.status} | ${goal} | ${start} | ${end} |`)
   }
 
@@ -107,7 +150,6 @@ export function registerSprintTools(server: McpServer) {
 
       let sprints = result.data || []
 
-      // Filter by status if specified
       if (status) {
         sprints = sprints.filter((s) => s.status === status)
       }
@@ -125,7 +167,6 @@ export function registerSprintTools(server: McpServer) {
       sprintName: z.string().describe('Sprint name'),
     },
     async ({ projectKey, sprintName }) => {
-      // First list sprints to find the sprint by name
       const listResult = await listSprints(projectKey)
       if (listResult.error) {
         return errorResponse(listResult.error)
@@ -139,14 +180,13 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(`Sprint not found: ${sprintName}`)
       }
 
-      // Get full sprint details
       const result = await getSprint(projectKey, sprint.id)
       if (result.error) {
         return errorResponse(result.error)
       }
 
       // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      return textResponse(formatSprint(result.data!, projectKey.toUpperCase()))
+      return textResponse(formatSprintDetail(result.data!, projectKey.toUpperCase()))
     },
   )
 
@@ -176,8 +216,7 @@ export function registerSprintTools(server: McpServer) {
       }
 
       // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      const sprint = result.data!
-      return textResponse(`Created sprint "${sprint.name}"\n\n${formatSprint(sprint)}`)
+      return textResponse(formatSprintCreated(result.data!))
     },
   )
 
@@ -195,7 +234,6 @@ export function registerSprintTools(server: McpServer) {
       budget: z.number().min(0).nullable().optional().describe('New capacity'),
     },
     async ({ projectKey, sprintName, name, goal, startDate, endDate, budget }) => {
-      // Find sprint by name
       const listResult = await listSprints(projectKey)
       if (listResult.error) {
         return errorResponse(listResult.error)
@@ -226,8 +264,7 @@ export function registerSprintTools(server: McpServer) {
       }
 
       // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      const updated = result.data!
-      return textResponse(`Updated sprint "${updated.name}"\n\n${formatSprint(updated)}`)
+      return textResponse(formatSprintUpdated(sprint, result.data!))
     },
   )
 
@@ -242,7 +279,6 @@ export function registerSprintTools(server: McpServer) {
       endDate: z.string().optional().describe('End date'),
     },
     async ({ projectKey, sprintName, startDate, endDate }) => {
-      // Find sprint by name
       const listResult = await listSprints(projectKey)
       if (listResult.error) {
         return errorResponse(listResult.error)
@@ -268,8 +304,12 @@ export function registerSprintTools(server: McpServer) {
       // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const started = result.data!
       const ticketCount = started.tickets?.length ?? 0
+      const dateRange =
+        started.startDate && started.endDate
+          ? ` (${formatDate(started.startDate)} - ${formatDate(started.endDate)})`
+          : ''
       return textResponse(
-        `Started sprint "${started.name}" with ${ticketCount} tickets\n\n${formatSprint(started)}`,
+        `Started sprint **"${started.name}"** with ${ticketCount} ticket(s)${dateRange}`,
       )
     },
   )
@@ -287,7 +327,6 @@ export function registerSprintTools(server: McpServer) {
         .describe('Where to move incomplete tickets'),
     },
     async ({ projectKey, sprintName, moveIncompleteTo }) => {
-      // Find sprint by name
       const listResult = await listSprints(projectKey)
       if (listResult.error) {
         return errorResponse(listResult.error)
@@ -312,7 +351,7 @@ export function registerSprintTools(server: McpServer) {
 
       const destination = moveIncompleteTo === 'next' ? 'next sprint' : 'backlog'
       return textResponse(
-        `Completed sprint "${sprint.name}"\n\nIncomplete tickets moved to ${destination}`,
+        `Completed sprint **"${sprint.name}"**. Incomplete tickets moved to ${destination}.`,
       )
     },
   )
@@ -331,7 +370,6 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse('Set confirm=true to delete the sprint')
       }
 
-      // Find sprint by name
       const listResult = await listSprints(projectKey)
       if (listResult.error) {
         return errorResponse(listResult.error)
@@ -352,7 +390,7 @@ export function registerSprintTools(server: McpServer) {
 
       const ticketCount = sprint.tickets?.length ?? 0
       return textResponse(
-        `Deleted sprint "${sprint.name}" (${ticketCount} tickets moved to backlog)`,
+        `Deleted sprint **"${sprint.name}"** (${ticketCount} ticket(s) moved to backlog)`,
       )
     },
   )

@@ -109,7 +109,7 @@ export function registerMemberTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(`Added ${user.name} to ${project.key} as ${foundRole.name}`)
+      return textResponse(`Added **${user.name}** to ${project.key} as ${foundRole.name}`)
     },
   )
 
@@ -160,7 +160,7 @@ export function registerMemberTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(`Removed ${user.name} from ${project.key}`)
+      return textResponse(`Removed **${user.name}** from ${project.key}`)
     },
   )
 
@@ -228,7 +228,7 @@ export function registerMemberTools(server: McpServer) {
       }
 
       return textResponse(
-        `Changed ${user.name}'s role in ${project.key} from ${previousRoleName} to ${newRole.name}`,
+        `Changed **${user.name}**'s role in ${project.key}: ${previousRoleName} -> ${newRole.name}`,
       )
     },
   )

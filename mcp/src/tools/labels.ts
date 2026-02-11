@@ -70,7 +70,7 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse('Failed to create label: no data returned')
       }
       return textResponse(
-        `Created label "${label.name}" (${label.color}) in ${projectKey.toUpperCase()}`,
+        `Created label **"${label.name}"** (${label.color}) in ${projectKey.toUpperCase()}`,
       )
     },
   )
@@ -121,7 +121,7 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse(createResult.error)
       }
 
-      return textResponse(`Updated label: "${label.name}" → "${newName}" (${newColor})`)
+      return textResponse(`Updated label **"${label.name}"** -> **"${newName}"** (${newColor})`)
     },
   )
 
@@ -153,7 +153,7 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(`Deleted label "${label.name}"`)
+      return textResponse(`Deleted label **"${label.name}"** from ${projectKey.toUpperCase()}`)
     },
   )
 
@@ -213,7 +213,9 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse(updateResult.error)
       }
 
-      return textResponse(`Added label "${label.name}" to ${projectKey.toUpperCase()}-${number}`)
+      return textResponse(
+        `Added label **"${label.name}"** to **${projectKey.toUpperCase()}-${number}**`,
+      )
     },
   )
 
@@ -264,7 +266,7 @@ export function registerLabelTools(server: McpServer) {
       }
 
       return textResponse(
-        `Removed label "${label.name}" from ${projectKey.toUpperCase()}-${number}`,
+        `Removed label **"${label.name}"** from **${projectKey.toUpperCase()}-${number}**`,
       )
     },
   )

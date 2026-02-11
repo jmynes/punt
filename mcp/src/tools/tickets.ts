@@ -11,111 +11,156 @@ import {
   type TicketData,
   updateTicket,
 } from '../api-client.js'
-import { errorResponse, parseTicketKey, textResponse } from '../utils.js'
+import {
+  errorResponse,
+  formatDate,
+  formatTicket,
+  formatTicketList,
+  parseTicketKey,
+  textResponse,
+} from '../utils.js'
 
 /**
- * Format a ticket for display
- * @param ticket - The ticket data
- * @param projectKey - Project key (optional, uses ticket.project.key if available)
+ * Format a compact summary for a newly created ticket.
+ * Shows only the key fields that were set.
  */
-function formatTicket(ticket: TicketData, projectKey?: string): string {
+function formatTicketCreated(ticket: TicketData, projectKey: string): string {
+  const key = `${projectKey}-${ticket.number}`
   const lines: string[] = []
-  const key = projectKey ?? ticket.project?.key ?? 'UNKNOWN'
 
-  lines.push(`# ${key}-${ticket.number}: ${ticket.title}`)
+  lines.push(`Created **${key}**: ${ticket.title}`)
   lines.push('')
-  lines.push('| Field | Value |')
-  lines.push('|-------|-------|')
-  lines.push(`| Type | ${ticket.type} |`)
-  lines.push(`| Priority | ${ticket.priority} |`)
-  lines.push(`| Status | ${ticket.column.name} |`)
 
-  if (ticket.sprint) {
-    lines.push(`| Sprint | ${ticket.sprint.name} (${ticket.sprint.status}) |`)
-  }
+  const fields: string[] = []
+  fields.push(`**Type:** ${ticket.type}`)
+  fields.push(`**Priority:** ${ticket.priority}`)
+  fields.push(`**Status:** ${ticket.column.name}`)
+  if (ticket.assignee) fields.push(`**Assignee:** ${ticket.assignee.name}`)
+  if (ticket.sprint) fields.push(`**Sprint:** ${ticket.sprint.name}`)
+  if (ticket.storyPoints !== null) fields.push(`**Points:** ${ticket.storyPoints}`)
+  if (ticket.labels.length > 0)
+    fields.push(`**Labels:** ${ticket.labels.map((l) => l.name).join(', ')}`)
+  if (ticket.estimate) fields.push(`**Estimate:** ${ticket.estimate}`)
+  if (ticket.startDate) fields.push(`**Start:** ${formatDate(ticket.startDate)}`)
+  if (ticket.dueDate) fields.push(`**Due:** ${formatDate(ticket.dueDate)}`)
+  if (ticket.environment) fields.push(`**Environment:** ${ticket.environment}`)
+  if (ticket.resolution) fields.push(`**Resolution:** ${ticket.resolution}`)
 
-  if (ticket.resolution) {
-    lines.push(`| Resolution | ${ticket.resolution} |`)
-  }
-
-  if (ticket.storyPoints !== null) {
-    lines.push(`| Story Points | ${ticket.storyPoints} |`)
-  }
-
-  if (ticket.assignee) {
-    lines.push(`| Assignee | ${ticket.assignee.name} |`)
-  }
-
-  if (ticket.creator) {
-    lines.push(`| Reporter | ${ticket.creator.name} |`)
-  }
-
-  if (ticket.labels.length > 0) {
-    lines.push(`| Labels | ${ticket.labels.map((l) => l.name).join(', ')} |`)
-  }
-
-  if (ticket.estimate) {
-    lines.push(`| Estimate | ${ticket.estimate} |`)
-  }
-
-  if (ticket.startDate) {
-    lines.push(`| Start Date | ${new Date(ticket.startDate).toISOString().split('T')[0]} |`)
-  }
-
-  if (ticket.dueDate) {
-    lines.push(`| Due Date | ${new Date(ticket.dueDate).toISOString().split('T')[0]} |`)
-  }
-
-  if (ticket.environment) {
-    lines.push(`| Environment | ${ticket.environment} |`)
-  }
-
-  if (ticket.affectedVersion) {
-    lines.push(`| Affected Version | ${ticket.affectedVersion} |`)
-  }
-
-  if (ticket.fixVersion) {
-    lines.push(`| Fix Version | ${ticket.fixVersion} |`)
-  }
+  lines.push(fields.join('  \n'))
 
   if (ticket.description) {
     lines.push('')
-    lines.push('## Description')
-    lines.push('')
-    lines.push(ticket.description)
+    lines.push(
+      `**Description:** ${ticket.description.length > 100 ? `${ticket.description.slice(0, 100)}...` : ticket.description}`,
+    )
   }
 
   return lines.join('\n')
 }
 
 /**
- * Format a list of tickets for display
- * @param tickets - The tickets to format
- * @param projectKey - Project key (optional, uses ticket.project.key if available)
+ * Format a diff-style view of what changed on a ticket update.
+ * Shows "field: old -> new" for each changed field.
  */
-function formatTicketList(tickets: TicketData[], projectKey?: string): string {
-  if (tickets.length === 0) {
-    return 'No tickets found.'
-  }
-
+function formatTicketUpdated(key: string, oldTicket: TicketData, newTicket: TicketData): string {
   const lines: string[] = []
-  lines.push('| Key | Title | Type | Priority | Status | Sprint | Assignee | Points |')
-  lines.push('|-----|-------|------|----------|--------|--------|----------|--------|')
+  lines.push(`Updated **${key}**`)
+  lines.push('')
 
-  for (const t of tickets) {
-    const key = `${projectKey ?? t.project?.key ?? 'UNKNOWN'}-${t.number}`
-    const title = t.title.length > 45 ? `${t.title.slice(0, 45)}...` : t.title
-    const sprint = t.sprint?.name ?? '-'
-    const assignee = t.assignee?.name ?? '-'
-    const points = t.storyPoints ?? '-'
+  const changes: string[] = []
 
-    lines.push(
-      `| ${key} | ${title} | ${t.type} | ${t.priority} | ${t.column.name} | ${sprint} | ${assignee} | ${points} |`,
+  if (oldTicket.title !== newTicket.title) {
+    changes.push(`**Title:** ${oldTicket.title} -> ${newTicket.title}`)
+  }
+  if (oldTicket.type !== newTicket.type) {
+    changes.push(`**Type:** ${oldTicket.type} -> ${newTicket.type}`)
+  }
+  if (oldTicket.priority !== newTicket.priority) {
+    changes.push(`**Priority:** ${oldTicket.priority} -> ${newTicket.priority}`)
+  }
+  if (oldTicket.column.name !== newTicket.column.name) {
+    changes.push(`**Status:** ${oldTicket.column.name} -> ${newTicket.column.name}`)
+  }
+  if ((oldTicket.resolution ?? null) !== (newTicket.resolution ?? null)) {
+    changes.push(
+      `**Resolution:** ${oldTicket.resolution ?? 'none'} -> ${newTicket.resolution ?? 'none'}`,
+    )
+  }
+  if ((oldTicket.assignee?.name ?? null) !== (newTicket.assignee?.name ?? null)) {
+    changes.push(
+      `**Assignee:** ${oldTicket.assignee?.name ?? 'unassigned'} -> ${newTicket.assignee?.name ?? 'unassigned'}`,
+    )
+  }
+  if ((oldTicket.sprint?.name ?? null) !== (newTicket.sprint?.name ?? null)) {
+    changes.push(
+      `**Sprint:** ${oldTicket.sprint?.name ?? 'backlog'} -> ${newTicket.sprint?.name ?? 'backlog'}`,
+    )
+  }
+  if (oldTicket.storyPoints !== newTicket.storyPoints) {
+    changes.push(
+      `**Points:** ${oldTicket.storyPoints ?? 'none'} -> ${newTicket.storyPoints ?? 'none'}`,
+    )
+  }
+  if ((oldTicket.estimate ?? null) !== (newTicket.estimate ?? null)) {
+    changes.push(`**Estimate:** ${oldTicket.estimate ?? 'none'} -> ${newTicket.estimate ?? 'none'}`)
+  }
+  if ((oldTicket.startDate ?? null) !== (newTicket.startDate ?? null)) {
+    changes.push(
+      `**Start:** ${oldTicket.startDate ? formatDate(oldTicket.startDate) : 'none'} -> ${newTicket.startDate ? formatDate(newTicket.startDate) : 'none'}`,
+    )
+  }
+  if ((oldTicket.dueDate ?? null) !== (newTicket.dueDate ?? null)) {
+    changes.push(
+      `**Due:** ${oldTicket.dueDate ? formatDate(oldTicket.dueDate) : 'none'} -> ${newTicket.dueDate ? formatDate(newTicket.dueDate) : 'none'}`,
+    )
+  }
+  if ((oldTicket.environment ?? null) !== (newTicket.environment ?? null)) {
+    changes.push(
+      `**Environment:** ${oldTicket.environment ?? 'none'} -> ${newTicket.environment ?? 'none'}`,
+    )
+  }
+  if ((oldTicket.affectedVersion ?? null) !== (newTicket.affectedVersion ?? null)) {
+    changes.push(
+      `**Affected Version:** ${oldTicket.affectedVersion ?? 'none'} -> ${newTicket.affectedVersion ?? 'none'}`,
+    )
+  }
+  if ((oldTicket.fixVersion ?? null) !== (newTicket.fixVersion ?? null)) {
+    changes.push(
+      `**Fix Version:** ${oldTicket.fixVersion ?? 'none'} -> ${newTicket.fixVersion ?? 'none'}`,
     )
   }
 
-  lines.push('')
-  lines.push(`Total: ${tickets.length} ticket(s)`)
+  // Labels comparison
+  const oldLabels = oldTicket.labels
+    .map((l) => l.name)
+    .sort()
+    .join(', ')
+  const newLabels = newTicket.labels
+    .map((l) => l.name)
+    .sort()
+    .join(', ')
+  if (oldLabels !== newLabels) {
+    changes.push(`**Labels:** ${oldLabels || 'none'} -> ${newLabels || 'none'}`)
+  }
+
+  // Description change (just note it changed, don't show full diff)
+  if ((oldTicket.description ?? null) !== (newTicket.description ?? null)) {
+    if (!newTicket.description) {
+      changes.push('**Description:** cleared')
+    } else if (!oldTicket.description) {
+      changes.push('**Description:** added')
+    } else {
+      changes.push('**Description:** updated')
+    }
+  }
+
+  if (changes.length === 0) {
+    lines.push('No changes detected.')
+  } else {
+    for (const change of changes) {
+      lines.push(`- ${change}`)
+    }
+  }
 
   return lines.join('\n')
 }
@@ -144,7 +189,12 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(`Ticket not found: ${key}`)
       }
 
-      return textResponse(formatTicket(ticket, parsed.projectKey.toUpperCase()))
+      return textResponse(
+        formatTicket({
+          ...ticket,
+          project: ticket.project ?? { key: parsed.projectKey.toUpperCase(), name: '' },
+        }),
+      )
     },
   )
 
@@ -176,28 +226,44 @@ export function registerTicketTools(server: McpServer) {
       let tickets = result.data || []
 
       // Apply filters
+      const appliedFilters: string[] = []
       if (column) {
         tickets = tickets.filter((t) => t.column.name.toLowerCase().includes(column.toLowerCase()))
+        appliedFilters.push(`column: ${column}`)
       }
       if (priority) {
         tickets = tickets.filter((t) => t.priority === priority)
+        appliedFilters.push(`priority: ${priority}`)
       }
       if (type) {
         tickets = tickets.filter((t) => t.type === type)
+        appliedFilters.push(`type: ${type}`)
       }
       if (assignee) {
         tickets = tickets.filter((t) =>
           t.assignee?.name.toLowerCase().includes(assignee.toLowerCase()),
         )
+        appliedFilters.push(`assignee: ${assignee}`)
       }
       if (sprint) {
         tickets = tickets.filter((t) => t.sprint?.name.toLowerCase().includes(sprint.toLowerCase()))
+        appliedFilters.push(`sprint: ${sprint}`)
       }
 
       // Apply limit
+      const totalBeforeLimit = tickets.length
       tickets = tickets.slice(0, limit)
 
-      return textResponse(formatTicketList(tickets, projectKey.toUpperCase()))
+      const filterNote =
+        appliedFilters.length > 0 ? `Filters: ${appliedFilters.join(', ')}\n\n` : ''
+      const limitNote =
+        totalBeforeLimit > limit
+          ? `\n\nShowing ${limit} of ${totalBeforeLimit} matching tickets.`
+          : ''
+
+      return textResponse(
+        filterNote + formatTicketList(tickets, projectKey.toUpperCase()) + limitNote,
+      )
     },
   )
 
@@ -371,10 +437,7 @@ export function registerTicketTools(server: McpServer) {
 
       // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const ticket = result.data!
-      const upperKey = projectKey.toUpperCase()
-      return textResponse(
-        `Created ticket ${upperKey}-${ticket.number}\n\n${formatTicket(ticket, upperKey)}`,
-      )
+      return textResponse(formatTicketCreated(ticket, projectKey.toUpperCase()))
     },
   )
 
@@ -538,8 +601,9 @@ export function registerTicketTools(server: McpServer) {
 
       // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const ticket = result.data!
+      const upperKey = parsed.projectKey.toUpperCase()
       return textResponse(
-        `Updated ticket ${key}\n\n${formatTicket(ticket, parsed.projectKey.toUpperCase())}`,
+        formatTicketUpdated(`${upperKey}-${ticket.number}`, existingTicket, ticket),
       )
     },
   )
@@ -590,14 +654,14 @@ export function registerTicketTools(server: McpServer) {
           return errorResponse(`Column not found: ${column}`)
         }
         updateData.columnId = col.id
-        changes.push(`column → ${col.name}`)
+        changes.push(`${existingTicket.column.name} -> ${col.name}`)
       }
 
       // Handle sprint move
       if (sprint !== undefined) {
         if (sprint === null) {
           updateData.sprintId = null
-          changes.push('sprint → backlog')
+          changes.push(`sprint: ${existingTicket.sprint?.name ?? 'backlog'} -> backlog`)
         } else {
           const sprintsResult = await listSprints(parsed.projectKey)
           if (sprintsResult.error) {
@@ -610,7 +674,7 @@ export function registerTicketTools(server: McpServer) {
             return errorResponse(`Sprint not found: ${sprint}`)
           }
           updateData.sprintId = sp.id
-          changes.push(`sprint → ${sp.name}`)
+          changes.push(`sprint: ${existingTicket.sprint?.name ?? 'backlog'} -> ${sp.name}`)
         }
       }
 
@@ -623,11 +687,7 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      const ticket = result.data!
-      return textResponse(
-        `Moved ${key}: ${changes.join(', ')}\n\n${formatTicket(ticket, parsed.projectKey.toUpperCase())}`,
-      )
+      return textResponse(`Moved **${key}**: ${changes.join(', ')}`)
     },
   )
 
@@ -660,7 +720,7 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(`Deleted ${key}: ${existingTicket.title}`)
+      return textResponse(`Deleted **${key}**: ${existingTicket.title}`)
     },
   )
 }
