@@ -826,39 +826,47 @@ export function UserList() {
               onClick={(e) => e.stopPropagation()}
               className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
             />
-            <Avatar>
-              <AvatarImage src={user.avatar || undefined} />
-              <AvatarFallback
-                className="text-white"
-                style={user.avatarColor ? { backgroundColor: user.avatarColor } : undefined}
-              >
-                {user.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-zinc-100">{user.name}</span>
-                {isCurrentUser && (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
-                  >
-                    You
-                  </Badge>
-                )}
-                {user.isSystemAdmin && (
-                  <Badge variant="outline" className="border-amber-500 text-amber-500 text-xs">
-                    Super Admin
-                  </Badge>
-                )}
-                {!user.isActive && (
-                  <Badge variant="outline" className="border-red-500 text-red-500 text-xs">
-                    Disabled
-                  </Badge>
-                )}
+            <Link
+              href={`/admin/users/${user.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="group/profile flex items-center gap-3 text-inherit hover:text-zinc-50 transition-colors"
+            >
+              <Avatar>
+                <AvatarImage src={user.avatar || undefined} />
+                <AvatarFallback
+                  className="text-white"
+                  style={user.avatarColor ? { backgroundColor: user.avatarColor } : undefined}
+                >
+                  {user.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-zinc-100 group-hover/profile:underline">
+                    {user.name}
+                  </span>
+                  {isCurrentUser && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
+                    >
+                      You
+                    </Badge>
+                  )}
+                  {user.isSystemAdmin && (
+                    <Badge variant="outline" className="border-amber-500 text-amber-500 text-xs">
+                      Super Admin
+                    </Badge>
+                  )}
+                  {!user.isActive && (
+                    <Badge variant="outline" className="border-red-500 text-red-500 text-xs">
+                      Disabled
+                    </Badge>
+                  )}
+                </div>
+                <span className="text-sm text-zinc-500">{user.email}</span>
               </div>
-              <span className="text-sm text-zinc-500">{user.email}</span>
-            </div>
+            </Link>
           </div>
 
           <div className="flex items-center gap-6">
