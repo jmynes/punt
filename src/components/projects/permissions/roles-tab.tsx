@@ -20,6 +20,7 @@ import {
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,6 +63,7 @@ import {
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission, useIsSystemAdmin } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
+import { LABEL_COLORS } from '@/lib/constants'
 import { ALL_PERMISSIONS, PERMISSIONS } from '@/lib/permissions'
 import { type DefaultRoleName, isDefaultRoleName, ROLE_PRESETS } from '@/lib/permissions/presets'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
@@ -74,18 +76,6 @@ import { useSettingsStore } from '@/stores/settings-store'
 import type { Permission, RoleWithPermissions } from '@/types'
 import { PermissionGrid } from './permission-grid'
 import { RoleCompareDialog } from './role-compare-dialog'
-
-// Preset colors for role badges
-const ROLE_COLORS = [
-  '#f59e0b', // amber
-  '#3b82f6', // blue
-  '#10b981', // emerald
-  '#8b5cf6', // violet
-  '#ec4899', // pink
-  '#ef4444', // red
-  '#6b7280', // gray
-  '#f97316', // orange
-]
 
 interface RolesTabProps {
   projectId: string
@@ -122,7 +112,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
 
   // Form state for editing
   const [editName, setEditName] = useState('')
-  const [editColor, setEditColor] = useState(ROLE_COLORS[0])
+  const [editColor, setEditColor] = useState(LABEL_COLORS[0])
   const [editDescription, setEditDescription] = useState('')
   const [editPermissions, setEditPermissions] = useState<Permission[]>([])
   const [hasChanges, setHasChanges] = useState(false)
@@ -564,7 +554,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
     setIsCreating(true)
     setSelectedRoleId(null)
     setEditName('')
-    setEditColor(ROLE_COLORS[0])
+    setEditColor(LABEL_COLORS[0])
     setEditDescription('')
     setEditPermissions([])
     setHasChanges(false)
@@ -893,24 +883,16 @@ export function RolesTab({ projectId }: RolesTabProps) {
                     {/* Color */}
                     <div className="space-y-2">
                       <Label>Color</Label>
-                      <div className="flex gap-1">
-                        {ROLE_COLORS.map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => handleFieldChange('color', c)}
-                            disabled={!canManageRoles}
-                            className={cn(
-                              'w-6 h-6 rounded-md transition-all',
-                              editColor === c
-                                ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900'
-                                : 'hover:scale-110',
-                              !canManageRoles && 'opacity-50 cursor-not-allowed',
-                            )}
-                            style={{ backgroundColor: c }}
-                          />
-                        ))}
-                      </div>
+                      <ColorPickerBody
+                        activeColor={editColor}
+                        onColorChange={(color) => handleFieldChange('color', color)}
+                        onApply={(color) => {
+                          if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
+                            handleFieldChange('color', color)
+                          }
+                        }}
+                        isDisabled={!canManageRoles}
+                      />
                     </div>
 
                     {/* Description */}
