@@ -484,6 +484,11 @@ The `.mcp.json` file lives in the project root but is **gitignored** because it 
 
 **Commit messages:** Same convention as PR titles when tied to a ticket.
 
+**Branch cleanup after merge:** GitHub is configured to auto-delete remote branches when a PR is merged (`delete_branch_on_merge` enabled). After merging, clean up the local branch:
+```bash
+git checkout main && git pull && git branch -d <branch-name>
+```
+
 ### Debugging
 
 - Logger: `logger.debug()`, `logger.info()`, `logger.warn()`, `logger.error()`, `logger.measure()`
