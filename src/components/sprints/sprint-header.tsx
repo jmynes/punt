@@ -56,6 +56,8 @@ interface SprintHeaderProps {
   projectId: string
   tickets?: TicketWithRelations[]
   columns?: ColumnWithTickets[]
+  /** Filtered tickets (from board filters). When provided and different from total, shows filtered progress overlay. */
+  filteredTickets?: TicketWithRelations[]
   className?: string
 }
 
@@ -67,6 +69,7 @@ export function SprintHeader({
   projectId,
   tickets = [],
   columns = [],
+  filteredTickets,
   className,
 }: SprintHeaderProps) {
   const { data: sprints, isLoading } = useProjectSprints(projectId)
@@ -138,6 +141,24 @@ export function SprintHeader({
     status: activeSprint.status as 'active' | 'planning' | 'completed',
   })
   const daysText = formatDaysRemaining(activeSprint.endDate)
+
+  // Calculate filtered stats (when board filters are active)
+  const hasFilter = filteredTickets !== undefined && filteredTickets.length !== sprintTickets.length
+  const filteredSprintTickets = hasFilter
+    ? filteredTickets.filter((t) => t.sprintId === activeSprint.id)
+    : null
+  const filteredCompletedCount = filteredSprintTickets
+    ? filteredSprintTickets.filter((t) => doneColumnIds.includes(t.columnId)).length
+    : null
+  const filteredTotalCount = filteredSprintTickets?.length ?? null
+  const filteredCompletedPoints = filteredSprintTickets
+    ? filteredSprintTickets
+        .filter((t) => doneColumnIds.includes(t.columnId))
+        .reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
+    : null
+  const filteredTotalPoints = filteredSprintTickets
+    ? filteredSprintTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
+    : null
 
   // Calculate "velocity" (points per day if we had more data)
   // For now, show estimated remaining work indicator
@@ -339,6 +360,10 @@ export function SprintHeader({
             completedPoints={completedPoints}
             totalPoints={totalPoints}
             colorScheme={colorScheme}
+            filteredCompletedCount={filteredCompletedCount}
+            filteredTotalCount={filteredTotalCount}
+            filteredCompletedPoints={filteredCompletedPoints}
+            filteredTotalPoints={filteredTotalPoints}
           />
 
           {/* Complete button when expired */}
@@ -358,7 +383,9 @@ export function SprintHeader({
 }
 
 /**
- * Dual progress meters showing issues and story points completion
+ * Dual progress meters showing issues and story points completion.
+ * When filtered stats are provided, shows a layered progress bar with
+ * the filtered portion highlighted and the overall sprint progress dimmed behind it.
  */
 function ProgressMeters({
   completedCount,
@@ -366,20 +393,45 @@ function ProgressMeters({
   completedPoints,
   totalPoints,
   colorScheme,
+  filteredCompletedCount,
+  filteredTotalCount,
+  filteredCompletedPoints,
+  filteredTotalPoints,
 }: {
   completedCount: number
   totalCount: number
   completedPoints: number
   totalPoints: number
   colorScheme: 'orange' | 'blue' | 'emerald'
+  filteredCompletedCount?: number | null
+  filteredTotalCount?: number | null
+  filteredCompletedPoints?: number | null
+  filteredTotalPoints?: number | null
 }) {
   const issuePercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
   const pointsPercent = totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0
+
+  const hasFilter = filteredTotalCount != null && filteredTotalCount !== totalCount
+
+  const filteredIssuePercent =
+    hasFilter && totalCount > 0
+      ? Math.round(((filteredCompletedCount ?? 0) / totalCount) * 100)
+      : null
+  const filteredPointsPercent =
+    hasFilter && totalPoints > 0
+      ? Math.round(((filteredCompletedPoints ?? 0) / totalPoints) * 100)
+      : null
 
   const progressColors = {
     orange: 'bg-orange-500',
     blue: 'bg-blue-500',
     emerald: 'bg-emerald-500',
+  }
+
+  const dimmedProgressColors = {
+    orange: 'bg-orange-500/30',
+    blue: 'bg-blue-500/30',
+    emerald: 'bg-emerald-500/30',
   }
 
   const textColors = {
@@ -389,6 +441,7 @@ function ProgressMeters({
   }
 
   const progressColor = progressColors[colorScheme]
+  const dimmedColor = dimmedProgressColors[colorScheme]
   const textColor = textColors[colorScheme]
 
   return (
@@ -407,29 +460,78 @@ function ProgressMeters({
 
             {/* Progress bar with numbers */}
             <div className="flex items-center gap-4">
-              <div className="h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
+                {/* Total completion bar (dimmed when filtered) */}
                 <div
-                  className={cn('h-full rounded-full transition-all duration-500', progressColor)}
+                  className={cn(
+                    'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                    hasFilter ? dimmedColor : progressColor,
+                  )}
                   style={{ width: `${issuePercent}%` }}
                 />
+                {/* Filtered completion overlay */}
+                {filteredIssuePercent != null && (
+                  <div
+                    className={cn(
+                      'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                      progressColor,
+                    )}
+                    style={{ width: `${filteredIssuePercent}%` }}
+                  />
+                )}
               </div>
               <div className="flex items-center gap-0.5 text-xs min-w-[44px]">
-                <span className={cn('font-bold tabular-nums', textColor)}>{completedCount}</span>
-                <span className="text-zinc-600">/</span>
-                <span className="text-zinc-500 tabular-nums">{totalCount}</span>
+                {hasFilter ? (
+                  <>
+                    <span className={cn('font-bold tabular-nums', textColor)}>
+                      {filteredCompletedCount}
+                    </span>
+                    <span className="text-zinc-600">/</span>
+                    <span className="text-zinc-500 tabular-nums">{filteredTotalCount}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className={cn('font-bold tabular-nums', textColor)}>
+                      {completedCount}
+                    </span>
+                    <span className="text-zinc-600">/</span>
+                    <span className="text-zinc-500 tabular-nums">{totalCount}</span>
+                  </>
+                )}
               </div>
             </div>
+
+            {/* Overall stats shown below when filtered */}
+            {hasFilter && (
+              <div className="flex items-center gap-1 text-[10px] text-zinc-600">
+                <span>Sprint:</span>
+                <span className="tabular-nums">
+                  {completedCount}/{totalCount}
+                </span>
+              </div>
+            )}
           </div>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
-          <p className="text-xs text-zinc-100">
-            {completedCount} of {totalCount} issues completed ({issuePercent}%)
-          </p>
+          {hasFilter ? (
+            <div className="space-y-1">
+              <p className="text-xs text-zinc-100">
+                Filtered: {filteredCompletedCount} of {filteredTotalCount} issues completed
+              </p>
+              <p className="text-xs text-zinc-400">
+                Sprint total: {completedCount} of {totalCount} issues ({issuePercent}%)
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-100">
+              {completedCount} of {totalCount} issues completed ({issuePercent}%)
+            </p>
+          )}
         </TooltipContent>
       </Tooltip>
 
       {/* Divider */}
-      <div className="h-10 w-px bg-zinc-800/60" />
+      <div className={cn('w-px bg-zinc-800/60', hasFilter ? 'h-14' : 'h-10')} />
 
       {/* Story points progress */}
       <Tooltip>
@@ -445,24 +547,73 @@ function ProgressMeters({
 
             {/* Progress bar with numbers */}
             <div className="flex items-center gap-4">
-              <div className="h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
+                {/* Total completion bar (dimmed when filtered) */}
                 <div
-                  className={cn('h-full rounded-full transition-all duration-500', progressColor)}
+                  className={cn(
+                    'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                    hasFilter ? dimmedColor : progressColor,
+                  )}
                   style={{ width: `${pointsPercent}%` }}
                 />
+                {/* Filtered completion overlay */}
+                {filteredPointsPercent != null && (
+                  <div
+                    className={cn(
+                      'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                      progressColor,
+                    )}
+                    style={{ width: `${filteredPointsPercent}%` }}
+                  />
+                )}
               </div>
               <div className="flex items-center gap-0.5 text-xs min-w-[44px]">
-                <span className={cn('font-bold tabular-nums', textColor)}>{completedPoints}</span>
-                <span className="text-zinc-600">/</span>
-                <span className="text-zinc-500 tabular-nums">{totalPoints}</span>
+                {hasFilter ? (
+                  <>
+                    <span className={cn('font-bold tabular-nums', textColor)}>
+                      {filteredCompletedPoints}
+                    </span>
+                    <span className="text-zinc-600">/</span>
+                    <span className="text-zinc-500 tabular-nums">{filteredTotalPoints}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className={cn('font-bold tabular-nums', textColor)}>
+                      {completedPoints}
+                    </span>
+                    <span className="text-zinc-600">/</span>
+                    <span className="text-zinc-500 tabular-nums">{totalPoints}</span>
+                  </>
+                )}
               </div>
             </div>
+
+            {/* Overall stats shown below when filtered */}
+            {hasFilter && (
+              <div className="flex items-center gap-1 text-[10px] text-zinc-600">
+                <span>Sprint:</span>
+                <span className="tabular-nums">
+                  {completedPoints}/{totalPoints}
+                </span>
+              </div>
+            )}
           </div>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
-          <p className="text-xs text-zinc-100">
-            {completedPoints} of {totalPoints} story points completed ({pointsPercent}%)
-          </p>
+          {hasFilter ? (
+            <div className="space-y-1">
+              <p className="text-xs text-zinc-100">
+                Filtered: {filteredCompletedPoints} of {filteredTotalPoints} story points completed
+              </p>
+              <p className="text-xs text-zinc-400">
+                Sprint total: {completedPoints} of {totalPoints} points ({pointsPercent}%)
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-100">
+              {completedPoints} of {totalPoints} story points completed ({pointsPercent}%)
+            </p>
+          )}
         </TooltipContent>
       </Tooltip>
     </div>

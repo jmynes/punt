@@ -219,6 +219,13 @@ export default function BoardPage() {
 
   // Get all tickets for finding the selected one (use unfiltered for drawer)
   const allTickets = useMemo(() => columns.flatMap((col) => col.tickets), [columns])
+
+  // Flattened filtered tickets for sprint progress overlay
+  const filteredTicketsFlat = useMemo(
+    () => filteredColumns.flatMap((col) => col.tickets),
+    [filteredColumns],
+  )
+
   const selectedTicket = useMemo(
     () => allTickets.find((t) => t.id === activeTicketId) || null,
     [activeTicketId, allTickets],
@@ -339,7 +346,12 @@ export default function BoardPage() {
       {/* Sprint header + filters */}
       <div className="flex-shrink-0 flex flex-col gap-4 px-4 py-4 lg:px-6 border-b border-zinc-800">
         {/* Sprint progress */}
-        <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
+        <SprintHeader
+          projectId={projectId}
+          tickets={allTickets}
+          columns={columns}
+          filteredTickets={filteredTicketsFlat}
+        />
 
         {/* Filters */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
