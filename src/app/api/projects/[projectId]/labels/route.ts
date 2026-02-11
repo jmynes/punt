@@ -6,29 +6,11 @@ import {
   requirePermission,
   requireProjectByKey,
 } from '@/lib/auth-helpers'
+import { LABEL_COLORS } from '@/lib/constants'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { PERMISSIONS } from '@/lib/permissions'
 import { LABEL_SELECT } from '@/lib/prisma-selects'
-
-// Predefined colors for auto-assignment when creating labels
-const LABEL_COLORS = [
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#8b5cf6', // purple
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#14b8a6', // teal
-  '#64748b', // slate
-  '#22c55e', // green
-  '#eab308', // yellow
-  '#dc2626', // red-600
-  '#a855f7', // purple-500
-  '#78716c', // stone
-  '#3b82f6', // blue
-  '#16a34a', // green-600
-  '#f97316', // orange
-]
 
 const createLabelSchema = z.object({
   name: z.string().min(1).max(50).trim(),

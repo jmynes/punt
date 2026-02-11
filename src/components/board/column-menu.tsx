@@ -49,7 +49,6 @@ import {
   getColumnIcon,
   resolveColumnColor,
   resolveColumnIconName,
-  TAILWIND_TO_HEX,
 } from '@/lib/status-icons'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
@@ -57,9 +56,6 @@ import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets } from '@/types'
-
-// Column auto-detected colors to include as extra presets in the color picker
-const COLUMN_COLOR_PRESETS = [...new Set(Object.values(TAILWIND_TO_HEX))]
 
 interface ColumnMenuProps {
   column: ColumnWithTickets
@@ -646,7 +642,6 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                     onColorChange={setColorValue}
                     onApply={setColorValue}
                     isDisabled={renameLoading}
-                    extraPresets={COLUMN_COLOR_PRESETS}
                   />
                   {/* PUNT-74: Ghost button style for reset */}
                   <button
@@ -670,7 +665,6 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                     onColorChange={setColorValue}
                     onApply={setColorValue}
                     isDisabled={renameLoading}
-                    extraPresets={COLUMN_COLOR_PRESETS}
                   />
                 </>
               )}
