@@ -1,8 +1,9 @@
 'use client'
 
-import { Check, Loader2, Pencil, Plus, Tag, Trash2, X } from 'lucide-react'
+import { Loader2, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   type LabelWithCount,
   useCreateLabel,
@@ -40,124 +42,169 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
 
   const canManageLabels = useHasPermission(projectId, PERMISSIONS.LABELS_MANAGE)
 
-  // Create form state
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [newLabelName, setNewLabelName] = useState('')
-  const [newLabelColor, setNewLabelColor] = useState(LABEL_COLORS[0])
-  const createInputRef = useRef<HTMLInputElement>(null)
+  // Selection state
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
 
-  // Edit state
-  const [editingLabel, setEditingLabel] = useState<LabelWithCount | null>(null)
+  // Editor form state
   const [editName, setEditName] = useState('')
-  const [editColor, setEditColor] = useState('')
-  const editInputRef = useRef<HTMLInputElement>(null)
+  const [editColor, setEditColor] = useState(LABEL_COLORS[0])
+  const [hasChanges, setHasChanges] = useState(false)
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
   // Delete confirmation state
   const [deletingLabel, setDeletingLabel] = useState<LabelWithCount | null>(null)
 
-  // Focus create input when form opens
-  useEffect(() => {
-    if (showCreateForm) {
-      setTimeout(() => createInputRef.current?.focus(), 0)
-    }
-  }, [showCreateForm])
+  // Get the currently selected label
+  const selectedLabel = labels?.find((l) => l.id === selectedLabelId) ?? null
 
-  // Focus edit input when editing starts
-  useEffect(() => {
-    if (editingLabel) {
-      setTimeout(() => editInputRef.current?.focus(), 0)
-    }
-  }, [editingLabel])
-
-  const handleCreate = useCallback(async () => {
-    const name = newLabelName.trim()
-    if (!name) return
-
-    createLabel.mutate(
-      { name, color: newLabelColor },
-      {
-        onSuccess: () => {
-          toast.success('Label created')
-          setNewLabelName('')
-          setNewLabelColor(LABEL_COLORS[((labels?.length ?? 0) + 1) % LABEL_COLORS.length])
-          setShowCreateForm(false)
-        },
-      },
-    )
-  }, [newLabelName, newLabelColor, labels?.length, createLabel])
-
-  const handleStartEdit = useCallback((label: LabelWithCount) => {
-    setEditingLabel(label)
+  // Load label data into the editor
+  const loadLabelData = useCallback((label: LabelWithCount) => {
     setEditName(label.name)
     setEditColor(label.color)
+    setHasChanges(false)
   }, [])
 
-  const handleCancelEdit = useCallback(() => {
-    setEditingLabel(null)
+  // Select the first label by default when labels load
+  useEffect(() => {
+    if (labels && labels.length > 0 && !selectedLabelId && !isCreating) {
+      setSelectedLabelId(labels[0].id)
+      loadLabelData(labels[0])
+    }
+  }, [labels, selectedLabelId, isCreating, loadLabelData])
+
+  // Handle label selection
+  const handleSelectLabel = useCallback(
+    (label: LabelWithCount) => {
+      if (label.id === selectedLabelId && !isCreating) return
+      setSelectedLabelId(label.id)
+      setIsCreating(false)
+      loadLabelData(label)
+    },
+    [selectedLabelId, isCreating, loadLabelData],
+  )
+
+  // Handle starting create mode
+  const handleStartCreate = useCallback(() => {
+    const nextColor = LABEL_COLORS[(labels?.length ?? 0) % LABEL_COLORS.length]
+    setIsCreating(true)
+    setSelectedLabelId(null)
     setEditName('')
-    setEditColor('')
+    setEditColor(nextColor)
+    setHasChanges(false)
+    setTimeout(() => nameInputRef.current?.focus(), 50)
+  }, [labels?.length])
+
+  // Derive hasChanges reactively from current state
+  useEffect(() => {
+    if (isCreating) {
+      setHasChanges(editName.trim() !== '')
+    } else if (selectedLabel) {
+      setHasChanges(editName !== selectedLabel.name || editColor !== selectedLabel.color)
+    } else {
+      setHasChanges(false)
+    }
+  }, [editName, editColor, isCreating, selectedLabel])
+
+  // Handle field changes
+  const handleNameChange = useCallback((value: string) => {
+    setEditName(value)
   }, [])
 
-  const handleSaveEdit = useCallback(async () => {
-    if (!editingLabel) return
+  const handleColorChange = useCallback((value: string) => {
+    setEditColor(value)
+  }, [])
+
+  // Save changes (create or update)
+  const handleSave = useCallback(async () => {
     const name = editName.trim()
-    if (!name) return
-
-    const hasNameChange = name !== editingLabel.name
-    const hasColorChange = editColor !== editingLabel.color
-
-    if (!hasNameChange && !hasColorChange) {
-      handleCancelEdit()
+    if (!name) {
+      toast.error('Label name is required')
       return
     }
 
-    updateLabel.mutate(
-      {
-        labelId: editingLabel.id,
-        ...(hasNameChange && { name }),
-        ...(hasColorChange && { color: editColor }),
-      },
-      {
-        onSuccess: () => {
-          handleCancelEdit()
+    if (isCreating) {
+      createLabel.mutate(
+        { name, color: editColor },
+        {
+          onSuccess: (newLabel) => {
+            toast.success('Label created')
+            setIsCreating(false)
+            setSelectedLabelId(newLabel.id)
+            setHasChanges(false)
+          },
         },
-      },
-    )
-  }, [editingLabel, editName, editColor, updateLabel, handleCancelEdit])
+      )
+    } else if (selectedLabel) {
+      const hasNameChange = name !== selectedLabel.name
+      const hasColorChange = editColor !== selectedLabel.color
 
+      if (!hasNameChange && !hasColorChange) {
+        return
+      }
+
+      updateLabel.mutate(
+        {
+          labelId: selectedLabel.id,
+          ...(hasNameChange && { name }),
+          ...(hasColorChange && { color: editColor }),
+        },
+        {
+          onSuccess: () => {
+            setHasChanges(false)
+          },
+        },
+      )
+    }
+  }, [editName, editColor, isCreating, selectedLabel, createLabel, updateLabel])
+
+  // Cancel editing
+  const handleCancel = useCallback(() => {
+    if (isCreating) {
+      setIsCreating(false)
+      if (labels && labels.length > 0) {
+        setSelectedLabelId(labels[0].id)
+        loadLabelData(labels[0])
+      }
+    } else if (selectedLabel) {
+      loadLabelData(selectedLabel)
+    }
+  }, [isCreating, labels, selectedLabel, loadLabelData])
+
+  // Handle delete
   const handleDelete = useCallback(async () => {
     if (!deletingLabel) return
 
     deleteLabel.mutate(deletingLabel.id, {
       onSuccess: () => {
         setDeletingLabel(null)
+        // Select the next available label
+        if (deletingLabel.id === selectedLabelId) {
+          const remaining = labels?.filter((l) => l.id !== deletingLabel.id) ?? []
+          if (remaining.length > 0) {
+            setSelectedLabelId(remaining[0].id)
+            loadLabelData(remaining[0])
+          } else {
+            setSelectedLabelId(null)
+            setEditName('')
+            setEditColor(LABEL_COLORS[0])
+          }
+        }
       },
     })
-  }, [deletingLabel, deleteLabel])
+  }, [deletingLabel, deleteLabel, selectedLabelId, labels, loadLabelData])
 
-  const handleCreateKeyDown = useCallback(
+  // Handle keyboard shortcuts in editor
+  const handleEditorKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && hasChanges) {
         e.preventDefault()
-        handleCreate()
+        handleSave()
       } else if (e.key === 'Escape') {
-        setShowCreateForm(false)
-        setNewLabelName('')
+        handleCancel()
       }
     },
-    [handleCreate],
-  )
-
-  const handleEditKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        handleSaveEdit()
-      } else if (e.key === 'Escape') {
-        handleCancelEdit()
-      }
-    },
-    [handleSaveEdit, handleCancelEdit],
+    [hasChanges, handleSave, handleCancel],
   )
 
   if (isLoading) {
@@ -171,274 +218,231 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium text-zinc-100">Labels</h3>
-          <p className="text-sm text-zinc-500">
-            Manage labels used to categorize and filter tickets in this project.
-          </p>
-        </div>
-        {canManageLabels && !showCreateForm && (
-          <Button
-            variant="primary"
-            onClick={() => {
-              setNewLabelColor(LABEL_COLORS[(labels?.length ?? 0) % LABEL_COLORS.length])
-              setShowCreateForm(true)
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Create Label
-          </Button>
-        )}
+      <div>
+        <h3 className="text-lg font-medium text-zinc-100">Labels</h3>
+        <p className="text-sm text-zinc-500">
+          Manage labels used to categorize and filter tickets in this project.
+        </p>
       </div>
 
-      {/* Create Label Form */}
-      {showCreateForm && canManageLabels && (
-        <Card className="bg-zinc-900/50 border-zinc-800">
-          <CardHeader>
-            <CardTitle className="text-base text-zinc-100">New Label</CardTitle>
-            <CardDescription>Choose a name and color for your label.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Preview */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-zinc-400">Preview:</span>
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
-                style={{ backgroundColor: newLabelColor }}
-              >
-                {newLabelName || 'Label name'}
-              </span>
-            </div>
+      {/* Side-by-side layout */}
+      <div className="flex gap-6 min-h-[500px]">
+        {/* Left Panel - Label List */}
+        <div className="w-64 flex-shrink-0 flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-sm font-medium text-zinc-400">
+              Labels
+              {labels && labels.length > 0 && (
+                <span className="ml-1.5 text-zinc-600">({labels.length})</span>
+              )}
+            </h4>
+            {canManageLabels && (
+              <Button variant="ghost" size="sm" onClick={handleStartCreate}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
 
-            {/* Name input */}
-            <div className="space-y-2">
-              <label htmlFor="new-label-name" className="text-sm text-zinc-300">
-                Name
-              </label>
-              <Input
-                ref={createInputRef}
-                id="new-label-name"
-                value={newLabelName}
-                onChange={(e) => setNewLabelName(e.target.value)}
-                onKeyDown={handleCreateKeyDown}
-                placeholder="e.g., bug, feature, documentation"
-                maxLength={50}
-                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              />
-            </div>
+          <ScrollArea className="flex-1">
+            <div className="space-y-1 pr-3">
+              {(!labels || labels.length === 0) && !isCreating ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Tag className="h-8 w-8 text-zinc-600 mb-2" />
+                  <p className="text-sm text-zinc-500">No labels yet</p>
+                  <p className="text-xs text-zinc-600 mt-1">
+                    {canManageLabels
+                      ? 'Click + to create your first label.'
+                      : 'Labels will appear here when created.'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {labels?.map((label) => {
+                    const ticketCount = label._count?.tickets ?? 0
+                    const isSelected = selectedLabelId === label.id && !isCreating
 
-            {/* Color picker */}
-            <div className="space-y-2">
-              <span className="text-sm text-zinc-300">Color</span>
-              <div className="flex flex-wrap gap-2">
-                {LABEL_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setNewLabelColor(color)}
-                    className={cn(
-                      'h-7 w-7 rounded-md transition-all',
-                      newLabelColor === color
-                        ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900'
-                        : 'hover:scale-110',
-                    )}
-                    style={{ backgroundColor: color }}
+                    return (
+                      <button
+                        key={label.id}
+                        type="button"
+                        onClick={() => handleSelectLabel(label)}
+                        className={cn(
+                          'w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-left',
+                          isSelected
+                            ? 'bg-zinc-800 text-zinc-100'
+                            : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200',
+                        )}
+                      >
+                        <div
+                          className="w-3.5 h-3.5 rounded-full flex-shrink-0 ring-1 ring-inset ring-white/10"
+                          style={{ backgroundColor: label.color }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium truncate block">{label.name}</span>
+                          <span className="text-xs text-zinc-500">
+                            {ticketCount} ticket{ticketCount !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+
+                  {/* New label placeholder in list */}
+                  {isCreating && (
+                    <div className="w-full flex items-center gap-3 px-3 py-2 rounded-md bg-amber-900/20 border border-amber-700/50">
+                      <div
+                        className="w-3.5 h-3.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: editColor }}
+                      />
+                      <span className="text-sm font-medium text-amber-400 truncate">
+                        {editName || 'New Label'}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Right Panel - Label Editor */}
+        <div className="flex-1 min-w-0">
+          {selectedLabel || isCreating ? (
+            <Card className="flex flex-col bg-zinc-900/50 border-zinc-800 h-full">
+              <CardHeader className="flex-shrink-0 pb-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-4 h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: editColor }}
                   />
-                ))}
+                  {canManageLabels ? (
+                    <div className="group/title relative flex items-center gap-2 flex-1 min-w-0">
+                      <div className="relative flex-1">
+                        <Input
+                          ref={nameInputRef}
+                          value={editName}
+                          onChange={(e) => handleNameChange(e.target.value)}
+                          onKeyDown={handleEditorKeyDown}
+                          placeholder="Label name..."
+                          maxLength={50}
+                          className="!text-lg font-semibold bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-zinc-500 cursor-text"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 h-px bg-zinc-700 group-hover/title:bg-zinc-500 group-focus-within/title:bg-amber-500 transition-colors" />
+                      </div>
+                      <Pencil className="h-3.5 w-3.5 text-zinc-600 group-hover/title:text-zinc-400 group-focus-within/title:text-amber-500 transition-colors flex-shrink-0" />
+                    </div>
+                  ) : (
+                    <CardTitle className="text-lg">{editName || 'New Label'}</CardTitle>
+                  )}
+                </div>
+                <CardDescription>
+                  {isCreating
+                    ? 'Create a new label with a name and color.'
+                    : 'Edit the name and color of this label.'}
+                  {!canManageLabels && ' You need the "Manage labels" permission to edit labels.'}
+                </CardDescription>
+              </CardHeader>
+
+              <ScrollArea className="flex-1 min-h-0">
+                <CardContent className="pt-0 space-y-6">
+                  {/* Live Preview */}
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium text-zinc-300">Preview</span>
+                    <div className="flex items-center gap-4 p-4 rounded-lg bg-zinc-800/50 border border-zinc-800">
+                      <span
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium text-white shadow-sm"
+                        style={{ backgroundColor: editColor }}
+                      >
+                        {editName || 'Label name'}
+                      </span>
+                      <span className="text-xs text-zinc-500">
+                        This is how the label will appear on tickets.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Color */}
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium text-zinc-300">Color</span>
+                    <ColorPickerBody
+                      activeColor={editColor}
+                      onColorChange={handleColorChange}
+                      onApply={(color) => {
+                        if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
+                          handleColorChange(color)
+                        }
+                      }}
+                      isDisabled={!canManageLabels}
+                    />
+                  </div>
+
+                  {/* Delete section (only for existing labels) */}
+                  {!isCreating && selectedLabel && canManageLabels && (
+                    <div className="space-y-2 pt-4 border-t border-zinc-800">
+                      <span className="text-sm font-medium text-red-400">Danger Zone</span>
+                      <p className="text-xs text-zinc-500">
+                        Deleting this label will remove it from all tickets that use it.
+                        {(selectedLabel._count?.tickets ?? 0) > 0 && (
+                          <span className="text-amber-400">
+                            {' '}
+                            Currently used on {selectedLabel._count?.tickets} ticket
+                            {selectedLabel._count?.tickets !== 1 ? 's' : ''}.
+                          </span>
+                        )}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeletingLabel(selectedLabel)}
+                        className="border-red-800 text-red-400 hover:bg-red-900/20 hover:text-red-300 hover:border-red-700"
+                      >
+                        <Trash2 className="mr-2 h-3.5 w-3.5" />
+                        Delete Label
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </ScrollArea>
+
+              {/* Footer bar with save/cancel actions */}
+              {canManageLabels && hasChanges && (
+                <div className="flex-shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-t border-zinc-800 bg-zinc-900/80">
+                  <p className="text-sm text-zinc-400">You have unsaved changes</p>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={handleCancel}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={!editName.trim() || createLabel.isPending || updateLabel.isPending}
+                    >
+                      {(createLabel.isPending || updateLabel.isPending) && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {isCreating ? 'Create Label' : 'Save Changes'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          ) : (
+            <div className="h-full flex items-center justify-center text-zinc-500">
+              <div className="text-center">
+                <Tag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">
+                  {labels && labels.length > 0
+                    ? 'Select a label to view and edit it'
+                    : canManageLabels
+                      ? 'Create your first label to get started'
+                      : 'No labels have been created yet'}
+                </p>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowCreateForm(false)
-                  setNewLabelName('')
-                }}
-                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={!newLabelName.trim() || createLabel.isPending}
-              >
-                {createLabel.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Label'
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Labels List */}
-      <Card className="bg-zinc-900/50 border-zinc-800">
-        <CardHeader>
-          <CardTitle className="text-base text-zinc-100">
-            Project Labels
-            {labels && labels.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-zinc-500">({labels.length})</span>
-            )}
-          </CardTitle>
-          <CardDescription>
-            Labels assigned to tickets in this project.{' '}
-            {!canManageLabels && 'You need the "Manage labels" permission to edit labels.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!labels || labels.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Tag className="h-10 w-10 text-zinc-600 mb-3" />
-              <p className="text-sm text-zinc-400">No labels yet</p>
-              <p className="text-xs text-zinc-600 mt-1">
-                {canManageLabels
-                  ? 'Create your first label to start categorizing tickets.'
-                  : 'Labels will appear here when they are created.'}
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-zinc-800">
-              {labels.map((label) => {
-                const isEditing = editingLabel?.id === label.id
-                const ticketCount = label._count?.tickets ?? 0
-
-                if (isEditing) {
-                  return (
-                    <div key={label.id} className="py-3 first:pt-0 last:pb-0">
-                      <div className="flex items-start gap-3">
-                        {/* Color picker for edit */}
-                        <div className="flex flex-col gap-2 pt-1">
-                          <div className="flex flex-wrap gap-1.5 max-w-[200px]">
-                            {LABEL_COLORS.map((color) => (
-                              <button
-                                key={color}
-                                type="button"
-                                onClick={() => setEditColor(color)}
-                                className={cn(
-                                  'h-5 w-5 rounded transition-all',
-                                  editColor === color
-                                    ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-900'
-                                    : 'hover:scale-110',
-                                )}
-                                style={{ backgroundColor: color }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Name input and preview */}
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
-                              style={{ backgroundColor: editColor }}
-                            >
-                              {editName || 'Label name'}
-                            </span>
-                          </div>
-                          <Input
-                            ref={editInputRef}
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            onKeyDown={handleEditKeyDown}
-                            maxLength={50}
-                            className="bg-zinc-900 border-zinc-700 text-zinc-100 h-8 text-sm"
-                          />
-                        </div>
-
-                        {/* Save / Cancel */}
-                        <div className="flex items-center gap-1 pt-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-900/20"
-                            onClick={handleSaveEdit}
-                            disabled={!editName.trim() || updateLabel.isPending}
-                          >
-                            {updateLabel.isPending ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Check className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-zinc-500 hover:text-zinc-300"
-                            onClick={handleCancelEdit}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                }
-
-                return (
-                  <div
-                    key={label.id}
-                    className="flex items-center justify-between py-3 first:pt-0 last:pb-0 group"
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* Color swatch */}
-                      <div
-                        className="h-4 w-4 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: label.color }}
-                      />
-
-                      {/* Label name as pill */}
-                      <span
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
-                        style={{ backgroundColor: label.color }}
-                      >
-                        {label.name}
-                      </span>
-
-                      {/* Ticket count */}
-                      <span className="text-xs text-zinc-500">
-                        {ticketCount} ticket{ticketCount !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-
-                    {/* Actions */}
-                    {canManageLabels && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-zinc-500 hover:text-zinc-300"
-                          onClick={() => handleStartEdit(label)}
-                          title="Edit label"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-900/20"
-                          onClick={() => setDeletingLabel(label)}
-                          title="Delete label"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!deletingLabel} onOpenChange={(open) => !open && setDeletingLabel(null)}>
