@@ -236,14 +236,15 @@ export function RolePermissionsForm() {
                   {!isOwner && (
                     <div className="flex items-center justify-center gap-1.5 mt-2">
                       <Checkbox
-                        checked={toggleState === 'checked'}
-                        data-state={toggleState}
-                        onCheckedChange={() => toggleAllForRole(role)}
-                        className={
-                          toggleState === 'indeterminate'
-                            ? 'border-zinc-600 bg-zinc-600 data-[state=indeterminate]:bg-zinc-600'
-                            : 'border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600'
+                        checked={
+                          toggleState === 'checked'
+                            ? true
+                            : toggleState === 'indeterminate'
+                              ? 'indeterminate'
+                              : false
                         }
+                        onCheckedChange={() => toggleAllForRole(role)}
+                        className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600 data-[state=indeterminate]:bg-zinc-600"
                       />
                       <span className="text-xs text-zinc-500">All</span>
                     </div>
@@ -320,7 +321,7 @@ export function RolePermissionsForm() {
 
       {/* Sticky footer for unsaved changes */}
       {hasChanges && (
-        <div className="sticky bottom-0 z-10 flex items-center justify-between gap-4 px-6 py-4 border-t border-zinc-800 bg-zinc-900/80 backdrop-blur-sm rounded-b-lg">
+        <div className="sticky bottom-0 z-10 flex items-center justify-between gap-4 px-6 py-4 border-t border-zinc-800 bg-zinc-900/80 backdrop-blur-sm">
           <p className="text-sm text-zinc-400">You have unsaved changes</p>
           <div className="flex items-center gap-2">
             <Button
