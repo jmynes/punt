@@ -11,41 +11,93 @@ import {
 import { errorResponse, textResponse } from '../utils.js'
 
 /**
- * Format a project for display
+ * Format a project for detailed display (get_project).
+ * Uses compact key-value layout with sections.
  */
-function formatProject(project: ProjectData): string {
+function formatProjectDetail(project: ProjectData): string {
   const lines: string[] = []
-  lines.push(`# ${project.key}: ${project.name}`)
+  lines.push(`## ${project.key}: ${project.name}`)
   lines.push('')
+
   if (project.description) {
     lines.push(project.description)
     lines.push('')
   }
-  lines.push('| Field | Value |')
-  lines.push('|-------|-------|')
-  lines.push(`| Color | ${project.color} |`)
+
+  lines.push(`**Color:** ${project.color}  `)
   if (project._count) {
-    lines.push(`| Tickets | ${project._count.tickets} |`)
-    lines.push(`| Members | ${project._count.members} |`)
+    lines.push(`**Tickets:** ${project._count.tickets}  `)
+    lines.push(`**Members:** ${project._count.members}  `)
   }
 
   if (project.columns && project.columns.length > 0) {
     lines.push('')
-    lines.push('## Columns')
-    lines.push('')
-    for (const col of project.columns) {
-      lines.push(`${col.order + 1}. ${col.name}`)
-    }
+    lines.push(`**Columns:** ${project.columns.map((c) => c.name).join(' -> ')}`)
   }
 
   if (project.members && project.members.length > 0) {
     lines.push('')
-    lines.push('## Members')
-    lines.push('')
-    lines.push('| Name | Role |')
-    lines.push('|------|------|')
+    lines.push('**Members:**')
     for (const m of project.members) {
-      lines.push(`| ${m.user.name} | ${m.role.name} |`)
+      lines.push(`- ${m.user.name} (${m.role.name})`)
+    }
+  }
+
+  return lines.join('\n')
+}
+
+/**
+ * Format a compact summary for a newly created project.
+ */
+function formatProjectCreated(project: ProjectData): string {
+  const lines: string[] = []
+  lines.push(`Created project **${project.key}**: ${project.name}`)
+  lines.push('')
+
+  const fields: string[] = []
+  fields.push(`**Color:** ${project.color}`)
+  if (project.description) fields.push(`**Description:** ${project.description}`)
+
+  for (const f of fields) lines.push(`${f}  `)
+
+  return lines.join('\n')
+}
+
+/**
+ * Format a diff-style view of what changed on a project update.
+ */
+function formatProjectUpdated(
+  key: string,
+  oldProject: ProjectData,
+  newProject: ProjectData,
+): string {
+  const lines: string[] = []
+  lines.push(`Updated project **${key}**`)
+  lines.push('')
+
+  const changes: string[] = []
+
+  if (oldProject.name !== newProject.name) {
+    changes.push(`**Name:** ${oldProject.name} -> ${newProject.name}`)
+  }
+  if ((oldProject.description ?? null) !== (newProject.description ?? null)) {
+    if (!newProject.description) {
+      changes.push('**Description:** cleared')
+    } else if (!oldProject.description) {
+      changes.push(`**Description:** added "${newProject.description}"`)
+    } else {
+      changes.push(`**Description:** "${oldProject.description}" -> "${newProject.description}"`)
+    }
+  }
+  if (oldProject.color !== newProject.color) {
+    changes.push(`**Color:** ${oldProject.color} -> ${newProject.color}`)
+  }
+
+  if (changes.length === 0) {
+    lines.push('No changes detected.')
+  } else {
+    for (const change of changes) {
+      lines.push(`- ${change}`)
     }
   }
 
@@ -109,7 +161,7 @@ export function registerProjectTools(server: McpServer) {
       }
 
       // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      return textResponse(formatProject(result.data!))
+      return textResponse(formatProjectDetail(result.data!))
     },
   )
 
@@ -136,8 +188,7 @@ export function registerProjectTools(server: McpServer) {
       }
 
       // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      const project = result.data!
-      return textResponse(`Created project ${project.key}\n\n${formatProject(project)}`)
+      return textResponse(formatProjectCreated(result.data!))
     },
   )
 
@@ -152,6 +203,12 @@ export function registerProjectTools(server: McpServer) {
       color: z.string().optional().describe('New color (hex)'),
     },
     async ({ key, name, description, color }) => {
+      // Get current project state for diff
+      const currentResult = await getProject(key)
+      if (currentResult.error) {
+        return errorResponse(currentResult.error)
+      }
+
       const updateData: Record<string, unknown> = {}
       if (name !== undefined) updateData.name = name
       if (description !== undefined) updateData.description = description
@@ -166,9 +223,12 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
-      const project = result.data!
-      return textResponse(`Updated project ${project.key}\n\n${formatProject(project)}`)
+      const oldProject = currentResult.data
+      const newProject = result.data
+      if (!oldProject || !newProject) {
+        return errorResponse('Unexpected empty response')
+      }
+      return textResponse(formatProjectUpdated(key.toUpperCase(), oldProject, newProject))
     },
   )
 
@@ -185,7 +245,6 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse('Set confirm=true to delete the project')
       }
 
-      // Get project info first for the response
       const projectResult = await getProject(key)
       if (projectResult.error) {
         return errorResponse(projectResult.error)
@@ -199,7 +258,7 @@ export function registerProjectTools(server: McpServer) {
       }
 
       return textResponse(
-        `Deleted project ${key}: ${project.name} (${project._count?.tickets ?? 0} tickets removed)`,
+        `Deleted project **${key}**: ${project.name} (${project._count?.tickets ?? 0} tickets removed)`,
       )
     },
   )

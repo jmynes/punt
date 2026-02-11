@@ -90,7 +90,9 @@ export function registerColumnTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(`Created column "${name}" at position ${targetOrder + 1} in ${upperKey}`)
+      return textResponse(
+        `Created column **"${name}"** at position ${targetOrder + 1} in ${upperKey}`,
+      )
     },
   )
 
@@ -126,7 +128,7 @@ export function registerColumnTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(`Renamed column: "${column.name}" → "${newName}"`)
+      return textResponse(`Renamed column **"${column.name}"** -> **"${newName}"**`)
     },
   )
 
@@ -159,7 +161,7 @@ export function registerColumnTools(server: McpServer) {
       const targetOrder = Math.max(0, Math.min(position - 1, columns.length - 1))
 
       if (currentOrder === targetOrder) {
-        return textResponse(`Column "${column.name}" is already at position ${position}`)
+        return textResponse(`Column **"${column.name}"** is already at position ${position}`)
       }
 
       // Use the API to update the column order (enforces authorization)
@@ -170,7 +172,7 @@ export function registerColumnTools(server: McpServer) {
       }
 
       return textResponse(
-        `Moved column "${column.name}" from position ${currentOrder + 1} to ${targetOrder + 1}`,
+        `Moved column **"${column.name}"** from position ${currentOrder + 1} to ${targetOrder + 1}`,
       )
     },
   )
@@ -221,7 +223,7 @@ export function registerColumnTools(server: McpServer) {
       }
 
       return textResponse(
-        `Deleted column "${column.name}" (tickets moved to "${targetColumn.name}")`,
+        `Deleted column **"${column.name}"** (tickets moved to "${targetColumn.name}")`,
       )
     },
   )
