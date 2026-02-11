@@ -413,6 +413,12 @@ PUNT includes an MCP (Model Context Protocol) server for conversational ticket m
 3. MCP sends key via `X-MCP-API-Key` header
 4. API routes validate key via `getMcpUser()` in `auth-helpers.ts`
 
+**Querying conventions:**
+- **All tickets are in scope by default.** Do not assume only "To Do", backlog, or active sprint unless the user explicitly scopes the query (e.g. "in the current sprint", "in the backlog", "To Do tickets only").
+- When applying filters, state which filters were used so the user knows what was included/excluded.
+- When auditing or reviewing tickets (e.g. checking for missing fields, evaluating points), query all columns and statuses — not just To Do.
+- Use your best judgement to scope queries when context makes it obvious (e.g. "what's left to do" implies non-Done tickets), but be transparent about it.
+
 **Available tools (31 total):**
 | Category | Tools |
 |----------|-------|
