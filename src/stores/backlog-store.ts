@@ -15,10 +15,15 @@ export const BACKLOG_COLUMNS = [
   'sprint',
   'storyPoints',
   'estimate',
+  'startDate',
   'dueDate',
   'created',
   'updated',
   'parent',
+  'environment',
+  'affectedVersion',
+  'fixVersion',
+  'watchers',
 ] as const
 
 export type BacklogColumnId = (typeof BACKLOG_COLUMNS)[number]
@@ -60,10 +65,43 @@ export const DEFAULT_COLUMNS: BacklogColumn[] = [
     sortable: true,
   },
   { id: 'estimate', label: 'Estimate', width: 90, minWidth: 70, visible: false, sortable: true },
+  {
+    id: 'startDate',
+    label: 'Start Date',
+    width: 110,
+    minWidth: 100,
+    visible: false,
+    sortable: true,
+  },
   { id: 'dueDate', label: 'Due Date', width: 110, minWidth: 100, visible: true, sortable: true },
   { id: 'created', label: 'Created', width: 110, minWidth: 100, visible: false, sortable: true },
   { id: 'updated', label: 'Updated', width: 110, minWidth: 100, visible: false, sortable: true },
   { id: 'parent', label: 'Parent', width: 120, minWidth: 100, visible: false, sortable: true },
+  {
+    id: 'environment',
+    label: 'Environment',
+    width: 120,
+    minWidth: 90,
+    visible: false,
+    sortable: true,
+  },
+  {
+    id: 'affectedVersion',
+    label: 'Affected Version',
+    width: 130,
+    minWidth: 100,
+    visible: false,
+    sortable: true,
+  },
+  {
+    id: 'fixVersion',
+    label: 'Fix Version',
+    width: 120,
+    minWidth: 90,
+    visible: false,
+    sortable: true,
+  },
+  { id: 'watchers', label: 'Watchers', width: 100, minWidth: 80, visible: false, sortable: true },
 ]
 
 export type SortDirection = 'asc' | 'desc'

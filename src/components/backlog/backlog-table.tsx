@@ -383,6 +383,30 @@ export function BacklogTable({
             aVal = a.parentId || 'zzz'
             bVal = b.parentId || 'zzz'
             break
+          case 'startDate':
+            aVal = a.startDate
+              ? (a.startDate instanceof Date ? a.startDate : new Date(a.startDate)).getTime()
+              : Number.MAX_SAFE_INTEGER
+            bVal = b.startDate
+              ? (b.startDate instanceof Date ? b.startDate : new Date(b.startDate)).getTime()
+              : Number.MAX_SAFE_INTEGER
+            break
+          case 'environment':
+            aVal = a.environment?.toLowerCase() || 'zzz'
+            bVal = b.environment?.toLowerCase() || 'zzz'
+            break
+          case 'affectedVersion':
+            aVal = a.affectedVersion?.toLowerCase() || 'zzz'
+            bVal = b.affectedVersion?.toLowerCase() || 'zzz'
+            break
+          case 'fixVersion':
+            aVal = a.fixVersion?.toLowerCase() || 'zzz'
+            bVal = b.fixVersion?.toLowerCase() || 'zzz'
+            break
+          case 'watchers':
+            aVal = a.watchers?.length ?? 0
+            bVal = b.watchers?.length ?? 0
+            break
         }
 
         if (aVal === null || bVal === null) return 0
