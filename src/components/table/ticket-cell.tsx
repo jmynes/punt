@@ -1,7 +1,7 @@
 'use client'
 
 import { format, isBefore, isToday } from 'date-fns'
-import { User } from 'lucide-react'
+import { Eye, User } from 'lucide-react'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { ResolutionBadge } from '@/components/common/resolution-badge'
@@ -195,6 +195,66 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
         <span className="text-sm text-zinc-400">{ticket.parentId}</span>
       ) : (
         <span className="text-zinc-500">—</span>
+      )
+
+    case 'startDate': {
+      if (!ticket.startDate) return <span className="text-zinc-500">—</span>
+      return (
+        <span className="text-sm text-zinc-400">
+          {format(ticket.startDate, 'yyyy-MM-dd')}
+        </span>
+      )
+    }
+
+    case 'environment':
+      return ticket.environment ? (
+        <span className="text-sm">{ticket.environment}</span>
+      ) : (
+        <span className="text-zinc-500">—</span>
+      )
+
+    case 'affectedVersion':
+      return ticket.affectedVersion ? (
+        <span className="text-sm">{ticket.affectedVersion}</span>
+      ) : (
+        <span className="text-zinc-500">—</span>
+      )
+
+    case 'fixVersion':
+      return ticket.fixVersion ? (
+        <span className="text-sm">{ticket.fixVersion}</span>
+      ) : (
+        <span className="text-zinc-500">—</span>
+      )
+
+    case 'watchers':
+      return ticket.watchers && ticket.watchers.length > 0 ? (
+        <div className="flex items-center gap-1.5">
+          <div className="flex -space-x-1.5">
+            {ticket.watchers.slice(0, 3).map((watcher) => (
+              <Avatar key={watcher.id} className="h-5 w-5 ring-1 ring-zinc-900">
+                <AvatarImage src={watcher.avatar || undefined} />
+                <AvatarFallback
+                  className="text-[10px] text-white font-medium"
+                  style={{
+                    backgroundColor:
+                      watcher.avatarColor || getAvatarColor(watcher.id || watcher.name),
+                  }}
+                >
+                  {getInitials(watcher.name)}
+                </AvatarFallback>
+              </Avatar>
+            ))}
+          </div>
+          {ticket.watchers.length > 3 && (
+            <span className="text-xs text-zinc-400">+{ticket.watchers.length - 3}</span>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-1 text-zinc-500">
+          <Eye className="h-3.5 w-3.5" />
+          <span className="text-sm">0</span>
+        </div>
       )
 
     default:
