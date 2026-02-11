@@ -77,7 +77,6 @@ export function useIsSystemAdmin(): { isSystemAdmin: boolean; isLoading: boolean
  */
 export function useProjectMembers(projectId?: string): UserSummary[] {
   // Demo mode: always return demo members (no API call needed)
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   if (isDemoMode()) {
     return [DEMO_USER_SUMMARY, ...DEMO_TEAM_SUMMARIES]
   }

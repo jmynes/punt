@@ -122,7 +122,7 @@ export const fileName = fc.oneof(
     '文件名.txt',
   ),
   // Edge cases
-  fc.constantFrom('', '.', '..', '...', '.hidden', 'a' + 'a'.repeat(300)),
+  fc.constantFrom('', '.', '..', '...', '.hidden', `a${'a'.repeat(300)}`),
 )
 
 /**

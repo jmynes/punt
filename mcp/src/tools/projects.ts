@@ -108,6 +108,7 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       return textResponse(formatProject(result.data!))
     },
   )
@@ -134,6 +135,7 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const project = result.data!
       return textResponse(`Created project ${project.key}\n\n${formatProject(project)}`)
     },
@@ -164,6 +166,7 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const project = result.data!
       return textResponse(`Updated project ${project.key}\n\n${formatProject(project)}`)
     },
@@ -188,6 +191,7 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse(projectResult.error)
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const project = projectResult.data!
       const result = await deleteProject(key)
       if (result.error) {

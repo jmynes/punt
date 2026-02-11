@@ -2,9 +2,6 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import {
   addMember as apiAddMember,
-  listMembers as apiListMembers,
-  listRoles as apiListRoles,
-  listUsers as apiListUsers,
   removeMember as apiRemoveMember,
   updateMemberRole as apiUpdateMemberRole,
 } from '../api-client.js'

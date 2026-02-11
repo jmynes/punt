@@ -128,7 +128,7 @@ export function SprintHeader({
   const sprintTickets = tickets.filter((t) => t.sprintId === activeSprint.id)
   const completedCount = sprintTickets.filter((t) => doneColumnIds.includes(t.columnId)).length
   const totalCount = sprintTickets.length
-  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+  const _progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
   // Calculate story points
   const totalPoints = sprintTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
@@ -162,7 +162,7 @@ export function SprintHeader({
 
   // Calculate "velocity" (points per day if we had more data)
   // For now, show estimated remaining work indicator
-  const remainingPoints = totalPoints - completedPoints
+  const _remainingPoints = totalPoints - completedPoints
 
   // Color scheme: orange for expired, blue for planning, green for active
   const getColorScheme = () => {

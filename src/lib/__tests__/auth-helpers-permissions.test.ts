@@ -162,6 +162,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should return true when user has "any" permission', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.TICKETS_MANAGE_ANY]),
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -180,6 +181,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should return true when user owns the resource and has "own" permission', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.TICKETS_MANAGE_OWN]),
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -198,6 +200,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should throw when user owns the resource but lacks "own" permission', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set(), // No permissions
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -216,6 +219,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should throw when user does not own resource and lacks "any" permission', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.TICKETS_MANAGE_OWN]), // Only has "own"
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -234,6 +238,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should handle null owner (legacy data)', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.TICKETS_MANAGE_ANY]),
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -254,6 +259,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should allow ticket creator with manage_own permission to edit', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.TICKETS_MANAGE_OWN]),
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -271,6 +277,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should allow ticket creator with manage_own permission to delete', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.TICKETS_MANAGE_OWN]),
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -288,6 +295,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should allow user with manage_any to edit any ticket', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.TICKETS_MANAGE_ANY]),
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -305,6 +313,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should deny non-creator with only manage_own permission', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.TICKETS_MANAGE_OWN]),
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -366,6 +375,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should allow moderating other comments with comments.manage_any', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.COMMENTS_MANAGE_ANY]),
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -400,6 +410,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should deny moderating other comments without permission', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.TICKETS_MANAGE_ANY]), // Wrong permission
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -426,6 +437,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should allow deleting other attachments with attachments.manage_any', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.ATTACHMENTS_MANAGE_ANY]),
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -460,6 +472,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should deny deleting other attachments without permission', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.TICKETS_MANAGE_ANY]), // Wrong permission
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -472,6 +485,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should handle null uploader (legacy data) with manage_any permission', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set([PERMISSIONS.ATTACHMENTS_MANAGE_ANY]),
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })
@@ -489,6 +503,7 @@ describe('Auth Helpers - Permission Functions', () => {
     it('should deny deleting when uploader is null and no permission', async () => {
       mockGetEffectivePermissions.mockResolvedValue({
         permissions: new Set(),
+        // biome-ignore lint/suspicious/noExplicitAny: mock typing
         membership: {} as any,
         isSystemAdmin: false,
       })

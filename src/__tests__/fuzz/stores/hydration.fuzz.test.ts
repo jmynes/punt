@@ -247,7 +247,7 @@ describe('Hydration Validation Fuzz Tests', () => {
           }
 
           // Check each project's columns
-          for (const [projectId, columns] of Object.entries(corrupted)) {
+          for (const [_projectId, columns] of Object.entries(corrupted)) {
             const isValid = isValidColumns(columns)
             expect(typeof isValid).toBe('boolean')
           }

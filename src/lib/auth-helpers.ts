@@ -37,7 +37,7 @@ async function getMcpUser() {
   })
 
   // Only return active users
-  if (user && user.isActive) {
+  if (user?.isActive) {
     return user
   }
 

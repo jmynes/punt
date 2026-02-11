@@ -369,6 +369,7 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const ticket = result.data!
       const upperKey = projectKey.toUpperCase()
       return textResponse(
@@ -535,6 +536,7 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const ticket = result.data!
       return textResponse(
         `Updated ticket ${key}\n\n${formatTicket(ticket, parsed.projectKey.toUpperCase())}`,
@@ -621,6 +623,7 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const ticket = result.data!
       return textResponse(
         `Moved ${key}: ${changes.join(', ')}\n\n${formatTicket(ticket, parsed.projectKey.toUpperCase())}`,

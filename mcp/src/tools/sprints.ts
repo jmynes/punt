@@ -145,6 +145,7 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       return textResponse(formatSprint(result.data!, projectKey.toUpperCase()))
     },
   )
@@ -174,6 +175,7 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const sprint = result.data!
       return textResponse(`Created sprint "${sprint.name}"\n\n${formatSprint(sprint)}`)
     },
@@ -223,6 +225,7 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const updated = result.data!
       return textResponse(`Updated sprint "${updated.name}"\n\n${formatSprint(updated)}`)
     },
@@ -262,6 +265,7 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: data is guaranteed present when no error
       const started = result.data!
       const ticketCount = started.tickets?.length ?? 0
       return textResponse(

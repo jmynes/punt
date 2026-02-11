@@ -111,7 +111,7 @@ describe('Generic API Validation Fuzz Tests', () => {
 
   describe('String constraints', () => {
     const titleSchema = z.string().min(1).max(500)
-    const descriptionSchema = z.string().max(10000).optional()
+    const _descriptionSchema = z.string().max(10000).optional()
     const projectKeySchema = z
       .string()
       .min(1)

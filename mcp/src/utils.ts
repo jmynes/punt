@@ -95,7 +95,7 @@ export function formatTicketList(
 
   for (const ticket of tickets) {
     const key = `${projectKey ?? ticket.project?.key ?? 'UNKNOWN'}-${ticket.number}`
-    const title = ticket.title.length > 50 ? ticket.title.substring(0, 47) + '...' : ticket.title
+    const title = ticket.title.length > 50 ? `${ticket.title.substring(0, 47)}...` : ticket.title
     const status = ticket.column?.name ?? '-'
     const sprint = ticket.sprint?.name ?? '-'
     const assignee = ticket.assignee?.name ?? '-'
@@ -173,7 +173,7 @@ export function formatProjectList(
   for (const project of projects) {
     const desc = project.description
       ? project.description.length > 40
-        ? project.description.substring(0, 37) + '...'
+        ? `${project.description.substring(0, 37)}...`
         : project.description
       : '-'
     const tickets = project._count?.tickets ?? '-'
@@ -252,7 +252,7 @@ export function formatSprintList(
   for (const sprint of sprints) {
     const goal = sprint.goal
       ? sprint.goal.length > 30
-        ? sprint.goal.substring(0, 27) + '...'
+        ? `${sprint.goal.substring(0, 27)}...`
         : sprint.goal
       : '-'
     const start = sprint.startDate ? formatDate(sprint.startDate) : '-'

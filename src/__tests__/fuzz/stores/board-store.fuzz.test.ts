@@ -6,8 +6,8 @@
 import * as fc from 'fast-check'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useBoardStore } from '@/stores/board-store'
-import type { ColumnWithTickets, TicketWithRelations } from '@/types'
-import { batchMoveOperation, columnsArray, moveOperation } from '../arbitraries'
+import type { TicketWithRelations } from '@/types'
+import { columnsArray } from '../arbitraries'
 import { ticketBase } from '../arbitraries/ticket'
 import { FUZZ_CONFIG } from '../setup'
 

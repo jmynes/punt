@@ -144,6 +144,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
     const row = container.querySelector('tr[data-ticket-row]')!
     fireEvent.click(row)
 
@@ -164,6 +165,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
     const row = container.querySelector('tr[data-ticket-row]')!
     fireEvent.click(row, { ctrlKey: true })
 
@@ -184,6 +186,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
     const row = container.querySelector('tr[data-ticket-row]')!
     fireEvent.click(row, { metaKey: true })
 
@@ -204,6 +207,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
     const row = container.querySelector('tr[data-ticket-row]')!
     fireEvent.click(row, { shiftKey: true })
 
@@ -262,6 +266,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
     const row = container.querySelector('tr[data-ticket-row]')!
     expect(row.className).toContain('ring-2')
   })
@@ -279,6 +284,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
     const row = container.querySelector('tr[data-ticket-row]')!
     fireEvent.keyDown(row, { key: 'Enter' })
 
@@ -299,6 +305,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
     const row = container.querySelector('tr[data-ticket-row]')!
     fireEvent.keyDown(row, { key: ' ' })
 

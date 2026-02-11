@@ -65,7 +65,10 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      const label = result.data!
+      const label = result.data
+      if (!label) {
+        return errorResponse('Failed to create label: no data returned')
+      }
       return textResponse(
         `Created label "${label.name}" (${label.color}) in ${projectKey.toUpperCase()}`,
       )
