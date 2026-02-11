@@ -50,7 +50,7 @@ function formatSprint(sprint: SprintData, projectKey?: string): string {
     for (const t of sprint.tickets) {
       const key = projectKey ? `${projectKey}-${t.number}` : `#${t.number}`
       const title = t.title.length > 35 ? `${t.title.slice(0, 35)}...` : t.title
-      const assignee = t.assignee?.name || '-'
+      const assignee = t.assignee?.name ?? '-'
       const points = t.storyPoints ?? '-'
 
       lines.push(
@@ -78,7 +78,7 @@ function formatSprintList(sprints: SprintData[]): string {
   lines.push('|------|--------|------|-------|-----|')
 
   for (const s of sprints) {
-    const goal = s.goal || '-'
+    const goal = s.goal ?? '-'
     const start = s.startDate ? new Date(s.startDate).toISOString().split('T')[0] : '-'
     const end = s.endDate ? new Date(s.endDate).toISOString().split('T')[0] : '-'
     lines.push(`| ${s.name} | ${s.status} | ${goal} | ${start} | ${end} |`)
@@ -164,10 +164,10 @@ export function registerSprintTools(server: McpServer) {
     async ({ projectKey, name, goal, startDate, endDate, budget }) => {
       const result = await createSprint(projectKey, {
         name,
-        goal: goal || null,
-        startDate: startDate || null,
-        endDate: endDate || null,
-        budget: budget || null,
+        goal: goal ?? null,
+        startDate: startDate ?? null,
+        endDate: endDate ?? null,
+        budget: budget ?? null,
       })
 
       if (result.error) {
@@ -263,7 +263,7 @@ export function registerSprintTools(server: McpServer) {
       }
 
       const started = result.data!
-      const ticketCount = started.tickets?.length || 0
+      const ticketCount = started.tickets?.length ?? 0
       return textResponse(
         `Started sprint "${started.name}" with ${ticketCount} tickets\n\n${formatSprint(started)}`,
       )
@@ -346,7 +346,7 @@ export function registerSprintTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      const ticketCount = sprint.tickets?.length || 0
+      const ticketCount = sprint.tickets?.length ?? 0
       return textResponse(
         `Deleted sprint "${sprint.name}" (${ticketCount} tickets moved to backlog)`,
       )

@@ -20,7 +20,7 @@ import { errorResponse, parseTicketKey, textResponse } from '../utils.js'
  */
 function formatTicket(ticket: TicketData, projectKey?: string): string {
   const lines: string[] = []
-  const key = projectKey || ticket.project?.key || 'UNKNOWN'
+  const key = projectKey ?? ticket.project?.key ?? 'UNKNOWN'
 
   lines.push(`# ${key}-${ticket.number}: ${ticket.title}`)
   lines.push('')
@@ -66,6 +66,18 @@ function formatTicket(ticket: TicketData, projectKey?: string): string {
     lines.push(`| Due Date | ${new Date(ticket.dueDate).toISOString().split('T')[0]} |`)
   }
 
+  if (ticket.environment) {
+    lines.push(`| Environment | ${ticket.environment} |`)
+  }
+
+  if (ticket.affectedVersion) {
+    lines.push(`| Affected Version | ${ticket.affectedVersion} |`)
+  }
+
+  if (ticket.fixVersion) {
+    lines.push(`| Fix Version | ${ticket.fixVersion} |`)
+  }
+
   if (ticket.description) {
     lines.push('')
     lines.push('## Description')
@@ -91,10 +103,10 @@ function formatTicketList(tickets: TicketData[], projectKey?: string): string {
   lines.push('|-----|-------|------|----------|--------|--------|----------|--------|')
 
   for (const t of tickets) {
-    const key = `${projectKey || t.project?.key || 'UNKNOWN'}-${t.number}`
+    const key = `${projectKey ?? t.project?.key ?? 'UNKNOWN'}-${t.number}`
     const title = t.title.length > 45 ? `${t.title.slice(0, 45)}...` : t.title
-    const sprint = t.sprint?.name || '-'
-    const assignee = t.assignee?.name || '-'
+    const sprint = t.sprint?.name ?? '-'
+    const assignee = t.assignee?.name ?? '-'
     const points = t.storyPoints ?? '-'
 
     lines.push(
@@ -335,21 +347,21 @@ export function registerTicketTools(server: McpServer) {
 
       const result = await createTicket(projectKey, {
         title,
-        description: description || null,
+        description: description ?? null,
         type,
         priority,
         columnId,
-        assigneeId: assigneeId || null,
-        reporterId: reporterId || null,
-        sprintId: sprintId || null,
-        storyPoints: storyPoints || null,
-        estimate: estimate || null,
-        resolution: resolution || null,
-        startDate: startDate || null,
-        dueDate: dueDate || null,
-        environment: environment || null,
-        affectedVersion: affectedVersion || null,
-        fixVersion: fixVersion || null,
+        assigneeId: assigneeId ?? null,
+        reporterId: reporterId ?? null,
+        sprintId: sprintId ?? null,
+        storyPoints: storyPoints ?? null,
+        estimate: estimate ?? null,
+        resolution: resolution ?? null,
+        startDate: startDate ?? null,
+        dueDate: dueDate ?? null,
+        environment: environment ?? null,
+        affectedVersion: affectedVersion ?? null,
+        fixVersion: fixVersion ?? null,
         labelIds,
       })
 

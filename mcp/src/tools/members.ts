@@ -52,7 +52,7 @@ export function registerMemberTools(server: McpServer) {
         lines.push('| Name | Email | Role |')
         lines.push('|------|-------|------|')
         for (const m of project.members) {
-          lines.push(`| ${m.user.name} | ${m.user.email || '-'} | ${m.role.name} |`)
+          lines.push(`| ${m.user.name} | ${m.user.email ?? '-'} | ${m.role.name} |`)
         }
         lines.push('')
         lines.push(`Total: ${project.members.length} member(s)`)
@@ -264,7 +264,7 @@ export function registerMemberTools(server: McpServer) {
       lines.push('|------|-------|-------|----------|')
       for (const u of users) {
         lines.push(
-          `| ${u.name} | ${u.email || '-'} | ${u.isSystemAdmin ? 'Yes' : '-'} | ${u._count.projects} |`,
+          `| ${u.name} | ${u.email ?? '-'} | ${u.isSystemAdmin ? 'Yes' : '-'} | ${u._count.projects} |`,
         )
       }
       lines.push('')
