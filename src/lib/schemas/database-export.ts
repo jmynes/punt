@@ -9,7 +9,6 @@ import { z } from 'zod'
 
 // Helper for nullable dates
 const nullableDate = z.union([z.string().datetime(), z.null()])
-const optionalDate = z.string().datetime().optional()
 
 // ============================================================================
 // Model schemas (matching Prisma schema)

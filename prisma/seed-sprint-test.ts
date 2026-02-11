@@ -5,6 +5,20 @@ const prisma = new PrismaClient()
 
 const SALT_ROUNDS = 12
 
+/** Get a value from a Map, throwing if the key is missing. */
+function getRequired<K, V>(map: Map<K, V>, key: K): V {
+  const value = map.get(key)
+  if (value === undefined) throw new Error(`Missing required key: ${String(key)}`)
+  return value
+}
+
+/** Find an element in an array, throwing if not found. */
+function findRequired<T>(items: T[], predicate: (item: T) => boolean, label: string): T {
+  const found = items.find(predicate)
+  if (!found) throw new Error(`Required item not found: ${label}`)
+  return found
+}
+
 async function main() {
   console.log('Creating sprint test data...\n')
 
@@ -116,12 +130,9 @@ async function main() {
     roleMap.set(roleConfig.name, role.id)
   }
 
-  // biome-ignore lint/style/noNonNullAssertion: roles are guaranteed to exist from upsert above
-  const ownerRoleId = roleMap.get('Owner')!
-  // biome-ignore lint/style/noNonNullAssertion: roles are guaranteed to exist from upsert above
-  const adminRoleId = roleMap.get('Admin')!
-  // biome-ignore lint/style/noNonNullAssertion: roles are guaranteed to exist from upsert above
-  const memberRoleId = roleMap.get('Member')!
+  const ownerRoleId = getRequired(roleMap, 'Owner')
+  const adminRoleId = getRequired(roleMap, 'Admin')
+  const memberRoleId = getRequired(roleMap, 'Member')
 
   // Add users as project members
   await Promise.all([
@@ -189,14 +200,10 @@ async function main() {
     console.log('\nUsing existing columns')
   }
 
-  // biome-ignore lint/style/noNonNullAssertion: columns are guaranteed to exist from creation above
-  const todoCol = columns.find((c) => c.name === 'To Do')!
-  // biome-ignore lint/style/noNonNullAssertion: columns are guaranteed to exist from creation above
-  const inProgressCol = columns.find((c) => c.name === 'In Progress')!
-  // biome-ignore lint/style/noNonNullAssertion: columns are guaranteed to exist from creation above
-  const reviewCol = columns.find((c) => c.name === 'Review')!
-  // biome-ignore lint/style/noNonNullAssertion: columns are guaranteed to exist from creation above
-  const doneCol = columns.find((c) => c.name === 'Done')!
+  const todoCol = findRequired(columns, (c) => c.name === 'To Do', 'To Do column')
+  const inProgressCol = findRequired(columns, (c) => c.name === 'In Progress', 'In Progress column')
+  const reviewCol = findRequired(columns, (c) => c.name === 'Review', 'Review column')
+  const doneCol = findRequired(columns, (c) => c.name === 'Done', 'Done column')
 
   // Create labels
   const labelData = [
