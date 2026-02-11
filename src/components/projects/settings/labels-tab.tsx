@@ -24,27 +24,9 @@ import {
   useUpdateLabel,
 } from '@/hooks/queries/use-labels'
 import { useHasPermission } from '@/hooks/use-permissions'
+import { LABEL_COLORS } from '@/lib/constants'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
-
-// Predefined color palette matching the backend LABEL_COLORS
-const LABEL_COLORS = [
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#8b5cf6', // purple
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#14b8a6', // teal
-  '#64748b', // slate
-  '#22c55e', // green
-  '#eab308', // yellow
-  '#dc2626', // red-600
-  '#a855f7', // purple-500
-  '#78716c', // stone
-  '#3b82f6', // blue
-  '#16a34a', // green-600
-  '#f97316', // orange
-]
 
 interface LabelsTabProps {
   projectId: string

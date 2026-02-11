@@ -1,7 +1,7 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { ChevronsLeftRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { ChevronsLeftRight, MoreHorizontal, Pencil, RotateCcw, Trash2 } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ColorPickerBody } from '@/components/tickets/label-select'
@@ -16,6 +16,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +44,12 @@ import { columnKeys, ticketKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
-import { COLUMN_ICON_OPTIONS, getColumnIcon, resolveColumnIconName } from '@/lib/status-icons'
+import {
+  COLUMN_ICON_OPTIONS,
+  getColumnIcon,
+  resolveColumnColor,
+  resolveColumnIconName,
+} from '@/lib/status-icons'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
@@ -539,15 +552,15 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Rename Dialog */}
-      <AlertDialog open={renameOpen} onOpenChange={setRenameOpen}>
-        <AlertDialogContent className="bg-zinc-900 border-zinc-700">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Edit column</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
+      {/* Edit Column Dialog (PUNT-72: uses Dialog for close button + click-outside dismiss) */}
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent className="bg-zinc-900 border-zinc-700">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-100">Edit column</DialogTitle>
+            <DialogDescription className="text-zinc-400">
               Update the name and icon for the &quot;{column.name}&quot; column.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+            </DialogDescription>
+          </DialogHeader>
           <div className="space-y-3 py-2">
             {(() => {
               const preview = getColumnIcon(iconValue, renameValue, colorValue)
@@ -617,7 +630,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
               <p className="text-xs text-zinc-500 mt-1">
                 {iconValue
                   ? 'Click selected icon to clear'
-                  : 'No icon selected — auto-detected from name'}
+                  : 'No icon selected \u2014 auto-detected from name'}
               </p>
             </div>
             <div>
@@ -630,11 +643,14 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                     onApply={setColorValue}
                     isDisabled={renameLoading}
                   />
+                  {/* PUNT-74: Ghost button style for reset */}
                   <button
                     type="button"
                     onClick={() => setColorValue(null)}
-                    className="text-xs text-zinc-500 hover:text-zinc-300 mt-1"
+                    disabled={renameLoading}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800/50 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
+                    <RotateCcw className="h-3 w-3" />
                     Reset to default color
                   </button>
                 </>
@@ -643,8 +659,9 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                   <p className="text-xs text-zinc-500 mb-2">
                     Using auto-detected color from icon. Pick a custom color:
                   </p>
+                  {/* PUNT-73: Resolve auto-detected color instead of hardcoding #3b82f6 */}
                   <ColorPickerBody
-                    activeColor="#3b82f6"
+                    activeColor={resolveColumnColor(null, iconValue, renameValue) ?? ''}
                     onColorChange={setColorValue}
                     onApply={setColorValue}
                     isDisabled={renameLoading}
@@ -653,18 +670,17 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
               )}
             </div>
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRenameOpen(false)}
               className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
               disabled={renameLoading}
             >
               Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                handleRename()
-              }}
+            </Button>
+            <Button
+              onClick={handleRename}
               disabled={
                 renameLoading ||
                 !renameValue.trim() ||
@@ -675,10 +691,10 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
               className="bg-amber-600 hover:bg-amber-700 text-white"
             >
               {renameLoading ? 'Saving...' : 'Save'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

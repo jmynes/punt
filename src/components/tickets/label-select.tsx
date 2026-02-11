@@ -25,28 +25,10 @@ import {
 } from '@/components/ui/command'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { LABEL_COLORS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { LabelSummary } from '@/types'
-
-// Predefined color palette matching the backend LABEL_COLORS
-const LABEL_COLORS = [
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#8b5cf6', // purple
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#14b8a6', // teal
-  '#64748b', // slate
-  '#22c55e', // green
-  '#eab308', // yellow
-  '#dc2626', // red-600
-  '#a855f7', // purple-500
-  '#78716c', // stone
-  '#3b82f6', // blue
-  '#16a34a', // green-600
-  '#f97316', // orange
-]
 
 interface LabelSelectProps {
   value: string[]
@@ -455,6 +437,8 @@ interface ColorPickerBodyProps {
   onColorChange: (color: string) => void
   onApply: (color: string) => void
   isDisabled?: boolean
+  /** Additional preset colors to show (e.g. column auto-detected colors) */
+  extraPresets?: string[]
 }
 
 export function ColorPickerBody({
@@ -462,6 +446,7 @@ export function ColorPickerBody({
   onColorChange,
   onApply,
   isDisabled,
+  extraPresets,
 }: ColorPickerBodyProps) {
   const { customColors, addCustomColor, removeCustomColor } = useSettingsStore()
   const [localHex, setLocalHex] = useState(activeColor)
@@ -479,9 +464,16 @@ export function ColorPickerBody({
     }
   }
 
+  // Merge extra presets (deduplicated) with standard label colors
+  const labelColorsLower = new Set(LABEL_COLORS.map((c) => c.toLowerCase()))
+  const dedupedExtras = (extraPresets ?? []).filter(
+    (c) => c && !labelColorsLower.has(c.toLowerCase()),
+  )
+  const allPresets = [...dedupedExtras, ...LABEL_COLORS]
+
   const isCurrentColorSaved =
     customColors.includes(currentColor.toLowerCase()) ||
-    LABEL_COLORS.includes(currentColor.toLowerCase())
+    allPresets.some((c) => c.toLowerCase() === currentColor.toLowerCase())
 
   return (
     <div className="space-y-4 py-2">
@@ -489,7 +481,7 @@ export function ColorPickerBody({
       <div>
         <div className="text-xs text-zinc-500 mb-1.5">Presets</div>
         <div className="flex flex-wrap gap-2">
-          {LABEL_COLORS.map((color) => (
+          {allPresets.map((color) => (
             <button
               key={color}
               type="button"
