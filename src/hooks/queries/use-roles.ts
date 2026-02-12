@@ -181,3 +181,36 @@ export function useDeleteRole(projectId: string) {
     },
   })
 }
+
+/**
+ * Reorder roles
+ */
+export function useReorderRoles(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (roleIds: string[]) => {
+      const res = await fetch(`/api/projects/${projectId}/roles/reorder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roleIds }),
+      })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to reorder roles')
+      }
+      return res.json() as Promise<RoleWithPermissions[]>
+    },
+    onSuccess: (data) => {
+      // Update the cache with the new order
+      queryClient.setQueryData(roleKeys.byProject(projectId), data)
+    },
+    onError: (err) => {
+      toast.error(err.message)
+      // Refetch to restore correct order
+      queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
+    },
+  })
+}

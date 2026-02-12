@@ -1,11 +1,28 @@
 'use client'
 
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRightLeft,
   CheckSquare,
   Copy,
   GitCompare,
+  GripVertical,
   Loader2,
   Lock,
   Minus,
@@ -69,6 +86,7 @@ import {
   useCreateRole,
   useDeleteRole,
   useProjectRoles,
+  useReorderRoles,
   useUpdateRole,
 } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -92,12 +110,130 @@ interface RolesTabProps {
   projectId: string
 }
 
+interface SortableRoleItemProps {
+  role: RoleWithPermissions
+  isSelected: boolean
+  isCreating: boolean
+  canManageRoles: boolean | undefined
+  onSelect: () => void
+  onClone: () => void
+  onDelete: () => void
+  cloneDisabled: boolean
+}
+
+function SortableRoleItem({
+  role,
+  isSelected,
+  isCreating,
+  canManageRoles,
+  onSelect,
+  onClone,
+  onDelete,
+  cloneDisabled,
+}: SortableRoleItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: role.id,
+    disabled: !canManageRoles,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'group flex items-center gap-1 rounded-md transition-colors',
+        isDragging && 'z-50 bg-zinc-700 shadow-lg ring-1 ring-amber-500/50',
+        isSelected && !isCreating ? 'bg-zinc-800' : 'hover:bg-zinc-800/50',
+      )}
+    >
+      {/* Drag handle */}
+      {canManageRoles && (
+        <button
+          type="button"
+          className="ml-1 cursor-grab touch-none text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-zinc-400 active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onSelect}
+        className={cn(
+          'flex-1 flex items-center gap-3 px-3 py-2 text-left transition-colors min-w-0',
+          !canManageRoles && 'pl-3',
+          isSelected && !isCreating ? 'text-zinc-100' : 'text-zinc-400 hover:text-zinc-200',
+        )}
+      >
+        <div
+          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+          style={{ backgroundColor: role.color }}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium truncate">{role.name}</span>
+            {role.isDefault && <Lock className="h-3 w-3 text-zinc-600 flex-shrink-0" />}
+          </div>
+          <div className="flex items-center gap-3 text-xs text-zinc-500">
+            <span>{role.memberCount || 0} members</span>
+          </div>
+        </div>
+      </button>
+      {canManageRoles && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="opacity-0 group-hover:opacity-100 mr-1 text-zinc-500 hover:text-zinc-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[140px]">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                onClone()
+              }}
+              disabled={cloneDisabled}
+            >
+              <Copy className="mr-2 h-4 w-4" />
+              Clone
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              disabled={role.isDefault || (role.memberCount || 0) > 0}
+              className="text-red-400 focus:text-red-400"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  )
+}
+
 export function RolesTab({ projectId }: RolesTabProps) {
   const { data: roles, isLoading: rolesLoading } = useProjectRoles(projectId)
   const { data: members, isLoading: membersLoading } = useProjectMembers(projectId)
   const createRole = useCreateRole(projectId)
   const updateRole = useUpdateRole(projectId)
   const deleteRole = useDeleteRole(projectId)
+  const reorderRoles = useReorderRoles(projectId)
   const queryClient = useQueryClient()
 
   const {
@@ -113,6 +249,18 @@ export function RolesTab({ projectId }: RolesTabProps) {
   const canManageRoles = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
   const isSystemAdmin = useIsSystemAdmin()
   const currentUser = useCurrentUser()
+
+  // Drag-and-drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  )
 
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
@@ -789,6 +937,34 @@ export function RolesTab({ projectId }: RolesTabProps) {
     setHasChanges(false)
   }
 
+  // Handle drag end for role reordering
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || active.id === over.id || !roles) return
+
+      const oldIndex = roles.findIndex((r) => r.id === active.id)
+      const newIndex = roles.findIndex((r) => r.id === over.id)
+
+      if (oldIndex === -1 || newIndex === -1) return
+
+      // Create new order
+      const newRoles = [...roles]
+      const [movedRole] = newRoles.splice(oldIndex, 1)
+      newRoles.splice(newIndex, 0, movedRole)
+
+      // Optimistically update the cache
+      queryClient.setQueryData(
+        ['roles', 'project', projectId],
+        newRoles.map((r, i) => ({ ...r, position: i })),
+      )
+
+      // Persist to server
+      reorderRoles.mutate(newRoles.map((r) => r.id))
+    },
+    [roles, queryClient, projectId, reorderRoles],
+  )
+
   // Check if form values differ from the original role
   const checkForChanges = (
     name: string,
@@ -958,92 +1134,45 @@ export function RolesTab({ projectId }: RolesTabProps) {
         </div>
 
         <ScrollArea className="flex-1">
-          <div className="space-y-1 pr-3">
-            {roles?.map((role) => (
-              <div
-                key={role.id}
-                className={cn(
-                  'group flex items-center gap-1 rounded-md transition-colors',
-                  selectedRoleId === role.id && !isCreating
-                    ? 'bg-zinc-800'
-                    : 'hover:bg-zinc-800/50',
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => handleSelectRole(role)}
-                  className={cn(
-                    'flex-1 flex items-center gap-3 px-3 py-2 text-left transition-colors min-w-0',
-                    selectedRoleId === role.id && !isCreating
-                      ? 'text-zinc-100'
-                      : 'text-zinc-400 hover:text-zinc-200',
-                  )}
-                >
-                  <div
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: role.color }}
+          <DndContext
+            id="roles-dnd"
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={roles?.map((r) => r.id) || []}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-1 pr-3">
+                {roles?.map((role) => (
+                  <SortableRoleItem
+                    key={role.id}
+                    role={role}
+                    isSelected={selectedRoleId === role.id}
+                    isCreating={isCreating}
+                    canManageRoles={canManageRoles}
+                    onSelect={() => handleSelectRole(role)}
+                    onClone={() => handleCloneRole(role)}
+                    onDelete={() => setDeletingRole(role)}
+                    cloneDisabled={createRole.isPending}
                   />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate">{role.name}</span>
-                      {role.isDefault && <Lock className="h-3 w-3 text-zinc-600 flex-shrink-0" />}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-zinc-500">
-                      <span>{role.memberCount || 0} members</span>
-                    </div>
+                ))}
+
+                {isCreating && (
+                  <div className="w-full flex items-center gap-3 px-3 py-2 rounded-md bg-amber-900/20 border border-amber-700/50">
+                    <div
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: editColor }}
+                    />
+                    <span className="text-sm font-medium text-amber-400">
+                      {editName || 'New Role'}
+                    </span>
                   </div>
-                </button>
-                {canManageRoles && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="opacity-0 group-hover:opacity-100 mr-1 text-zinc-500 hover:text-zinc-200"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[140px]">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleCloneRole(role)
-                        }}
-                        disabled={createRole.isPending}
-                      >
-                        <Copy className="mr-2 h-4 w-4" />
-                        Clone
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDeletingRole(role)
-                        }}
-                        disabled={role.isDefault || (role.memberCount || 0) > 0}
-                        className="text-red-400 focus:text-red-400"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 )}
               </div>
-            ))}
-
-            {isCreating && (
-              <div className="w-full flex items-center gap-3 px-3 py-2 rounded-md bg-amber-900/20 border border-amber-700/50">
-                <div
-                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: editColor }}
-                />
-                <span className="text-sm font-medium text-amber-400">{editName || 'New Role'}</span>
-              </div>
-            )}
-          </div>
+            </SortableContext>
+          </DndContext>
         </ScrollArea>
       </div>
 
