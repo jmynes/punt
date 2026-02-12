@@ -210,6 +210,8 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 {projects.map((project) => {
                   const ticketCount = project._count?.tickets ?? 0
+                  // Skip projects with missing key (can happen during rename operations)
+                  if (!project.key) return null
                   return (
                     <Link
                       key={project.id}

@@ -1,6 +1,5 @@
 'use client'
 
-import { useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronsUpDown, Palette, Plus, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
@@ -27,10 +26,8 @@ import {
 } from '@/components/ui/command'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { labelKeys } from '@/hooks/queries/use-labels'
 import { LABEL_COLORS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
-import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { LabelSummary } from '@/types'
 
@@ -50,7 +47,7 @@ export function LabelSelect({
   onChange,
   labels,
   disabled,
-  projectId,
+  projectId: _projectId, // Deprecated - no longer used
   onCreateLabel,
   onUpdateLabel,
   onDeleteLabel,
@@ -411,13 +408,7 @@ export function LabelSelect({
           <ColorPickerBody
             activeColor={customColor || labelToEdit?.color || '#000000'}
             onColorChange={setCustomColor}
-            onApply={(color) => {
-              if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
-                handleColorChange(color)
-              }
-            }}
             isDisabled={isUpdatingColor}
-            projectId={projectId}
           />
 
           <AlertDialogFooter>
@@ -427,6 +418,17 @@ export function LabelSelect({
             >
               Cancel
             </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (/^#[0-9A-Fa-f]{6}$/i.test(customColor)) {
+                  handleColorChange(customColor)
+                }
+              }}
+              disabled={isUpdatingColor || !/^#[0-9A-Fa-f]{6}$/i.test(customColor)}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {isUpdatingColor ? 'Applying...' : 'Apply Color'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -446,7 +448,7 @@ interface ColorPickerBodyProps {
   isDisabled?: boolean
   /** Additional preset colors to show (e.g. column auto-detected colors) */
   extraPresets?: string[]
-  /** Project ID for checking color usage when removing saved colors */
+  /** @deprecated No longer used - color removal warning is now simple and dismissible */
   projectId?: string
 }
 
@@ -455,12 +457,17 @@ export function ColorPickerBody({
   onColorChange,
   isDisabled,
   extraPresets,
-  projectId,
 }: ColorPickerBodyProps) {
-  const { customColors, addCustomColor, removeCustomColor } = useSettingsStore()
-  const { getColumns } = useBoardStore()
-  const queryClient = useQueryClient()
+  const {
+    customColors,
+    addCustomColor,
+    removeCustomColor,
+    hideColorRemovalWarning,
+    setHideColorRemovalWarning,
+  } = useSettingsStore()
   const [localHex, setLocalHex] = useState(activeColor)
+  const [colorToRemove, setColorToRemove] = useState<string | null>(null)
+  const [dontShowAgain, setDontShowAgain] = useState(false)
 
   // Sync local hex when activeColor changes from outside (e.g. spectrum drag)
   useEffect(() => {
@@ -475,53 +482,34 @@ export function ColorPickerBody({
     }
   }
 
-  // Handle removing a saved color with usage check
-  const handleRemoveColor = useCallback(
+  // Handle clicking the remove button on a saved color
+  const handleRemoveClick = useCallback(
     (color: string) => {
-      // First remove the color from saved swatches
-      removeCustomColor(color)
-
-      // Check if the color is in use by columns or labels in the current project
-      if (!projectId) return
-
-      const normalizedColor = color.toLowerCase()
-      let columnCount = 0
-      let labelCount = 0
-
-      // Check columns from board store
-      const columns = getColumns(projectId)
-      for (const col of columns) {
-        if (col.color?.toLowerCase() === normalizedColor) {
-          columnCount++
-        }
-      }
-
-      // Check labels from React Query cache
-      const cachedLabels = queryClient.getQueryData<LabelSummary[]>(labelKeys.byProject(projectId))
-      if (cachedLabels) {
-        for (const label of cachedLabels) {
-          if (label.color.toLowerCase() === normalizedColor) {
-            labelCount++
-          }
-        }
-      }
-
-      // Show info toast if color is in use
-      if (columnCount > 0 || labelCount > 0) {
-        const parts: string[] = []
-        if (columnCount > 0) {
-          parts.push(`${columnCount} column${columnCount > 1 ? 's' : ''}`)
-        }
-        if (labelCount > 0) {
-          parts.push(`${labelCount} label${labelCount > 1 ? 's' : ''}`)
-        }
-        toast.info(
-          `This color is used by ${parts.join(' and ')}. They'll keep their color — this only removes it from your saved swatches.`,
-        )
+      if (hideColorRemovalWarning) {
+        // Skip modal, remove directly
+        removeCustomColor(color)
+        toast.success('Color removed from swatches')
+      } else {
+        // Show confirmation modal
+        setColorToRemove(color)
+        setDontShowAgain(false)
       }
     },
-    [projectId, getColumns, queryClient, removeCustomColor],
+    [hideColorRemovalWarning, removeCustomColor],
   )
+
+  // Confirm removal from modal
+  const handleConfirmRemove = useCallback(() => {
+    if (!colorToRemove) return
+
+    if (dontShowAgain) {
+      setHideColorRemovalWarning(true)
+    }
+
+    removeCustomColor(colorToRemove)
+    setColorToRemove(null)
+    toast.success('Color removed from swatches')
+  }, [colorToRemove, dontShowAgain, removeCustomColor, setHideColorRemovalWarning])
 
   // Merge extra presets (deduplicated) with standard label colors
   const labelColorsLower = new Set(LABEL_COLORS.map((c) => c.toLowerCase()))
@@ -581,7 +569,7 @@ export function ColorPickerBody({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleRemoveColor(color)
+                    handleRemoveClick(color)
                   }}
                   className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-zinc-800 border border-zinc-600 text-zinc-400 hover:bg-red-900 hover:text-red-300 hover:border-red-700 opacity-0 group-hover/swatch:opacity-100 transition-opacity flex items-center justify-center"
                   title="Remove saved color"
@@ -638,6 +626,48 @@ export function ColorPickerBody({
           <span className="text-xs">Save</span>
         </Button>
       </div>
+
+      {/* Color removal confirmation modal */}
+      <AlertDialog open={!!colorToRemove} onOpenChange={(open) => !open && setColorToRemove(null)}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">Remove saved color?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              <span className="flex items-center gap-2 mb-3">
+                <span
+                  className="inline-block h-5 w-5 rounded border border-zinc-600"
+                  style={{ backgroundColor: colorToRemove ?? undefined }}
+                />
+                <span className="font-mono text-zinc-300">{colorToRemove}</span>
+              </span>
+              Items using this color will keep it — only the saved swatch is removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex items-center gap-2 py-2">
+            <input
+              type="checkbox"
+              id="dont-show-again"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-amber-600 focus:ring-amber-500 focus:ring-offset-zinc-950"
+            />
+            <label htmlFor="dont-show-again" className="text-sm text-zinc-400 cursor-pointer">
+              Don&apos;t show this again
+            </label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRemove}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

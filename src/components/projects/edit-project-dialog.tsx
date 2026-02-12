@@ -3,6 +3,7 @@
 import { AlertTriangle, Loader2, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -232,22 +233,11 @@ export function EditProjectDialog() {
             {/* Color */}
             <div className="space-y-2">
               <Label className="text-zinc-300">Project Color</Label>
-              <div className="flex flex-wrap gap-2">
-                {LABEL_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setFormData((prev) => ({ ...prev, color }))}
-                    className={`h-8 w-8 rounded-md transition-all ${
-                      formData.color === color
-                        ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-950'
-                        : 'hover:scale-110'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    disabled={isPending}
-                  />
-                ))}
-              </div>
+              <ColorPickerBody
+                activeColor={formData.color}
+                onColorChange={(color) => setFormData((prev) => ({ ...prev, color }))}
+                isDisabled={isPending}
+              />
             </div>
           </div>
 

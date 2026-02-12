@@ -3,6 +3,7 @@
 import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
+import { ColorPickerBody } from '@/components/tickets/label-select'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -190,22 +191,11 @@ export function CreateProjectDialog() {
           {/* Color */}
           <div className="space-y-2">
             <Label className="text-zinc-300">Project Color</Label>
-            <div className="flex flex-wrap gap-2">
-              {LABEL_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, color }))}
-                  className={`h-8 w-8 rounded-md transition-all ${
-                    formData.color === color
-                      ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-950'
-                      : 'hover:scale-110'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  disabled={createProject.isPending}
-                />
-              ))}
-            </div>
+            <ColorPickerBody
+              activeColor={formData.color}
+              onColorChange={(color) => setFormData((prev) => ({ ...prev, color }))}
+              isDisabled={createProject.isPending}
+            />
           </div>
         </div>
 
