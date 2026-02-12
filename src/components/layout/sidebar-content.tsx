@@ -19,6 +19,7 @@ import {
   Target,
   Trash2,
   Upload,
+  User,
   Users,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -41,6 +42,7 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/', icon: Home },
+  { title: 'Profile', href: '/profile', icon: User },
   { title: 'Preferences', href: '/preferences', icon: SlidersHorizontal },
 ]
 
