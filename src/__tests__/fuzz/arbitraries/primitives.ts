@@ -100,9 +100,7 @@ export const maliciousString = fc.oneof(
   fc.constantFrom(...controlCharPatterns),
   fc.constantFrom(...unicodePatterns),
   // Mix with random strings
-  fc
-    .string()
-    .map((s) => `${s}<script>alert(1)</script>${s}`),
+  fc.string().map((s) => `${s}<script>alert(1)</script>${s}`),
   fc.string().map((s) => `${s}'; DROP TABLE users; --`),
   // Very long strings
   fc.string({ minLength: 1000, maxLength: 10000 }),
@@ -148,9 +146,7 @@ export const urlLike = fc.oneof(
     '..\\..\\windows',
   ),
   // Mixed
-  fc
-    .string()
-    .map((s) => s.slice(0, 50)),
+  fc.string().map((s) => s.slice(0, 50)),
 )
 
 /**
@@ -181,9 +177,7 @@ export const passwordString = fc.oneof(
     })
     .map((chars) => chars.join('')),
   // Valid passwords
-  fc
-    .string({ minLength: 12, maxLength: 128 })
-    .map((s) => `Aa1${s}`),
+  fc.string({ minLength: 12, maxLength: 128 }).map((s) => `Aa1${s}`),
   // Edge cases
   fc.constantFrom(
     '', // Empty
@@ -198,9 +192,7 @@ export const passwordString = fc.oneof(
   // Very long
   fc.string({ minLength: 100, maxLength: 1000 }),
   // With special characters
-  fc
-    .string()
-    .map((s) => `Aa1!@#$%^&*()${s}`),
+  fc.string().map((s) => `Aa1!@#$%^&*()${s}`),
 )
 
 /**
@@ -223,9 +215,7 @@ export const emailLike = fc.oneof(
     'a@b@c.com',
   ),
   // Edge cases
-  fc
-    .string()
-    .filter((s) => !s.includes('@')),
+  fc.string().filter((s) => !s.includes('@')),
   fc.string().map((s) => `${s}@example.com`),
 )
 

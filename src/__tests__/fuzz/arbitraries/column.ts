@@ -82,13 +82,9 @@ export const corruptedColumns = fc.oneof(
     }),
   ),
   // Deeply nested garbage
-  fc
-    .jsonValue()
-    .filter((v) => !Array.isArray(v)),
+  fc.jsonValue().filter((v) => !Array.isArray(v)),
   // Mixed valid and invalid
-  fc
-    .tuple(columnWithTickets, corruptedJson)
-    .map(([col, garbage]) => [col, garbage]),
+  fc.tuple(columnWithTickets, corruptedJson).map(([col, garbage]) => [col, garbage]),
 )
 
 /**

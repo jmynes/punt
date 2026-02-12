@@ -102,9 +102,7 @@ export const fileSize = fc.oneof(
  */
 export const fileName = fc.oneof(
   // Normal names
-  fc
-    .string({ minLength: 1, maxLength: 100 })
-    .map((s) => `${s}.txt`),
+  fc.string({ minLength: 1, maxLength: 100 }).map((s) => `${s}.txt`),
   fc.constantFrom('document.pdf', 'image.jpg', 'video.mp4', 'file.docx', 'spreadsheet.xlsx'),
   // Dangerous names
   fc.constantFrom(

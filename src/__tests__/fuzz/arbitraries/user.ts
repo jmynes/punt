@@ -28,9 +28,7 @@ export const invalidUsername = fc.oneof(
     .array(fc.constantFrom(...validUsernameChars.split('')), { minLength: 31, maxLength: 100 })
     .map((chars) => chars.join('')),
   // Contains invalid characters
-  fc
-    .string({ minLength: 3, maxLength: 30 })
-    .filter((s) => /[^a-zA-Z0-9_-]/.test(s)),
+  fc.string({ minLength: 3, maxLength: 30 }).filter((s) => /[^a-zA-Z0-9_-]/.test(s)),
   // Unicode lookalikes
   fc.constantFrom(
     'аdmin', // Cyrillic 'а'
