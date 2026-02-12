@@ -441,7 +441,8 @@ export function LabelSelect({
 interface ColorPickerBodyProps {
   activeColor: string
   onColorChange: (color: string) => void
-  onApply: (color: string) => void
+  /** @deprecated No longer used - colors apply immediately via onColorChange */
+  onApply?: (color: string) => void
   isDisabled?: boolean
   /** Additional preset colors to show (e.g. column auto-detected colors) */
   extraPresets?: string[]
@@ -452,7 +453,6 @@ interface ColorPickerBodyProps {
 export function ColorPickerBody({
   activeColor,
   onColorChange,
-  onApply,
   isDisabled,
   extraPresets,
   projectId,
@@ -602,7 +602,7 @@ export function ColorPickerBody({
         style={{ height: '160px' }}
       />
 
-      {/* Hex input with preview, save, and apply */}
+      {/* Hex input with preview and save to swatches */}
       <div className="flex items-center gap-2">
         <div
           className="h-8 w-8 rounded-md border border-zinc-700 shrink-0"
@@ -629,21 +629,13 @@ export function ColorPickerBody({
           type="button"
           size="sm"
           variant="outline"
-          className="border-zinc-700 hover:bg-zinc-800 shrink-0"
+          className="border-zinc-700 hover:bg-zinc-800 shrink-0 gap-1.5"
           onClick={handleSaveColor}
           disabled={isDisabled || isCurrentColorSaved || !/^#[0-9A-Fa-f]{6}$/i.test(currentColor)}
-          title={isCurrentColorSaved ? 'Color already saved' : 'Save color'}
+          title={isCurrentColorSaved ? 'Already in swatches' : 'Save to swatches'}
         >
           <Plus className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="primary"
-          onClick={() => onApply(currentColor)}
-          disabled={isDisabled || !/^#[0-9A-Fa-f]{6}$/i.test(currentColor)}
-        >
-          Apply
+          <span className="text-xs">Save</span>
         </Button>
       </div>
     </div>
