@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getTabId } from '@/hooks/use-realtime'
 import { getDataProvider } from '@/lib/data-provider'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import type { LabelSummary } from '@/types'
 
 // Label with ticket count for management views
@@ -53,6 +54,20 @@ export function useProjectLabelsWithCounts(projectId: string) {
   return useQuery<LabelWithCount[]>({
     queryKey: labelKeys.byProjectWithCounts(projectId),
     queryFn: async () => {
+      // Demo mode: compute ticket counts from demo storage
+      if (isDemoMode()) {
+        const provider = getDataProvider()
+        const labels = await provider.getLabels(projectId)
+        const tickets = demoStorage.getTickets(projectId)
+
+        return labels.map((label) => ({
+          ...label,
+          _count: {
+            tickets: tickets.filter((t) => t.labels.some((l) => l.id === label.id)).length,
+          },
+        }))
+      }
+
       const tabId = getTabId()
       const res = await fetch(`/api/projects/${projectId}/labels?include_count=true`, {
         headers: {
@@ -152,6 +167,23 @@ export function useLabelTickets(projectId: string, labelId: string | null, enabl
     queryKey: labelKeys.ticketsByLabel(projectId, labelId ?? ''),
     queryFn: async () => {
       if (!labelId) return []
+
+      // Demo mode: find tickets with this label from demo storage
+      if (isDemoMode()) {
+        const tickets = demoStorage.getTickets(projectId)
+        const projects = demoStorage.getProjects()
+        const project = projects.find((p) => p.id === projectId)
+        const projectKey = project?.key ?? ''
+
+        return tickets
+          .filter((t) => t.labels.some((l) => l.id === labelId))
+          .map((t) => ({
+            id: t.id,
+            key: `${projectKey}-${t.number}`,
+            title: t.title,
+          }))
+      }
+
       const tabId = getTabId()
       const res = await fetch(`/api/projects/${projectId}/labels/${labelId}`, {
         headers: {
