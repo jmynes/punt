@@ -88,6 +88,7 @@ export interface TicketData {
   startDate: string | null
   dueDate: string | null
   resolution: string | null
+  resolvedAt: string | null
   environment: string | null
   affectedVersion: string | null
   fixVersion: string | null

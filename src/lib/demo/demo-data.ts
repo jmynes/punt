@@ -259,6 +259,7 @@ function createTicket(
     startDate: null,
     dueDate: null,
     resolution: null,
+    resolvedAt: null,
     environment: null,
     affectedVersion: null,
     fixVersion: null,

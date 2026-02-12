@@ -193,6 +193,7 @@ export async function PATCH(
         ) {
           // Moving to a "done" column → auto-set resolution to "Done"
           dbUpdateData.resolution = 'Done'
+          dbUpdateData.resolvedAt = new Date()
         } else if (
           !isCompletedColumn(targetCol.name) &&
           dbUpdateData.resolution === undefined &&
@@ -200,6 +201,7 @@ export async function PATCH(
         ) {
           // Moving out of a "done" column to a non-done column → clear resolution
           dbUpdateData.resolution = null
+          dbUpdateData.resolvedAt = null
         }
       }
     }
@@ -217,6 +219,17 @@ export async function PATCH(
         if (doneColumn) {
           dbUpdateData.columnId = doneColumn.id
         }
+      }
+    }
+
+    // Track resolvedAt when resolution is explicitly set or cleared
+    if (dbUpdateData.resolution !== undefined) {
+      if (dbUpdateData.resolution && !existingTicket.resolution) {
+        // Resolution being set (and wasn't set before) → set resolvedAt
+        dbUpdateData.resolvedAt = dbUpdateData.resolvedAt ?? new Date()
+      } else if (dbUpdateData.resolution === null && existingTicket.resolution) {
+        // Resolution being cleared → clear resolvedAt
+        dbUpdateData.resolvedAt = null
       }
     }
 

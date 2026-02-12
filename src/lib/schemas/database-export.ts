@@ -161,6 +161,7 @@ export const TicketSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   resolution: z.string().nullable(),
+  resolvedAt: nullableDate.optional(),
   environment: z.string().nullable(),
   affectedVersion: z.string().nullable(),
   fixVersion: z.string().nullable(),

@@ -168,6 +168,8 @@ export async function POST(
           creatorId,
           type: ticketData.type as IssueType,
           priority: ticketData.priority as Priority,
+          // Set resolvedAt if ticket is created with a resolution
+          resolvedAt: ticketData.resolution ? new Date() : undefined,
           labels: labelIds.length > 0 ? { connect: labelIds.map((id) => ({ id })) } : undefined,
           watchers:
             watcherIds.length > 0
@@ -278,8 +280,10 @@ export async function PATCH(
         // Auto-couple resolution when moving to/from done column
         if (targetIsDone && !ticket.resolution) {
           updateData.resolution = 'Done'
+          updateData.resolvedAt = new Date()
         } else if (!targetIsDone && ticket.resolution) {
           updateData.resolution = null
+          updateData.resolvedAt = null
         }
 
         const updated = await tx.ticket.update({
