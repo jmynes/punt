@@ -169,6 +169,7 @@ export const DEMO_SPRINTS: (SprintSummary & { projectId: string })[] = [
     startDate: threeWeeksAgo,
     endDate: twoWeeksAgo,
     goal: 'Setup project infrastructure and basic navigation',
+    budget: 20,
     projectId: 'demo-project-1',
   },
   {
@@ -178,6 +179,7 @@ export const DEMO_SPRINTS: (SprintSummary & { projectId: string })[] = [
     startDate: twoWeeksAgo,
     endDate: oneWeekAgo,
     goal: 'Implement authentication and user profile',
+    budget: 30,
     projectId: 'demo-project-1',
   },
   {
@@ -187,6 +189,7 @@ export const DEMO_SPRINTS: (SprintSummary & { projectId: string })[] = [
     startDate: oneWeekAgo,
     endDate: oneWeekFromNow,
     goal: 'Build core features: dashboard and notifications',
+    budget: 35,
     projectId: 'demo-project-1',
   },
   {
@@ -196,6 +199,7 @@ export const DEMO_SPRINTS: (SprintSummary & { projectId: string })[] = [
     startDate: null,
     endDate: null,
     goal: 'Offline mode and performance optimization',
+    budget: 30,
     projectId: 'demo-project-1',
   },
   // Project 2: Backend API
@@ -206,6 +210,7 @@ export const DEMO_SPRINTS: (SprintSummary & { projectId: string })[] = [
     startDate: twoWeeksAgo,
     endDate: oneWeekAgo,
     goal: 'Setup authentication and basic CRUD endpoints',
+    budget: 25,
     projectId: 'demo-project-2',
   },
   {
@@ -215,6 +220,7 @@ export const DEMO_SPRINTS: (SprintSummary & { projectId: string })[] = [
     startDate: oneWeekAgo,
     endDate: oneWeekFromNow,
     goal: 'Real-time updates and notification service',
+    budget: 30,
     projectId: 'demo-project-2',
   },
   // Project 3: Design System
@@ -225,6 +231,7 @@ export const DEMO_SPRINTS: (SprintSummary & { projectId: string })[] = [
     startDate: twoWeeksAgo,
     endDate: twoWeeksFromNow,
     goal: 'Ship core components: Button, Input, Modal, Card',
+    budget: 40,
     projectId: 'demo-project-3',
   },
 ]
@@ -410,7 +417,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     id: 'demo-ticket-1-6',
     number: 6,
     title: 'Settings screen with notification preferences',
-    description: 'User settings page with profile editing, notification toggles, and app preferences.',
+    description:
+      'User settings page with profile editing, notification toggles, and app preferences.',
     type: 'story',
     priority: 'medium',
     order: 0,
@@ -469,7 +477,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     id: 'demo-ticket-1-9',
     number: 9,
     title: 'User profile avatar upload',
-    description: 'Allow users to upload and crop profile photos. Support camera and gallery selection.',
+    description:
+      'Allow users to upload and crop profile photos. Support camera and gallery selection.',
     type: 'story',
     priority: 'medium',
     order: 0,
@@ -559,7 +568,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     id: 'demo-ticket-1-14',
     number: 14,
     title: 'Add haptic feedback',
-    description: 'Implement haptic feedback for button presses, success/error states, and pull-to-refresh.',
+    description:
+      'Implement haptic feedback for button presses, success/error states, and pull-to-refresh.',
     type: 'task',
     priority: 'low',
     order: 4,
@@ -592,7 +602,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     id: 'demo-ticket-2-1',
     number: 1,
     title: 'Set up project with Express and TypeScript',
-    description: 'Initialize Node.js project with Express, TypeScript, and proper folder structure.',
+    description:
+      'Initialize Node.js project with Express, TypeScript, and proper folder structure.',
     type: 'task',
     priority: 'highest',
     order: 0,
@@ -891,7 +902,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     id: 'demo-ticket-3-5',
     number: 5,
     title: 'Spacing and layout tokens',
-    description: 'Define 8px grid-based spacing scale. Include tokens for margins, padding, and gaps.',
+    description:
+      'Define 8px grid-based spacing scale. Include tokens for margins, padding, and gaps.',
     type: 'story',
     priority: 'high',
     order: 1,
@@ -1000,7 +1012,10 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
     storyPoints: 3,
     projectId: 'demo-project-3',
     columnId: 'demo-col-3-1',
-    labels: [getLabel('demo-project-3', 'breaking-change'), getLabel('demo-project-3', 'documentation')],
+    labels: [
+      getLabel('demo-project-3', 'breaking-change'),
+      getLabel('demo-project-3', 'documentation'),
+    ],
   }),
   createTicket({
     id: 'demo-ticket-3-12',
