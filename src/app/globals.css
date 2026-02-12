@@ -573,6 +573,25 @@ input[type="number"] {
   color: rgb(244 244 245) !important; /* zinc-100 */
 }
 
+/* MDXEditor - reduce vertical padding in read-only markdown viewer */
+.markdown-viewer [contenteditable],
+.markdown-viewer .mdxeditor-root-contenteditable,
+.markdown-viewer [class*="_contentEditable_"] {
+  padding: 0 !important;
+  min-height: auto !important;
+}
+
+/* Hide trailing empty paragraphs that create phantom whitespace */
+.markdown-viewer p:last-child:empty,
+.markdown-viewer [contenteditable] > p:last-child:empty {
+  display: none;
+}
+
+/* Remove bottom margin from last child elements to avoid trailing space */
+.markdown-viewer [contenteditable] > *:last-child {
+  margin-bottom: 0 !important;
+}
+
 /* react-colorful dark theme overrides */
 .react-colorful {
   border-radius: 0.5rem !important;

@@ -501,7 +501,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       updates.title = tempTitle.trim()
     }
     if (tempDescription !== (ticket.description || '')) {
-      updates.description = tempDescription || null
+      updates.description = tempDescription.trim() || null
     }
     if (tempType !== ticket.type) {
       updates.type = tempType
@@ -640,7 +640,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         }
         break
       case 'description':
-        updates.description = tempDescription || null
+        updates.description = tempDescription.trim() || null
         break
       case 'type':
         updates.type = tempType
@@ -1123,7 +1123,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     className="w-full text-left rounded-md bg-zinc-900/50 px-3 py-2 cursor-pointer hover:bg-amber-500/15 min-h-[40px]"
                     onClick={() => startEditing('description')}
                   >
-                    {ticket.description ? (
+                    {ticket.description?.trim() ? (
                       <MarkdownViewer markdown={ticket.description} />
                     ) : (
                       <span className="text-zinc-500 italic text-sm">No description provided</span>
