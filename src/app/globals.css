@@ -582,8 +582,11 @@ input[type="number"] {
 }
 
 /* Hide trailing empty paragraphs that create phantom whitespace */
+/* MDXEditor inserts <p><br></p> after block elements - target both truly empty and br-only */
 .markdown-viewer p:last-child:empty,
-.markdown-viewer [contenteditable] > p:last-child:empty {
+.markdown-viewer [contenteditable] > p:last-child:empty,
+.markdown-viewer p:last-child:has(br:only-child),
+.markdown-viewer [contenteditable] > p:last-child:has(br:only-child) {
   display: none;
 }
 

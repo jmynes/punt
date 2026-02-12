@@ -86,8 +86,14 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
     [],
   )
 
-  // Preprocess markdown: trim trailing whitespace and convert ticket references into clickable links
-  const processedMarkdown = useMemo(() => linkifyTicketReferences(markdown.trim()), [markdown])
+  // Preprocess markdown: strip trailing blank lines that MDXEditor converts to empty <p><br></p>,
+  // then convert ticket references into clickable links
+  const processedMarkdown = useMemo(() => {
+    // Remove trailing newlines/whitespace - MDXEditor adds <p><br></p> for these
+    // This preserves intentional blank lines within content, only strips trailing ones
+    const trimmed = markdown.trimEnd()
+    return linkifyTicketReferences(trimmed)
+  }, [markdown])
 
   // Show loading placeholder during SSR to prevent hydration mismatch
   if (!isMounted) {
