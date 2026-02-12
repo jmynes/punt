@@ -580,7 +580,7 @@ export function ColorPickerBody({
         <Button
           type="button"
           size="sm"
-          className="text-primary-foreground"
+          variant="primary"
           onClick={() => onApply(currentColor)}
           disabled={isDisabled || !/^#[0-9A-Fa-f]{6}$/i.test(currentColor)}
         >

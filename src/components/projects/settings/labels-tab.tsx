@@ -107,7 +107,7 @@ function LabelDangerZone({
                   <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
                 </div>
               ) : tickets && tickets.length > 0 ? (
-                <div className="max-h-32 overflow-y-auto overflow-x-hidden">
+                <ScrollArea className="max-h-32">
                   {tickets.map((ticket) => {
                     // Extract project key from ticket key (e.g., "PUNT-42" -> "PUNT")
                     const projectKey = ticket.key.split('-')[0]
@@ -126,7 +126,7 @@ function LabelDangerZone({
                       </Link>
                     )
                   })}
-                </div>
+                </ScrollArea>
               ) : null}
             </div>
           </CollapsibleContent>
