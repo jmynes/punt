@@ -17,14 +17,15 @@ import { DEMO_STORAGE_PREFIX, DEMO_TEAM_MEMBERS, DEMO_USER } from './demo-config
 import {
   DEMO_COLUMNS,
   DEMO_LABELS,
-  DEMO_MEMBER,
   DEMO_PROJECTS,
-  DEMO_ROLE,
+  DEMO_ROLES,
   DEMO_SPRINTS,
   DEMO_TICKETS,
   DEMO_USER_SUMMARY,
   type DemoColumn,
   type DemoProject,
+  getDemoMembersForProject,
+  getDemoRolesForProject,
 } from './demo-data'
 
 // Storage keys
@@ -35,6 +36,8 @@ const KEYS = {
   tickets: (projectId: string) => `${DEMO_STORAGE_PREFIX}tickets-${projectId}`,
   labels: (projectId: string) => `${DEMO_STORAGE_PREFIX}labels-${projectId}`,
   sprints: (projectId: string) => `${DEMO_STORAGE_PREFIX}sprints-${projectId}`,
+  members: (projectId: string) => `${DEMO_STORAGE_PREFIX}members-${projectId}`,
+  roles: (projectId: string) => `${DEMO_STORAGE_PREFIX}roles-${projectId}`,
   ticketCounter: (projectId: string) => `${DEMO_STORAGE_PREFIX}ticket-counter-${projectId}`,
 }
 
@@ -76,7 +79,7 @@ class DemoStorage {
     }))
     localStorage.setItem(KEYS.projects, JSON.stringify(projects))
 
-    // Seed columns, tickets, labels, sprints per project
+    // Seed columns, tickets, labels, sprints, members, roles per project
     for (const project of DEMO_PROJECTS) {
       const projectColumns = DEMO_COLUMNS.filter((c) => c.projectId === project.id)
       localStorage.setItem(KEYS.columns(project.id), JSON.stringify(projectColumns))
@@ -89,6 +92,13 @@ class DemoStorage {
 
       const projectSprints = DEMO_SPRINTS.filter((s) => s.projectId === project.id)
       localStorage.setItem(KEYS.sprints(project.id), JSON.stringify(projectSprints))
+
+      // Seed members with varied roles per project
+      const projectMembers = getDemoMembersForProject(project.id)
+      localStorage.setItem(KEYS.members(project.id), JSON.stringify(projectMembers))
+
+      // Seed all default roles (Owner, Admin, Member)
+      localStorage.setItem(KEYS.roles(project.id), JSON.stringify(DEMO_ROLES))
 
       // Set initial ticket counter
       const maxTicketNumber = Math.max(...projectTickets.map((t) => t.number), 0)
@@ -155,7 +165,7 @@ class DemoStorage {
     projects.push(newProject)
     localStorage.setItem(KEYS.projects, JSON.stringify(projects))
 
-    // Initialize empty columns, tickets, labels, sprints for new project
+    // Initialize empty columns, tickets, labels, sprints, members, roles for new project
     const defaultColumns: DemoColumn[] = [
       { id: `demo-col-${Date.now()}-1`, name: 'To Do', order: 0, projectId: newProject.id },
       { id: `demo-col-${Date.now()}-2`, name: 'In Progress', order: 1, projectId: newProject.id },
@@ -166,6 +176,12 @@ class DemoStorage {
     localStorage.setItem(KEYS.tickets(newProject.id), JSON.stringify([]))
     localStorage.setItem(KEYS.labels(newProject.id), JSON.stringify([]))
     localStorage.setItem(KEYS.sprints(newProject.id), JSON.stringify([]))
+    // Initialize members with demo user as owner and all default roles
+    localStorage.setItem(
+      KEYS.members(newProject.id),
+      JSON.stringify(getDemoMembersForProject(newProject.id)),
+    )
+    localStorage.setItem(KEYS.roles(newProject.id), JSON.stringify(DEMO_ROLES))
     localStorage.setItem(KEYS.ticketCounter(newProject.id), '1')
 
     return newProject
@@ -193,6 +209,8 @@ class DemoStorage {
     localStorage.removeItem(KEYS.tickets(id))
     localStorage.removeItem(KEYS.labels(id))
     localStorage.removeItem(KEYS.sprints(id))
+    localStorage.removeItem(KEYS.members(id))
+    localStorage.removeItem(KEYS.roles(id))
     localStorage.removeItem(KEYS.ticketCounter(id))
   }
 
@@ -510,19 +528,32 @@ class DemoStorage {
   }
 
   // ============================================================================
-  // Members (demo mode only has the demo user)
+  // Members (all demo users with varied roles)
   // ============================================================================
 
-  getMembers(_projectId: string) {
-    return [DEMO_MEMBER]
+  getMembers(projectId: string) {
+    if (!this.isClient) return []
+    const data = localStorage.getItem(KEYS.members(projectId))
+    if (!data) {
+      // Fallback: return generated members if not in storage
+      return getDemoMembersForProject(projectId)
+    }
+    return JSON.parse(data)
   }
 
   // ============================================================================
-  // Roles (demo mode has a single owner role)
+  // Roles (Owner, Admin, Member) with member counts
   // ============================================================================
 
-  getRoles(_projectId: string) {
-    return [DEMO_ROLE]
+  getRoles(projectId: string) {
+    if (!this.isClient) return []
+    // Always calculate memberCount dynamically from current members
+    const members = this.getMembers(projectId)
+    const rolesWithCounts = getDemoRolesForProject(projectId).map((role) => ({
+      ...role,
+      memberCount: members.filter((m: { roleId: string }) => m.roleId === role.id).length,
+    }))
+    return rolesWithCounts
   }
 
   // ============================================================================
@@ -544,6 +575,24 @@ class DemoStorage {
       lastLoginAt: user.id === DEMO_USER.id ? new Date().toISOString() : null,
       _count: { projects: 2 },
     }))
+  }
+
+  getUser(userId: string): DemoAdminUser | null {
+    const allUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
+    const user = allUsers.find((u) => u.id === userId)
+    if (!user) return null
+    return {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      isSystemAdmin: user.isSystemAdmin,
+      isActive: user.isActive,
+      createdAt: user.createdAt.toISOString(),
+      lastLoginAt: user.id === DEMO_USER.id ? new Date().toISOString() : null,
+      _count: { projects: 2 },
+    }
   }
 }
 

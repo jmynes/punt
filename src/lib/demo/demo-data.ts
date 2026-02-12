@@ -560,23 +560,136 @@ export function getProjectSprints(projectId: string): SprintSummary[] {
 }
 
 // ============================================================================
-// Default role for demo mode
+// Default roles for demo mode (matches production role presets)
 // ============================================================================
 
-export const DEMO_ROLE = {
-  id: 'demo-role-owner',
-  name: 'Owner',
-  color: '#f59e0b',
-  description: 'Full access to the project',
-  isDefault: true,
-  position: 0,
+export const DEMO_ROLES = [
+  {
+    id: 'demo-role-owner',
+    name: 'Owner',
+    color: '#f59e0b',
+    description: 'Full control over the project including deletion and permission management',
+    isDefault: true,
+    position: 0,
+  },
+  {
+    id: 'demo-role-admin',
+    name: 'Admin',
+    color: '#3b82f6',
+    description: 'Can manage most project settings, members, and content',
+    isDefault: true,
+    position: 1,
+  },
+  {
+    id: 'demo-role-member',
+    name: 'Member',
+    color: '#6b7280',
+    description: 'Can create tickets and manage their own content',
+    isDefault: true,
+    position: 2,
+  },
+] as const
+
+// Export individual roles for backward compatibility
+export const DEMO_ROLE = DEMO_ROLES[0]
+export const DEMO_ROLE_ADMIN = DEMO_ROLES[1]
+export const DEMO_ROLE_MEMBER = DEMO_ROLES[2]
+
+// Helper to get a role by name
+export function getDemoRole(name: 'Owner' | 'Admin' | 'Member') {
+  const role = DEMO_ROLES.find((r) => r.name === name)
+  if (!role) {
+    throw new Error(`Demo role not found: ${name}`)
+  }
+  return role
 }
 
-export const DEMO_MEMBER = {
-  id: 'demo-member-1',
-  roleId: DEMO_ROLE.id,
-  overrides: null,
-  userId: DEMO_USER.id,
-  role: DEMO_ROLE,
-  user: DEMO_USER_SUMMARY,
+// ============================================================================
+// Demo members (all demo users assigned to projects with varied roles)
+// ============================================================================
+
+export const DEMO_MEMBERS = [
+  // Demo User - Owner of both projects
+  {
+    id: 'demo-member-1',
+    roleId: DEMO_ROLE.id,
+    overrides: null,
+    userId: DEMO_USER.id,
+    role: DEMO_ROLE,
+    user: DEMO_USER_SUMMARY,
+  },
+  // Sarah Chen - Admin on Project 1, Member on Project 2
+  {
+    id: 'demo-member-2',
+    roleId: DEMO_ROLE_ADMIN.id,
+    overrides: null,
+    userId: DEMO_TEAM_SUMMARIES[0].id,
+    role: DEMO_ROLE_ADMIN,
+    user: DEMO_TEAM_SUMMARIES[0],
+    projectMapping: { 'demo-project-1': 'Admin', 'demo-project-2': 'Member' },
+  },
+  // Marcus Johnson - Member on both projects
+  {
+    id: 'demo-member-3',
+    roleId: DEMO_ROLE_MEMBER.id,
+    overrides: null,
+    userId: DEMO_TEAM_SUMMARIES[1].id,
+    role: DEMO_ROLE_MEMBER,
+    user: DEMO_TEAM_SUMMARIES[1],
+  },
+  // Emily Rodriguez - Admin on Project 2, Member on Project 1
+  {
+    id: 'demo-member-4',
+    roleId: DEMO_ROLE_MEMBER.id,
+    overrides: null,
+    userId: DEMO_TEAM_SUMMARIES[2].id,
+    role: DEMO_ROLE_MEMBER,
+    user: DEMO_TEAM_SUMMARIES[2],
+    projectMapping: { 'demo-project-1': 'Member', 'demo-project-2': 'Admin' },
+  },
+] as const
+
+// Legacy export for backward compatibility
+export const DEMO_MEMBER = DEMO_MEMBERS[0]
+
+/**
+ * Get demo members for a specific project with correct roles
+ */
+export function getDemoMembersForProject(projectId: string) {
+  return DEMO_MEMBERS.map((member) => {
+    // Check if member has project-specific role mapping
+    const projectMapping = 'projectMapping' in member ? member.projectMapping : null
+    if (projectMapping && projectId in projectMapping) {
+      const roleName = projectMapping[projectId as keyof typeof projectMapping]
+      const role = getDemoRole(roleName as 'Owner' | 'Admin' | 'Member')
+      return {
+        id: `${member.id}-${projectId}`,
+        roleId: role.id,
+        overrides: null,
+        userId: member.userId,
+        role,
+        user: member.user,
+      }
+    }
+    // Default: use the member's default role
+    return {
+      id: `${member.id}-${projectId}`,
+      roleId: member.roleId,
+      overrides: null,
+      userId: member.userId,
+      role: member.role,
+      user: member.user,
+    }
+  })
+}
+
+/**
+ * Get demo roles with member counts for a specific project
+ */
+export function getDemoRolesForProject(projectId: string) {
+  const members = getDemoMembersForProject(projectId)
+  return DEMO_ROLES.map((role) => ({
+    ...role,
+    memberCount: members.filter((m) => m.roleId === role.id).length,
+  }))
 }
