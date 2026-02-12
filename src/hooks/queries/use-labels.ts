@@ -13,12 +13,21 @@ export interface LabelWithCount extends LabelSummary {
   }
 }
 
+// Ticket summary for label usage preview
+export interface LabelTicketSummary {
+  id: string
+  key: string
+  title: string
+}
+
 // Query keys for labels
 export const labelKeys = {
   all: ['labels'] as const,
   byProject: (projectId: string) => ['labels', 'project', projectId] as const,
   byProjectWithCounts: (projectId: string) =>
     ['labels', 'project', projectId, 'with-counts'] as const,
+  ticketsByLabel: (projectId: string, labelId: string) =>
+    ['labels', 'project', projectId, 'label', labelId, 'tickets'] as const,
 }
 
 /**
@@ -131,5 +140,31 @@ export function useDeleteLabel(projectId: string) {
     onError: (err) => {
       toast.error(err.message)
     },
+  })
+}
+
+/**
+ * Fetch tickets that use a specific label.
+ * Used for the label deletion preview.
+ */
+export function useLabelTickets(projectId: string, labelId: string | null, enabled = true) {
+  return useQuery<LabelTicketSummary[]>({
+    queryKey: labelKeys.ticketsByLabel(projectId, labelId ?? ''),
+    queryFn: async () => {
+      if (!labelId) return []
+      const tabId = getTabId()
+      const res = await fetch(`/api/projects/${projectId}/labels/${labelId}`, {
+        headers: {
+          'X-Tab-Id': tabId,
+        },
+      })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to fetch label tickets')
+      }
+      return res.json()
+    },
+    enabled: enabled && !!projectId && !!labelId,
+    staleTime: 1000 * 60, // 1 minute
   })
 }
