@@ -915,7 +915,7 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
           placeholder="Search tickets..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
+          className="pl-9 border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"
         />
       </div>
 
