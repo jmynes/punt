@@ -18,7 +18,8 @@ vi.mock('@/lib/rate-limit', () => ({
 
 import { db } from '@/lib/db'
 
-const mockDb = vi.mocked(db)
+// biome-ignore lint/suspicious/noExplicitAny: partial mock for testing
+const mockDb = vi.mocked(db) as any
 
 function createRequest(body: unknown): Request {
   return new Request('http://localhost:3000/api/auth/register', {
@@ -32,7 +33,8 @@ describe('Registration API - Username Validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDb.user.findUnique.mockResolvedValue(null)
-    mockDb.user.create.mockImplementation(({ data }) =>
+    // biome-ignore lint/suspicious/noExplicitAny: partial mock for testing
+    mockDb.user.create.mockImplementation(({ data }: any) =>
       Promise.resolve({
         id: 'test-id',
         username: data.username,
@@ -177,7 +179,8 @@ describe('Registration API - Password Validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDb.user.findUnique.mockResolvedValue(null)
-    mockDb.user.create.mockImplementation(({ data }) =>
+    // biome-ignore lint/suspicious/noExplicitAny: partial mock for testing
+    mockDb.user.create.mockImplementation(({ data }: any) =>
       Promise.resolve({
         id: 'test-id',
         username: data.username,
@@ -334,7 +337,8 @@ describe('Registration API - Input Sanitization', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDb.user.findUnique.mockResolvedValue(null)
-    mockDb.user.create.mockImplementation(({ data }) =>
+    // biome-ignore lint/suspicious/noExplicitAny: partial mock for testing
+    mockDb.user.create.mockImplementation(({ data }: any) =>
       Promise.resolve({
         id: 'test-id',
         username: data.username,

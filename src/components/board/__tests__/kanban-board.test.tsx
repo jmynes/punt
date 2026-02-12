@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockColumns } from '@/__tests__/utils/mocks'
 import { render } from '@/__tests__/utils/test-utils'
 import { useBoardStore } from '@/stores/board-store'
+import type { ColumnWithTickets } from '@/types'
 import { KanbanBoard } from '../kanban-board'
 
 // Use vi.hoisted to define mocks before vi.mock runs (vi.mock is hoisted)
@@ -24,7 +25,7 @@ const { mockBoardState, mockSelectionState, mockUiState, mockUndoState, createMo
     }
 
     const mockBoardState = {
-      getColumns: vi.fn(() => []),
+      getColumns: vi.fn(() => [] as ColumnWithTickets[]),
       moveTicket: vi.fn(),
       moveTickets: vi.fn(),
       reorderTicket: vi.fn(),
@@ -105,8 +106,10 @@ describe('KanbanBoard', () => {
     // Update the mock to return columns
     mockBoardState.getColumns = vi.fn(() => mockColumns)
     // Update both the hook return and getState return
-    vi.mocked(useBoardStore).mockReturnValue(mockBoardState)
-    vi.mocked(useBoardStore.getState).mockReturnValue(mockBoardState)
+    // biome-ignore lint/suspicious/noExplicitAny: partial mock for testing
+    vi.mocked(useBoardStore).mockReturnValue(mockBoardState as any)
+    // biome-ignore lint/suspicious/noExplicitAny: partial mock for testing
+    vi.mocked(useBoardStore.getState).mockReturnValue(mockBoardState as any)
   })
 
   it('should render board with columns', () => {

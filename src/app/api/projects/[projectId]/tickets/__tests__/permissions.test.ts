@@ -59,7 +59,8 @@ import { getEffectivePermissions, hasPermission, isMember } from '@/lib/permissi
 // Import routes after mocks
 import { GET, POST } from '../route'
 
-const mockDb = vi.mocked(db)
+// biome-ignore lint/suspicious/noExplicitAny: partial mock for testing
+const mockDb = vi.mocked(db) as any
 const mockRequireAuth = vi.mocked(requireAuth)
 const mockHasPermission = vi.mocked(hasPermission)
 const mockIsMember = vi.mocked(isMember)

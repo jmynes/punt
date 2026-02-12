@@ -29,10 +29,13 @@ vi.mock('@/lib/db', () => ({
 // Import mocked db after vi.mock
 import { db } from '@/lib/db'
 
-// Type-safe mock accessors
-const mockUserFindUnique = vi.mocked(db.user.findUnique)
-const mockProjectMemberFindUnique = vi.mocked(db.projectMember.findUnique)
-const mockRoleFindUnique = vi.mocked(db.role.findUnique)
+// Mock accessors - cast to any since we pass partial mock data
+// biome-ignore lint/suspicious/noExplicitAny: partial mock data for unit tests
+const mockUserFindUnique = vi.mocked(db.user.findUnique) as any
+// biome-ignore lint/suspicious/noExplicitAny: partial mock data for unit tests
+const mockProjectMemberFindUnique = vi.mocked(db.projectMember.findUnique) as any
+// biome-ignore lint/suspicious/noExplicitAny: partial mock data for unit tests
+const mockRoleFindUnique = vi.mocked(db.role.findUnique) as any
 
 // Test data helpers
 const TEST_USER_ID = 'user-1'

@@ -142,8 +142,18 @@ export const uploadSettings = fc.record({
   maxVideoSizeMB: fc.integer({ min: 1, max: 500 }),
   maxDocumentSizeMB: fc.integer({ min: 1, max: 100 }),
   maxAttachmentsPerTicket: fc.integer({ min: 1, max: 50 }),
-  allowedImageTypes: fc.constant(['image/jpeg', 'image/png', 'image/gif', 'image/webp']),
-  allowedVideoTypes: fc.constant(['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']),
+  allowedImageTypes: fc.constant([
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+  ] as string[]),
+  allowedVideoTypes: fc.constant([
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+    'video/quicktime',
+  ] as string[]),
   allowedDocumentTypes: fc.constant([
     'application/pdf',
     'application/msword',
@@ -152,5 +162,5 @@ export const uploadSettings = fc.record({
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'text/plain',
     'text/csv',
-  ]),
+  ] as string[]),
 })

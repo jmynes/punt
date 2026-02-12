@@ -15,6 +15,7 @@ const createColumn = (id: string): BacklogColumn => ({
   visible: true,
   width: 100,
   minWidth: 50,
+  sortable: true,
 })
 
 const mockGetStatusName = (columnId: string) => {

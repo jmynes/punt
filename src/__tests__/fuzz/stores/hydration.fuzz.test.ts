@@ -349,10 +349,13 @@ describe('Hydration Validation Fuzz Tests', () => {
 
   describe('Edge cases in validation', () => {
     it('should handle objects with prototype pollution attempts', () => {
-      const malicious = [
-        { id: 'col-1', tickets: [], __proto__: { evil: true } },
-        { id: 'col-2', tickets: [], constructor: { prototype: { pwned: true } } },
-      ]
+      const col1 = { id: 'col-1', tickets: [] as unknown[], __proto__: { evil: true } }
+      const col2 = {
+        id: 'col-2',
+        tickets: [] as unknown[],
+        constructor: { prototype: { pwned: true } },
+      }
+      const malicious = [col1, col2]
 
       // Should still work correctly
       expect(isValidColumns(malicious)).toBe(true)
