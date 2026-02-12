@@ -522,6 +522,80 @@ export function BacklogTable({
         </Button>
       </div>
 
+      {/* Summary header */}
+      <div className="flex shrink-0 items-center gap-4 border-b border-zinc-800 px-4 py-2 text-sm">
+        {/* Ticket count */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-default text-zinc-400">
+              {isFiltered ? (
+                <>
+                  <span className="font-medium tabular-nums text-zinc-200">
+                    {filteredTickets.length}
+                  </span>
+                  <span className="text-zinc-600"> / </span>
+                  <span className="tabular-nums text-zinc-500">{tickets.length}</span>{' '}
+                  {tickets.length === 1 ? 'issue' : 'issues'}
+                </>
+              ) : (
+                <>
+                  <span className="font-medium tabular-nums text-zinc-200">{tickets.length}</span>{' '}
+                  <span className="text-zinc-500">{tickets.length === 1 ? 'issue' : 'issues'}</span>
+                </>
+              )}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+            {isFiltered ? (
+              <div className="space-y-1">
+                <p className="text-xs text-zinc-100">
+                  Showing {filteredTickets.length} of {tickets.length} issues
+                </p>
+                <p className="text-xs text-zinc-400">Filters are active</p>
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-100">
+                {tickets.length} {tickets.length === 1 ? 'issue' : 'issues'} in backlog
+              </p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Story points */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex cursor-default items-center gap-1.5 text-zinc-400">
+              <TrendingUp className="h-3.5 w-3.5" />
+              {isFiltered ? (
+                <>
+                  <span className="font-medium tabular-nums text-zinc-200">{filteredPoints}</span>
+                  <span className="text-zinc-600"> / </span>
+                  <span className="tabular-nums text-zinc-500">{totalPoints}</span>
+                  <span className="text-zinc-600"> pts</span>
+                </>
+              ) : (
+                <>
+                  <span className="font-medium tabular-nums text-zinc-200">{totalPoints}</span>
+                  <span className="text-zinc-500"> pts</span>
+                </>
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+            {isFiltered ? (
+              <div className="space-y-1">
+                <p className="text-xs text-zinc-100">
+                  Showing {filteredPoints} of {totalPoints} story points
+                </p>
+                <p className="text-xs text-zinc-400">Filters are active</p>
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-100">{totalPoints} story points in backlog</p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+
       {/* Table */}
       <ScrollArea
         className="min-h-0 flex-1"
@@ -567,84 +641,6 @@ export function BacklogTable({
 
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
-
-      {/* Footer */}
-      <div className="flex shrink-0 items-center justify-end border-t border-zinc-800 py-2 pl-4 pr-14 text-sm">
-        <div className="flex items-center gap-4">
-          {/* Ticket count */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-default text-zinc-400">
-                {isFiltered ? (
-                  <>
-                    <span className="font-medium tabular-nums text-zinc-200">
-                      {filteredTickets.length}
-                    </span>
-                    <span className="text-zinc-600"> / </span>
-                    <span className="tabular-nums text-zinc-500">{tickets.length}</span>{' '}
-                    {tickets.length === 1 ? 'issue' : 'issues'}
-                  </>
-                ) : (
-                  <>
-                    <span className="font-medium tabular-nums text-zinc-200">{tickets.length}</span>{' '}
-                    <span className="text-zinc-500">
-                      {tickets.length === 1 ? 'issue' : 'issues'}
-                    </span>
-                  </>
-                )}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="bg-zinc-900 border-zinc-700">
-              {isFiltered ? (
-                <div className="space-y-1">
-                  <p className="text-xs text-zinc-100">
-                    Showing {filteredTickets.length} of {tickets.length} issues
-                  </p>
-                  <p className="text-xs text-zinc-400">Filters are active</p>
-                </div>
-              ) : (
-                <p className="text-xs text-zinc-100">
-                  {tickets.length} {tickets.length === 1 ? 'issue' : 'issues'} in backlog
-                </p>
-              )}
-            </TooltipContent>
-          </Tooltip>
-
-          {/* Story points */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex cursor-default items-center gap-1.5 text-zinc-400">
-                <TrendingUp className="h-3.5 w-3.5" />
-                {isFiltered ? (
-                  <>
-                    <span className="font-medium tabular-nums text-zinc-200">{filteredPoints}</span>
-                    <span className="text-zinc-600"> / </span>
-                    <span className="tabular-nums text-zinc-500">{totalPoints}</span>
-                    <span className="text-zinc-600"> pts</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="font-medium tabular-nums text-zinc-200">{totalPoints}</span>
-                    <span className="text-zinc-500"> pts</span>
-                  </>
-                )}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="bg-zinc-900 border-zinc-700">
-              {isFiltered ? (
-                <div className="space-y-1">
-                  <p className="text-xs text-zinc-100">
-                    Showing {filteredPoints} of {totalPoints} story points
-                  </p>
-                  <p className="text-xs text-zinc-400">Filters are active</p>
-                </div>
-              ) : (
-                <p className="text-xs text-zinc-100">{totalPoints} story points in backlog</p>
-              )}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
     </div>
   )
 }
