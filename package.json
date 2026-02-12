@@ -1,6 +1,6 @@
 {
   "name": "punt",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
   "license": "AGPL-3.0-or-later",
   "engines": {
@@ -26,7 +26,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed-demo": "tsx prisma/seed-demo.ts",
     "db:generate-avatars": "tsx prisma/generate-avatars.ts",
-    "prepare": "husky"
+    "prepare": "husky",
+    "release": "node scripts/release.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
