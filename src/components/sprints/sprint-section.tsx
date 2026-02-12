@@ -61,6 +61,10 @@ interface SprintSectionProps {
   draggingTicketIds?: string[]
   /** Whether there's an active sprint (used to hide create sprint button) */
   hasActiveSprint?: boolean
+  /** Total ticket count before filtering (if different from tickets.length, shows filtered view) */
+  totalTicketCount?: number
+  /** Total story points before filtering */
+  totalStoryPoints?: number
 }
 
 /**
@@ -79,6 +83,8 @@ export function SprintSection({
   dropPosition = null,
   draggingTicketIds = [],
   hasActiveSprint = false,
+  totalTicketCount,
+  totalStoryPoints,
 }: SprintSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
@@ -245,9 +251,14 @@ export function SprintSection({
 
   // Calculate totals (excluding dragging tickets for display counts)
   const visibleTickets = tickets.filter((t) => !draggingTicketIds.includes(t.id))
-  const totalPoints = visibleTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
-  const ticketCount = visibleTickets.length
+  const filteredPoints = visibleTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
+  const filteredCount = visibleTickets.length
   const draggingCount = draggingTicketIds.length
+
+  // Check if filters are active (totalTicketCount differs from filtered count)
+  const hasFilters = totalTicketCount !== undefined && totalTicketCount !== filteredCount
+  const displayTotalCount = totalTicketCount ?? filteredCount
+  const displayTotalPoints = totalStoryPoints ?? filteredPoints
 
   // Droppable for the section
   const droppableId = sprint?.id ?? 'backlog'
@@ -304,7 +315,9 @@ export function SprintSection({
         // Drop target styling - subtle glow when this section is a valid drop target
         dropPosition !== null && 'border-blue-500/40 ring-1 ring-blue-500/20',
         // isOver is still useful for empty sections
-        isOver && ticketCount === 0 && 'border-blue-500/50 bg-blue-500/10 ring-2 ring-blue-500/20',
+        isOver &&
+          filteredCount === 0 &&
+          'border-blue-500/50 bg-blue-500/10 ring-2 ring-blue-500/20',
       )}
     >
       {/* Section Header */}
@@ -424,27 +437,79 @@ export function SprintSection({
         {/* Stats */}
         <div className="flex items-center gap-4 text-xs">
           {/* Ticket count */}
-          <div className="flex items-center gap-1.5">
-            <span
-              className={cn(
-                'font-medium tabular-nums',
-                ticketCount === 0 ? 'text-zinc-600' : 'text-zinc-300',
-              )}
-            >
-              {ticketCount}
-            </span>
-            <span className="text-zinc-600">{ticketCount === 1 ? 'issue' : 'issues'}</span>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1.5">
+                {hasFilters ? (
+                  <>
+                    <span
+                      className={cn(
+                        'font-medium tabular-nums',
+                        filteredCount === 0 ? 'text-zinc-600' : 'text-blue-400',
+                      )}
+                    >
+                      {filteredCount}
+                    </span>
+                    <span className="text-zinc-600">of</span>
+                    <span className="text-zinc-500 tabular-nums">{displayTotalCount}</span>
+                    <span className="text-zinc-600">
+                      {displayTotalCount === 1 ? 'issue' : 'issues'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span
+                      className={cn(
+                        'font-medium tabular-nums',
+                        filteredCount === 0 ? 'text-zinc-600' : 'text-zinc-300',
+                      )}
+                    >
+                      {filteredCount}
+                    </span>
+                    <span className="text-zinc-600">
+                      {filteredCount === 1 ? 'issue' : 'issues'}
+                    </span>
+                  </>
+                )}
+              </div>
+            </TooltipTrigger>
+            {hasFilters && (
+              <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+                <p className="text-xs text-zinc-100">
+                  Showing {filteredCount} of {displayTotalCount} issues (filtered)
+                </p>
+              </TooltipContent>
+            )}
+          </Tooltip>
 
           {/* Story points with budget */}
           {sprint?.budget ? (
-            <BudgetIndicator totalPoints={totalPoints} budget={sprint.budget} />
+            <BudgetIndicator totalPoints={displayTotalPoints} budget={sprint.budget} />
           ) : (
-            <div className="flex items-center gap-1.5 text-zinc-400">
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span className="font-medium">{totalPoints}</span>
-              <span className="text-zinc-600">pts</span>
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  {hasFilters ? (
+                    <>
+                      <span className="font-medium text-blue-400">{filteredPoints}</span>
+                      <span className="text-zinc-600">of</span>
+                      <span className="text-zinc-500">{displayTotalPoints}</span>
+                    </>
+                  ) : (
+                    <span className="font-medium">{filteredPoints}</span>
+                  )}
+                  <span className="text-zinc-600">pts</span>
+                </div>
+              </TooltipTrigger>
+              {hasFilters && (
+                <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+                  <p className="text-xs text-zinc-100">
+                    Showing {filteredPoints} of {displayTotalPoints} story points (filtered)
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
           )}
         </div>
 
@@ -463,7 +528,7 @@ export function SprintSection({
           )}
 
           {/* Start Sprint button for planning sprints */}
-          {canManageSprints && isPlanning && ticketCount > 0 && (
+          {canManageSprints && isPlanning && displayTotalCount > 0 && (
             <Button
               size="sm"
               onClick={handleStartSprint}
@@ -559,8 +624,8 @@ export function SprintSection({
 
       {/* Ticket table */}
       {expanded && (
-        <div ref={setNodeRef} className={cn('pb-3', ticketCount === 0 && 'px-4 py-3')}>
-          {ticketCount === 0 ? (
+        <div ref={setNodeRef} className={cn('pb-3', filteredCount === 0 && 'px-4 py-3')}>
+          {filteredCount === 0 ? (
             <DropZone
               isActive={dropPosition !== null || isOver}
               itemCount={draggingCount}
