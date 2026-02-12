@@ -216,9 +216,47 @@ export function registerTicketTools(server: McpServer) {
         .describe('Filter by type'),
       assignee: z.string().optional().describe('Filter by assignee name'),
       sprint: z.string().optional().describe('Filter by sprint name'),
+      label: z.string().optional().describe('Filter by label name (tickets with this label)'),
+      resolution: z
+        .string()
+        .optional()
+        .describe(
+          'Filter by resolution: "resolved" (any resolution set), "unresolved" (no resolution), or a specific resolution value',
+        ),
+      missingFields: z
+        .array(
+          z.enum([
+            'storyPoints',
+            'assignee',
+            'sprint',
+            'labels',
+            'description',
+            'estimate',
+            'dueDate',
+            'startDate',
+          ]),
+        )
+        .optional()
+        .describe('Find tickets missing these fields (e.g., ["storyPoints", "assignee"])'),
+      search: z
+        .string()
+        .optional()
+        .describe('Text search across title and description (case-insensitive)'),
       limit: z.number().min(1).max(100).default(20).describe('Max results to return'),
     },
-    async ({ projectKey, column, priority, type, assignee, sprint, limit }) => {
+    async ({
+      projectKey,
+      column,
+      priority,
+      type,
+      assignee,
+      sprint,
+      label,
+      resolution,
+      missingFields,
+      search,
+      limit,
+    }) => {
       const result = await listTickets(projectKey)
       if (result.error) {
         return errorResponse(result.error)
@@ -249,6 +287,47 @@ export function registerTicketTools(server: McpServer) {
       if (sprint) {
         tickets = tickets.filter((t) => t.sprint?.name.toLowerCase().includes(sprint.toLowerCase()))
         appliedFilters.push(`sprint: ${sprint}`)
+      }
+      if (label) {
+        tickets = tickets.filter((t) =>
+          t.labels.some((l) => l.name.toLowerCase().includes(label.toLowerCase())),
+        )
+        appliedFilters.push(`label: ${label}`)
+      }
+      if (resolution) {
+        if (resolution === 'resolved') {
+          tickets = tickets.filter((t) => t.resolution != null)
+          appliedFilters.push('resolution: resolved')
+        } else if (resolution === 'unresolved') {
+          tickets = tickets.filter((t) => t.resolution == null)
+          appliedFilters.push('resolution: unresolved')
+        } else {
+          tickets = tickets.filter((t) => t.resolution?.toLowerCase() === resolution.toLowerCase())
+          appliedFilters.push(`resolution: ${resolution}`)
+        }
+      }
+      if (missingFields && missingFields.length > 0) {
+        const fieldChecks: Record<string, (t: TicketData) => boolean> = {
+          storyPoints: (t) => t.storyPoints == null,
+          assignee: (t) => t.assignee == null,
+          sprint: (t) => t.sprint == null,
+          labels: (t) => t.labels.length === 0,
+          description: (t) => !t.description,
+          estimate: (t) => !t.estimate,
+          dueDate: (t) => !t.dueDate,
+          startDate: (t) => !t.startDate,
+        }
+        tickets = tickets.filter((t) => missingFields.some((field) => fieldChecks[field](t)))
+        appliedFilters.push(`missing: ${missingFields.join(', ')}`)
+      }
+      if (search) {
+        const searchLower = search.toLowerCase()
+        tickets = tickets.filter(
+          (t) =>
+            t.title.toLowerCase().includes(searchLower) ||
+            (t.description?.toLowerCase().includes(searchLower) ?? false),
+        )
+        appliedFilters.push(`search: "${search}"`)
       }
 
       // Apply limit
