@@ -20,8 +20,10 @@ describe('Undo Store', () => {
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry).toBeDefined()
       expect(entry?.action.type).toBe('delete')
-      expect(entry?.action.tickets).toHaveLength(1)
-      expect(entry?.action.tickets[0].ticket.id).toBe('ticket-1')
+      if (entry?.action.type === 'delete') {
+        expect(entry.action.tickets).toHaveLength(1)
+        expect(entry.action.tickets[0].ticket.id).toBe('ticket-1')
+      }
       expect(entry?.toastId).toBe('toast-1')
       expect(entry?.projectId).toBe(PROJECT_ID)
     })
@@ -56,7 +58,9 @@ describe('Undo Store', () => {
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry?.action.type).toBe('delete')
-      expect(entry?.action.tickets).toHaveLength(2)
+      if (entry?.action.type === 'delete') {
+        expect(entry.action.tickets).toHaveLength(2)
+      }
     })
   })
 

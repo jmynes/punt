@@ -82,9 +82,9 @@ vi.mock('@/stores/undo-store', () => {
 })
 
 const mockColumns: BacklogColumn[] = [
-  { id: 'key', label: 'Key', visible: true, width: 100, minWidth: 80 },
-  { id: 'title', label: 'Title', visible: true, width: 300, minWidth: 150 },
-  { id: 'status', label: 'Status', visible: true, width: 120, minWidth: 100 },
+  { id: 'key', label: 'Key', visible: true, width: 100, minWidth: 80, sortable: true },
+  { id: 'title', label: 'Title', visible: true, width: 300, minWidth: 150, sortable: true },
+  { id: 'status', label: 'Status', visible: true, width: 120, minWidth: 100, sortable: true },
 ]
 
 const mockContext: TableContext = {

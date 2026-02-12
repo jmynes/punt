@@ -2,17 +2,18 @@
  * Ticket-related arbitraries for fuzz testing.
  */
 import * as fc from 'fast-check'
+import type { IssueType, Priority, SprintStatus } from '@/types'
 import { maliciousString } from './primitives'
 
 /**
  * Ticket type enum values
  */
-export const ticketType = fc.constantFrom('task', 'bug', 'story', 'epic')
+export const ticketType = fc.constantFrom<IssueType>('task', 'bug', 'story', 'epic')
 
 /**
  * Ticket priority enum values
  */
-export const ticketPriority = fc.constantFrom('low', 'medium', 'high', 'critical')
+export const ticketPriority = fc.constantFrom<Priority>('low', 'medium', 'high', 'critical')
 
 /**
  * Valid ticket number (positive integer)
@@ -32,6 +33,40 @@ export const storyPoints = fc.option(fc.constantFrom(1, 2, 3, 5, 8, 13, 21), { n
 /**
  * Base ticket arbitrary with minimal required fields
  */
+/**
+ * User summary arbitrary (for assignee, reporter, creator, watchers)
+ */
+const userSummary = fc.record({
+  id: fc.uuid(),
+  name: fc.string({ minLength: 1, maxLength: 100 }),
+  email: fc.emailAddress(),
+  avatar: fc.option(fc.webUrl(), { nil: null }),
+})
+
+/**
+ * Sprint summary arbitrary (for sprint, carriedFromSprint)
+ */
+const sprintSummary = fc.record({
+  id: fc.uuid(),
+  name: fc.string({ minLength: 1, maxLength: 100 }),
+  status: fc.constantFrom<SprintStatus>('planning', 'active', 'completed'),
+  startDate: fc.option(fc.date(), { nil: null }),
+  endDate: fc.option(fc.date(), { nil: null }),
+  goal: fc.option(fc.string({ maxLength: 200 }), { nil: null }),
+  budget: fc.option(fc.nat({ max: 100 }), { nil: null }),
+})
+
+/**
+ * Resolution values
+ */
+const resolution = fc.option(
+  fc.constantFrom('Done', "Won't Fix", 'Duplicate', 'Cannot Reproduce', 'Incomplete', "Won't Do"),
+  { nil: null },
+)
+
+/**
+ * Base ticket arbitrary with minimal required fields
+ */
 export const ticketBase = fc.record({
   id: fc.uuid(),
   projectId: fc.uuid(),
@@ -42,8 +77,9 @@ export const ticketBase = fc.record({
   type: ticketType,
   priority: ticketPriority,
   order: ticketOrder,
+  resolution,
   storyPoints,
-  estimate: fc.option(fc.nat({ max: 480 }), { nil: null }), // Minutes, max 8 hours
+  estimate: fc.option(fc.string({ maxLength: 20 }), { nil: null }),
   startDate: fc.option(fc.date(), { nil: null }),
   dueDate: fc.option(fc.date(), { nil: null }),
   environment: fc.option(fc.string({ maxLength: 100 }), { nil: null }),
@@ -54,6 +90,7 @@ export const ticketBase = fc.record({
   parentId: fc.option(fc.uuid(), { nil: null }),
   sprintId: fc.option(fc.uuid(), { nil: null }),
   assigneeId: fc.option(fc.uuid(), { nil: null }),
+  creatorId: fc.uuid(),
   reporterId: fc.uuid(),
   isCarriedOver: fc.boolean(),
   carriedOverCount: fc.nat({ max: 10 }),
@@ -69,30 +106,12 @@ export const ticketBase = fc.record({
     }),
     { maxLength: 10 },
   ),
-  watchers: fc.array(
-    fc.record({
-      id: fc.uuid(),
-      name: fc.string({ minLength: 1, maxLength: 100 }),
-      email: fc.option(fc.emailAddress(), { nil: null }),
-      avatar: fc.option(fc.webUrl(), { nil: null }),
-    }),
-    { maxLength: 10 },
-  ),
-  assignee: fc.option(
-    fc.record({
-      id: fc.uuid(),
-      name: fc.string({ minLength: 1, maxLength: 100 }),
-      email: fc.option(fc.emailAddress(), { nil: null }),
-      avatar: fc.option(fc.webUrl(), { nil: null }),
-    }),
-    { nil: null },
-  ),
-  reporter: fc.record({
-    id: fc.uuid(),
-    name: fc.string({ minLength: 1, maxLength: 100 }),
-    email: fc.option(fc.emailAddress(), { nil: null }),
-    avatar: fc.option(fc.webUrl(), { nil: null }),
-  }),
+  watchers: fc.array(userSummary, { maxLength: 10 }),
+  assignee: fc.option(userSummary, { nil: null }),
+  creator: userSummary,
+  reporter: userSummary,
+  sprint: fc.option(sprintSummary, { nil: null }),
+  carriedFromSprint: fc.option(sprintSummary, { nil: null }),
 })
 
 /**
@@ -108,8 +127,9 @@ export const maliciousTicket = fc.record({
   type: ticketType,
   priority: ticketPriority,
   order: ticketOrder,
+  resolution: fc.constant(null),
   storyPoints,
-  estimate: fc.option(fc.nat({ max: 480 }), { nil: null }),
+  estimate: fc.option(fc.string({ maxLength: 20 }), { nil: null }),
   startDate: fc.option(fc.date(), { nil: null }),
   dueDate: fc.option(fc.date(), { nil: null }),
   environment: fc.option(maliciousString, { nil: null }),
@@ -120,6 +140,7 @@ export const maliciousTicket = fc.record({
   parentId: fc.option(fc.uuid(), { nil: null }),
   sprintId: fc.option(fc.uuid(), { nil: null }),
   assigneeId: fc.option(fc.uuid(), { nil: null }),
+  creatorId: fc.uuid(),
   reporterId: fc.uuid(),
   isCarriedOver: fc.boolean(),
   carriedOverCount: fc.nat({ max: 10 }),
@@ -127,12 +148,20 @@ export const maliciousTicket = fc.record({
   labels: fc.constant([]),
   watchers: fc.constant([]),
   assignee: fc.constant(null),
+  creator: fc.record({
+    id: fc.uuid(),
+    name: fc.string({ minLength: 1, maxLength: 100 }),
+    email: fc.emailAddress(),
+    avatar: fc.constant(null),
+  }),
   reporter: fc.record({
     id: fc.uuid(),
     name: fc.string({ minLength: 1, maxLength: 100 }),
-    email: fc.option(fc.emailAddress(), { nil: null }),
+    email: fc.emailAddress(),
     avatar: fc.constant(null),
   }),
+  sprint: fc.constant(null),
+  carriedFromSprint: fc.constant(null),
 })
 
 /**
