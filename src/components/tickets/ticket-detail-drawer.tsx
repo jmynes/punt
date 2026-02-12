@@ -1044,18 +1044,28 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     >
                       No sprint (Backlog)
                     </DropdownMenuCheckboxItem>
-                    {availableSprints.map((sprint) => (
-                      <DropdownMenuCheckboxItem
-                        key={sprint.id}
-                        checked={tempSprintId === sprint.id}
-                        onCheckedChange={() => {
-                          handleChange('sprint', sprint.id)
-                        }}
-                        className="cursor-pointer"
-                      >
-                        {sprint.name} {sprint.status === 'active' && '(Active)'}
-                      </DropdownMenuCheckboxItem>
-                    ))}
+                    {availableSprints
+                      .filter(
+                        (s) =>
+                          s.status === 'active' || s.status === 'planning' || s.id === tempSprintId,
+                      )
+                      .map((sprint) => (
+                        <DropdownMenuCheckboxItem
+                          key={sprint.id}
+                          checked={tempSprintId === sprint.id}
+                          onCheckedChange={() => {
+                            handleChange('sprint', sprint.id)
+                          }}
+                          className="cursor-pointer"
+                        >
+                          {sprint.name}{' '}
+                          {sprint.status === 'active'
+                            ? '(Active)'
+                            : sprint.status === 'completed'
+                              ? '(Completed)'
+                              : ''}
+                        </DropdownMenuCheckboxItem>
+                      ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
