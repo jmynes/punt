@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockColumns } from '@/__tests__/utils/mocks'
 import { render } from '@/__tests__/utils/test-utils'
 import { useBoardStore } from '@/stores/board-store'
-import type { ColumnWithTickets } from '@/types'
+import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { KanbanBoard } from '../kanban-board'
 
 // Use vi.hoisted to define mocks before vi.mock runs (vi.mock is hoisted)
@@ -41,6 +41,9 @@ const { mockBoardState, mockSelectionState, mockUiState, mockUndoState, createMo
       isColumnCollapsed: vi.fn(() => false),
       toggleColumnCollapsed: vi.fn(),
       setColumnCollapsed: vi.fn(),
+      columnSorts: {},
+      getColumnSort: vi.fn(() => 'manual' as const),
+      setColumnSort: vi.fn(),
     }
 
     const mockSelectionState = {
@@ -84,6 +87,30 @@ const { mockBoardState, mockSelectionState, mockUiState, mockUndoState, createMo
 // Mock the stores
 vi.mock('@/stores/board-store', () => ({
   useBoardStore: createMockStore(mockBoardState),
+  // Re-export the real sortTickets function since it's a pure utility
+  sortTickets: (tickets: TicketWithRelations[], _sortOption: string) => tickets,
+  COLUMN_SORT_OPTIONS: [
+    'manual',
+    'priority-desc',
+    'priority-asc',
+    'due-date-asc',
+    'due-date-desc',
+    'story-points-desc',
+    'story-points-asc',
+    'created-asc',
+    'created-desc',
+  ],
+  COLUMN_SORT_LABELS: {
+    manual: 'Manual',
+    'priority-desc': 'Priority (high to low)',
+    'priority-asc': 'Priority (low to high)',
+    'due-date-asc': 'Due date (earliest first)',
+    'due-date-desc': 'Due date (latest first)',
+    'story-points-desc': 'Story points (high to low)',
+    'story-points-asc': 'Story points (low to high)',
+    'created-asc': 'Created (oldest first)',
+    'created-desc': 'Created (newest first)',
+  },
 }))
 
 vi.mock('@/stores/selection-store', () => ({

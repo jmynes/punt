@@ -498,6 +498,8 @@ cd /tmp/worktree-<branch-name>
 git checkout main && git pull && git branch -d <branch-name>
 ```
 
+**PR merging:** Do NOT merge PRs without explicitly asking the user first. Always present the PR for review and wait for approval before merging.
+
 ### Debugging
 
 - Logger: `logger.debug()`, `logger.info()`, `logger.warn()`, `logger.error()`, `logger.measure()`

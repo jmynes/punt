@@ -4,6 +4,110 @@ import { logger } from '@/lib/logger'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
+// Column sort options
+export const COLUMN_SORT_OPTIONS = [
+  'manual',
+  'priority-desc',
+  'priority-asc',
+  'due-date-asc',
+  'due-date-desc',
+  'story-points-desc',
+  'story-points-asc',
+  'created-asc',
+  'created-desc',
+] as const
+
+export type ColumnSortOption = (typeof COLUMN_SORT_OPTIONS)[number]
+
+// Human-readable labels for sort options
+export const COLUMN_SORT_LABELS: Record<ColumnSortOption, string> = {
+  manual: 'Manual',
+  'priority-desc': 'Priority (high to low)',
+  'priority-asc': 'Priority (low to high)',
+  'due-date-asc': 'Due date (earliest first)',
+  'due-date-desc': 'Due date (latest first)',
+  'story-points-desc': 'Story points (high to low)',
+  'story-points-asc': 'Story points (low to high)',
+  'created-asc': 'Created (oldest first)',
+  'created-desc': 'Created (newest first)',
+}
+
+// Priority order for sorting (higher index = higher priority)
+const PRIORITY_ORDER: Record<string, number> = {
+  lowest: 0,
+  low: 1,
+  medium: 2,
+  high: 3,
+  highest: 4,
+  critical: 5,
+}
+
+// Sort tickets by the specified option
+export function sortTickets(
+  tickets: TicketWithRelations[],
+  sortOption: ColumnSortOption,
+): TicketWithRelations[] {
+  if (sortOption === 'manual') {
+    // Manual sorting - use the order field
+    return [...tickets].sort((a, b) => a.order - b.order)
+  }
+
+  const sorted = [...tickets]
+
+  switch (sortOption) {
+    case 'priority-desc':
+      sorted.sort((a, b) => (PRIORITY_ORDER[b.priority] ?? 0) - (PRIORITY_ORDER[a.priority] ?? 0))
+      break
+    case 'priority-asc':
+      sorted.sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 0) - (PRIORITY_ORDER[b.priority] ?? 0))
+      break
+    case 'due-date-asc':
+      sorted.sort((a, b) => {
+        // Tickets without due date go to the end
+        if (!a.dueDate && !b.dueDate) return 0
+        if (!a.dueDate) return 1
+        if (!b.dueDate) return -1
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+      })
+      break
+    case 'due-date-desc':
+      sorted.sort((a, b) => {
+        // Tickets without due date go to the end
+        if (!a.dueDate && !b.dueDate) return 0
+        if (!a.dueDate) return 1
+        if (!b.dueDate) return -1
+        return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
+      })
+      break
+    case 'story-points-desc':
+      sorted.sort((a, b) => {
+        // Tickets without story points go to the end
+        if (a.storyPoints === null && b.storyPoints === null) return 0
+        if (a.storyPoints === null) return 1
+        if (b.storyPoints === null) return -1
+        return b.storyPoints - a.storyPoints
+      })
+      break
+    case 'story-points-asc':
+      sorted.sort((a, b) => {
+        // Tickets without story points go to the end
+        if (a.storyPoints === null && b.storyPoints === null) return 0
+        if (a.storyPoints === null) return 1
+        if (b.storyPoints === null) return -1
+        return a.storyPoints - b.storyPoints
+      })
+      break
+    case 'created-asc':
+      sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      break
+    case 'created-desc':
+      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      break
+  }
+
+  return sorted
+}
+
 // Helper to create default columns for a project
 // Note: "Backlog" is not a column - tickets without a sprint are in the backlog view
 function createDefaultColumns(projectId: string): ColumnWithTickets[] {
@@ -76,6 +180,11 @@ interface BoardState {
   searchQueries: Record<string, string>
   getSearchQuery: (projectId: string) => string
   setSearchQuery: (projectId: string, query: string) => void
+
+  // Column sorting: Record<columnId, ColumnSortOption>
+  columnSorts: Record<string, ColumnSortOption>
+  getColumnSort: (columnId: string) => ColumnSortOption
+  setColumnSort: (columnId: string, sort: ColumnSortOption) => void
 
   // Get the next ticket number (max + 1) for a project
   getNextTicketNumber: (projectId: string) => number
@@ -211,6 +320,16 @@ export const useBoardStore = create<BoardState>()(
       setSearchQuery: (projectId: string, query: string) =>
         set((state) => ({
           searchQueries: { ...state.searchQueries, [projectId]: query },
+        })),
+
+      // Column sorting
+      columnSorts: {},
+      getColumnSort: (columnId: string) => {
+        return get().columnSorts[columnId] ?? 'manual'
+      },
+      setColumnSort: (columnId: string, sort: ColumnSortOption) =>
+        set((state) => ({
+          columnSorts: { ...state.columnSorts, [columnId]: sort },
         })),
 
       // Get the next ticket number for a project
@@ -631,6 +750,7 @@ export const useBoardStore = create<BoardState>()(
       partialize: (state) => ({
         projects: state.projects,
         collapsedColumns: state.collapsedColumns,
+        columnSorts: state.columnSorts,
       }),
       // Revive Date objects when loading from storage and mark as hydrated
       onRehydrateStorage: () => (state) => {
