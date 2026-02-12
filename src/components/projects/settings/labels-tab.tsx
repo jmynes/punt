@@ -491,6 +491,7 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
                         }
                       }}
                       isDisabled={!canManageLabels}
+                      projectId={projectId}
                     />
                   </div>
 
