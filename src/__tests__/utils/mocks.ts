@@ -11,6 +11,7 @@ import type {
 // Mock user data
 export const createMockUser = (overrides?: Partial<UserSummary>): UserSummary => ({
   id: 'user-1',
+  username: 'testuser',
   name: 'Test User',
   email: 'test@example.com',
   avatar: null,

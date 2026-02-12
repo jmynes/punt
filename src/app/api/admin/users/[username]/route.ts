@@ -14,21 +14,26 @@ const updateUserSchema = z.object({
 })
 
 /**
- * GET /api/admin/users/[userId] - Get a specific user
+ * GET /api/admin/users/[username] - Get a specific user by username
  */
-export async function GET(_request: Request, { params }: { params: Promise<{ userId: string }> }) {
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ username: string }> },
+) {
   try {
     await requireSystemAdmin()
 
-    const { userId } = await params
+    const { username } = await params
 
     const user = await db.user.findUnique({
-      where: { id: userId },
+      where: { username },
       select: {
         id: true,
+        username: true,
         email: true,
         name: true,
         avatar: true,
+        avatarColor: true,
         isSystemAdmin: true,
         isActive: true,
         createdAt: true,
@@ -90,16 +95,29 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
 }
 
 /**
- * PATCH /api/admin/users/[userId] - Update a user
+ * PATCH /api/admin/users/[username] - Update a user
  */
-export async function PATCH(request: Request, { params }: { params: Promise<{ userId: string }> }) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ username: string }> },
+) {
   try {
     const currentUser = await requireSystemAdmin()
-    const { userId } = await params
+    const { username } = await params
+
+    // Look up the target user by username
+    const existingUser = await db.user.findUnique({
+      where: { username },
+    })
+
+    if (!existingUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const body = await request.json()
 
     // Prevent self-demotion
-    if (userId === currentUser.id) {
-      const body = await request.json()
+    if (existingUser.id === currentUser.id) {
       if (body.isSystemAdmin === false || body.isActive === false) {
         return NextResponse.json(
           { error: 'Cannot remove your own admin privileges or disable your own account' },
@@ -108,7 +126,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
       }
     }
 
-    const body = await request.json()
     const parsed = updateUserSchema.safeParse(body)
 
     if (!parsed.success) {
@@ -117,15 +134,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
     }
 
     const updates = parsed.data
-
-    // Check if user exists
-    const existingUser = await db.user.findUnique({
-      where: { id: userId },
-    })
-
-    if (!existingUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Check email uniqueness if being updated
     if (updates.email && updates.email !== existingUser.email) {
@@ -155,7 +163,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
 
     // Update user
     const user = await db.user.update({
-      where: { id: userId },
+      where: { username },
       data: {
         ...(updates.name && { name: updates.name }),
         ...(updates.email && { email: updates.email }),
@@ -165,6 +173,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
       },
       select: {
         id: true,
+        username: true,
         email: true,
         name: true,
         avatar: true,
@@ -179,7 +188,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
     if (becomingSystemAdmin) {
       // Get projects the user is already a member of
       const existingMemberships = await db.projectMember.findMany({
-        where: { userId },
+        where: { userId: existingUser.id },
         select: { projectId: true },
       })
       const existingProjectIds = existingMemberships.map((m) => m.projectId)
@@ -203,7 +212,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
         if (adminRole) {
           await db.projectMember.create({
             data: {
-              userId,
+              userId: existingUser.id,
               projectId: project.id,
               roleId: adminRole.id,
             },
@@ -242,48 +251,48 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
 }
 
 /**
- * DELETE /api/admin/users/[userId] - Delete or disable a user
+ * DELETE /api/admin/users/[username] - Delete or disable a user
  * Query params:
  *   - permanent=true: Hard delete (permanently remove from database)
  *   - permanent=false or omitted: Soft delete (disable the account)
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ userId: string }> },
+  { params }: { params: Promise<{ username: string }> },
 ) {
   try {
     const currentUser = await requireSystemAdmin()
-    const { userId } = await params
+    const { username } = await params
     const { searchParams } = new URL(request.url)
     const permanent = searchParams.get('permanent') === 'true'
 
-    // Prevent self-deletion
-    if (userId === currentUser.id) {
-      return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
-    }
-
-    // Check if user exists
+    // Look up the target user by username
     const existingUser = await db.user.findUnique({
-      where: { id: userId },
+      where: { username },
     })
 
     if (!existingUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    // Prevent self-deletion
+    if (existingUser.id === currentUser.id) {
+      return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
+    }
+
     if (permanent) {
       // Hard delete: remove all sessions first, then delete user
       await db.session.deleteMany({
-        where: { userId },
+        where: { userId: existingUser.id },
       })
       await db.user.delete({
-        where: { id: userId },
+        where: { username },
       })
       return NextResponse.json({ success: true, action: 'deleted' })
     } else {
       // Soft delete: deactivate the user
       await db.user.update({
-        where: { id: userId },
+        where: { username },
         data: { isActive: false },
       })
       return NextResponse.json({ success: true, action: 'disabled' })

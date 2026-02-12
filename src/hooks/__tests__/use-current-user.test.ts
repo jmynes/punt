@@ -51,6 +51,7 @@ describe('useCurrentUser', () => {
       data: {
         user: {
           id: 'user-1',
+          username: 'testuser',
           name: 'Test User',
           email: 'test@example.com',
           avatar: '/avatar.jpg',
@@ -63,6 +64,7 @@ describe('useCurrentUser', () => {
     const { result } = renderHook(() => useCurrentUser())
     expect(result.current).toEqual({
       id: 'user-1',
+      username: 'testuser',
       name: 'Test User',
       email: 'test@example.com',
       avatar: '/avatar.jpg',

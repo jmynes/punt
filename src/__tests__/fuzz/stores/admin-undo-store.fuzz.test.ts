@@ -19,6 +19,7 @@ function resetStore() {
 // User snapshot generator
 const userSnapshot = fc.record({
   id: fc.uuid(),
+  username: fc.string({ minLength: 3, maxLength: 30 }),
   name: fc.string({ minLength: 1, maxLength: 50 }),
   email: fc.string({ minLength: 3, maxLength: 50 }),
   isSystemAdmin: fc.boolean(),
@@ -265,6 +266,7 @@ describe('Admin Undo Store Fuzz Tests', () => {
             useAdminUndoStore.getState().pushUserDisable([
               {
                 id: '1',
+                username: 'testuser',
                 name: 'Test',
                 email: 'test@test.com',
                 isSystemAdmin: false,
@@ -288,6 +290,7 @@ describe('Admin Undo Store Fuzz Tests', () => {
           useAdminUndoStore.getState().pushUserDisable([
             {
               id: '1',
+              username: 'testuser',
               name: 'Test',
               email: 'test@test.com',
               isSystemAdmin: false,

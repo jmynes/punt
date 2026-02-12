@@ -595,7 +595,7 @@ export function MembersTab({ projectId }: MembersTabProps) {
               onSelect={(shiftKey) => handleSelectSelf(shiftKey)}
               onRoleChange={(roleId) => handleRoleChange(currentMember.id, roleId)}
               onRemove={() => setRemovingMember(currentMember)}
-              profileUrl={isSystemAdmin ? `/admin/users/${currentMember.userId}` : undefined}
+              profileUrl={isSystemAdmin ? `/admin/users/${currentMember.user.username}` : undefined}
             />
             {otherMembers.length > 0 && (
               <div className="flex items-center gap-3 py-3">
@@ -622,7 +622,7 @@ export function MembersTab({ projectId }: MembersTabProps) {
             onSelect={(shiftKey) => handleSelect(member.id, shiftKey)}
             onRoleChange={(roleId) => handleRoleChange(member.id, roleId)}
             onRemove={() => setRemovingMember(member)}
-            profileUrl={isSystemAdmin ? `/admin/users/${member.userId}` : undefined}
+            profileUrl={isSystemAdmin ? `/admin/users/${member.user.username}` : undefined}
           />
         ))}
 
