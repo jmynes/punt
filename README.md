@@ -39,7 +39,7 @@ PUNT is a lightweight, local-first issue tracking system for teams who want the 
 
 ```bash
 # Clone and install
-git clone https://github.com/yourusername/punt.git
+git clone https://github.com/jmynes/punt.git
 cd punt
 pnpm install
 
