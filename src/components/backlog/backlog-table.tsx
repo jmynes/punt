@@ -523,7 +523,7 @@ export function BacklogTable({
       </div>
 
       {/* Summary header */}
-      <div className="flex shrink-0 items-center gap-4 border-b border-zinc-800 px-4 py-2 text-sm">
+      <div className="flex shrink-0 items-center justify-end gap-4 border-b border-zinc-800 px-4 py-2 text-sm">
         {/* Ticket count */}
         <Tooltip>
           <TooltipTrigger asChild>
