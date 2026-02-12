@@ -194,7 +194,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 min-h-0 pb-8">
+        <div className="flex-1 min-h-0">
           {activeTab === 'profile' && (
             <ProfileTab
               user={stableUser}
@@ -214,6 +214,9 @@ export default function ProfilePage() {
           {activeTab === 'integrations' && <IntegrationsTab isDemo={isDemo} />}
         </div>
       </div>
+
+      {/* Bottom spacer outside scroll container */}
+      <div className="h-6 flex-shrink-0" />
     </div>
   )
 }
