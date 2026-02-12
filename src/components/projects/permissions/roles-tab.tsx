@@ -3,16 +3,20 @@
 import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRightLeft,
+  CheckSquare,
   Copy,
   GitCompare,
   Loader2,
   Lock,
+  Minus,
   MoreVertical,
   Pencil,
   Plus,
   RotateCcw,
   Shield,
+  Square,
   Trash2,
+  UserMinus,
   UserPlus,
   Users,
   X,
@@ -46,6 +50,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -129,6 +140,13 @@ export function RolesTab({ projectId }: RolesTabProps) {
   // Compare roles dialog
   const [showCompareDialog, setShowCompareDialog] = useState(false)
 
+  // Multi-select state for role members
+  const [memberSelectedIds, setMemberSelectedIds] = useState<Set<string>>(new Set())
+  const [lastSelectedMemberId, setLastSelectedMemberId] = useState<string | null>(null)
+  const [isChangingBulkRole, setIsChangingBulkRole] = useState(false)
+  const [isRemovingBulk, setIsRemovingBulk] = useState(false)
+  const [showBulkRemoveDialog, setShowBulkRemoveDialog] = useState(false)
+
   // Show diff while editing
   const [showDiff, setShowDiff] = useState(false)
   const [originalPermissions, setOriginalPermissions] = useState<Permission[]>([])
@@ -177,6 +195,74 @@ export function RolesTab({ projectId }: RolesTabProps) {
     if (!selectedRoleId || !members) return []
     return members.filter((m) => m.roleId === selectedRoleId)
   }, [selectedRoleId, members])
+
+  // Split role members into current user and others for multi-select
+  const currentMemberInRole = roleMembers.find((m) => m.userId === currentUser?.id)
+  const otherMembersInRole = roleMembers.filter((m) => m.userId !== currentUser?.id)
+
+  // Multi-select helpers
+  const allOtherMembersSelected =
+    otherMembersInRole.length > 0 && otherMembersInRole.every((m) => memberSelectedIds.has(m.id))
+  const someMembersSelected = memberSelectedIds.size > 0
+
+  const handleMemberSelect = useCallback(
+    (memberId: string, shiftKey: boolean) => {
+      // Shift-click range selection
+      if (shiftKey && lastSelectedMemberId && otherMembersInRole.length > 0) {
+        const memberIds = otherMembersInRole.map((m) => m.id)
+        const lastIndex = memberIds.indexOf(lastSelectedMemberId)
+        const currentIndex = memberIds.indexOf(memberId)
+
+        if (lastIndex !== -1 && currentIndex !== -1) {
+          const start = Math.min(lastIndex, currentIndex)
+          const end = Math.max(lastIndex, currentIndex)
+          const rangeIds = memberIds.slice(start, end + 1)
+
+          setMemberSelectedIds((prev) => {
+            const next = new Set(prev)
+            const allSelected = rangeIds.every((id) => prev.has(id))
+            for (const id of rangeIds) {
+              if (allSelected) {
+                next.delete(id)
+              } else {
+                next.add(id)
+              }
+            }
+            return next
+          })
+          return
+        }
+      }
+
+      // Normal toggle
+      setMemberSelectedIds((prev) => {
+        const next = new Set(prev)
+        if (next.has(memberId)) {
+          next.delete(memberId)
+        } else {
+          next.add(memberId)
+        }
+        return next
+      })
+      setLastSelectedMemberId(memberId)
+    },
+    [lastSelectedMemberId, otherMembersInRole],
+  )
+
+  const selectAllMembers = () => {
+    setMemberSelectedIds(new Set(otherMembersInRole.map((m) => m.id)))
+  }
+
+  const selectNoMembers = () => {
+    setMemberSelectedIds(new Set())
+  }
+
+  // Clear selection when switching roles
+  // biome-ignore lint/correctness/useExhaustiveDependencies: selectedRoleId is intentionally the only dependency - we want to reset selection when the role changes
+  useEffect(() => {
+    setMemberSelectedIds(new Set())
+    setLastSelectedMemberId(null)
+  }, [selectedRoleId])
 
   // Combined search results: members from other roles + available users
   const searchResults = useMemo(() => {
@@ -325,6 +411,136 @@ export function RolesTab({ projectId }: RolesTabProps) {
     },
     [projectId, roles, invalidateMemberQueries, pushMemberRemove],
   )
+
+  // Bulk change role for selected members
+  const handleBulkRoleChange = useCallback(
+    async (newRoleId: string) => {
+      if (memberSelectedIds.size === 0 || !selectedRoleId) return
+
+      setIsChangingBulkRole(true)
+      const count = memberSelectedIds.size
+      const newRoleName = roles?.find((r) => r.id === newRoleId)?.name || 'role'
+      const currentRoleName = roles?.find((r) => r.id === selectedRoleId)?.name || 'role'
+
+      // Capture member snapshots for undo (with previous roles)
+      const roleChanges: BulkMemberRoleSnapshot[] = [...memberSelectedIds]
+        .map((memberId) => {
+          const member = roleMembers.find((m) => m.id === memberId)
+          if (!member) return null
+          return {
+            membershipId: member.id,
+            userId: member.userId,
+            userName: member.user.name,
+            previousRoleId: selectedRoleId,
+            previousRoleName: currentRoleName,
+            newRoleId,
+            newRoleName,
+          }
+        })
+        .filter((m): m is BulkMemberRoleSnapshot => m !== null)
+
+      try {
+        await Promise.all(
+          [...memberSelectedIds].map(async (memberId) => {
+            const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Tab-Id': getTabId(),
+              },
+              body: JSON.stringify({ roleId: newRoleId }),
+            })
+            if (!res.ok) {
+              const error = await res.json()
+              throw new Error(error.error || 'Failed to update role')
+            }
+          }),
+        )
+        invalidateMemberQueries()
+
+        // Push to undo stack
+        pushBulkMemberRoleChange(projectId, roleChanges)
+
+        toast.success(
+          `Moved ${count} member${count !== 1 ? 's' : ''} to ${newRoleName} (Ctrl+Z to undo)`,
+        )
+        setMemberSelectedIds(new Set())
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to update roles')
+      } finally {
+        setIsChangingBulkRole(false)
+      }
+    },
+    [
+      memberSelectedIds,
+      selectedRoleId,
+      roles,
+      roleMembers,
+      projectId,
+      invalidateMemberQueries,
+      pushBulkMemberRoleChange,
+    ],
+  )
+
+  // Bulk remove selected members
+  const handleBulkRemove = useCallback(async () => {
+    if (memberSelectedIds.size === 0 || !selectedRoleId) return
+
+    setIsRemovingBulk(true)
+    const count = memberSelectedIds.size
+    const roleName = roles?.find((r) => r.id === selectedRoleId)?.name || 'role'
+
+    // Capture member snapshots for undo
+    const removedMembers: MemberSnapshot[] = [...memberSelectedIds]
+      .map((memberId) => {
+        const member = roleMembers.find((m) => m.id === memberId)
+        if (!member) return null
+        return {
+          membershipId: member.id,
+          projectId,
+          userId: member.userId,
+          userName: member.user.name,
+          roleId: selectedRoleId,
+          roleName,
+        }
+      })
+      .filter((m): m is MemberSnapshot => m !== null)
+
+    try {
+      await Promise.all(
+        [...memberSelectedIds].map(async (memberId) => {
+          const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+            method: 'DELETE',
+            headers: { 'X-Tab-Id': getTabId() },
+          })
+          if (!res.ok) {
+            const error = await res.json()
+            throw new Error(error.error || 'Failed to remove member')
+          }
+        }),
+      )
+      invalidateMemberQueries()
+
+      // Push to undo stack
+      pushMemberRemove(projectId, removedMembers)
+
+      toast.success(`Removed ${count} member${count !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
+      setMemberSelectedIds(new Set())
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove members')
+    } finally {
+      setIsRemovingBulk(false)
+      setShowBulkRemoveDialog(false)
+    }
+  }, [
+    memberSelectedIds,
+    selectedRoleId,
+    roles,
+    roleMembers,
+    projectId,
+    invalidateMemberQueries,
+    pushMemberRemove,
+  ])
 
   // Handle undo
   const handleUndo = useCallback(async () => {
@@ -1091,168 +1307,235 @@ export function RolesTab({ projectId }: RolesTabProps) {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <Label>Members ({roleMembers.length})</Label>
+                        <div className="flex items-center justify-between">
+                          <Label>Members ({roleMembers.length})</Label>
+                          {/* Select All Row */}
+                          {canManageRoles && otherMembersInRole.length > 0 && (
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={
+                                  allOtherMembersSelected ? selectNoMembers : selectAllMembers
+                                }
+                                className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+                              >
+                                {allOtherMembersSelected ? (
+                                  <CheckSquare className="h-4 w-4 text-amber-500" />
+                                ) : someMembersSelected ? (
+                                  <Minus className="h-4 w-4 text-amber-500" />
+                                ) : (
+                                  <Square className="h-4 w-4" />
+                                )}
+                                <span>
+                                  {memberSelectedIds.size > 0
+                                    ? `${memberSelectedIds.size} selected`
+                                    : 'Select all'}
+                                </span>
+                              </button>
+                              {memberSelectedIds.size > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={selectNoMembers}
+                                  className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         {(() => {
-                          const currentMember = roleMembers.find(
-                            (m) => m.userId === currentUser?.id,
-                          )
-                          const otherMembers = roleMembers.filter(
-                            (m) => m.userId !== currentUser?.id,
-                          )
-
                           const renderMemberRow = (
                             member: (typeof roleMembers)[0],
                             isCurrentUser = false,
-                          ) => (
-                            <div
-                              key={member.id}
-                              className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/30 border border-zinc-800"
-                            >
-                              {isSystemAdmin ? (
-                                <Link
-                                  href={`/admin/users/${member.user.username}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="group/profile flex items-center gap-3 text-inherit hover:text-zinc-50 transition-colors"
-                                >
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage
-                                      src={member.user.avatar || undefined}
-                                      alt={member.user.name}
-                                    />
-                                    <AvatarFallback
-                                      className="text-xs font-medium text-white"
-                                      style={{
-                                        backgroundColor:
-                                          member.user.avatarColor ||
-                                          getAvatarColor(member.user.id || member.user.name),
-                                      }}
-                                    >
-                                      {getInitials(member.user.name)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="flex items-center gap-2">
-                                      <p className="text-sm font-medium text-zinc-200 group-hover/profile:underline">
-                                        {member.user.name}
-                                      </p>
-                                      {isCurrentUser && (
-                                        <Badge
-                                          variant="outline"
-                                          className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
-                                        >
-                                          You
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    {member.user.email && (
-                                      <p className="text-xs text-zinc-500">{member.user.email}</p>
-                                    )}
-                                  </div>
-                                </Link>
-                              ) : (
+                          ) => {
+                            const isSelected = memberSelectedIds.has(member.id)
+                            const canSelect = canManageRoles && !isCurrentUser
+
+                            return (
+                              <div
+                                key={member.id}
+                                onMouseDown={(e) => {
+                                  if (e.shiftKey) e.preventDefault()
+                                }}
+                                onClick={(e) => {
+                                  if (canSelect) {
+                                    handleMemberSelect(member.id, e.shiftKey)
+                                  }
+                                }}
+                                className={cn(
+                                  'flex items-center justify-between p-3 rounded-lg border transition-all duration-150',
+                                  canSelect && 'cursor-pointer',
+                                  isSelected
+                                    ? 'ring-1 ring-amber-500/50 bg-amber-500/5 border-amber-500/30'
+                                    : 'bg-zinc-800/30 border-zinc-800',
+                                  canSelect && !isSelected && 'hover:bg-zinc-800/50',
+                                )}
+                              >
                                 <div className="flex items-center gap-3">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage
-                                      src={member.user.avatar || undefined}
-                                      alt={member.user.name}
+                                  {/* Checkbox */}
+                                  {canSelect && (
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() => handleMemberSelect(member.id, false)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
                                     />
-                                    <AvatarFallback
-                                      className="text-xs font-medium text-white"
-                                      style={{
-                                        backgroundColor:
-                                          member.user.avatarColor ||
-                                          getAvatarColor(member.user.id || member.user.name),
-                                      }}
-                                    >
-                                      {getInitials(member.user.name)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="flex items-center gap-2">
-                                      <p className="text-sm font-medium text-zinc-200">
-                                        {member.user.name}
-                                      </p>
-                                      {isCurrentUser && (
-                                        <Badge
-                                          variant="outline"
-                                          className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
-                                        >
-                                          You
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    {member.user.email && (
-                                      <p className="text-xs text-zinc-500">{member.user.email}</p>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                              {canManageRoles && (
-                                <div className="flex items-center gap-1">
-                                  {roles && roles.length > 1 && (
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon-sm"
-                                          className="text-zinc-500 hover:text-zinc-200 hover:bg-zinc-700"
-                                        >
-                                          <ArrowRightLeft className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end" className="min-w-[140px]">
-                                        {roles
-                                          .filter((r) => r.id !== selectedRoleId)
-                                          .map((role) => (
-                                            <DropdownMenuItem
-                                              key={role.id}
-                                              onClick={() =>
-                                                handleChangeMemberRole(
-                                                  member.id,
-                                                  member.userId,
-                                                  member.user.name,
-                                                  member.roleId,
-                                                  role.id,
-                                                )
-                                              }
-                                              className="gap-2"
-                                            >
-                                              <div
-                                                className="w-2 h-2 rounded-full"
-                                                style={{ backgroundColor: role.color }}
-                                              />
-                                              {role.name}
-                                            </DropdownMenuItem>
-                                          ))}
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
                                   )}
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    onClick={() =>
-                                      handleRemoveMemberFromRole(
-                                        member.id,
-                                        member.userId,
-                                        member.user.name,
-                                        member.roleId,
-                                      )
-                                    }
-                                    className="text-zinc-500 hover:text-red-400 hover:bg-red-900/20"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
+                                  {isSystemAdmin ? (
+                                    <Link
+                                      href={`/admin/users/${member.user.username}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="group/profile flex items-center gap-3 text-inherit hover:text-zinc-50 transition-colors"
+                                    >
+                                      <Avatar className="h-8 w-8">
+                                        <AvatarImage
+                                          src={member.user.avatar || undefined}
+                                          alt={member.user.name}
+                                        />
+                                        <AvatarFallback
+                                          className="text-xs font-medium text-white"
+                                          style={{
+                                            backgroundColor:
+                                              member.user.avatarColor ||
+                                              getAvatarColor(member.user.id || member.user.name),
+                                          }}
+                                        >
+                                          {getInitials(member.user.name)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-sm font-medium text-zinc-200 group-hover/profile:underline">
+                                            {member.user.name}
+                                          </p>
+                                          {isCurrentUser && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
+                                            >
+                                              You
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        {member.user.email && (
+                                          <p className="text-xs text-zinc-500">
+                                            {member.user.email}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </Link>
+                                  ) : (
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-8 w-8">
+                                        <AvatarImage
+                                          src={member.user.avatar || undefined}
+                                          alt={member.user.name}
+                                        />
+                                        <AvatarFallback
+                                          className="text-xs font-medium text-white"
+                                          style={{
+                                            backgroundColor:
+                                              member.user.avatarColor ||
+                                              getAvatarColor(member.user.id || member.user.name),
+                                          }}
+                                        >
+                                          {getInitials(member.user.name)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-sm font-medium text-zinc-200">
+                                            {member.user.name}
+                                          </p>
+                                          {isCurrentUser && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-[10px] px-1.5 py-0 h-4 border-amber-600 text-amber-500"
+                                            >
+                                              You
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        {member.user.email && (
+                                          <p className="text-xs text-zinc-500">
+                                            {member.user.email}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                          )
+                                {canManageRoles && (
+                                  <div
+                                    className="flex items-center gap-1"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {roles && roles.length > 1 && (
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            className="text-zinc-500 hover:text-zinc-200 hover:bg-zinc-700"
+                                          >
+                                            <ArrowRightLeft className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="min-w-[140px]">
+                                          {roles
+                                            .filter((r) => r.id !== selectedRoleId)
+                                            .map((role) => (
+                                              <DropdownMenuItem
+                                                key={role.id}
+                                                onClick={() =>
+                                                  handleChangeMemberRole(
+                                                    member.id,
+                                                    member.userId,
+                                                    member.user.name,
+                                                    member.roleId,
+                                                    role.id,
+                                                  )
+                                                }
+                                                className="gap-2"
+                                              >
+                                                <div
+                                                  className="w-2 h-2 rounded-full"
+                                                  style={{ backgroundColor: role.color }}
+                                                />
+                                                {role.name}
+                                              </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      onClick={() =>
+                                        handleRemoveMemberFromRole(
+                                          member.id,
+                                          member.userId,
+                                          member.user.name,
+                                          member.roleId,
+                                        )
+                                      }
+                                      className="text-zinc-500 hover:text-red-400 hover:bg-red-900/20"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          }
 
                           return (
                             <>
-                              {currentMember && (
+                              {currentMemberInRole && (
                                 <>
-                                  {renderMemberRow(currentMember, true)}
-                                  {otherMembers.length > 0 && (
+                                  {renderMemberRow(currentMemberInRole, true)}
+                                  {otherMembersInRole.length > 0 && (
                                     <div className="flex items-center gap-3 py-2">
                                       <div className="flex-1 h-px bg-zinc-800" />
                                       <span className="text-xs text-zinc-600 uppercase tracking-wider">
@@ -1263,10 +1546,78 @@ export function RolesTab({ projectId }: RolesTabProps) {
                                   )}
                                 </>
                               )}
-                              {otherMembers.map((member) => renderMemberRow(member, false))}
+                              {otherMembersInRole.map((member) => renderMemberRow(member, false))}
                             </>
                           )
                         })()}
+                      </div>
+                    )}
+
+                    {/* Floating Bulk Action Bar */}
+                    {memberSelectedIds.size > 0 && (
+                      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
+                        <div className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/50">
+                          <span className="text-sm text-zinc-300 font-medium pr-2 border-r border-zinc-700">
+                            {memberSelectedIds.size} selected
+                          </span>
+
+                          {/* Move to Role */}
+                          {roles && roles.length > 1 && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm text-zinc-400">Move to:</span>
+                              <Select
+                                value=""
+                                onValueChange={handleBulkRoleChange}
+                                disabled={isChangingBulkRole}
+                              >
+                                <SelectTrigger className="h-7 w-[110px] bg-zinc-800 border-zinc-600 text-sm">
+                                  <SelectValue
+                                    placeholder={isChangingBulkRole ? 'Moving...' : 'Select...'}
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {roles
+                                    .filter((r) => r.id !== selectedRoleId)
+                                    .map((role) => (
+                                      <SelectItem key={role.id} value={role.id}>
+                                        <div className="flex items-center gap-2">
+                                          <div
+                                            className="w-2 h-2 rounded-full shrink-0"
+                                            style={{ backgroundColor: role.color }}
+                                          />
+                                          <span>{role.name}</span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          <div className="w-px h-6 bg-zinc-700" />
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                            onClick={() => setShowBulkRemoveDialog(true)}
+                            disabled={isRemovingBulk}
+                          >
+                            <UserMinus className="h-4 w-4 mr-1.5" />
+                            Remove
+                          </Button>
+
+                          <div className="w-px h-6 bg-zinc-700" />
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-zinc-400 hover:text-zinc-200"
+                            onClick={selectNoMembers}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -1409,6 +1760,44 @@ export function RolesTab({ projectId }: RolesTabProps) {
                 Delete Role
               </AlertDialogAction>
             )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Remove Members Confirmation */}
+      <AlertDialog open={showBulkRemoveDialog} onOpenChange={setShowBulkRemoveDialog}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">
+              Remove {memberSelectedIds.size} Members
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Are you sure you want to remove {memberSelectedIds.size} member
+              {memberSelectedIds.size !== 1 ? 's' : ''} from this project? They will lose access to
+              all project resources.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isRemovingBulk}
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkRemove}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={isRemovingBulk}
+            >
+              {isRemovingBulk ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                `Remove ${memberSelectedIds.size} Member${memberSelectedIds.size !== 1 ? 's' : ''}`
+              )}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
