@@ -56,6 +56,7 @@ export const UserSchema = z.object({
   email: z.string().nullable(),
   name: z.string(),
   avatar: z.string().nullable(),
+  avatarColor: z.string().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   lastLoginAt: nullableDate,
@@ -64,6 +65,7 @@ export const UserSchema = z.object({
   emailVerified: nullableDate,
   isSystemAdmin: z.boolean(),
   isActive: z.boolean(),
+  mcpApiKey: z.string().nullable(),
 })
 
 export const ProjectSchema = z.object({
@@ -92,6 +94,8 @@ export const RoleSchema = z.object({
 export const ColumnSchema = z.object({
   id: z.string(),
   name: z.string(),
+  icon: z.string().nullable(),
+  color: z.string().nullable(),
   order: z.number(),
   projectId: z.string(),
 })
@@ -156,6 +160,7 @@ export const TicketSchema = z.object({
   dueDate: nullableDate,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  resolution: z.string().nullable(),
   environment: z.string().nullable(),
   affectedVersion: z.string().nullable(),
   fixVersion: z.string().nullable(),
