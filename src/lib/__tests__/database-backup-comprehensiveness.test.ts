@@ -161,7 +161,6 @@ async function cleanupTestData() {
   await db.session.deleteMany()
   await db.account.deleteMany()
   await db.user.deleteMany()
-  // Clear system settings
   await db.systemSettings.deleteMany()
 }
 

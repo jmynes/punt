@@ -16,17 +16,34 @@ export default defineConfig({
     globalSetup: ['./src/__tests__/global-setup.ts'],
     // Per-file setup for React Testing Library, mocks, etc.
     setupFiles: ['./src/__tests__/setup.ts'],
-    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: [
-      'node_modules',
-      'dist',
-      '.next',
-      'coverage',
-      'src/generated/**',
-      '**/*.d.ts',
-      // Exclude due to jsdom + @stitches/core CSS parsing incompatibility
-      // (sandpack-react bundles @stitches/core which uses CSS custom properties that jsdom can't parse)
-      'src/components/tickets/__tests__/ticket-form.test.tsx',
+    // File selection is handled by projects below
+    projects: [
+      {
+        // Database tests share SQLite and must run sequentially to avoid races
+        extends: true,
+        test: {
+          name: 'db',
+          include: ['src/lib/__tests__/database-backup*.test.ts'],
+          fileParallelism: false,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+          exclude: [
+            'node_modules',
+            'dist',
+            '.next',
+            'coverage',
+            'src/generated/**',
+            '**/*.d.ts',
+            'src/components/tickets/__tests__/ticket-form.test.tsx',
+            'src/lib/__tests__/database-backup*.test.ts',
+          ],
+        },
+      },
     ],
     coverage: {
       provider: 'v8',
