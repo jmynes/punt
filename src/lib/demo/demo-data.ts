@@ -682,3 +682,14 @@ export function getDemoMembersForProject(projectId: string) {
     }
   })
 }
+
+/**
+ * Get demo roles with member counts for a specific project
+ */
+export function getDemoRolesForProject(projectId: string) {
+  const members = getDemoMembersForProject(projectId)
+  return DEMO_ROLES.map((role) => ({
+    ...role,
+    memberCount: members.filter((m) => m.roleId === role.id).length,
+  }))
+}

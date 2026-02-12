@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { DEMO_TEAM_MEMBERS, DEMO_USER, isDemoMode } from '@/lib/demo/demo-config'
+import { DEMO_PROJECTS, DEMO_ROLES, getDemoMembersForProject } from '@/lib/demo/demo-data'
 import { projectEvents } from '@/lib/events'
 import { hashPassword, validatePasswordStrength } from '@/lib/password'
 
@@ -24,6 +26,58 @@ export async function GET(
     await requireSystemAdmin()
 
     const { username } = await params
+
+    // Handle demo mode - return demo user data
+    if (isDemoMode()) {
+      const allDemoUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
+      const demoUser = allDemoUsers.find((u) => u.username === username)
+
+      if (!demoUser) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
+
+      // Build project memberships for this user
+      const projects = DEMO_PROJECTS.map((project) => {
+        const members = getDemoMembersForProject(project.id)
+        const membership = members.find((m) => m.userId === demoUser.id)
+        if (!membership) return null
+
+        return {
+          id: membership.id,
+          roleId: membership.roleId,
+          role: {
+            id: membership.role.id,
+            name: membership.role.name,
+          },
+          project: {
+            id: project.id,
+            name: project.name,
+            key: project.key,
+            color: project.color,
+            roles: DEMO_ROLES.map((r) => ({
+              id: r.id,
+              name: r.name,
+              position: r.position,
+            })),
+          },
+        }
+      }).filter(Boolean)
+
+      return NextResponse.json({
+        id: demoUser.id,
+        username: demoUser.username,
+        email: demoUser.email,
+        name: demoUser.name,
+        avatar: demoUser.avatar,
+        avatarColor: null,
+        isSystemAdmin: demoUser.isSystemAdmin,
+        isActive: demoUser.isActive,
+        createdAt: demoUser.createdAt.toISOString(),
+        updatedAt: demoUser.updatedAt.toISOString(),
+        projects,
+        _count: { projects: projects.length },
+      })
+    }
 
     const user = await db.user.findUnique({
       where: { username },
@@ -104,6 +158,27 @@ export async function PATCH(
   try {
     const currentUser = await requireSystemAdmin()
     const { username } = await params
+
+    // Handle demo mode - return success without persisting
+    if (isDemoMode()) {
+      const allDemoUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
+      const demoUser = allDemoUsers.find((u) => u.username === username)
+      if (!demoUser) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
+      const body = await request.json()
+      return NextResponse.json({
+        id: demoUser.id,
+        username: demoUser.username,
+        email: body.email ?? demoUser.email,
+        name: body.name ?? demoUser.name,
+        avatar: demoUser.avatar,
+        isSystemAdmin: body.isSystemAdmin ?? demoUser.isSystemAdmin,
+        isActive: body.isActive ?? demoUser.isActive,
+        createdAt: demoUser.createdAt.toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+    }
 
     // Look up the target user by username
     const existingUser = await db.user.findUnique({
@@ -265,6 +340,19 @@ export async function DELETE(
     const { username } = await params
     const { searchParams } = new URL(request.url)
     const permanent = searchParams.get('permanent') === 'true'
+
+    // Handle demo mode - return success without persisting
+    if (isDemoMode()) {
+      const allDemoUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
+      const demoUser = allDemoUsers.find((u) => u.username === username)
+      if (!demoUser) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
+      if (demoUser.id === currentUser.id) {
+        return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
+      }
+      return NextResponse.json({ success: true, action: permanent ? 'deleted' : 'disabled' })
+    }
 
     // Look up the target user by username
     const existingUser = await db.user.findUnique({

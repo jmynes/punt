@@ -18,13 +18,13 @@ import {
   DEMO_COLUMNS,
   DEMO_LABELS,
   DEMO_PROJECTS,
-  DEMO_ROLES,
   DEMO_SPRINTS,
   DEMO_TICKETS,
   DEMO_USER_SUMMARY,
   type DemoColumn,
   type DemoProject,
   getDemoMembersForProject,
+  getDemoRolesForProject,
 } from './demo-data'
 
 // Storage keys
@@ -541,17 +541,18 @@ class DemoStorage {
   }
 
   // ============================================================================
-  // Roles (Owner, Admin, Member)
+  // Roles (Owner, Admin, Member) with member counts
   // ============================================================================
 
   getRoles(projectId: string) {
     if (!this.isClient) return []
-    const data = localStorage.getItem(KEYS.roles(projectId))
-    if (!data) {
-      // Fallback: return default roles if not in storage
-      return [...DEMO_ROLES]
-    }
-    return JSON.parse(data)
+    // Always calculate memberCount dynamically from current members
+    const members = this.getMembers(projectId)
+    const rolesWithCounts = getDemoRolesForProject(projectId).map((role) => ({
+      ...role,
+      memberCount: members.filter((m: { roleId: string }) => m.roleId === role.id).length,
+    }))
+    return rolesWithCounts
   }
 
   // ============================================================================
@@ -573,6 +574,24 @@ class DemoStorage {
       lastLoginAt: user.id === DEMO_USER.id ? new Date().toISOString() : null,
       _count: { projects: 2 },
     }))
+  }
+
+  getUser(userId: string): DemoAdminUser | null {
+    const allUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
+    const user = allUsers.find((u) => u.id === userId)
+    if (!user) return null
+    return {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      isSystemAdmin: user.isSystemAdmin,
+      isActive: user.isActive,
+      createdAt: user.createdAt.toISOString(),
+      lastLoginAt: user.id === DEMO_USER.id ? new Date().toISOString() : null,
+      _count: { projects: 2 },
+    }
   }
 }
 
