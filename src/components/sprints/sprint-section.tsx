@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import {
   AlertTriangle,
   CalendarDays,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -30,7 +31,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
-import { formatDaysRemaining, isSprintExpired } from '@/lib/sprint-utils'
+import { formatDaysRemaining, isCompletedColumn, isSprintExpired } from '@/lib/sprint-utils'
 import { cn } from '@/lib/utils'
 import {
   type BacklogColumnId,
@@ -255,6 +256,16 @@ export function SprintSection({
   const filteredCount = visibleTickets.length
   const draggingCount = draggingTicketIds.length
 
+  // Calculate completion stats (done columns)
+  const doneColumnIds = useMemo(
+    () => statusColumns.filter((col) => isCompletedColumn(col.name)).map((col) => col.id),
+    [statusColumns],
+  )
+  const completedCount = visibleTickets.filter((t) => doneColumnIds.includes(t.columnId)).length
+  const completedPoints = visibleTickets
+    .filter((t) => doneColumnIds.includes(t.columnId))
+    .reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
+
   // Determine if filters are active (total counts provided and differ from filtered)
   const isFiltered =
     totalTicketCount !== undefined &&
@@ -435,85 +446,93 @@ export function SprintSection({
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Stats */}
-        <div className="flex items-center gap-4 text-xs">
-          {/* Ticket count */}
+        {/* Stats - progress bars for issues, points, and budget */}
+        <div className="hidden sm:flex items-center gap-4 text-xs">
+          {/* Issues progress */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="flex items-center gap-1.5 cursor-default">
-                {isFiltered ? (
-                  <>
-                    <span className="font-medium tabular-nums text-zinc-300">{filteredCount}</span>
-                    <span className="text-zinc-600">/</span>
-                    <span className="tabular-nums text-zinc-500">{totalTicketCount}</span>
-                    <span className="text-zinc-600">
-                      {totalTicketCount === 1 ? 'issue' : 'issues'}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span
-                      className={cn(
-                        'font-medium tabular-nums',
-                        filteredCount === 0 ? 'text-zinc-600' : 'text-zinc-300',
-                      )}
-                    >
-                      {filteredCount}
-                    </span>
-                    <span className="text-zinc-600">
-                      {filteredCount === 1 ? 'issue' : 'issues'}
-                    </span>
-                  </>
-                )}
-              </div>
-            </TooltipTrigger>
-            {isFiltered && (
-              <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
-                <div className="space-y-1">
-                  <p className="text-xs text-zinc-100">
-                    Showing {filteredCount} of {totalTicketCount} issues
-                  </p>
-                  <p className="text-xs text-zinc-400">Filters are active</p>
-                </div>
-              </TooltipContent>
-            )}
-          </Tooltip>
-
-          {/* Story points with budget */}
-          {sprint?.budget ? (
-            <BudgetIndicator totalPoints={filteredPoints} budget={sprint.budget} />
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1.5 text-zinc-400 cursor-default">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  {isFiltered ? (
-                    <>
-                      <span className="font-medium text-zinc-300">{filteredPoints}</span>
-                      <span className="text-zinc-600">/</span>
-                      <span className="text-zinc-500">{totalStoryPoints}</span>
-                      <span className="text-zinc-600">pts</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="font-medium">{filteredPoints}</span>
-                      <span className="text-zinc-600">pts</span>
-                    </>
+              <div className="flex items-center gap-2 cursor-default">
+                <CheckCircle2 className="h-3.5 w-3.5 text-zinc-500" />
+                <div className="relative h-1.5 w-16 bg-zinc-800 rounded-full overflow-hidden">
+                  {filteredCount > 0 && (
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full bg-blue-500 transition-all duration-500"
+                      style={{
+                        width: `${filteredCount > 0 ? Math.round((completedCount / filteredCount) * 100) : 0}%`,
+                      }}
+                    />
                   )}
                 </div>
-              </TooltipTrigger>
-              {isFiltered && (
-                <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
-                  <div className="space-y-1">
-                    <p className="text-xs text-zinc-100">
-                      Showing {filteredPoints} of {totalStoryPoints} story points
-                    </p>
-                    <p className="text-xs text-zinc-400">Filters are active</p>
-                  </div>
-                </TooltipContent>
-              )}
-            </Tooltip>
+                <div className="flex items-center gap-0.5 min-w-[36px]">
+                  <span className="font-bold tabular-nums text-zinc-300">{completedCount}</span>
+                  <span className="text-zinc-600">/</span>
+                  <span className="tabular-nums text-zinc-500">{filteredCount}</span>
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+              <div className="space-y-1">
+                <p className="text-xs text-zinc-100">
+                  {completedCount} of {filteredCount} issues completed
+                </p>
+                {isFiltered && (
+                  <p className="text-xs text-zinc-400">
+                    Sprint total: {totalTicketCount} issues (filters active)
+                  </p>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Points progress */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2 cursor-default">
+                <TrendingUp className="h-3.5 w-3.5 text-zinc-500" />
+                <div className="relative h-1.5 w-16 bg-zinc-800 rounded-full overflow-hidden">
+                  {filteredPoints > 0 && (
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full bg-blue-500 transition-all duration-500"
+                      style={{
+                        width: `${filteredPoints > 0 ? Math.round((completedPoints / filteredPoints) * 100) : 0}%`,
+                      }}
+                    />
+                  )}
+                </div>
+                <div className="flex items-center gap-0.5 min-w-[36px]">
+                  <span className="font-bold tabular-nums text-zinc-300">{completedPoints}</span>
+                  <span className="text-zinc-600">/</span>
+                  <span className="tabular-nums text-zinc-500">{filteredPoints}</span>
+                  <span className="text-zinc-600 ml-0.5">pts</span>
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+              <div className="space-y-1">
+                <p className="text-xs text-zinc-100">
+                  {completedPoints} of {filteredPoints} story points completed
+                </p>
+                {isFiltered && (
+                  <p className="text-xs text-zinc-400">
+                    Sprint total: {totalStoryPoints} pts (filters active)
+                  </p>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Budget indicator */}
+          {sprint?.budget != null && sprint.budget > 0 && (
+            <BudgetIndicator totalPoints={filteredPoints} budget={sprint.budget} />
           )}
+        </div>
+
+        {/* Compact stats for small screens */}
+        <div className="flex sm:hidden items-center gap-3 text-xs">
+          <span className="tabular-nums text-zinc-400">
+            {completedCount}/{filteredCount} issues
+          </span>
+          <span className="tabular-nums text-zinc-400">{filteredPoints} pts</span>
         </div>
 
         {/* Action buttons */}
