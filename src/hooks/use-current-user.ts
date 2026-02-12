@@ -26,6 +26,7 @@ export function useCurrentUser(): UserSummary | null {
 
   return {
     id: session.user.id,
+    username: session.user.username || '',
     name: session.user.name || 'Unknown',
     email: session.user.email || '',
     avatar: session.user.avatar || null,

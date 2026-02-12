@@ -134,6 +134,7 @@ export interface ProjectWithDetails extends ProjectSummary {
 
 export interface UserSummary {
   id: string
+  username: string
   name: string
   email: string
   avatar: string | null

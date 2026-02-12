@@ -534,6 +534,7 @@ class DemoStorage {
     const allUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
     return allUsers.map((user) => ({
       id: user.id,
+      username: user.username,
       name: user.name,
       email: user.email,
       avatar: user.avatar,
@@ -549,6 +550,7 @@ class DemoStorage {
 // Type for admin user list
 export interface DemoAdminUser {
   id: string
+  username: string
   name: string
   email: string
   avatar: string | null

@@ -58,6 +58,7 @@ interface ProjectMembership {
 
 interface UserDetails {
   id: string
+  username: string
   email: string | null
   name: string
   avatar: string | null
@@ -149,7 +150,7 @@ function RoleSelector({
 export default function AdminUserProfilePage() {
   const params = useParams()
   const queryClient = useQueryClient()
-  const userId = params.userId as string
+  const username = params.username as string
   const { pushMemberRoleChange, undo, redo, canUndo, canRedo } = useAdminUndoStore()
 
   const {
@@ -157,9 +158,9 @@ export default function AdminUserProfilePage() {
     isLoading,
     error,
   } = useQuery<UserDetails>({
-    queryKey: ['admin', 'users', userId],
+    queryKey: ['admin', 'user', username],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/users/${userId}`)
+      const res = await fetch(`/api/admin/users/${username}`)
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error || 'Failed to fetch user')
@@ -192,11 +193,11 @@ export default function AdminUserProfilePage() {
       }
 
       // Invalidate the cache to get fresh data
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users', userId] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'user', username] })
 
       toast.success(isUndo ? `Role reverted to ${roleName}` : `Role updated to ${roleName}`)
     },
-    [queryClient, userId],
+    [queryClient, username],
   )
 
   // Handle undo
@@ -271,12 +272,12 @@ export default function AdminUserProfilePage() {
     const previousUser = user
 
     // Optimistic update
-    queryClient.setQueryData<UserDetails>(['admin', 'users', userId], (old) =>
+    queryClient.setQueryData<UserDetails>(['admin', 'user', username], (old) =>
       old ? { ...old, isSystemAdmin: newValue } : old,
     )
 
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await fetch(`/api/admin/users/${username}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -287,7 +288,7 @@ export default function AdminUserProfilePage() {
 
       if (!res.ok) {
         // Rollback on error
-        queryClient.setQueryData(['admin', 'users', userId], previousUser)
+        queryClient.setQueryData(['admin', 'user', username], previousUser)
         const data = await res.json()
         throw new Error(data.error || 'Failed to update user')
       }
@@ -297,7 +298,7 @@ export default function AdminUserProfilePage() {
         { queryKey: ['admin', 'users'], exact: true },
         (oldData) => {
           if (!oldData || !Array.isArray(oldData)) return oldData
-          return oldData.map((u) => (u.id === userId ? { ...u, isSystemAdmin: newValue } : u))
+          return oldData.map((u) => (u.id === user.id ? { ...u, isSystemAdmin: newValue } : u))
         },
       )
 
@@ -316,12 +317,12 @@ export default function AdminUserProfilePage() {
     const previousUser = user
 
     // Optimistic update
-    queryClient.setQueryData<UserDetails>(['admin', 'users', userId], (old) =>
+    queryClient.setQueryData<UserDetails>(['admin', 'user', username], (old) =>
       old ? { ...old, isActive: newValue } : old,
     )
 
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await fetch(`/api/admin/users/${username}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -332,7 +333,7 @@ export default function AdminUserProfilePage() {
 
       if (!res.ok) {
         // Rollback on error
-        queryClient.setQueryData(['admin', 'users', userId], previousUser)
+        queryClient.setQueryData(['admin', 'user', username], previousUser)
         const data = await res.json()
         throw new Error(data.error || 'Failed to update user')
       }
@@ -342,7 +343,7 @@ export default function AdminUserProfilePage() {
         { queryKey: ['admin', 'users'], exact: true },
         (oldData) => {
           if (!oldData || !Array.isArray(oldData)) return oldData
-          return oldData.map((u) => (u.id === userId ? { ...u, isActive: newValue } : u))
+          return oldData.map((u) => (u.id === user.id ? { ...u, isActive: newValue } : u))
         },
       )
 
@@ -368,7 +369,7 @@ export default function AdminUserProfilePage() {
     const previousRoleName = membership.role.name
 
     // Optimistic update
-    queryClient.setQueryData<UserDetails>(['admin', 'users', userId], (old) => {
+    queryClient.setQueryData<UserDetails>(['admin', 'user', username], (old) => {
       if (!old) return old
       return {
         ...old,
@@ -392,7 +393,7 @@ export default function AdminUserProfilePage() {
 
       if (!res.ok) {
         // Rollback on error
-        queryClient.setQueryData(['admin', 'users', userId], previousUser)
+        queryClient.setQueryData(['admin', 'user', username], previousUser)
         const data = await res.json()
         throw new Error(data.error || 'Failed to update role')
       }
@@ -401,7 +402,7 @@ export default function AdminUserProfilePage() {
       pushMemberRoleChange({
         membershipId,
         projectId,
-        targetUserId: userId,
+        targetUserId: user.id,
         userName: user.name,
         previousRoleId,
         previousRoleName,

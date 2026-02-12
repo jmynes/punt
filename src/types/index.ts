@@ -97,6 +97,7 @@ export interface SprintCompletionOptions {
 // User summary for display
 export interface UserSummary {
   id: string
+  username: string
   name: string
   email: string
   avatar: string | null

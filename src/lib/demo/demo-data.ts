@@ -16,6 +16,7 @@ import { DEMO_TEAM_MEMBERS, DEMO_USER } from './demo-config'
 // Demo user as UserSummary
 export const DEMO_USER_SUMMARY: UserSummary = {
   id: DEMO_USER.id,
+  username: DEMO_USER.username,
   name: DEMO_USER.name,
   email: DEMO_USER.email ?? '',
   avatar: DEMO_USER.avatar,
@@ -25,6 +26,7 @@ export const DEMO_USER_SUMMARY: UserSummary = {
 // Team members as UserSummary
 export const DEMO_TEAM_SUMMARIES: UserSummary[] = DEMO_TEAM_MEMBERS.map((member) => ({
   id: member.id,
+  username: member.username,
   name: member.name,
   email: member.email ?? '',
   avatar: member.avatar,

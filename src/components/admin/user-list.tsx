@@ -76,6 +76,7 @@ import { CreateUserDialog } from './create-user-dialog'
 
 interface User {
   id: string
+  username: string
   name: string
   email: string
   avatar: string | null
@@ -102,7 +103,7 @@ export function UserList() {
   const queryClient = useQueryClient()
   const currentUser = useCurrentUser()
   const tabId = getTabId()
-  const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
+  const [deleteUsername, setDeleteUsername] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [lastSelectedId, setLastSelectedId] = useState<string | null>(null)
   const [bulkAction, setBulkAction] = useState<BulkAction>(null)
@@ -207,20 +208,20 @@ export function UserList() {
 
   const updateUser = useMutation({
     mutationFn: async ({
-      userId,
+      username,
       updates,
       previousUser,
     }: {
-      userId: string
+      username: string
       updates: Partial<User>
       previousUser?: User
     }) => {
       if (isDemoMode()) {
         // Demo mode: simulate success
         toast.info('User management is read-only in demo mode')
-        return { user: { id: userId, ...updates }, updates, previousUser }
+        return { user: { username, ...updates }, updates, previousUser }
       }
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await fetch(`/api/admin/users/${username}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
         body: JSON.stringify(updates),
@@ -240,6 +241,7 @@ export function UserList() {
       if ('isSystemAdmin' in updates && previousUser) {
         const userSnapshot = {
           id: previousUser.id,
+          username: previousUser.username,
           name: previousUser.name,
           email: previousUser.email,
           isSystemAdmin: previousUser.isSystemAdmin,
@@ -261,14 +263,14 @@ export function UserList() {
   })
 
   const deleteUser = useMutation({
-    mutationFn: async ({ userId, permanent }: { userId: string; permanent: boolean }) => {
+    mutationFn: async ({ username, permanent }: { username: string; permanent: boolean }) => {
       if (isDemoMode()) {
         toast.info('User management is read-only in demo mode')
         return { action: 'demo' }
       }
       const url = permanent
-        ? `/api/admin/users/${userId}?permanent=true`
-        : `/api/admin/users/${userId}`
+        ? `/api/admin/users/${username}?permanent=true`
+        : `/api/admin/users/${username}`
       const res = await fetch(url, { method: 'DELETE' })
       if (!res.ok) {
         const error = await res.json()
@@ -280,7 +282,7 @@ export function UserList() {
       if (data.action === 'demo') return
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
       toast.success(data.action === 'deleted' ? 'User permanently deleted' : 'User disabled')
-      setDeleteUserId(null)
+      setDeleteUsername(null)
     },
     onError: (error) => {
       toast.error(error.message)
@@ -310,7 +312,7 @@ export function UserList() {
 
       const results = await Promise.allSettled(
         usersToUpdate.map((user) =>
-          fetch(`/api/admin/users/${user.id}`, {
+          fetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify(updates),
@@ -331,6 +333,7 @@ export function UserList() {
       if ('isSystemAdmin' in updates && succeeded > 0) {
         const userSnapshots = actualUsers.slice(0, succeeded).map((u) => ({
           id: u.id,
+          username: u.username,
           name: u.name,
           email: u.email,
           isSystemAdmin: u.isSystemAdmin,
@@ -399,7 +402,7 @@ export function UserList() {
 
       const results = await Promise.allSettled(
         usersToDisable.map((user) =>
-          fetch(`/api/admin/users/${user.id}`, {
+          fetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ isActive: false }),
@@ -422,6 +425,7 @@ export function UserList() {
         pushUserDisable(
           actualUsers.slice(0, succeeded).map((u) => ({
             id: u.id,
+            username: u.username,
             name: u.name,
             email: u.email,
             isSystemAdmin: u.isSystemAdmin,
@@ -461,7 +465,7 @@ export function UserList() {
 
       const results = await Promise.allSettled(
         usersToEnable.map((user) =>
-          fetch(`/api/admin/users/${user.id}`, {
+          fetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ isActive: true }),
@@ -484,6 +488,7 @@ export function UserList() {
         pushUserEnable(
           actualUsers.slice(0, succeeded).map((u) => ({
             id: u.id,
+            username: u.username,
             name: u.name,
             email: u.email,
             isSystemAdmin: u.isSystemAdmin,
@@ -515,11 +520,11 @@ export function UserList() {
   // Bulk permanent delete - requires credential verification
   const bulkPermanentDeleteUsers = useMutation({
     mutationFn: async ({
-      userIds,
+      usernames,
       email,
       password,
     }: {
-      userIds: string[]
+      usernames: string[]
       email: string
       password: string
     }) => {
@@ -537,8 +542,8 @@ export function UserList() {
 
       // Now delete users permanently
       const results = await Promise.allSettled(
-        userIds.map((userId) =>
-          fetch(`/api/admin/users/${userId}?permanent=true`, {
+        usernames.map((uname) =>
+          fetch(`/api/admin/users/${uname}?permanent=true`, {
             method: 'DELETE',
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
@@ -619,7 +624,7 @@ export function UserList() {
 
       await Promise.all(
         action.users.map((user) =>
-          fetch(`/api/admin/users/${user.id}`, {
+          fetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify(updates),
@@ -676,7 +681,7 @@ export function UserList() {
 
       await Promise.all(
         action.users.map((user) =>
-          fetch(`/api/admin/users/${user.id}`, {
+          fetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify(updates),
@@ -710,7 +715,7 @@ export function UserList() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleUndo, handleRedo, canUndo, canRedo])
 
-  const userToDelete = deleteUserId ? users?.find((u) => u.id === deleteUserId) : null
+  const userToDelete = deleteUsername ? users?.find((u) => u.username === deleteUsername) : null
   const selectedUsers = users?.filter((u) => selectedIds.has(u.id)) || []
 
   // Separate current user from other users
@@ -827,7 +832,7 @@ export function UserList() {
               className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
             />
             <Link
-              href={`/admin/users/${user.id}`}
+              href={`/admin/users/${user.username}`}
               onClick={(e) => e.stopPropagation()}
               className="group/profile flex items-center gap-3 text-inherit hover:text-zinc-50 transition-colors"
             >
@@ -902,7 +907,7 @@ export function UserList() {
                   asChild
                   className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
                 >
-                  <Link href={`/admin/users/${user.id}`}>
+                  <Link href={`/admin/users/${user.username}`}>
                     <UserIcon className="h-4 w-4 mr-2" />
                     View profile
                   </Link>
@@ -911,7 +916,7 @@ export function UserList() {
                 <DropdownMenuItem
                   onClick={() =>
                     updateUser.mutate({
-                      userId: user.id,
+                      username: user.username,
                       updates: { isSystemAdmin: !user.isSystemAdmin },
                       previousUser: user,
                     })
@@ -934,7 +939,7 @@ export function UserList() {
                 <DropdownMenuItem
                   onClick={() =>
                     updateUser.mutate({
-                      userId: user.id,
+                      username: user.username,
                       updates: { isActive: !user.isActive },
                     })
                   }
@@ -958,7 +963,7 @@ export function UserList() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-zinc-800" />
                 <DropdownMenuItem
-                  onClick={() => setDeleteUserId(user.id)}
+                  onClick={() => setDeleteUsername(user.username)}
                   className="text-red-400 focus:text-red-300 focus:bg-zinc-800"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
@@ -1006,7 +1011,7 @@ export function UserList() {
       return
     }
     bulkPermanentDeleteUsers.mutate({
-      userIds: [...selectedIds],
+      usernames: selectedUsers.map((u) => u.username),
       email: deleteEmail,
       password: deletePassword,
     })
@@ -1362,7 +1367,10 @@ export function UserList() {
       )}
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={!!deleteUserId} onOpenChange={(open) => !open && setDeleteUserId(null)}>
+      <AlertDialog
+        open={!!deleteUsername}
+        onOpenChange={(open) => !open && setDeleteUsername(null)}
+      >
         <AlertDialogContent className="bg-zinc-900 border-zinc-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">Delete User Permanently?</AlertDialogTitle>
@@ -1378,7 +1386,7 @@ export function UserList() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() =>
-                deleteUserId && deleteUser.mutate({ userId: deleteUserId, permanent: true })
+                deleteUsername && deleteUser.mutate({ username: deleteUsername, permanent: true })
               }
               className="bg-red-600 hover:bg-red-700 text-white"
             >

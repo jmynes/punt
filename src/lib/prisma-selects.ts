@@ -8,6 +8,7 @@
  */
 export const USER_SELECT_SUMMARY = {
   id: true,
+  username: true,
   name: true,
   email: true,
   avatar: true,
@@ -149,6 +150,7 @@ export const TICKET_SELECT_FULL = {
 export type TicketWatcher = {
   user: {
     id: string
+    username: string
     name: string
     email: string | null
     avatar: string | null
@@ -184,6 +186,7 @@ export function transformTicket(ticket: TicketWithRelations) {
  */
 export const USER_SELECT_ADMIN_LIST = {
   id: true,
+  username: true,
   email: true,
   name: true,
   avatar: true,

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 export interface UserSnapshot {
   id: string
+  username: string
   name: string
   email: string
   isSystemAdmin: boolean
