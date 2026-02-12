@@ -27,6 +27,7 @@ import {
   Lock,
   Minus,
   MoreVertical,
+  Palette,
   Pencil,
   Plus,
   RotateCcw,
@@ -1179,13 +1180,20 @@ export function RolesTab({ projectId }: RolesTabProps) {
       {/* Right Panel - Role Editor */}
       <div className="flex-1 min-w-0">
         {selectedRole || isCreating ? (
-          <Tabs defaultValue="permissions" className="h-full flex flex-col">
+          <Tabs defaultValue="appearance" className="h-full flex flex-col">
             {/* Tab bar */}
             <div className="mb-4">
-              <TabsList className="w-full grid grid-cols-2 h-auto p-0 bg-transparent rounded-none gap-0">
+              <TabsList className="w-full grid grid-cols-3 h-auto p-0 bg-transparent rounded-none gap-0">
+                <TabsTrigger
+                  value="appearance"
+                  className="!rounded-none !rounded-l-lg !border !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
+                >
+                  <Palette className="mr-2 h-4 w-4" />
+                  Appearance
+                </TabsTrigger>
                 <TabsTrigger
                   value="permissions"
-                  className="!rounded-none !rounded-l-lg !border !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
+                  className="!rounded-none !border !border-l-0 !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
                 >
                   <Shield className="mr-2 h-4 w-4" />
                   Permissions
@@ -1235,7 +1243,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
                 </CardDescription>
               </CardHeader>
 
-              <TabsContent value="permissions" className="flex-1 min-h-0 mt-0">
+              <TabsContent value="appearance" className="flex-1 min-h-0 mt-0">
                 <ScrollArea className="h-full">
                   <CardContent className="pt-0 space-y-4">
                     {/* Color */}
@@ -1267,7 +1275,13 @@ export function RolesTab({ projectId }: RolesTabProps) {
                         rows={2}
                       />
                     </div>
+                  </CardContent>
+                </ScrollArea>
+              </TabsContent>
 
+              <TabsContent value="permissions" className="flex-1 min-h-0 mt-0">
+                <ScrollArea className="h-full">
+                  <CardContent className="pt-0 space-y-4">
                     {/* Permissions */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
