@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
-  Flame,
   Pencil,
   Play,
   Plus,
@@ -344,16 +343,7 @@ export function SprintHeader({
 
         {/* Right: Progress and stats */}
         <div className="flex items-center gap-6">
-          {/* Budget tracker - only show if budget is set */}
-          {activeSprint.budget && (
-            <BudgetTracker
-              totalPoints={totalPoints}
-              completedPoints={completedPoints}
-              budget={activeSprint.budget}
-            />
-          )}
-
-          {/* Dual progress meters */}
+          {/* Progress meters (issues, points, budget) */}
           <ProgressMeters
             completedCount={completedCount}
             totalCount={totalCount}
@@ -364,6 +354,7 @@ export function SprintHeader({
             filteredTotalCount={filteredTotalCount}
             filteredCompletedPoints={filteredCompletedPoints}
             filteredTotalPoints={filteredTotalPoints}
+            budget={activeSprint.budget}
           />
 
           {/* Complete button when expired */}
@@ -397,6 +388,7 @@ function ProgressMeters({
   filteredTotalCount,
   filteredCompletedPoints,
   filteredTotalPoints,
+  budget,
 }: {
   completedCount: number
   totalCount: number
@@ -407,6 +399,7 @@ function ProgressMeters({
   filteredTotalCount?: number | null
   filteredCompletedPoints?: number | null
   filteredTotalPoints?: number | null
+  budget?: number | null
 }) {
   const issuePercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
   const pointsPercent = totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0
@@ -616,155 +609,78 @@ function ProgressMeters({
           )}
         </TooltipContent>
       </Tooltip>
+
+      {/* Budget meter - only shown when budget is set */}
+      {budget != null && budget > 0 && (
+        <>
+          {/* Divider */}
+          <div className={cn('w-px bg-zinc-800/60', hasFilter ? 'h-14' : 'h-10')} />
+
+          {/* Budget progress */}
+          <BudgetMeter totalPoints={totalPoints} budget={budget} />
+        </>
+      )}
     </div>
   )
 }
 
 /**
- * Budget tracker component with visual indicators for over-budget status
+ * Budget meter matching the visual style of issues/points progress meters.
+ * Always reflects total sprint scope (ignores active filters).
  */
-function BudgetTracker({
-  totalPoints,
-  completedPoints,
-  budget,
-}: {
-  totalPoints: number
-  completedPoints: number
-  budget: number
-}) {
+function BudgetMeter({ totalPoints, budget }: { totalPoints: number; budget: number }) {
   const { status, percent } = getBudgetStatus(totalPoints, budget)
   const overBudget = totalPoints > budget
   const overAmount = overBudget ? totalPoints - budget : 0
+  const budgetPercent = Math.min(percent, 100)
 
-  // Status-based styling
-  const statusConfig = {
-    under: {
-      barColor: 'bg-emerald-500',
-      textColor: 'text-emerald-400',
-      bgColor: 'bg-emerald-500/10',
-      borderColor: 'border-emerald-500/30',
-      icon: null,
-      label: 'On track',
-    },
-    approaching: {
-      barColor: 'bg-amber-500',
-      textColor: 'text-amber-400',
-      bgColor: 'bg-amber-500/10',
-      borderColor: 'border-amber-500/30',
-      icon: null,
-      label: 'Near capacity',
-    },
-    over: {
-      barColor: 'bg-orange-500',
-      textColor: 'text-orange-400',
-      bgColor: 'bg-orange-500/10',
-      borderColor: 'border-orange-500/30',
-      icon: AlertTriangle,
-      label: 'Over budget',
-    },
-    critical: {
-      barColor: 'bg-red-500',
-      textColor: 'text-red-400',
-      bgColor: 'bg-red-500/10',
-      borderColor: 'border-red-500/30',
-      icon: Flame,
-      label: 'Way over',
-    },
-    none: {
-      barColor: 'bg-zinc-500',
-      textColor: 'text-zinc-400',
-      bgColor: 'bg-zinc-500/10',
-      borderColor: 'border-zinc-500/30',
-      icon: null,
-      label: '',
-    },
+  // Color based on budget status
+  const budgetColors = {
+    under: { bar: 'bg-emerald-500', text: 'text-emerald-400', icon: 'text-zinc-500' },
+    approaching: { bar: 'bg-amber-500', text: 'text-amber-400', icon: 'text-amber-500' },
+    over: { bar: 'bg-orange-500', text: 'text-orange-400', icon: 'text-orange-500' },
+    critical: { bar: 'bg-red-500', text: 'text-red-400', icon: 'text-red-500' },
+    none: { bar: 'bg-zinc-500', text: 'text-zinc-400', icon: 'text-zinc-500' },
   }
 
-  const config = statusConfig[status]
-  const StatusIcon = config.icon
-
-  // Calculate bar widths
-  const committedWidth = Math.min(percent, 100)
-  const overflowWidth = percent > 100 ? Math.min(percent - 100, 50) : 0
+  const colors = budgetColors[status]
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div
-          className={cn(
-            'hidden lg:flex items-center gap-3 px-3 py-2 rounded-lg border transition-all',
-            config.bgColor,
-            config.borderColor,
-            overBudget && 'animate-pulse-subtle',
-          )}
-        >
-          {/* Status icon for over budget */}
-          {StatusIcon && (
-            <StatusIcon
-              className={cn(
-                'h-4 w-4 flex-shrink-0',
-                config.textColor,
-                status === 'critical' && 'animate-bounce',
-              )}
-            />
-          )}
+        <div className="flex flex-col gap-1.5">
+          {/* Label row */}
+          <div className="flex items-center gap-1.5">
+            <Target className={cn('h-3.5 w-3.5', colors.icon)} />
+            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+              Budget
+            </span>
+          </div>
 
-          {/* Budget bar visualization */}
-          <div className="flex flex-col gap-1 min-w-[100px]">
-            <div className="flex items-center justify-between text-[10px] font-medium">
-              <span className={cn(config.textColor, 'uppercase tracking-wider')}>Budget</span>
-              <span className={cn(config.textColor)}>
-                {totalPoints}/{budget} SP
-              </span>
-            </div>
-
-            {/* Progress bar */}
-            <div className="relative h-1.5 bg-zinc-800 rounded-full overflow-visible">
-              {/* Committed portion (up to 100%) */}
+          {/* Progress bar with numbers */}
+          <div className="flex items-center gap-4">
+            <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
               <div
                 className={cn(
                   'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
-                  config.barColor,
+                  colors.bar,
                 )}
-                style={{ width: `${committedWidth}%` }}
+                style={{ width: `${budgetPercent}%` }}
               />
-
-              {/* Overflow indicator (beyond 100%) */}
-              {overBudget && (
-                <div
-                  className={cn(
-                    'absolute inset-y-0 rounded-r-full transition-all duration-500',
-                    status === 'critical' ? 'bg-red-500' : 'bg-orange-500',
-                  )}
-                  style={{
-                    left: '100%',
-                    width: `${overflowWidth}%`,
-                  }}
-                />
-              )}
-
-              {/* Budget line marker at 100% */}
-              <div
-                className={cn(
-                  'absolute top-1/2 -translate-y-1/2 w-0.5 h-3 rounded-full',
-                  overBudget ? 'bg-zinc-400' : 'bg-zinc-600',
-                )}
-                style={{ left: '100%' }}
-              />
+            </div>
+            <div className="flex items-center gap-0.5 text-xs min-w-[44px]">
+              <span className={cn('font-bold tabular-nums', colors.text)}>{totalPoints}</span>
+              <span className="text-zinc-600">/</span>
+              <span className="text-zinc-500 tabular-nums">{budget}</span>
+              <span className="text-zinc-600 text-[10px] ml-0.5">pts</span>
             </div>
           </div>
 
-          {/* Over budget badge */}
+          {/* Over budget indicator */}
           {overBudget && (
-            <div
-              className={cn(
-                'flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                status === 'critical'
-                  ? 'bg-red-500/20 text-red-400'
-                  : 'bg-orange-500/20 text-orange-400',
-              )}
-            >
-              +{overAmount}
+            <div className={cn('flex items-center gap-1 text-[10px] font-medium', colors.text)}>
+              <AlertTriangle className="h-3 w-3" />
+              <span>+{overAmount} over</span>
             </div>
           )}
         </div>
@@ -773,13 +689,13 @@ function BudgetTracker({
         <div className="space-y-1">
           <p className="font-medium">
             {overBudget ? (
-              <span className={config.textColor}>{overAmount} points over budget</span>
+              <span className={colors.text}>{overAmount} points over budget</span>
             ) : (
               <span>{budget - totalPoints} points remaining in budget</span>
             )}
           </p>
           <p className="text-xs text-zinc-400">
-            {completedPoints} completed / {totalPoints} committed / {budget} budgeted
+            {totalPoints} committed of {budget} budgeted ({percent}%)
           </p>
           {overBudget && (
             <p className="text-xs text-zinc-500">
