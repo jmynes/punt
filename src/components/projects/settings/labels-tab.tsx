@@ -216,9 +216,9 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full min-h-[500px]">
       {/* Header */}
-      <div>
+      <div className="flex-shrink-0 mb-6">
         <h3 className="text-lg font-medium text-zinc-100">Labels</h3>
         <p className="text-sm text-zinc-500">
           Manage labels used to categorize and filter tickets in this project.
@@ -226,9 +226,9 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
       </div>
 
       {/* Side-by-side layout */}
-      <div className="flex gap-6 min-h-[500px]">
+      <div className="flex gap-6 flex-1 min-h-0">
         {/* Left Panel - Label List */}
-        <div className="w-64 flex-shrink-0 flex flex-col">
+        <div className="w-64 flex-shrink-0 flex flex-col min-h-0">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-sm font-medium text-zinc-400">
               Labels
@@ -243,7 +243,7 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
             )}
           </div>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-1 pr-3">
               {(!labels || labels.length === 0) && !isCreating ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
