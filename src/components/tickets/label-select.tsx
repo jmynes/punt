@@ -466,6 +466,8 @@ export function ColorPickerBody({
     setHideColorRemovalWarning,
   } = useSettingsStore()
   const [localHex, setLocalHex] = useState(activeColor)
+  const [colorToRemove, setColorToRemove] = useState<string | null>(null)
+  const [dontShowAgain, setDontShowAgain] = useState(false)
 
   // Sync local hex when activeColor changes from outside (e.g. spectrum drag)
   useEffect(() => {
@@ -480,25 +482,34 @@ export function ColorPickerBody({
     }
   }
 
-  // Handle removing a saved color with simple dismissible warning
-  const handleRemoveColor = useCallback(
+  // Handle clicking the remove button on a saved color
+  const handleRemoveClick = useCallback(
     (color: string) => {
-      // Remove the color from saved swatches
-      removeCustomColor(color)
-
-      // Show simple warning if not dismissed
-      if (!hideColorRemovalWarning) {
-        toast.info('Color removed from swatches', {
-          description: 'Items using this color will keep it — only the saved swatch is removed.',
-          action: {
-            label: "Don't show again",
-            onClick: () => setHideColorRemovalWarning(true),
-          },
-        })
+      if (hideColorRemovalWarning) {
+        // Skip modal, remove directly
+        removeCustomColor(color)
+        toast.success('Color removed from swatches')
+      } else {
+        // Show confirmation modal
+        setColorToRemove(color)
+        setDontShowAgain(false)
       }
     },
-    [removeCustomColor, hideColorRemovalWarning, setHideColorRemovalWarning],
+    [hideColorRemovalWarning, removeCustomColor],
   )
+
+  // Confirm removal from modal
+  const handleConfirmRemove = useCallback(() => {
+    if (!colorToRemove) return
+
+    if (dontShowAgain) {
+      setHideColorRemovalWarning(true)
+    }
+
+    removeCustomColor(colorToRemove)
+    setColorToRemove(null)
+    toast.success('Color removed from swatches')
+  }, [colorToRemove, dontShowAgain, removeCustomColor, setHideColorRemovalWarning])
 
   // Merge extra presets (deduplicated) with standard label colors
   const labelColorsLower = new Set(LABEL_COLORS.map((c) => c.toLowerCase()))
@@ -558,7 +569,7 @@ export function ColorPickerBody({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleRemoveColor(color)
+                    handleRemoveClick(color)
                   }}
                   className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-zinc-800 border border-zinc-600 text-zinc-400 hover:bg-red-900 hover:text-red-300 hover:border-red-700 opacity-0 group-hover/swatch:opacity-100 transition-opacity flex items-center justify-center"
                   title="Remove saved color"
@@ -615,6 +626,48 @@ export function ColorPickerBody({
           <span className="text-xs">Save</span>
         </Button>
       </div>
+
+      {/* Color removal confirmation modal */}
+      <AlertDialog open={!!colorToRemove} onOpenChange={(open) => !open && setColorToRemove(null)}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">Remove saved color?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              <span className="flex items-center gap-2 mb-3">
+                <span
+                  className="inline-block h-5 w-5 rounded border border-zinc-600"
+                  style={{ backgroundColor: colorToRemove ?? undefined }}
+                />
+                <span className="font-mono text-zinc-300">{colorToRemove}</span>
+              </span>
+              Items using this color will keep it — only the saved swatch is removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex items-center gap-2 py-2">
+            <input
+              type="checkbox"
+              id="dont-show-again"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-amber-600 focus:ring-amber-500 focus:ring-offset-zinc-950"
+            />
+            <label htmlFor="dont-show-again" className="text-sm text-zinc-400 cursor-pointer">
+              Don&apos;t show this again
+            </label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRemove}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

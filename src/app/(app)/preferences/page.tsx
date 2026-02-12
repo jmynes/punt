@@ -249,10 +249,11 @@ export default function PreferencesPage() {
             <div className="flex items-start justify-between space-x-4">
               <div className="flex-1 space-y-1">
                 <Label htmlFor="hide-color-removal-warning" className="text-zinc-300">
-                  Hide color removal warning
+                  Skip color removal confirmation
                 </Label>
                 <p className="text-sm text-zinc-500">
-                  Don&apos;t show the notification when removing a saved color from your swatches
+                  Don&apos;t show the confirmation dialog when removing a saved color from your
+                  swatches
                 </p>
               </div>
               <Checkbox
