@@ -208,15 +208,17 @@ export function TicketForm({
             <SelectItem value="none" className="focus:bg-zinc-800 focus:text-zinc-100">
               No sprint (Backlog)
             </SelectItem>
-            {sprints.map((sprint) => (
-              <SelectItem
-                key={sprint.id}
-                value={sprint.id}
-                className="focus:bg-zinc-800 focus:text-zinc-100"
-              >
-                {sprint.name} {sprint.status === 'active' && '(Active)'}
-              </SelectItem>
-            ))}
+            {sprints
+              .filter((s) => s.status === 'active' || s.status === 'planning')
+              .map((sprint) => (
+                <SelectItem
+                  key={sprint.id}
+                  value={sprint.id}
+                  className="focus:bg-zinc-800 focus:text-zinc-100"
+                >
+                  {sprint.name} {sprint.status === 'active' && '(Active)'}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>
