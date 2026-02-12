@@ -66,6 +66,10 @@ interface SprintSectionProps {
   totalTicketCount?: number
   /** Total story points before filters (for filtered/total display) */
   totalStoryPoints?: number
+  /** Total completed ticket count before filters */
+  totalCompletedCount?: number
+  /** Total completed story points before filters */
+  totalCompletedPoints?: number
 }
 
 /**
@@ -86,6 +90,8 @@ export function SprintSection({
   hasActiveSprint = false,
   totalTicketCount,
   totalStoryPoints,
+  totalCompletedCount,
+  totalCompletedPoints,
 }: SprintSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
@@ -448,98 +454,18 @@ export function SprintSection({
 
         {/* Stats */}
         {sprint ? (
-          <>
-            {/* Sprint: progress bars for issues, points, and budget */}
-            <div className="hidden sm:flex items-center gap-4 text-xs">
-              {/* Issues progress */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-2 cursor-default">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-zinc-500" />
-                    <div className="relative h-1.5 w-16 bg-zinc-800 rounded-full overflow-hidden">
-                      {filteredCount > 0 && (
-                        <div
-                          className="absolute inset-y-0 left-0 rounded-full bg-blue-500 transition-all duration-500"
-                          style={{
-                            width: `${Math.round((completedCount / filteredCount) * 100)}%`,
-                          }}
-                        />
-                      )}
-                    </div>
-                    <div className="flex items-center gap-0.5 min-w-[36px]">
-                      <span className="font-bold tabular-nums text-zinc-300">{completedCount}</span>
-                      <span className="text-zinc-600">/</span>
-                      <span className="tabular-nums text-zinc-500">{filteredCount}</span>
-                    </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
-                  <div className="space-y-1">
-                    <p className="text-xs text-zinc-100">
-                      {completedCount} of {filteredCount} issues completed
-                    </p>
-                    {isFiltered && (
-                      <p className="text-xs text-zinc-400">
-                        Sprint total: {totalTicketCount} issues (filters active)
-                      </p>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Points progress */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-2 cursor-default">
-                    <TrendingUp className="h-3.5 w-3.5 text-zinc-500" />
-                    <div className="relative h-1.5 w-16 bg-zinc-800 rounded-full overflow-hidden">
-                      {filteredPoints > 0 && (
-                        <div
-                          className="absolute inset-y-0 left-0 rounded-full bg-blue-500 transition-all duration-500"
-                          style={{
-                            width: `${Math.round((completedPoints / filteredPoints) * 100)}%`,
-                          }}
-                        />
-                      )}
-                    </div>
-                    <div className="flex items-center gap-0.5 min-w-[36px]">
-                      <span className="font-bold tabular-nums text-zinc-300">
-                        {completedPoints}
-                      </span>
-                      <span className="text-zinc-600">/</span>
-                      <span className="tabular-nums text-zinc-500">{filteredPoints}</span>
-                      <span className="text-zinc-600 ml-0.5">pts</span>
-                    </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
-                  <div className="space-y-1">
-                    <p className="text-xs text-zinc-100">
-                      {completedPoints} of {filteredPoints} story points completed
-                    </p>
-                    {isFiltered && (
-                      <p className="text-xs text-zinc-400">
-                        Sprint total: {totalStoryPoints} pts (filters active)
-                      </p>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Budget indicator */}
-              {sprint.budget != null && sprint.budget > 0 && (
-                <BudgetIndicator totalPoints={filteredPoints} budget={sprint.budget} />
-              )}
-            </div>
-
-            {/* Compact stats for small screens */}
-            <div className="flex sm:hidden items-center gap-3 text-xs">
-              <span className="tabular-nums text-zinc-400">
-                {completedCount}/{filteredCount} issues
-              </span>
-              <span className="tabular-nums text-zinc-400">{filteredPoints} pts</span>
-            </div>
-          </>
+          <SprintProgressBars
+            completedCount={completedCount}
+            totalCount={filteredCount}
+            completedPoints={completedPoints}
+            totalPoints={filteredPoints}
+            unfilteredCompletedCount={totalCompletedCount ?? completedCount}
+            unfilteredTotalCount={totalTicketCount ?? filteredCount}
+            unfilteredCompletedPoints={totalCompletedPoints ?? completedPoints}
+            unfilteredTotalPoints={totalStoryPoints ?? filteredPoints}
+            isFiltered={isFiltered}
+            budget={sprint.budget}
+          />
         ) : (
           /* Backlog: simple text stats */
           <div className="flex items-center gap-4 text-xs">
@@ -702,6 +628,194 @@ export function SprintSection({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Progress bars for sprint sections, matching the active sprint header style.
+ * Shows layered bars: total completion dimmed behind filtered completion.
+ * Budget always reflects total sprint scope (ignores filters).
+ */
+function SprintProgressBars({
+  completedCount,
+  totalCount,
+  completedPoints,
+  totalPoints,
+  unfilteredCompletedCount,
+  unfilteredTotalCount,
+  unfilteredCompletedPoints,
+  unfilteredTotalPoints,
+  isFiltered,
+  budget,
+}: {
+  completedCount: number
+  totalCount: number
+  completedPoints: number
+  totalPoints: number
+  unfilteredCompletedCount: number
+  unfilteredTotalCount: number
+  unfilteredCompletedPoints: number
+  unfilteredTotalPoints: number
+  isFiltered: boolean
+  budget?: number | null
+}) {
+  // When filtered: show total completion dimmed, filtered completion bright
+  // When unfiltered: show completion directly
+  const issuePercent =
+    unfilteredTotalCount > 0
+      ? Math.round((unfilteredCompletedCount / unfilteredTotalCount) * 100)
+      : 0
+  const filteredIssuePercent =
+    isFiltered && unfilteredTotalCount > 0
+      ? Math.round((completedCount / unfilteredTotalCount) * 100)
+      : null
+
+  const pointsPercent =
+    unfilteredTotalPoints > 0
+      ? Math.round((unfilteredCompletedPoints / unfilteredTotalPoints) * 100)
+      : 0
+  const filteredPointsPercent =
+    isFiltered && unfilteredTotalPoints > 0
+      ? Math.round((completedPoints / unfilteredTotalPoints) * 100)
+      : null
+
+  return (
+    <>
+      <div className="hidden sm:flex items-center gap-4 text-xs">
+        {/* Issues progress */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-2 cursor-default">
+              <CheckCircle2 className="h-3.5 w-3.5 text-zinc-500" />
+              <div className="relative h-1.5 w-16 bg-zinc-800 rounded-full overflow-hidden">
+                {/* Total completion (dimmed when filtered) */}
+                <div
+                  className={cn(
+                    'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                    isFiltered ? 'bg-blue-500/30' : 'bg-blue-500',
+                  )}
+                  style={{ width: `${issuePercent}%` }}
+                />
+                {/* Filtered completion overlay */}
+                {filteredIssuePercent != null && (
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full bg-blue-500 transition-all duration-500"
+                    style={{ width: `${filteredIssuePercent}%` }}
+                  />
+                )}
+              </div>
+              <div className="flex items-center gap-0.5 min-w-[36px]">
+                {isFiltered ? (
+                  <>
+                    <span className="font-bold tabular-nums text-blue-400">{completedCount}</span>
+                    <span className="text-zinc-600">/</span>
+                    <span className="tabular-nums text-zinc-500">{totalCount}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-bold tabular-nums text-zinc-300">{completedCount}</span>
+                    <span className="text-zinc-600">/</span>
+                    <span className="tabular-nums text-zinc-500">{totalCount}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+            <div className="space-y-1">
+              {isFiltered ? (
+                <>
+                  <p className="text-xs text-zinc-100">
+                    Filtered: {completedCount} of {totalCount} issues completed
+                  </p>
+                  <p className="text-xs text-zinc-400">
+                    Sprint total: {unfilteredCompletedCount} of {unfilteredTotalCount} issues
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-zinc-100">
+                  {completedCount} of {totalCount} issues completed
+                </p>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Points progress */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-2 cursor-default">
+              <TrendingUp className="h-3.5 w-3.5 text-zinc-500" />
+              <div className="relative h-1.5 w-16 bg-zinc-800 rounded-full overflow-hidden">
+                {/* Total completion (dimmed when filtered) */}
+                <div
+                  className={cn(
+                    'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                    isFiltered ? 'bg-blue-500/30' : 'bg-blue-500',
+                  )}
+                  style={{ width: `${pointsPercent}%` }}
+                />
+                {/* Filtered completion overlay */}
+                {filteredPointsPercent != null && (
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full bg-blue-500 transition-all duration-500"
+                    style={{ width: `${filteredPointsPercent}%` }}
+                  />
+                )}
+              </div>
+              <div className="flex items-center gap-0.5 min-w-[36px]">
+                {isFiltered ? (
+                  <>
+                    <span className="font-bold tabular-nums text-blue-400">{completedPoints}</span>
+                    <span className="text-zinc-600">/</span>
+                    <span className="tabular-nums text-zinc-500">{totalPoints}</span>
+                    <span className="text-zinc-600 ml-0.5">pts</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-bold tabular-nums text-zinc-300">{completedPoints}</span>
+                    <span className="text-zinc-600">/</span>
+                    <span className="tabular-nums text-zinc-500">{totalPoints}</span>
+                    <span className="text-zinc-600 ml-0.5">pts</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+            <div className="space-y-1">
+              {isFiltered ? (
+                <>
+                  <p className="text-xs text-zinc-100">
+                    Filtered: {completedPoints} of {totalPoints} story points completed
+                  </p>
+                  <p className="text-xs text-zinc-400">
+                    Sprint total: {unfilteredCompletedPoints} of {unfilteredTotalPoints} points
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-zinc-100">
+                  {completedPoints} of {totalPoints} story points completed
+                </p>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Budget - always uses unfiltered total points */}
+        {budget != null && budget > 0 && (
+          <BudgetIndicator totalPoints={unfilteredTotalPoints} budget={budget} />
+        )}
+      </div>
+
+      {/* Compact stats for small screens */}
+      <div className="flex sm:hidden items-center gap-3 text-xs">
+        <span className="tabular-nums text-zinc-400">
+          {completedCount}/{totalCount} issues
+        </span>
+        <span className="tabular-nums text-zinc-400">{completedPoints} pts</span>
+      </div>
+    </>
   )
 }
 
