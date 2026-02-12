@@ -1,6 +1,16 @@
 'use client'
 
-import { Loader2, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  Loader2,
+  Pencil,
+  Plus,
+  Tag,
+  Trash2,
+} from 'lucide-react'
+import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ColorPickerBody } from '@/components/tickets/label-select'
@@ -17,12 +27,14 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   type LabelWithCount,
   useCreateLabel,
   useDeleteLabel,
+  useLabelTickets,
   useProjectLabelsWithCounts,
   useUpdateLabel,
 } from '@/hooks/queries/use-labels'
@@ -30,6 +42,111 @@ import { useHasPermission } from '@/hooks/use-permissions'
 import { LABEL_COLORS } from '@/lib/constants'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn, getLabelStyles } from '@/lib/utils'
+
+/**
+ * Danger zone component for label deletion with affected tickets preview.
+ */
+interface LabelDangerZoneProps {
+  projectId: string
+  label: LabelWithCount
+  isExpanded: boolean
+  onExpandedChange: (expanded: boolean) => void
+  onDelete: () => void
+}
+
+function LabelDangerZone({
+  projectId,
+  label,
+  isExpanded,
+  onExpandedChange,
+  onDelete,
+}: LabelDangerZoneProps) {
+  const ticketCount = label._count?.tickets ?? 0
+  const hasTickets = ticketCount > 0
+
+  // Only fetch tickets when expanded and there are tickets to show
+  const { data: tickets, isLoading: isLoadingTickets } = useLabelTickets(
+    projectId,
+    label.id,
+    isExpanded && hasTickets,
+  )
+
+  return (
+    <div className="space-y-3 pt-4 border-t border-zinc-800 w-full overflow-hidden">
+      <span className="text-sm font-medium text-red-400">Danger Zone</span>
+      <p className="text-xs text-zinc-500">
+        Deleting this label will remove it from all tickets that use it.
+      </p>
+
+      {/* Affected tickets section */}
+      {hasTickets ? (
+        <Collapsible
+          open={isExpanded}
+          onOpenChange={onExpandedChange}
+          className="w-full overflow-hidden"
+        >
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-2 text-xs text-amber-400 hover:text-amber-300 transition-colors group"
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
+              <span>
+                {ticketCount} ticket{ticketCount !== 1 ? 's' : ''} will be affected
+              </span>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="w-full overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-up-1 data-[state=open]:slide-down-1">
+            <div className="mt-2 rounded-md border border-zinc-800 bg-zinc-900/50 w-full overflow-hidden">
+              {isLoadingTickets ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
+                </div>
+              ) : tickets && tickets.length > 0 ? (
+                <div className="max-h-32 overflow-y-auto [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-600 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-500">
+                  {tickets.map((ticket) => {
+                    // Extract project key from ticket key (e.g., "PUNT-42" -> "PUNT")
+                    const projectKey = ticket.key.split('-')[0]
+                    return (
+                      <Link
+                        key={ticket.id}
+                        href={`/projects/${projectKey}/board?ticket=${ticket.key}`}
+                        className="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-1.5 text-xs hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/50 last:border-b-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="font-mono text-amber-500 group-hover:text-amber-400">
+                          {ticket.key}
+                        </span>
+                        <span className="text-zinc-400 truncate">{ticket.title}</span>
+                        <ExternalLink className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Link>
+                    )
+                  })}
+                </div>
+              ) : null}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : (
+        <p className="text-xs text-zinc-600">This label is not used by any tickets.</p>
+      )}
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onDelete}
+        className="border-red-800 text-red-400 hover:bg-red-900/20 hover:text-red-300 hover:border-red-700"
+      >
+        <Trash2 className="mr-2 h-3.5 w-3.5" />
+        Delete Label
+      </Button>
+    </div>
+  )
+}
 
 interface LabelsTabProps {
   projectId: string
@@ -55,6 +172,9 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
 
   // Delete confirmation state
   const [deletingLabel, setDeletingLabel] = useState<LabelWithCount | null>(null)
+
+  // Affected tickets expansion state
+  const [isTicketListExpanded, setIsTicketListExpanded] = useState(false)
 
   // Get the currently selected label
   const selectedLabel = labels?.find((l) => l.id === selectedLabelId) ?? null
@@ -307,9 +427,9 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
         </div>
 
         {/* Right Panel - Label Editor */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           {selectedLabel || isCreating ? (
-            <Card className="flex flex-col bg-zinc-900/50 border-zinc-800 h-full">
+            <Card className="flex flex-col bg-zinc-900/50 border-zinc-800 h-full overflow-hidden">
               <CardHeader className="flex-shrink-0 pb-4">
                 <div className="flex items-center gap-3">
                   <div
@@ -344,8 +464,8 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
                 </CardDescription>
               </CardHeader>
 
-              <ScrollArea className="flex-1 min-h-0">
-                <CardContent className="pt-0 space-y-6">
+              <ScrollArea className="flex-1 min-h-0 w-full">
+                <CardContent className="pt-0 space-y-6 overflow-hidden">
                   {/* Live Preview */}
                   <div className="space-y-2">
                     <span className="text-sm font-medium text-zinc-300">Preview</span>
@@ -376,28 +496,13 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
 
                   {/* Delete section (only for existing labels) */}
                   {!isCreating && selectedLabel && canManageLabels && (
-                    <div className="space-y-2 pt-4 border-t border-zinc-800">
-                      <span className="text-sm font-medium text-red-400">Danger Zone</span>
-                      <p className="text-xs text-zinc-500">
-                        Deleting this label will remove it from all tickets that use it.
-                        {(selectedLabel._count?.tickets ?? 0) > 0 && (
-                          <span className="text-amber-400">
-                            {' '}
-                            Currently used on {selectedLabel._count?.tickets} ticket
-                            {selectedLabel._count?.tickets !== 1 ? 's' : ''}.
-                          </span>
-                        )}
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDeletingLabel(selectedLabel)}
-                        className="border-red-800 text-red-400 hover:bg-red-900/20 hover:text-red-300 hover:border-red-700"
-                      >
-                        <Trash2 className="mr-2 h-3.5 w-3.5" />
-                        Delete Label
-                      </Button>
-                    </div>
+                    <LabelDangerZone
+                      projectId={projectId}
+                      label={selectedLabel}
+                      isExpanded={isTicketListExpanded}
+                      onExpandedChange={setIsTicketListExpanded}
+                      onDelete={() => setDeletingLabel(selectedLabel)}
+                    />
                   )}
                 </CardContent>
               </ScrollArea>

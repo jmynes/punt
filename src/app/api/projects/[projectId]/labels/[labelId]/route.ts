@@ -1,10 +1,82 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
+import {
+  requireAuth,
+  requireMembership,
+  requirePermission,
+  requireProjectByKey,
+} from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { PERMISSIONS } from '@/lib/permissions'
 import { LABEL_SELECT } from '@/lib/prisma-selects'
+
+/**
+ * Ticket summary for label usage preview.
+ * Minimal fields needed to display in the affected tickets list.
+ */
+const TICKET_SUMMARY_SELECT = {
+  id: true,
+  number: true,
+  title: true,
+  project: {
+    select: { key: true },
+  },
+} as const
+
+/**
+ * GET /api/projects/[projectId]/labels/[labelId]/tickets - Get tickets using this label
+ * Requires project membership
+ */
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ projectId: string; labelId: string }> },
+) {
+  try {
+    const user = await requireAuth()
+    const { projectId: projectKey, labelId } = await params
+    const projectId = await requireProjectByKey(projectKey)
+
+    // Check project membership
+    await requireMembership(user.id, projectId)
+
+    // Verify label exists and belongs to this project
+    const label = await db.label.findFirst({
+      where: { id: labelId, projectId },
+      select: {
+        id: true,
+        tickets: {
+          select: TICKET_SUMMARY_SELECT,
+          orderBy: { number: 'asc' },
+        },
+      },
+    })
+
+    if (!label) {
+      return NextResponse.json({ error: 'Label not found' }, { status: 404 })
+    }
+
+    // Transform tickets to include the ticket key (e.g., PUNT-42)
+    const tickets = label.tickets.map((ticket) => ({
+      id: ticket.id,
+      key: `${ticket.project.key}-${ticket.number}`,
+      title: ticket.title,
+    }))
+
+    return NextResponse.json(tickets)
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      if (error.message.startsWith('Forbidden:')) {
+        return NextResponse.json({ error: error.message }, { status: 403 })
+      }
+    }
+    console.error('Failed to fetch label tickets:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
 
 const updateLabelSchema = z.object({
   name: z.string().min(1).max(50).trim().optional(),
