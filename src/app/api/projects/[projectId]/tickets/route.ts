@@ -11,6 +11,7 @@ import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { PERMISSIONS } from '@/lib/permissions'
 import { TICKET_SELECT_FULL, transformTicket } from '@/lib/prisma-selects'
+import { isCompletedColumn } from '@/lib/sprint-utils'
 import { type IssueType, type Priority, RESOLUTIONS } from '@/types'
 
 const createTicketSchema = z.object({
@@ -196,5 +197,144 @@ export async function POST(
     return NextResponse.json(transformTicket(ticket), { status: 201 })
   } catch (error) {
     return handleApiError(error, 'create ticket')
+  }
+}
+
+const batchMoveTicketsSchema = z.object({
+  ticketIds: z.array(z.string()).min(1),
+  toColumnId: z.string().min(1),
+  newOrder: z.number().int().min(0),
+})
+
+/**
+ * PATCH /api/projects/[projectId]/tickets - Batch move tickets to a column
+ * Requires project membership and ticket edit permission
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ projectId: string }> },
+) {
+  try {
+    const user = await requireAuth()
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
+
+    // Check ticket edit permission
+    await requirePermission(user.id, projectId, PERMISSIONS.TICKETS_EDIT_ANY)
+
+    const body = await request.json()
+    const parsed = batchMoveTicketsSchema.safeParse(body)
+
+    if (!parsed.success) {
+      return validationError(parsed)
+    }
+
+    const { ticketIds, toColumnId, newOrder } = parsed.data
+
+    // Verify target column belongs to project
+    const targetColumn = await db.column.findFirst({
+      where: { id: toColumnId, projectId },
+    })
+
+    if (!targetColumn) {
+      return badRequestError('Target column not found or does not belong to project')
+    }
+
+    // Verify all tickets exist and belong to project
+    const tickets = await db.ticket.findMany({
+      where: { id: { in: ticketIds }, projectId },
+      select: {
+        id: true,
+        columnId: true,
+        resolution: true,
+        order: true,
+      },
+      orderBy: { order: 'asc' },
+    })
+
+    if (tickets.length !== ticketIds.length) {
+      return badRequestError('One or more tickets not found or do not belong to project')
+    }
+
+    // Determine if target column is a "done" column for resolution auto-coupling
+    const targetIsDone = isCompletedColumn(targetColumn.name)
+
+    // Update all tickets in a transaction
+    const updatedTickets = await db.$transaction(async (tx) => {
+      const results = []
+      let currentOrder = newOrder
+
+      // Process tickets in the order they were provided (preserves selection order)
+      for (const ticketId of ticketIds) {
+        const ticket = tickets.find((t) => t.id === ticketId)
+        if (!ticket) continue
+
+        // Build update data with resolution auto-coupling
+        const updateData: Record<string, unknown> = {
+          columnId: toColumnId,
+          order: currentOrder,
+        }
+
+        // Auto-couple resolution when moving to/from done column
+        if (targetIsDone && !ticket.resolution) {
+          updateData.resolution = 'Done'
+        } else if (!targetIsDone && ticket.resolution) {
+          updateData.resolution = null
+        }
+
+        const updated = await tx.ticket.update({
+          where: { id: ticketId },
+          data: updateData,
+          select: TICKET_SELECT_FULL,
+        })
+
+        results.push(updated)
+        currentOrder++
+      }
+
+      // Reorder other tickets in the target column to make room
+      // Get all tickets in target column that are NOT in the moved set
+      const otherTicketsInTarget = await tx.ticket.findMany({
+        where: {
+          columnId: toColumnId,
+          projectId,
+          id: { notIn: ticketIds },
+        },
+        orderBy: { order: 'asc' },
+        select: { id: true, order: true },
+      })
+
+      // Reindex tickets that come after the insertion point
+      let reorderIdx = 0
+      for (const t of otherTicketsInTarget) {
+        const newIdx = reorderIdx >= newOrder ? reorderIdx + ticketIds.length : reorderIdx
+        if (t.order !== newIdx) {
+          await tx.ticket.update({
+            where: { id: t.id },
+            data: { order: newIdx },
+          })
+        }
+        reorderIdx++
+      }
+
+      return results
+    })
+
+    // Emit real-time events for each moved ticket
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    for (const ticket of updatedTickets) {
+      projectEvents.emitTicketEvent({
+        type: 'ticket.moved',
+        projectId,
+        ticketId: ticket.id,
+        userId: user.id,
+        tabId,
+        timestamp: Date.now(),
+      })
+    }
+
+    return NextResponse.json(updatedTickets.map(transformTicket))
+  } catch (error) {
+    return handleApiError(error, 'batch move tickets')
   }
 }
