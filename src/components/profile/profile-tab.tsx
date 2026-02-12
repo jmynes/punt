@@ -263,6 +263,49 @@ export function ProfileTab({
 
   return (
     <div className="space-y-6">
+      {/* Display Name */}
+      <Card className="border-zinc-800 bg-zinc-900/50">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2">
+            <User className="h-5 w-5 text-amber-500" />
+            <CardTitle className="text-zinc-100">Display Name</CardTitle>
+          </div>
+          <CardDescription className="text-zinc-500">
+            This is how other users will see you
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleProfileUpdate} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-zinc-300">
+                Name
+              </Label>
+              <Input
+                ref={nameInputRef}
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                className="bg-zinc-900 border-zinc-700 focus:border-amber-500 max-w-md"
+              />
+            </div>
+
+            {user.isSystemAdmin && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg max-w-md">
+                <Shield className="h-4 w-4 text-amber-500" />
+                <span className="text-sm text-amber-400">Super Admin</span>
+              </div>
+            )}
+
+            <div className="flex justify-end max-w-md">
+              <Button type="submit" variant="primary" disabled={profileLoading || !name.trim()}>
+                {profileLoading ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
       {/* Avatar Section */}
       <Card className="border-zinc-800 bg-zinc-900/50 overflow-hidden">
         <CardHeader className="pb-4">
@@ -397,49 +440,6 @@ export function ProfileTab({
               </Button>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Display Name */}
-      <Card className="border-zinc-800 bg-zinc-900/50">
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <User className="h-5 w-5 text-amber-500" />
-            <CardTitle className="text-zinc-100">Display Name</CardTitle>
-          </div>
-          <CardDescription className="text-zinc-500">
-            This is how other users will see you
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleProfileUpdate} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-zinc-300">
-                Name
-              </Label>
-              <Input
-                ref={nameInputRef}
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-                className="bg-zinc-900 border-zinc-700 focus:border-amber-500 max-w-md"
-              />
-            </div>
-
-            {user.isSystemAdmin && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg max-w-md">
-                <Shield className="h-4 w-4 text-amber-500" />
-                <span className="text-sm text-amber-400">Super Admin</span>
-              </div>
-            )}
-
-            <div className="flex justify-end max-w-md">
-              <Button type="submit" variant="primary" disabled={profileLoading || !name.trim()}>
-                {profileLoading ? 'Saving...' : 'Save'}
-              </Button>
-            </div>
-          </form>
         </CardContent>
       </Card>
 
