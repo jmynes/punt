@@ -7,7 +7,6 @@ import {
   ChevronsLeftRight,
   MoreHorizontal,
   Pencil,
-  Plus,
   RotateCcw,
   Trash2,
 } from 'lucide-react'
@@ -63,7 +62,6 @@ import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
-import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets } from '@/types'
 
@@ -72,23 +70,12 @@ interface ColumnMenuProps {
   projectId: string
   projectKey: string
   allColumns: ColumnWithTickets[]
-  activeSprintId?: string | null
-  onAddTicket?: () => void
 }
 
-export function ColumnMenu({
-  column,
-  projectId,
-  projectKey,
-  allColumns,
-  activeSprintId = null,
-  onAddTicket,
-}: ColumnMenuProps) {
+export function ColumnMenu({ column, projectId, projectKey, allColumns }: ColumnMenuProps) {
   const queryClient = useQueryClient()
   const { toggleColumnCollapsed, setColumns, getColumns } = useBoardStore()
-  const { openCreateTicketWithData, setSprintCreateOpen } = useUIStore()
   const canManageBoard = useHasPermission(projectId, PERMISSIONS.BOARD_MANAGE)
-  const canCreateTickets = useHasPermission(projectId, PERMISSIONS.TICKETS_CREATE)
 
   // Move state
   const [moveLoading, setMoveLoading] = useState(false)
@@ -115,17 +102,6 @@ export function ColumnMenu({
   const canMoveRight = columnIndex < allColumns.length - 1
 
   // Handle adding a ticket to this column
-  const handleAddTicket = useCallback(() => {
-    if (onAddTicket) {
-      onAddTicket()
-    } else if (activeSprintId) {
-      openCreateTicketWithData({ columnId: column.id, sprintId: activeSprintId })
-    } else {
-      // No active sprint - prompt to create one first
-      setSprintCreateOpen(true)
-    }
-  }, [onAddTicket, activeSprintId, column.id, openCreateTicketWithData, setSprintCreateOpen])
-
   // Handle moving column left or right
   const handleMoveColumn = useCallback(
     async (direction: 'left' | 'right') => {
@@ -632,19 +608,23 @@ export function ColumnMenu({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-zinc-300">
-            <MoreHorizontal className="h-3.5 w-3.5" />
-          </Button>
-        </DropdownMenuTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
+              >
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="text-xs">
+            Column options
+          </TooltipContent>
+        </Tooltip>
         <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-700">
-          {/* Add ticket */}
-          {canCreateTickets && (
-            <DropdownMenuItem onClick={handleAddTicket} className="text-zinc-300 focus:bg-zinc-800">
-              <Plus className="h-4 w-4 mr-2" />
-              Add ticket
-            </DropdownMenuItem>
-          )}
           {canManageBoard && (
             <DropdownMenuItem
               onClick={handleRenameOpen}

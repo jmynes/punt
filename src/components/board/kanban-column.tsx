@@ -2,12 +2,24 @@
 
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Plus } from 'lucide-react'
+import { ArrowUpDown, Check, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getColumnIcon } from '@/lib/status-icons'
 import { cn } from '@/lib/utils'
-import { useBoardStore } from '@/stores/board-store'
+import {
+  COLUMN_SORT_LABELS,
+  COLUMN_SORT_OPTIONS,
+  sortTickets,
+  useBoardStore,
+} from '@/stores/board-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets } from '@/types'
 import { ColumnMenu } from './column-menu'
@@ -35,9 +47,13 @@ export function KanbanColumn({
   activeSprintId = null,
 }: KanbanColumnProps) {
   const { openCreateTicketWithData, setSprintCreateOpen } = useUIStore()
-  const { isColumnCollapsed, toggleColumnCollapsed } = useBoardStore()
+  const { isColumnCollapsed, toggleColumnCollapsed, getColumnSort, setColumnSort } = useBoardStore()
 
   const collapsed = isColumnCollapsed(column.id)
+  const sortOption = getColumnSort(column.id)
+
+  // Sort tickets based on column sort option
+  const sortedTickets = sortTickets(column.tickets, sortOption)
 
   // Handle creating a ticket - requires active sprint on board view
   const handleCreateTicket = () => {
@@ -67,7 +83,7 @@ export function KanbanColumn({
   })
 
   // Exclude dragged tickets from SortableContext items to prevent transform calculation issues
-  const ticketIds = column.tickets
+  const ticketIds = sortedTickets
     .filter((t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId)
     .map((t) => t.id)
 
@@ -135,22 +151,64 @@ export function KanbanColumn({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
-            onClick={handleCreateTicket}
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
           <ColumnMenu
             column={column}
             projectId={projectId}
             projectKey={projectKey}
             allColumns={allColumns}
-            activeSprintId={activeSprintId}
-            onAddTicket={handleCreateTicket}
           />
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      'h-6 w-6',
+                      sortOption !== 'manual'
+                        ? 'text-amber-500 hover:text-amber-400'
+                        : 'text-zinc-500 hover:text-zinc-300',
+                    )}
+                  >
+                    <ArrowUpDown className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                {sortOption !== 'manual'
+                  ? `Sorted by: ${COLUMN_SORT_LABELS[sortOption]}`
+                  : 'Sort tickets'}
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-700 min-w-[200px]">
+              {COLUMN_SORT_OPTIONS.map((option) => (
+                <DropdownMenuItem
+                  key={option}
+                  onClick={() => setColumnSort(column.id, option)}
+                  className="text-zinc-300 focus:bg-zinc-800 flex items-center justify-between"
+                >
+                  <span>{COLUMN_SORT_LABELS[option]}</span>
+                  {sortOption === option && <Check className="h-4 w-4 text-amber-500" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
+                onClick={handleCreateTicket}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              Add ticket
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -158,12 +216,12 @@ export function KanbanColumn({
       <ScrollArea className="flex-1 min-h-0">
         <div ref={setNodeRef} className="flex flex-col gap-2 min-h-[100px] p-2">
           <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
-            {column.tickets.map((ticket, _index) => {
+            {sortedTickets.map((ticket, _index) => {
               // Hide ticket if it's in the drag selection OR if it's the active ticket being dragged
               const isBeingDragged =
                 dragSelectionIds.includes(ticket.id) || ticket.id === activeTicketId
               // Calculate the visual index (excluding dragged tickets)
-              const visibleTickets = column.tickets.filter(
+              const visibleTickets = sortedTickets.filter(
                 (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
               )
               const visualIndex = visibleTickets.findIndex((t) => t.id === ticket.id)
@@ -206,7 +264,7 @@ export function KanbanColumn({
             {/* Show full-size placeholder at the end if target is beyond last ticket */}
             {activeDragTarget !== null &&
               activeDragTarget >=
-                column.tickets.filter(
+                sortedTickets.filter(
                   (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
                 ).length &&
               (dragSelectionIds.length > 0 || activeTicketId) && (
@@ -216,7 +274,7 @@ export function KanbanColumn({
               )}
 
             {/* Drop zone indicator when empty and not dragging */}
-            {column.tickets.length === 0 && !activeTicketId && dragSelectionIds.length === 0 && (
+            {sortedTickets.length === 0 && !activeTicketId && dragSelectionIds.length === 0 && (
               <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-lg">
                 <span className="text-xs text-zinc-600">Drop tickets here</span>
               </div>
