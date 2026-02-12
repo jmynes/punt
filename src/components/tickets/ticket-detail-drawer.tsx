@@ -1120,7 +1120,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 ) : (
                   <button
                     type="button"
-                    className="w-full text-left rounded-md bg-zinc-900/50 p-4 cursor-pointer hover:bg-amber-500/15 min-h-[60px]"
+                    className="w-full text-left rounded-md bg-zinc-900/50 px-3 py-2 cursor-pointer hover:bg-amber-500/15 min-h-[40px]"
                     onClick={() => startEditing('description')}
                   >
                     {ticket.description ? (
