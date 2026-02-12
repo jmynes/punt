@@ -71,6 +71,7 @@ export const userId = fc.uuid()
  */
 export const userSummary = fc.record({
   id: fc.uuid(),
+  username: validUsername,
   name: fc.string({ minLength: 1, maxLength: 100 }),
   email: fc.option(fc.emailAddress(), { nil: null }),
   avatar: fc.option(fc.webUrl(), { nil: null }),

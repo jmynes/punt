@@ -34,10 +34,20 @@ export const storyPoints = fc.option(fc.constantFrom(1, 2, 3, 5, 8, 13, 21), { n
  * Base ticket arbitrary with minimal required fields
  */
 /**
+ * Valid username characters for generating usernames
+ */
+const validUsernameChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-'
+
+const validUsername = fc
+  .array(fc.constantFrom(...validUsernameChars.split('')), { minLength: 3, maxLength: 30 })
+  .map((chars) => chars.join(''))
+
+/**
  * User summary arbitrary (for assignee, reporter, creator, watchers)
  */
 const userSummary = fc.record({
   id: fc.uuid(),
+  username: validUsername,
   name: fc.string({ minLength: 1, maxLength: 100 }),
   email: fc.emailAddress(),
   avatar: fc.option(fc.webUrl(), { nil: null }),
@@ -150,12 +160,14 @@ export const maliciousTicket = fc.record({
   assignee: fc.constant(null),
   creator: fc.record({
     id: fc.uuid(),
+    username: validUsername,
     name: fc.string({ minLength: 1, maxLength: 100 }),
     email: fc.emailAddress(),
     avatar: fc.constant(null),
   }),
   reporter: fc.record({
     id: fc.uuid(),
+    username: validUsername,
     name: fc.string({ minLength: 1, maxLength: 100 }),
     email: fc.emailAddress(),
     avatar: fc.constant(null),
