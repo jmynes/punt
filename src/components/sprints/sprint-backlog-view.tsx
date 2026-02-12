@@ -157,6 +157,33 @@ export function SprintBacklogView({
     return groups
   }, [filteredTickets, sprints])
 
+  // Calculate unfiltered totals per sprint (for filtered/total display)
+  const unfilteredTotals = useMemo(() => {
+    const totals: Record<string, { count: number; points: number }> = {
+      backlog: { count: 0, points: 0 },
+    }
+
+    // Initialize for each sprint
+    sprints?.forEach((sprint) => {
+      totals[sprint.id] = { count: 0, points: 0 }
+    })
+
+    // Count all tickets (unfiltered)
+    tickets.forEach((ticket) => {
+      const sprintId = ticket.sprintId ?? 'backlog'
+      if (totals[sprintId]) {
+        totals[sprintId].count++
+        totals[sprintId].points += ticket.storyPoints ?? 0
+      } else {
+        // Sprint doesn't exist, count in backlog
+        totals.backlog.count++
+        totals.backlog.points += ticket.storyPoints ?? 0
+      }
+    })
+
+    return totals
+  }, [tickets, sprints])
+
   // Separate sprints by status
   const activeSprints = useMemo(
     () => sprints?.filter((s) => s.status === 'active') ?? [],
@@ -558,6 +585,8 @@ export function SprintBacklogView({
             onCreateTicket={handleCreateTicket}
             dropPosition={dropPosition?.sectionId === sprint.id ? dropPosition.insertIndex : null}
             draggingTicketIds={draggingTicketIds}
+            totalTicketCount={unfilteredTotals[sprint.id]?.count ?? 0}
+            totalStoryPoints={unfilteredTotals[sprint.id]?.points ?? 0}
           />
         ))}
 
@@ -575,6 +604,8 @@ export function SprintBacklogView({
             onDelete={handleDeleteSprint}
             dropPosition={dropPosition?.sectionId === sprint.id ? dropPosition.insertIndex : null}
             draggingTicketIds={draggingTicketIds}
+            totalTicketCount={unfilteredTotals[sprint.id]?.count ?? 0}
+            totalStoryPoints={unfilteredTotals[sprint.id]?.points ?? 0}
           />
         ))}
 
@@ -590,6 +621,8 @@ export function SprintBacklogView({
           dropPosition={dropPosition?.sectionId === 'backlog' ? dropPosition.insertIndex : null}
           draggingTicketIds={draggingTicketIds}
           hasActiveSprint={activeSprints.length > 0}
+          totalTicketCount={unfilteredTotals.backlog?.count ?? 0}
+          totalStoryPoints={unfilteredTotals.backlog?.points ?? 0}
         />
 
         {/* Completed Sprints (collapsed by default) */}
@@ -615,6 +648,8 @@ export function SprintBacklogView({
                     dropPosition?.sectionId === sprint.id ? dropPosition.insertIndex : null
                   }
                   draggingTicketIds={draggingTicketIds}
+                  totalTicketCount={unfilteredTotals[sprint.id]?.count ?? 0}
+                  totalStoryPoints={unfilteredTotals[sprint.id]?.points ?? 0}
                 />
               ))}
               {completedSprints.length > 3 && (
