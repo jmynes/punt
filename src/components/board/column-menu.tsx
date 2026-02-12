@@ -642,6 +642,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                     onColorChange={setColorValue}
                     onApply={setColorValue}
                     isDisabled={renameLoading}
+                    projectId={projectId}
                   />
                   {/* PUNT-74: Ghost button style for reset */}
                   <button
@@ -665,6 +666,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
                     onColorChange={setColorValue}
                     onApply={setColorValue}
                     isDisabled={renameLoading}
+                    projectId={projectId}
                   />
                 </>
               )}

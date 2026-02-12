@@ -905,6 +905,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
                           }
                         }}
                         isDisabled={!canManageRoles}
+                        projectId={projectId}
                       />
                     </div>
 
