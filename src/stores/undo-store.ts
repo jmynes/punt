@@ -65,6 +65,11 @@ type UndoAction =
       column: ColumnWithTickets
       movedToColumnId: string
     }
+  | {
+      type: 'columnCreate'
+      columnId: string
+      columnName: string
+    }
 
 interface UndoEntry {
   action: UndoAction
@@ -170,6 +175,15 @@ interface UndoState {
     projectId: string,
     column: ColumnWithTickets,
     movedToColumnId: string,
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
+
+  // Add a column create action to the undo stack
+  pushColumnCreate: (
+    projectId: string,
+    columnId: string,
+    columnName: string,
     toastId: string | number,
     isRedo?: boolean,
   ) => void
@@ -493,6 +507,30 @@ export const useUndoStore = create<UndoState>((set, get) => ({
               tickets: column.tickets.map((t) => ({ ...t })),
             },
             movedToColumnId,
+          },
+          timestamp: Date.now(),
+          toastId,
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushColumnCreate: (projectId, columnId, columnName, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Column Create ${isRedo ? '(Redo)' : ''}`, {
+      columnId,
+      columnName,
+      projectId,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: {
+            type: 'columnCreate',
+            columnId,
+            columnName,
           },
           timestamp: Date.now(),
           toastId,

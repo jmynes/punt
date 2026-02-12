@@ -29,6 +29,9 @@ const UpdateSettingsSchema = z.object({
   allowedVideoTypes: z.array(z.string()).optional(),
   allowedDocumentTypes: z.array(z.string()).optional(),
 
+  // Board settings
+  showAddColumnButton: z.boolean().optional(),
+
   // Email settings
   emailEnabled: z.boolean().optional(),
   emailProvider: z.enum(['none', 'smtp', 'resend', 'console']).optional(),
@@ -123,6 +126,11 @@ export async function PATCH(request: Request) {
     }
     if (updates.allowedDocumentTypes !== undefined) {
       updateData.allowedDocumentTypes = JSON.stringify(updates.allowedDocumentTypes)
+    }
+
+    // Board settings
+    if (updates.showAddColumnButton !== undefined) {
+      updateData.showAddColumnButton = updates.showAddColumnButton
     }
 
     // Email settings

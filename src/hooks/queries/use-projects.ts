@@ -12,6 +12,38 @@ export const projectKeys = {
   detail: (id: string) => ['projects', id] as const,
 }
 
+export interface ProjectDetail {
+  id: string
+  name: string
+  key: string
+  color: string
+  description: string | null
+  showAddColumnButton: boolean | null
+  effectiveShowAddColumnButton: boolean
+  createdAt: string
+  updatedAt: string
+  role: string
+  _count: { tickets: number; members: number }
+}
+
+/**
+ * Fetch a single project's details (including board settings)
+ */
+export function useProjectDetail(projectKey: string) {
+  return useQuery<ProjectDetail>({
+    queryKey: projectKeys.detail(projectKey),
+    queryFn: async () => {
+      const res = await fetch(`/api/projects/${projectKey}`)
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Failed to fetch project' }))
+        throw new Error(error.error || 'Failed to fetch project')
+      }
+      return res.json()
+    },
+    staleTime: 1000 * 60, // 1 minute
+  })
+}
+
 /**
  * Fetch all projects for the current user and sync with Zustand store
  */
@@ -120,6 +152,7 @@ export function useUpdateProject() {
       key?: string
       color?: string
       description?: string | null
+      showAddColumnButton?: boolean | null
     }) => {
       const provider = getDataProvider(getTabId())
       return provider.updateProject(id, data)
@@ -143,8 +176,12 @@ export function useUpdateProject() {
     onSuccess: () => {
       toast.success('Project updated')
     },
-    onSettled: () => {
+    onSettled: (_, __, variables) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.all })
+      // Also invalidate the project detail cache
+      if (variables?.id) {
+        queryClient.invalidateQueries({ queryKey: projectKeys.detail(variables.id) })
+      }
     },
   })
 }

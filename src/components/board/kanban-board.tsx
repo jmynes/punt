@@ -23,6 +23,7 @@ import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
+import { AddColumnButton } from './add-column-button'
 import { KanbanCard } from './kanban-card'
 import { KanbanColumn } from './kanban-column'
 
@@ -470,6 +471,7 @@ export function KanbanBoard({
               activeSprintId={activeSprintId}
             />
           ))}
+          <AddColumnButton projectId={projectId} projectKey={projectKey} />
         </div>
       )}
 

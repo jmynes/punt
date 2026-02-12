@@ -30,6 +30,7 @@ export interface UpdateProjectInput {
   key?: string
   color?: string
   description?: string | null
+  showAddColumnButton?: boolean | null
 }
 
 export interface CreateTicketInput {

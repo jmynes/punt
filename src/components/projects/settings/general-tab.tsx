@@ -20,9 +20,23 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
-import { useDeleteProject, useUpdateProject } from '@/hooks/queries/use-projects'
+import { useDeleteProject, useProjectDetail, useUpdateProject } from '@/hooks/queries/use-projects'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
+
+type AddColumnVisibility = 'inherit' | 'show' | 'hide'
+
+function toVisibilityOption(value: boolean | null | undefined): AddColumnVisibility {
+  if (value === true) return 'show'
+  if (value === false) return 'hide'
+  return 'inherit'
+}
+
+function fromVisibilityOption(option: AddColumnVisibility): boolean | null {
+  if (option === 'show') return true
+  if (option === 'hide') return false
+  return null
+}
 
 // Preset colors for projects
 const PROJECT_COLORS = [
@@ -60,9 +74,13 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
   const router = useRouter()
   const updateProject = useUpdateProject()
   const deleteProject = useDeleteProject()
+  const { data: projectDetail } = useProjectDetail(project.key)
 
   const canEditSettings = useHasPermission(projectId, PERMISSIONS.PROJECT_SETTINGS)
+  const canManageBoard = useHasPermission(projectId, PERMISSIONS.BOARD_MANAGE)
   const canDeleteProject = useHasPermission(projectId, PERMISSIONS.PROJECT_DELETE)
+
+  const [addColumnVisibility, setAddColumnVisibility] = useState<AddColumnVisibility>('inherit')
 
   const [formData, setFormData] = useState<FormData>({
     name: project.name,
@@ -85,6 +103,13 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
     })
     setHasChanges(false)
   }, [project])
+
+  // Sync board settings when project detail loads
+  useEffect(() => {
+    if (projectDetail) {
+      setAddColumnVisibility(toVisibilityOption(projectDetail.showAddColumnButton))
+    }
+  }, [projectDetail])
 
   // Track changes
   useEffect(() => {
@@ -145,6 +170,23 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
       color: project.color,
     })
   }, [project])
+
+  const boardSettingsChanged =
+    projectDetail && addColumnVisibility !== toVisibilityOption(projectDetail.showAddColumnButton)
+
+  const handleSaveBoardSettings = useCallback(() => {
+    if (!canManageBoard) return
+    updateProject.mutate({
+      id: project.id,
+      showAddColumnButton: fromVisibilityOption(addColumnVisibility),
+    })
+  }, [canManageBoard, project.id, addColumnVisibility, updateProject])
+
+  const handleResetBoardSettings = useCallback(() => {
+    if (projectDetail) {
+      setAddColumnVisibility(toVisibilityOption(projectDetail.showAddColumnButton))
+    }
+  }, [projectDetail])
 
   const isValid = formData.name.trim().length > 0 && formData.key.length > 0
   const isPending = updateProject.isPending || deleteProject.isPending
@@ -281,6 +323,92 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Board Settings Card */}
+      {canManageBoard && (
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardHeader>
+            <CardTitle className="text-base text-zinc-100">Board Settings</CardTitle>
+            <CardDescription>Configure board behavior for this project.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-zinc-300">&quot;Add Column&quot; button visibility</Label>
+              <div className="flex flex-col gap-2">
+                {(
+                  [
+                    {
+                      value: 'inherit' as const,
+                      label: 'Use global default',
+                      description: 'Follow the system-wide setting configured by admins',
+                    },
+                    {
+                      value: 'show' as const,
+                      label: 'Always show',
+                      description: "Show the Add Column button on this project's board",
+                    },
+                    {
+                      value: 'hide' as const,
+                      label: 'Always hide',
+                      description: "Hide the Add Column button on this project's board",
+                    },
+                  ] as const
+                ).map((option) => (
+                  <label
+                    key={option.value}
+                    className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
+                      addColumnVisibility === option.value
+                        ? 'border-amber-600/50 bg-amber-950/20'
+                        : 'border-zinc-800 hover:border-zinc-700'
+                    } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="addColumnVisibility"
+                      value={option.value}
+                      checked={addColumnVisibility === option.value}
+                      onChange={() => setAddColumnVisibility(option.value)}
+                      disabled={isDisabled}
+                      className="mt-1 accent-amber-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-zinc-200">{option.label}</p>
+                      <p className="text-xs text-zinc-500">{option.description}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Save/Reset buttons */}
+            {canManageBoard && (
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={handleResetBoardSettings}
+                  disabled={!boardSettingsChanged || isPending}
+                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                >
+                  Reset
+                </Button>
+                <Button
+                  onClick={handleSaveBoardSettings}
+                  disabled={!boardSettingsChanged || isPending}
+                >
+                  {updateProject.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Danger Zone */}
       {canDeleteProject && (

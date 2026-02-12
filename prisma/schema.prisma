@@ -138,6 +138,8 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  showAddColumnButton Boolean? // null = inherit from global SystemSettings
+
   columns        Column[]
   tickets        Ticket[]
   members        ProjectMember[]
@@ -504,6 +506,9 @@ model SystemSettings {
   emailWelcome       Boolean @default(false)
   emailVerification  Boolean @default(false)
   emailInvitations   Boolean @default(true)
+
+  // Board settings
+  showAddColumnButton Boolean @default(true)
 
   // Default role permissions for new projects (JSON object)
   // Keys: "Owner", "Admin", "Member", "Viewer"

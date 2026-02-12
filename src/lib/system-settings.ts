@@ -60,6 +60,8 @@ export interface SystemSettings {
   allowedImageTypes: string[]
   allowedVideoTypes: string[]
   allowedDocumentTypes: string[]
+  // Board settings
+  showAddColumnButton: boolean
 }
 
 export interface UploadConfig {
@@ -125,6 +127,8 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       settings.allowedDocumentTypes,
       DEFAULT_SETTINGS.allowedDocumentTypes,
     ),
+    // Board settings
+    showAddColumnButton: settings.showAddColumnButton,
   }
 }
 

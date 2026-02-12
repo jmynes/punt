@@ -42,6 +42,8 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
   logoGradientFrom: '#f59e0b',
   logoGradientTo: '#d97706',
   logoUrl: null,
+  // Board settings
+  showAddColumnButton: true,
   // Email settings
   emailEnabled: false,
   emailProvider: 'none',
@@ -95,6 +97,9 @@ export interface UpdateSystemSettingsParams {
   allowedImageTypes?: string[]
   allowedVideoTypes?: string[]
   allowedDocumentTypes?: string[]
+
+  // Board settings
+  showAddColumnButton?: boolean
 
   // Email settings
   emailEnabled?: boolean
