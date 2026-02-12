@@ -1,6 +1,6 @@
 'use client'
 
-import { LogOut, Settings, Shield, User } from 'lucide-react'
+import { LogOut, Shield, SlidersHorizontal, User } from 'lucide-react'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 import { AnimatedMenuIcon } from '@/components/ui/animated-menu-icon'
@@ -130,7 +130,7 @@ export function Header() {
                 className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
               >
                 <Link href="/preferences">
-                  <Settings className="mr-2 h-4 w-4" />
+                  <SlidersHorizontal className="mr-2 h-4 w-4" />
                   <span>Preferences</span>
                 </Link>
               </DropdownMenuItem>
