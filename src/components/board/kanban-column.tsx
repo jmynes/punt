@@ -148,6 +148,8 @@ export function KanbanColumn({
             projectId={projectId}
             projectKey={projectKey}
             allColumns={allColumns}
+            activeSprintId={activeSprintId}
+            onAddTicket={handleCreateTicket}
           />
         </div>
       </div>

@@ -1,7 +1,16 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { ChevronsLeftRight, MoreHorizontal, Pencil, RotateCcw, Trash2 } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeftRight,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ColorPickerBody } from '@/components/tickets/label-select'
@@ -54,6 +63,7 @@ import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
+import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets } from '@/types'
 
@@ -62,12 +72,26 @@ interface ColumnMenuProps {
   projectId: string
   projectKey: string
   allColumns: ColumnWithTickets[]
+  activeSprintId?: string | null
+  onAddTicket?: () => void
 }
 
-export function ColumnMenu({ column, projectId, projectKey, allColumns }: ColumnMenuProps) {
+export function ColumnMenu({
+  column,
+  projectId,
+  projectKey,
+  allColumns,
+  activeSprintId = null,
+  onAddTicket,
+}: ColumnMenuProps) {
   const queryClient = useQueryClient()
   const { toggleColumnCollapsed, setColumns, getColumns } = useBoardStore()
+  const { openCreateTicketWithData, setSprintCreateOpen } = useUIStore()
   const canManageBoard = useHasPermission(projectId, PERMISSIONS.BOARD_MANAGE)
+  const canCreateTickets = useHasPermission(projectId, PERMISSIONS.TICKETS_CREATE)
+
+  // Move state
+  const [moveLoading, setMoveLoading] = useState(false)
 
   // Rename state
   const [renameOpen, setRenameOpen] = useState(false)
@@ -84,6 +108,89 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
 
   const otherColumns = allColumns.filter((c) => c.id !== column.id)
   const isLastColumn = allColumns.length <= 1
+
+  // Calculate column position for move left/right
+  const columnIndex = allColumns.findIndex((c) => c.id === column.id)
+  const canMoveLeft = columnIndex > 0
+  const canMoveRight = columnIndex < allColumns.length - 1
+
+  // Handle adding a ticket to this column
+  const handleAddTicket = useCallback(() => {
+    if (onAddTicket) {
+      onAddTicket()
+    } else if (activeSprintId) {
+      openCreateTicketWithData({ columnId: column.id, sprintId: activeSprintId })
+    } else {
+      // No active sprint - prompt to create one first
+      setSprintCreateOpen(true)
+    }
+  }, [onAddTicket, activeSprintId, column.id, openCreateTicketWithData, setSprintCreateOpen])
+
+  // Handle moving column left or right
+  const handleMoveColumn = useCallback(
+    async (direction: 'left' | 'right') => {
+      const currentIndex = allColumns.findIndex((c) => c.id === column.id)
+      const targetIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1
+
+      if (targetIndex < 0 || targetIndex >= allColumns.length) return
+
+      setMoveLoading(true)
+      try {
+        const tabId = getTabId()
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+          ...(tabId && { 'X-Tab-Id': tabId }),
+        }
+
+        // The target order is the order of the column we're swapping with
+        const targetColumn = allColumns[targetIndex]
+        const newOrder = targetColumn.order
+
+        const res = await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ order: newOrder }),
+        })
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ error: 'Failed to move column' }))
+          throw new Error(error.error || 'Failed to move column')
+        }
+
+        // Also update the swapped column's order
+        await fetch(`/api/projects/${projectKey}/columns/${targetColumn.id}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ order: column.order }),
+        })
+
+        // Update the board store
+        const columns = getColumns(projectId)
+        const updatedColumns = [...columns]
+        // Swap the positions
+        const temp = updatedColumns[currentIndex]
+        updatedColumns[currentIndex] = { ...updatedColumns[targetIndex], order: column.order }
+        updatedColumns[targetIndex] = { ...temp, order: newOrder }
+        // Sort by order
+        updatedColumns.sort((a, b) => a.order - b.order)
+        setColumns(projectId, updatedColumns)
+
+        // Invalidate column queries to refresh data
+        queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
+
+        toast.success('Column moved', {
+          description: `"${column.name}" moved ${direction}`,
+        })
+      } catch (error) {
+        toast.error('Failed to move column', {
+          description: error instanceof Error ? error.message : 'An error occurred',
+        })
+      } finally {
+        setMoveLoading(false)
+      }
+    },
+    [allColumns, column, projectId, projectKey, getColumns, setColumns, queryClient],
+  )
 
   // Initialize move target when delete dialog opens
   const handleDeleteOpen = useCallback(() => {
@@ -520,13 +627,20 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-700">
+          {/* Add ticket */}
+          {canCreateTickets && (
+            <DropdownMenuItem onClick={handleAddTicket} className="text-zinc-300 focus:bg-zinc-800">
+              <Plus className="h-4 w-4 mr-2" />
+              Add ticket
+            </DropdownMenuItem>
+          )}
           {canManageBoard && (
             <DropdownMenuItem
               onClick={handleRenameOpen}
               className="text-zinc-300 focus:bg-zinc-800"
             >
               <Pencil className="h-4 w-4 mr-2" />
-              Rename column
+              Edit column
             </DropdownMenuItem>
           )}
           <DropdownMenuItem
@@ -536,8 +650,26 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
             <ChevronsLeftRight className="h-4 w-4 mr-2" />
             Collapse column
           </DropdownMenuItem>
+          {/* Move left/right */}
           {canManageBoard && (
             <>
+              <DropdownMenuSeparator className="bg-zinc-700" />
+              <DropdownMenuItem
+                onClick={() => handleMoveColumn('left')}
+                disabled={!canMoveLeft || moveLoading}
+                className="text-zinc-300 focus:bg-zinc-800 disabled:opacity-50"
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Move left
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleMoveColumn('right')}
+                disabled={!canMoveRight || moveLoading}
+                className="text-zinc-300 focus:bg-zinc-800 disabled:opacity-50"
+              >
+                <ChevronRight className="h-4 w-4 mr-2" />
+                Move right
+              </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-zinc-700" />
               <DropdownMenuItem
                 onClick={handleDeleteOpen}
