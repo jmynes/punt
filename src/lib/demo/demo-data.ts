@@ -2,6 +2,11 @@
  * Pre-seeded demo data for client-side demo mode
  *
  * This data is used to initialize localStorage when demo mode is enabled.
+ * It showcases a realistic software development team scenario with:
+ * - Multiple projects with different colors
+ * - Various ticket types (epic, story, task, bug)
+ * - Sprint states (planning, active, completed)
+ * - Labels, assignees, story points, estimates, and due dates
  */
 
 import type {
@@ -54,19 +59,28 @@ export interface DemoProject {
 export const DEMO_PROJECTS: DemoProject[] = [
   {
     id: 'demo-project-1',
-    name: 'Product Launch',
-    key: 'LAUNCH',
-    description: 'Q1 product launch planning and execution',
-    color: '#6366f1',
+    name: 'Mobile App',
+    key: 'MOBILE',
+    description: 'Cross-platform mobile app for iOS and Android with React Native',
+    color: '#6366f1', // Indigo
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   },
   {
     id: 'demo-project-2',
-    name: 'Bug Tracker',
-    key: 'BUGS',
-    description: 'Bug tracking and issue resolution',
-    color: '#ef4444',
+    name: 'Backend API',
+    key: 'API',
+    description: 'RESTful API service with authentication, real-time updates, and data persistence',
+    color: '#10b981', // Emerald
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  },
+  {
+    id: 'demo-project-3',
+    name: 'Design System',
+    key: 'DESIGN',
+    description: 'Shared component library and design tokens for consistent UI across products',
+    color: '#f59e0b', // Amber
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   },
@@ -86,16 +100,23 @@ export interface DemoColumn {
 }
 
 export const DEMO_COLUMNS: DemoColumn[] = [
-  // Project 1: Product Launch
+  // Project 1: Mobile App
   { id: 'demo-col-1-1', name: 'To Do', order: 0, projectId: 'demo-project-1' },
   { id: 'demo-col-1-2', name: 'In Progress', order: 1, projectId: 'demo-project-1' },
-  { id: 'demo-col-1-3', name: 'Review', order: 2, projectId: 'demo-project-1' },
+  { id: 'demo-col-1-3', name: 'In Review', order: 2, projectId: 'demo-project-1' },
   { id: 'demo-col-1-4', name: 'Done', order: 3, projectId: 'demo-project-1' },
-  // Project 2: Bug Tracker
+  // Project 2: Backend API
   { id: 'demo-col-2-1', name: 'To Do', order: 0, projectId: 'demo-project-2' },
   { id: 'demo-col-2-2', name: 'In Progress', order: 1, projectId: 'demo-project-2' },
-  { id: 'demo-col-2-3', name: 'Review', order: 2, projectId: 'demo-project-2' },
-  { id: 'demo-col-2-4', name: 'Done', order: 3, projectId: 'demo-project-2' },
+  { id: 'demo-col-2-3', name: 'Code Review', order: 2, projectId: 'demo-project-2' },
+  { id: 'demo-col-2-4', name: 'QA Testing', order: 3, projectId: 'demo-project-2' },
+  { id: 'demo-col-2-5', name: 'Done', order: 4, projectId: 'demo-project-2' },
+  // Project 3: Design System
+  { id: 'demo-col-3-1', name: 'Backlog', order: 0, projectId: 'demo-project-3' },
+  { id: 'demo-col-3-2', name: 'In Design', order: 1, projectId: 'demo-project-3' },
+  { id: 'demo-col-3-3', name: 'In Development', order: 2, projectId: 'demo-project-3' },
+  { id: 'demo-col-3-4', name: 'Review', order: 3, projectId: 'demo-project-3' },
+  { id: 'demo-col-3-5', name: 'Published', order: 4, projectId: 'demo-project-3' },
 ]
 
 // ============================================================================
@@ -103,18 +124,26 @@ export const DEMO_COLUMNS: DemoColumn[] = [
 // ============================================================================
 
 export const DEMO_LABELS: (LabelSummary & { projectId: string })[] = [
-  // Project 1: Product Launch
-  { id: 'demo-label-1-1', name: 'feature', color: '#22c55e', projectId: 'demo-project-1' },
-  { id: 'demo-label-1-2', name: 'enhancement', color: '#3b82f6', projectId: 'demo-project-1' },
-  { id: 'demo-label-1-3', name: 'documentation', color: '#a855f7', projectId: 'demo-project-1' },
-  { id: 'demo-label-1-4', name: 'urgent', color: '#f59e0b', projectId: 'demo-project-1' },
-  { id: 'demo-label-1-5', name: 'blocked', color: '#991b1b', projectId: 'demo-project-1' },
-  // Project 2: Bug Tracker
-  { id: 'demo-label-2-1', name: 'bug', color: '#ef4444', projectId: 'demo-project-2' },
-  { id: 'demo-label-2-2', name: 'critical', color: '#dc2626', projectId: 'demo-project-2' },
-  { id: 'demo-label-2-3', name: 'performance', color: '#f59e0b', projectId: 'demo-project-2' },
-  { id: 'demo-label-2-4', name: 'ui/ux', color: '#ec4899', projectId: 'demo-project-2' },
-  { id: 'demo-label-2-5', name: 'backend', color: '#0891b2', projectId: 'demo-project-2' },
+  // Project 1: Mobile App
+  { id: 'demo-label-1-1', name: 'ios', color: '#000000', projectId: 'demo-project-1' },
+  { id: 'demo-label-1-2', name: 'android', color: '#3ddc84', projectId: 'demo-project-1' },
+  { id: 'demo-label-1-3', name: 'ui', color: '#ec4899', projectId: 'demo-project-1' },
+  { id: 'demo-label-1-4', name: 'performance', color: '#f59e0b', projectId: 'demo-project-1' },
+  { id: 'demo-label-1-5', name: 'accessibility', color: '#8b5cf6', projectId: 'demo-project-1' },
+  { id: 'demo-label-1-6', name: 'offline', color: '#6b7280', projectId: 'demo-project-1' },
+  // Project 2: Backend API
+  { id: 'demo-label-2-1', name: 'security', color: '#ef4444', projectId: 'demo-project-2' },
+  { id: 'demo-label-2-2', name: 'database', color: '#3b82f6', projectId: 'demo-project-2' },
+  { id: 'demo-label-2-3', name: 'auth', color: '#10b981', projectId: 'demo-project-2' },
+  { id: 'demo-label-2-4', name: 'api', color: '#6366f1', projectId: 'demo-project-2' },
+  { id: 'demo-label-2-5', name: 'performance', color: '#f59e0b', projectId: 'demo-project-2' },
+  { id: 'demo-label-2-6', name: 'documentation', color: '#a855f7', projectId: 'demo-project-2' },
+  // Project 3: Design System
+  { id: 'demo-label-3-1', name: 'component', color: '#3b82f6', projectId: 'demo-project-3' },
+  { id: 'demo-label-3-2', name: 'token', color: '#10b981', projectId: 'demo-project-3' },
+  { id: 'demo-label-3-3', name: 'documentation', color: '#a855f7', projectId: 'demo-project-3' },
+  { id: 'demo-label-3-4', name: 'breaking-change', color: '#ef4444', projectId: 'demo-project-3' },
+  { id: 'demo-label-3-5', name: 'accessibility', color: '#8b5cf6', projectId: 'demo-project-3' },
 ]
 
 // ============================================================================
@@ -125,36 +154,85 @@ const now = new Date()
 const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+const twoWeeksFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+const threeWeeksAgo = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000)
+const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
+const fiveDaysFromNow = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000)
+const tenDaysFromNow = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000)
 
 export const DEMO_SPRINTS: (SprintSummary & { projectId: string })[] = [
-  // Project 1: Product Launch
+  // Project 1: Mobile App - shows all sprint states
   {
     id: 'demo-sprint-1-1',
     name: 'Sprint 1',
     status: 'completed',
-    startDate: twoWeeksAgo,
-    endDate: oneWeekAgo,
-    goal: 'Complete initial planning and setup',
+    startDate: threeWeeksAgo,
+    endDate: twoWeeksAgo,
+    goal: 'Setup project infrastructure and basic navigation',
+    budget: 20,
     projectId: 'demo-project-1',
   },
   {
     id: 'demo-sprint-1-2',
     name: 'Sprint 2',
+    status: 'completed',
+    startDate: twoWeeksAgo,
+    endDate: oneWeekAgo,
+    goal: 'Implement authentication and user profile',
+    budget: 30,
+    projectId: 'demo-project-1',
+  },
+  {
+    id: 'demo-sprint-1-3',
+    name: 'Sprint 3',
     status: 'active',
     startDate: oneWeekAgo,
     endDate: oneWeekFromNow,
-    goal: 'Develop core features',
+    goal: 'Build core features: dashboard and notifications',
+    budget: 35,
     projectId: 'demo-project-1',
   },
-  // Project 2: Bug Tracker
+  {
+    id: 'demo-sprint-1-4',
+    name: 'Sprint 4',
+    status: 'planning',
+    startDate: null,
+    endDate: null,
+    goal: 'Offline mode and performance optimization',
+    budget: 30,
+    projectId: 'demo-project-1',
+  },
+  // Project 2: Backend API
   {
     id: 'demo-sprint-2-1',
     name: 'Sprint 1',
+    status: 'completed',
+    startDate: twoWeeksAgo,
+    endDate: oneWeekAgo,
+    goal: 'Setup authentication and basic CRUD endpoints',
+    budget: 25,
+    projectId: 'demo-project-2',
+  },
+  {
+    id: 'demo-sprint-2-2',
+    name: 'Sprint 2',
     status: 'active',
     startDate: oneWeekAgo,
     endDate: oneWeekFromNow,
-    goal: 'Fix critical bugs',
+    goal: 'Real-time updates and notification service',
+    budget: 30,
     projectId: 'demo-project-2',
+  },
+  // Project 3: Design System
+  {
+    id: 'demo-sprint-3-1',
+    name: 'Q1 Release',
+    status: 'active',
+    startDate: twoWeeksAgo,
+    endDate: twoWeeksFromNow,
+    goal: 'Ship core components: Button, Input, Modal, Card',
+    budget: 40,
+    projectId: 'demo-project-3',
   },
 ]
 
@@ -228,296 +306,730 @@ function getSprint(projectId: string, name: string): SprintSummary | undefined {
 
 export const DEMO_TICKETS: TicketWithRelations[] = [
   // ============================================================================
-  // Project 1: Product Launch
+  // Project 1: Mobile App
   // ============================================================================
 
-  // To Do column (active sprint)
+  // Epic: User Authentication (Done - Sprint 2)
   createTicket({
     id: 'demo-ticket-1-1',
     number: 1,
-    title: 'Create landing page design mockups',
+    title: 'User Authentication Epic',
     description:
-      'Design initial mockups for the product landing page. Include mobile and desktop versions.',
-    type: 'story',
-    priority: 'high',
+      'Complete authentication system including login, registration, password reset, and biometric authentication.',
+    type: 'epic',
+    priority: 'highest',
     order: 0,
-    storyPoints: 5,
+    storyPoints: 21,
     projectId: 'demo-project-1',
-    columnId: 'demo-col-1-1',
+    columnId: 'demo-col-1-4', // Done
     sprintId: 'demo-sprint-1-2',
     sprint: getSprint('demo-project-1', 'Sprint 2'),
-    labels: [getLabel('demo-project-1', 'feature')],
-    assigneeId: getTeamMember(0).id,
-    assignee: getTeamMember(0),
+    assigneeId: DEMO_USER.id,
+    assignee: DEMO_USER_SUMMARY,
+    labels: [getLabel('demo-project-1', 'ios'), getLabel('demo-project-1', 'android')],
   }),
+
+  // Done items from Sprint 2
   createTicket({
     id: 'demo-ticket-1-2',
     number: 2,
-    title: 'Set up analytics tracking',
-    description: 'Implement Google Analytics and custom event tracking for user behavior analysis.',
-    type: 'task',
-    priority: 'medium',
+    title: 'Implement login screen',
+    description:
+      'Create login screen with email/password fields, validation, and error handling. Include "forgot password" link.',
+    type: 'story',
+    priority: 'high',
     order: 1,
-    storyPoints: 3,
+    storyPoints: 5,
+    estimate: '4h',
     projectId: 'demo-project-1',
-    columnId: 'demo-col-1-1',
+    columnId: 'demo-col-1-4',
     sprintId: 'demo-sprint-1-2',
     sprint: getSprint('demo-project-1', 'Sprint 2'),
-    assigneeId: getTeamMember(1).id,
-    assignee: getTeamMember(1),
+    parentId: 'demo-ticket-1-1',
+    assigneeId: getTeamMember(0).id,
+    assignee: getTeamMember(0),
+    labels: [getLabel('demo-project-1', 'ui')],
   }),
   createTicket({
     id: 'demo-ticket-1-3',
     number: 3,
-    title: 'Write product documentation',
-    description: 'Create comprehensive documentation for end users and developers.',
-    type: 'task',
-    priority: 'low',
+    title: 'Add biometric authentication',
+    description:
+      'Integrate Face ID for iOS and fingerprint for Android. Fall back to PIN if biometrics unavailable.',
+    type: 'story',
+    priority: 'medium',
     order: 2,
     storyPoints: 8,
+    estimate: '6h',
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-4',
+    sprintId: 'demo-sprint-1-2',
+    sprint: getSprint('demo-project-1', 'Sprint 2'),
+    parentId: 'demo-ticket-1-1',
+    assigneeId: getTeamMember(1).id,
+    assignee: getTeamMember(1),
+    labels: [getLabel('demo-project-1', 'ios'), getLabel('demo-project-1', 'android')],
+  }),
+
+  // Active Sprint 3 - In Progress
+  createTicket({
+    id: 'demo-ticket-1-4',
+    number: 4,
+    title: 'Dashboard screen implementation',
+    description:
+      'Build the main dashboard with activity feed, quick actions, and summary cards. Must support pull-to-refresh.',
+    type: 'story',
+    priority: 'highest',
+    order: 0,
+    storyPoints: 13,
+    estimate: '2d',
+    dueDate: threeDaysFromNow,
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-2', // In Progress
+    sprintId: 'demo-sprint-1-3',
+    sprint: getSprint('demo-project-1', 'Sprint 3'),
+    assigneeId: DEMO_USER.id,
+    assignee: DEMO_USER_SUMMARY,
+    labels: [getLabel('demo-project-1', 'ui')],
+  }),
+  createTicket({
+    id: 'demo-ticket-1-5',
+    number: 5,
+    title: 'Push notification service integration',
+    description:
+      'Integrate Firebase Cloud Messaging for Android and APNs for iOS. Handle notification permissions and deep linking.',
+    type: 'story',
+    priority: 'high',
+    order: 1,
+    storyPoints: 8,
+    estimate: '1d',
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-2',
+    sprintId: 'demo-sprint-1-3',
+    sprint: getSprint('demo-project-1', 'Sprint 3'),
+    assigneeId: getTeamMember(1).id,
+    assignee: getTeamMember(1),
+    labels: [getLabel('demo-project-1', 'ios'), getLabel('demo-project-1', 'android')],
+  }),
+
+  // Active Sprint 3 - In Review
+  createTicket({
+    id: 'demo-ticket-1-6',
+    number: 6,
+    title: 'Settings screen with notification preferences',
+    description:
+      'User settings page with profile editing, notification toggles, and app preferences.',
+    type: 'story',
+    priority: 'medium',
+    order: 0,
+    storyPoints: 5,
+    estimate: '4h',
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-3', // In Review
+    sprintId: 'demo-sprint-1-3',
+    sprint: getSprint('demo-project-1', 'Sprint 3'),
+    assigneeId: getTeamMember(0).id,
+    assignee: getTeamMember(0),
+    labels: [getLabel('demo-project-1', 'ui')],
+  }),
+
+  // Active Sprint 3 - To Do
+  createTicket({
+    id: 'demo-ticket-1-7',
+    number: 7,
+    title: 'Fix keyboard avoiding view on Android',
+    description:
+      'Keyboard overlaps input fields on certain Android devices. Need to adjust layout and test on multiple screen sizes.',
+    type: 'bug',
+    priority: 'high',
+    order: 0,
+    storyPoints: 3,
+    estimate: '2h',
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-1', // To Do
+    sprintId: 'demo-sprint-1-3',
+    sprint: getSprint('demo-project-1', 'Sprint 3'),
+    assigneeId: getTeamMember(2).id,
+    assignee: getTeamMember(2),
+    labels: [getLabel('demo-project-1', 'android'), getLabel('demo-project-1', 'ui')],
+    environment: 'Android 13+',
+  }),
+  createTicket({
+    id: 'demo-ticket-1-8',
+    number: 8,
+    title: 'Add loading skeletons',
+    description:
+      'Replace loading spinners with skeleton screens for better perceived performance. Apply to lists and cards.',
+    type: 'task',
+    priority: 'low',
+    order: 1,
+    storyPoints: 2,
+    estimate: '2h',
     projectId: 'demo-project-1',
     columnId: 'demo-col-1-1',
-    labels: [getLabel('demo-project-1', 'documentation')],
+    sprintId: 'demo-sprint-1-3',
+    sprint: getSprint('demo-project-1', 'Sprint 3'),
+    labels: [getLabel('demo-project-1', 'ui'), getLabel('demo-project-1', 'performance')],
   }),
-  // Backlog items (no sprint)
+
+  // Sprint 3 - Done (carried over from Sprint 2)
   createTicket({
     id: 'demo-ticket-1-9',
     number: 9,
-    title: 'Implement email notification system',
+    title: 'User profile avatar upload',
     description:
-      'Build email notification infrastructure for user alerts, password resets, and marketing communications.',
+      'Allow users to upload and crop profile photos. Support camera and gallery selection.',
+    type: 'story',
+    priority: 'medium',
+    order: 0,
+    storyPoints: 5,
+    estimate: '4h',
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-4',
+    sprintId: 'demo-sprint-1-3',
+    sprint: getSprint('demo-project-1', 'Sprint 3'),
+    assigneeId: getTeamMember(2).id,
+    assignee: getTeamMember(2),
+    labels: [getLabel('demo-project-1', 'ui')],
+    isCarriedOver: true,
+    carriedFromSprintId: 'demo-sprint-1-2',
+    carriedOverCount: 1,
+  }),
+
+  // Planning Sprint 4 - Backlog items planned
+  createTicket({
+    id: 'demo-ticket-1-10',
+    number: 10,
+    title: 'Offline Mode Epic',
+    description:
+      'Enable the app to work offline with local data caching and sync when connection is restored.',
+    type: 'epic',
+    priority: 'high',
+    order: 0,
+    storyPoints: 34,
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-1',
+    sprintId: 'demo-sprint-1-4',
+    sprint: getSprint('demo-project-1', 'Sprint 4'),
+    labels: [getLabel('demo-project-1', 'offline')],
+  }),
+  createTicket({
+    id: 'demo-ticket-1-11',
+    number: 11,
+    title: 'Implement local SQLite database',
+    description: 'Set up SQLite for local data persistence. Define schema mirroring server models.',
+    type: 'story',
+    priority: 'high',
+    order: 1,
+    storyPoints: 8,
+    estimate: '1d',
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-1',
+    sprintId: 'demo-sprint-1-4',
+    sprint: getSprint('demo-project-1', 'Sprint 4'),
+    parentId: 'demo-ticket-1-10',
+    labels: [getLabel('demo-project-1', 'offline')],
+  }),
+  createTicket({
+    id: 'demo-ticket-1-12',
+    number: 12,
+    title: 'Background sync service',
+    description:
+      'Create a service that syncs local changes to server when network becomes available. Handle conflicts.',
+    type: 'story',
+    priority: 'high',
+    order: 2,
+    storyPoints: 13,
+    estimate: '2d',
+    projectId: 'demo-project-1',
+    columnId: 'demo-col-1-1',
+    sprintId: 'demo-sprint-1-4',
+    sprint: getSprint('demo-project-1', 'Sprint 4'),
+    parentId: 'demo-ticket-1-10',
+    labels: [getLabel('demo-project-1', 'offline')],
+  }),
+
+  // Unassigned backlog items (no sprint)
+  createTicket({
+    id: 'demo-ticket-1-13',
+    number: 13,
+    title: 'Implement dark mode',
+    description:
+      'Add system-aware dark mode with manual toggle option. Update all screens and components.',
     type: 'story',
     priority: 'medium',
     order: 3,
     storyPoints: 8,
     projectId: 'demo-project-1',
     columnId: 'demo-col-1-1',
-    labels: [getLabel('demo-project-1', 'feature')],
+    labels: [getLabel('demo-project-1', 'ui'), getLabel('demo-project-1', 'accessibility')],
   }),
   createTicket({
-    id: 'demo-ticket-1-10',
-    number: 10,
-    title: 'Add keyboard shortcuts for power users',
+    id: 'demo-ticket-1-14',
+    number: 14,
+    title: 'Add haptic feedback',
     description:
-      'Implement keyboard shortcuts for common actions like navigation, creating tickets, and quick search.',
+      'Implement haptic feedback for button presses, success/error states, and pull-to-refresh.',
     type: 'task',
     priority: 'low',
     order: 4,
-    storyPoints: 3,
+    storyPoints: 2,
     projectId: 'demo-project-1',
     columnId: 'demo-col-1-1',
-    labels: [getLabel('demo-project-1', 'enhancement')],
+    labels: [getLabel('demo-project-1', 'ios'), getLabel('demo-project-1', 'android')],
   }),
   createTicket({
-    id: 'demo-ticket-1-11',
-    number: 11,
-    title: 'Research third-party integrations',
+    id: 'demo-ticket-1-15',
+    number: 15,
+    title: 'VoiceOver and TalkBack accessibility audit',
     description:
-      'Evaluate potential integrations with Slack, GitHub, and calendar apps. Document API requirements and effort estimates.',
+      'Conduct full accessibility audit. Ensure all interactive elements have proper labels and the app is navigable with screen readers.',
     type: 'task',
-    priority: 'low',
+    priority: 'high',
     order: 5,
     storyPoints: 5,
     projectId: 'demo-project-1',
     columnId: 'demo-col-1-1',
-  }),
-
-  // In Progress column
-  createTicket({
-    id: 'demo-ticket-1-4',
-    number: 4,
-    title: 'Implement user authentication flow',
-    description:
-      'Build the complete authentication flow including login, registration, and password reset.',
-    type: 'story',
-    priority: 'highest',
-    order: 0,
-    storyPoints: 13,
-    projectId: 'demo-project-1',
-    columnId: 'demo-col-1-2',
-    sprintId: 'demo-sprint-1-2',
-    sprint: getSprint('demo-project-1', 'Sprint 2'),
-    assigneeId: DEMO_USER.id,
-    assignee: DEMO_USER_SUMMARY,
-    labels: [getLabel('demo-project-1', 'feature'), getLabel('demo-project-1', 'urgent')],
-  }),
-  createTicket({
-    id: 'demo-ticket-1-5',
-    number: 5,
-    title: 'Design system component library',
-    description: 'Create reusable UI components with consistent styling and accessibility.',
-    type: 'story',
-    priority: 'high',
-    order: 1,
-    storyPoints: 8,
-    projectId: 'demo-project-1',
-    columnId: 'demo-col-1-2',
-    sprintId: 'demo-sprint-1-2',
-    sprint: getSprint('demo-project-1', 'Sprint 2'),
-    assigneeId: DEMO_USER.id,
-    assignee: DEMO_USER_SUMMARY,
-  }),
-
-  // Review column
-  createTicket({
-    id: 'demo-ticket-1-6',
-    number: 6,
-    title: 'API endpoint documentation',
-    description: 'Document all REST API endpoints with examples and response schemas.',
-    type: 'task',
-    priority: 'medium',
-    order: 0,
-    storyPoints: 3,
-    projectId: 'demo-project-1',
-    columnId: 'demo-col-1-3',
-    sprintId: 'demo-sprint-1-2',
-    sprint: getSprint('demo-project-1', 'Sprint 2'),
-    labels: [getLabel('demo-project-1', 'documentation')],
-    assigneeId: getTeamMember(2).id,
-    assignee: getTeamMember(2),
-  }),
-
-  // Done column (from completed sprint)
-  createTicket({
-    id: 'demo-ticket-1-7',
-    number: 7,
-    title: 'Project setup and configuration',
-    description: 'Initialize project repository, configure build tools and CI/CD pipeline.',
-    type: 'task',
-    priority: 'highest',
-    order: 0,
-    storyPoints: 5,
-    projectId: 'demo-project-1',
-    columnId: 'demo-col-1-4',
-    sprintId: 'demo-sprint-1-1',
-    sprint: getSprint('demo-project-1', 'Sprint 1'),
-    assigneeId: DEMO_USER.id,
-    assignee: DEMO_USER_SUMMARY,
-  }),
-  createTicket({
-    id: 'demo-ticket-1-8',
-    number: 8,
-    title: 'Database schema design',
-    description: 'Design and implement the initial database schema with migrations.',
-    type: 'task',
-    priority: 'high',
-    order: 1,
-    storyPoints: 8,
-    projectId: 'demo-project-1',
-    columnId: 'demo-col-1-4',
-    sprintId: 'demo-sprint-1-1',
-    sprint: getSprint('demo-project-1', 'Sprint 1'),
-    assigneeId: getTeamMember(1).id,
-    assignee: getTeamMember(1),
+    labels: [getLabel('demo-project-1', 'accessibility')],
   }),
 
   // ============================================================================
-  // Project 2: Bug Tracker
+  // Project 2: Backend API
   // ============================================================================
 
-  // To Do column
+  // Completed Sprint 1
   createTicket({
     id: 'demo-ticket-2-1',
     number: 1,
-    title: 'Login form validation not working on Safari',
+    title: 'Set up project with Express and TypeScript',
     description:
-      'Users report that form validation messages are not displaying correctly on Safari browser.',
-    type: 'bug',
-    priority: 'high',
+      'Initialize Node.js project with Express, TypeScript, and proper folder structure.',
+    type: 'task',
+    priority: 'highest',
     order: 0,
+    storyPoints: 3,
+    estimate: '2h',
     projectId: 'demo-project-2',
-    columnId: 'demo-col-2-1',
+    columnId: 'demo-col-2-5', // Done
     sprintId: 'demo-sprint-2-1',
     sprint: getSprint('demo-project-2', 'Sprint 1'),
-    labels: [getLabel('demo-project-2', 'bug'), getLabel('demo-project-2', 'ui/ux')],
-    environment: 'Production',
-    assigneeId: getTeamMember(0).id,
-    assignee: getTeamMember(0),
+    assigneeId: DEMO_USER.id,
+    assignee: DEMO_USER_SUMMARY,
+    labels: [getLabel('demo-project-2', 'api')],
   }),
   createTicket({
     id: 'demo-ticket-2-2',
     number: 2,
-    title: 'Dashboard charts not rendering on mobile',
-    description:
-      'Chart components fail to render on mobile devices with screen width less than 768px.',
-    type: 'bug',
-    priority: 'medium',
+    title: 'JWT authentication middleware',
+    description: 'Implement JWT-based authentication with access and refresh tokens.',
+    type: 'story',
+    priority: 'highest',
     order: 1,
+    storyPoints: 8,
+    estimate: '6h',
     projectId: 'demo-project-2',
-    columnId: 'demo-col-2-1',
+    columnId: 'demo-col-2-5',
     sprintId: 'demo-sprint-2-1',
     sprint: getSprint('demo-project-2', 'Sprint 1'),
-    labels: [getLabel('demo-project-2', 'bug'), getLabel('demo-project-2', 'ui/ux')],
+    assigneeId: getTeamMember(1).id,
+    assignee: getTeamMember(1),
+    labels: [getLabel('demo-project-2', 'auth'), getLabel('demo-project-2', 'security')],
+  }),
+  createTicket({
+    id: 'demo-ticket-2-3',
+    number: 3,
+    title: 'User CRUD endpoints',
+    description: 'Create REST endpoints for user registration, profile update, and deletion.',
+    type: 'story',
+    priority: 'high',
+    order: 2,
+    storyPoints: 5,
+    estimate: '4h',
+    projectId: 'demo-project-2',
+    columnId: 'demo-col-2-5',
+    sprintId: 'demo-sprint-2-1',
+    sprint: getSprint('demo-project-2', 'Sprint 1'),
+    assigneeId: getTeamMember(0).id,
+    assignee: getTeamMember(0),
+    labels: [getLabel('demo-project-2', 'api')],
+  }),
+
+  // Active Sprint 2 - In Progress
+  createTicket({
+    id: 'demo-ticket-2-4',
+    number: 4,
+    title: 'WebSocket server for real-time updates',
+    description:
+      'Set up Socket.io server for real-time notifications and live data updates. Handle connection management and rooms.',
+    type: 'story',
+    priority: 'highest',
+    order: 0,
+    storyPoints: 13,
+    estimate: '2d',
+    dueDate: fiveDaysFromNow,
+    projectId: 'demo-project-2',
+    columnId: 'demo-col-2-2', // In Progress
+    sprintId: 'demo-sprint-2-2',
+    sprint: getSprint('demo-project-2', 'Sprint 2'),
+    assigneeId: DEMO_USER.id,
+    assignee: DEMO_USER_SUMMARY,
+    labels: [getLabel('demo-project-2', 'api')],
+  }),
+  createTicket({
+    id: 'demo-ticket-2-5',
+    number: 5,
+    title: 'Email notification service',
+    description:
+      'Integrate SendGrid for transactional emails. Create templates for welcome, password reset, and notifications.',
+    type: 'story',
+    priority: 'high',
+    order: 1,
+    storyPoints: 5,
+    estimate: '4h',
+    projectId: 'demo-project-2',
+    columnId: 'demo-col-2-2',
+    sprintId: 'demo-sprint-2-2',
+    sprint: getSprint('demo-project-2', 'Sprint 2'),
     assigneeId: getTeamMember(2).id,
     assignee: getTeamMember(2),
   }),
 
-  // In Progress column
-  createTicket({
-    id: 'demo-ticket-2-3',
-    number: 3,
-    title: 'Memory leak in real-time updates',
-    description:
-      'Application memory usage grows continuously when real-time update feature is enabled.',
-    type: 'bug',
-    priority: 'critical',
-    order: 0,
-    projectId: 'demo-project-2',
-    columnId: 'demo-col-2-2',
-    sprintId: 'demo-sprint-2-1',
-    sprint: getSprint('demo-project-2', 'Sprint 1'),
-    assigneeId: DEMO_USER.id,
-    assignee: DEMO_USER_SUMMARY,
-    labels: [
-      getLabel('demo-project-2', 'critical'),
-      getLabel('demo-project-2', 'performance'),
-      getLabel('demo-project-2', 'backend'),
-    ],
-    environment: 'Production',
-  }),
-
-  // Review column
-  createTicket({
-    id: 'demo-ticket-2-4',
-    number: 4,
-    title: 'File upload fails for large images',
-    description: 'Images larger than 5MB fail to upload with a generic error message.',
-    type: 'bug',
-    priority: 'high',
-    order: 0,
-    projectId: 'demo-project-2',
-    columnId: 'demo-col-2-3',
-    sprintId: 'demo-sprint-2-1',
-    sprint: getSprint('demo-project-2', 'Sprint 1'),
-    labels: [getLabel('demo-project-2', 'bug'), getLabel('demo-project-2', 'backend')],
-    assigneeId: getTeamMember(1).id,
-    assignee: getTeamMember(1),
-  }),
-
-  // Done column
-  createTicket({
-    id: 'demo-ticket-2-5',
-    number: 5,
-    title: 'Dark mode toggle not persisting',
-    description: 'User preference for dark mode resets after page refresh.',
-    type: 'bug',
-    priority: 'low',
-    order: 0,
-    projectId: 'demo-project-2',
-    columnId: 'demo-col-2-4',
-    labels: [getLabel('demo-project-2', 'bug'), getLabel('demo-project-2', 'ui/ux')],
-  }),
+  // Active Sprint 2 - Code Review
   createTicket({
     id: 'demo-ticket-2-6',
     number: 6,
-    title: 'Session timeout not redirecting properly',
-    description: 'When session expires, user is not redirected to login page.',
+    title: 'Rate limiting middleware',
+    description:
+      'Implement rate limiting with Redis to prevent abuse. Different limits for authenticated vs anonymous users.',
+    type: 'task',
+    priority: 'medium',
+    order: 0,
+    storyPoints: 5,
+    estimate: '3h',
+    projectId: 'demo-project-2',
+    columnId: 'demo-col-2-3', // Code Review
+    sprintId: 'demo-sprint-2-2',
+    sprint: getSprint('demo-project-2', 'Sprint 2'),
+    assigneeId: getTeamMember(1).id,
+    assignee: getTeamMember(1),
+    labels: [getLabel('demo-project-2', 'security'), getLabel('demo-project-2', 'performance')],
+  }),
+
+  // Active Sprint 2 - QA Testing
+  createTicket({
+    id: 'demo-ticket-2-7',
+    number: 7,
+    title: 'Fix refresh token expiration handling',
+    description:
+      'Refresh tokens are not being invalidated properly after password change. Security vulnerability.',
     type: 'bug',
+    priority: 'critical',
+    order: 0,
+    storyPoints: 3,
+    projectId: 'demo-project-2',
+    columnId: 'demo-col-2-4', // QA Testing
+    sprintId: 'demo-sprint-2-2',
+    sprint: getSprint('demo-project-2', 'Sprint 2'),
+    assigneeId: getTeamMember(0).id,
+    assignee: getTeamMember(0),
+    labels: [getLabel('demo-project-2', 'auth'), getLabel('demo-project-2', 'security')],
+    environment: 'Production',
+  }),
+
+  // Active Sprint 2 - To Do
+  createTicket({
+    id: 'demo-ticket-2-8',
+    number: 8,
+    title: 'Add request validation with Zod',
+    description: 'Implement Zod schemas for all endpoints. Return clear validation error messages.',
+    type: 'task',
+    priority: 'medium',
+    order: 0,
+    storyPoints: 5,
+    estimate: '4h',
+    dueDate: oneWeekFromNow,
+    projectId: 'demo-project-2',
+    columnId: 'demo-col-2-1', // To Do
+    sprintId: 'demo-sprint-2-2',
+    sprint: getSprint('demo-project-2', 'Sprint 2'),
+    labels: [getLabel('demo-project-2', 'api')],
+  }),
+  createTicket({
+    id: 'demo-ticket-2-9',
+    number: 9,
+    title: 'OpenAPI documentation',
+    description: 'Generate OpenAPI 3.0 spec from endpoint definitions. Set up Swagger UI.',
+    type: 'task',
+    priority: 'low',
+    order: 1,
+    storyPoints: 3,
+    estimate: '3h',
+    projectId: 'demo-project-2',
+    columnId: 'demo-col-2-1',
+    sprintId: 'demo-sprint-2-2',
+    sprint: getSprint('demo-project-2', 'Sprint 2'),
+    labels: [getLabel('demo-project-2', 'documentation')],
+  }),
+
+  // Backlog (no sprint)
+  createTicket({
+    id: 'demo-ticket-2-10',
+    number: 10,
+    title: 'Database query optimization',
+    description: 'Analyze slow queries and add appropriate indexes. Set up query monitoring.',
+    type: 'task',
+    priority: 'medium',
+    order: 2,
+    storyPoints: 8,
+    projectId: 'demo-project-2',
+    columnId: 'demo-col-2-1',
+    labels: [getLabel('demo-project-2', 'database'), getLabel('demo-project-2', 'performance')],
+  }),
+  createTicket({
+    id: 'demo-ticket-2-11',
+    number: 11,
+    title: 'Implement soft delete for all models',
+    description:
+      'Add deletedAt column and update queries to filter deleted records. Allow admin to restore.',
+    type: 'story',
+    priority: 'low',
+    order: 3,
+    storyPoints: 5,
+    projectId: 'demo-project-2',
+    columnId: 'demo-col-2-1',
+    labels: [getLabel('demo-project-2', 'database')],
+  }),
+  createTicket({
+    id: 'demo-ticket-2-12',
+    number: 12,
+    title: 'File upload service with S3',
+    description: 'Set up file upload to S3 with presigned URLs, size limits, and virus scanning.',
+    type: 'story',
+    priority: 'medium',
+    order: 4,
+    storyPoints: 8,
+    projectId: 'demo-project-2',
+    columnId: 'demo-col-2-1',
+    labels: [getLabel('demo-project-2', 'api')],
+  }),
+
+  // ============================================================================
+  // Project 3: Design System
+  // ============================================================================
+
+  // Active Q1 Release - In Development
+  createTicket({
+    id: 'demo-ticket-3-1',
+    number: 1,
+    title: 'Button component',
+    description:
+      'Core button component with variants: primary, secondary, outline, ghost. Include sizes: sm, md, lg. Support loading and disabled states.',
+    type: 'story',
+    priority: 'highest',
+    order: 0,
+    storyPoints: 8,
+    estimate: '1d',
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-3', // In Development
+    sprintId: 'demo-sprint-3-1',
+    sprint: getSprint('demo-project-3', 'Q1 Release'),
+    assigneeId: getTeamMember(0).id,
+    assignee: getTeamMember(0),
+    labels: [getLabel('demo-project-3', 'component'), getLabel('demo-project-3', 'accessibility')],
+  }),
+  createTicket({
+    id: 'demo-ticket-3-2',
+    number: 2,
+    title: 'Input field component',
+    description:
+      'Text input with label, placeholder, error state, and helper text. Support types: text, email, password, number.',
+    type: 'story',
+    priority: 'high',
+    order: 1,
+    storyPoints: 8,
+    estimate: '1d',
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-3',
+    sprintId: 'demo-sprint-3-1',
+    sprint: getSprint('demo-project-3', 'Q1 Release'),
+    assigneeId: getTeamMember(2).id,
+    assignee: getTeamMember(2),
+    labels: [getLabel('demo-project-3', 'component')],
+  }),
+
+  // Active Q1 Release - Review
+  createTicket({
+    id: 'demo-ticket-3-3',
+    number: 3,
+    title: 'Color tokens documentation',
+    description:
+      'Document all color tokens including semantic colors, palette variations, and accessibility contrast ratios.',
+    type: 'task',
+    priority: 'medium',
+    order: 0,
+    storyPoints: 3,
+    estimate: '3h',
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-4', // Review
+    sprintId: 'demo-sprint-3-1',
+    sprint: getSprint('demo-project-3', 'Q1 Release'),
+    assigneeId: DEMO_USER.id,
+    assignee: DEMO_USER_SUMMARY,
+    labels: [getLabel('demo-project-3', 'token'), getLabel('demo-project-3', 'documentation')],
+  }),
+
+  // Published (Done)
+  createTicket({
+    id: 'demo-ticket-3-4',
+    number: 4,
+    title: 'Typography scale and tokens',
+    description:
+      'Define typography scale with font families, sizes, weights, and line heights. Export as CSS variables and JS constants.',
+    type: 'story',
+    priority: 'highest',
+    order: 0,
+    storyPoints: 5,
+    estimate: '4h',
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-5', // Published
+    sprintId: 'demo-sprint-3-1',
+    sprint: getSprint('demo-project-3', 'Q1 Release'),
+    assigneeId: DEMO_USER.id,
+    assignee: DEMO_USER_SUMMARY,
+    labels: [getLabel('demo-project-3', 'token')],
+  }),
+  createTicket({
+    id: 'demo-ticket-3-5',
+    number: 5,
+    title: 'Spacing and layout tokens',
+    description:
+      'Define 8px grid-based spacing scale. Include tokens for margins, padding, and gaps.',
+    type: 'story',
+    priority: 'high',
+    order: 1,
+    storyPoints: 3,
+    estimate: '2h',
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-5',
+    sprintId: 'demo-sprint-3-1',
+    sprint: getSprint('demo-project-3', 'Q1 Release'),
+    assigneeId: getTeamMember(1).id,
+    assignee: getTeamMember(1),
+    labels: [getLabel('demo-project-3', 'token')],
+  }),
+
+  // In Design
+  createTicket({
+    id: 'demo-ticket-3-6',
+    number: 6,
+    title: 'Modal/Dialog component',
+    description:
+      'Modal component with header, body, footer sections. Support sizes and focus trapping. Include confirmation dialog variant.',
+    type: 'story',
+    priority: 'high',
+    order: 0,
+    storyPoints: 13,
+    estimate: '2d',
+    dueDate: tenDaysFromNow,
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-2', // In Design
+    sprintId: 'demo-sprint-3-1',
+    sprint: getSprint('demo-project-3', 'Q1 Release'),
+    assigneeId: getTeamMember(0).id,
+    assignee: getTeamMember(0),
+    labels: [getLabel('demo-project-3', 'component'), getLabel('demo-project-3', 'accessibility')],
+  }),
+  createTicket({
+    id: 'demo-ticket-3-7',
+    number: 7,
+    title: 'Card component',
+    description:
+      'Flexible card container with header, content, footer, and media slots. Support elevated and outlined variants.',
+    type: 'story',
     priority: 'medium',
     order: 1,
-    projectId: 'demo-project-2',
-    columnId: 'demo-col-2-4',
-    labels: [getLabel('demo-project-2', 'bug')],
+    storyPoints: 8,
+    estimate: '1d',
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-2',
+    sprintId: 'demo-sprint-3-1',
+    sprint: getSprint('demo-project-3', 'Q1 Release'),
+    labels: [getLabel('demo-project-3', 'component')],
+  }),
+
+  // Backlog
+  createTicket({
+    id: 'demo-ticket-3-8',
+    number: 8,
+    title: 'Dropdown/Select component',
+    description:
+      'Custom dropdown with search, multi-select, and groups. Ensure keyboard navigation and screen reader support.',
+    type: 'story',
+    priority: 'high',
+    order: 0,
+    storyPoints: 13,
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-1', // Backlog
+    labels: [getLabel('demo-project-3', 'component'), getLabel('demo-project-3', 'accessibility')],
+  }),
+  createTicket({
+    id: 'demo-ticket-3-9',
+    number: 9,
+    title: 'Table component',
+    description:
+      'Data table with sorting, filtering, pagination, and row selection. Support fixed headers and horizontal scroll.',
+    type: 'story',
+    priority: 'medium',
+    order: 1,
+    storyPoints: 21,
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-1',
+    labels: [getLabel('demo-project-3', 'component')],
+  }),
+  createTicket({
+    id: 'demo-ticket-3-10',
+    number: 10,
+    title: 'Toast notification component',
+    description:
+      'Toast notifications with variants: success, error, warning, info. Auto-dismiss with configurable duration.',
+    type: 'story',
+    priority: 'medium',
+    order: 2,
+    storyPoints: 5,
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-1',
+    labels: [getLabel('demo-project-3', 'component')],
+  }),
+  createTicket({
+    id: 'demo-ticket-3-11',
+    number: 11,
+    title: 'Update Button API to match new spec',
+    description:
+      'Breaking change: rename `type` prop to `variant`. Update documentation and migration guide.',
+    type: 'task',
+    priority: 'high',
+    order: 3,
+    storyPoints: 3,
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-1',
+    labels: [
+      getLabel('demo-project-3', 'breaking-change'),
+      getLabel('demo-project-3', 'documentation'),
+    ],
+  }),
+  createTicket({
+    id: 'demo-ticket-3-12',
+    number: 12,
+    title: 'Icon library integration',
+    description:
+      'Integrate icon library with tree-shaking support. Create Icon component wrapper with size and color props.',
+    type: 'story',
+    priority: 'low',
+    order: 4,
+    storyPoints: 5,
+    projectId: 'demo-project-3',
+    columnId: 'demo-col-3-1',
+    labels: [getLabel('demo-project-3', 'component')],
   }),
 ]
 
@@ -609,7 +1121,7 @@ export function getDemoRole(name: 'Owner' | 'Admin' | 'Member') {
 // ============================================================================
 
 export const DEMO_MEMBERS = [
-  // Demo User - Owner of both projects
+  // Demo User - Owner of all projects
   {
     id: 'demo-member-1',
     roleId: DEMO_ROLE.id,
@@ -618,7 +1130,7 @@ export const DEMO_MEMBERS = [
     role: DEMO_ROLE,
     user: DEMO_USER_SUMMARY,
   },
-  // Sarah Chen - Admin on Project 1, Member on Project 2
+  // Sarah Chen - Admin on Mobile App and Design System, Member on Backend API
   {
     id: 'demo-member-2',
     roleId: DEMO_ROLE_ADMIN.id,
@@ -626,9 +1138,13 @@ export const DEMO_MEMBERS = [
     userId: DEMO_TEAM_SUMMARIES[0].id,
     role: DEMO_ROLE_ADMIN,
     user: DEMO_TEAM_SUMMARIES[0],
-    projectMapping: { 'demo-project-1': 'Admin', 'demo-project-2': 'Member' },
+    projectMapping: {
+      'demo-project-1': 'Admin',
+      'demo-project-2': 'Member',
+      'demo-project-3': 'Admin',
+    },
   },
-  // Marcus Johnson - Member on both projects
+  // Marcus Johnson - Member on all projects (backend focused)
   {
     id: 'demo-member-3',
     roleId: DEMO_ROLE_MEMBER.id,
@@ -637,7 +1153,7 @@ export const DEMO_MEMBERS = [
     role: DEMO_ROLE_MEMBER,
     user: DEMO_TEAM_SUMMARIES[1],
   },
-  // Emily Rodriguez - Admin on Project 2, Member on Project 1
+  // Emily Rodriguez - Admin on Backend API, Member on others
   {
     id: 'demo-member-4',
     roleId: DEMO_ROLE_MEMBER.id,
@@ -645,7 +1161,11 @@ export const DEMO_MEMBERS = [
     userId: DEMO_TEAM_SUMMARIES[2].id,
     role: DEMO_ROLE_MEMBER,
     user: DEMO_TEAM_SUMMARIES[2],
-    projectMapping: { 'demo-project-1': 'Member', 'demo-project-2': 'Admin' },
+    projectMapping: {
+      'demo-project-1': 'Member',
+      'demo-project-2': 'Admin',
+      'demo-project-3': 'Member',
+    },
   },
 ] as const
 
