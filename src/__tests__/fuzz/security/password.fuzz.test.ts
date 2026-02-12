@@ -110,9 +110,7 @@ describe('Password Validation Fuzz Tests', () => {
     it('should validate known-good passwords as valid', () => {
       fc.assert(
         fc.property(
-          fc
-            .string({ minLength: 8, maxLength: 100 })
-            .map((base) => `Aa1${base}`), // Ensures uppercase, lowercase, number, and length >= 12
+          fc.string({ minLength: 8, maxLength: 100 }).map((base) => `Aa1${base}`), // Ensures uppercase, lowercase, number, and length >= 12
           (password) => {
             // Only test if the generated password actually meets requirements
             if (password.length >= 12) {
