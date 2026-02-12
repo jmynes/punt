@@ -38,6 +38,10 @@ interface SettingsState {
   hideColorRemovalWarning: boolean
   setHideColorRemovalWarning: (value: boolean) => void
 
+  // Persist table sort configuration across page refreshes
+  persistTableSort: boolean
+  setPersistTableSort: (value: boolean) => void
+
   // Projects where user has dismissed the "Add Column" button
   dismissedAddColumnProjects: string[]
   dismissAddColumn: (projectId: string) => void
@@ -99,6 +103,10 @@ export const useSettingsStore = create<SettingsState>()(
       // Hide color removal warning (off by default - show warning)
       hideColorRemovalWarning: false,
       setHideColorRemovalWarning: (value) => set({ hideColorRemovalWarning: value }),
+
+      // Persist table sort across refreshes (on by default)
+      persistTableSort: true,
+      setPersistTableSort: (value) => set({ persistTableSort: value }),
 
       // Add column dismiss per project
       dismissedAddColumnProjects: [],

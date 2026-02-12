@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { filterTickets } from '@/lib/filter-tickets'
 import { type SortConfig, useBacklogStore } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { BacklogFilters } from './backlog-filters'
 
@@ -62,6 +63,7 @@ export function BacklogTable({
     columns,
     reorderColumns,
     sort,
+    setSort,
     toggleSort,
     filterByType,
     filterByPriority,
@@ -79,6 +81,18 @@ export function BacklogTable({
     setBacklogOrder,
     clearBacklogOrder: _clearBacklogOrder,
   } = useBacklogStore()
+  const persistTableSort = useSettingsStore((s) => s.persistTableSort)
+
+  // Reset backlog sort to default on mount when sort persistence is disabled
+  const sortResetRef = useRef(false)
+  useEffect(() => {
+    if (!sortResetRef.current) {
+      sortResetRef.current = true
+      if (!persistTableSort) {
+        setSort({ column: 'key', direction: 'desc' })
+      }
+    }
+  }, [persistTableSort, setSort])
 
   // Apply persisted backlog order (per project) while keeping any new tickets appended
   const applyBacklogOrder = useMemo(

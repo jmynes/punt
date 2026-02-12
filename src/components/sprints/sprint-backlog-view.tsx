@@ -12,7 +12,7 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { Plus, Target } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   useDeleteSprint,
@@ -27,6 +27,8 @@ import { cn } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSettingsStore } from '@/stores/settings-store'
+import { useSprintStore } from '@/stores/sprint-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
@@ -74,6 +76,19 @@ export function SprintBacklogView({
     showSubtasks,
   } = useBacklogStore()
   const visibleColumns = backlogColumns.filter((c) => c.visible)
+  const persistTableSort = useSettingsStore((s) => s.persistTableSort)
+  const clearAllSprintSorts = useSprintStore((s) => s.clearAllSprintSorts)
+
+  // Clear sprint sorts on mount when sort persistence is disabled
+  const sortResetRef = useRef(false)
+  useEffect(() => {
+    if (!sortResetRef.current) {
+      sortResetRef.current = true
+      if (!persistTableSort) {
+        clearAllSprintSorts()
+      }
+    }
+  }, [persistTableSort, clearAllSprintSorts])
 
   // Apply filters from the shared backlog store
   const filteredTickets = useMemo(() => {

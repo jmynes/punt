@@ -27,6 +27,8 @@ export default function PreferencesPage() {
     setAutoSaveOnRoleEditorClose,
     showUndoButtons,
     setShowUndoButtons,
+    persistTableSort,
+    setPersistTableSort,
     sidebarExpandedSections,
     setSidebarSectionExpanded,
     hideColorRemovalWarning,
@@ -140,6 +142,35 @@ export default function PreferencesPage() {
                 id="show-undo-buttons"
                 checked={showUndoButtons}
                 onCheckedChange={(checked) => setShowUndoButtons(checked === true)}
+                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Table Behavior */}
+        <Card className="border-zinc-800 bg-zinc-900/50">
+          <CardHeader>
+            <CardTitle className="text-zinc-100">Table Behavior</CardTitle>
+            <CardDescription className="text-zinc-500">
+              Configure how backlog and sprint tables behave
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-start justify-between space-x-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="persist-table-sort" className="text-zinc-300">
+                  Persist sort on refresh
+                </Label>
+                <p className="text-sm text-zinc-500">
+                  Remember table sort configuration across page refreshes. When disabled, tables
+                  always reset to their default sort order on page load.
+                </p>
+              </div>
+              <Checkbox
+                id="persist-table-sort"
+                checked={persistTableSort}
+                onCheckedChange={(checked) => setPersistTableSort(checked === true)}
                 className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
               />
             </div>
