@@ -467,7 +467,7 @@ export function SprintSection({
             budget={sprint.budget}
           />
         ) : (
-          /* Backlog: simple text stats */
+          /* Backlog: simple text stats with filtered/total when filters active */
           <div className="flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1.5">
               <span
@@ -478,11 +478,25 @@ export function SprintSection({
               >
                 {filteredCount}
               </span>
-              <span className="text-zinc-600">{filteredCount === 1 ? 'issue' : 'issues'}</span>
+              {isFiltered && (
+                <>
+                  <span className="text-zinc-600">/</span>
+                  <span className="tabular-nums text-zinc-500">{totalTicketCount}</span>
+                </>
+              )}
+              <span className="text-zinc-600">
+                {(isFiltered ? totalTicketCount : filteredCount) === 1 ? 'issue' : 'issues'}
+              </span>
             </div>
             <div className="flex items-center gap-1.5 text-zinc-400">
               <TrendingUp className="h-3.5 w-3.5" />
               <span className="font-medium">{filteredPoints}</span>
+              {isFiltered && (
+                <>
+                  <span className="text-zinc-600">/</span>
+                  <span className="text-zinc-500">{totalStoryPoints}</span>
+                </>
+              )}
               <span className="text-zinc-600">pts</span>
             </div>
           </div>
