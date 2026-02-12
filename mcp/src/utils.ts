@@ -77,6 +77,7 @@ export function formatTicket(ticket: {
   startDate?: Date | string | null
   dueDate?: Date | string | null
   resolution?: string | null
+  resolvedAt?: Date | string | null
   environment?: string | null
   affectedVersion?: string | null
   fixVersion?: string | null
@@ -101,6 +102,7 @@ export function formatTicket(ticket: {
   lines.push(`**Priority:** ${ticket.priority}  `)
   if (ticket.column) lines.push(`**Status:** ${escapeMarkdown(ticket.column.name)}  `)
   if (ticket.resolution) lines.push(`**Resolution:** ${escapeMarkdown(ticket.resolution)}  `)
+  if (ticket.resolvedAt) lines.push(`**Resolved:** ${formatDate(ticket.resolvedAt)}  `)
 
   // People (names are user-controlled)
   if (ticket.assignee || ticket.creator) {

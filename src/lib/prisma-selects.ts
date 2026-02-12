@@ -88,6 +88,7 @@ export const TICKET_SELECT_FULL = {
   startDate: true,
   dueDate: true,
   resolution: true,
+  resolvedAt: true,
   environment: true,
   affectedVersion: true,
   fixVersion: true,

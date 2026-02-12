@@ -178,6 +178,7 @@ export interface TicketWithRelations {
   startDate: Date | null
   dueDate: Date | null
   resolution: string | null
+  resolvedAt: Date | null
   environment: string | null
   affectedVersion: string | null
   fixVersion: string | null

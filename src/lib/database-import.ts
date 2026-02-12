@@ -540,6 +540,7 @@ export async function importDatabase(
               ...ticketData,
               startDate: ticketData.startDate ? new Date(ticketData.startDate) : null,
               dueDate: ticketData.dueDate ? new Date(ticketData.dueDate) : null,
+              resolvedAt: ticketData.resolvedAt ? new Date(ticketData.resolvedAt) : null,
               createdAt: new Date(ticketData.createdAt),
               updatedAt: new Date(ticketData.updatedAt),
             },

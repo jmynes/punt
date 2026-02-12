@@ -1497,6 +1497,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             <div className="text-xs text-zinc-500 space-y-1">
               <p>Created {format(ticket.createdAt, "MMM d, yyyy 'at' h:mm a")}</p>
               <p>Updated {format(ticket.updatedAt, "MMM d, yyyy 'at' h:mm a")}</p>
+              {ticket.resolvedAt && (
+                <p className="text-green-500">
+                  Resolved {format(new Date(ticket.resolvedAt), "MMM d, yyyy 'at' h:mm a")}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {hasUnsavedChanges && (
