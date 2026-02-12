@@ -465,6 +465,8 @@ export function SprintSection({
             unfilteredTotalPoints={totalStoryPoints ?? filteredPoints}
             isFiltered={isFiltered}
             budget={sprint.budget}
+            sprintStatus={sprint.status as 'planning' | 'active' | 'completed'}
+            expired={expired}
           />
         ) : (
           /* Backlog: simple text stats with filtered/total when filters active */
@@ -661,6 +663,8 @@ function SprintProgressBars({
   unfilteredTotalPoints,
   isFiltered,
   budget,
+  sprintStatus,
+  expired,
 }: {
   completedCount: number
   totalCount: number
@@ -672,6 +676,8 @@ function SprintProgressBars({
   unfilteredTotalPoints: number
   isFiltered: boolean
   budget?: number | null
+  sprintStatus: 'planning' | 'active' | 'completed'
+  expired: boolean
 }) {
   // When filtered: show total completion dimmed, filtered completion bright
   // When unfiltered: show completion directly
@@ -693,6 +699,25 @@ function SprintProgressBars({
       ? Math.round((completedPoints / unfilteredTotalPoints) * 100)
       : null
 
+  // Match color scheme from the active sprint header:
+  // orange for expired, blue for planning, emerald for active/completed
+  const colorScheme = expired ? 'orange' : sprintStatus === 'planning' ? 'blue' : 'emerald'
+  const barColor = {
+    orange: 'bg-orange-500',
+    blue: 'bg-blue-500',
+    emerald: 'bg-emerald-500',
+  }[colorScheme]
+  const barColorDimmed = {
+    orange: 'bg-orange-500/30',
+    blue: 'bg-blue-500/30',
+    emerald: 'bg-emerald-500/30',
+  }[colorScheme]
+  const filteredTextColor = {
+    orange: 'text-orange-400',
+    blue: 'text-blue-400',
+    emerald: 'text-emerald-400',
+  }[colorScheme]
+
   return (
     <>
       <div className="hidden sm:flex items-center gap-4 text-xs">
@@ -706,14 +731,17 @@ function SprintProgressBars({
                 <div
                   className={cn(
                     'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
-                    isFiltered ? 'bg-blue-500/30' : 'bg-blue-500',
+                    isFiltered ? barColorDimmed : barColor,
                   )}
                   style={{ width: `${issuePercent}%` }}
                 />
                 {/* Filtered completion overlay */}
                 {filteredIssuePercent != null && (
                   <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-blue-500 transition-all duration-500"
+                    className={cn(
+                      'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                      barColor,
+                    )}
                     style={{ width: `${filteredIssuePercent}%` }}
                   />
                 )}
@@ -721,7 +749,9 @@ function SprintProgressBars({
               <div className="flex items-center gap-0.5 min-w-[36px]">
                 {isFiltered ? (
                   <>
-                    <span className="font-bold tabular-nums text-blue-400">{completedCount}</span>
+                    <span className={cn('font-bold tabular-nums', filteredTextColor)}>
+                      {completedCount}
+                    </span>
                     <span className="text-zinc-600">/</span>
                     <span className="tabular-nums text-zinc-500">{totalCount}</span>
                   </>
@@ -765,14 +795,17 @@ function SprintProgressBars({
                 <div
                   className={cn(
                     'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
-                    isFiltered ? 'bg-blue-500/30' : 'bg-blue-500',
+                    isFiltered ? barColorDimmed : barColor,
                   )}
                   style={{ width: `${pointsPercent}%` }}
                 />
                 {/* Filtered completion overlay */}
                 {filteredPointsPercent != null && (
                   <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-blue-500 transition-all duration-500"
+                    className={cn(
+                      'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                      barColor,
+                    )}
                     style={{ width: `${filteredPointsPercent}%` }}
                   />
                 )}
@@ -780,7 +813,9 @@ function SprintProgressBars({
               <div className="flex items-center gap-0.5 min-w-[36px]">
                 {isFiltered ? (
                   <>
-                    <span className="font-bold tabular-nums text-blue-400">{completedPoints}</span>
+                    <span className={cn('font-bold tabular-nums', filteredTextColor)}>
+                      {completedPoints}
+                    </span>
                     <span className="text-zinc-600">/</span>
                     <span className="tabular-nums text-zinc-500">{totalPoints}</span>
                     <span className="text-zinc-600 ml-0.5">pts</span>
