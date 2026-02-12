@@ -127,6 +127,7 @@ export async function exportDatabase(): Promise<ExportData> {
     ...ticket,
     startDate: ticket.startDate?.toISOString() ?? null,
     dueDate: ticket.dueDate?.toISOString() ?? null,
+    resolvedAt: ticket.resolvedAt?.toISOString() ?? null,
     createdAt: ticket.createdAt.toISOString(),
     updatedAt: ticket.updatedAt.toISOString(),
     labelIds: ticket.labels.map((l) => l.id),
