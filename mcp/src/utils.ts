@@ -11,6 +11,50 @@ export function parseTicketKey(key: string): { projectKey: string; number: numbe
 }
 
 /**
+ * Escape special markdown characters in text.
+ * This prevents user-controlled content from being interpreted as markdown formatting.
+ */
+export function escapeMarkdown(text: string): string {
+  // Escape backslashes first, then other special characters
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/\*/g, '\\*')
+    .replace(/_/g, '\\_')
+    .replace(/`/g, '\\`')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/</g, '\\<')
+    .replace(/>/g, '\\>')
+    .replace(/~/g, '\\~')
+    .replace(/\|/g, '\\|')
+}
+
+/**
+ * Escape text for use in markdown table cells.
+ * Pipes must be escaped to not break table structure.
+ * Newlines are replaced with spaces to keep content on one line.
+ */
+export function escapeTableCell(text: string): string {
+  return text.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').replace(/\r/g, ' ')
+}
+
+/**
+ * Truncate text to a maximum length, adding ellipsis if truncated.
+ */
+export function truncate(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text
+  return `${text.substring(0, maxLength - 3)}...`
+}
+
+/**
+ * Escape and truncate text for table cells.
+ * Combines escaping and truncation for safe table rendering.
+ */
+export function safeTableCell(text: string, maxLength = 50): string {
+  return escapeTableCell(truncate(text, maxLength))
+}
+
+/**
  * Format a date for display (YYYY-MM-DD)
  */
 export function formatDate(date: Date | string): string {
@@ -48,28 +92,31 @@ export function formatTicket(ticket: {
   const projectKey = ticket.project?.key ?? 'UNKNOWN'
   const lines: string[] = []
 
-  lines.push(`## ${projectKey}-${ticket.number}: ${ticket.title}`)
+  // Escape user-controlled content in heading
+  lines.push(`## ${projectKey}-${ticket.number}: ${escapeMarkdown(ticket.title)}`)
   lines.push('')
 
-  // Core fields
+  // Core fields (type/priority/resolution are controlled values, but column name is user-controlled)
   lines.push(`**Type:** ${ticket.type}  `)
   lines.push(`**Priority:** ${ticket.priority}  `)
-  if (ticket.column) lines.push(`**Status:** ${ticket.column.name}  `)
-  if (ticket.resolution) lines.push(`**Resolution:** ${ticket.resolution}  `)
+  if (ticket.column) lines.push(`**Status:** ${escapeMarkdown(ticket.column.name)}  `)
+  if (ticket.resolution) lines.push(`**Resolution:** ${escapeMarkdown(ticket.resolution)}  `)
 
-  // People
+  // People (names are user-controlled)
   if (ticket.assignee || ticket.creator) {
     lines.push('')
-    if (ticket.assignee) lines.push(`**Assignee:** ${ticket.assignee.name}  `)
-    if (ticket.creator) lines.push(`**Reporter:** ${ticket.creator.name}  `)
+    if (ticket.assignee) lines.push(`**Assignee:** ${escapeMarkdown(ticket.assignee.name)}  `)
+    if (ticket.creator) lines.push(`**Reporter:** ${escapeMarkdown(ticket.creator.name)}  `)
   }
 
-  // Planning
+  // Planning (sprint name and estimate are user-controlled)
   const planningFields: string[] = []
   if (ticket.sprint)
-    planningFields.push(`**Sprint:** ${ticket.sprint.name} (${ticket.sprint.status})`)
+    planningFields.push(
+      `**Sprint:** ${escapeMarkdown(ticket.sprint.name)} (${ticket.sprint.status})`,
+    )
   if (ticket.storyPoints != null) planningFields.push(`**Points:** ${ticket.storyPoints}`)
-  if (ticket.estimate) planningFields.push(`**Estimate:** ${ticket.estimate}`)
+  if (ticket.estimate) planningFields.push(`**Estimate:** ${escapeMarkdown(ticket.estimate)}`)
   if (planningFields.length > 0) {
     lines.push('')
     for (const f of planningFields) lines.push(`${f}  `)
@@ -84,24 +131,25 @@ export function formatTicket(ticket: {
     for (const f of dateFields) lines.push(`${f}  `)
   }
 
-  // Metadata
+  // Metadata (labels, environment, versions are user-controlled)
   const metaFields: string[] = []
   if (ticket.labels && ticket.labels.length > 0) {
-    metaFields.push(`**Labels:** ${ticket.labels.map((l) => l.name).join(', ')}`)
+    metaFields.push(`**Labels:** ${ticket.labels.map((l) => escapeMarkdown(l.name)).join(', ')}`)
   }
-  if (ticket.environment) metaFields.push(`**Environment:** ${ticket.environment}`)
-  if (ticket.affectedVersion) metaFields.push(`**Affected Version:** ${ticket.affectedVersion}`)
-  if (ticket.fixVersion) metaFields.push(`**Fix Version:** ${ticket.fixVersion}`)
+  if (ticket.environment) metaFields.push(`**Environment:** ${escapeMarkdown(ticket.environment)}`)
+  if (ticket.affectedVersion)
+    metaFields.push(`**Affected Version:** ${escapeMarkdown(ticket.affectedVersion)}`)
+  if (ticket.fixVersion) metaFields.push(`**Fix Version:** ${escapeMarkdown(ticket.fixVersion)}`)
   if (metaFields.length > 0) {
     lines.push('')
     for (const f of metaFields) lines.push(`${f}  `)
   }
 
-  // Description
+  // Description (user-controlled, escape markdown)
   if (ticket.description) {
     lines.push('')
     lines.push('**Description:**')
-    lines.push(ticket.description)
+    lines.push(escapeMarkdown(ticket.description))
   }
 
   return lines.join('\n')
@@ -134,10 +182,11 @@ export function formatTicketList(
 
   for (const ticket of tickets) {
     const key = `${projectKey ?? ticket.project?.key ?? 'UNKNOWN'}-${ticket.number}`
-    const title = ticket.title.length > 50 ? `${ticket.title.substring(0, 47)}...` : ticket.title
-    const status = ticket.column?.name ?? '-'
-    const sprint = ticket.sprint?.name ?? '-'
-    const assignee = ticket.assignee?.name ?? '-'
+    // Escape and truncate user-controlled fields for safe table rendering
+    const title = safeTableCell(ticket.title, 50)
+    const status = ticket.column?.name ? safeTableCell(ticket.column.name, 20) : '-'
+    const sprint = ticket.sprint?.name ? safeTableCell(ticket.sprint.name, 20) : '-'
+    const assignee = ticket.assignee?.name ? safeTableCell(ticket.assignee.name, 20) : '-'
     const points = ticket.storyPoints ?? '-'
 
     lines.push(
@@ -164,11 +213,12 @@ export function formatProject(project: {
 }): string {
   const lines: string[] = []
 
-  lines.push(`# ${project.key}: ${project.name}`)
+  // Escape user-controlled project name
+  lines.push(`# ${project.key}: ${escapeMarkdown(project.name)}`)
   lines.push('')
 
   if (project.description) {
-    lines.push(project.description)
+    lines.push(escapeMarkdown(project.description))
     lines.push('')
   }
 
@@ -183,7 +233,7 @@ export function formatProject(project: {
     lines.push('## Columns')
     lines.push('')
     for (const col of project.columns.sort((a, b) => a.order - b.order)) {
-      lines.push(`- ${col.name}`)
+      lines.push(`- ${escapeMarkdown(col.name)}`)
     }
   }
 
@@ -210,13 +260,11 @@ export function formatProjectList(
   lines.push('|-----|------|-------------|---------|')
 
   for (const project of projects) {
-    const desc = project.description
-      ? project.description.length > 40
-        ? `${project.description.substring(0, 37)}...`
-        : project.description
-      : '-'
+    // Escape and truncate user-controlled fields for safe table rendering
+    const name = safeTableCell(project.name, 30)
+    const desc = project.description ? safeTableCell(project.description, 40) : '-'
     const tickets = project._count?.tickets ?? '-'
-    lines.push(`| ${project.key} | ${project.name} | ${desc} | ${tickets} |`)
+    lines.push(`| ${project.key} | ${name} | ${desc} | ${tickets} |`)
   }
 
   lines.push('')
@@ -247,13 +295,15 @@ export function formatSprint(sprint: {
 }): string {
   const lines: string[] = []
 
-  lines.push(`# Sprint: ${sprint.name}`)
+  // Escape user-controlled sprint name
+  lines.push(`# Sprint: ${escapeMarkdown(sprint.name)}`)
   lines.push('')
 
   lines.push('| Field | Value |')
   lines.push('|-------|-------|')
   lines.push(`| Status | ${sprint.status} |`)
-  if (sprint.goal) lines.push(`| Goal | ${sprint.goal} |`)
+  // Escape user-controlled goal in table cell
+  if (sprint.goal) lines.push(`| Goal | ${safeTableCell(sprint.goal, 100)} |`)
   if (sprint.startDate) lines.push(`| Start | ${formatDate(sprint.startDate)} |`)
   if (sprint.endDate) lines.push(`| End | ${formatDate(sprint.endDate)} |`)
   if (sprint.budget != null) lines.push(`| Capacity | ${sprint.budget} points |`)
@@ -289,14 +339,12 @@ export function formatSprintList(
   lines.push('|------|--------|------|-------|-----|')
 
   for (const sprint of sprints) {
-    const goal = sprint.goal
-      ? sprint.goal.length > 30
-        ? `${sprint.goal.substring(0, 27)}...`
-        : sprint.goal
-      : '-'
+    // Escape user-controlled fields for safe table rendering
+    const name = safeTableCell(sprint.name, 30)
+    const goal = sprint.goal ? safeTableCell(sprint.goal, 30) : '-'
     const start = sprint.startDate ? formatDate(sprint.startDate) : '-'
     const end = sprint.endDate ? formatDate(sprint.endDate) : '-'
-    lines.push(`| ${sprint.name} | ${sprint.status} | ${goal} | ${start} | ${end} |`)
+    lines.push(`| ${name} | ${sprint.status} | ${goal} | ${start} | ${end} |`)
   }
 
   lines.push('')

@@ -11,7 +11,14 @@ import {
   unwrapData,
   updateSprint,
 } from '../api-client.js'
-import { errorResponse, formatDate, formatTicketList, textResponse } from '../utils.js'
+import {
+  errorResponse,
+  escapeMarkdown,
+  formatDate,
+  formatTicketList,
+  safeTableCell,
+  textResponse,
+} from '../utils.js'
 
 /**
  * Format a sprint for detailed display (get_sprint).
@@ -20,11 +27,13 @@ import { errorResponse, formatDate, formatTicketList, textResponse } from '../ut
 function formatSprintDetail(sprint: SprintData, projectKey?: string): string {
   const lines: string[] = []
 
-  lines.push(`## ${sprint.name}`)
+  // Escape user-controlled sprint name
+  lines.push(`## ${escapeMarkdown(sprint.name)}`)
   lines.push('')
 
   lines.push(`**Status:** ${sprint.status}  `)
-  if (sprint.goal) lines.push(`**Goal:** ${sprint.goal}  `)
+  // Escape user-controlled goal
+  if (sprint.goal) lines.push(`**Goal:** ${escapeMarkdown(sprint.goal)}  `)
   if (sprint.startDate) lines.push(`**Start:** ${formatDate(sprint.startDate)}  `)
   if (sprint.endDate) lines.push(`**End:** ${formatDate(sprint.endDate)}  `)
   if (sprint.budget !== null) lines.push(`**Capacity:** ${sprint.budget} points  `)
@@ -45,11 +54,13 @@ function formatSprintDetail(sprint: SprintData, projectKey?: string): string {
  */
 function formatSprintCreated(sprint: SprintData): string {
   const lines: string[] = []
-  lines.push(`Created sprint **"${sprint.name}"**`)
+  // Escape user-controlled sprint name
+  lines.push(`Created sprint **"${escapeMarkdown(sprint.name)}"**`)
   lines.push('')
 
   lines.push(`**Status:** ${sprint.status}  `)
-  if (sprint.goal) lines.push(`**Goal:** ${sprint.goal}  `)
+  // Escape user-controlled goal
+  if (sprint.goal) lines.push(`**Goal:** ${escapeMarkdown(sprint.goal)}  `)
   if (sprint.startDate) lines.push(`**Start:** ${formatDate(sprint.startDate)}  `)
   if (sprint.endDate) lines.push(`**End:** ${formatDate(sprint.endDate)}  `)
   if (sprint.budget !== null) lines.push(`**Capacity:** ${sprint.budget} points  `)
@@ -62,13 +73,14 @@ function formatSprintCreated(sprint: SprintData): string {
  */
 function formatSprintUpdated(oldSprint: SprintData, newSprint: SprintData): string {
   const lines: string[] = []
-  lines.push(`Updated sprint **"${newSprint.name}"**`)
+  // Escape user-controlled sprint name
+  lines.push(`Updated sprint **"${escapeMarkdown(newSprint.name)}"**`)
   lines.push('')
 
   const changes: string[] = []
 
   if (oldSprint.name !== newSprint.name) {
-    changes.push(`**Name:** ${oldSprint.name} -> ${newSprint.name}`)
+    changes.push(`**Name:** ${escapeMarkdown(oldSprint.name)} -> ${escapeMarkdown(newSprint.name)}`)
   }
   if (oldSprint.status !== newSprint.status) {
     changes.push(`**Status:** ${oldSprint.status} -> ${newSprint.status}`)
@@ -77,9 +89,11 @@ function formatSprintUpdated(oldSprint: SprintData, newSprint: SprintData): stri
     if (!newSprint.goal) {
       changes.push('**Goal:** cleared')
     } else if (!oldSprint.goal) {
-      changes.push(`**Goal:** added "${newSprint.goal}"`)
+      changes.push(`**Goal:** added "${escapeMarkdown(newSprint.goal)}"`)
     } else {
-      changes.push(`**Goal:** "${oldSprint.goal}" -> "${newSprint.goal}"`)
+      changes.push(
+        `**Goal:** "${escapeMarkdown(oldSprint.goal)}" -> "${escapeMarkdown(newSprint.goal)}"`,
+      )
     }
   }
   if ((oldSprint.startDate ?? null) !== (newSprint.startDate ?? null)) {
@@ -122,10 +136,12 @@ function formatSprintList(sprints: SprintData[]): string {
   lines.push('|------|--------|------|-------|-----|')
 
   for (const s of sprints) {
-    const goal = s.goal ? (s.goal.length > 30 ? `${s.goal.slice(0, 27)}...` : s.goal) : '-'
+    // Escape user-controlled fields for safe table rendering
+    const name = safeTableCell(s.name, 30)
+    const goal = s.goal ? safeTableCell(s.goal, 30) : '-'
     const start = s.startDate ? formatDate(s.startDate) : '-'
     const end = s.endDate ? formatDate(s.endDate) : '-'
-    lines.push(`| ${s.name} | ${s.status} | ${goal} | ${start} | ${end} |`)
+    lines.push(`| ${name} | ${s.status} | ${goal} | ${start} | ${end} |`)
   }
 
   lines.push('')
@@ -305,8 +321,9 @@ export function registerSprintTools(server: McpServer) {
         started.startDate && started.endDate
           ? ` (${formatDate(started.startDate)} - ${formatDate(started.endDate)})`
           : ''
+      // Escape user-controlled sprint name
       return textResponse(
-        `Started sprint **"${started.name}"** with ${ticketCount} ticket(s)${dateRange}`,
+        `Started sprint **"${escapeMarkdown(started.name)}"** with ${ticketCount} ticket(s)${dateRange}`,
       )
     },
   )
@@ -347,8 +364,9 @@ export function registerSprintTools(server: McpServer) {
       }
 
       const destination = moveIncompleteTo === 'next' ? 'next sprint' : 'backlog'
+      // Escape user-controlled sprint name
       return textResponse(
-        `Completed sprint **"${sprint.name}"**. Incomplete tickets moved to ${destination}.`,
+        `Completed sprint **"${escapeMarkdown(sprint.name)}"**. Incomplete tickets moved to ${destination}.`,
       )
     },
   )
@@ -386,8 +404,9 @@ export function registerSprintTools(server: McpServer) {
       }
 
       const ticketCount = sprint.tickets?.length ?? 0
+      // Escape user-controlled sprint name
       return textResponse(
-        `Deleted sprint **"${sprint.name}"** (${ticketCount} ticket(s) moved to backlog)`,
+        `Deleted sprint **"${escapeMarkdown(sprint.name)}"** (${ticketCount} ticket(s) moved to backlog)`,
       )
     },
   )

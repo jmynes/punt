@@ -8,7 +8,7 @@ import {
   listTickets,
   updateTicket,
 } from '../api-client.js'
-import { errorResponse, textResponse } from '../utils.js'
+import { errorResponse, escapeMarkdown, safeTableCell, textResponse } from '../utils.js'
 
 /**
  * Format a list of labels for display
@@ -24,7 +24,8 @@ function formatLabelList(labels: LabelData[], projectKey: string): string {
   lines.push('| Name | Color |')
   lines.push('|------|-------|')
   for (const label of labels) {
-    lines.push(`| ${label.name} | ${label.color} |`)
+    // Escape user-controlled label name for safe table rendering
+    lines.push(`| ${safeTableCell(label.name, 40)} | ${label.color} |`)
   }
   lines.push('')
   lines.push(`Total: ${labels.length} label(s)`)
@@ -69,8 +70,9 @@ export function registerLabelTools(server: McpServer) {
       if (!label) {
         return errorResponse('Failed to create label: no data returned')
       }
+      // Escape user-controlled label name
       return textResponse(
-        `Created label **"${label.name}"** (${label.color}) in ${projectKey.toUpperCase()}`,
+        `Created label **"${escapeMarkdown(label.name)}"** (${label.color}) in ${projectKey.toUpperCase()}`,
       )
     },
   )
@@ -121,7 +123,10 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse(createResult.error)
       }
 
-      return textResponse(`Updated label **"${label.name}"** -> **"${newName}"** (${newColor})`)
+      // Escape user-controlled label names
+      return textResponse(
+        `Updated label **"${escapeMarkdown(label.name)}"** -> **"${escapeMarkdown(newName)}"** (${newColor})`,
+      )
     },
   )
 
@@ -153,7 +158,10 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(`Deleted label **"${label.name}"** from ${projectKey.toUpperCase()}`)
+      // Escape user-controlled label name
+      return textResponse(
+        `Deleted label **"${escapeMarkdown(label.name)}"** from ${projectKey.toUpperCase()}`,
+      )
     },
   )
 
@@ -213,8 +221,9 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse(updateResult.error)
       }
 
+      // Escape user-controlled label name
       return textResponse(
-        `Added label **"${label.name}"** to **${projectKey.toUpperCase()}-${number}**`,
+        `Added label **"${escapeMarkdown(label.name)}"** to **${projectKey.toUpperCase()}-${number}**`,
       )
     },
   )
@@ -265,8 +274,9 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse(updateResult.error)
       }
 
+      // Escape user-controlled label name
       return textResponse(
-        `Removed label **"${label.name}"** from **${projectKey.toUpperCase()}-${number}**`,
+        `Removed label **"${escapeMarkdown(label.name)}"** from **${projectKey.toUpperCase()}-${number}**`,
       )
     },
   )
