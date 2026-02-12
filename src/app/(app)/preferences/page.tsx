@@ -29,6 +29,8 @@ export default function PreferencesPage() {
     setShowUndoButtons,
     sidebarExpandedSections,
     setSidebarSectionExpanded,
+    hideColorRemovalWarning,
+    setHideColorRemovalWarning,
   } = useSettingsStore()
 
   const projects = useProjectsStore((s) => s.projects)
@@ -231,6 +233,34 @@ export default function PreferencesPage() {
                   </div>
                 </div>
               </RadioGroup>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Color Picker */}
+        <Card className="border-zinc-800 bg-zinc-900/50">
+          <CardHeader>
+            <CardTitle className="text-zinc-100">Color Picker</CardTitle>
+            <CardDescription className="text-zinc-500">
+              Configure color picker behavior and notifications
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-start justify-between space-x-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="hide-color-removal-warning" className="text-zinc-300">
+                  Hide color removal warning
+                </Label>
+                <p className="text-sm text-zinc-500">
+                  Don&apos;t show the notification when removing a saved color from your swatches
+                </p>
+              </div>
+              <Checkbox
+                id="hide-color-removal-warning"
+                checked={hideColorRemovalWarning}
+                onCheckedChange={(checked) => setHideColorRemovalWarning(checked === true)}
+                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+              />
             </div>
           </CardContent>
         </Card>

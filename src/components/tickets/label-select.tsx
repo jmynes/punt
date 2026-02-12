@@ -1,6 +1,5 @@
 'use client'
 
-import { useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronsUpDown, Palette, Plus, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
@@ -27,10 +26,8 @@ import {
 } from '@/components/ui/command'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { labelKeys } from '@/hooks/queries/use-labels'
 import { LABEL_COLORS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
-import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { LabelSummary } from '@/types'
 
@@ -50,7 +47,7 @@ export function LabelSelect({
   onChange,
   labels,
   disabled,
-  projectId,
+  projectId: _projectId, // Deprecated - no longer used
   onCreateLabel,
   onUpdateLabel,
   onDeleteLabel,
@@ -411,13 +408,7 @@ export function LabelSelect({
           <ColorPickerBody
             activeColor={customColor || labelToEdit?.color || '#000000'}
             onColorChange={setCustomColor}
-            onApply={(color) => {
-              if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
-                handleColorChange(color)
-              }
-            }}
             isDisabled={isUpdatingColor}
-            projectId={projectId}
           />
 
           <AlertDialogFooter>
@@ -427,6 +418,17 @@ export function LabelSelect({
             >
               Cancel
             </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (/^#[0-9A-Fa-f]{6}$/i.test(customColor)) {
+                  handleColorChange(customColor)
+                }
+              }}
+              disabled={isUpdatingColor || !/^#[0-9A-Fa-f]{6}$/i.test(customColor)}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {isUpdatingColor ? 'Applying...' : 'Apply Color'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -446,7 +448,7 @@ interface ColorPickerBodyProps {
   isDisabled?: boolean
   /** Additional preset colors to show (e.g. column auto-detected colors) */
   extraPresets?: string[]
-  /** Project ID for checking color usage when removing saved colors */
+  /** @deprecated No longer used - color removal warning is now simple and dismissible */
   projectId?: string
 }
 
@@ -455,11 +457,14 @@ export function ColorPickerBody({
   onColorChange,
   isDisabled,
   extraPresets,
-  projectId,
 }: ColorPickerBodyProps) {
-  const { customColors, addCustomColor, removeCustomColor } = useSettingsStore()
-  const { getColumns } = useBoardStore()
-  const queryClient = useQueryClient()
+  const {
+    customColors,
+    addCustomColor,
+    removeCustomColor,
+    hideColorRemovalWarning,
+    setHideColorRemovalWarning,
+  } = useSettingsStore()
   const [localHex, setLocalHex] = useState(activeColor)
 
   // Sync local hex when activeColor changes from outside (e.g. spectrum drag)
@@ -475,52 +480,24 @@ export function ColorPickerBody({
     }
   }
 
-  // Handle removing a saved color with usage check
+  // Handle removing a saved color with simple dismissible warning
   const handleRemoveColor = useCallback(
     (color: string) => {
-      // First remove the color from saved swatches
+      // Remove the color from saved swatches
       removeCustomColor(color)
 
-      // Check if the color is in use by columns or labels in the current project
-      if (!projectId) return
-
-      const normalizedColor = color.toLowerCase()
-      let columnCount = 0
-      let labelCount = 0
-
-      // Check columns from board store
-      const columns = getColumns(projectId)
-      for (const col of columns) {
-        if (col.color?.toLowerCase() === normalizedColor) {
-          columnCount++
-        }
-      }
-
-      // Check labels from React Query cache
-      const cachedLabels = queryClient.getQueryData<LabelSummary[]>(labelKeys.byProject(projectId))
-      if (cachedLabels) {
-        for (const label of cachedLabels) {
-          if (label.color.toLowerCase() === normalizedColor) {
-            labelCount++
-          }
-        }
-      }
-
-      // Show info toast if color is in use
-      if (columnCount > 0 || labelCount > 0) {
-        const parts: string[] = []
-        if (columnCount > 0) {
-          parts.push(`${columnCount} column${columnCount > 1 ? 's' : ''}`)
-        }
-        if (labelCount > 0) {
-          parts.push(`${labelCount} label${labelCount > 1 ? 's' : ''}`)
-        }
-        toast.info(
-          `This color is used by ${parts.join(' and ')}. They'll keep their color — this only removes it from your saved swatches.`,
-        )
+      // Show simple warning if not dismissed
+      if (!hideColorRemovalWarning) {
+        toast.info('Color removed from swatches', {
+          description: 'Items using this color will keep it — only the saved swatch is removed.',
+          action: {
+            label: "Don't show again",
+            onClick: () => setHideColorRemovalWarning(true),
+          },
+        })
       }
     },
-    [projectId, getColumns, queryClient, removeCustomColor],
+    [removeCustomColor, hideColorRemovalWarning, setHideColorRemovalWarning],
   )
 
   // Merge extra presets (deduplicated) with standard label colors

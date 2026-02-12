@@ -33,6 +33,10 @@ interface SettingsState {
   sidebarExpandedSections: Record<string, boolean> // keyed by 'admin' or project ID
   setSidebarSectionExpanded: (key: string, expanded: boolean) => void
   toggleSidebarSection: (key: string) => void
+
+  // Hide warning when removing saved colors from swatches
+  hideColorRemovalWarning: boolean
+  setHideColorRemovalWarning: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -86,6 +90,10 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           customColors: state.customColors.filter((c) => c !== color.toLowerCase()),
         })),
+
+      // Hide color removal warning (off by default - show warning)
+      hideColorRemovalWarning: false,
+      setHideColorRemovalWarning: (value) => set({ hideColorRemovalWarning: value }),
     }),
     {
       name: 'punt-settings',

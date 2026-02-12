@@ -485,13 +485,7 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
                     <ColorPickerBody
                       activeColor={editColor}
                       onColorChange={handleColorChange}
-                      onApply={(color) => {
-                        if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
-                          handleColorChange(color)
-                        }
-                      }}
                       isDisabled={!canManageLabels}
-                      projectId={projectId}
                     />
                   </div>
 
