@@ -9,6 +9,8 @@ import { TicketDetailDrawer } from '@/components/tickets'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
+import { filterTickets } from '@/lib/filter-tickets'
+import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -70,6 +72,54 @@ export default function SprintPlanningPage() {
 
   // Get all tickets from columns (flattened for sprint view)
   const allTickets = useMemo(() => columns.flatMap((col) => col.tickets), [columns])
+
+  // Apply backlog filters for SprintHeader filtered stats
+  const {
+    filterByType,
+    filterByPriority,
+    filterByStatus,
+    filterByResolution,
+    filterByAssignee,
+    filterByLabels,
+    filterBySprint,
+    filterByPoints,
+    filterByDueDate,
+    searchQuery,
+    showSubtasks,
+  } = useBacklogStore()
+
+  const filteredTickets = useMemo(
+    () =>
+      filterTickets(allTickets, {
+        searchQuery,
+        projectKey,
+        filterByType,
+        filterByPriority,
+        filterByStatus,
+        filterByResolution,
+        filterByAssignee,
+        filterByLabels,
+        filterBySprint,
+        filterByPoints,
+        filterByDueDate,
+        showSubtasks,
+      }),
+    [
+      allTickets,
+      searchQuery,
+      projectKey,
+      filterByType,
+      filterByPriority,
+      filterByStatus,
+      filterByResolution,
+      filterByAssignee,
+      filterByLabels,
+      filterBySprint,
+      filterByPoints,
+      filterByDueDate,
+      showSubtasks,
+    ],
+  )
 
   // Find the selected ticket
   const selectedTicket = useMemo(
@@ -139,7 +189,12 @@ export default function SprintPlanningPage() {
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-4 lg:p-6 space-y-4">
           {/* Active sprint header with progress */}
-          <SprintHeader projectId={projectId} tickets={allTickets} columns={columns} />
+          <SprintHeader
+            projectId={projectId}
+            tickets={allTickets}
+            columns={columns}
+            filteredTickets={filteredTickets}
+          />
 
           {/* Sprint backlog view */}
           <SprintBacklogView
