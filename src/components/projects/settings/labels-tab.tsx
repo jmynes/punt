@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -28,7 +29,7 @@ import {
 import { useHasPermission } from '@/hooks/use-permissions'
 import { LABEL_COLORS } from '@/lib/constants'
 import { PERMISSIONS } from '@/lib/permissions'
-import { cn } from '@/lib/utils'
+import { cn, getLabelStyles } from '@/lib/utils'
 
 interface LabelsTabProps {
   projectId: string
@@ -349,12 +350,9 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
                   <div className="space-y-2">
                     <span className="text-sm font-medium text-zinc-300">Preview</span>
                     <div className="flex items-center gap-4 p-4 rounded-lg bg-zinc-800/50 border border-zinc-800">
-                      <span
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium text-white shadow-sm"
-                        style={{ backgroundColor: editColor }}
-                      >
+                      <Badge variant="outline" style={getLabelStyles(editColor)}>
                         {editName || 'Label name'}
-                      </span>
+                      </Badge>
                       <span className="text-xs text-zinc-500">
                         This is how the label will appear on tickets.
                       </span>
@@ -453,12 +451,13 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
               {deletingLabel && (
                 <>
                   Are you sure you want to delete the label{' '}
-                  <span
-                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                    style={{ backgroundColor: deletingLabel.color }}
+                  <Badge
+                    variant="outline"
+                    className="text-xs"
+                    style={getLabelStyles(deletingLabel.color)}
                   >
                     {deletingLabel.name}
-                  </span>
+                  </Badge>
                   ?
                   {(deletingLabel._count?.tickets ?? 0) > 0 && (
                     <span className="block mt-2 text-amber-400">
