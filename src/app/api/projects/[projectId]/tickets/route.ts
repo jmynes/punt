@@ -219,8 +219,8 @@ export async function PATCH(
     const { projectId: projectKey } = await params
     const projectId = await requireProjectByKey(projectKey)
 
-    // Check ticket edit permission
-    await requirePermission(user.id, projectId, PERMISSIONS.TICKETS_EDIT_ANY)
+    // Check ticket manage permission
+    await requirePermission(user.id, projectId, PERMISSIONS.TICKETS_MANAGE_ANY)
 
     const body = await request.json()
     const parsed = batchMoveTicketsSchema.safeParse(body)
