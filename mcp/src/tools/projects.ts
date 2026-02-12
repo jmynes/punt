@@ -9,7 +9,7 @@ import {
   unwrapData,
   updateProject,
 } from '../api-client.js'
-import { errorResponse, textResponse } from '../utils.js'
+import { errorResponse, escapeMarkdown, safeTableCell, textResponse } from '../utils.js'
 
 /**
  * Format a project for detailed display (get_project).
@@ -17,11 +17,13 @@ import { errorResponse, textResponse } from '../utils.js'
  */
 function formatProjectDetail(project: ProjectData): string {
   const lines: string[] = []
-  lines.push(`## ${project.key}: ${project.name}`)
+  // Escape user-controlled project name
+  lines.push(`## ${project.key}: ${escapeMarkdown(project.name)}`)
   lines.push('')
 
   if (project.description) {
-    lines.push(project.description)
+    // Escape user-controlled description
+    lines.push(escapeMarkdown(project.description))
     lines.push('')
   }
 
@@ -33,14 +35,16 @@ function formatProjectDetail(project: ProjectData): string {
 
   if (project.columns && project.columns.length > 0) {
     lines.push('')
-    lines.push(`**Columns:** ${project.columns.map((c) => c.name).join(' -> ')}`)
+    // Escape user-controlled column names
+    lines.push(`**Columns:** ${project.columns.map((c) => escapeMarkdown(c.name)).join(' -> ')}`)
   }
 
   if (project.members && project.members.length > 0) {
     lines.push('')
     lines.push('**Members:**')
     for (const m of project.members) {
-      lines.push(`- ${m.user.name} (${m.role.name})`)
+      // Escape user-controlled user and role names
+      lines.push(`- ${escapeMarkdown(m.user.name)} (${escapeMarkdown(m.role.name)})`)
     }
   }
 
@@ -52,12 +56,14 @@ function formatProjectDetail(project: ProjectData): string {
  */
 function formatProjectCreated(project: ProjectData): string {
   const lines: string[] = []
-  lines.push(`Created project **${project.key}**: ${project.name}`)
+  // Escape user-controlled project name
+  lines.push(`Created project **${project.key}**: ${escapeMarkdown(project.name)}`)
   lines.push('')
 
   const fields: string[] = []
   fields.push(`**Color:** ${project.color}`)
-  if (project.description) fields.push(`**Description:** ${project.description}`)
+  // Escape user-controlled description
+  if (project.description) fields.push(`**Description:** ${escapeMarkdown(project.description)}`)
 
   for (const f of fields) lines.push(`${f}  `)
 
@@ -79,15 +85,22 @@ function formatProjectUpdated(
   const changes: string[] = []
 
   if (oldProject.name !== newProject.name) {
-    changes.push(`**Name:** ${oldProject.name} -> ${newProject.name}`)
+    // Escape user-controlled project names
+    changes.push(
+      `**Name:** ${escapeMarkdown(oldProject.name)} -> ${escapeMarkdown(newProject.name)}`,
+    )
   }
   if ((oldProject.description ?? null) !== (newProject.description ?? null)) {
     if (!newProject.description) {
       changes.push('**Description:** cleared')
     } else if (!oldProject.description) {
-      changes.push(`**Description:** added "${newProject.description}"`)
+      // Escape user-controlled description
+      changes.push(`**Description:** added "${escapeMarkdown(newProject.description)}"`)
     } else {
-      changes.push(`**Description:** "${oldProject.description}" -> "${newProject.description}"`)
+      // Escape user-controlled descriptions
+      changes.push(
+        `**Description:** "${escapeMarkdown(oldProject.description)}" -> "${escapeMarkdown(newProject.description)}"`,
+      )
     }
   }
   if (oldProject.color !== newProject.color) {
@@ -118,9 +131,11 @@ function formatProjectList(projects: ProjectData[]): string {
   lines.push('|-----|------|---------|---------|')
 
   for (const p of projects) {
+    // Escape user-controlled project name for safe table rendering
+    const name = safeTableCell(p.name, 30)
     const tickets = p._count?.tickets ?? '-'
     const members = p._count?.members ?? '-'
-    lines.push(`| ${p.key} | ${p.name} | ${tickets} | ${members} |`)
+    lines.push(`| ${p.key} | ${name} | ${tickets} | ${members} |`)
   }
 
   lines.push('')
@@ -252,8 +267,9 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // Escape user-controlled project name
       return textResponse(
-        `Deleted project **${key}**: ${project.name} (${project._count?.tickets ?? 0} tickets removed)`,
+        `Deleted project **${key}**: ${escapeMarkdown(project.name)} (${project._count?.tickets ?? 0} tickets removed)`,
       )
     },
   )

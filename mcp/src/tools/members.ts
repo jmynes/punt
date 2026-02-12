@@ -6,7 +6,7 @@ import {
   updateMemberRole as apiUpdateMemberRole,
 } from '../api-client.js'
 import { db } from '../db.js'
-import { errorResponse, textResponse } from '../utils.js'
+import { errorResponse, escapeMarkdown, safeTableCell, textResponse } from '../utils.js'
 
 export function registerMemberTools(server: McpServer) {
   // list_members - List project members
@@ -40,7 +40,8 @@ export function registerMemberTools(server: McpServer) {
       }
 
       const lines: string[] = []
-      lines.push(`# Members of ${project.key}: ${project.name}`)
+      // Escape user-controlled project name
+      lines.push(`# Members of ${project.key}: ${escapeMarkdown(project.name)}`)
       lines.push('')
 
       if (project.members.length === 0) {
@@ -49,7 +50,11 @@ export function registerMemberTools(server: McpServer) {
         lines.push('| Name | Email | Role |')
         lines.push('|------|-------|------|')
         for (const m of project.members) {
-          lines.push(`| ${m.user.name} | ${m.user.email ?? '-'} | ${m.role.name} |`)
+          // Escape user-controlled fields for safe table rendering
+          const name = safeTableCell(m.user.name, 30)
+          const email = m.user.email ? safeTableCell(m.user.email, 40) : '-'
+          const role = safeTableCell(m.role.name, 20)
+          lines.push(`| ${name} | ${email} | ${role} |`)
         }
         lines.push('')
         lines.push(`Total: ${project.members.length} member(s)`)
@@ -109,7 +114,10 @@ export function registerMemberTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(`Added **${user.name}** to ${project.key} as ${foundRole.name}`)
+      // Escape user-controlled user and role names
+      return textResponse(
+        `Added **${escapeMarkdown(user.name)}** to ${project.key} as ${escapeMarkdown(foundRole.name)}`,
+      )
     },
   )
 
@@ -160,7 +168,8 @@ export function registerMemberTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(`Removed **${user.name}** from ${project.key}`)
+      // Escape user-controlled user name
+      return textResponse(`Removed **${escapeMarkdown(user.name)}** from ${project.key}`)
     },
   )
 
@@ -227,8 +236,9 @@ export function registerMemberTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // Escape user-controlled user and role names
       return textResponse(
-        `Changed **${user.name}**'s role in ${project.key}: ${previousRoleName} -> ${newRole.name}`,
+        `Changed **${escapeMarkdown(user.name)}**'s role in ${project.key}: ${escapeMarkdown(previousRoleName)} -> ${escapeMarkdown(newRole.name)}`,
       )
     },
   )
@@ -260,8 +270,11 @@ export function registerMemberTools(server: McpServer) {
       lines.push('| Name | Email | Admin | Projects |')
       lines.push('|------|-------|-------|----------|')
       for (const u of users) {
+        // Escape user-controlled fields for safe table rendering
+        const name = safeTableCell(u.name, 30)
+        const email = u.email ? safeTableCell(u.email, 40) : '-'
         lines.push(
-          `| ${u.name} | ${u.email ?? '-'} | ${u.isSystemAdmin ? 'Yes' : '-'} | ${u._count.projects} |`,
+          `| ${name} | ${email} | ${u.isSystemAdmin ? 'Yes' : '-'} | ${u._count.projects} |`,
         )
       }
       lines.push('')

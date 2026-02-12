@@ -7,7 +7,7 @@ import {
   updateColumn as apiUpdateColumn,
 } from '../api-client.js'
 import { db } from '../db.js'
-import { errorResponse, textResponse } from '../utils.js'
+import { errorResponse, escapeMarkdown, safeTableCell, textResponse } from '../utils.js'
 
 export function registerColumnTools(server: McpServer) {
   // list_columns - List columns for a project
@@ -41,7 +41,8 @@ export function registerColumnTools(server: McpServer) {
       }
 
       const lines: string[] = []
-      lines.push(`# Columns in ${project.key}: ${project.name}`)
+      // Escape user-controlled project name
+      lines.push(`# Columns in ${project.key}: ${escapeMarkdown(project.name)}`)
       lines.push('')
 
       if (project.columns.length === 0) {
@@ -50,7 +51,10 @@ export function registerColumnTools(server: McpServer) {
         lines.push('| # | Name | Tickets |')
         lines.push('|---|------|---------|')
         for (const col of project.columns) {
-          lines.push(`| ${col.order + 1} | ${col.name} | ${col._count.tickets} |`)
+          // Escape user-controlled column name for safe table rendering
+          lines.push(
+            `| ${col.order + 1} | ${safeTableCell(col.name, 30)} | ${col._count.tickets} |`,
+          )
         }
         lines.push('')
         lines.push(`Total: ${project.columns.length} column(s)`)
@@ -90,8 +94,9 @@ export function registerColumnTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // Escape user-controlled column name
       return textResponse(
-        `Created column **"${name}"** at position ${targetOrder + 1} in ${upperKey}`,
+        `Created column **"${escapeMarkdown(name)}"** at position ${targetOrder + 1} in ${upperKey}`,
       )
     },
   )
@@ -128,7 +133,10 @@ export function registerColumnTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(`Renamed column **"${column.name}"** -> **"${newName}"**`)
+      // Escape user-controlled column names
+      return textResponse(
+        `Renamed column **"${escapeMarkdown(column.name)}"** -> **"${escapeMarkdown(newName)}"**`,
+      )
     },
   )
 
@@ -161,7 +169,10 @@ export function registerColumnTools(server: McpServer) {
       const targetOrder = Math.max(0, Math.min(position - 1, columns.length - 1))
 
       if (currentOrder === targetOrder) {
-        return textResponse(`Column **"${column.name}"** is already at position ${position}`)
+        // Escape user-controlled column name
+        return textResponse(
+          `Column **"${escapeMarkdown(column.name)}"** is already at position ${position}`,
+        )
       }
 
       // Use the API to update the column order (enforces authorization)
@@ -171,8 +182,9 @@ export function registerColumnTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // Escape user-controlled column name
       return textResponse(
-        `Moved column **"${column.name}"** from position ${currentOrder + 1} to ${targetOrder + 1}`,
+        `Moved column **"${escapeMarkdown(column.name)}"** from position ${currentOrder + 1} to ${targetOrder + 1}`,
       )
     },
   )
@@ -222,8 +234,9 @@ export function registerColumnTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
+      // Escape user-controlled column names
       return textResponse(
-        `Deleted column **"${column.name}"** (tickets moved to "${targetColumn.name}")`,
+        `Deleted column **"${escapeMarkdown(column.name)}"** (tickets moved to "${escapeMarkdown(targetColumn.name)}")`,
       )
     },
   )

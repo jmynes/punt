@@ -14,11 +14,13 @@ import {
 } from '../api-client.js'
 import {
   errorResponse,
+  escapeMarkdown,
   formatDate,
   formatTicket,
   formatTicketList,
   parseTicketKey,
   textResponse,
+  truncate,
 } from '../utils.js'
 
 /**
@@ -29,31 +31,32 @@ function formatTicketCreated(ticket: TicketData, projectKey: string): string {
   const key = `${projectKey}-${ticket.number}`
   const lines: string[] = []
 
-  lines.push(`Created **${key}**: ${ticket.title}`)
+  // Escape user-controlled title
+  lines.push(`Created **${key}**: ${escapeMarkdown(ticket.title)}`)
   lines.push('')
 
   const fields: string[] = []
   fields.push(`**Type:** ${ticket.type}`)
   fields.push(`**Priority:** ${ticket.priority}`)
-  fields.push(`**Status:** ${ticket.column.name}`)
-  if (ticket.assignee) fields.push(`**Assignee:** ${ticket.assignee.name}`)
-  if (ticket.sprint) fields.push(`**Sprint:** ${ticket.sprint.name}`)
+  // Escape user-controlled column name
+  fields.push(`**Status:** ${escapeMarkdown(ticket.column.name)}`)
+  if (ticket.assignee) fields.push(`**Assignee:** ${escapeMarkdown(ticket.assignee.name)}`)
+  if (ticket.sprint) fields.push(`**Sprint:** ${escapeMarkdown(ticket.sprint.name)}`)
   if (ticket.storyPoints !== null) fields.push(`**Points:** ${ticket.storyPoints}`)
   if (ticket.labels.length > 0)
-    fields.push(`**Labels:** ${ticket.labels.map((l) => l.name).join(', ')}`)
-  if (ticket.estimate) fields.push(`**Estimate:** ${ticket.estimate}`)
+    fields.push(`**Labels:** ${ticket.labels.map((l) => escapeMarkdown(l.name)).join(', ')}`)
+  if (ticket.estimate) fields.push(`**Estimate:** ${escapeMarkdown(ticket.estimate)}`)
   if (ticket.startDate) fields.push(`**Start:** ${formatDate(ticket.startDate)}`)
   if (ticket.dueDate) fields.push(`**Due:** ${formatDate(ticket.dueDate)}`)
-  if (ticket.environment) fields.push(`**Environment:** ${ticket.environment}`)
-  if (ticket.resolution) fields.push(`**Resolution:** ${ticket.resolution}`)
+  if (ticket.environment) fields.push(`**Environment:** ${escapeMarkdown(ticket.environment)}`)
+  if (ticket.resolution) fields.push(`**Resolution:** ${escapeMarkdown(ticket.resolution)}`)
 
   lines.push(fields.join('  \n'))
 
   if (ticket.description) {
     lines.push('')
-    lines.push(
-      `**Description:** ${ticket.description.length > 100 ? `${ticket.description.slice(0, 100)}...` : ticket.description}`,
-    )
+    // Escape and truncate user-controlled description
+    lines.push(`**Description:** ${escapeMarkdown(truncate(ticket.description, 100))}`)
   }
 
   return lines.join('\n')
@@ -70,8 +73,12 @@ function formatTicketUpdated(key: string, oldTicket: TicketData, newTicket: Tick
 
   const changes: string[] = []
 
+  // Helper to escape a value or return 'none' for null/undefined
+  const esc = (val: string | null | undefined, fallback = 'none'): string =>
+    val ? escapeMarkdown(val) : fallback
+
   if (oldTicket.title !== newTicket.title) {
-    changes.push(`**Title:** ${oldTicket.title} -> ${newTicket.title}`)
+    changes.push(`**Title:** ${esc(oldTicket.title)} -> ${esc(newTicket.title)}`)
   }
   if (oldTicket.type !== newTicket.type) {
     changes.push(`**Type:** ${oldTicket.type} -> ${newTicket.type}`)
@@ -80,21 +87,19 @@ function formatTicketUpdated(key: string, oldTicket: TicketData, newTicket: Tick
     changes.push(`**Priority:** ${oldTicket.priority} -> ${newTicket.priority}`)
   }
   if (oldTicket.column.name !== newTicket.column.name) {
-    changes.push(`**Status:** ${oldTicket.column.name} -> ${newTicket.column.name}`)
+    changes.push(`**Status:** ${esc(oldTicket.column.name)} -> ${esc(newTicket.column.name)}`)
   }
   if ((oldTicket.resolution ?? null) !== (newTicket.resolution ?? null)) {
-    changes.push(
-      `**Resolution:** ${oldTicket.resolution ?? 'none'} -> ${newTicket.resolution ?? 'none'}`,
-    )
+    changes.push(`**Resolution:** ${esc(oldTicket.resolution)} -> ${esc(newTicket.resolution)}`)
   }
   if ((oldTicket.assignee?.name ?? null) !== (newTicket.assignee?.name ?? null)) {
     changes.push(
-      `**Assignee:** ${oldTicket.assignee?.name ?? 'unassigned'} -> ${newTicket.assignee?.name ?? 'unassigned'}`,
+      `**Assignee:** ${esc(oldTicket.assignee?.name, 'unassigned')} -> ${esc(newTicket.assignee?.name, 'unassigned')}`,
     )
   }
   if ((oldTicket.sprint?.name ?? null) !== (newTicket.sprint?.name ?? null)) {
     changes.push(
-      `**Sprint:** ${oldTicket.sprint?.name ?? 'backlog'} -> ${newTicket.sprint?.name ?? 'backlog'}`,
+      `**Sprint:** ${esc(oldTicket.sprint?.name, 'backlog')} -> ${esc(newTicket.sprint?.name, 'backlog')}`,
     )
   }
   if (oldTicket.storyPoints !== newTicket.storyPoints) {
@@ -103,7 +108,7 @@ function formatTicketUpdated(key: string, oldTicket: TicketData, newTicket: Tick
     )
   }
   if ((oldTicket.estimate ?? null) !== (newTicket.estimate ?? null)) {
-    changes.push(`**Estimate:** ${oldTicket.estimate ?? 'none'} -> ${newTicket.estimate ?? 'none'}`)
+    changes.push(`**Estimate:** ${esc(oldTicket.estimate)} -> ${esc(newTicket.estimate)}`)
   }
   if ((oldTicket.startDate ?? null) !== (newTicket.startDate ?? null)) {
     changes.push(
@@ -116,28 +121,24 @@ function formatTicketUpdated(key: string, oldTicket: TicketData, newTicket: Tick
     )
   }
   if ((oldTicket.environment ?? null) !== (newTicket.environment ?? null)) {
-    changes.push(
-      `**Environment:** ${oldTicket.environment ?? 'none'} -> ${newTicket.environment ?? 'none'}`,
-    )
+    changes.push(`**Environment:** ${esc(oldTicket.environment)} -> ${esc(newTicket.environment)}`)
   }
   if ((oldTicket.affectedVersion ?? null) !== (newTicket.affectedVersion ?? null)) {
     changes.push(
-      `**Affected Version:** ${oldTicket.affectedVersion ?? 'none'} -> ${newTicket.affectedVersion ?? 'none'}`,
+      `**Affected Version:** ${esc(oldTicket.affectedVersion)} -> ${esc(newTicket.affectedVersion)}`,
     )
   }
   if ((oldTicket.fixVersion ?? null) !== (newTicket.fixVersion ?? null)) {
-    changes.push(
-      `**Fix Version:** ${oldTicket.fixVersion ?? 'none'} -> ${newTicket.fixVersion ?? 'none'}`,
-    )
+    changes.push(`**Fix Version:** ${esc(oldTicket.fixVersion)} -> ${esc(newTicket.fixVersion)}`)
   }
 
-  // Labels comparison
+  // Labels comparison (escape each label name)
   const oldLabels = oldTicket.labels
-    .map((l) => l.name)
+    .map((l) => escapeMarkdown(l.name))
     .sort()
     .join(', ')
   const newLabels = newTicket.labels
-    .map((l) => l.name)
+    .map((l) => escapeMarkdown(l.name))
     .sort()
     .join(', ')
   if (oldLabels !== newLabels) {
@@ -732,14 +733,19 @@ export function registerTicketTools(server: McpServer) {
           return errorResponse(`Column not found: ${column}`)
         }
         updateData.columnId = col.id
-        changes.push(`${existingTicket.column.name} -> ${col.name}`)
+        // Escape user-controlled column names
+        changes.push(`${escapeMarkdown(existingTicket.column.name)} -> ${escapeMarkdown(col.name)}`)
       }
 
       // Handle sprint move
       if (sprint !== undefined) {
         if (sprint === null) {
           updateData.sprintId = null
-          changes.push(`sprint: ${existingTicket.sprint?.name ?? 'backlog'} -> backlog`)
+          // Escape user-controlled sprint name
+          const oldSprint = existingTicket.sprint?.name
+            ? escapeMarkdown(existingTicket.sprint.name)
+            : 'backlog'
+          changes.push(`sprint: ${oldSprint} -> backlog`)
         } else {
           const sprintsResult = await listSprints(parsed.projectKey)
           if (sprintsResult.error) {
@@ -752,7 +758,11 @@ export function registerTicketTools(server: McpServer) {
             return errorResponse(`Sprint not found: ${sprint}`)
           }
           updateData.sprintId = sp.id
-          changes.push(`sprint: ${existingTicket.sprint?.name ?? 'backlog'} -> ${sp.name}`)
+          // Escape user-controlled sprint names
+          const oldSprint = existingTicket.sprint?.name
+            ? escapeMarkdown(existingTicket.sprint.name)
+            : 'backlog'
+          changes.push(`sprint: ${oldSprint} -> ${escapeMarkdown(sp.name)}`)
         }
       }
 
@@ -798,7 +808,8 @@ export function registerTicketTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(`Deleted **${key}**: ${existingTicket.title}`)
+      // Escape user-controlled ticket title
+      return textResponse(`Deleted **${key}**: ${escapeMarkdown(existingTicket.title)}`)
     },
   )
 }
