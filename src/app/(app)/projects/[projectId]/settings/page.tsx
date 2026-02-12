@@ -203,21 +203,23 @@ export default function ProjectSettingsPage() {
         </div>
 
         {/* Tab Content */}
-        {effectiveTab === 'general' && project && (
-          <GeneralTab
-            projectId={projectId}
-            project={{
-              id: project.id,
-              name: project.name,
-              key: project.key,
-              description: project.description || null,
-              color: project.color,
-            }}
-          />
-        )}
-        {effectiveTab === 'members' && <MembersTab projectId={projectId} />}
-        {effectiveTab === 'labels' && <LabelsTab projectId={projectId} />}
-        {effectiveTab === 'roles' && <RolesTab projectId={projectId} />}
+        <div className="flex-1 min-h-0 flex flex-col">
+          {effectiveTab === 'general' && project && (
+            <GeneralTab
+              projectId={projectId}
+              project={{
+                id: project.id,
+                name: project.name,
+                key: project.key,
+                description: project.description || null,
+                color: project.color,
+              }}
+            />
+          )}
+          {effectiveTab === 'members' && <MembersTab projectId={projectId} />}
+          {effectiveTab === 'labels' && <LabelsTab projectId={projectId} />}
+          {effectiveTab === 'roles' && <RolesTab projectId={projectId} />}
+        </div>
 
         {/* Footer spacer */}
         <div className="h-8 flex-shrink-0" />
