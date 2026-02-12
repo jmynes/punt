@@ -74,6 +74,6 @@ export const useProjectsStore = create<ProjectsState>()((set, get) => ({
   },
 
   getProjectByKey: (key) => {
-    return get().projects.find((p) => p.key.toLowerCase() === key.toLowerCase())
+    return get().projects.find((p) => p.key?.toLowerCase() === key.toLowerCase())
   },
 }))
