@@ -512,3 +512,51 @@ git checkout main && git pull && git branch -d <branch-name>
 - Required env vars for demo mode: `NEXT_PUBLIC_DEMO_MODE=true`, `AUTH_SECRET`, `AUTH_TRUST_HOST=true`, `DATABASE_URL` (dummy value for Prisma generation)
 
 **Node.js requirement:** Next.js 16 requires Node.js >= 20.9.0. The `engines` field in `package.json` enforces this.
+
+### Releasing
+
+Releases are automated via GitHub Actions when a version tag is pushed.
+
+**Quick release:**
+```bash
+pnpm release patch   # 0.1.0 -> 0.1.1
+pnpm release minor   # 0.1.0 -> 0.2.0
+pnpm release major   # 0.1.0 -> 1.0.0
+pnpm release 1.2.3   # Explicit version
+```
+
+The `pnpm release` script:
+1. Validates you are on the `main` branch with no uncommitted changes
+2. Updates `package.json` version
+3. Commits the version bump
+4. Creates and pushes a git tag (e.g., `v0.2.0`)
+5. The tag push triggers the GitHub Actions release workflow
+
+**Manual release process:**
+```bash
+# 1. Ensure you're on main with a clean working directory
+git checkout main && git pull
+
+# 2. Update package.json version
+npm version 0.2.0 --no-git-tag-version
+
+# 3. Commit the version bump
+git add package.json
+git commit -m "chore(release): bump version to 0.2.0"
+
+# 4. Create and push the tag
+git tag -a v0.2.0 -m "Release v0.2.0"
+git push origin main
+git push origin v0.2.0
+```
+
+**What the release workflow does:**
+- Runs lint and tests to ensure the release is stable
+- Builds the project
+- Verifies `package.json` version matches the tag
+- Creates a GitHub release with auto-generated release notes
+- Pre-release tags (containing `-alpha`, `-beta`, or `-rc`) are marked as pre-releases
+
+**Key files:**
+- `.github/workflows/release.yml` - Release automation workflow
+- `scripts/release.js` - Release helper script
