@@ -16,21 +16,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCreateProject } from '@/hooks/queries/use-projects'
+import { LABEL_COLORS } from '@/lib/constants'
 import { useUIStore } from '@/stores/ui-store'
-
-// Preset colors for projects
-const PROJECT_COLORS = [
-  '#f59e0b', // amber
-  '#10b981', // emerald
-  '#8b5cf6', // violet
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#ef4444', // red
-  '#3b82f6', // blue
-  '#22c55e', // green
-  '#f97316', // orange
-  '#a855f7', // purple
-]
 
 interface FormData {
   name: string
@@ -43,7 +30,7 @@ const DEFAULT_FORM: FormData = {
   name: '',
   key: '',
   description: '',
-  color: PROJECT_COLORS[0],
+  color: LABEL_COLORS[0],
 }
 
 export function CreateProjectDialog() {
@@ -204,7 +191,7 @@ export function CreateProjectDialog() {
           <div className="space-y-2">
             <Label className="text-zinc-300">Project Color</Label>
             <div className="flex flex-wrap gap-2">
-              {PROJECT_COLORS.map((color) => (
+              {LABEL_COLORS.map((color) => (
                 <button
                   key={color}
                   type="button"
