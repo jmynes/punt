@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { SortConfig } from '@/stores/backlog-store'
 
 interface DismissedPrompt {
   dismissedAt: number // timestamp
@@ -13,6 +14,12 @@ interface SprintState {
   shouldShowPrompt: (sprintId: string) => boolean
   clearDismissedPrompt: (sprintId: string) => void
   clearAllDismissedPrompts: () => void
+
+  // Per-section sort configuration (keyed by sprint ID or 'backlog')
+  sprintSorts: Record<string, SortConfig | null>
+  getSprintSort: (sectionId: string) => SortConfig | null
+  setSprintSort: (sectionId: string, sort: SortConfig | null) => void
+  clearAllSprintSorts: () => void
 
   // Sprint planning view state
   planningViewOpen: boolean
@@ -62,6 +69,18 @@ export const useSprintStore = create<SprintState>()(
 
       clearAllDismissedPrompts: () => set({ dismissedPrompts: {} }),
 
+      // Per-section sort configuration
+      sprintSorts: {},
+      getSprintSort: (sectionId) => get().sprintSorts[sectionId] ?? null,
+      setSprintSort: (sectionId, sort) =>
+        set((state) => ({
+          sprintSorts: {
+            ...state.sprintSorts,
+            [sectionId]: sort,
+          },
+        })),
+      clearAllSprintSorts: () => set({ sprintSorts: {} }),
+
       // Sprint planning view state
       planningViewOpen: false,
       setPlanningViewOpen: (open) => set({ planningViewOpen: open }),
@@ -71,16 +90,25 @@ export const useSprintStore = create<SprintState>()(
     }),
     {
       name: 'punt-sprint-store',
-      version: 1,
+      version: 2,
       onRehydrateStorage: () => (state) => {
         if (state) {
           state._hasHydrated = true
         }
       },
-      // Only persist dismissedPrompts, not UI state
+      // Persist dismissedPrompts and sprint sort configuration
       partialize: (state) => ({
         dismissedPrompts: state.dismissedPrompts,
+        sprintSorts: state.sprintSorts,
       }),
+      migrate: (persistedState, version) => {
+        const state = persistedState as Record<string, unknown>
+        if (version < 2) {
+          // Add sprintSorts for existing users upgrading from v1
+          state.sprintSorts = {}
+        }
+        return state as SprintState
+      },
     },
   ),
 )

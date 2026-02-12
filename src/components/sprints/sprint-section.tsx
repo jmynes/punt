@@ -33,12 +33,8 @@ import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { formatDaysRemaining, isCompletedColumn, isSprintExpired } from '@/lib/sprint-utils'
 import { cn } from '@/lib/utils'
-import {
-  type BacklogColumnId,
-  type SortConfig,
-  type SortDirection,
-  useBacklogStore,
-} from '@/stores/backlog-store'
+import { type BacklogColumnId, type SortDirection, useBacklogStore } from '@/stores/backlog-store'
+import { useSprintStore } from '@/stores/sprint-store'
 import { useUIStore } from '@/stores/ui-store'
 import type {
   ColumnWithTickets,
@@ -96,28 +92,37 @@ export function SprintSection({
   const [expanded, setExpanded] = useState(defaultExpanded)
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
   const { columns } = useBacklogStore()
+  const { getSprintSort, setSprintSort } = useSprintStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
 
-  // Local sort state for this section only
-  const [sort, setSort] = useState<SortConfig | null>(null)
+  // Sort state: persisted via sprint store (keyed by sprint ID or 'backlog')
+  const sectionId = sprint?.id ?? 'backlog'
+  const sort = getSprintSort(sectionId)
 
   const handleToggleSort = useCallback(
     (columnId: string) => {
       const column = columns.find((c) => c.id === columnId)
       if (!column?.sortable) return
 
-      setSort((prev) => {
-        if (prev?.column === columnId) {
-          // Toggle direction or clear
-          if (prev.direction === 'asc') {
-            return { column: columnId as BacklogColumnId, direction: 'desc' as SortDirection }
-          }
-          return null
+      const prev = getSprintSort(sectionId)
+      if (prev?.column === columnId) {
+        // Toggle direction or clear
+        if (prev.direction === 'asc') {
+          setSprintSort(sectionId, {
+            column: columnId as BacklogColumnId,
+            direction: 'desc' as SortDirection,
+          })
+        } else {
+          setSprintSort(sectionId, null)
         }
-        return { column: columnId as BacklogColumnId, direction: 'asc' as SortDirection }
-      })
+      } else {
+        setSprintSort(sectionId, {
+          column: columnId as BacklogColumnId,
+          direction: 'asc' as SortDirection,
+        })
+      }
     },
-    [columns],
+    [columns, sectionId, getSprintSort, setSprintSort],
   )
 
   // Get status name helper
