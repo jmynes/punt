@@ -327,6 +327,8 @@ src/
 
 Vitest + React Testing Library + MSW for API mocking. Tests colocated in `__tests__/` subdirectories. Use custom render from `@/__tests__/utils/test-utils`. `InMemoryStorage` for file upload tests. Coverage target: 80% minimum, 90% for stores/API/utils.
 
+**Database test isolation:** Tests that hit SQLite (`database-backup*.test.ts`) run in a separate vitest project (`db`) with `fileParallelism: false` to prevent shared-DB race conditions. All other tests run in the `unit` project with full parallelism. New database test files must be added to the `db` project's `include` pattern in `vitest.config.ts`.
+
 ### Security
 
 **Authentication & Authorization:**
