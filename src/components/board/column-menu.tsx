@@ -158,11 +158,22 @@ export function ColumnMenu({
         }
 
         // Also update the swapped column's order
-        await fetch(`/api/projects/${projectKey}/columns/${targetColumn.id}`, {
+        const res2 = await fetch(`/api/projects/${projectKey}/columns/${targetColumn.id}`, {
           method: 'PATCH',
           headers,
           body: JSON.stringify({ order: column.order }),
         })
+
+        if (!res2.ok) {
+          // Rollback first column to its original order
+          await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ order: column.order }),
+          }).catch(() => {})
+          const error = await res2.json().catch(() => ({ error: 'Failed to move column' }))
+          throw new Error(error.error || 'Failed to move column')
+        }
 
         // Update the board store
         const columns = getColumns(projectId)
