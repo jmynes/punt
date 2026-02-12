@@ -195,6 +195,7 @@ export function CreateTicketDialog() {
       startDate: formData.startDate,
       dueDate: formData.dueDate,
       resolution: formData.resolution || null,
+      resolvedAt: null,
       environment: formData.environment || null,
       affectedVersion: formData.affectedVersion || null,
       fixVersion: formData.fixVersion || null,

@@ -111,7 +111,7 @@ export const useSprintStore = create<SprintState>()(
           // v1 → v2: add sprintSorts
           state.sprintSorts = state.sprintSorts ?? {}
         }
-        return state as SprintState
+        return state as unknown as SprintState
       },
     },
   ),

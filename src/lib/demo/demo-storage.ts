@@ -290,6 +290,7 @@ class DemoStorage {
       startDate: data.startDate ?? null,
       dueDate: data.dueDate ?? null,
       resolution: data.resolution ?? null,
+      resolvedAt: null,
       environment: data.environment ?? null,
       affectedVersion: data.affectedVersion ?? null,
       fixVersion: data.fixVersion ?? null,
