@@ -37,6 +37,11 @@ interface SettingsState {
   // Hide warning when removing saved colors from swatches
   hideColorRemovalWarning: boolean
   setHideColorRemovalWarning: (value: boolean) => void
+
+  // Projects where user has dismissed the "Add Column" button
+  dismissedAddColumnProjects: string[]
+  dismissAddColumn: (projectId: string) => void
+  undismissAddColumn: (projectId: string) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -94,6 +99,20 @@ export const useSettingsStore = create<SettingsState>()(
       // Hide color removal warning (off by default - show warning)
       hideColorRemovalWarning: false,
       setHideColorRemovalWarning: (value) => set({ hideColorRemovalWarning: value }),
+
+      // Add column dismiss per project
+      dismissedAddColumnProjects: [],
+      dismissAddColumn: (projectId) =>
+        set((state) => {
+          if (state.dismissedAddColumnProjects.includes(projectId)) return state
+          return { dismissedAddColumnProjects: [...state.dismissedAddColumnProjects, projectId] }
+        }),
+      undismissAddColumn: (projectId) =>
+        set((state) => ({
+          dismissedAddColumnProjects: state.dismissedAddColumnProjects.filter(
+            (id) => id !== projectId,
+          ),
+        })),
     }),
     {
       name: 'punt-settings',

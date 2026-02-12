@@ -9,6 +9,7 @@ import {
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { PERMISSIONS } from '@/lib/permissions'
+import { getSystemSettings } from '@/lib/system-settings'
 
 const updateProjectSchema = z.object({
   name: z.string().min(1).optional(),
@@ -18,6 +19,7 @@ const updateProjectSchema = z.object({
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/)
     .optional(),
+  showAddColumnButton: z.boolean().nullable().optional(),
 })
 
 /**
@@ -46,6 +48,7 @@ export async function GET(
         key: true,
         color: true,
         description: true,
+        showAddColumnButton: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -62,10 +65,25 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    const { members, ...projectData } = project
+    const { members, showAddColumnButton: projectSetting, ...projectData } = project
     const roleDetails = members[0]?.role ?? null
 
-    return NextResponse.json({ ...projectData, role: roleDetails?.name ?? 'member', roleDetails })
+    // Resolve effective showAddColumnButton: project override > global default
+    let effectiveShowAddColumn = true
+    if (projectSetting !== null) {
+      effectiveShowAddColumn = projectSetting
+    } else {
+      const systemSettings = await getSystemSettings()
+      effectiveShowAddColumn = systemSettings.showAddColumnButton
+    }
+
+    return NextResponse.json({
+      ...projectData,
+      role: roleDetails?.name ?? 'member',
+      roleDetails,
+      showAddColumnButton: projectSetting,
+      effectiveShowAddColumnButton: effectiveShowAddColumn,
+    })
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
@@ -143,6 +161,7 @@ export async function PATCH(
         key: true,
         color: true,
         description: true,
+        showAddColumnButton: true,
         createdAt: true,
         updatedAt: true,
         members: {
@@ -152,7 +171,7 @@ export async function PATCH(
       },
     })
 
-    const { members, ...projectData } = project
+    const { members, showAddColumnButton: patchedSetting, ...projectData } = project
     const roleDetails = members[0]?.role ?? null
 
     // Emit real-time event for other clients
@@ -165,7 +184,22 @@ export async function PATCH(
       timestamp: Date.now(),
     })
 
-    return NextResponse.json({ ...projectData, role: roleDetails?.name ?? 'member', roleDetails })
+    // Resolve effective setting for PATCH response too
+    let effectiveShowAddColumn = true
+    if (patchedSetting !== null) {
+      effectiveShowAddColumn = patchedSetting
+    } else {
+      const systemSettings = await getSystemSettings()
+      effectiveShowAddColumn = systemSettings.showAddColumnButton
+    }
+
+    return NextResponse.json({
+      ...projectData,
+      role: roleDetails?.name ?? 'member',
+      roleDetails,
+      showAddColumnButton: patchedSetting,
+      effectiveShowAddColumnButton: effectiveShowAddColumn,
+    })
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized') {
