@@ -30,7 +30,19 @@ export function useProjectMembers(projectId: string) {
     queryFn: async () => {
       // Demo mode: return demo member
       if (isDemoMode()) {
-        const members = demoStorage.getMembers(projectId)
+        const members = demoStorage.getMembers(projectId) as Array<{
+          id: string
+          roleId: string
+          userId: string
+          user: {
+            id: string
+            name: string
+            email: string | null
+            avatar: string | null
+            avatarColor: string | null
+          }
+          role: { id: string; name: string; position: number }
+        }>
         return members.map((m) => ({
           id: m.id,
           roleId: m.roleId,
