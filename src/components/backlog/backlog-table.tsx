@@ -111,7 +111,9 @@ export function BacklogTable({
   const [orderedTickets, setOrderedTickets] = useState<TicketWithRelations[]>(() =>
     applyBacklogOrder(tickets, backlogOrder[projectId] || []),
   )
-  const [hasManualOrder, setHasManualOrder] = useState((backlogOrder[projectId] || []).length > 0)
+  const [hasManualOrder, setHasManualOrder] = useState(
+    !sort && (backlogOrder[projectId] || []).length > 0,
+  )
   const sortInitRef = useRef<SortConfig | null>(sort)
   const sortDidInitRef = useRef(false)
 
@@ -125,8 +127,14 @@ export function BacklogTable({
     const projectOrder = backlogOrder[projectId] || []
     const ordered = applyBacklogOrder(tickets, projectOrder)
     setOrderedTickets(ordered)
-    setHasManualOrder(projectOrder.length > 0)
-  }, [tickets, backlogOrder, projectId, applyBacklogOrder])
+    // Only apply manual order when no sort is active. When a sort is active,
+    // keep hasManualOrder false so the sort is applied. This prevents ticket
+    // data updates (e.g. from context menu edits) from reverting to manual
+    // order and making it look like the sort column was reset.
+    if (!sort) {
+      setHasManualOrder(projectOrder.length > 0)
+    }
+  }, [tickets, backlogOrder, projectId, applyBacklogOrder, sort])
 
   // Reset manual order when sort changes (user clicked a column header to sort)
   useEffect(() => {
