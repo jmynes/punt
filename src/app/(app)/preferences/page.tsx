@@ -292,6 +292,27 @@ export default function PreferencesPage() {
               />
             </div>
 
+            <Separator className="bg-zinc-800" />
+
+            <div className="flex items-start justify-between space-x-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="sidebar-profile" className="text-zinc-300">
+                  Profile tabs expanded
+                </Label>
+                <p className="text-sm text-zinc-500">
+                  Keep the profile tabs section expanded in the sidebar
+                </p>
+              </div>
+              <Checkbox
+                id="sidebar-profile"
+                checked={sidebarExpandedSections.profile ?? false}
+                onCheckedChange={(checked) =>
+                  setSidebarSectionExpanded('profile', checked === true)
+                }
+                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+              />
+            </div>
+
             {projects.length > 0 && (
               <>
                 <Separator className="bg-zinc-800" />
