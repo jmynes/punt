@@ -472,6 +472,15 @@ The `.mcp.json` file lives in the project root but is **gitignored** because it 
 }
 ```
 
+**Parallel subagents must use git worktrees:** When launching multiple Claude Code subagents in parallel, each must work in its own git worktree to avoid branch-switching conflicts. Without this, agents overwrite each other's file changes and cause linter/commit failures.
+```bash
+git worktree add /tmp/worktree-<branch-name> -b <branch-name> main
+cd /tmp/worktree-<branch-name>
+# Do all work here, then commit, push, and create PR from this directory
+```
+
+**Use `??` (nullish coalescing), not `||`:** For values where `0`, `false`, or empty string are valid, always use `??`. Example: `storyPoints ?? null` not `storyPoints || null` (the latter silently discards `0`).
+
 ### Branch & PR Naming Convention
 
 **Branch names:** `type/punt-N-short-description`
