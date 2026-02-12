@@ -152,7 +152,7 @@ export default function ProfilePage() {
         description="Manage your profile, security, and integrations"
       />
 
-      <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-3xl px-6 pb-6 overflow-auto">
+      <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-3xl px-6 overflow-auto">
         {/* Tab Navigation */}
         <div className="flex gap-1 mb-6 border-b border-zinc-800">
           <Link
@@ -194,7 +194,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 pb-8">
           {activeTab === 'profile' && (
             <ProfileTab
               user={stableUser}
@@ -213,9 +213,6 @@ export default function ProfilePage() {
           )}
           {activeTab === 'integrations' && <IntegrationsTab isDemo={isDemo} />}
         </div>
-
-        {/* Footer spacer */}
-        <div className="h-8 flex-shrink-0" />
       </div>
     </div>
   )
