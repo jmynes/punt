@@ -72,7 +72,7 @@ function LabelDangerZone({
   )
 
   return (
-    <div className="space-y-3 pt-4 border-t border-zinc-800 min-w-0">
+    <div className="space-y-3 pt-4 border-t border-zinc-800 w-full overflow-hidden">
       <span className="text-sm font-medium text-red-400">Danger Zone</span>
       <p className="text-xs text-zinc-500">
         Deleting this label will remove it from all tickets that use it.
@@ -80,7 +80,11 @@ function LabelDangerZone({
 
       {/* Affected tickets section */}
       {hasTickets ? (
-        <Collapsible open={isExpanded} onOpenChange={onExpandedChange} className="min-w-0">
+        <Collapsible
+          open={isExpanded}
+          onOpenChange={onExpandedChange}
+          className="w-full overflow-hidden"
+        >
           <CollapsibleTrigger asChild>
             <button
               type="button"
@@ -96,14 +100,14 @@ function LabelDangerZone({
               </span>
             </button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="overflow-hidden min-w-0 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-up-1 data-[state=open]:slide-down-1">
-            <div className="mt-2 rounded-md border border-zinc-800 bg-zinc-900/50 overflow-hidden">
+          <CollapsibleContent className="w-full overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-up-1 data-[state=open]:slide-down-1">
+            <div className="mt-2 rounded-md border border-zinc-800 bg-zinc-900/50 w-full overflow-hidden">
               {isLoadingTickets ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
                 </div>
               ) : tickets && tickets.length > 0 ? (
-                <div className="max-h-32 overflow-auto">
+                <div className="max-h-32 overflow-y-auto overflow-x-hidden">
                   {tickets.map((ticket) => {
                     // Extract project key from ticket key (e.g., "PUNT-42" -> "PUNT")
                     const projectKey = ticket.key.split('-')[0]
@@ -111,14 +115,14 @@ function LabelDangerZone({
                       <Link
                         key={ticket.id}
                         href={`/projects/${projectKey}/board?ticket=${ticket.key}`}
-                        className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/50 last:border-b-0 min-w-0"
+                        className="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-1.5 text-xs hover:bg-zinc-800/50 transition-colors group border-b border-zinc-800/50 last:border-b-0"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <span className="font-mono text-amber-500 group-hover:text-amber-400 flex-shrink-0">
+                        <span className="font-mono text-amber-500 group-hover:text-amber-400">
                           {ticket.key}
                         </span>
-                        <span className="text-zinc-400 truncate min-w-0">{ticket.title}</span>
-                        <ExternalLink className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <span className="text-zinc-400 truncate">{ticket.title}</span>
+                        <ExternalLink className="h-3 w-3 text-zinc-600 group-hover:text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </Link>
                     )
                   })}
@@ -424,9 +428,9 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
         </div>
 
         {/* Right Panel - Label Editor */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           {selectedLabel || isCreating ? (
-            <Card className="flex flex-col bg-zinc-900/50 border-zinc-800 h-full">
+            <Card className="flex flex-col bg-zinc-900/50 border-zinc-800 h-full overflow-hidden">
               <CardHeader className="flex-shrink-0 pb-4">
                 <div className="flex items-center gap-3">
                   <div
@@ -461,8 +465,8 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
                 </CardDescription>
               </CardHeader>
 
-              <ScrollArea className="flex-1 min-h-0">
-                <CardContent className="pt-0 space-y-6">
+              <ScrollArea className="flex-1 min-h-0 w-full">
+                <CardContent className="pt-0 space-y-6 overflow-hidden">
                   {/* Live Preview */}
                   <div className="space-y-2">
                     <span className="text-sm font-medium text-zinc-300">Preview</span>
