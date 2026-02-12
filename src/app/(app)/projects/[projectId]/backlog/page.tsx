@@ -19,7 +19,7 @@ import { List, Loader2, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BacklogTable, ColumnConfig } from '@/components/backlog'
-import { SprintSection } from '@/components/sprints'
+import { SprintHeader, SprintSection } from '@/components/sprints'
 import { TicketTableRow } from '@/components/table'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
@@ -1007,6 +1007,13 @@ export default function BacklogPage() {
           </div>
         )}
       </div>
+
+      {/* No active sprint banner */}
+      {!hasActiveSprints && (
+        <div className="flex-shrink-0 px-4 py-4 lg:px-6 border-b border-zinc-800">
+          <SprintHeader projectId={projectId} />
+        </div>
+      )}
 
       {/* Unified DnD context wrapping sprint sections AND backlog table */}
       <DndContext
