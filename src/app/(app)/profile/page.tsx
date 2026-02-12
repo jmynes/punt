@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { PageHeader } from '@/components/common'
 import { ImageCropDialog, resizeImageForCropper } from '@/components/profile/image-crop-dialog'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
@@ -662,23 +663,15 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      {/* Header with gradient accent */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent" />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl" />
-        <div className="absolute top-20 right-1/4 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl" />
+      <PageHeader
+        variant="hero"
+        icon={User}
+        category="Profile"
+        title="Account Settings"
+        description="Manage your profile, security, and preferences"
+      />
 
-        <div className="relative max-w-3xl mx-auto px-6 py-12">
-          <div className="flex items-center gap-2 text-amber-500 mb-2">
-            <User className="h-5 w-5" />
-            <span className="text-sm font-medium uppercase tracking-wider">Profile</span>
-          </div>
-          <h1 className="text-3xl font-bold text-zinc-100 mb-2">Account Settings</h1>
-          <p className="text-zinc-400">Manage your profile, security, and preferences</p>
-        </div>
-      </div>
-
-      <div className="max-w-3xl mx-auto px-6 pb-16 space-y-8">
+      <div className="max-w-3xl mx-auto px-6 pb-16 space-y-6">
         {/* Avatar Section */}
         <Card className="border-zinc-800 bg-zinc-900/50 overflow-hidden">
           <CardHeader className="pb-4">

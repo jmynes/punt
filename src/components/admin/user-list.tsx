@@ -26,6 +26,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import { PageHeader } from '@/components/common'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1036,525 +1037,546 @@ export function UserList() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between py-6 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <Users className="h-6 w-6 text-amber-500" />
-          <h1 className="text-2xl font-semibold text-zinc-100">
-            Users {users && <span className="text-zinc-500">– {users.length}</span>}
-          </h1>
-        </div>
+      <PageHeader
+        icon={Users}
+        category="Admin"
+        title="User Management"
+        description={
+          users ? `${users.length} users in the system` : 'Manage user accounts and permissions'
+        }
+        variant="hero"
+        accentColor="blue"
+      >
         <CreateUserDialog />
-      </div>
+      </PageHeader>
 
-      {/* Search and filters toolbar - fixed */}
-      <div className="flex flex-col gap-3 mb-4 flex-shrink-0">
-        <div className="flex flex-wrap gap-3">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-            <Input
-              placeholder="Search by name or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-500"
-            />
+      <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 pb-6">
+        {/* Search and filters toolbar - fixed */}
+        <div className="flex flex-col gap-3 mb-4 flex-shrink-0">
+          <div className="flex flex-wrap gap-3">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+              <Input
+                placeholder="Search by name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-500"
+              />
+            </div>
+
+            {/* Sort dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                >
+                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  {sortLabels[sort]}
+                  <span className="ml-1 text-zinc-500">({sortDir === 'asc' ? 'A-Z' : 'Z-A'})</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-zinc-900 border-zinc-800">
+                <DropdownMenuLabel className="text-zinc-400">Sort by</DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={sort} onValueChange={(v) => setSort(v as SortField)}>
+                  <DropdownMenuRadioItem
+                    value="name"
+                    className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                  >
+                    Name
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem
+                    value="lastLoginAt"
+                    className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                  >
+                    Last Login
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem
+                    value="createdAt"
+                    className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                  >
+                    Date Created
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator className="bg-zinc-800" />
+                <DropdownMenuItem
+                  onClick={toggleSortDirection}
+                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                >
+                  {sortDir === 'asc' ? 'Sort Descending' : 'Sort Ascending'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Role filter */}
+            <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as RoleFilter)}>
+              <SelectTrigger className="w-[140px] border-zinc-800 bg-zinc-900 text-zinc-300">
+                <SelectValue placeholder="All roles" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-800">
+                <SelectItem
+                  value="all"
+                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                >
+                  All Users
+                </SelectItem>
+                <SelectItem
+                  value="admin"
+                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                >
+                  Admins
+                </SelectItem>
+                <SelectItem
+                  value="standard"
+                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+                >
+                  Standard
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Projects filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 ${
+                    minProjects || maxProjects ? 'border-indigo-500' : ''
+                  }`}
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Projects
+                  {(minProjects || maxProjects) && (
+                    <Badge variant="secondary" className="ml-2 bg-indigo-500/20 text-indigo-300">
+                      {minProjects || '0'}-{maxProjects || '*'}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-zinc-900 border-zinc-800 p-3 w-[200px]">
+                <div className="space-y-3">
+                  <div>
+                    <label
+                      htmlFor="min-projects-filter"
+                      className="text-xs text-zinc-500 mb-1 block"
+                    >
+                      Min Projects
+                    </label>
+                    <Input
+                      id="min-projects-filter"
+                      type="number"
+                      min="0"
+                      value={minProjects}
+                      onChange={(e) => setMinProjects(e.target.value)}
+                      placeholder="0"
+                      className="bg-zinc-800 border-zinc-700 text-zinc-100"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="max-projects-filter"
+                      className="text-xs text-zinc-500 mb-1 block"
+                    >
+                      Max Projects
+                    </label>
+                    <Input
+                      id="max-projects-filter"
+                      type="number"
+                      min="0"
+                      value={maxProjects}
+                      onChange={(e) => setMaxProjects(e.target.value)}
+                      placeholder="Any"
+                      className="bg-zinc-800 border-zinc-700 text-zinc-100"
+                    />
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Clear filters */}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={clearFilters}
+                className="text-zinc-400 hover:text-zinc-100"
+                title="Clear all filters"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
-          {/* Sort dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
-              >
-                <ArrowUpDown className="h-4 w-4 mr-2" />
-                {sortLabels[sort]}
-                <span className="ml-1 text-zinc-500">({sortDir === 'asc' ? 'A-Z' : 'Z-A'})</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-zinc-900 border-zinc-800">
-              <DropdownMenuLabel className="text-zinc-400">Sort by</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={sort} onValueChange={(v) => setSort(v as SortField)}>
-                <DropdownMenuRadioItem
-                  value="name"
-                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
-                >
-                  Name
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem
-                  value="lastLoginAt"
-                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
-                >
-                  Last Login
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem
-                  value="createdAt"
-                  className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
-                >
-                  Date Created
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-              <DropdownMenuSeparator className="bg-zinc-800" />
-              <DropdownMenuItem
-                onClick={toggleSortDirection}
-                className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
-              >
-                {sortDir === 'asc' ? 'Sort Descending' : 'Sort Ascending'}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Role filter */}
-          <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as RoleFilter)}>
-            <SelectTrigger className="w-[140px] border-zinc-800 bg-zinc-900 text-zinc-300">
-              <SelectValue placeholder="All roles" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
-              <SelectItem
-                value="all"
-                className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
-              >
-                All Users
-              </SelectItem>
-              <SelectItem
-                value="admin"
-                className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
-              >
-                Admins
-              </SelectItem>
-              <SelectItem
-                value="standard"
-                className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
-              >
-                Standard
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Projects filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className={`border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 ${
-                  minProjects || maxProjects ? 'border-indigo-500' : ''
-                }`}
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Projects
-                {(minProjects || maxProjects) && (
-                  <Badge variant="secondary" className="ml-2 bg-indigo-500/20 text-indigo-300">
-                    {minProjects || '0'}-{maxProjects || '*'}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-zinc-900 border-zinc-800 p-3 w-[200px]">
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="min-projects-filter" className="text-xs text-zinc-500 mb-1 block">
-                    Min Projects
-                  </label>
-                  <Input
-                    id="min-projects-filter"
-                    type="number"
-                    min="0"
-                    value={minProjects}
-                    onChange={(e) => setMinProjects(e.target.value)}
-                    placeholder="0"
-                    className="bg-zinc-800 border-zinc-700 text-zinc-100"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="max-projects-filter" className="text-xs text-zinc-500 mb-1 block">
-                    Max Projects
-                  </label>
-                  <Input
-                    id="max-projects-filter"
-                    type="number"
-                    min="0"
-                    value={maxProjects}
-                    onChange={(e) => setMaxProjects(e.target.value)}
-                    placeholder="Any"
-                    className="bg-zinc-800 border-zinc-700 text-zinc-100"
-                  />
-                </div>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Clear filters */}
+          {/* Active filters summary */}
           {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={clearFilters}
-              className="text-zinc-400 hover:text-zinc-100"
-              title="Clear all filters"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2 text-sm text-zinc-500">
+              <span>Showing {users?.length ?? 0} users</span>
+              {search && (
+                <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+                  Search: {search}
+                </Badge>
+              )}
+              {roleFilter !== 'all' && (
+                <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+                  {roleFilter === 'admin' ? 'Admins only' : 'Standard only'}
+                </Badge>
+              )}
+              {(minProjects || maxProjects) && (
+                <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+                  Projects: {minProjects || '0'} - {maxProjects || 'any'}
+                </Badge>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Active filters summary */}
-        {hasActiveFilters && (
-          <div className="flex items-center gap-2 text-sm text-zinc-500">
-            <span>Showing {users?.length ?? 0} users</span>
-            {search && (
-              <Badge variant="outline" className="border-zinc-700 text-zinc-400">
-                Search: {search}
-              </Badge>
-            )}
-            {roleFilter !== 'all' && (
-              <Badge variant="outline" className="border-zinc-700 text-zinc-400">
-                {roleFilter === 'admin' ? 'Admins only' : 'Standard only'}
-              </Badge>
-            )}
-            {(minProjects || maxProjects) && (
-              <Badge variant="outline" className="border-zinc-700 text-zinc-400">
-                Projects: {minProjects || '0'} - {maxProjects || 'any'}
-              </Badge>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Select all row */}
-      {users && users.length > 0 && (
-        <div className="flex items-center gap-3 mb-3 px-1 flex-shrink-0">
-          <button
-            type="button"
-            onClick={allSelected ? selectNone : selectAll}
-            className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
-          >
-            {allSelected ? (
-              <CheckSquare className="h-4 w-4 text-amber-500" />
-            ) : someSelected ? (
-              <Minus className="h-4 w-4 text-amber-500" />
-            ) : (
-              <Square className="h-4 w-4" />
-            )}
-            <span>
-              {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all other Users'}
-            </span>
-          </button>
-          {selectedIds.size > 0 && (
+        {/* Select all row */}
+        {users && users.length > 0 && (
+          <div className="flex items-center gap-3 mb-3 px-1 flex-shrink-0">
             <button
               type="button"
-              onClick={selectNone}
-              className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+              onClick={allSelected ? selectNone : selectAll}
+              className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
             >
-              Clear
+              {allSelected ? (
+                <CheckSquare className="h-4 w-4 text-amber-500" />
+              ) : someSelected ? (
+                <Minus className="h-4 w-4 text-amber-500" />
+              ) : (
+                <Square className="h-4 w-4" />
+              )}
+              <span>
+                {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all other Users'}
+              </span>
             </button>
-          )}
-        </div>
-      )}
-
-      {/* User list - scrollable container */}
-      <div className="flex-1 overflow-y-auto min-h-0">
-        {isLoading ? (
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={`skeleton-${i}`} className="h-20 bg-zinc-800/50 rounded-lg animate-pulse" />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="text-center py-8 text-red-400">
-            Failed to load users. Please try again.
-          </div>
-        ) : !users?.length ? (
-          <div className="text-center py-8 text-zinc-500">
-            {hasActiveFilters
-              ? 'No users match your filters.'
-              : 'No users found. Create your first user above.'}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {/* Current user section */}
-            {currentUserData && (
-              <>
-                {renderUserCard(currentUserData, true)}
-                {otherUsers.length > 0 && (
-                  <div className="flex items-center gap-3 py-3">
-                    <div className="flex-1 h-px bg-zinc-800" />
-                    <span className="text-xs text-zinc-600 uppercase tracking-wider">
-                      Other Users
-                    </span>
-                    <div className="flex-1 h-px bg-zinc-800" />
-                  </div>
-                )}
-              </>
+            {selectedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={selectNone}
+                className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                Clear
+              </button>
             )}
-            {/* Other users */}
-            {otherUsers.map((user) => renderUserCard(user, false))}
           </div>
         )}
-      </div>
 
-      {/* Floating bulk action bar */}
-      {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
-          <div className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/50">
-            <span className="text-sm text-zinc-300 font-medium pr-2 border-r border-zinc-700">
-              {selectedIds.size} selected
-            </span>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleBulkAction('makeAdmin')}
-              className="text-zinc-300 hover:text-amber-400 hover:bg-amber-500/10"
-            >
-              <Shield className="h-4 w-4 mr-1.5" />
-              Make Admin
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleBulkAction('removeAdmin')}
-              className="text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
-            >
-              <ShieldOff className="h-4 w-4 mr-1.5" />
-              Remove Admin
-            </Button>
-
-            <div className="w-px h-6 bg-zinc-700" />
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleBulkAction('enable')}
-              className="text-zinc-300 hover:text-green-400 hover:bg-green-500/10"
-            >
-              <UserCheck className="h-4 w-4 mr-1.5" />
-              Enable
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleBulkAction('disable')}
-              className="text-zinc-300 hover:text-red-400 hover:bg-red-500/10"
-            >
-              <UserX className="h-4 w-4 mr-1.5" />
-              Disable
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={openBulkDeleteDialog}
-              className="text-zinc-300 hover:text-red-400 hover:bg-red-500/10"
-            >
-              <Trash2 className="h-4 w-4 mr-1.5" />
-              Delete
-            </Button>
-
-            <div className="w-px h-6 bg-zinc-700" />
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={selectNone}
-              className="text-zinc-400 hover:text-zinc-100"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+        {/* User list - scrollable container */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={`skeleton-${i}`}
+                  className="h-20 bg-zinc-800/50 rounded-lg animate-pulse"
+                />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-400">
+              Failed to load users. Please try again.
+            </div>
+          ) : !users?.length ? (
+            <div className="text-center py-8 text-zinc-500">
+              {hasActiveFilters
+                ? 'No users match your filters.'
+                : 'No users found. Create your first user above.'}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Current user section */}
+              {currentUserData && (
+                <>
+                  {renderUserCard(currentUserData, true)}
+                  {otherUsers.length > 0 && (
+                    <div className="flex items-center gap-3 py-3">
+                      <div className="flex-1 h-px bg-zinc-800" />
+                      <span className="text-xs text-zinc-600 uppercase tracking-wider">
+                        Other Users
+                      </span>
+                      <div className="flex-1 h-px bg-zinc-800" />
+                    </div>
+                  )}
+                </>
+              )}
+              {/* Other users */}
+              {otherUsers.map((user) => renderUserCard(user, false))}
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Delete confirmation dialog */}
-      <AlertDialog
-        open={!!deleteUsername}
-        onOpenChange={(open) => !open && setDeleteUsername(null)}
-      >
-        <AlertDialogContent className="bg-zinc-900 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Delete User Permanently?</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to permanently delete{' '}
-              <strong className="text-zinc-200">{userToDelete?.name}</strong> ({userToDelete?.email}
-              )? This action cannot be undone and will remove all their data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() =>
-                deleteUsername && deleteUser.mutate({ username: deleteUsername, permanent: true })
-              }
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete Permanently
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* Floating bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
+            <div className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/50">
+              <span className="text-sm text-zinc-300 font-medium pr-2 border-r border-zinc-700">
+                {selectedIds.size} selected
+              </span>
 
-      {/* Bulk action confirmation dialog */}
-      <AlertDialog open={!!bulkAction} onOpenChange={(open) => !open && setBulkAction(null)}>
-        <AlertDialogContent className="bg-zinc-900 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">
-              {bulkAction === 'disable' && 'Disable Users'}
-              {bulkAction === 'enable' && 'Enable Users'}
-              {bulkAction === 'makeAdmin' && 'Grant Super Admin Privileges'}
-              {bulkAction === 'removeAdmin' && 'Remove Super Admin Privileges'}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              {getBulkActionDescription()}
-            </AlertDialogDescription>
-            {selectedUsers.length <= 8 && (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleBulkAction('makeAdmin')}
+                className="text-zinc-300 hover:text-amber-400 hover:bg-amber-500/10"
+              >
+                <Shield className="h-4 w-4 mr-1.5" />
+                Make Admin
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleBulkAction('removeAdmin')}
+                className="text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
+              >
+                <ShieldOff className="h-4 w-4 mr-1.5" />
+                Remove Admin
+              </Button>
+
+              <div className="w-px h-6 bg-zinc-700" />
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleBulkAction('enable')}
+                className="text-zinc-300 hover:text-green-400 hover:bg-green-500/10"
+              >
+                <UserCheck className="h-4 w-4 mr-1.5" />
+                Enable
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleBulkAction('disable')}
+                className="text-zinc-300 hover:text-red-400 hover:bg-red-500/10"
+              >
+                <UserX className="h-4 w-4 mr-1.5" />
+                Disable
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={openBulkDeleteDialog}
+                className="text-zinc-300 hover:text-red-400 hover:bg-red-500/10"
+              >
+                <Trash2 className="h-4 w-4 mr-1.5" />
+                Delete
+              </Button>
+
+              <div className="w-px h-6 bg-zinc-700" />
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={selectNone}
+                className="text-zinc-400 hover:text-zinc-100"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Delete confirmation dialog */}
+        <AlertDialog
+          open={!!deleteUsername}
+          onOpenChange={(open) => !open && setDeleteUsername(null)}
+        >
+          <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-zinc-100">
+                Delete User Permanently?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-zinc-400">
+                Are you sure you want to permanently delete{' '}
+                <strong className="text-zinc-200">{userToDelete?.name}</strong> (
+                {userToDelete?.email}
+                )? This action cannot be undone and will remove all their data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() =>
+                  deleteUsername && deleteUser.mutate({ username: deleteUsername, permanent: true })
+                }
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete Permanently
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Bulk action confirmation dialog */}
+        <AlertDialog open={!!bulkAction} onOpenChange={(open) => !open && setBulkAction(null)}>
+          <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-zinc-100">
+                {bulkAction === 'disable' && 'Disable Users'}
+                {bulkAction === 'enable' && 'Enable Users'}
+                {bulkAction === 'makeAdmin' && 'Grant Super Admin Privileges'}
+                {bulkAction === 'removeAdmin' && 'Remove Super Admin Privileges'}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-zinc-400">
+                {getBulkActionDescription()}
+              </AlertDialogDescription>
+              {selectedUsers.length <= 8 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedUsers.map((user) => (
+                    <Badge
+                      key={user.id}
+                      variant="outline"
+                      className="border-zinc-700 text-zinc-300"
+                    >
+                      {user.name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                Cancel
+              </AlertDialogCancel>
+              <Button
+                onClick={confirmBulkAction}
+                className={
+                  bulkAction === 'disable'
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : bulkAction === 'makeAdmin'
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'bg-zinc-600 hover:bg-zinc-700 text-white'
+                }
+              >
+                Confirm
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Bulk delete confirmation dialog with credential verification */}
+        <Dialog open={bulkDeleteOpen} onOpenChange={(open) => !open && closeBulkDeleteDialog()}>
+          <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-zinc-100 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                Permanently Delete {selectedIds.size} User{selectedIds.size !== 1 ? 's' : ''}
+              </DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                This action <strong className="text-red-400">cannot be undone</strong>. All user
+                data will be permanently removed from the system.
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedUsers.length <= 6 && (
+              <div className="flex flex-wrap gap-2 py-2">
                 {selectedUsers.map((user) => (
-                  <Badge key={user.id} variant="outline" className="border-zinc-700 text-zinc-300">
+                  <Badge
+                    key={user.id}
+                    variant="outline"
+                    className="border-red-500/30 text-red-300 bg-red-500/10"
+                  >
                     {user.name}
                   </Badge>
                 ))}
               </div>
             )}
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-              Cancel
-            </AlertDialogCancel>
-            <Button
-              onClick={confirmBulkAction}
-              className={
-                bulkAction === 'disable'
-                  ? 'bg-red-600 hover:bg-red-700 text-white'
-                  : bulkAction === 'makeAdmin'
-                    ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                    : 'bg-zinc-600 hover:bg-zinc-700 text-white'
-              }
-            >
-              Confirm
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
-      {/* Bulk delete confirmation dialog with credential verification */}
-      <Dialog open={bulkDeleteOpen} onOpenChange={(open) => !open && closeBulkDeleteDialog()}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-zinc-100 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Permanently Delete {selectedIds.size} User{selectedIds.size !== 1 ? 's' : ''}
-            </DialogTitle>
-            <DialogDescription className="text-zinc-400">
-              This action <strong className="text-red-400">cannot be undone</strong>. All user data
-              will be permanently removed from the system.
-            </DialogDescription>
-          </DialogHeader>
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-zinc-400">
+                To confirm deletion, enter your admin credentials:
+              </p>
 
-          {selectedUsers.length <= 6 && (
-            <div className="flex flex-wrap gap-2 py-2">
-              {selectedUsers.map((user) => (
-                <Badge
-                  key={user.id}
-                  variant="outline"
-                  className="border-red-500/30 text-red-300 bg-red-500/10"
-                >
-                  {user.name}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-zinc-400">
-              To confirm deletion, enter your admin credentials:
-            </p>
-
-            <div className="space-y-2">
-              <Label htmlFor="delete-email" className="text-zinc-300">
-                Your Email
-              </Label>
-              <Input
-                id="delete-email"
-                type="email"
-                value={deleteEmail}
-                onChange={(e) => {
-                  setDeleteEmail(e.target.value)
-                  setDeleteError('')
-                }}
-                placeholder={currentUser?.email || 'admin@example.com'}
-                autoComplete="off"
-                className="border-zinc-700 bg-zinc-800 text-zinc-100"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="delete-password" className="text-zinc-300">
-                Your Password
-              </Label>
-              <div className="relative">
+              <div className="space-y-2">
+                <Label htmlFor="delete-email" className="text-zinc-300">
+                  Your Email
+                </Label>
                 <Input
-                  id="delete-password"
-                  type={showDeletePassword ? 'text' : 'password'}
-                  value={deletePassword}
+                  id="delete-email"
+                  type="email"
+                  value={deleteEmail}
                   onChange={(e) => {
-                    setDeletePassword(e.target.value)
+                    setDeleteEmail(e.target.value)
                     setDeleteError('')
                   }}
-                  placeholder="Enter your password"
-                  className="border-zinc-700 bg-zinc-800 text-zinc-100 pr-10"
+                  placeholder={currentUser?.email || 'admin@example.com'}
+                  autoComplete="off"
+                  className="border-zinc-700 bg-zinc-800 text-zinc-100"
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 text-zinc-500 hover:text-zinc-300"
-                  onClick={() => setShowDeletePassword(!showDeletePassword)}
-                >
-                  {showDeletePassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="delete-password" className="text-zinc-300">
+                  Your Password
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="delete-password"
+                    type={showDeletePassword ? 'text' : 'password'}
+                    value={deletePassword}
+                    onChange={(e) => {
+                      setDeletePassword(e.target.value)
+                      setDeleteError('')
+                    }}
+                    placeholder="Enter your password"
+                    className="border-zinc-700 bg-zinc-800 text-zinc-100 pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 text-zinc-500 hover:text-zinc-300"
+                    onClick={() => setShowDeletePassword(!showDeletePassword)}
+                  >
+                    {showDeletePassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {deleteError && (
+                <p className="text-sm text-red-400 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  {deleteError}
+                </p>
+              )}
             </div>
 
-            {deleteError && (
-              <p className="text-sm text-red-400 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                {deleteError}
-              </p>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={closeBulkDeleteDialog}
-              className="text-zinc-300 hover:bg-zinc-800"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleBulkDelete}
-              disabled={bulkPermanentDeleteUsers.isPending || !deleteEmail || !deletePassword}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {bulkPermanentDeleteUsers.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Permanently'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={closeBulkDeleteDialog}
+                className="text-zinc-300 hover:bg-zinc-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkDelete}
+                disabled={bulkPermanentDeleteUsers.isPending || !deleteEmail || !deletePassword}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {bulkPermanentDeleteUsers.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Permanently'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { DatabaseSettings } from '@/components/admin/database-settings'
 import { EmailSettingsForm } from '@/components/admin/email-settings-form'
 import { RolePermissionsForm } from '@/components/admin/role-permissions-form'
 import { SettingsForm } from '@/components/admin/settings-form'
+import { PageHeader } from '@/components/common'
 import { cn } from '@/lib/utils'
 
 type SettingsTab = 'email' | 'branding' | 'uploads' | 'roles' | 'database'
@@ -25,13 +26,16 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 py-6 overflow-auto">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <Settings className="h-6 w-6 text-amber-500" />
-          <h1 className="text-2xl font-semibold text-zinc-100">System Settings</h1>
-        </div>
+      <PageHeader
+        icon={Settings}
+        category="Admin"
+        title="System Settings"
+        description="Configure uploads, branding, roles, and database options"
+        variant="hero"
+        accentColor="amber"
+      />
 
+      <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-auto">
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-zinc-800">
           <Link

@@ -1,5 +1,6 @@
 import { Settings, Shield, Users } from 'lucide-react'
 import Link from 'next/link'
+import { PageHeader } from '@/components/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { db } from '@/lib/db'
 import { DEMO_TEAM_MEMBERS, DEMO_USER, isDemoMode } from '@/lib/demo/demo-config'
@@ -27,14 +28,17 @@ export default async function AdminDashboard() {
   }
 
   return (
-    <div className="h-full overflow-auto p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Shield className="h-6 w-6 text-amber-500" />
-          <h1 className="text-2xl font-semibold text-zinc-100">Admin</h1>
-        </div>
+    <div className="h-full overflow-auto">
+      <PageHeader
+        icon={Shield}
+        category="Admin"
+        title="Dashboard"
+        description="System overview and quick actions"
+        variant="hero"
+        accentColor="purple"
+      />
 
+      <div className="mx-auto max-w-4xl px-6 pb-6 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="border-zinc-800 bg-zinc-900/50">

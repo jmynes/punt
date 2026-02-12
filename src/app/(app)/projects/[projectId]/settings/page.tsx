@@ -4,6 +4,7 @@ import { Loader2, Settings, Shield, Tag, Users } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
+import { PageHeader } from '@/components/common'
 import { MembersTab } from '@/components/projects/permissions/members-tab'
 import { RolesTab } from '@/components/projects/permissions/roles-tab'
 import { GeneralTab } from '@/components/projects/settings/general-tab'
@@ -130,18 +131,16 @@ export default function ProjectSettingsPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 py-6 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div
-            className="h-6 w-6 rounded-md flex-shrink-0"
-            style={{ backgroundColor: project?.color || '#3b82f6' }}
-          />
-          <h1 className="text-2xl font-semibold text-zinc-100">
-            {project?.name || projectKey} Settings
-          </h1>
-        </div>
+      <PageHeader
+        icon={Settings}
+        category={project?.name || projectKey}
+        title="Project Settings"
+        description="Configure project details, members, labels, and roles"
+        variant="hero"
+        accentColor="blue"
+      />
 
+      <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-hidden">
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-zinc-800">
           {canViewSettings && (
