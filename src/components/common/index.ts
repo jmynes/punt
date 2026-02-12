@@ -1,5 +1,7 @@
 export { EmptyState } from './empty-state'
 export { InlineCodeText } from './inline-code'
 export { LinkedText } from './linked-text'
+export type { PageHeaderProps } from './page-header'
+export { PageHeader } from './page-header'
 export { PriorityBadge } from './priority-badge'
 export { TypeBadge } from './type-badge'

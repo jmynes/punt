@@ -2,6 +2,7 @@
 
 import { Settings } from 'lucide-react'
 import { useEffect, useRef } from 'react'
+import { PageHeader } from '@/components/common'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -44,14 +45,17 @@ export default function PreferencesPage() {
   }, [ticketDateMaxYearMode])
 
   return (
-    <div className="h-full overflow-auto p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Settings className="h-6 w-6 text-amber-500" />
-          <h1 className="text-2xl font-semibold text-zinc-100">Preferences</h1>
-        </div>
+    <div className="h-full overflow-auto">
+      <PageHeader
+        icon={Settings}
+        category="Settings"
+        title="Preferences"
+        description="Customize your experience and workflow"
+        variant="hero"
+        accentColor="green"
+      />
 
+      <div className="mx-auto max-w-4xl px-6 pb-6 space-y-6">
         {/* Ticket Behavior */}
         <Card className="border-zinc-800 bg-zinc-900/50">
           <CardHeader>
