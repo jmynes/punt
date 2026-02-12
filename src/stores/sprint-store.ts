@@ -101,11 +101,15 @@ export const useSprintStore = create<SprintState>()(
         dismissedPrompts: state.dismissedPrompts,
         sprintSorts: state.sprintSorts,
       }),
-      migrate: (persistedState, version) => {
-        const state = persistedState as Record<string, unknown>
+      migrate: (persistedState: unknown, version: number) => {
+        const state = (persistedState ?? {}) as Record<string, unknown>
+        if (version < 1) {
+          // v0 → v1: ensure dismissedPrompts exists
+          state.dismissedPrompts = state.dismissedPrompts ?? {}
+        }
         if (version < 2) {
-          // Add sprintSorts for existing users upgrading from v1
-          state.sprintSorts = {}
+          // v1 → v2: add sprintSorts
+          state.sprintSorts = state.sprintSorts ?? {}
         }
         return state as SprintState
       },
