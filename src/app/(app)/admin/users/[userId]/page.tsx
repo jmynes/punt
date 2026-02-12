@@ -422,7 +422,7 @@ export default function AdminUserProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950">
+      <div className="h-full overflow-auto bg-zinc-950">
         <div className="max-w-3xl mx-auto px-6 py-12">
           <div className="animate-pulse space-y-8">
             <div className="h-8 w-48 bg-zinc-800 rounded" />
@@ -436,7 +436,7 @@ export default function AdminUserProfilePage() {
 
   if (error || !user) {
     return (
-      <div className="min-h-screen bg-zinc-950">
+      <div className="h-full overflow-auto bg-zinc-950">
         <div className="max-w-3xl mx-auto px-6 py-12">
           <Button variant="ghost" asChild className="mb-6">
             <Link href="/admin/users">
@@ -469,7 +469,7 @@ export default function AdminUserProfilePage() {
   })
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="h-full overflow-auto bg-zinc-950">
       {/* Header with gradient accent */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent" />
