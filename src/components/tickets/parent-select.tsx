@@ -39,7 +39,7 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
   }, [])
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 min-w-0">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -48,7 +48,7 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="flex-1 justify-between text-left"
+            className="flex-1 min-w-0 justify-between text-left"
           >
             {selectedParent ? (
               <div className="flex items-center gap-2 truncate min-w-0 flex-1">

@@ -200,6 +200,7 @@ export function useUpdateTicket() {
       if ('assigneeId' in updates) apiUpdates.assigneeId = updates.assigneeId
       if ('creatorId' in updates) apiUpdates.creatorId = updates.creatorId
       if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
+      if ('parentId' in updates) apiUpdates.parentId = updates.parentId
       if ('startDate' in updates) apiUpdates.startDate = updates.startDate
       if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
       if ('resolution' in updates) apiUpdates.resolution = updates.resolution
@@ -408,7 +409,9 @@ export async function updateTicketAPI(
   if ('storyPoints' in updates) apiUpdates.storyPoints = updates.storyPoints
   if ('estimate' in updates) apiUpdates.estimate = updates.estimate
   if ('assigneeId' in updates) apiUpdates.assigneeId = updates.assigneeId
+  if ('creatorId' in updates) apiUpdates.creatorId = updates.creatorId
   if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
+  if ('parentId' in updates) apiUpdates.parentId = updates.parentId
   if ('startDate' in updates) apiUpdates.startDate = updates.startDate
   if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
   if ('resolution' in updates) apiUpdates.resolution = updates.resolution

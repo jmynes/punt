@@ -61,6 +61,7 @@ export interface UpdateTicketInput {
   assigneeId?: string | null
   creatorId?: string | null
   sprintId?: string | null
+  parentId?: string | null
   storyPoints?: number | null
   estimate?: string | null
   startDate?: Date | null

@@ -1242,7 +1242,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 </div>
 
                 {/* Parent Epic/Story */}
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label className="text-zinc-400">Parent Epic / Story</Label>
                   <ParentSelect
                     value={tempParentId}
