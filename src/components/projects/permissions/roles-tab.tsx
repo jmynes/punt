@@ -99,9 +99,10 @@ import { type EditorRole, type RoleItemAction, SortableRoleItem } from './sortab
 
 interface RolesTabProps {
   projectId: string
+  projectKey: string
 }
 
-export function RolesTab({ projectId }: RolesTabProps) {
+export function RolesTab({ projectId, projectKey }: RolesTabProps) {
   const { data: roles, isLoading: rolesLoading } = useProjectRoles(projectId)
   const { data: members, isLoading: membersLoading } = useProjectMembers(projectId)
   const createRole = useCreateRole(projectId)
@@ -1303,7 +1304,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
                                   )}
                                   {isSystemAdmin ? (
                                     <Link
-                                      href={`/admin/users/${member.user.username}`}
+                                      href={`/admin/users/${member.user.username}?from=project-settings&projectKey=${projectKey}&tab=roles`}
                                       onClick={(e) => e.stopPropagation()}
                                       className="group/profile flex items-center gap-3 text-inherit hover:text-zinc-50 transition-colors"
                                     >

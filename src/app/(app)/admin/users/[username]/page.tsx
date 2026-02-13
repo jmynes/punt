@@ -15,8 +15,8 @@ import {
   UserX,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +30,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useIsSystemAdmin } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useAdminUndoStore } from '@/stores/admin-undo-store'
@@ -147,11 +148,65 @@ function RoleSelector({
   )
 }
 
-export default function AdminUserProfilePage() {
+function RoleBadge({ roleName }: { roleName: string }) {
+  const getRoleStyle = (name: string) => {
+    switch (name) {
+      case 'Owner':
+        return 'border-amber-500/50 text-amber-400 bg-amber-500/10'
+      case 'Admin':
+        return 'border-blue-500/50 text-blue-400 bg-blue-500/10'
+      default:
+        return 'border-zinc-600 text-zinc-400 bg-zinc-800/50'
+    }
+  }
+
+  return (
+    <Badge variant="outline" className={cn('w-[110px] justify-center', getRoleStyle(roleName))}>
+      {roleName}
+    </Badge>
+  )
+}
+
+function ProfileLoading() {
+  return (
+    <div className="h-full overflow-auto bg-zinc-950">
+      <div className="max-w-3xl mx-auto px-6 py-12">
+        <div className="animate-pulse space-y-8">
+          <div className="h-8 w-48 bg-zinc-800 rounded" />
+          <div className="h-32 bg-zinc-800 rounded-lg" />
+          <div className="h-48 bg-zinc-800 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AdminUserProfileContent() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const username = params.username as string
   const { pushMemberRoleChange, undo, redo, canUndo, canRedo } = useAdminUndoStore()
+  const { isSystemAdmin, isLoading: isAdminLoading } = useIsSystemAdmin()
+
+  // Navigation context from query params
+  const navContext = useMemo(() => {
+    const from = searchParams.get('from')
+    const projectKey = searchParams.get('projectKey')
+    const tab = searchParams.get('tab')
+
+    if (from === 'admin-users') {
+      return { href: '/admin/users', label: 'Back to Users' }
+    }
+    if (from === 'project-settings' && projectKey) {
+      return {
+        href: `/projects/${projectKey}/settings?tab=${tab ?? 'members'}`,
+        label: 'Back to Project Settings',
+      }
+    }
+    // Default fallback
+    return { href: '/admin/users', label: 'Back to Users' }
+  }, [searchParams])
 
   const {
     data: user,
@@ -421,18 +476,8 @@ export default function AdminUserProfilePage() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="h-full overflow-auto bg-zinc-950">
-        <div className="max-w-3xl mx-auto px-6 py-12">
-          <div className="animate-pulse space-y-8">
-            <div className="h-8 w-48 bg-zinc-800 rounded" />
-            <div className="h-32 bg-zinc-800 rounded-lg" />
-            <div className="h-48 bg-zinc-800 rounded-lg" />
-          </div>
-        </div>
-      </div>
-    )
+  if (isLoading || isAdminLoading) {
+    return <ProfileLoading />
   }
 
   if (error || !user) {
@@ -440,9 +485,9 @@ export default function AdminUserProfilePage() {
       <div className="h-full overflow-auto bg-zinc-950">
         <div className="max-w-3xl mx-auto px-6 py-12">
           <Button variant="ghost" asChild className="mb-6">
-            <Link href="/admin/users">
+            <Link href={navContext.href}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Users
+              {navContext.label}
             </Link>
           </Button>
           <Card className="border-zinc-800 bg-zinc-900/50">
@@ -479,9 +524,9 @@ export default function AdminUserProfilePage() {
 
         <div className="relative max-w-3xl mx-auto px-6 py-8">
           <Button variant="ghost" asChild className="mb-4 -ml-2">
-            <Link href="/admin/users">
+            <Link href={navContext.href}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Users
+              {navContext.label}
             </Link>
           </Button>
 
@@ -604,17 +649,21 @@ export default function AdminUserProfilePage() {
                         <p className="text-zinc-500 text-sm">{membership.project.key}</p>
                       </div>
                     </Link>
-                    <RoleSelector
-                      membership={membership}
-                      onRoleChange={(newRoleId, newRoleName) =>
-                        handleRoleChange(
-                          membership.id,
-                          membership.project.id,
-                          newRoleId,
-                          newRoleName,
-                        )
-                      }
-                    />
+                    {isSystemAdmin ? (
+                      <RoleSelector
+                        membership={membership}
+                        onRoleChange={(newRoleId, newRoleName) =>
+                          handleRoleChange(
+                            membership.id,
+                            membership.project.id,
+                            newRoleId,
+                            newRoleName,
+                          )
+                        }
+                      />
+                    ) : (
+                      <RoleBadge roleName={membership.role.name} />
+                    )}
                   </div>
                 ))}
               </div>
@@ -622,86 +671,96 @@ export default function AdminUserProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Admin Controls */}
-        <Card className="border-zinc-800 bg-zinc-900/50">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-amber-500" />
-              <CardTitle className="text-zinc-100">Admin Controls</CardTitle>
-            </div>
-            <CardDescription className="text-zinc-500">
-              Manage this user's access and permissions
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-lg">
-              <div>
-                <p className="font-medium text-zinc-100">Super Admin</p>
-                <p className="text-sm text-zinc-400">
-                  {user.isSystemAdmin
-                    ? 'Has full access to manage all users and settings'
-                    : 'Standard user without super admin privileges'}
-                </p>
+        {/* Admin Controls - only visible to system admins */}
+        {isSystemAdmin && (
+          <Card className="border-zinc-800 bg-zinc-900/50">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-amber-500" />
+                <CardTitle className="text-zinc-100">Admin Controls</CardTitle>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleToggleAdmin}
-                className={
-                  user.isSystemAdmin
-                    ? 'border-zinc-600 text-zinc-300 hover:bg-zinc-800'
-                    : 'border-amber-500/50 text-amber-400 hover:bg-amber-500/10'
-                }
-              >
-                {user.isSystemAdmin ? (
-                  <>
-                    <ShieldOff className="h-4 w-4 mr-2" />
-                    Remove Super Admin
-                  </>
-                ) : (
-                  <>
-                    <Shield className="h-4 w-4 mr-2" />
-                    Make Super Admin
-                  </>
-                )}
-              </Button>
-            </div>
+              <CardDescription className="text-zinc-500">
+                Manage this user's access and permissions
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-lg">
+                <div>
+                  <p className="font-medium text-zinc-100">Super Admin</p>
+                  <p className="text-sm text-zinc-400">
+                    {user.isSystemAdmin
+                      ? 'Has full access to manage all users and settings'
+                      : 'Standard user without super admin privileges'}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleAdmin}
+                  className={
+                    user.isSystemAdmin
+                      ? 'border-zinc-600 text-zinc-300 hover:bg-zinc-800'
+                      : 'border-amber-500/50 text-amber-400 hover:bg-amber-500/10'
+                  }
+                >
+                  {user.isSystemAdmin ? (
+                    <>
+                      <ShieldOff className="h-4 w-4 mr-2" />
+                      Remove Super Admin
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="h-4 w-4 mr-2" />
+                      Make Super Admin
+                    </>
+                  )}
+                </Button>
+              </div>
 
-            <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-lg">
-              <div>
-                <p className="font-medium text-zinc-100">Account Status</p>
-                <p className="text-sm text-zinc-400">
-                  {user.isActive
-                    ? 'User can sign in and access the system'
-                    : 'User is blocked from signing in'}
-                </p>
+              <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-lg">
+                <div>
+                  <p className="font-medium text-zinc-100">Account Status</p>
+                  <p className="text-sm text-zinc-400">
+                    {user.isActive
+                      ? 'User can sign in and access the system'
+                      : 'User is blocked from signing in'}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleActive}
+                  className={
+                    user.isActive
+                      ? 'border-red-500/50 text-red-400 hover:bg-red-500/10'
+                      : 'border-green-500/50 text-green-400 hover:bg-green-500/10'
+                  }
+                >
+                  {user.isActive ? (
+                    <>
+                      <UserX className="h-4 w-4 mr-2" />
+                      Disable User
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck className="h-4 w-4 mr-2" />
+                      Enable User
+                    </>
+                  )}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleToggleActive}
-                className={
-                  user.isActive
-                    ? 'border-red-500/50 text-red-400 hover:bg-red-500/10'
-                    : 'border-green-500/50 text-green-400 hover:bg-green-500/10'
-                }
-              >
-                {user.isActive ? (
-                  <>
-                    <UserX className="h-4 w-4 mr-2" />
-                    Disable User
-                  </>
-                ) : (
-                  <>
-                    <UserCheck className="h-4 w-4 mr-2" />
-                    Enable User
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
+  )
+}
+
+export default function AdminUserProfilePage() {
+  return (
+    <Suspense fallback={<ProfileLoading />}>
+      <AdminUserProfileContent />
+    </Suspense>
   )
 }

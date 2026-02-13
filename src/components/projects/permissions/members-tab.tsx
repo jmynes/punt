@@ -60,9 +60,10 @@ import type { ProjectMemberWithRole } from '@/types'
 
 interface MembersTabProps {
   projectId: string
+  projectKey: string
 }
 
-export function MembersTab({ projectId }: MembersTabProps) {
+export function MembersTab({ projectId, projectKey }: MembersTabProps) {
   const { data: members, isLoading: membersLoading } = useProjectMembers(projectId)
   const { data: roles, isLoading: rolesLoading } = useProjectRoles(projectId)
   const updateMember = useUpdateMember(projectId)
@@ -595,7 +596,11 @@ export function MembersTab({ projectId }: MembersTabProps) {
               onSelect={(shiftKey) => handleSelectSelf(shiftKey)}
               onRoleChange={(roleId) => handleRoleChange(currentMember.id, roleId)}
               onRemove={() => setRemovingMember(currentMember)}
-              profileUrl={isSystemAdmin ? `/admin/users/${currentMember.user.username}` : undefined}
+              profileUrl={
+                isSystemAdmin
+                  ? `/admin/users/${currentMember.user.username}?from=project-settings&projectKey=${projectKey}&tab=members`
+                  : undefined
+              }
             />
             {otherMembers.length > 0 && (
               <div className="flex items-center gap-3 py-3">
@@ -622,7 +627,11 @@ export function MembersTab({ projectId }: MembersTabProps) {
             onSelect={(shiftKey) => handleSelect(member.id, shiftKey)}
             onRoleChange={(roleId) => handleRoleChange(member.id, roleId)}
             onRemove={() => setRemovingMember(member)}
-            profileUrl={isSystemAdmin ? `/admin/users/${member.user.username}` : undefined}
+            profileUrl={
+              isSystemAdmin
+                ? `/admin/users/${member.user.username}?from=project-settings&projectKey=${projectKey}&tab=members`
+                : undefined
+            }
           />
         ))}
 
