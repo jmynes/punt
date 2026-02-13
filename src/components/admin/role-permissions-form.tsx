@@ -12,26 +12,21 @@ import {
 import {
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { GripVertical, Loader2, Lock, Palette, Pencil, RotateCcw, Shield } from 'lucide-react'
+import { Loader2, RotateCcw, Shield } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { PermissionGrid } from '@/components/projects/permissions/permission-grid'
-import { ColorPickerBody } from '@/components/tickets/label-select'
-import { Badge } from '@/components/ui/badge'
+import { RoleEditorPanel } from '@/components/projects/permissions/role-editor-panel'
+import {
+  type EditorRole,
+  SortableRoleItem,
+} from '@/components/projects/permissions/sortable-role-item'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getTabId } from '@/hooks/use-realtime'
-import { ALL_PERMISSIONS, type Permission } from '@/lib/permissions/constants'
+import type { Permission } from '@/lib/permissions/constants'
 import {
   type DefaultRoleName,
   ROLE_COLORS,
@@ -39,7 +34,6 @@ import {
   ROLE_POSITIONS,
   ROLE_PRESETS,
 } from '@/lib/permissions/presets'
-import { cn } from '@/lib/utils'
 
 interface RoleConfig {
   name: string
@@ -81,65 +75,6 @@ function getDefaultSettings(): RoleSettings {
       position: ROLE_POSITIONS.Member,
     },
   }
-}
-
-interface SortableRoleItemProps {
-  role: DefaultRoleName
-  config: RoleConfig
-  isSelected: boolean
-  onSelect: () => void
-}
-
-function SortableRoleItem({ role, config, isSelected, onSelect }: SortableRoleItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: role,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        'group flex items-center gap-1 rounded-md transition-colors',
-        isDragging && 'z-50 bg-zinc-700 shadow-lg ring-1 ring-amber-500/50',
-        isSelected ? 'bg-zinc-800' : 'hover:bg-zinc-800/50',
-      )}
-    >
-      <button
-        type="button"
-        className="ml-1 cursor-grab touch-none text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-zinc-400 active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        onClick={onSelect}
-        className={cn(
-          'flex-1 flex items-center gap-3 px-3 py-2.5 text-left transition-colors min-w-0',
-          isSelected ? 'text-zinc-100' : 'text-zinc-400 hover:text-zinc-200',
-        )}
-      >
-        <div
-          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: config.color }}
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{config.name}</span>
-            <Lock className="h-3 w-3 text-zinc-600 flex-shrink-0" />
-          </div>
-          <p className="text-xs text-zinc-500 truncate">{config.description}</p>
-        </div>
-      </button>
-    </div>
-  )
 }
 
 export function RolePermissionsForm() {
@@ -213,7 +148,6 @@ export function RolePermissionsForm() {
   useEffect(() => {
     if (data?.roleSettings) {
       setLocalSettings(data.roleSettings)
-      // Sort by position
       const sorted = (['Owner', 'Admin', 'Member'] as DefaultRoleName[]).sort(
         (a, b) => (data.roleSettings[a]?.position ?? 0) - (data.roleSettings[b]?.position ?? 0),
       )
@@ -269,38 +203,10 @@ export function RolePermissionsForm() {
     )
   }, [localSettings, selectedRole])
 
-  const allPermissionsEnabled = useMemo(() => {
-    const current = localSettings[selectedRole]?.permissions || []
-    return (
-      current.length === ALL_PERMISSIONS.length && ALL_PERMISSIONS.every((p) => current.includes(p))
-    )
-  }, [localSettings, selectedRole])
-
-  const handleNameChange = (name: string) => {
+  const handleFieldChange = (field: string, value: string | Permission[]) => {
     setLocalSettings((prev) => ({
       ...prev,
-      [selectedRole]: { ...prev[selectedRole], name },
-    }))
-  }
-
-  const handlePermissionsChange = (permissions: Permission[]) => {
-    setLocalSettings((prev) => ({
-      ...prev,
-      [selectedRole]: { ...prev[selectedRole], permissions },
-    }))
-  }
-
-  const handleColorChange = (color: string) => {
-    setLocalSettings((prev) => ({
-      ...prev,
-      [selectedRole]: { ...prev[selectedRole], color },
-    }))
-  }
-
-  const handleDescriptionChange = (description: string) => {
-    setLocalSettings((prev) => ({
-      ...prev,
-      [selectedRole]: { ...prev[selectedRole], description },
+      [selectedRole]: { ...prev[selectedRole], [field]: value },
     }))
   }
 
@@ -317,7 +223,6 @@ export function RolePermissionsForm() {
     newOrder.splice(newIndex, 0, moved)
     setRoleOrder(newOrder)
 
-    // Update positions
     setLocalSettings((prev) => {
       const updated = { ...prev }
       for (let i = 0; i < newOrder.length; i++) {
@@ -366,6 +271,15 @@ export function RolePermissionsForm() {
   const isOwner = selectedRole === 'Owner'
   const selectedConfig = localSettings[selectedRole]
 
+  // Map role configs to EditorRole for the shared SortableRoleItem
+  const editorRoles: EditorRole[] = roleOrder.map((role) => ({
+    id: role,
+    name: localSettings[role].name,
+    color: localSettings[role].color,
+    description: localSettings[role].description,
+    isDefault: true,
+  }))
+
   return (
     <div className="space-y-6">
       <Card className="border-zinc-800 bg-zinc-900/50">
@@ -391,13 +305,13 @@ export function RolePermissionsForm() {
               >
                 <SortableContext items={roleOrder} strategy={verticalListSortingStrategy}>
                   <div className="space-y-1">
-                    {roleOrder.map((role) => (
+                    {editorRoles.map((role) => (
                       <SortableRoleItem
-                        key={role}
+                        key={role.id}
                         role={role}
-                        config={localSettings[role]}
-                        isSelected={selectedRole === role}
-                        onSelect={() => setSelectedRole(role)}
+                        isSelected={selectedRole === role.id}
+                        canReorder
+                        onSelect={() => setSelectedRole(role.id as DefaultRoleName)}
                       />
                     ))}
                   </div>
@@ -407,136 +321,21 @@ export function RolePermissionsForm() {
 
             {/* Right Panel - Role Editor */}
             <div className="flex-1 min-w-0 flex flex-col">
-              <Tabs defaultValue="appearance" className="h-full flex flex-col">
-                <div className="mb-4">
-                  <TabsList className="w-full grid grid-cols-2 h-auto p-0 bg-transparent rounded-none gap-0">
-                    <TabsTrigger
-                      value="appearance"
-                      className="!rounded-none !rounded-l-lg !border !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
-                    >
-                      <Palette className="mr-2 h-4 w-4" />
-                      Appearance
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="permissions"
-                      className="!rounded-none !rounded-r-lg !border !border-l-0 !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
-                    >
-                      <Shield className="mr-2 h-4 w-4" />
-                      Permissions
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-
-                <Card className="flex-1 flex flex-col bg-zinc-900/50 border-zinc-800 min-h-0">
-                  <CardHeader className="flex-shrink-0 pb-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: selectedConfig.color }}
-                      />
-                      <div className="group/title relative flex items-center gap-2 flex-1 min-w-0">
-                        <div className="relative">
-                          <Input
-                            value={selectedConfig.name}
-                            onChange={(e) => handleNameChange(e.target.value)}
-                            placeholder="Role name..."
-                            className="!text-lg font-semibold bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-zinc-500 cursor-text"
-                          />
-                          <div className="absolute bottom-0 left-0 right-0 h-px bg-zinc-700 group-hover/title:bg-zinc-500 group-focus-within/title:bg-amber-500 transition-colors" />
-                        </div>
-                        <Pencil className="h-3.5 w-3.5 text-zinc-600 group-hover/title:text-zinc-400 group-focus-within/title:text-amber-500 transition-colors flex-shrink-0" />
-                      </div>
-                      <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500">
-                        <Lock className="mr-1 h-3 w-3" />
-                        Default
-                      </Badge>
-                    </div>
-                    <CardDescription>{selectedConfig.description}</CardDescription>
-                  </CardHeader>
-
-                  <TabsContent value="appearance" className="flex-1 min-h-0 mt-0">
-                    <ScrollArea className="h-full">
-                      <CardContent className="pt-0 space-y-4">
-                        <div className="space-y-2">
-                          <Label>Color</Label>
-                          <ColorPickerBody
-                            activeColor={selectedConfig.color}
-                            onColorChange={handleColorChange}
-                            onApply={(color) => {
-                              if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
-                                handleColorChange(color)
-                              }
-                            }}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="role-description">Description</Label>
-                          <Textarea
-                            id="role-description"
-                            value={selectedConfig.description}
-                            onChange={(e) => handleDescriptionChange(e.target.value)}
-                            placeholder="Describe what this role can do..."
-                            className="bg-zinc-800/50 resize-none border-zinc-700 hover:border-zinc-500"
-                            rows={3}
-                          />
-                        </div>
-                      </CardContent>
-                    </ScrollArea>
-                  </TabsContent>
-
-                  <TabsContent value="permissions" className="flex-1 min-h-0 mt-0">
-                    <ScrollArea className="h-full">
-                      <CardContent className="pt-0 space-y-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label>Permissions</Label>
-                            <div className="flex items-center gap-2">
-                              {!isOwner && !selectedRoleAtDefaults && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handlePermissionsChange([...ROLE_PRESETS[selectedRole]])
-                                  }
-                                  className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
-                                >
-                                  <RotateCcw className="mr-1 h-3 w-3" />
-                                  Reset to Defaults
-                                </Button>
-                              )}
-                              {!isOwner && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handlePermissionsChange(
-                                      allPermissionsEnabled ? [] : [...ALL_PERMISSIONS],
-                                    )
-                                  }
-                                  className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
-                                >
-                                  {allPermissionsEnabled ? 'Disable All' : 'Enable All'}
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                          {isOwner && (
-                            <p className="text-xs text-zinc-500">
-                              Owner always has all permissions.
-                            </p>
-                          )}
-                          <PermissionGrid
-                            selectedPermissions={selectedConfig.permissions}
-                            onChange={handlePermissionsChange}
-                            disabled={isOwner}
-                          />
-                        </div>
-                      </CardContent>
-                    </ScrollArea>
-                  </TabsContent>
-                </Card>
-              </Tabs>
+              <RoleEditorPanel
+                name={selectedConfig.name}
+                color={selectedConfig.color}
+                description={selectedConfig.description}
+                permissions={selectedConfig.permissions}
+                onNameChange={(name) => handleFieldChange('name', name)}
+                onColorChange={(color) => handleFieldChange('color', color)}
+                onDescriptionChange={(description) => handleFieldChange('description', description)}
+                onPermissionsChange={(permissions) => handleFieldChange('permissions', permissions)}
+                isDefault
+                isOwnerRole={isOwner}
+                headerDescription={selectedConfig.description}
+                presetPermissions={ROLE_PRESETS[selectedRole]}
+                isAtDefaults={selectedRoleAtDefaults}
+              />
             </div>
           </div>
         </CardContent>

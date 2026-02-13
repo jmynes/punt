@@ -6,14 +6,7 @@
 
 import { db } from '@/lib/db'
 import { isValidPermission, type Permission } from './constants'
-import {
-  type DefaultRoleName,
-  getDefaultRoleConfigs,
-  ROLE_COLORS,
-  ROLE_DESCRIPTIONS,
-  ROLE_POSITIONS,
-  ROLE_PRESETS,
-} from './presets'
+import { type DefaultRoleName, getDefaultRoleConfigs, ROLE_POSITIONS } from './presets'
 
 interface CustomRoleConfig {
   name?: string

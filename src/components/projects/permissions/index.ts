@@ -1,4 +1,7 @@
 export { AddMemberDialog } from './add-member-dialog'
 export { MembersTab } from './members-tab'
 export { PermissionGrid } from './permission-grid'
+export { ROLE_TAB_TRIGGER_CLASS, RoleEditorPanel } from './role-editor-panel'
 export { RolesTab } from './roles-tab'
+export type { EditorRole, RoleItemAction } from './sortable-role-item'
+export { SortableRoleItem } from './sortable-role-item'
