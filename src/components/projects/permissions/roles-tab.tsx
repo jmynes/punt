@@ -1527,7 +1527,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
                                   )}
                                   {isSystemAdmin ? (
                                     <Link
-                                      href={`/admin/users/${member.user.username}`}
+                                      href={`/admin/users/${member.user.username}?from=project-settings&projectId=${projectId}`}
                                       onClick={(e) => e.stopPropagation()}
                                       className="group/profile flex items-center gap-3 text-inherit hover:text-zinc-50 transition-colors"
                                     >
