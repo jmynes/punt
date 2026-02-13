@@ -3,7 +3,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { format, isPast, isToday } from 'date-fns'
-import { Calendar, GripVertical, MessageSquare, Paperclip, User } from 'lucide-react'
+import { Ban, Calendar, GripVertical, MessageSquare, Paperclip, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
@@ -15,7 +15,8 @@ import { Card } from '@/components/ui/card'
 import { cn, getAvatarColor, getInitials, getLabelStyles } from '@/lib/utils'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
-import type { IssueType, Priority, Resolution, TicketWithRelations } from '@/types'
+import type { IssueType, LinkType, Priority, Resolution, TicketWithRelations } from '@/types'
+import { INVERSE_LINK_TYPES } from '@/types'
 import { TicketContextMenu } from './ticket-context-menu'
 
 interface KanbanCardProps {
@@ -88,6 +89,14 @@ export function KanbanCard({
   const isOverdue = ticket.dueDate && isPast(ticket.dueDate) && !isToday(ticket.dueDate)
   const isDueToday = ticket.dueDate && isToday(ticket.dueDate)
 
+  // Check if ticket is blocked by unresolved tickets
+  const isBlocked =
+    ticket.links?.some((link) => {
+      const displayType =
+        link.direction === 'inward' ? INVERSE_LINK_TYPES[link.linkType as LinkType] : link.linkType
+      return displayType === 'is_blocked_by' && !link.linkedTicket.resolution
+    }) ?? false
+
   // Hide the card if it's being dragged (for multi-drag support)
   if (isBeingDragged) {
     return null
@@ -116,12 +125,18 @@ export function KanbanCard({
         </div>
 
         <div className="pl-4">
-          {/* Header row: Type, Key, Priority */}
+          {/* Header row: Type, Key, Blocked, Priority */}
           <div className="flex items-center gap-2 mb-2">
             <TypeBadge type={ticket.type as IssueType} size="sm" />
             <span className="text-xs font-mono text-zinc-500">
               {projectKey}-{ticket.number}
             </span>
+            {isBlocked && (
+              <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">
+                <Ban className="h-2.5 w-2.5 mr-0.5" />
+                Blocked
+              </Badge>
+            )}
             <div className="ml-auto">
               <PriorityBadge priority={ticket.priority as Priority} size="sm" />
             </div>

@@ -59,6 +59,28 @@ export const LINK_TYPES = [
 ] as const
 export type LinkType = (typeof LINK_TYPES)[number]
 
+// Display names for link types
+export const LINK_TYPE_LABELS: Record<LinkType, string> = {
+  blocks: 'Blocks',
+  is_blocked_by: 'Is blocked by',
+  relates_to: 'Relates to',
+  duplicates: 'Duplicates',
+  is_duplicated_by: 'Is duplicated by',
+  clones: 'Clones',
+  is_cloned_by: 'Is cloned by',
+}
+
+// Inverse link types for bidirectional display
+export const INVERSE_LINK_TYPES: Record<LinkType, LinkType> = {
+  blocks: 'is_blocked_by',
+  is_blocked_by: 'blocks',
+  relates_to: 'relates_to',
+  duplicates: 'is_duplicated_by',
+  is_duplicated_by: 'duplicates',
+  clones: 'is_cloned_by',
+  is_cloned_by: 'clones',
+}
+
 // Resolution values for closed/done tickets
 export const RESOLUTIONS = [
   'Done',
@@ -164,6 +186,22 @@ export interface AttachmentInfo {
   createdAt: Date
 }
 
+// Ticket link summary for display
+export interface TicketLinkSummary {
+  id: string
+  linkType: LinkType
+  linkedTicket: {
+    id: string
+    number: number
+    title: string
+    type: IssueType
+    priority: Priority
+    columnId: string
+    resolution: string | null
+  }
+  direction: 'outward' | 'inward'
+}
+
 // Extended types with relations
 export interface TicketWithRelations {
   id: string
@@ -201,6 +239,7 @@ export interface TicketWithRelations {
   labels: LabelSummary[]
   watchers: UserSummary[]
   attachments?: AttachmentInfo[]
+  links?: TicketLinkSummary[]
   _count?: {
     comments: number
     subtasks: number
