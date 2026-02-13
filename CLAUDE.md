@@ -483,6 +483,20 @@ cd /tmp/worktree-<branch-name>
 
 **Use `??` (nullish coalescing), not `||`:** For values where `0`, `false`, or empty string are valid, always use `??`. Example: `storyPoints ?? null` not `storyPoints || null` (the latter silently discards `0`).
 
+### Workflow Conventions
+
+**Ticket filing vs. implementation:**
+
+When a user asks to "file a ticket", "add a ticket", or "create a ticket", create the ticket and stop. Do not assume the user wants immediate implementation. Filing a ticket is a planning action, not a request to start work.
+
+| User says | Action |
+|-----------|--------|
+| "File a ticket for X" / "Add a ticket for X" / "Create a ticket for X" | Create the ticket only. Do not implement. |
+| "Work on PUNT-X" / "Implement PUNT-X" / "Tackle PUNT-X" | Implement the ticket. |
+| "File a ticket and start working on it" / "Create PUNT-X and implement it" | Create the ticket, then implement. |
+
+**When in doubt, ask.** If the user's intent is ambiguous, clarify before proceeding. User preferences expressed during the conversation override these defaults.
+
 ### Branch & PR Naming Convention
 
 **Branch names:** `type/punt-N-short-description`
