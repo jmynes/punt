@@ -135,9 +135,6 @@ export const TICKET_SELECT_FULL = {
       },
     },
   },
-  parent: {
-    select: { id: true, number: true, title: true, type: true },
-  },
   attachments: {
     select: ATTACHMENT_SELECT,
     orderBy: { createdAt: 'desc' as const },
