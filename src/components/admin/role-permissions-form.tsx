@@ -15,12 +15,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, RotateCcw, Shield } from 'lucide-react'
+import { Copy, Loader2, RotateCcw, Shield, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { RoleEditorPanel } from '@/components/projects/permissions/role-editor-panel'
 import {
   type EditorRole,
+  type RoleItemAction,
   SortableRoleItem,
 } from '@/components/projects/permissions/sortable-role-item'
 import { Button } from '@/components/ui/button'
@@ -84,6 +85,7 @@ export function RolePermissionsForm() {
   const [isAtDefaults, setIsAtDefaults] = useState(true)
   const [selectedRole, setSelectedRole] = useState<DefaultRoleName>('Owner')
   const [roleOrder, setRoleOrder] = useState<DefaultRoleName[]>(['Owner', 'Admin', 'Member'])
+  const [showDiff, setShowDiff] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -203,6 +205,47 @@ export function RolePermissionsForm() {
     )
   }, [localSettings, selectedRole])
 
+  // Get original permissions for the selected role (from saved server state)
+  const originalPermissions = useMemo(() => {
+    if (!data?.roleSettings) return undefined
+    return data.roleSettings[selectedRole]?.permissions
+  }, [data, selectedRole])
+
+  // Check if the selected role has unsaved changes
+  const selectedRoleHasChanges = useMemo(() => {
+    if (!data?.roleSettings) return false
+    const original = data.roleSettings[selectedRole]
+    const current = localSettings[selectedRole]
+    if (!original || !current) return false
+    return (
+      original.name !== current.name ||
+      original.color !== current.color ||
+      original.description !== current.description ||
+      original.position !== current.position ||
+      original.permissions.length !== current.permissions.length ||
+      !original.permissions.every((p) => current.permissions.includes(p))
+    )
+  }, [data, selectedRole, localSettings])
+
+  // Build actions for each role item (disabled for default roles)
+  const getRoleActions = (_role: DefaultRoleName): RoleItemAction[] => {
+    return [
+      {
+        icon: Copy,
+        label: 'Clone',
+        onClick: () => {},
+        disabled: true,
+      },
+      {
+        icon: Trash2,
+        label: 'Delete',
+        onClick: () => {},
+        disabled: true,
+        variant: 'destructive' as const,
+      },
+    ]
+  }
+
   const handleFieldChange = (field: string, value: string | Permission[]) => {
     setLocalSettings((prev) => ({
       ...prev,
@@ -293,8 +336,8 @@ export function RolePermissionsForm() {
         <CardContent>
           <div className="flex gap-6 min-h-[500px]">
             {/* Left Panel - Role List */}
-            <div className="w-56 flex-shrink-0 flex flex-col">
-              <div className="flex items-center mb-3">
+            <div className="w-64 flex-shrink-0 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-medium text-zinc-400">Roles</h3>
               </div>
               <DndContext
@@ -312,6 +355,7 @@ export function RolePermissionsForm() {
                         isSelected={selectedRole === role.id}
                         canReorder
                         onSelect={() => setSelectedRole(role.id as DefaultRoleName)}
+                        actions={getRoleActions(role.id as DefaultRoleName)}
                       />
                     ))}
                   </div>
@@ -335,6 +379,10 @@ export function RolePermissionsForm() {
                 headerDescription={selectedConfig.description}
                 presetPermissions={ROLE_PRESETS[selectedRole]}
                 isAtDefaults={selectedRoleAtDefaults}
+                showDiff={showDiff}
+                originalPermissions={originalPermissions}
+                onShowDiffChange={setShowDiff}
+                hasUnsavedChanges={selectedRoleHasChanges}
               />
             </div>
           </div>
