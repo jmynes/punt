@@ -122,6 +122,9 @@ export const TICKET_SELECT_FULL = {
   carriedFromSprint: {
     select: SPRINT_SELECT_SUMMARY,
   },
+  parent: {
+    select: { id: true, number: true, title: true, type: true },
+  },
   labels: {
     select: LABEL_SELECT,
   },

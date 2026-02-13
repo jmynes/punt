@@ -96,6 +96,7 @@ export interface TicketData {
   sprint: { id: string; name: string; status: string } | null
   assignee: { id: string; name: string; email: string | null } | null
   creator: { id: string; name: string } | null
+  parent: { id: string; number: number; title: string; type: string } | null
   labels: Array<{ id: string; name: string; color: string }>
   project?: { id: string; key: string; name: string }
 }

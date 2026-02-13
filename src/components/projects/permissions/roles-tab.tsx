@@ -12,25 +12,17 @@ import {
 import {
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRightLeft,
   CheckSquare,
   Copy,
   GitCompare,
-  GripVertical,
   Loader2,
-  Lock,
   Minus,
-  MoreVertical,
-  Palette,
-  Pencil,
   Plus,
-  RotateCcw,
   Shield,
   Square,
   Trash2,
@@ -42,7 +34,6 @@ import {
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,13 +47,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
@@ -75,8 +65,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
+import { TabsContent, TabsTrigger } from '@/components/ui/tabs'
 import {
   availableUserKeys,
   memberKeys,
@@ -94,7 +83,7 @@ import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission, useIsSystemAdmin } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { LABEL_COLORS } from '@/lib/constants'
-import { ALL_PERMISSIONS, PERMISSIONS } from '@/lib/permissions'
+import { PERMISSIONS } from '@/lib/permissions'
 import { type DefaultRoleName, ROLE_POSITIONS, ROLE_PRESETS } from '@/lib/permissions/presets'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import {
@@ -104,129 +93,13 @@ import {
 } from '@/stores/admin-undo-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { Permission, RoleWithPermissions } from '@/types'
-import { PermissionGrid } from './permission-grid'
 import { RoleCompareDialog } from './role-compare-dialog'
+import { ROLE_TAB_TRIGGER_CLASS, RoleEditorPanel } from './role-editor-panel'
+import { type EditorRole, type RoleItemAction, SortableRoleItem } from './sortable-role-item'
 
 interface RolesTabProps {
   projectId: string
   projectKey: string
-}
-
-interface SortableRoleItemProps {
-  role: RoleWithPermissions
-  isSelected: boolean
-  isCreating: boolean
-  canManageRoles: boolean | undefined
-  onSelect: () => void
-  onClone: () => void
-  onDelete: () => void
-  cloneDisabled: boolean
-}
-
-function SortableRoleItem({
-  role,
-  isSelected,
-  isCreating,
-  canManageRoles,
-  onSelect,
-  onClone,
-  onDelete,
-  cloneDisabled,
-}: SortableRoleItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: role.id,
-    disabled: !canManageRoles,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        'group flex items-center gap-1 rounded-md transition-colors',
-        isDragging && 'z-50 bg-zinc-700 shadow-lg ring-1 ring-amber-500/50',
-        isSelected && !isCreating ? 'bg-zinc-800' : 'hover:bg-zinc-800/50',
-      )}
-    >
-      {/* Drag handle */}
-      {canManageRoles && (
-        <button
-          type="button"
-          className="ml-1 cursor-grab touch-none text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-zinc-400 active:cursor-grabbing"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={onSelect}
-        className={cn(
-          'flex-1 flex items-center gap-3 px-3 py-2 text-left transition-colors min-w-0',
-          !canManageRoles && 'pl-3',
-          isSelected && !isCreating ? 'text-zinc-100' : 'text-zinc-400 hover:text-zinc-200',
-        )}
-      >
-        <div
-          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: role.color }}
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium truncate">{role.name}</span>
-            {role.isDefault && <Lock className="h-3 w-3 text-zinc-600 flex-shrink-0" />}
-          </div>
-          <div className="flex items-center gap-3 text-xs text-zinc-500">
-            <span>{role.memberCount || 0} members</span>
-          </div>
-        </div>
-      </button>
-      {canManageRoles && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="opacity-0 group-hover:opacity-100 mr-1 text-zinc-500 hover:text-zinc-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[140px]">
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation()
-                onClone()
-              }}
-              disabled={cloneDisabled}
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              Clone
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete()
-              }}
-              disabled={role.isDefault || (role.memberCount || 0) > 0}
-              className="text-red-400 focus:text-red-400"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </div>
-  )
 }
 
 export function RolesTab({ projectId, projectKey }: RolesTabProps) {
@@ -309,14 +182,6 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     return roles.find((r) => r.id === selectedRoleId) || null
   }, [selectedRoleId, roles])
 
-  // Check if all permissions are currently enabled
-  const allPermissionsEnabled = useMemo(
-    () =>
-      editPermissions.length === ALL_PERMISSIONS.length &&
-      ALL_PERMISSIONS.every((p) => editPermissions.includes(p)),
-    [editPermissions],
-  )
-
   // Map a default role's position to its preset name for permission lookup
   const getPresetNameByPosition = useCallback((position: number): DefaultRoleName | null => {
     const entry = Object.entries(ROLE_POSITIONS).find(([, pos]) => pos === position)
@@ -339,6 +204,13 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     isCreating,
     getPresetNameByPosition,
   ])
+
+  // Get preset permissions for the selected role (for Reset to Defaults)
+  const presetPermissions = useMemo(() => {
+    if (!selectedRole?.isDefault) return undefined
+    const presetName = getPresetNameByPosition(selectedRole.position)
+    return presetName ? ROLE_PRESETS[presetName] : undefined
+  }, [selectedRole?.isDefault, selectedRole?.position, getPresetNameByPosition])
 
   // Get members for the selected role
   const roleMembers = useMemo(() => {
@@ -933,7 +805,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     setIsCreating(true)
     setSelectedRoleId(null)
     setEditName('')
-    setEditColor(LABEL_COLORS[0])
+    setEditColor(LABEL_COLORS[Math.floor(Math.random() * LABEL_COLORS.length)])
     setEditDescription('')
     setEditPermissions([])
     setHasChanges(false)
@@ -1102,6 +974,44 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     }
   }
 
+  // Build actions for each role item
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handleCloneRole is intentionally excluded to avoid unnecessary rerenders
+  const getRoleActions = useCallback(
+    (role: RoleWithPermissions): RoleItemAction[] => {
+      if (!canManageRoles) return []
+      return [
+        {
+          icon: Copy,
+          label: 'Clone',
+          onClick: () => handleCloneRole(role),
+          disabled: createRole.isPending,
+        },
+        {
+          icon: Trash2,
+          label: 'Delete',
+          onClick: () => setDeletingRole(role),
+          disabled: role.isDefault || (role.memberCount || 0) > 0,
+          variant: 'destructive' as const,
+        },
+      ]
+    },
+    [canManageRoles, createRole.isPending],
+  )
+
+  // Map roles to EditorRole for the shared SortableRoleItem
+  const editorRoles: EditorRole[] = useMemo(
+    () =>
+      (roles || []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        color: r.color,
+        description: r.description || '',
+        isDefault: r.isDefault,
+        subtitle: `${r.memberCount || 0} members`,
+      })),
+    [roles],
+  )
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -1147,19 +1057,22 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-1 pr-3">
-                {roles?.map((role) => (
-                  <SortableRoleItem
-                    key={role.id}
-                    role={role}
-                    isSelected={selectedRoleId === role.id}
-                    isCreating={isCreating}
-                    canManageRoles={canManageRoles}
-                    onSelect={() => handleSelectRole(role)}
-                    onClone={() => handleCloneRole(role)}
-                    onDelete={() => setDeletingRole(role)}
-                    cloneDisabled={createRole.isPending}
-                  />
-                ))}
+                {editorRoles.map((editorRole) => {
+                  const originalRole = roles?.find((r) => r.id === editorRole.id)
+                  return (
+                    <SortableRoleItem
+                      key={editorRole.id}
+                      role={editorRole}
+                      isSelected={selectedRoleId === editorRole.id}
+                      isCreating={isCreating}
+                      canReorder={!!canManageRoles}
+                      onSelect={() => {
+                        if (originalRole) handleSelectRole(originalRole)
+                      }}
+                      actions={originalRole ? getRoleActions(originalRole) : undefined}
+                    />
+                  )
+                })}
 
                 {isCreating && (
                   <div className="w-full flex items-center gap-3 px-3 py-2 rounded-md bg-amber-900/20 border border-amber-700/50">
@@ -1181,179 +1094,42 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
       {/* Right Panel - Role Editor */}
       <div className="flex-1 min-w-0">
         {selectedRole || isCreating ? (
-          <Tabs defaultValue="appearance" className="h-full flex flex-col">
-            {/* Tab bar */}
-            <div className="mb-4">
-              <TabsList className="w-full grid grid-cols-3 h-auto p-0 bg-transparent rounded-none gap-0">
-                <TabsTrigger
-                  value="appearance"
-                  className="!rounded-none !rounded-l-lg !border !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
-                >
-                  <Palette className="mr-2 h-4 w-4" />
-                  Appearance
-                </TabsTrigger>
-                <TabsTrigger
-                  value="permissions"
-                  className="!rounded-none !border !border-l-0 !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
-                >
-                  <Shield className="mr-2 h-4 w-4" />
-                  Permissions
-                </TabsTrigger>
-                <TabsTrigger
-                  value="members"
-                  className="!rounded-none !rounded-r-lg !border !border-l-0 !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white disabled:!opacity-50"
-                  disabled={isCreating}
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  Members ({roleMembers.length})
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <Card className="flex-1 flex flex-col bg-zinc-900/50 border-zinc-800 min-h-0">
-              <CardHeader className="flex-shrink-0 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: editColor }} />
-                  {canManageRoles ? (
-                    <div className="group/title relative flex items-center gap-2 flex-1 min-w-0">
-                      <div className="relative">
-                        <Input
-                          value={editName}
-                          onChange={(e) => handleFieldChange('name', e.target.value)}
-                          placeholder="Role name..."
-                          className="!text-lg font-semibold bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-zinc-500 cursor-text"
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 h-px bg-zinc-700 group-hover/title:bg-zinc-500 group-focus-within/title:bg-amber-500 transition-colors" />
-                      </div>
-                      <Pencil className="h-3.5 w-3.5 text-zinc-600 group-hover/title:text-zinc-400 group-focus-within/title:text-amber-500 transition-colors flex-shrink-0" />
-                    </div>
-                  ) : (
-                    <CardTitle className="text-lg">{editName || 'New Role'}</CardTitle>
-                  )}
-                  {selectedRole?.isDefault && (
-                    <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500">
-                      <Lock className="mr-1 h-3 w-3" />
-                      Default
-                    </Badge>
-                  )}
-                </div>
-                <CardDescription>
-                  {isCreating
-                    ? 'Create a new role with custom permissions.'
-                    : `Configure permissions and manage members for this role.`}
-                </CardDescription>
-              </CardHeader>
-
-              <TabsContent value="appearance" className="flex-1 min-h-0 mt-0">
-                <ScrollArea className="h-full">
-                  <CardContent className="pt-0 space-y-4">
-                    {/* Color */}
-                    <div className="space-y-2">
-                      <Label>Color</Label>
-                      <ColorPickerBody
-                        activeColor={editColor}
-                        onColorChange={(color) => handleFieldChange('color', color)}
-                        onApply={(color) => {
-                          if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
-                            handleFieldChange('color', color)
-                          }
-                        }}
-                        isDisabled={!canManageRoles}
-                        projectId={projectId}
-                      />
-                    </div>
-
-                    {/* Description */}
-                    <div className="space-y-2">
-                      <Label htmlFor="role-description">Description (optional)</Label>
-                      <Textarea
-                        id="role-description"
-                        value={editDescription}
-                        onChange={(e) => handleFieldChange('description', e.target.value)}
-                        placeholder="Describe what this role can do..."
-                        disabled={!canManageRoles}
-                        className="bg-zinc-800/50 resize-none border-zinc-700 hover:border-zinc-500"
-                        rows={2}
-                      />
-                    </div>
-                  </CardContent>
-                </ScrollArea>
-              </TabsContent>
-
-              <TabsContent value="permissions" className="flex-1 min-h-0 mt-0">
-                <ScrollArea className="h-full">
-                  <CardContent className="pt-0 space-y-4">
-                    {/* Permissions */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>Permissions</Label>
-                        <div className="flex items-center gap-3">
-                          {!isCreating && hasChanges && (
-                            <label
-                              htmlFor="show-diff"
-                              className="flex items-center gap-2 cursor-pointer select-none"
-                            >
-                              <span className="text-xs text-zinc-500">Show changes</span>
-                              <Checkbox
-                                id="show-diff"
-                                checked={showDiff}
-                                onCheckedChange={(checked) => setShowDiff(checked === true)}
-                                className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                              />
-                            </label>
-                          )}
-                          {canManageRoles &&
-                            !isCreating &&
-                            selectedRole?.isDefault &&
-                            !isAtDefaults &&
-                            (() => {
-                              const presetName = getPresetNameByPosition(selectedRole.position)
-                              return presetName ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleFieldChange('permissions', [...ROLE_PRESETS[presetName]])
-                                  }
-                                  className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
-                                >
-                                  <RotateCcw className="mr-1 h-3 w-3" />
-                                  Reset to Defaults
-                                </Button>
-                              ) : null
-                            })()}
-                          {canManageRoles && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleFieldChange(
-                                  'permissions',
-                                  allPermissionsEnabled ? [] : [...ALL_PERMISSIONS],
-                                )
-                              }
-                              className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
-                            >
-                              {allPermissionsEnabled ? 'Disable All' : 'Enable All'}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-xs text-zinc-500 mb-3">
-                        Select the actions members with this role can perform.
-                      </p>
-                      <PermissionGrid
-                        selectedPermissions={editPermissions}
-                        onChange={(perms) => handleFieldChange('permissions', perms)}
-                        disabled={!canManageRoles}
-                        originalPermissions={originalPermissions}
-                        showDiff={showDiff && !isCreating}
-                      />
-                    </div>
-                  </CardContent>
-                </ScrollArea>
-              </TabsContent>
-
+          <RoleEditorPanel
+            name={editName}
+            color={editColor}
+            description={editDescription}
+            permissions={editPermissions}
+            onNameChange={(name) => handleFieldChange('name', name)}
+            onColorChange={(color) => handleFieldChange('color', color)}
+            onDescriptionChange={(desc) => handleFieldChange('description', desc)}
+            onPermissionsChange={(perms) => handleFieldChange('permissions', perms)}
+            canEdit={!!canManageRoles}
+            isDefault={selectedRole?.isDefault}
+            headerDescription={
+              isCreating
+                ? 'Create a new role with custom permissions.'
+                : 'Configure permissions and manage members for this role.'
+            }
+            presetPermissions={presetPermissions}
+            isAtDefaults={isAtDefaults}
+            showDiff={showDiff}
+            originalPermissions={originalPermissions}
+            onShowDiffChange={setShowDiff}
+            hasUnsavedChanges={hasChanges}
+            isCreating={isCreating}
+            projectId={projectId}
+            tabColumns={3}
+            extraTabTriggers={
+              <TabsTrigger
+                value="members"
+                className={cn(ROLE_TAB_TRIGGER_CLASS, '!rounded-r-lg disabled:!opacity-50')}
+                disabled={isCreating}
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Members ({roleMembers.length})
+              </TabsTrigger>
+            }
+            extraTabContent={
               <TabsContent value="members" className="flex-1 min-h-0 mt-0">
                 <ScrollArea className="h-full">
                   <CardContent className="pt-0 space-y-4">
@@ -1767,9 +1543,9 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
                   </CardContent>
                 </ScrollArea>
               </TabsContent>
-
-              {/* Footer bar with save/cancel actions */}
-              {canManageRoles && hasChanges && (
+            }
+            footer={
+              canManageRoles && hasChanges ? (
                 <div className="flex-shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-t border-zinc-800 bg-zinc-900/80">
                   <p className="text-sm text-zinc-400">You have unsaved changes</p>
                   <div className="flex items-center gap-2">
@@ -1789,9 +1565,9 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
                     </Button>
                   </div>
                 </div>
-              )}
-            </Card>
-          </Tabs>
+              ) : undefined
+            }
+          />
         ) : (
           <div className="h-full flex items-center justify-center text-zinc-500">
             <div className="text-center">
