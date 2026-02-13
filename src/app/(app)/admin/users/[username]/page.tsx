@@ -193,13 +193,14 @@ function AdminUserProfileContent() {
   const navContext = useMemo(() => {
     const from = searchParams.get('from')
     const projectKey = searchParams.get('projectKey')
+    const tab = searchParams.get('tab')
 
     if (from === 'admin-users') {
       return { href: '/admin/users', label: 'Back to Users' }
     }
     if (from === 'project-settings' && projectKey) {
       return {
-        href: `/projects/${projectKey}/settings?tab=members`,
+        href: `/projects/${projectKey}/settings?tab=${tab ?? 'members'}`,
         label: 'Back to Project Settings',
       }
     }
