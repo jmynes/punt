@@ -192,13 +192,16 @@ function AdminUserProfileContent() {
   // Navigation context from query params
   const navContext = useMemo(() => {
     const from = searchParams.get('from')
-    const projectId = searchParams.get('projectId')
+    const projectKey = searchParams.get('projectKey')
 
     if (from === 'admin-users') {
       return { href: '/admin/users', label: 'Back to Users' }
     }
-    if (from === 'project-settings' && projectId) {
-      return { href: `/projects/${projectId}/settings`, label: 'Back to Project Settings' }
+    if (from === 'project-settings' && projectKey) {
+      return {
+        href: `/projects/${projectKey}/settings?tab=members`,
+        label: 'Back to Project Settings',
+      }
     }
     // Default fallback
     return { href: '/admin/users', label: 'Back to Users' }

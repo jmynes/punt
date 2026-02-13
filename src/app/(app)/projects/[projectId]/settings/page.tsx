@@ -215,9 +215,11 @@ export default function ProjectSettingsPage() {
               }}
             />
           )}
-          {effectiveTab === 'members' && <MembersTab projectId={projectId} />}
+          {effectiveTab === 'members' && (
+            <MembersTab projectId={projectId} projectKey={projectKey} />
+          )}
           {effectiveTab === 'labels' && <LabelsTab projectId={projectId} />}
-          {effectiveTab === 'roles' && <RolesTab projectId={projectId} />}
+          {effectiveTab === 'roles' && <RolesTab projectId={projectId} projectKey={projectKey} />}
         </div>
 
         {/* Footer spacer */}

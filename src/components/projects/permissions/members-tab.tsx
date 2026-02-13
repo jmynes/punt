@@ -60,9 +60,10 @@ import type { ProjectMemberWithRole } from '@/types'
 
 interface MembersTabProps {
   projectId: string
+  projectKey: string
 }
 
-export function MembersTab({ projectId }: MembersTabProps) {
+export function MembersTab({ projectId, projectKey }: MembersTabProps) {
   const { data: members, isLoading: membersLoading } = useProjectMembers(projectId)
   const { data: roles, isLoading: rolesLoading } = useProjectRoles(projectId)
   const updateMember = useUpdateMember(projectId)
@@ -597,7 +598,7 @@ export function MembersTab({ projectId }: MembersTabProps) {
               onRemove={() => setRemovingMember(currentMember)}
               profileUrl={
                 isSystemAdmin
-                  ? `/admin/users/${currentMember.user.username}?from=project-settings&projectId=${projectId}`
+                  ? `/admin/users/${currentMember.user.username}?from=project-settings&projectKey=${projectKey}`
                   : undefined
               }
             />
@@ -628,7 +629,7 @@ export function MembersTab({ projectId }: MembersTabProps) {
             onRemove={() => setRemovingMember(member)}
             profileUrl={
               isSystemAdmin
-                ? `/admin/users/${member.user.username}?from=project-settings&projectId=${projectId}`
+                ? `/admin/users/${member.user.username}?from=project-settings&projectKey=${projectKey}`
                 : undefined
             }
           />
