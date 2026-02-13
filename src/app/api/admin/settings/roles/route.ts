@@ -22,6 +22,15 @@ interface RoleConfig {
   position: number
 }
 
+export interface CustomRoleConfig {
+  id: string
+  name: string
+  permissions: Permission[]
+  color: string
+  description: string
+  position: number
+}
+
 export type DefaultRoleSettings = Record<DefaultRoleName, RoleConfig>
 
 /** Get default role settings, reading from DB or falling back to hardcoded defaults */
@@ -52,8 +61,12 @@ function getDefaultSettings(): DefaultRoleSettings {
 }
 
 /** Parse stored JSON, handling both old format (arrays) and new format (objects) */
-function parseStoredSettings(json: string): DefaultRoleSettings {
+function parseStoredSettings(json: string): {
+  defaults: DefaultRoleSettings
+  customRoles: CustomRoleConfig[]
+} {
   const defaults = getDefaultSettings()
+  let customRoles: CustomRoleConfig[] = []
   try {
     const parsed = JSON.parse(json)
 
@@ -83,10 +96,32 @@ function parseStoredSettings(json: string): DefaultRoleSettings {
         }
       }
     }
+
+    // Parse custom roles
+    if (Array.isArray(parsed._customRoles)) {
+      customRoles = parsed._customRoles
+        .filter(
+          (r: unknown) =>
+            typeof r === 'object' &&
+            r !== null &&
+            typeof (r as Record<string, unknown>).id === 'string' &&
+            typeof (r as Record<string, unknown>).name === 'string',
+        )
+        .map((r: Record<string, unknown>) => ({
+          id: r.id as string,
+          name: (r.name as string).trim(),
+          permissions: Array.isArray(r.permissions)
+            ? (r.permissions as string[]).filter(isValidPermission)
+            : [],
+          color: typeof r.color === 'string' ? r.color : '#6b7280',
+          description: typeof r.description === 'string' ? r.description : '',
+          position: typeof r.position === 'number' ? r.position : 100,
+        }))
+    }
   } catch {
     // Return defaults on parse error
   }
-  return defaults
+  return { defaults, customRoles }
 }
 
 // Schema for updating role settings
@@ -98,10 +133,20 @@ const roleConfigSchema = z.object({
   position: z.number().optional(),
 })
 
+const customRoleSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1).max(50),
+  permissions: z.array(z.string()),
+  color: z.string(),
+  description: z.string(),
+  position: z.number(),
+})
+
 const updateRoleSettingsSchema = z.object({
   Owner: roleConfigSchema.optional(),
   Admin: roleConfigSchema.optional(),
   Member: roleConfigSchema.optional(),
+  customRoles: z.array(customRoleSchema).optional(),
 })
 
 /**
@@ -116,15 +161,16 @@ export async function GET() {
       select: { defaultRolePermissions: true },
     })
 
-    const roleSettings = settings?.defaultRolePermissions
+    const { defaults: roleSettings, customRoles } = settings?.defaultRolePermissions
       ? parseStoredSettings(settings.defaultRolePermissions)
-      : getDefaultSettings()
+      : { defaults: getDefaultSettings(), customRoles: [] }
 
     // Owner always has all permissions
     roleSettings.Owner.permissions = [...ALL_PERMISSIONS]
 
     return NextResponse.json({
       roleSettings,
+      customRoles,
       availablePermissions: ALL_PERMISSIONS,
       roleNames: Object.values(DEFAULT_ROLE_NAMES),
     })
@@ -163,11 +209,11 @@ export async function PATCH(request: Request) {
       select: { defaultRolePermissions: true },
     })
 
-    const currentSettings = currentDbSettings?.defaultRolePermissions
+    const { defaults: currentSettings } = currentDbSettings?.defaultRolePermissions
       ? parseStoredSettings(currentDbSettings.defaultRolePermissions)
-      : getDefaultSettings()
+      : { defaults: getDefaultSettings() }
 
-    // Merge updates
+    // Merge updates for default roles
     const updates = parsed.data
     for (const role of Object.values(DEFAULT_ROLE_NAMES)) {
       const update = updates[role]
@@ -193,15 +239,24 @@ export async function PATCH(request: Request) {
     // Owner must always have all permissions
     currentSettings.Owner.permissions = [...ALL_PERMISSIONS]
 
+    // Build storage object with custom roles
+    const storageObj: Record<string, unknown> = { ...currentSettings }
+    if (updates.customRoles) {
+      storageObj._customRoles = updates.customRoles.map((r) => ({
+        ...r,
+        permissions: r.permissions.filter(isValidPermission),
+      }))
+    }
+
     // Save to database
     await db.systemSettings.upsert({
       where: { id: 'system-settings' },
       create: {
         id: 'system-settings',
-        defaultRolePermissions: JSON.stringify(currentSettings),
+        defaultRolePermissions: JSON.stringify(storageObj),
       },
       update: {
-        defaultRolePermissions: JSON.stringify(currentSettings),
+        defaultRolePermissions: JSON.stringify(storageObj),
       },
     })
 
