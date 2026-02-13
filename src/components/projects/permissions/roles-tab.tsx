@@ -804,7 +804,7 @@ export function RolesTab({ projectId }: RolesTabProps) {
     setIsCreating(true)
     setSelectedRoleId(null)
     setEditName('')
-    setEditColor(LABEL_COLORS[0])
+    setEditColor(LABEL_COLORS[Math.floor(Math.random() * LABEL_COLORS.length)])
     setEditDescription('')
     setEditPermissions([])
     setHasChanges(false)
