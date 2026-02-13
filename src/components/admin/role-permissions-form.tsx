@@ -15,7 +15,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Copy, Loader2, RotateCcw, Shield, Trash2 } from 'lucide-react'
+import { Copy, GitCompare, Loader2, Plus, RotateCcw, Shield, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { RoleEditorPanel } from '@/components/projects/permissions/role-editor-panel'
@@ -330,6 +330,14 @@ export function RolePermissionsForm() {
       <div className="w-64 flex-shrink-0 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-zinc-400">Roles</h3>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" disabled title="Compare Roles">
+              <GitCompare className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" disabled title="Cannot add custom default roles">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <ScrollArea className="flex-1">
