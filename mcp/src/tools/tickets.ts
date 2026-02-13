@@ -246,6 +246,7 @@ export function registerTicketTools(server: McpServer) {
             'estimate',
             'dueDate',
             'startDate',
+            'parent',
           ]),
         )
         .optional()
@@ -328,6 +329,7 @@ export function registerTicketTools(server: McpServer) {
           estimate: (t) => !t.estimate,
           dueDate: (t) => !t.dueDate,
           startDate: (t) => !t.startDate,
+          parent: (t) => t.parent == null,
         }
         tickets = tickets.filter((t) => missingFields.some((field) => fieldChecks[field](t)))
         appliedFilters.push(`missing: ${missingFields.join(', ')}`)
