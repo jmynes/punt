@@ -196,6 +196,8 @@ describe('Ticket API - Permission Tests', () => {
         columnId: 'column-1',
         creatorId: TEST_USER.id,
         watchers: [],
+        linkedFrom: [],
+        linkedTo: [],
       }
       // biome-ignore lint/suspicious/noExplicitAny: mock typing
       ;(mockDb.$transaction as any).mockImplementation(async (_fn: any) => {
@@ -229,6 +231,8 @@ describe('Ticket API - Permission Tests', () => {
         columnId: 'column-1',
         creatorId: ADMIN_USER.id,
         watchers: [],
+        linkedFrom: [],
+        linkedTo: [],
       }
       // biome-ignore lint/suspicious/noExplicitAny: mock typing
       ;(mockDb.$transaction as any).mockImplementation(async (_fn: any) => {
