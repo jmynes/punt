@@ -28,6 +28,39 @@ export const BACKLOG_COLUMNS = [
 
 export type BacklogColumnId = (typeof BACKLOG_COLUMNS)[number]
 
+// Filter button types - independent from column visibility
+export const FILTER_BUTTON_TYPES = [
+  'type',
+  'status',
+  'resolution',
+  'priority',
+  'assignee',
+  'labels',
+  'sprint',
+  'storyPoints',
+  'dueDate',
+] as const
+
+export type FilterButtonId = (typeof FILTER_BUTTON_TYPES)[number]
+
+export interface FilterButton {
+  id: FilterButtonId
+  label: string
+  visible: boolean
+}
+
+export const DEFAULT_FILTER_BUTTONS: FilterButton[] = [
+  { id: 'type', label: 'Type', visible: true },
+  { id: 'status', label: 'Status', visible: true },
+  { id: 'resolution', label: 'Resolution', visible: true },
+  { id: 'priority', label: 'Priority', visible: true },
+  { id: 'assignee', label: 'Assignee', visible: true },
+  { id: 'labels', label: 'Labels', visible: true },
+  { id: 'sprint', label: 'Sprint', visible: true },
+  { id: 'storyPoints', label: 'Points', visible: true },
+  { id: 'dueDate', label: 'Due Date', visible: true },
+]
+
 export interface BacklogColumn {
   id: BacklogColumnId
   label: string
@@ -165,6 +198,16 @@ interface BacklogState {
   columnConfigOpen: boolean
   setColumnConfigOpen: (open: boolean) => void
 
+  // Filter button configuration
+  filterButtons: FilterButton[]
+  setFilterButtons: (buttons: FilterButton[]) => void
+  toggleFilterButtonVisibility: (buttonId: FilterButtonId) => void
+  reorderFilterButtons: (fromIndex: number, toIndex: number) => void
+  resetFilterButtons: () => void
+  matchFilterButtonsToColumns: () => void
+  filterConfigOpen: boolean
+  setFilterConfigOpen: (open: boolean) => void
+
   // Manual backlog ordering (per project)
   backlogOrder: Record<string, string[]>
   setBacklogOrder: (projectId: string, orderedIds: string[]) => void
@@ -269,6 +312,62 @@ export const useBacklogStore = create<BacklogState>()(
       columnConfigOpen: false,
       setColumnConfigOpen: (open) => set({ columnConfigOpen: open }),
 
+      // Filter button configuration
+      filterButtons: DEFAULT_FILTER_BUTTONS,
+      setFilterButtons: (buttons) => set({ filterButtons: buttons }),
+      toggleFilterButtonVisibility: (buttonId) =>
+        set((state) => ({
+          filterButtons: state.filterButtons.map((btn) =>
+            btn.id === buttonId ? { ...btn, visible: !btn.visible } : btn,
+          ),
+        })),
+      reorderFilterButtons: (fromIndex, toIndex) =>
+        set((state) => {
+          const newButtons = [...state.filterButtons]
+          const [removed] = newButtons.splice(fromIndex, 1)
+          newButtons.splice(toIndex, 0, removed)
+          return { filterButtons: newButtons }
+        }),
+      resetFilterButtons: () => set({ filterButtons: DEFAULT_FILTER_BUTTONS }),
+      matchFilterButtonsToColumns: () =>
+        set((state) => {
+          // Map column IDs to filter button IDs where applicable
+          const columnToFilterMap: Record<string, FilterButtonId> = {
+            type: 'type',
+            status: 'status',
+            resolution: 'resolution',
+            priority: 'priority',
+            assignee: 'assignee',
+            labels: 'labels',
+            sprint: 'sprint',
+            storyPoints: 'storyPoints',
+            dueDate: 'dueDate',
+          }
+
+          // Get visible column IDs that map to filter buttons
+          const visibleColumnIds = new Set(state.columns.filter((c) => c.visible).map((c) => c.id))
+
+          // Update filter button visibility to match columns
+          return {
+            filterButtons: state.filterButtons.map((btn) => {
+              // Find if there's a matching column
+              const matchingColumnId = Object.entries(columnToFilterMap).find(
+                ([_, filterId]) => filterId === btn.id,
+              )?.[0]
+
+              if (matchingColumnId) {
+                return {
+                  ...btn,
+                  visible: visibleColumnIds.has(matchingColumnId as BacklogColumnId),
+                }
+              }
+              return btn
+            }),
+          }
+        }),
+      filterConfigOpen: false,
+      setFilterConfigOpen: (open) => set({ filterConfigOpen: open }),
+
       backlogOrder: {},
       setBacklogOrder: (projectId, orderedIds) =>
         set((state) => ({
@@ -292,6 +391,7 @@ export const useBacklogStore = create<BacklogState>()(
         showSubtasks: state.showSubtasks,
         groupByEpic: state.groupByEpic,
         backlogOrder: state.backlogOrder,
+        filterButtons: state.filterButtons,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return
@@ -300,6 +400,12 @@ export const useBacklogStore = create<BacklogState>()(
         const newColumns = DEFAULT_COLUMNS.filter((c) => !existingIds.has(c.id))
         if (newColumns.length > 0) {
           state.columns = [...state.columns, ...newColumns]
+        }
+        // Merge any new DEFAULT_FILTER_BUTTONS that don't exist in persisted state
+        const existingButtonIds = new Set(state.filterButtons.map((b) => b.id))
+        const newButtons = DEFAULT_FILTER_BUTTONS.filter((b) => !existingButtonIds.has(b.id))
+        if (newButtons.length > 0) {
+          state.filterButtons = [...state.filterButtons, ...newButtons]
         }
       },
     },

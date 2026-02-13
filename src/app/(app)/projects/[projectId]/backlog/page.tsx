@@ -18,7 +18,7 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { List, Loader2, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BacklogTable, ColumnConfig } from '@/components/backlog'
+import { BacklogTable, ColumnConfig, FilterConfig } from '@/components/backlog'
 import { SprintHeader, SprintSection } from '@/components/sprints'
 import { TicketTableRow } from '@/components/table'
 import { TicketDetailDrawer } from '@/components/tickets'
@@ -1121,6 +1121,9 @@ export default function BacklogPage() {
 
       {/* Column config sheet */}
       <ColumnConfig />
+
+      {/* Filter config sheet */}
+      <FilterConfig />
 
       {/* Ticket detail drawer */}
       <TicketDetailDrawer
