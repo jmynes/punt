@@ -50,6 +50,10 @@ function formatTicketCreated(ticket: TicketData, projectKey: string): string {
   if (ticket.dueDate) fields.push(`**Due:** ${formatDate(ticket.dueDate)}`)
   if (ticket.environment) fields.push(`**Environment:** ${escapeMarkdown(ticket.environment)}`)
   if (ticket.resolution) fields.push(`**Resolution:** ${escapeMarkdown(ticket.resolution)}`)
+  if (ticket.parent) {
+    const parentKey = `${projectKey}-${ticket.parent.number}`
+    fields.push(`**Parent:** ${parentKey} (${escapeMarkdown(ticket.parent.title)})`)
+  }
 
   lines.push(fields.join('  \n'))
 
@@ -130,6 +134,13 @@ function formatTicketUpdated(key: string, oldTicket: TicketData, newTicket: Tick
   }
   if ((oldTicket.fixVersion ?? null) !== (newTicket.fixVersion ?? null)) {
     changes.push(`**Fix Version:** ${esc(oldTicket.fixVersion)} -> ${esc(newTicket.fixVersion)}`)
+  }
+
+  // Parent comparison
+  const oldParentKey = oldTicket.parent ? `${key.split('-')[0]}-${oldTicket.parent.number}` : null
+  const newParentKey = newTicket.parent ? `${key.split('-')[0]}-${newTicket.parent.number}` : null
+  if (oldParentKey !== newParentKey) {
+    changes.push(`**Parent:** ${oldParentKey ?? 'none'} -> ${newParentKey ?? 'none'}`)
   }
 
   // Labels comparison (escape each label name)
@@ -381,6 +392,10 @@ export function registerTicketTools(server: McpServer) {
       environment: z.string().optional().describe('Environment (e.g., "Production")'),
       affectedVersion: z.string().optional().describe('Affected version'),
       fixVersion: z.string().optional().describe('Fix version'),
+      parent: z
+        .string()
+        .optional()
+        .describe('Parent ticket key (e.g., "PUNT-1") for creating subtasks'),
     },
     async ({
       projectKey,
@@ -401,6 +416,7 @@ export function registerTicketTools(server: McpServer) {
       environment,
       affectedVersion,
       fixVersion,
+      parent,
     }) => {
       // Get columns to find columnId
       const columnsResult = await listColumns(projectKey)
@@ -492,6 +508,28 @@ export function registerTicketTools(server: McpServer) {
         }
       }
 
+      // Get parent ticket ID if specified
+      let parentId: string | undefined
+      if (parent) {
+        const parsedParent = parseTicketKey(parent)
+        if (!parsedParent) {
+          return errorResponse(`Invalid parent ticket key format: ${parent}`)
+        }
+        // Validate parent is in the same project
+        if (parsedParent.projectKey.toUpperCase() !== projectKey.toUpperCase()) {
+          return errorResponse(`Parent ticket must be in the same project: ${parent}`)
+        }
+        const ticketsResult = await listTickets(projectKey)
+        if (ticketsResult.error) {
+          return errorResponse(ticketsResult.error)
+        }
+        const parentTicket = ticketsResult.data?.find((t) => t.number === parsedParent.number)
+        if (!parentTicket) {
+          return errorResponse(`Parent ticket not found: ${parent}`)
+        }
+        parentId = parentTicket.id
+      }
+
       const result = await createTicket(projectKey, {
         title,
         description: description ?? null,
@@ -501,6 +539,7 @@ export function registerTicketTools(server: McpServer) {
         assigneeId: assigneeId ?? null,
         reporterId: reporterId ?? null,
         sprintId: sprintId ?? null,
+        parentId: parentId ?? null,
         storyPoints: storyPoints ?? null,
         estimate: estimate ?? null,
         resolution: resolution ?? null,
@@ -550,6 +589,11 @@ export function registerTicketTools(server: McpServer) {
       environment: z.string().nullable().optional().describe('Environment'),
       affectedVersion: z.string().nullable().optional().describe('Affected version'),
       fixVersion: z.string().nullable().optional().describe('Fix version'),
+      parent: z
+        .string()
+        .nullable()
+        .optional()
+        .describe('Parent ticket key (e.g., "PUNT-1") or null to remove parent'),
     },
     async ({
       key,
@@ -569,6 +613,7 @@ export function registerTicketTools(server: McpServer) {
       environment,
       affectedVersion,
       fixVersion,
+      parent,
     }) => {
       const parsed = parseTicketKey(key)
       if (!parsed) {
@@ -672,6 +717,32 @@ export function registerTicketTools(server: McpServer) {
           labelIds.push(label.id)
         }
         updateData.labelIds = labelIds
+      }
+
+      // Handle parent
+      if (parent !== undefined) {
+        if (parent === null) {
+          updateData.parentId = null
+        } else {
+          const parsedParent = parseTicketKey(parent)
+          if (!parsedParent) {
+            return errorResponse(`Invalid parent ticket key format: ${parent}`)
+          }
+          // Validate parent is in the same project
+          if (parsedParent.projectKey.toUpperCase() !== parsed.projectKey.toUpperCase()) {
+            return errorResponse(`Parent ticket must be in the same project: ${parent}`)
+          }
+          // Find parent ticket (we already fetched tickets above)
+          const parentTicket = ticketsResult.data?.find((t) => t.number === parsedParent.number)
+          if (!parentTicket) {
+            return errorResponse(`Parent ticket not found: ${parent}`)
+          }
+          // Prevent setting ticket as its own parent
+          if (parentTicket.id === existingTicket.id) {
+            return errorResponse('A ticket cannot be its own parent')
+          }
+          updateData.parentId = parentTicket.id
+        }
       }
 
       const result = await updateTicket(parsed.projectKey, existingTicket.id, updateData)

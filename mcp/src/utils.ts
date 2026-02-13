@@ -85,6 +85,7 @@ export function formatTicket(ticket: {
   sprint?: { name: string; status: string } | null
   assignee?: { name: string; email?: string | null } | null
   creator?: { name: string } | null
+  parent?: { number: number; title: string; type: string } | null
   labels?: { name: string; color: string }[]
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -103,6 +104,12 @@ export function formatTicket(ticket: {
   if (ticket.column) lines.push(`**Status:** ${escapeMarkdown(ticket.column.name)}  `)
   if (ticket.resolution) lines.push(`**Resolution:** ${escapeMarkdown(ticket.resolution)}  `)
   if (ticket.resolvedAt) lines.push(`**Resolved:** ${formatDate(ticket.resolvedAt)}  `)
+  if (ticket.parent) {
+    const parentKey = `${projectKey}-${ticket.parent.number}`
+    lines.push(
+      `**Parent:** ${parentKey} (${ticket.parent.type}): ${escapeMarkdown(ticket.parent.title)}  `,
+    )
+  }
 
   // People (names are user-controlled)
   if (ticket.assignee || ticket.creator) {
@@ -170,6 +177,7 @@ export function formatTicketList(
     sprint?: { name: string } | null
     assignee?: { name: string } | null
     storyPoints?: number | null
+    parent?: { number: number } | null
     project?: { key: string }
   }>,
   projectKey?: string,
@@ -179,20 +187,22 @@ export function formatTicketList(
   }
 
   const lines: string[] = []
-  lines.push('| Key | Title | Type | Priority | Status | Sprint | Assignee | Points |')
-  lines.push('|-----|-------|------|----------|--------|--------|----------|--------|')
+  lines.push('| Key | Title | Type | Priority | Status | Sprint | Assignee | Points | Parent |')
+  lines.push('|-----|-------|------|----------|--------|--------|----------|--------|--------|')
 
   for (const ticket of tickets) {
-    const key = `${projectKey ?? ticket.project?.key ?? 'UNKNOWN'}-${ticket.number}`
+    const pKey = projectKey ?? ticket.project?.key ?? 'UNKNOWN'
+    const key = `${pKey}-${ticket.number}`
     // Escape and truncate user-controlled fields for safe table rendering
     const title = safeTableCell(ticket.title, 50)
     const status = ticket.column?.name ? safeTableCell(ticket.column.name, 20) : '-'
     const sprint = ticket.sprint?.name ? safeTableCell(ticket.sprint.name, 20) : '-'
     const assignee = ticket.assignee?.name ? safeTableCell(ticket.assignee.name, 20) : '-'
     const points = ticket.storyPoints ?? '-'
+    const parent = ticket.parent ? `${pKey}-${ticket.parent.number}` : '-'
 
     lines.push(
-      `| ${key} | ${title} | ${ticket.type} | ${ticket.priority} | ${status} | ${sprint} | ${assignee} | ${points} |`,
+      `| ${key} | ${title} | ${ticket.type} | ${ticket.priority} | ${status} | ${sprint} | ${assignee} | ${points} | ${parent} |`,
     )
   }
 
