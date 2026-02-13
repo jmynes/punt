@@ -402,10 +402,14 @@ export const useBacklogStore = create<BacklogState>()(
           state.columns = [...state.columns, ...newColumns]
         }
         // Merge any new DEFAULT_FILTER_BUTTONS that don't exist in persisted state
-        const existingButtonIds = new Set(state.filterButtons.map((b) => b.id))
-        const newButtons = DEFAULT_FILTER_BUTTONS.filter((b) => !existingButtonIds.has(b.id))
-        if (newButtons.length > 0) {
-          state.filterButtons = [...state.filterButtons, ...newButtons]
+        if (!state.filterButtons) {
+          state.filterButtons = DEFAULT_FILTER_BUTTONS
+        } else {
+          const existingButtonIds = new Set(state.filterButtons.map((b) => b.id))
+          const newButtons = DEFAULT_FILTER_BUTTONS.filter((b) => !existingButtonIds.has(b.id))
+          if (newButtons.length > 0) {
+            state.filterButtons = [...state.filterButtons, ...newButtons]
+          }
         }
       },
     },

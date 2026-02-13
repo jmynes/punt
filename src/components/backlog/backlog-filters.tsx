@@ -688,12 +688,8 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                             onClick={() => {
                               const currentValue = filterByPoints?.value ?? 0
                               const newValue = currentValue + 1
-                              const selectElement = document.querySelector(
-                                'select',
-                              ) as HTMLSelectElement
-                              const operator =
-                                (selectElement?.value as '<' | '>' | '=' | '<=' | '>=') || '='
-                              setFilterByPoints({ operator: operator || '=', value: newValue })
+                              const operator = filterByPoints?.operator ?? '='
+                              setFilterByPoints({ operator, value: newValue })
                             }}
                           >
                             <ChevronUp className="h-3 w-3" />
@@ -705,12 +701,8 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                             onClick={() => {
                               const currentValue = filterByPoints?.value ?? 0
                               const newValue = Math.max(0, currentValue - 1)
-                              const selectElement = document.querySelector(
-                                'select',
-                              ) as HTMLSelectElement
-                              const operator =
-                                (selectElement?.value as '<' | '>' | '=' | '<=' | '>=') || '='
-                              setFilterByPoints({ operator: operator || '=', value: newValue })
+                              const operator = filterByPoints?.operator ?? '='
+                              setFilterByPoints({ operator, value: newValue })
                             }}
                           >
                             <ChevronDown className="h-3 w-3" />
