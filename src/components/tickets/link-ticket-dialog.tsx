@@ -126,7 +126,7 @@ export function LinkTicketDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 min-w-0">
           {/* Link Type Selection */}
           <div className="space-y-2">
             <Label className="text-zinc-400">Link Type</Label>
@@ -159,7 +159,7 @@ export function LinkTicketDialog({
           </div>
 
           {/* Ticket List */}
-          <div className="max-h-60 overflow-y-auto rounded border border-zinc-800 bg-zinc-900/50">
+          <div className="max-h-60 overflow-y-auto overflow-x-hidden rounded border border-zinc-800 bg-zinc-900/50">
             {filteredTickets.length === 0 ? (
               <div className="p-4 text-center text-sm text-zinc-500">
                 {searchQuery ? 'No tickets match your search' : 'No available tickets to link'}
@@ -170,7 +170,7 @@ export function LinkTicketDialog({
                   <button
                     key={t.id}
                     type="button"
-                    className={`w-full flex items-center gap-2 p-2 text-left transition-colors ${
+                    className={`w-full min-w-0 flex items-center gap-2 p-2 text-left transition-colors ${
                       selectedTicketId === t.id
                         ? 'bg-amber-500/20 border-l-2 border-amber-500'
                         : 'hover:bg-zinc-800/50'
@@ -181,7 +181,9 @@ export function LinkTicketDialog({
                     <span className="font-mono text-xs text-zinc-500 shrink-0">
                       {projectKey}-{t.number}
                     </span>
-                    <InlineCodeText text={t.title} className="text-sm truncate text-zinc-300" />
+                    <span className="min-w-0 flex-1 truncate text-sm text-zinc-300">
+                      <InlineCodeText text={t.title} />
+                    </span>
                   </button>
                 ))}
                 {filteredTickets.length > 50 && (
@@ -195,14 +197,16 @@ export function LinkTicketDialog({
 
           {/* Selected Ticket Preview */}
           {selectedTicket && (
-            <div className="p-3 rounded bg-zinc-800/50 border border-zinc-700">
+            <div className="p-3 rounded bg-zinc-800/50 border border-zinc-700 min-w-0">
               <div className="text-xs text-zinc-500 mb-1">Selected:</div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <TypeBadge type={selectedTicket.type} size="sm" />
-                <span className="font-mono text-sm text-zinc-400">
+                <span className="font-mono text-sm text-zinc-400 shrink-0">
                   {projectKey}-{selectedTicket.number}
                 </span>
-                <span className="text-sm text-zinc-200 truncate">{selectedTicket.title}</span>
+                <span className="text-sm text-zinc-200 truncate min-w-0 flex-1">
+                  {selectedTicket.title}
+                </span>
               </div>
             </div>
           )}
