@@ -1,15 +1,23 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, RotateCcw, Shield } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Loader2, Lock, RotateCcw, Shield } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { DefaultRolesPermissionGrid } from '@/components/projects/permissions/default-roles-permission-grid'
+import { PermissionGrid } from '@/components/projects/permissions/permission-grid'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { getTabId } from '@/hooks/use-realtime'
-import type { Permission } from '@/lib/permissions/constants'
-import { type DefaultRoleName, ROLE_PRESETS } from '@/lib/permissions/presets'
+import { ALL_PERMISSIONS, type Permission } from '@/lib/permissions/constants'
+import {
+  type DefaultRoleName,
+  ROLE_COLORS,
+  ROLE_DESCRIPTIONS,
+  ROLE_PRESETS,
+} from '@/lib/permissions/presets'
+import { cn } from '@/lib/utils'
 
 interface RolePermissionsData {
   rolePermissions: Record<DefaultRoleName, Permission[]>
@@ -24,6 +32,7 @@ export function RolePermissionsForm() {
   const [localPermissions, setLocalPermissions] = useState<Record<string, Permission[]>>({})
   const [hasChanges, setHasChanges] = useState(false)
   const [isAtDefaults, setIsAtDefaults] = useState(true)
+  const [selectedRole, setSelectedRole] = useState<DefaultRoleName>('Owner')
 
   const { data, isLoading, error } = useQuery<RolePermissionsData>({
     queryKey: ['admin', 'settings', 'roles'],
@@ -110,6 +119,28 @@ export function RolePermissionsForm() {
     setIsAtDefaults(matchesDefaults)
   }, [localPermissions])
 
+  // Check if the selected role's permissions match its preset defaults
+  const selectedRoleAtDefaults = useMemo(() => {
+    const current = localPermissions[selectedRole] || []
+    const defaults = ROLE_PRESETS[selectedRole] || []
+    return current.length === defaults.length && defaults.every((p) => current.includes(p))
+  }, [localPermissions, selectedRole])
+
+  // Check if all permissions are enabled for the selected role
+  const allPermissionsEnabled = useMemo(() => {
+    const current = localPermissions[selectedRole] || []
+    return (
+      current.length === ALL_PERMISSIONS.length && ALL_PERMISSIONS.every((p) => current.includes(p))
+    )
+  }, [localPermissions, selectedRole])
+
+  const handlePermissionsChange = (permissions: Permission[]) => {
+    setLocalPermissions((prev) => ({
+      ...prev,
+      [selectedRole]: permissions,
+    }))
+  }
+
   const handleSave = () => {
     updateMutation.mutate(localPermissions)
   }
@@ -142,6 +173,8 @@ export function RolePermissionsForm() {
     )
   }
 
+  const isOwner = selectedRole === 'Owner'
+
   return (
     <div className="space-y-6">
       <Card className="border-zinc-800 bg-zinc-900/50">
@@ -153,10 +186,100 @@ export function RolePermissionsForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <DefaultRolesPermissionGrid
-            rolePermissions={localPermissions}
-            onPermissionsChange={setLocalPermissions}
-          />
+          <div className="flex gap-6 min-h-[400px]">
+            {/* Left Panel - Role List */}
+            <div className="w-56 flex-shrink-0 flex flex-col">
+              <div className="flex items-center mb-3">
+                <h3 className="text-sm font-medium text-zinc-400">Roles</h3>
+              </div>
+              <div className="space-y-1">
+                {ROLE_ORDER.map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setSelectedRole(role)}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors',
+                      selectedRole === role
+                        ? 'bg-zinc-800 text-zinc-100'
+                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50',
+                    )}
+                  >
+                    <div
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: ROLE_COLORS[role] }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{role}</span>
+                        <Lock className="h-3 w-3 text-zinc-600 flex-shrink-0" />
+                      </div>
+                      <p className="text-xs text-zinc-500 truncate">
+                        {ROLE_DESCRIPTIONS[role].length > 50
+                          ? `${ROLE_DESCRIPTIONS[role].slice(0, 50)}...`
+                          : ROLE_DESCRIPTIONS[role]}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Panel - Permission Editor */}
+            <div className="flex-1 min-w-0 flex flex-col">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <Badge
+                    variant="outline"
+                    className="font-medium"
+                    style={{
+                      borderColor: `${ROLE_COLORS[selectedRole]}50`,
+                      color: ROLE_COLORS[selectedRole],
+                    }}
+                  >
+                    {selectedRole === 'Owner' && <Shield className="h-3 w-3 mr-1" />}
+                    {selectedRole}
+                  </Badge>
+                  {isOwner && (
+                    <span className="text-xs text-zinc-500">Owner always has all permissions</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {!isOwner && !selectedRoleAtDefaults && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePermissionsChange([...ROLE_PRESETS[selectedRole]])}
+                      className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
+                    >
+                      <RotateCcw className="mr-1 h-3 w-3" />
+                      Reset to Defaults
+                    </Button>
+                  )}
+                  {!isOwner && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        handlePermissionsChange(allPermissionsEnabled ? [] : [...ALL_PERMISSIONS])
+                      }
+                      className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
+                    >
+                      {allPermissionsEnabled ? 'Disable All' : 'Enable All'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <ScrollArea className="flex-1">
+                <PermissionGrid
+                  selectedPermissions={localPermissions[selectedRole] || []}
+                  onChange={handlePermissionsChange}
+                  disabled={isOwner}
+                />
+              </ScrollArea>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
