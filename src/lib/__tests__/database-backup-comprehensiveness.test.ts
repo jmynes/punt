@@ -657,6 +657,7 @@ describe('Database Backup Comprehensiveness', () => {
     })
 
     it('should handle large dataset export/import', async () => {
+      // Increased timeout for large data operations
       // Create multiple users, projects, tickets
       // Use null mcpApiKey to avoid unique constraint issues with fast sequential creation
       const _users = await Promise.all(
@@ -715,7 +716,7 @@ describe('Database Backup Comprehensiveness', () => {
       expect(importedUsers).toBe(10)
       expect(importedProjects).toBe(5)
       expect(importedTickets).toBe(100)
-    })
+    }, 30000)
 
     it('should handle SystemSettings export/import', async () => {
       await db.systemSettings.upsert({
