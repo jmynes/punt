@@ -25,7 +25,8 @@ import {
   SortableRoleItem,
 } from '@/components/projects/permissions/sortable-role-item'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { getTabId } from '@/hooks/use-realtime'
 import type { Permission } from '@/lib/permissions/constants'
 import {
@@ -324,127 +325,114 @@ export function RolePermissionsForm() {
   }))
 
   return (
-    <div className="space-y-6">
-      <Card className="border-zinc-800 bg-zinc-900/50">
-        <CardHeader>
-          <CardTitle className="text-zinc-100">Default Roles</CardTitle>
-          <CardDescription className="text-zinc-400 mt-1">
-            Configure the default roles for new projects. Drag to reorder. These settings apply to
-            new projects only.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-6 min-h-[500px]">
-            {/* Left Panel - Role List */}
-            <div className="w-64 flex-shrink-0 flex flex-col">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-zinc-400">Roles</h3>
-              </div>
-              <DndContext
-                id="admin-roles-dnd"
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext items={roleOrder} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-1">
-                    {editorRoles.map((role) => (
-                      <SortableRoleItem
-                        key={role.id}
-                        role={role}
-                        isSelected={selectedRole === role.id}
-                        canReorder
-                        onSelect={() => setSelectedRole(role.id as DefaultRoleName)}
-                        actions={getRoleActions(role.id as DefaultRoleName)}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            </div>
-
-            {/* Right Panel - Role Editor */}
-            <div className="flex-1 min-w-0 flex flex-col">
-              <RoleEditorPanel
-                name={selectedConfig.name}
-                color={selectedConfig.color}
-                description={selectedConfig.description}
-                permissions={selectedConfig.permissions}
-                onNameChange={(name) => handleFieldChange('name', name)}
-                onColorChange={(color) => handleFieldChange('color', color)}
-                onDescriptionChange={(description) => handleFieldChange('description', description)}
-                onPermissionsChange={(permissions) => handleFieldChange('permissions', permissions)}
-                isDefault
-                isOwnerRole={isOwner}
-                headerDescription={selectedConfig.description}
-                presetPermissions={ROLE_PRESETS[selectedRole]}
-                isAtDefaults={selectedRoleAtDefaults}
-                showDiff={showDiff}
-                originalPermissions={originalPermissions}
-                onShowDiffChange={setShowDiff}
-                hasUnsavedChanges={selectedRoleHasChanges}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Info Note */}
-      <Card className="border-zinc-800 bg-zinc-900/30">
-        <CardContent className="py-4">
-          <div className="flex items-start gap-3">
-            <Shield className="h-5 w-5 text-amber-500 mt-0.5" />
-            <div className="text-sm text-zinc-400">
-              <p className="font-medium text-zinc-300 mb-1">Note about existing projects</p>
-              <p>
-                Changes here only affect newly created projects. Existing projects retain their
-                current role configurations. Project owners can customize roles within their own
-                projects at any time.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Sticky footer for unsaved changes */}
-      {hasChanges && (
-        <div className="sticky bottom-0 z-10 flex items-center justify-between gap-4 px-6 py-4 border-t border-zinc-800 bg-zinc-900/80 backdrop-blur-sm">
-          <p className="text-sm text-zinc-400">You have unsaved changes</p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleReset}
-              disabled={isAtDefaults || resetMutation.isPending}
-              className="border-zinc-700 text-zinc-400 hover:text-zinc-100"
-            >
-              {resetMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RotateCcw className="h-4 w-4" />
-              )}
-              <span className="ml-2">Reset to Defaults</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCancel}
-              className="border-zinc-700 text-zinc-400 hover:text-zinc-100"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={updateMutation.isPending}
-              className="bg-amber-600 hover:bg-amber-700"
-            >
-              {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Save Changes
-            </Button>
-          </div>
+    <div className="flex gap-6 h-full min-h-[500px]">
+      {/* Left Panel - Role List */}
+      <div className="w-64 flex-shrink-0 flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium text-zinc-400">Roles</h3>
         </div>
-      )}
+
+        <ScrollArea className="flex-1">
+          <DndContext
+            id="admin-roles-dnd"
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={roleOrder} strategy={verticalListSortingStrategy}>
+              <div className="space-y-1 pr-3">
+                {editorRoles.map((role) => (
+                  <SortableRoleItem
+                    key={role.id}
+                    role={role}
+                    isSelected={selectedRole === role.id}
+                    canReorder
+                    onSelect={() => setSelectedRole(role.id as DefaultRoleName)}
+                    actions={getRoleActions(role.id as DefaultRoleName)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
+          {/* Info Note */}
+          <div className="mt-6 pr-3">
+            <Card className="border-zinc-800 bg-zinc-900/30">
+              <CardContent className="py-3 px-3">
+                <div className="flex items-start gap-2">
+                  <Shield className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-zinc-500">
+                    Changes here only affect newly created projects.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Right Panel - Role Editor */}
+      <div className="flex-1 min-w-0">
+        <RoleEditorPanel
+          name={selectedConfig.name}
+          color={selectedConfig.color}
+          description={selectedConfig.description}
+          permissions={selectedConfig.permissions}
+          onNameChange={(name) => handleFieldChange('name', name)}
+          onColorChange={(color) => handleFieldChange('color', color)}
+          onDescriptionChange={(description) => handleFieldChange('description', description)}
+          onPermissionsChange={(permissions) => handleFieldChange('permissions', permissions)}
+          isDefault
+          isOwnerRole={isOwner}
+          headerDescription={selectedConfig.description}
+          presetPermissions={ROLE_PRESETS[selectedRole]}
+          isAtDefaults={selectedRoleAtDefaults}
+          showDiff={showDiff}
+          originalPermissions={originalPermissions}
+          onShowDiffChange={setShowDiff}
+          hasUnsavedChanges={selectedRoleHasChanges}
+          footer={
+            hasChanges ? (
+              <div className="flex-shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-t border-zinc-800 bg-zinc-900/80">
+                <p className="text-sm text-zinc-400">You have unsaved changes</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReset}
+                    disabled={isAtDefaults || resetMutation.isPending}
+                    className="border-zinc-700 text-zinc-400 hover:text-zinc-100"
+                  >
+                    {resetMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RotateCcw className="h-4 w-4" />
+                    )}
+                    <span className="ml-2">Reset to Defaults</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancel}
+                    className="border-zinc-700 text-zinc-400 hover:text-zinc-100"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={updateMutation.isPending}
+                    className="bg-amber-600 hover:bg-amber-700"
+                  >
+                    {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            ) : undefined
+          }
+        />
+      </div>
     </div>
   )
 }
