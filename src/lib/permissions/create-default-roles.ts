@@ -16,6 +16,7 @@ import {
 } from './presets'
 
 interface CustomRoleConfig {
+  name?: string
   permissions?: Permission[]
   color?: string
   description?: string
@@ -52,6 +53,9 @@ async function getCustomRoleSettings(): Promise<CustomRoleSettings | null> {
         } else if (typeof value === 'object') {
           // New format: { "Owner": { permissions: [...], color: "...", ... } }
           result[role] = {}
+          if (typeof value.name === 'string' && value.name.trim()) {
+            result[role].name = value.name.trim()
+          }
           if (Array.isArray(value.permissions)) {
             result[role].permissions = value.permissions.filter(isValidPermission)
           }
@@ -91,7 +95,7 @@ export async function createDefaultRolesForProject(
 
     const role = await db.role.create({
       data: {
-        name: config.name,
+        name: custom?.name ?? config.name,
         color: custom?.color ?? config.color,
         description: custom?.description ?? config.description,
         permissions: JSON.stringify(custom?.permissions ?? config.permissions),

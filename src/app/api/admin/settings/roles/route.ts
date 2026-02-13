@@ -15,6 +15,7 @@ import {
 
 /** Full role config stored in DB */
 interface RoleConfig {
+  name: string
   permissions: Permission[]
   color: string
   description: string
@@ -27,18 +28,21 @@ export type DefaultRoleSettings = Record<DefaultRoleName, RoleConfig>
 function getDefaultSettings(): DefaultRoleSettings {
   return {
     Owner: {
+      name: 'Owner',
       permissions: [...ROLE_PRESETS.Owner],
       color: ROLE_COLORS.Owner,
       description: ROLE_DESCRIPTIONS.Owner,
       position: ROLE_POSITIONS.Owner,
     },
     Admin: {
+      name: 'Admin',
       permissions: [...ROLE_PRESETS.Admin],
       color: ROLE_COLORS.Admin,
       description: ROLE_DESCRIPTIONS.Admin,
       position: ROLE_POSITIONS.Admin,
     },
     Member: {
+      name: 'Member',
       permissions: [...ROLE_PRESETS.Member],
       color: ROLE_COLORS.Member,
       description: ROLE_DESCRIPTIONS.Member,
@@ -74,6 +78,9 @@ function parseStoredSettings(json: string): DefaultRoleSettings {
         if (typeof value.position === 'number') {
           defaults[role].position = value.position
         }
+        if (typeof value.name === 'string' && value.name.trim()) {
+          defaults[role].name = value.name.trim()
+        }
       }
     }
   } catch {
@@ -84,6 +91,7 @@ function parseStoredSettings(json: string): DefaultRoleSettings {
 
 // Schema for updating role settings
 const roleConfigSchema = z.object({
+  name: z.string().min(1).max(50).optional(),
   permissions: z.array(z.string()).optional(),
   color: z.string().optional(),
   description: z.string().optional(),
@@ -165,6 +173,9 @@ export async function PATCH(request: Request) {
       const update = updates[role]
       if (!update) continue
 
+      if (update.name !== undefined) {
+        currentSettings[role].name = update.name.trim()
+      }
       if (update.permissions) {
         currentSettings[role].permissions = update.permissions.filter(isValidPermission)
       }

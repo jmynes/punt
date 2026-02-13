@@ -17,14 +17,15 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { GripVertical, Loader2, Lock, Palette, RotateCcw, Shield } from 'lucide-react'
+import { GripVertical, Loader2, Lock, Palette, Pencil, RotateCcw, Shield } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { PermissionGrid } from '@/components/projects/permissions/permission-grid'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -41,6 +42,7 @@ import {
 import { cn } from '@/lib/utils'
 
 interface RoleConfig {
+  name: string
   permissions: Permission[]
   color: string
   description: string
@@ -58,18 +60,21 @@ interface RoleSettingsData {
 function getDefaultSettings(): RoleSettings {
   return {
     Owner: {
+      name: 'Owner',
       permissions: [...ROLE_PRESETS.Owner],
       color: ROLE_COLORS.Owner,
       description: ROLE_DESCRIPTIONS.Owner,
       position: ROLE_POSITIONS.Owner,
     },
     Admin: {
+      name: 'Admin',
       permissions: [...ROLE_PRESETS.Admin],
       color: ROLE_COLORS.Admin,
       description: ROLE_DESCRIPTIONS.Admin,
       position: ROLE_POSITIONS.Admin,
     },
     Member: {
+      name: 'Member',
       permissions: [...ROLE_PRESETS.Member],
       color: ROLE_COLORS.Member,
       description: ROLE_DESCRIPTIONS.Member,
@@ -127,7 +132,7 @@ function SortableRoleItem({ role, config, isSelected, onSelect }: SortableRoleIt
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{role}</span>
+            <span className="text-sm font-medium">{config.name}</span>
             <Lock className="h-3 w-3 text-zinc-600 flex-shrink-0" />
           </div>
           <p className="text-xs text-zinc-500 truncate">{config.description}</p>
@@ -224,6 +229,7 @@ export function RolePermissionsForm() {
         const current = localSettings[role]
         if (!original || !current) return false
         return (
+          original.name !== current.name ||
           original.color !== current.color ||
           original.description !== current.description ||
           original.position !== current.position ||
@@ -242,6 +248,7 @@ export function RolePermissionsForm() {
       const current = localSettings[role]
       const def = defaults[role]
       return (
+        current.name === def.name &&
         current.color === def.color &&
         current.description === def.description &&
         current.position === def.position &&
@@ -268,6 +275,13 @@ export function RolePermissionsForm() {
       current.length === ALL_PERMISSIONS.length && ALL_PERMISSIONS.every((p) => current.includes(p))
     )
   }, [localSettings, selectedRole])
+
+  const handleNameChange = (name: string) => {
+    setLocalSettings((prev) => ({
+      ...prev,
+      [selectedRole]: { ...prev[selectedRole], name },
+    }))
+  }
 
   const handlePermissionsChange = (permissions: Permission[]) => {
     setLocalSettings((prev) => ({
@@ -420,7 +434,18 @@ export function RolePermissionsForm() {
                         className="w-4 h-4 rounded-full"
                         style={{ backgroundColor: selectedConfig.color }}
                       />
-                      <CardTitle className="text-lg">{selectedRole}</CardTitle>
+                      <div className="group/title relative flex items-center gap-2 flex-1 min-w-0">
+                        <div className="relative">
+                          <Input
+                            value={selectedConfig.name}
+                            onChange={(e) => handleNameChange(e.target.value)}
+                            placeholder="Role name..."
+                            className="!text-lg font-semibold bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-zinc-500 cursor-text"
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 h-px bg-zinc-700 group-hover/title:bg-zinc-500 group-focus-within/title:bg-amber-500 transition-colors" />
+                        </div>
+                        <Pencil className="h-3.5 w-3.5 text-zinc-600 group-hover/title:text-zinc-400 group-focus-within/title:text-amber-500 transition-colors flex-shrink-0" />
+                      </div>
                       <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500">
                         <Lock className="mr-1 h-3 w-3" />
                         Default
