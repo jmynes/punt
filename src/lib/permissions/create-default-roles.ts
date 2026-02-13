@@ -6,17 +6,32 @@
 
 import { db } from '@/lib/db'
 import { isValidPermission, type Permission } from './constants'
-import { type DefaultRoleName, getDefaultRoleConfigs, ROLE_POSITIONS } from './presets'
+import {
+  type DefaultRoleName,
+  getDefaultRoleConfigs,
+  ROLE_COLORS,
+  ROLE_DESCRIPTIONS,
+  ROLE_POSITIONS,
+  ROLE_PRESETS,
+} from './presets'
 
-type CustomRolePermissions = {
-  [K in DefaultRoleName]?: Permission[]
+interface CustomRoleConfig {
+  permissions?: Permission[]
+  color?: string
+  description?: string
+  position?: number
+}
+
+type CustomRoleSettings = {
+  [K in DefaultRoleName]?: CustomRoleConfig
 }
 
 /**
- * Get custom role permissions from system settings.
+ * Get custom role settings from system settings.
+ * Handles both old format (permission arrays) and new format (full config objects).
  * Falls back to presets if not configured.
  */
-async function getCustomRolePermissions(): Promise<CustomRolePermissions | null> {
+async function getCustomRoleSettings(): Promise<CustomRoleSettings | null> {
   try {
     const settings = await db.systemSettings.findUnique({
       where: { id: 'system-settings' },
@@ -25,12 +40,34 @@ async function getCustomRolePermissions(): Promise<CustomRolePermissions | null>
 
     if (settings?.defaultRolePermissions) {
       const parsed = JSON.parse(settings.defaultRolePermissions)
-      // Validate permissions
-      return {
-        Owner: (parsed.Owner || []).filter(isValidPermission),
-        Admin: (parsed.Admin || []).filter(isValidPermission),
-        Member: (parsed.Member || []).filter(isValidPermission),
+      const result: CustomRoleSettings = {}
+
+      for (const role of ['Owner', 'Admin', 'Member'] as DefaultRoleName[]) {
+        const value = parsed[role]
+        if (!value) continue
+
+        if (Array.isArray(value)) {
+          // Old format: { "Owner": ["perm1", "perm2"] }
+          result[role] = { permissions: value.filter(isValidPermission) }
+        } else if (typeof value === 'object') {
+          // New format: { "Owner": { permissions: [...], color: "...", ... } }
+          result[role] = {}
+          if (Array.isArray(value.permissions)) {
+            result[role].permissions = value.permissions.filter(isValidPermission)
+          }
+          if (typeof value.color === 'string') {
+            result[role].color = value.color
+          }
+          if (typeof value.description === 'string') {
+            result[role].description = value.description
+          }
+          if (typeof value.position === 'number') {
+            result[role].position = value.position
+          }
+        }
       }
+
+      return result
     }
   } catch {
     // Fall back to presets on error
@@ -46,21 +83,20 @@ export async function createDefaultRolesForProject(
   projectId: string,
 ): Promise<Map<string, string>> {
   const configs = getDefaultRoleConfigs()
-  const customPermissions = await getCustomRolePermissions()
+  const customSettings = await getCustomRoleSettings()
   const roleMap = new Map<string, string>()
 
   for (const config of configs) {
-    // Use custom permissions if available, otherwise use preset
-    const permissions = customPermissions?.[config.name as DefaultRoleName] ?? config.permissions
+    const custom = customSettings?.[config.name as DefaultRoleName]
 
     const role = await db.role.create({
       data: {
         name: config.name,
-        color: config.color,
-        description: config.description,
-        permissions: JSON.stringify(permissions),
+        color: custom?.color ?? config.color,
+        description: custom?.description ?? config.description,
+        permissions: JSON.stringify(custom?.permissions ?? config.permissions),
         isDefault: config.isDefault,
-        position: config.position,
+        position: custom?.position ?? config.position,
         projectId,
       },
     })

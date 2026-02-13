@@ -4,21 +4,100 @@ import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { ALL_PERMISSIONS, isValidPermission, type Permission } from '@/lib/permissions/constants'
-import { DEFAULT_ROLE_NAMES, type DefaultRoleName, ROLE_PRESETS } from '@/lib/permissions/presets'
+import {
+  DEFAULT_ROLE_NAMES,
+  type DefaultRoleName,
+  ROLE_COLORS,
+  ROLE_DESCRIPTIONS,
+  ROLE_POSITIONS,
+  ROLE_PRESETS,
+} from '@/lib/permissions/presets'
 
-// Schema for updating role permissions
-const updateRolePermissionsSchema = z.object({
-  Owner: z.array(z.string()).optional(),
-  Admin: z.array(z.string()).optional(),
-  Member: z.array(z.string()).optional(),
-})
-
-export type DefaultRolePermissions = {
-  [K in DefaultRoleName]: Permission[]
+/** Full role config stored in DB */
+interface RoleConfig {
+  permissions: Permission[]
+  color: string
+  description: string
+  position: number
 }
 
+export type DefaultRoleSettings = Record<DefaultRoleName, RoleConfig>
+
+/** Get default role settings, reading from DB or falling back to hardcoded defaults */
+function getDefaultSettings(): DefaultRoleSettings {
+  return {
+    Owner: {
+      permissions: [...ROLE_PRESETS.Owner],
+      color: ROLE_COLORS.Owner,
+      description: ROLE_DESCRIPTIONS.Owner,
+      position: ROLE_POSITIONS.Owner,
+    },
+    Admin: {
+      permissions: [...ROLE_PRESETS.Admin],
+      color: ROLE_COLORS.Admin,
+      description: ROLE_DESCRIPTIONS.Admin,
+      position: ROLE_POSITIONS.Admin,
+    },
+    Member: {
+      permissions: [...ROLE_PRESETS.Member],
+      color: ROLE_COLORS.Member,
+      description: ROLE_DESCRIPTIONS.Member,
+      position: ROLE_POSITIONS.Member,
+    },
+  }
+}
+
+/** Parse stored JSON, handling both old format (arrays) and new format (objects) */
+function parseStoredSettings(json: string): DefaultRoleSettings {
+  const defaults = getDefaultSettings()
+  try {
+    const parsed = JSON.parse(json)
+
+    for (const role of Object.values(DEFAULT_ROLE_NAMES)) {
+      const value = parsed[role]
+      if (!value) continue
+
+      if (Array.isArray(value)) {
+        // Old format: { "Owner": ["perm1", "perm2"] }
+        defaults[role].permissions = value.filter(isValidPermission)
+      } else if (typeof value === 'object') {
+        // New format: { "Owner": { permissions: [...], color: "...", ... } }
+        if (Array.isArray(value.permissions)) {
+          defaults[role].permissions = value.permissions.filter(isValidPermission)
+        }
+        if (typeof value.color === 'string') {
+          defaults[role].color = value.color
+        }
+        if (typeof value.description === 'string') {
+          defaults[role].description = value.description
+        }
+        if (typeof value.position === 'number') {
+          defaults[role].position = value.position
+        }
+      }
+    }
+  } catch {
+    // Return defaults on parse error
+  }
+  return defaults
+}
+
+// Schema for updating role settings
+const roleConfigSchema = z.object({
+  permissions: z.array(z.string()).optional(),
+  color: z.string().optional(),
+  description: z.string().optional(),
+  position: z.number().optional(),
+})
+
+const updateRoleSettingsSchema = z.object({
+  Owner: roleConfigSchema.optional(),
+  Admin: roleConfigSchema.optional(),
+  Member: roleConfigSchema.optional(),
+})
+
 /**
- * GET /api/admin/settings/roles - Get default role permissions
+ * GET /api/admin/settings/roles - Get default role settings
  */
 export async function GET() {
   try {
@@ -29,26 +108,15 @@ export async function GET() {
       select: { defaultRolePermissions: true },
     })
 
-    // Parse stored permissions or use presets as defaults
-    let rolePermissions: DefaultRolePermissions
-    if (settings?.defaultRolePermissions) {
-      try {
-        const parsed = JSON.parse(settings.defaultRolePermissions)
-        rolePermissions = {
-          Owner: (parsed.Owner || ROLE_PRESETS.Owner).filter(isValidPermission),
-          Admin: (parsed.Admin || ROLE_PRESETS.Admin).filter(isValidPermission),
-          Member: (parsed.Member || ROLE_PRESETS.Member).filter(isValidPermission),
-        }
-      } catch {
-        // Fall back to presets if parsing fails
-        rolePermissions = { ...ROLE_PRESETS }
-      }
-    } else {
-      rolePermissions = { ...ROLE_PRESETS }
-    }
+    const roleSettings = settings?.defaultRolePermissions
+      ? parseStoredSettings(settings.defaultRolePermissions)
+      : getDefaultSettings()
+
+    // Owner always has all permissions
+    roleSettings.Owner.permissions = [...ALL_PERMISSIONS]
 
     return NextResponse.json({
-      rolePermissions,
+      roleSettings,
       availablePermissions: ALL_PERMISSIONS,
       roleNames: Object.values(DEFAULT_ROLE_NAMES),
     })
@@ -61,13 +129,13 @@ export async function GET() {
         return NextResponse.json({ error: error.message }, { status: 403 })
       }
     }
-    console.error('Failed to get role permissions:', error)
+    console.error('Failed to get role settings:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 /**
- * PATCH /api/admin/settings/roles - Update default role permissions
+ * PATCH /api/admin/settings/roles - Update default role settings
  */
 export async function PATCH(request: Request) {
   try {
@@ -75,55 +143,54 @@ export async function PATCH(request: Request) {
     const tabId = request.headers.get('X-Tab-Id') || undefined
 
     const body = await request.json()
-    const parsed = updateRolePermissionsSchema.safeParse(body)
+    const parsed = updateRoleSettingsSchema.safeParse(body)
 
     if (!parsed.success) {
       return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
 
     // Get current settings
-    const currentSettings = await db.systemSettings.findUnique({
+    const currentDbSettings = await db.systemSettings.findUnique({
       where: { id: 'system-settings' },
       select: { defaultRolePermissions: true },
     })
 
-    // Parse current permissions
-    let currentPermissions: DefaultRolePermissions
-    if (currentSettings?.defaultRolePermissions) {
-      try {
-        const current = JSON.parse(currentSettings.defaultRolePermissions)
-        currentPermissions = {
-          Owner: current.Owner || ROLE_PRESETS.Owner,
-          Admin: current.Admin || ROLE_PRESETS.Admin,
-          Member: current.Member || ROLE_PRESETS.Member,
-        }
-      } catch {
-        currentPermissions = { ...ROLE_PRESETS }
-      }
-    } else {
-      currentPermissions = { ...ROLE_PRESETS }
-    }
+    const currentSettings = currentDbSettings?.defaultRolePermissions
+      ? parseStoredSettings(currentDbSettings.defaultRolePermissions)
+      : getDefaultSettings()
 
-    // Validate and merge updates
+    // Merge updates
     const updates = parsed.data
-    const newPermissions: DefaultRolePermissions = {
-      Owner: updates.Owner ? updates.Owner.filter(isValidPermission) : currentPermissions.Owner,
-      Admin: updates.Admin ? updates.Admin.filter(isValidPermission) : currentPermissions.Admin,
-      Member: updates.Member ? updates.Member.filter(isValidPermission) : currentPermissions.Member,
+    for (const role of Object.values(DEFAULT_ROLE_NAMES)) {
+      const update = updates[role]
+      if (!update) continue
+
+      if (update.permissions) {
+        currentSettings[role].permissions = update.permissions.filter(isValidPermission)
+      }
+      if (update.color !== undefined) {
+        currentSettings[role].color = update.color
+      }
+      if (update.description !== undefined) {
+        currentSettings[role].description = update.description
+      }
+      if (update.position !== undefined) {
+        currentSettings[role].position = update.position
+      }
     }
 
     // Owner must always have all permissions
-    newPermissions.Owner = [...ALL_PERMISSIONS]
+    currentSettings.Owner.permissions = [...ALL_PERMISSIONS]
 
     // Save to database
     await db.systemSettings.upsert({
       where: { id: 'system-settings' },
       create: {
         id: 'system-settings',
-        defaultRolePermissions: JSON.stringify(newPermissions),
+        defaultRolePermissions: JSON.stringify(currentSettings),
       },
       update: {
-        defaultRolePermissions: JSON.stringify(newPermissions),
+        defaultRolePermissions: JSON.stringify(currentSettings),
       },
     })
 
@@ -136,8 +203,8 @@ export async function PATCH(request: Request) {
     })
 
     return NextResponse.json({
-      rolePermissions: newPermissions,
-      message: 'Default role permissions updated successfully',
+      roleSettings: currentSettings,
+      message: 'Default role settings updated successfully',
     })
   } catch (error) {
     if (error instanceof Error) {
@@ -148,28 +215,30 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 403 })
       }
     }
-    console.error('Failed to update role permissions:', error)
+    console.error('Failed to update role settings:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 /**
- * POST /api/admin/settings/roles/reset - Reset to default presets
+ * POST /api/admin/settings/roles - Reset to default presets
  */
 export async function POST(request: Request) {
   try {
     const currentUser = await requireSystemAdmin()
     const tabId = request.headers.get('X-Tab-Id') || undefined
 
+    const defaults = getDefaultSettings()
+
     // Reset to default presets
     await db.systemSettings.upsert({
       where: { id: 'system-settings' },
       create: {
         id: 'system-settings',
-        defaultRolePermissions: JSON.stringify(ROLE_PRESETS),
+        defaultRolePermissions: JSON.stringify(defaults),
       },
       update: {
-        defaultRolePermissions: JSON.stringify(ROLE_PRESETS),
+        defaultRolePermissions: JSON.stringify(defaults),
       },
     })
 
@@ -182,8 +251,8 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({
-      rolePermissions: ROLE_PRESETS,
-      message: 'Role permissions reset to defaults',
+      roleSettings: defaults,
+      message: 'Role settings reset to defaults',
     })
   } catch (error) {
     if (error instanceof Error) {
@@ -194,7 +263,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 403 })
       }
     }
-    console.error('Failed to reset role permissions:', error)
+    console.error('Failed to reset role settings:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

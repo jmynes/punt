@@ -1,67 +1,183 @@
 'use client'
 
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Lock, RotateCcw, Shield } from 'lucide-react'
+import { GripVertical, Loader2, Lock, Palette, RotateCcw, Shield } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { PermissionGrid } from '@/components/projects/permissions/permission-grid'
+import { ColorPickerBody } from '@/components/tickets/label-select'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { getTabId } from '@/hooks/use-realtime'
 import { ALL_PERMISSIONS, type Permission } from '@/lib/permissions/constants'
 import {
   type DefaultRoleName,
   ROLE_COLORS,
   ROLE_DESCRIPTIONS,
+  ROLE_POSITIONS,
   ROLE_PRESETS,
 } from '@/lib/permissions/presets'
 import { cn } from '@/lib/utils'
 
-interface RolePermissionsData {
-  rolePermissions: Record<DefaultRoleName, Permission[]>
+interface RoleConfig {
+  permissions: Permission[]
+  color: string
+  description: string
+  position: number
+}
+
+type RoleSettings = Record<DefaultRoleName, RoleConfig>
+
+interface RoleSettingsData {
+  roleSettings: RoleSettings
   availablePermissions: Permission[]
   roleNames: DefaultRoleName[]
 }
 
-const ROLE_ORDER: DefaultRoleName[] = ['Owner', 'Admin', 'Member']
+function getDefaultSettings(): RoleSettings {
+  return {
+    Owner: {
+      permissions: [...ROLE_PRESETS.Owner],
+      color: ROLE_COLORS.Owner,
+      description: ROLE_DESCRIPTIONS.Owner,
+      position: ROLE_POSITIONS.Owner,
+    },
+    Admin: {
+      permissions: [...ROLE_PRESETS.Admin],
+      color: ROLE_COLORS.Admin,
+      description: ROLE_DESCRIPTIONS.Admin,
+      position: ROLE_POSITIONS.Admin,
+    },
+    Member: {
+      permissions: [...ROLE_PRESETS.Member],
+      color: ROLE_COLORS.Member,
+      description: ROLE_DESCRIPTIONS.Member,
+      position: ROLE_POSITIONS.Member,
+    },
+  }
+}
+
+interface SortableRoleItemProps {
+  role: DefaultRoleName
+  config: RoleConfig
+  isSelected: boolean
+  onSelect: () => void
+}
+
+function SortableRoleItem({ role, config, isSelected, onSelect }: SortableRoleItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: role,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'group flex items-center gap-1 rounded-md transition-colors',
+        isDragging && 'z-50 bg-zinc-700 shadow-lg ring-1 ring-amber-500/50',
+        isSelected ? 'bg-zinc-800' : 'hover:bg-zinc-800/50',
+      )}
+    >
+      <button
+        type="button"
+        className="ml-1 cursor-grab touch-none text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-zinc-400 active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={onSelect}
+        className={cn(
+          'flex-1 flex items-center gap-3 px-3 py-2.5 text-left transition-colors min-w-0',
+          isSelected ? 'text-zinc-100' : 'text-zinc-400 hover:text-zinc-200',
+        )}
+      >
+        <div
+          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+          style={{ backgroundColor: config.color }}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{role}</span>
+            <Lock className="h-3 w-3 text-zinc-600 flex-shrink-0" />
+          </div>
+          <p className="text-xs text-zinc-500 truncate">{config.description}</p>
+        </div>
+      </button>
+    </div>
+  )
+}
 
 export function RolePermissionsForm() {
   const queryClient = useQueryClient()
-  const [localPermissions, setLocalPermissions] = useState<Record<string, Permission[]>>({})
+  const [localSettings, setLocalSettings] = useState<RoleSettings>(getDefaultSettings())
   const [hasChanges, setHasChanges] = useState(false)
   const [isAtDefaults, setIsAtDefaults] = useState(true)
   const [selectedRole, setSelectedRole] = useState<DefaultRoleName>('Owner')
+  const [roleOrder, setRoleOrder] = useState<DefaultRoleName[]>(['Owner', 'Admin', 'Member'])
 
-  const { data, isLoading, error } = useQuery<RolePermissionsData>({
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  const { data, isLoading, error } = useQuery<RoleSettingsData>({
     queryKey: ['admin', 'settings', 'roles'],
     queryFn: async () => {
       const res = await fetch('/api/admin/settings/roles')
-      if (!res.ok) throw new Error('Failed to fetch role permissions')
+      if (!res.ok) throw new Error('Failed to fetch role settings')
       return res.json()
     },
   })
 
   const updateMutation = useMutation({
-    mutationFn: async (permissions: Record<string, Permission[]>) => {
+    mutationFn: async (settings: RoleSettings) => {
       const res = await fetch('/api/admin/settings/roles', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'X-Tab-Id': getTabId(),
         },
-        body: JSON.stringify(permissions),
+        body: JSON.stringify(settings),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to update role permissions')
+        throw new Error(data.error || 'Failed to update role settings')
       }
       return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
-      toast.success('Role permissions saved')
+      toast.success('Role settings saved')
       setHasChanges(false)
     },
     onError: (err) => {
@@ -73,16 +189,14 @@ export function RolePermissionsForm() {
     mutationFn: async () => {
       const res = await fetch('/api/admin/settings/roles', {
         method: 'POST',
-        headers: {
-          'X-Tab-Id': getTabId(),
-        },
+        headers: { 'X-Tab-Id': getTabId() },
       })
-      if (!res.ok) throw new Error('Failed to reset role permissions')
+      if (!res.ok) throw new Error('Failed to reset role settings')
       return res.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
-      toast.success('Role permissions reset to defaults')
+      toast.success('Role settings reset to defaults')
       setHasChanges(false)
     },
     onError: (err) => {
@@ -92,57 +206,115 @@ export function RolePermissionsForm() {
 
   // Sync local state when data loads
   useEffect(() => {
-    if (data?.rolePermissions) {
-      setLocalPermissions(data.rolePermissions)
+    if (data?.roleSettings) {
+      setLocalSettings(data.roleSettings)
+      // Sort by position
+      const sorted = (['Owner', 'Admin', 'Member'] as DefaultRoleName[]).sort(
+        (a, b) => (data.roleSettings[a]?.position ?? 0) - (data.roleSettings[b]?.position ?? 0),
+      )
+      setRoleOrder(sorted)
     }
   }, [data])
 
   // Check for changes from saved state
   useEffect(() => {
-    if (data?.rolePermissions) {
-      const changed = Object.keys(localPermissions).some((role) => {
-        const original = data.rolePermissions[role as DefaultRoleName] || []
-        const current = localPermissions[role] || []
-        return original.length !== current.length || !original.every((p) => current.includes(p))
+    if (data?.roleSettings) {
+      const changed = (['Owner', 'Admin', 'Member'] as DefaultRoleName[]).some((role) => {
+        const original = data.roleSettings[role]
+        const current = localSettings[role]
+        if (!original || !current) return false
+        return (
+          original.color !== current.color ||
+          original.description !== current.description ||
+          original.position !== current.position ||
+          original.permissions.length !== current.permissions.length ||
+          !original.permissions.every((p) => current.permissions.includes(p))
+        )
       })
       setHasChanges(changed)
     }
-  }, [localPermissions, data])
+  }, [localSettings, data])
 
-  // Check if current permissions match defaults
+  // Check if current settings match defaults
   useEffect(() => {
-    const matchesDefaults = ROLE_ORDER.every((role) => {
-      const current = localPermissions[role] || []
-      const defaults = ROLE_PRESETS[role] || []
-      return current.length === defaults.length && defaults.every((p) => current.includes(p))
+    const defaults = getDefaultSettings()
+    const matchesDefaults = (['Owner', 'Admin', 'Member'] as DefaultRoleName[]).every((role) => {
+      const current = localSettings[role]
+      const def = defaults[role]
+      return (
+        current.color === def.color &&
+        current.description === def.description &&
+        current.position === def.position &&
+        current.permissions.length === def.permissions.length &&
+        def.permissions.every((p) => current.permissions.includes(p))
+      )
     })
     setIsAtDefaults(matchesDefaults)
-  }, [localPermissions])
+  }, [localSettings])
 
   // Check if the selected role's permissions match its preset defaults
   const selectedRoleAtDefaults = useMemo(() => {
-    const current = localPermissions[selectedRole] || []
-    const defaults = ROLE_PRESETS[selectedRole] || []
-    return current.length === defaults.length && defaults.every((p) => current.includes(p))
-  }, [localPermissions, selectedRole])
+    const current = localSettings[selectedRole]
+    const defaults = ROLE_PRESETS[selectedRole]
+    return (
+      current.permissions.length === defaults.length &&
+      defaults.every((p) => current.permissions.includes(p))
+    )
+  }, [localSettings, selectedRole])
 
-  // Check if all permissions are enabled for the selected role
   const allPermissionsEnabled = useMemo(() => {
-    const current = localPermissions[selectedRole] || []
+    const current = localSettings[selectedRole]?.permissions || []
     return (
       current.length === ALL_PERMISSIONS.length && ALL_PERMISSIONS.every((p) => current.includes(p))
     )
-  }, [localPermissions, selectedRole])
+  }, [localSettings, selectedRole])
 
   const handlePermissionsChange = (permissions: Permission[]) => {
-    setLocalPermissions((prev) => ({
+    setLocalSettings((prev) => ({
       ...prev,
-      [selectedRole]: permissions,
+      [selectedRole]: { ...prev[selectedRole], permissions },
     }))
   }
 
+  const handleColorChange = (color: string) => {
+    setLocalSettings((prev) => ({
+      ...prev,
+      [selectedRole]: { ...prev[selectedRole], color },
+    }))
+  }
+
+  const handleDescriptionChange = (description: string) => {
+    setLocalSettings((prev) => ({
+      ...prev,
+      [selectedRole]: { ...prev[selectedRole], description },
+    }))
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = roleOrder.indexOf(active.id as DefaultRoleName)
+    const newIndex = roleOrder.indexOf(over.id as DefaultRoleName)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const newOrder = [...roleOrder]
+    const [moved] = newOrder.splice(oldIndex, 1)
+    newOrder.splice(newIndex, 0, moved)
+    setRoleOrder(newOrder)
+
+    // Update positions
+    setLocalSettings((prev) => {
+      const updated = { ...prev }
+      for (let i = 0; i < newOrder.length; i++) {
+        updated[newOrder[i]] = { ...updated[newOrder[i]], position: i }
+      }
+      return updated
+    })
+  }
+
   const handleSave = () => {
-    updateMutation.mutate(localPermissions)
+    updateMutation.mutate(localSettings)
   }
 
   const handleReset = () => {
@@ -150,8 +322,12 @@ export function RolePermissionsForm() {
   }
 
   const handleCancel = () => {
-    if (data?.rolePermissions) {
-      setLocalPermissions(data.rolePermissions)
+    if (data?.roleSettings) {
+      setLocalSettings(data.roleSettings)
+      const sorted = (['Owner', 'Admin', 'Member'] as DefaultRoleName[]).sort(
+        (a, b) => (data.roleSettings[a]?.position ?? 0) - (data.roleSettings[b]?.position ?? 0),
+      )
+      setRoleOrder(sorted)
     }
   }
 
@@ -167,13 +343,14 @@ export function RolePermissionsForm() {
     return (
       <Card className="border-red-500/50 bg-red-500/10">
         <CardContent className="py-6">
-          <p className="text-red-400">Failed to load role permissions</p>
+          <p className="text-red-400">Failed to load role settings</p>
         </CardContent>
       </Card>
     )
   }
 
   const isOwner = selectedRole === 'Owner'
+  const selectedConfig = localSettings[selectedRole]
 
   return (
     <div className="space-y-6">
@@ -181,103 +358,160 @@ export function RolePermissionsForm() {
         <CardHeader>
           <CardTitle className="text-zinc-100">Default Roles</CardTitle>
           <CardDescription className="text-zinc-400 mt-1">
-            Configure which permissions each role has when new projects are created. These settings
-            apply to new projects only.
+            Configure the default roles for new projects. Drag to reorder. These settings apply to
+            new projects only.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-6 min-h-[400px]">
+          <div className="flex gap-6 min-h-[500px]">
             {/* Left Panel - Role List */}
             <div className="w-56 flex-shrink-0 flex flex-col">
               <div className="flex items-center mb-3">
                 <h3 className="text-sm font-medium text-zinc-400">Roles</h3>
               </div>
-              <div className="space-y-1">
-                {ROLE_ORDER.map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => setSelectedRole(role)}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors',
-                      selectedRole === role
-                        ? 'bg-zinc-800 text-zinc-100'
-                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50',
-                    )}
-                  >
-                    <div
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: ROLE_COLORS[role] }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{role}</span>
-                        <Lock className="h-3 w-3 text-zinc-600 flex-shrink-0" />
-                      </div>
-                      <p className="text-xs text-zinc-500 truncate">
-                        {ROLE_DESCRIPTIONS[role].length > 50
-                          ? `${ROLE_DESCRIPTIONS[role].slice(0, 50)}...`
-                          : ROLE_DESCRIPTIONS[role]}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <DndContext
+                id="admin-roles-dnd"
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={roleOrder} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-1">
+                    {roleOrder.map((role) => (
+                      <SortableRoleItem
+                        key={role}
+                        role={role}
+                        config={localSettings[role]}
+                        isSelected={selectedRole === role}
+                        onSelect={() => setSelectedRole(role)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
 
-            {/* Right Panel - Permission Editor */}
+            {/* Right Panel - Role Editor */}
             <div className="flex-1 min-w-0 flex flex-col">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <Badge
-                    variant="outline"
-                    className="font-medium"
-                    style={{
-                      borderColor: `${ROLE_COLORS[selectedRole]}50`,
-                      color: ROLE_COLORS[selectedRole],
-                    }}
-                  >
-                    {selectedRole === 'Owner' && <Shield className="h-3 w-3 mr-1" />}
-                    {selectedRole}
-                  </Badge>
-                  {isOwner && (
-                    <span className="text-xs text-zinc-500">Owner always has all permissions</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {!isOwner && !selectedRoleAtDefaults && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handlePermissionsChange([...ROLE_PRESETS[selectedRole]])}
-                      className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
+              <Tabs defaultValue="appearance" className="h-full flex flex-col">
+                <div className="mb-4">
+                  <TabsList className="w-full grid grid-cols-2 h-auto p-0 bg-transparent rounded-none gap-0">
+                    <TabsTrigger
+                      value="appearance"
+                      className="!rounded-none !rounded-l-lg !border !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
                     >
-                      <RotateCcw className="mr-1 h-3 w-3" />
-                      Reset to Defaults
-                    </Button>
-                  )}
-                  {!isOwner && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        handlePermissionsChange(allPermissionsEnabled ? [] : [...ALL_PERMISSIONS])
-                      }
-                      className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
+                      <Palette className="mr-2 h-4 w-4" />
+                      Appearance
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="permissions"
+                      className="!rounded-none !rounded-r-lg !border !border-l-0 !border-zinc-600 !bg-zinc-800 !text-zinc-300 py-2.5 px-4 text-sm font-medium transition-colors data-[state=active]:!bg-amber-600 data-[state=active]:!text-white data-[state=active]:!border-amber-600 hover:!bg-zinc-700 hover:!text-white"
                     >
-                      {allPermissionsEnabled ? 'Disable All' : 'Enable All'}
-                    </Button>
-                  )}
+                      <Shield className="mr-2 h-4 w-4" />
+                      Permissions
+                    </TabsTrigger>
+                  </TabsList>
                 </div>
-              </div>
 
-              <ScrollArea className="flex-1">
-                <PermissionGrid
-                  selectedPermissions={localPermissions[selectedRole] || []}
-                  onChange={handlePermissionsChange}
-                  disabled={isOwner}
-                />
-              </ScrollArea>
+                <Card className="flex-1 flex flex-col bg-zinc-900/50 border-zinc-800 min-h-0">
+                  <CardHeader className="flex-shrink-0 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-4 h-4 rounded-full"
+                        style={{ backgroundColor: selectedConfig.color }}
+                      />
+                      <CardTitle className="text-lg">{selectedRole}</CardTitle>
+                      <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500">
+                        <Lock className="mr-1 h-3 w-3" />
+                        Default
+                      </Badge>
+                    </div>
+                    <CardDescription>{selectedConfig.description}</CardDescription>
+                  </CardHeader>
+
+                  <TabsContent value="appearance" className="flex-1 min-h-0 mt-0">
+                    <ScrollArea className="h-full">
+                      <CardContent className="pt-0 space-y-4">
+                        <div className="space-y-2">
+                          <Label>Color</Label>
+                          <ColorPickerBody
+                            activeColor={selectedConfig.color}
+                            onColorChange={handleColorChange}
+                            onApply={(color) => {
+                              if (/^#[0-9A-Fa-f]{6}$/i.test(color)) {
+                                handleColorChange(color)
+                              }
+                            }}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="role-description">Description</Label>
+                          <Textarea
+                            id="role-description"
+                            value={selectedConfig.description}
+                            onChange={(e) => handleDescriptionChange(e.target.value)}
+                            placeholder="Describe what this role can do..."
+                            className="bg-zinc-800/50 resize-none border-zinc-700 hover:border-zinc-500"
+                            rows={3}
+                          />
+                        </div>
+                      </CardContent>
+                    </ScrollArea>
+                  </TabsContent>
+
+                  <TabsContent value="permissions" className="flex-1 min-h-0 mt-0">
+                    <ScrollArea className="h-full">
+                      <CardContent className="pt-0 space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label>Permissions</Label>
+                            <div className="flex items-center gap-2">
+                              {!isOwner && !selectedRoleAtDefaults && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handlePermissionsChange([...ROLE_PRESETS[selectedRole]])
+                                  }
+                                  className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
+                                >
+                                  <RotateCcw className="mr-1 h-3 w-3" />
+                                  Reset to Defaults
+                                </Button>
+                              )}
+                              {!isOwner && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handlePermissionsChange(
+                                      allPermissionsEnabled ? [] : [...ALL_PERMISSIONS],
+                                    )
+                                  }
+                                  className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
+                                >
+                                  {allPermissionsEnabled ? 'Disable All' : 'Enable All'}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          {isOwner && (
+                            <p className="text-xs text-zinc-500">
+                              Owner always has all permissions.
+                            </p>
+                          )}
+                          <PermissionGrid
+                            selectedPermissions={selectedConfig.permissions}
+                            onChange={handlePermissionsChange}
+                            disabled={isOwner}
+                          />
+                        </div>
+                      </CardContent>
+                    </ScrollArea>
+                  </TabsContent>
+                </Card>
+              </Tabs>
             </div>
           </div>
         </CardContent>
