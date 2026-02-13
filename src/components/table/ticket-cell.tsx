@@ -1,7 +1,7 @@
 'use client'
 
 import { format, isBefore, isToday } from 'date-fns'
-import { Eye, User } from 'lucide-react'
+import { Ban, Eye, User } from 'lucide-react'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { ResolutionBadge } from '@/components/common/resolution-badge'
@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { getStatusIcon } from '@/lib/status-icons'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
-import type { Resolution } from '@/types'
+import type { LinkType, Resolution } from '@/types'
+import { INVERSE_LINK_TYPES } from '@/types'
 import type { TicketCellProps } from './types'
 
 /**
@@ -29,9 +30,25 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
         </span>
       )
 
-    case 'title':
+    case 'title': {
+      // Check if ticket is blocked by unresolved tickets
+      const isBlocked =
+        ticket.links?.some((link) => {
+          const displayType =
+            link.direction === 'inward'
+              ? INVERSE_LINK_TYPES[link.linkType as LinkType]
+              : link.linkType
+          return displayType === 'is_blocked_by' && !link.linkedTicket.resolution
+        }) ?? false
+
       return (
         <div className="flex items-center gap-2">
+          {isBlocked && (
+            <Badge variant="destructive" className="shrink-0 text-xs px-1.5 py-0">
+              <Ban className="h-3 w-3 mr-0.5" />
+              Blocked
+            </Badge>
+          )}
           <InlineCodeText text={ticket.title} className="truncate font-medium" />
           {ticket._count && ticket._count.subtasks > 0 && (
             <Badge variant="outline" className="shrink-0 text-xs">
@@ -40,6 +57,7 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
           )}
         </div>
       )
+    }
 
     case 'status': {
       const statusName = getStatusName(ticket.columnId)

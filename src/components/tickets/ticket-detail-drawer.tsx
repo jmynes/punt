@@ -103,6 +103,7 @@ import { FileUpload } from './file-upload'
 import { LabelSelect } from './label-select'
 import { MarkdownViewer } from './markdown-viewer'
 import { ParentSelect } from './parent-select'
+import { TicketLinkSection } from './ticket-link-section'
 import { UserSelect } from './user-select'
 
 // Type icons and colors (matching backlog filters)
@@ -1319,6 +1320,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   onDeleteLabel={canManageLabels ? handleDeleteLabel : undefined}
                 />
               </div>
+
+              {/* Ticket Links */}
+              <TicketLinkSection ticket={ticket} projectKey={projectKey} projectId={projectId} />
 
               {/* Parent Ticket */}
               {parentTicket && (
