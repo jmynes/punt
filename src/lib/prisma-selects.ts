@@ -132,9 +132,46 @@ export const TICKET_SELECT_FULL = {
       },
     },
   },
+  parent: {
+    select: { id: true, number: true, title: true, type: true },
+  },
   attachments: {
     select: ATTACHMENT_SELECT,
     orderBy: { createdAt: 'desc' as const },
+  },
+  linkedFrom: {
+    select: {
+      id: true,
+      linkType: true,
+      toTicket: {
+        select: {
+          id: true,
+          number: true,
+          title: true,
+          type: true,
+          priority: true,
+          columnId: true,
+          resolution: true,
+        },
+      },
+    },
+  },
+  linkedTo: {
+    select: {
+      id: true,
+      linkType: true,
+      fromTicket: {
+        select: {
+          id: true,
+          number: true,
+          title: true,
+          type: true,
+          priority: true,
+          columnId: true,
+          resolution: true,
+        },
+      },
+    },
   },
   _count: {
     select: {
@@ -160,25 +197,73 @@ export type TicketWatcher = {
 }
 
 /**
+ * Type for link relations as returned from Prisma.
+ */
+type LinkedFromEntry = {
+  id: string
+  linkType: string
+  toTicket: {
+    id: string
+    number: number
+    title: string
+    type: string
+    priority: string
+    columnId: string
+    resolution: string | null
+  }
+}
+
+type LinkedToEntry = {
+  id: string
+  linkType: string
+  fromTicket: {
+    id: string
+    number: number
+    title: string
+    type: string
+    priority: string
+    columnId: string
+    resolution: string | null
+  }
+}
+
+/**
  * Type for a ticket as returned from Prisma with TICKET_SELECT_FULL.
  */
 export type TicketWithRelations = {
   watchers: TicketWatcher[]
+  linkedFrom: LinkedFromEntry[]
+  linkedTo: LinkedToEntry[]
   [key: string]: unknown
 }
 
 /**
  * Transforms a ticket from Prisma format to API response format.
  * Flattens the watchers relation from { user: {...} } to just the user object.
+ * Merges linkedFrom/linkedTo into a unified links array with computed direction.
  *
- * @param ticket - Ticket with watchers relation from Prisma
- * @returns Ticket with flattened watchers array
+ * @param ticket - Ticket with watchers and link relations from Prisma
+ * @returns Ticket with flattened watchers and unified links array
  */
 export function transformTicket(ticket: TicketWithRelations) {
-  const { watchers, ...rest } = ticket
+  const { watchers, linkedFrom, linkedTo, ...rest } = ticket
   return {
     ...rest,
     watchers: watchers.map((w) => w.user),
+    links: [
+      ...linkedFrom.map((link) => ({
+        id: link.id,
+        linkType: link.linkType,
+        linkedTicket: link.toTicket,
+        direction: 'outward' as const,
+      })),
+      ...linkedTo.map((link) => ({
+        id: link.id,
+        linkType: link.linkType,
+        linkedTicket: link.fromTicket,
+        direction: 'inward' as const,
+      })),
+    ],
   }
 }
 
