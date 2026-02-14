@@ -108,6 +108,10 @@ All data operations go through the `DataProvider` interface, which abstracts whe
 - `POST /api/auth/[...nextauth]` - NextAuth handlers
 - `POST /api/auth/register` - Public registration (rate limited: 5/hour)
 - `POST /api/auth/verify-credentials` - Credential validation helper
+- `POST /api/auth/forgot-password` - Request password reset (rate limited per email+IP, same response regardless of email existence)
+- `GET/POST /api/auth/reset-password` - Validate token (GET) / complete reset (POST), marks token used
+- `POST /api/auth/send-verification` - Send email verification link
+- `POST /api/auth/verify-email` - Complete email verification
 
 **User profile (`/api/me`):**
 - `GET/PATCH /api/me` - Get/update profile (name)
@@ -115,17 +119,32 @@ All data operations go through the `DataProvider` interface, which abstracts whe
 - `PATCH /api/me/password` - Change password (rate limited: 5/15min)
 - `POST/DELETE /api/me/avatar` - Upload/delete avatar (WebP conversion, metadata stripping)
 - `DELETE /api/me/account` - Hard delete account (requires password + confirmation string)
+- `GET/POST/DELETE /api/me/mcp-key` - Get status / generate / revoke MCP API key
+- `GET /api/me/verification-status` - Email verification status
 
 **Projects:**
 - `GET/POST /api/projects` - List/create projects
 - `GET/PATCH/DELETE /api/projects/[projectId]` - Manage project (member/admin/owner required)
-- `GET /api/projects/[projectId]/columns` - List columns (auto-creates defaults if none)
-- `GET /api/projects/[projectId]/members` - List project members
+- `GET/POST /api/projects/[projectId]/columns` - List/create columns (auto-creates defaults if none)
+- `GET/PATCH/DELETE /api/projects/[projectId]/columns/[columnId]` - Manage column (rename, reorder, icon, color, delete with ticket migration)
+- `GET/POST /api/projects/[projectId]/members` - List/add project members
+- `PATCH/DELETE /api/projects/[projectId]/members/[memberId]` - Update role / remove member
+- `GET /api/projects/[projectId]/my-permissions` - Current user's permissions for project
+- `GET /api/projects/[projectId]/available-users` - Users not yet members of project
+- `GET/POST /api/projects/[projectId]/roles` - List/create custom roles
+- `GET/PATCH/DELETE /api/projects/[projectId]/roles/[roleId]` - Manage role
+- `POST /api/projects/[projectId]/roles/reorder` - Drag-and-drop role ordering
 
 **Tickets:**
 - `GET/POST /api/projects/[projectId]/tickets` - List/create tickets
 - `GET/PATCH/DELETE /api/projects/[projectId]/tickets/[ticketId]` - Manage ticket
-- Ticket fields: title, description, type, priority, columnId, assigneeId, sprintId, parentId, storyPoints, estimate, startDate, dueDate, environment, affectedVersion, fixVersion, labelIds, watcherIds
+- `GET /api/projects/[projectId]/tickets/search` - Full-text search across tickets
+- Ticket fields: title, description, type, priority, columnId, assigneeId, sprintId, parentId, storyPoints, estimate, startDate, dueDate, environment, affectedVersion, fixVersion, resolution, labelIds, watcherIds
+
+**Ticket Links:**
+- `GET/POST /api/projects/[projectId]/tickets/[ticketId]/links` - List/create ticket links
+- `DELETE /api/projects/[projectId]/tickets/[ticketId]/links/[linkId]` - Remove link
+- Link types: blocks, is_blocked_by, relates_to, duplicates, is_duplicated_by, clones, is_cloned_by
 
 **Attachments:**
 - `GET/POST /api/projects/[projectId]/tickets/[ticketId]/attachments` - List/add attachments
@@ -147,11 +166,19 @@ All data operations go through the `DataProvider` interface, which abstracts whe
 **Admin (`/api/admin`) - requires `isSystemAdmin`:**
 - `GET/POST /api/admin/users` - List/create users (with filtering/sorting, requires password confirmation)
 - `GET/PATCH/DELETE /api/admin/users/[userId]` - Manage user (self-demotion prevented)
-- `GET/PATCH /api/admin/settings` - System settings (upload limits, allowed file types)
+- `GET/PATCH /api/admin/settings` - System settings (upload limits, allowed file types, branding, email config)
+- `GET/PATCH /api/admin/settings/roles` - Default role permissions for new projects
+- `POST /api/admin/settings/logo` - Upload custom logo (JPEG/PNG/GIF/WebP, max 2MB, WebP conversion)
+- `DELETE /api/admin/settings/logo` - Remove custom logo
+- `POST /api/admin/settings/email/test` - Test email configuration
 - `POST /api/admin/database/export` - Export database (requires password confirmation)
 - `POST /api/admin/database/import` - Import database backup (requires password confirmation, replaces all data)
 - `POST /api/admin/database/wipe` - Wipe entire database, create new admin (requires password confirmation)
 - `POST /api/admin/database/wipe-projects` - Wipe all projects, keep users (requires password confirmation)
+
+**Branding & Dashboard:**
+- `GET /api/branding` - Public endpoint (no auth required) for login page branding (app name, logo, colors)
+- `GET /api/dashboard/stats` - Aggregated ticket counts (open, in-progress, completed)
 
 **File Upload:**
 - `GET/POST /api/upload` - Get config/upload files (validates type/size against SystemSettings)
@@ -171,10 +198,12 @@ Events are broadcast via Server-Sent Events for multi-tab/multi-user sync.
 
 **Event types:**
 - `ticket.created`, `ticket.updated`, `ticket.moved`, `ticket.deleted`
+- `ticket.link.created`, `ticket.link.deleted` - Ticket relationship changes
 - `label.created`, `label.deleted`
 - `project.created`, `project.updated`, `project.deleted`
 - `member.added`, `member.removed`, `member.role.updated` - Project membership changes
 - `user.updated`
+- `branding.updated` - Logo/app name changes
 - `database.wiped` - Full database wipe or import (forces sign out on all tabs)
 - `database.projects.wiped` - All projects wiped (invalidates all queries)
 
@@ -189,9 +218,9 @@ Events are broadcast via Server-Sent Events for multi-tab/multi-user sync.
 All client-side state lives in Zustand stores with localStorage persistence:
 
 - **board-store**: Kanban columns/tickets per project. Key pattern: `projects: Record<projectId, ColumnWithTickets[]>`. Use `getColumns(projectId)` to access. `updateTickets()` for atomic batch updates (prevents visual glitches during undo/redo). Custom date revival on hydration. Validates localStorage data structure during rehydration to prevent crashes from corrupted data.
-- **backlog-store**: Backlog view config (15 columns, multi-filter support, sorting). Filters by type/priority/status/assignee/labels/sprint/story-points/due-date.
+- **backlog-store**: Backlog view config (21 columns, multi-filter support, sorting, filter button configuration). Filters by type/priority/status/resolution/assignee/labels/sprint/story-points/due-date. Independent filter button visibility and drag-and-drop ordering.
 - **sprint-store**: Sprint-related state for sprint planning view.
-- **undo-store**: Undo/redo stack for all reversible actions (delete, move, paste, update, ticketCreate, projectCreate/Delete). Each action has `toastId` for UI feedback.
+- **undo-store**: Undo/redo stack for all reversible actions (delete, move, paste, update, ticketCreate, projectCreate/Delete, columnRename, columnDelete, columnCreate). Each action has `toastId` for UI feedback.
 - **admin-undo-store**: Separate undo/redo for admin operations. Handles user management (enable/disable, admin toggle) and project member operations (add, remove, role changes). Supports both single and bulk operations with Ctrl+Z/Y keyboard shortcuts.
 - **selection-store**: Multi-select with `selectedTicketIds: Set<string>`, clipboard via `copiedTicketIds`, and `ticketOrigins` map for arrow key navigation.
 - **projects-store**: Project list with sequential numeric ID generation.
@@ -205,23 +234,26 @@ Stores use `_hasHydrated` flag to prevent render before localStorage loads.
 Schema in `prisma/schema.prisma`. Key models:
 
 **Core:**
-- **User**: username (unique), email (unique, optional), name, avatar, passwordHash, passwordChangedAt, isSystemAdmin, isActive. Related: Session, Account, Invitation.
+- **User**: username (unique), email (unique, optional), name, avatar, avatarColor, passwordHash, passwordChangedAt, isSystemAdmin, isActive, mcpApiKey. Related: Session, Account, Invitation, PasswordResetToken, EmailVerificationToken.
 - **Session**: Server-side session storage with userAgent, ipAddress, lastActive.
 - **Account**: OAuth provider linkage (future-proofed for Google, GitHub).
 - **RateLimit**: Tracks rate limits per IP/endpoint.
+- **PasswordResetToken**: Forgot password flow with SHA-256 hashed tokens, expiration, usedAt tracking.
+- **EmailVerificationToken**: Email verification with hashed tokens, target email, expiration.
 
 **Projects:**
-- **Project**: name, key (unique), description, color. Relations: columns, tickets, members, labels, sprints, invitations, sprintSettings.
-- **ProjectMember**: User-project relationship with role (owner, admin, member).
-- **Column**: Board columns with order field.
+- **Project**: name, key (unique), description, color, showAddColumnButton. Relations: columns, tickets, members, labels, sprints, invitations, sprintSettings, roles.
+- **ProjectMember**: User-project relationship via roleId (references Role). Optional per-member permission overrides (JSON array of permission strings).
+- **Role**: Custom roles with name, color, description, permissions (JSON array), isDefault (built-in roles can't be deleted), position (display ordering). Unique constraint: `[projectId, name]`.
+- **Column**: Board columns with order, icon, color fields.
 
 **Tickets:**
-- **Ticket**: 25+ fields including type/priority/order/storyPoints/estimate/dates/versions. Unique constraint on `[projectId, number]` for ticket keys (e.g., PUNT-1). Supports parentId for subtasks, isCarriedOver/carriedFromSprintId/carriedOverCount for sprint tracking.
+- **Ticket**: 25+ fields including type/priority/order/storyPoints/estimate/dates/versions/resolution/resolvedAt. Unique constraint on `[projectId, number]` for ticket keys (e.g., PUNT-1). Supports parentId for subtasks, isCarriedOver/carriedFromSprintId/carriedOverCount for sprint tracking.
 - **Label**: Project-scoped with name/color. Unique constraint: `[projectId, name]`.
 - **TicketWatcher**: Many-to-many user-ticket relationship.
-- **TicketLink**: Ticket relationships (blocks, is_blocked_by, relates_to, duplicates, is_duplicated_by, clones, is_cloned_by).
+- **TicketLink**: Ticket relationships with linkType (blocks, is_blocked_by, relates_to, duplicates, is_duplicated_by, clones, is_cloned_by). Unique constraint: `[fromTicketId, toTicketId, linkType]`.
 - **Comment**: Ticket comments with author.
-- **Attachment**: File attachments with filename, mimeType, size, url.
+- **Attachment**: File attachments with filename, mimeType, size, url, uploaderId (ownership tracking).
 - **TicketEdit**: Edit history tracking field changes.
 
 **Sprints:**
@@ -231,7 +263,7 @@ Schema in `prisma/schema.prisma`. Key models:
 
 **System:**
 - **Invitation**: Project invitations with token, role, status, expiration.
-- **SystemSettings**: Singleton for upload config (max sizes, allowed MIME types).
+- **SystemSettings**: Singleton for upload config (max sizes, allowed MIME types), branding (appName, logoUrl, logoLetter, logoGradientFrom/To), email configuration (provider: none/smtp/resend/console, SMTP settings, feature toggles for passwordReset/welcome/verification/invitations), board settings (showAddColumnButton), and defaultRolePermissions for new projects.
 
 Types generated to `@/generated/prisma/client`, re-exported with relations from `@/types/index.ts`.
 
@@ -240,16 +272,17 @@ Types generated to `@/generated/prisma/client`, re-exported with relations from 
 - **Auth**: `LoginForm` uses `signIn('credentials')`, `RegisterForm` calls `/api/auth/register` then auto-signs in.
 - **Admin**: `UserList` with React Query, admin toggle (self-prevention), enable/disable users. `AdminSettingsForm` for upload config.
 - **Profile**: `AvatarUpload`, `ProfileForm`, `PasswordChange` components.
-- **Board**: `KanbanBoard` orchestrates dnd-kit with `KanbanColumn` and `KanbanCard`. Multi-select drag shows overlay.
+- **Board**: `KanbanBoard` orchestrates dnd-kit with `KanbanColumn` and `KanbanCard`. Multi-select drag shows overlay. `ColumnMenu` with rename, icon/color picker, delete (with ticket migration), move left/right, collapse. `AddColumnButton` for creating new columns.
 - **Table**: Unified table components in `src/components/table/` shared by backlog and sprint views:
   - `TicketTable` - Main table component with drag-and-drop support
   - `TicketTableRow` - Row with selection (click/Ctrl/Shift), keyboard nav, drag state
   - `TicketTableHeader` - Sortable column headers
   - `TicketCell` - Cell renderer for all 15 column types
   - `DropIndicator` - Visual drop target indicator
-- **Backlog**: `BacklogTable` wraps `TicketTable` with filtering, sorting, and column configuration.
+- **Backlog**: `BacklogTable` wraps `TicketTable` with filtering, sorting, and column configuration. `FilterConfig` for independent filter button visibility and drag-and-drop ordering. `ColumnConfig` for column visibility/ordering.
 - **Sprints**: `SprintSection` wraps `TicketTable`. Also: `SprintList`, `SprintCard`, `SprintCreateDialog`, `SprintStartDialog`, `SprintCompleteDialog`, `CarryoverBadge`.
-- **Tickets**: `TicketForm` with comprehensive fields, `TypeSelect`, `PrioritySelect`, `CustomImageDialog`.
+- **Tickets**: `TicketForm` with comprehensive fields, `TypeSelect`, `PrioritySelect`, `CustomImageDialog`. `TicketLinkSection` displays linked tickets grouped by type. `LinkTicketDialog` for creating new ticket links with type selection.
+- **Permissions**: `RolesTab` with drag-and-drop role reordering, create/edit/delete custom roles. `RoleEditorPanel` with categorized permission grid. `RoleCompareDialog` for side-by-side comparison. `AddMemberDialog` with multi-select support.
 - **UI**: shadcn/ui components in `src/components/ui/`.
 
 ### Provider Stack (`src/components/providers.tsx`)
@@ -284,14 +317,18 @@ src/
 │   │   ├── sprints/        # Sprint planning view
 │   │   └── settings/       # Project settings (general, members, roles)
 │   ├── settings/           # Settings page
-│   ├── api/auth/           # NextAuth + register
-│   ├── api/me/             # User profile endpoints
-│   ├── api/admin/          # Admin endpoints (users/, settings/)
+│   ├── api/auth/           # NextAuth + register + password reset + email verification
+│   ├── api/me/             # User profile endpoints + MCP key
+│   ├── api/admin/          # Admin endpoints (users/, settings/, database/)
+│   ├── api/branding/       # Public branding endpoint
+│   ├── api/dashboard/      # Dashboard stats
 │   ├── api/projects/       # Project CRUD + nested resources
 │   │   └── [projectId]/
-│   │       ├── columns/    # Column endpoints
+│   │       ├── columns/    # Column CRUD endpoints
 │   │       ├── members/    # Member endpoints
-│   │       ├── tickets/    # Ticket CRUD + attachments
+│   │       ├── roles/      # Role CRUD + reorder
+│   │       ├── my-permissions/ # Current user permissions
+│   │       ├── tickets/    # Ticket CRUD + attachments + links + search
 │   │       ├── labels/     # Label endpoints
 │   │       ├── sprints/    # Sprint endpoints + actions
 │   │       └── events/     # SSE endpoint
@@ -317,9 +354,11 @@ src/
 │   ├── actions/            # Unified action modules (paste-tickets.ts, delete-tickets.ts)
 │   ├── data-provider/      # DataProvider abstraction (api-provider.ts, demo-provider.ts)
 │   ├── demo/               # Demo mode (demo-config.ts, demo-storage.ts, demo-data.ts)
+│   ├── email/              # Email system (providers, templates, token hashing)
+│   ├── permissions/        # Granular RBAC (constants, check, presets, create-default-roles)
 │   ├── events.ts           # SSE event emitter
 │   ├── sprint-utils.ts     # Sprint helpers (generateNextSprintName, isCompletedColumn)
-│   └── system-settings.ts  # Dynamic upload config
+│   └── system-settings.ts  # Dynamic upload config + branding
 └── types/                  # Prisma re-exports + custom types
 ```
 
@@ -332,12 +371,13 @@ Vitest + React Testing Library + MSW for API mocking. Tests colocated in `__test
 ### Security
 
 **Authentication & Authorization:**
-- Project IDOR protection: All `/api/projects/[projectId]` routes verify membership via `requireProjectMember/Admin/Owner()`
+- Project IDOR protection: All `/api/projects/[projectId]` routes verify membership via granular permissions
 - Password hashing: bcryptjs with 12 salt rounds
 - JWT sessions in HTTP-only cookies
 - Session invalidation on password change (passwordChangedAt field)
 - Soft delete with `isActive` flag (disabled users can't login)
 - Admin self-demotion and sole admin deletion prevention
+- Password reset tokens: SHA-256 hashed, rate limited per email+IP, constant-time responses to prevent enumeration
 
 **Input Validation:**
 - Open redirect prevention: `callbackUrl` validated via `getSafeRedirectUrl()` - only relative paths allowed
@@ -374,7 +414,7 @@ Shared Prisma select clauses to avoid duplication:
 - `USER_SELECT_SUMMARY` - User summary (id, name, email, avatar)
 - `USER_SELECT_ADMIN_LIST` - User for admin listing
 - `LABEL_SELECT` - Label full selection
-- `transformTicket(ticket)` - Flatten watchers relation
+- `transformTicket(ticket)` - Flatten watchers relation, merge linkedFrom/linkedTo into unified `links` array with direction
 
 ### Sprint Utilities (`src/lib/sprint-utils.ts`)
 
@@ -387,6 +427,39 @@ Shared Prisma select clauses to avoid duplication:
 - `getUploadConfig()` - Get upload limits and allowed types
 - `getFileCategoryForMimeType(mimeType, settings)` - Categorize file (image/video/document)
 - `getMaxSizeForMimeType(mimeType, settings)` - Get max size limit for file type
+
+### Permissions System (`src/lib/permissions/`)
+
+Granular role-based access control with 14 permissions across 7 categories:
+
+- **Project**: `project.settings`, `project.delete`
+- **Members**: `members.invite`, `members.manage`, `members.admin`
+- **Board**: `board.manage`
+- **Tickets**: `tickets.create`, `tickets.manage_own`, `tickets.manage_any`
+- **Sprints**: `sprints.manage`
+- **Labels**: `labels.manage`
+- **Moderation**: `comments.manage_any`, `attachments.manage_any`
+
+Key files:
+- `constants.ts` - Permission definitions, metadata, category groupings
+- `check.ts` - `isMember()`, `hasPermission()`, `hasAnyPermission()`
+- `presets.ts` - Default role definitions (Owner, Admin, Member, Viewer)
+- `create-default-roles.ts` - Auto-create default roles for new projects
+
+### Email System (`src/lib/email/`)
+
+Configurable email sending with multiple providers:
+
+- **Providers**: SMTP, Resend, Console (for development), None (disabled)
+- **Features**: Password reset, welcome emails, email verification, invitation emails (each independently toggleable)
+- **Security**: SHA-256 token hashing, rate limiting per email+IP, constant-time email existence responses
+
+Key files:
+- `index.ts` - Email sending interface
+- `providers/` - Provider implementations
+- `templates/` - Email templates
+- `token.ts` - Token generation and hashing
+- `settings.ts` - Feature toggle helpers (`isEmailFeatureEnabled()`)
 
 ### Action Modules (`src/lib/actions/`)
 
