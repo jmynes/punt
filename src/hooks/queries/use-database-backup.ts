@@ -3,8 +3,11 @@
 import { useMutation } from '@tanstack/react-query'
 import { signOut } from 'next-auth/react'
 import { toast } from 'sonner'
+import type { ImportPreview } from '@/app/api/admin/database/preview/route'
 import type { ImportResult } from '@/lib/database-import'
 import { isDemoMode } from '@/lib/demo'
+
+export type { ImportPreview }
 
 export interface ExportOptions {
   password?: string
@@ -81,6 +84,45 @@ export function useExportDatabase() {
     },
     onError: (err) => {
       toast.error(err.message)
+    },
+  })
+}
+
+export interface PreviewDatabaseParams {
+  content: string // Base64 encoded
+  decryptionPassword?: string
+}
+
+/**
+ * Preview a database backup (parse and validate without importing)
+ */
+export function usePreviewDatabase() {
+  return useMutation({
+    mutationFn: async (params: PreviewDatabaseParams): Promise<ImportPreview> => {
+      if (isDemoMode()) {
+        toast.info('Database preview is disabled in demo mode')
+        throw new Error('Demo mode')
+      }
+
+      const res = await fetch('/api/admin/database/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to preview database')
+      }
+
+      return res.json()
+    },
+    onError: (err) => {
+      if (err.message !== 'Demo mode') {
+        // Don't show toast for preview errors - let the UI handle it
+      }
     },
   })
 }
