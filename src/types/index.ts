@@ -104,6 +104,14 @@ export type SprintEntryType = (typeof SPRINT_ENTRY_TYPES)[number]
 export const SPRINT_EXIT_STATUSES = ['completed', 'carried_over', 'removed'] as const
 export type SprintExitStatus = (typeof SPRINT_EXIT_STATUSES)[number]
 
+// Invitation statuses
+export const INVITATION_STATUSES = ['pending', 'accepted', 'expired', 'revoked'] as const
+export type InvitationStatus = (typeof INVITATION_STATUSES)[number]
+
+// Invitation roles (subset of project roles allowed for invitations)
+export const INVITATION_ROLES = ['admin', 'member'] as const
+export type InvitationRole = (typeof INVITATION_ROLES)[number]
+
 // Sprint completion action types
 export type SprintCompletionAction = 'extend' | 'close_to_next' | 'close_to_backlog' | 'close_keep'
 
