@@ -251,6 +251,10 @@ export function registerTicketTools(server: McpServer) {
         )
         .optional()
         .describe('Find tickets missing these fields (e.g., ["storyPoints", "assignee"])'),
+      parent: z
+        .string()
+        .optional()
+        .describe('Parent ticket key (e.g., "PUNT-5") to filter subtasks'),
       search: z
         .string()
         .optional()
@@ -267,6 +271,7 @@ export function registerTicketTools(server: McpServer) {
       label,
       resolution,
       missingFields,
+      parent,
       search,
       limit,
     }) => {
@@ -318,6 +323,17 @@ export function registerTicketTools(server: McpServer) {
           tickets = tickets.filter((t) => t.resolution?.toLowerCase() === resolution.toLowerCase())
           appliedFilters.push(`resolution: ${resolution}`)
         }
+      }
+      if (parent) {
+        const parsedParent = parseTicketKey(parent)
+        if (!parsedParent) {
+          return errorResponse(
+            `Invalid parent ticket key format: ${parent}. Expected format: PROJECT-123`,
+          )
+        }
+        const parentNumber = parsedParent.number
+        tickets = tickets.filter((t) => t.parent?.number === parentNumber)
+        appliedFilters.push(`parent: ${parent.toUpperCase()}`)
       }
       if (missingFields && missingFields.length > 0) {
         const fieldChecks: Record<string, (t: TicketData) => boolean> = {
