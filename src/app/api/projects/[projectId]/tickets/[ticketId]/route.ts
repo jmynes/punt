@@ -141,7 +141,7 @@ export async function PATCH(
       let depth = 0
 
       while (currentId && depth < MAX_DEPTH) {
-        const parent = await db.ticket.findUnique({
+        const parent: { parentId: string | null } | null = await db.ticket.findUnique({
           where: { id: currentId },
           select: { parentId: true },
         })
