@@ -13,7 +13,7 @@ import {
   useUpdateSystemSettings,
   useUploadLogo,
 } from '@/hooks/queries/use-system-settings'
-import { DEFAULT_BRANDING } from '@/lib/system-settings'
+import { DEFAULT_BRANDING } from '@/lib/branding'
 
 export function BrandingSettingsForm() {
   const { data: settings, isLoading, error } = useSystemSettings()

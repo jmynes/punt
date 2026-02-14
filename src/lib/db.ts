@@ -10,7 +10,8 @@ const globalForPrisma = globalThis as unknown as {
 // string fields before they reach SQLite (which has no native enum support).
 function createPrismaClient() {
   const client = new PrismaClient().$extends({
-    query: enumValidationExtension as Parameters<PrismaClient['$extends']>[0]['query'],
+    // biome-ignore lint/suspicious/noExplicitAny: Prisma's DynamicQueryExtensionArgs generic is too complex to satisfy statically
+    query: enumValidationExtension as any,
   })
   // Cast back to PrismaClient for type compatibility across the codebase.
   // The extended client is a superset of PrismaClient with identical API.

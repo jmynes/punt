@@ -14,27 +14,16 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-// Mock the permissions module
-vi.mock('@/lib/permissions', () => ({
+// Mock the permissions check module (server-only, uses db)
+vi.mock('@/lib/permissions/check', () => ({
   hasPermission: vi.fn(),
   hasAnyPermission: vi.fn(),
+  hasAllPermissions: vi.fn(),
   isMember: vi.fn(),
   getEffectivePermissions: vi.fn(),
-  PERMISSIONS: {
-    PROJECT_SETTINGS: 'project.settings',
-    PROJECT_DELETE: 'project.delete',
-    MEMBERS_INVITE: 'members.invite',
-    MEMBERS_MANAGE: 'members.manage',
-    MEMBERS_ADMIN: 'members.admin',
-    BOARD_MANAGE: 'board.manage',
-    TICKETS_CREATE: 'tickets.create',
-    TICKETS_MANAGE_OWN: 'tickets.manage_own',
-    TICKETS_MANAGE_ANY: 'tickets.manage_any',
-    SPRINTS_MANAGE: 'sprints.manage',
-    LABELS_MANAGE: 'labels.manage',
-    COMMENTS_MANAGE_ANY: 'comments.manage_any',
-    ATTACHMENTS_MANAGE_ANY: 'attachments.manage_any',
-  },
+  getRolePermissions: vi.fn(),
+  canManageMember: vi.fn(),
+  canAssignRole: vi.fn(),
 }))
 
 // Import mocked functions
@@ -43,7 +32,7 @@ import {
   hasAnyPermission,
   hasPermission,
   isMember,
-} from '@/lib/permissions'
+} from '@/lib/permissions/check'
 // Import the auth-helpers after mocks are set up
 import {
   requireAnyPermission,

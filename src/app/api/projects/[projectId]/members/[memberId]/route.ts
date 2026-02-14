@@ -4,14 +4,8 @@ import { handleApiError, notFoundError } from '@/lib/api-utils'
 import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
-import {
-  canAssignRole,
-  canManageMember,
-  isMember,
-  isValidPermission,
-  PERMISSIONS,
-  parsePermissions,
-} from '@/lib/permissions'
+import { isValidPermission, PERMISSIONS, parsePermissions } from '@/lib/permissions'
+import { canAssignRole, canManageMember, isMember } from '@/lib/permissions/check'
 
 // Schema for updating a member
 const updateMemberSchema = z.object({

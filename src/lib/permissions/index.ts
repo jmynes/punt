@@ -1,22 +1,12 @@
 /**
  * Permissions Module
  *
- * Re-exports all permission-related utilities and constants.
+ * Re-exports permission constants, types, and presets.
+ * Server-only modules (check.ts, create-default-roles.ts) are NOT re-exported
+ * here because they import PrismaClient, which cannot be bundled for the browser.
+ * Import those directly: '@/lib/permissions/check', '@/lib/permissions/create-default-roles'.
  */
 
-// Permission checking
-export {
-  canAssignRole,
-  canManageMember,
-  type EffectivePermissions,
-  getEffectivePermissions,
-  getRolePermissions,
-  hasAllPermissions,
-  hasAnyPermission,
-  hasPermission,
-  isMember,
-  type MembershipWithRole,
-} from './check'
 // Constants and types
 export {
   ALL_PERMISSIONS,
@@ -33,13 +23,6 @@ export {
   type PermissionMeta,
   parsePermissions,
 } from './constants'
-// Role creation helpers
-export {
-  createDefaultRolesForProject,
-  getMemberRoleForProject,
-  getOwnerRoleForProject,
-  getRoleByName,
-} from './create-default-roles'
 // Role presets
 export {
   DEFAULT_ROLE_NAMES,

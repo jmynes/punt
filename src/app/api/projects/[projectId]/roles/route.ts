@@ -3,7 +3,8 @@ import { z } from 'zod'
 import { handleApiError, validationError } from '@/lib/api-utils'
 import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
-import { isMember, isValidPermission, PERMISSIONS, parsePermissions } from '@/lib/permissions'
+import { isValidPermission, PERMISSIONS, parsePermissions } from '@/lib/permissions'
+import { isMember } from '@/lib/permissions/check'
 
 // Schema for creating a new role
 const createRoleSchema = z.object({

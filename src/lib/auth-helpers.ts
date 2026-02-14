@@ -2,13 +2,13 @@ import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { DEMO_USER, isDemoMode } from '@/lib/demo'
+import type { Permission } from '@/lib/permissions'
 import {
   hasAnyPermission as checkAnyPermission,
   hasPermission as checkPermission,
   getEffectivePermissions,
   isMember,
-  type Permission,
-} from '@/lib/permissions'
+} from '@/lib/permissions/check'
 
 /**
  * Check if the current request is authenticated via MCP API key.
