@@ -64,12 +64,12 @@ export async function POST(request: Request) {
       return badRequestError(parseResult.error)
     }
 
-    const { data, options, isZip } = parseResult
+    const { data, options, isZip, exportedAt } = parseResult
 
     // Build preview response
     const preview: ImportPreview = {
       version: 1, // Current export version
-      exportedAt: data.exportedAt,
+      exportedAt,
       isZip,
       isEncrypted: !!decryptionPassword,
       includesAttachments: options?.includeAttachments ?? false,

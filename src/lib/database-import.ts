@@ -59,6 +59,7 @@ export interface ImportError {
 interface ParsedBackup {
   data: ExportData
   options?: ExportOptionsType
+  exportedAt: string
 }
 
 /**
@@ -152,6 +153,7 @@ function parseBackupJson(
       parsed: {
         data: dataResult.data,
         options: encrypted.options,
+        exportedAt: encrypted.exportedAt,
       },
     }
   }
@@ -163,6 +165,7 @@ function parseBackupJson(
     parsed: {
       data: unencrypted.data,
       options: unencrypted.options,
+      exportedAt: unencrypted.exportedAt,
     },
   }
 }
@@ -192,6 +195,7 @@ export async function parseExportFile(
       success: true
       data: ExportData
       options?: ExportOptionsType
+      exportedAt: string
       isZip: boolean
       zipBuffer?: Buffer
     }
@@ -208,6 +212,7 @@ export async function parseExportFile(
       success: true,
       data: result.parsed.data,
       options: result.parsed.options,
+      exportedAt: result.parsed.exportedAt,
       isZip: true,
       zipBuffer: buffer,
     }
@@ -221,6 +226,7 @@ export async function parseExportFile(
     success: true,
     data: result.parsed.data,
     options: result.parsed.options,
+    exportedAt: result.parsed.exportedAt,
     isZip: false,
   }
 }

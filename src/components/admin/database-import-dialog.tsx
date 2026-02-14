@@ -14,7 +14,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -81,40 +81,64 @@ export function DatabaseImportDialog({
   const [verifying, setVerifying] = useState(false)
   const [credentialError, setCredentialError] = useState<string | null>(null)
 
-  const loadPreview = useCallback(async () => {
-    setError(null)
-    try {
-      const previewResult = await previewMutation.mutateAsync({
-        content: fileContent,
-        decryptionPassword: needsPassword ? decryptionPassword : undefined,
-      })
-      setPreview(previewResult)
-      setStep('preview')
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to preview backup'
-      // Check if it's an encryption error
-      if (errorMessage.includes('encrypted') || errorMessage.includes('password')) {
-        setNeedsPassword(true)
-        setStep('preview') // Show preview step with password input
-        setError(errorMessage)
-      } else {
-        setError(errorMessage)
-        setStep('error')
+  // Use refs to prevent infinite re-renders from mutation state changes
+  const isLoadingRef = useRef(false)
+  const previewMutateRef = useRef(previewMutation.mutateAsync)
+  previewMutateRef.current = previewMutation.mutateAsync
+
+  // Load preview when dialog opens or when retrying with password
+  useEffect(() => {
+    if (!open || step !== 'loading') {
+      isLoadingRef.current = false
+      return
+    }
+
+    // Prevent duplicate calls
+    if (isLoadingRef.current) return
+    isLoadingRef.current = true
+
+    let cancelled = false
+
+    const loadPreview = async () => {
+      setError(null)
+      try {
+        const previewResult = await previewMutateRef.current({
+          content: fileContent,
+          decryptionPassword: needsPassword ? decryptionPassword : undefined,
+        })
+        if (cancelled) return
+        setPreview(previewResult)
+        setStep('preview')
+      } catch (err) {
+        if (cancelled) return
+        const errorMessage = err instanceof Error ? err.message : 'Failed to preview backup'
+        // Check if it's an encryption error
+        if (errorMessage.includes('encrypted') || errorMessage.includes('password')) {
+          setNeedsPassword(true)
+          setStep('preview') // Show preview step with password input
+          setError(errorMessage)
+        } else {
+          setError(errorMessage)
+          setStep('error')
+        }
+      } finally {
+        if (!cancelled) {
+          isLoadingRef.current = false
+        }
       }
     }
-  }, [fileContent, needsPassword, decryptionPassword, previewMutation])
 
-  // Load preview when dialog opens
-  useEffect(() => {
-    if (open && step === 'loading') {
-      loadPreview()
+    loadPreview()
+
+    return () => {
+      cancelled = true
+      isLoadingRef.current = false
     }
-  }, [open, step, loadPreview])
+  }, [open, step, fileContent, needsPassword, decryptionPassword])
 
-  const handleRetryPreview = async () => {
+  const handleRetryPreview = () => {
     if (!decryptionPassword && needsPassword) return
-    setStep('loading')
-    await loadPreview()
+    setStep('loading') // useEffect will trigger loadPreview when step is 'loading'
   }
 
   const handleNext = async () => {
