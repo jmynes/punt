@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { isDemoMode } from '@/lib/demo'
 import type { EmailProviderType, EmailSettings } from '@/lib/email/types'
-import type { SystemSettings } from '@/lib/system-settings'
+import type { RepoHostingProvider, SystemSettings } from '@/lib/system-settings'
 import { brandingKeys } from './use-branding'
 
 // Combined settings type that includes both upload and email settings
@@ -57,6 +57,10 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
   emailWelcome: false,
   emailVerification: false,
   emailInvitations: true,
+  // Repository configuration
+  canonicalRepoUrl: null,
+  repoHostingProvider: null,
+  forkRepoUrl: null,
 }
 
 /**
@@ -114,6 +118,11 @@ export interface UpdateSystemSettingsParams {
   emailWelcome?: boolean
   emailVerification?: boolean
   emailInvitations?: boolean
+
+  // Repository configuration
+  canonicalRepoUrl?: string | null
+  repoHostingProvider?: RepoHostingProvider | null
+  forkRepoUrl?: string | null
 }
 
 /**

@@ -1,20 +1,38 @@
 'use client'
 
-import { Columns3, Database, Mail, Palette, Settings, Shield, Upload } from 'lucide-react'
+import {
+  Columns3,
+  Database,
+  GitBranch,
+  Mail,
+  Palette,
+  Settings,
+  Shield,
+  Upload,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { BoardSettingsForm } from '@/components/admin/board-settings-form'
 import { BrandingSettingsForm } from '@/components/admin/branding-settings-form'
 import { DatabaseSettings } from '@/components/admin/database-settings'
 import { EmailSettingsForm } from '@/components/admin/email-settings-form'
+import { RepositorySettingsForm } from '@/components/admin/repository-settings-form'
 import { RolePermissionsForm } from '@/components/admin/role-permissions-form'
 import { SettingsForm } from '@/components/admin/settings-form'
 import { PageHeader } from '@/components/common'
 import { cn } from '@/lib/utils'
 
-type SettingsTab = 'email' | 'branding' | 'uploads' | 'board' | 'roles' | 'database'
+type SettingsTab = 'email' | 'branding' | 'uploads' | 'board' | 'roles' | 'repository' | 'database'
 
-const VALID_TABS: SettingsTab[] = ['email', 'branding', 'uploads', 'board', 'roles', 'database']
+const VALID_TABS: SettingsTab[] = [
+  'email',
+  'branding',
+  'uploads',
+  'board',
+  'roles',
+  'repository',
+  'database',
+]
 
 function isValidTab(tab: string | null): tab is SettingsTab {
   return tab !== null && VALID_TABS.includes(tab as SettingsTab)
@@ -100,6 +118,18 @@ export default function AdminSettingsPage() {
             Default Roles
           </Link>
           <Link
+            href="/admin/settings?tab=repository"
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              activeTab === 'repository'
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            <GitBranch className="h-4 w-4" />
+            Repository
+          </Link>
+          <Link
             href="/admin/settings?tab=database"
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
@@ -119,6 +149,7 @@ export default function AdminSettingsPage() {
         {activeTab === 'uploads' && <SettingsForm />}
         {activeTab === 'board' && <BoardSettingsForm />}
         {activeTab === 'roles' && <RolePermissionsForm />}
+        {activeTab === 'repository' && <RepositorySettingsForm />}
         {activeTab === 'database' && <DatabaseSettings />}
 
         {/* Footer spacer */}
