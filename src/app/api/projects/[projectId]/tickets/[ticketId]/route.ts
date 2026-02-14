@@ -128,6 +128,39 @@ export async function PATCH(
       }
     }
 
+    // Validate parentId: prevent self-referencing and circular parent chains
+    if (updateData.parentId !== undefined && updateData.parentId !== null) {
+      // Prevent direct self-referencing
+      if (updateData.parentId === ticketId) {
+        return badRequestError('Cannot set parent: ticket cannot be its own parent')
+      }
+
+      // Walk up the parent chain from the proposed parent to detect cycles
+      const MAX_DEPTH = 50
+      let currentId: string | null = updateData.parentId
+      let depth = 0
+
+      while (currentId && depth < MAX_DEPTH) {
+        const parent = await db.ticket.findUnique({
+          where: { id: currentId },
+          select: { parentId: true },
+        })
+
+        if (!parent) break
+
+        if (parent.parentId === ticketId) {
+          return badRequestError('Cannot set parent: would create a circular reference')
+        }
+
+        currentId = parent.parentId
+        depth++
+      }
+
+      if (depth >= MAX_DEPTH) {
+        return badRequestError('Cannot set parent: parent chain exceeds maximum depth')
+      }
+    }
+
     // Validate assigneeId is a project member (if provided and not null)
     if (updateData.assigneeId !== undefined && updateData.assigneeId !== null) {
       const assigneeMembership = await db.projectMember.findUnique({
