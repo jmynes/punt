@@ -41,12 +41,14 @@ The MCP server currently exposes 31 tools covering tickets, projects, sprints, m
 | GET /api/projects/[projectId]/tickets/[ticketId]/attachments | High | List ticket attachments |
 | POST /api/projects/[projectId]/tickets/[ticketId]/attachments | High | Add attachment to ticket |
 | DELETE /api/projects/[projectId]/tickets/[ticketId]/attachments/[attachmentId] | High | Remove attachment |
+| GET/POST /api/projects/[projectId]/tickets/[ticketId]/links | Medium | List/create ticket links |
+| DELETE /api/projects/[projectId]/tickets/[ticketId]/links/[linkId] | Medium | Remove ticket link |
 
-**Note:** The MCP api-client has no functions for attachments. The existing `list_tickets` does client-side filtering but could benefit from using the server-side search endpoint for better performance.
+**Note:** The MCP api-client has no functions for attachments or ticket links. The existing `list_tickets` does client-side filtering but could benefit from using the server-side search endpoint for better performance.
 
 #### Missing API Endpoints (Not in MCP or API)
 - **Ticket comments**: No comment CRUD endpoints exist in the API
-- **Ticket links**: TicketLink model exists but no API endpoints
+- ~~**Ticket links**: TicketLink model exists but no API endpoints~~ **RESOLVED** — API endpoints added: `GET/POST /api/projects/[projectId]/tickets/[ticketId]/links`, `DELETE .../links/[linkId]`. MCP tools not yet added.
 - **Ticket watchers**: No direct watcher management endpoints (only via ticket update with `watcherIds`)
 - **Ticket history/edits**: TicketEdit model exists but no API to retrieve edit history
 
@@ -148,15 +150,15 @@ The MCP server currently exposes 31 tools covering tickets, projects, sprints, m
 
 ### 7. Roles (Project-level)
 
-#### Currently NOT Available in MCP
+#### API Endpoints Available (MCP tools NOT yet implemented)
 
-| API Endpoint | Priority | Description |
-|--------------|----------|-------------|
-| GET /api/projects/[projectId]/roles | Medium | List project roles |
-| POST /api/projects/[projectId]/roles | Medium | Create custom role |
-| PATCH /api/projects/[projectId]/roles/[roleId] | Medium | Update role permissions |
-| DELETE /api/projects/[projectId]/roles/[roleId] | Medium | Delete custom role |
-| POST /api/projects/[projectId]/roles/reorder | Low | Reorder roles |
+| API Endpoint | Priority | Description | MCP Status |
+|--------------|----------|-------------|------------|
+| GET /api/projects/[projectId]/roles | Medium | List project roles | Not in MCP |
+| POST /api/projects/[projectId]/roles | Medium | Create custom role | Not in MCP |
+| GET/PATCH/DELETE /api/projects/[projectId]/roles/[roleId] | Medium | Manage role | Not in MCP |
+| POST /api/projects/[projectId]/roles/reorder | Low | Reorder roles | Not in MCP |
+| GET /api/projects/[projectId]/my-permissions | Low | Current user permissions | Not in MCP |
 
 ---
 
@@ -207,12 +209,14 @@ The MCP server currently exposes 31 tools covering tickets, projects, sprints, m
 
 #### Currently NOT Available in MCP (By Design)
 
+All authentication endpoints now exist in the API. They are intentionally excluded from MCP.
+
 | API Endpoint | Notes |
 |--------------|-------|
 | POST /api/auth/register | Public registration |
 | POST /api/auth/verify-credentials | Credential validation |
-| POST /api/auth/forgot-password | Password reset request |
-| POST /api/auth/reset-password | Password reset completion |
+| POST /api/auth/forgot-password | Password reset request (rate limited, constant-time response) |
+| GET/POST /api/auth/reset-password | Validate token / complete reset |
 | POST /api/auth/send-verification | Send verification email |
 | POST /api/auth/verify-email | Verify email |
 
@@ -294,16 +298,16 @@ Or the existing endpoint could support query params:
 
 | Category | API Routes | MCP Coverage | Gap |
 |----------|------------|--------------|-----|
-| Tickets | 6 endpoints | 6 tools | Search, attachments missing |
+| Tickets | 8 endpoints | 6 tools | Search, attachments, links missing from MCP |
 | Sprints | 8 endpoints | 7 tools | Extend, settings missing |
 | Labels | 3 endpoints | 5 tools* | Update workaround needs fix |
 | Projects | 3 endpoints | 5 tools | Good coverage |
 | Members | 3 endpoints | 4 tools | Direct DB access issue |
 | Columns | 4 endpoints | 5 tools | Direct DB access issue |
-| Roles | 4 endpoints | 0 tools | Not implemented |
-| Admin | 12 endpoints | 0 tools | By design |
+| Roles | 5 endpoints | 0 tools | API exists, MCP tools not implemented |
+| Admin | 15 endpoints | 0 tools | By design |
 | User Profile | 11 endpoints | 0 tools | Not needed |
-| Auth | 6 endpoints | 0 tools | By design |
+| Auth | 8 endpoints | 0 tools | By design |
 | Utility | 4 endpoints | 0 tools | Low priority |
 
 *Labels has 5 MCP tools but only 3 API endpoints because add/remove label from ticket goes through ticket update API.
@@ -320,7 +324,7 @@ Or the existing endpoint could support query params:
 - settings (GET, PATCH)
 - settings/email/test (POST)
 - settings/logo (POST, DELETE)
-- settings/roles (GET, PATCH, POST)
+- settings/roles (GET, PATCH)
 - users (GET, POST)
 - users/[username] (GET, PATCH, DELETE)
 
@@ -370,6 +374,8 @@ Or the existing endpoint could support query params:
 - [projectId]/tickets/[ticketId] (GET, PATCH, DELETE)
 - [projectId]/tickets/[ticketId]/attachments (GET, POST)
 - [projectId]/tickets/[ticketId]/attachments/[attachmentId] (DELETE)
+- [projectId]/tickets/[ticketId]/links (GET, POST)
+- [projectId]/tickets/[ticketId]/links/[linkId] (DELETE)
 
 ### /api/
 - branding (GET)
