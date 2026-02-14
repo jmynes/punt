@@ -7,9 +7,11 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
+  FileImage,
   FileWarning,
   Loader2,
   Lock,
+  Paperclip,
   Shield,
   Trash2,
 } from 'lucide-react'
@@ -340,10 +342,16 @@ export function DatabaseImportDialog({
                       </div>
                     )}
                     {preview.includesAttachments && (
-                      <div className="text-sm text-zinc-400">Includes ticket attachments</div>
+                      <div className="flex items-center gap-2 text-sm text-green-400">
+                        <Paperclip className="h-4 w-4" />
+                        Includes ticket attachments
+                      </div>
                     )}
                     {preview.includesAvatars && (
-                      <div className="text-sm text-zinc-400">Includes profile pictures</div>
+                      <div className="flex items-center gap-2 text-sm text-green-400">
+                        <FileImage className="h-4 w-4" />
+                        Includes profile pictures
+                      </div>
                     )}
                   </div>
 
