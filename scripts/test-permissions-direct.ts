@@ -11,14 +11,14 @@ import {
   requireTicketPermission,
 } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { PERMISSIONS } from '@/lib/permissions'
 import {
   canAssignRole,
   canManageMember,
   getEffectivePermissions,
   hasPermission,
   isMember,
-} from '@/lib/permissions'
-import { PERMISSIONS } from '@/lib/permissions/constants'
+} from '@/lib/permissions/check'
 
 interface TestResult {
   test: string

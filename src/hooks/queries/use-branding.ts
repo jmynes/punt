@@ -1,9 +1,9 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { DEFAULT_BRANDING } from '@/lib/branding'
 import type { BrandingSettings } from '@/lib/data-provider'
 import { getDataProvider } from '@/lib/data-provider'
-import { DEFAULT_BRANDING } from '@/lib/system-settings'
 
 export const brandingKeys = {
   all: ['branding'] as const,

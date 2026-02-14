@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-utils'
 import { requireAuth, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
-import { getEffectivePermissions, parsePermissions } from '@/lib/permissions'
+import { parsePermissions } from '@/lib/permissions'
+import { getEffectivePermissions } from '@/lib/permissions/check'
 
 /**
  * GET /api/projects/[projectId]/my-permissions

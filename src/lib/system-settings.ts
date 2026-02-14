@@ -3,16 +3,11 @@
  * Provides cached access to system-wide settings like file upload limits and branding.
  */
 
+import { type BrandingSettings, DEFAULT_BRANDING } from '@/lib/branding'
 import { db } from '@/lib/db'
 
-// Default branding values
-export const DEFAULT_BRANDING = {
-  appName: 'PUNT',
-  logoUrl: null as string | null,
-  logoLetter: 'P',
-  logoGradientFrom: '#f59e0b',
-  logoGradientTo: '#ea580c',
-}
+export type { BrandingSettings } from '@/lib/branding'
+export { DEFAULT_BRANDING } from '@/lib/branding'
 
 // Default values matching Prisma schema defaults
 const DEFAULT_SETTINGS = {
@@ -32,14 +27,6 @@ const DEFAULT_SETTINGS = {
     'text/plain',
     'text/csv',
   ],
-}
-
-export interface BrandingSettings {
-  appName: string
-  logoUrl: string | null
-  logoLetter: string
-  logoGradientFrom: string
-  logoGradientTo: string
 }
 
 export interface SystemSettings {

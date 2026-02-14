@@ -39,19 +39,20 @@ vi.mock('@/lib/auth-helpers', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/permissions', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@/lib/permissions')>()
-  return {
-    ...original,
-    hasPermission: vi.fn(),
-    isMember: vi.fn(),
-    getEffectivePermissions: vi.fn(),
-  }
-})
+vi.mock('@/lib/permissions/check', () => ({
+  hasPermission: vi.fn(),
+  hasAnyPermission: vi.fn(),
+  hasAllPermissions: vi.fn(),
+  isMember: vi.fn(),
+  getEffectivePermissions: vi.fn(),
+  getRolePermissions: vi.fn(),
+  canManageMember: vi.fn(),
+  canAssignRole: vi.fn(),
+}))
 
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
-import { hasPermission, isMember } from '@/lib/permissions'
+import { hasPermission, isMember } from '@/lib/permissions/check'
 // Import routes after mocks
 import { DELETE, GET, PATCH } from '../route'
 

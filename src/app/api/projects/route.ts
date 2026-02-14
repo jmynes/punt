@@ -3,7 +3,8 @@ import { z } from 'zod'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
-import { createDefaultRolesForProject, DEFAULT_ROLE_NAMES } from '@/lib/permissions'
+import { DEFAULT_ROLE_NAMES } from '@/lib/permissions'
+import { createDefaultRolesForProject } from '@/lib/permissions/create-default-roles'
 
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Name is required'),
