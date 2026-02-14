@@ -1,7 +1,7 @@
 'use client'
 
-import { ClipboardCopy, Eye, EyeOff, KeyRound, Terminal, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Check, Copy, Eye, EyeOff, KeyRound, Terminal, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -29,6 +29,14 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
   const [mcpNewKey, setMcpNewKey] = useState<string | null>(null)
   const [mcpKeyVisible, setMcpKeyVisible] = useState(false)
   const [mcpKeyFetched, setMcpKeyFetched] = useState(false)
+  const [mcpKeyCopied, setMcpKeyCopied] = useState(false)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (isDemo || mcpKeyFetched) return
@@ -84,15 +92,18 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
     }
   }
 
-  const handleCopyMcpKey = async () => {
+  const handleCopyMcpKey = useCallback(async () => {
     if (!mcpNewKey) return
     try {
       await navigator.clipboard.writeText(mcpNewKey)
+      setMcpKeyCopied(true)
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+      copyTimeoutRef.current = setTimeout(() => setMcpKeyCopied(false), 2000)
       toast.success('API key copied to clipboard')
     } catch {
       toast.error('Failed to copy to clipboard')
     }
-  }
+  }, [mcpNewKey])
 
   if (isDemo) {
     return (
@@ -176,7 +187,11 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
                       className="h-7 w-7 p-0 text-zinc-400 hover:text-zinc-200"
                       onClick={handleCopyMcpKey}
                     >
-                      <ClipboardCopy className="h-3.5 w-3.5" />
+                      {mcpKeyCopied ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
                     </Button>
                   </div>
                 </div>
