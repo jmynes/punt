@@ -1222,7 +1222,7 @@ export function registerTicketTools(server: McpServer) {
       }
 
       const result = await createTicketLink(fromParsed.projectKey, fromTicket.id, {
-        toTicketId: toTicket.id,
+        targetTicketId: toTicket.id,
         linkType,
       })
 
@@ -1282,27 +1282,24 @@ function formatTicketLinkList(
   lines.push(`## Links on ${ticketKey}`)
   lines.push('')
 
-  // Group links by type
+  // Group links by type and direction
   const grouped: Record<string, TicketLinkData[]> = {}
   for (const link of links) {
-    if (!grouped[link.linkType]) {
-      grouped[link.linkType] = []
+    // Include direction in grouping key for clarity
+    const key = link.direction === 'inward' ? `is ${link.linkType} by` : link.linkType
+    if (!grouped[key]) {
+      grouped[key] = []
     }
-    grouped[link.linkType].push(link)
+    grouped[key].push(link)
   }
 
   for (const [linkType, typeLinks] of Object.entries(grouped)) {
     const label = linkType.replace(/_/g, ' ')
     lines.push(`### ${label}`)
     for (const link of typeLinks) {
-      // Determine which ticket is the "other" one
-      const otherTicket =
-        link.fromTicket.number === Number.parseInt(ticketKey.split('-')[1], 10)
-          ? link.toTicket
-          : link.fromTicket
-      const otherKey = `${projectKey}-${otherTicket.number}`
+      const linkedKey = `${projectKey}-${link.linkedTicket.number}`
       lines.push(
-        `- **${otherKey}**: ${escapeMarkdown(otherTicket.title)} _(${otherTicket.type}, ${escapeMarkdown(otherTicket.column.name)})_`,
+        `- **${linkedKey}**: ${escapeMarkdown(link.linkedTicket.title)} _(${link.linkedTicket.type})_`,
       )
       lines.push(`  _Link ID: ${link.id}_`)
     }

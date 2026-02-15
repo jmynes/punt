@@ -506,21 +506,16 @@ export async function updateComment(
 export interface TicketLinkData {
   id: string
   linkType: string
-  fromTicket: {
+  linkedTicket: {
     id: string
     number: number
     title: string
     type: string
-    column: { name: string }
+    priority: string
+    columnId: string
+    resolution: string | null
   }
-  toTicket: {
-    id: string
-    number: number
-    title: string
-    type: string
-    column: { name: string }
-  }
-  createdAt: string
+  direction: 'outward' | 'inward'
 }
 
 export async function listTicketLinks(projectKey: string, ticketId: string) {
@@ -531,7 +526,7 @@ export async function listTicketLinks(projectKey: string, ticketId: string) {
 }
 
 export interface CreateTicketLinkInput {
-  toTicketId: string
+  targetTicketId: string
   linkType: string
 }
 
