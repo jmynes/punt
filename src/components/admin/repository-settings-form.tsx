@@ -53,10 +53,9 @@ interface CommitStatusProps {
     behindBy: number
     status: 'ahead' | 'behind' | 'identical' | 'diverged' | 'unknown'
   }
-  remoteCommitShort: string | null
 }
 
-function CommitStatusDisplay({ status, remoteCommitShort }: CommitStatusProps) {
+function CommitStatusDisplay({ status }: CommitStatusProps) {
   // Don't show anything if we're identical to main
   if (status.status === 'identical') {
     return null
@@ -251,10 +250,7 @@ export function RepositorySettingsForm() {
 
               {/* Commit status - show ahead/behind info */}
               {!updateResult.error && updateResult.commitStatus && (
-                <CommitStatusDisplay
-                  status={updateResult.commitStatus}
-                  remoteCommitShort={updateResult.remote.latestCommitShort}
-                />
+                <CommitStatusDisplay status={updateResult.commitStatus} />
               )}
             </div>
           )}
