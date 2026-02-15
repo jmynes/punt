@@ -404,6 +404,10 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Track system-generated comments (e.g., MCP context logs)
+  isSystemGenerated Boolean @default(false)
+  source            String? // Optional source identifier (e.g., "mcp", "automation")
+
   ticketId String
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   authorId String
