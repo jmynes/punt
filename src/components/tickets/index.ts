@@ -1,4 +1,5 @@
 export { AttachmentList } from './attachment-list'
+export { AttachmentPreviewModal } from './attachment-preview-modal'
 export { CreateTicketDialog } from './create-ticket-dialog'
 export { DatePicker } from './date-picker'
 export { FileUpload, type UploadedFile } from './file-upload'
