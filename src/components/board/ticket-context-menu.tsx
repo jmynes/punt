@@ -53,6 +53,7 @@ import { formatTicketIds } from '@/lib/ticket-format'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
+import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -77,9 +78,11 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const submenuRef = useRef<HTMLDivElement | null>(null)
 
   const { getColumns } = useBoardStore()
+  const { getProject } = useProjectsStore()
   // Use the ticket's projectId directly instead of relying on activeProjectId from UI store
   // This ensures we always use the correct project context
   const projectId = ticket.projectId
+  const project = getProject(projectId)
   const columns = getColumns(projectId)
   // Call hooks unconditionally at top level for reactivity
   const _boardState = useBoardStore()
@@ -1377,7 +1380,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           open={showMoveToProject}
           onOpenChange={setShowMoveToProject}
           ticket={ticket}
-          projectKey={ticket.project?.key || ''}
+          projectKey={project?.key || ''}
           projectId={projectId}
         />
       )}

@@ -68,7 +68,7 @@ export function MoveToProjectDialog({
       const data = await res.json()
 
       // Remove ticket from current project's board
-      removeTicket(projectId, ticket.id, ticket.columnId)
+      removeTicket(projectId, ticket.id)
 
       toast.success('Ticket moved', {
         description: `${projectKey}-${ticket.number} moved to ${selectedProjectKey}-${data.ticket.number}`,
