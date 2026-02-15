@@ -1,0 +1,97 @@
+#!/bin/bash
+#
+# PUNT Git Hook: commit-msg
+#
+# This hook validates that the commit message contains a ticket reference.
+# It can be configured to require, suggest, or ignore ticket references.
+#
+# Configuration (via environment variables):
+#   PUNT_REQUIRE_TICKET  - "require" to block commits without tickets,
+#                          "suggest" to warn but allow (default),
+#                          "ignore" to skip validation
+#   PUNT_PROJECT_KEYS    - Comma-separated list of valid project keys
+#                          (e.g., "PUNT,PROJ,BUG"). If empty, accepts any.
+#   PUNT_HOOK_DEBUG      - Set to "1" to enable debug output
+#
+# Installation:
+#   1. Copy this file to your repository's .git/hooks/commit-msg
+#   2. Make it executable: chmod +x .git/hooks/commit-msg
+#
+
+set -e
+
+# Configuration
+PUNT_REQUIRE_TICKET="${PUNT_REQUIRE_TICKET:-suggest}"
+PUNT_PROJECT_KEYS="${PUNT_PROJECT_KEYS:-}"
+
+# Get the commit message file path
+COMMIT_MSG_FILE="$1"
+
+if [ ! -f "$COMMIT_MSG_FILE" ]; then
+    echo "[PUNT] Error: Commit message file not found"
+    exit 1
+fi
+
+# Read the commit message (excluding comments)
+COMMIT_MSG=$(grep -v '^#' "$COMMIT_MSG_FILE" | head -c 10000)
+
+# Skip validation if configured to ignore
+if [ "$PUNT_REQUIRE_TICKET" = "ignore" ]; then
+    exit 0
+fi
+
+# Build the ticket pattern
+if [ -n "$PUNT_PROJECT_KEYS" ]; then
+    # Create pattern from configured project keys
+    # Convert "PUNT,PROJ,BUG" to "PUNT|PROJ|BUG"
+    KEYS_PATTERN=$(echo "$PUNT_PROJECT_KEYS" | tr ',' '|')
+    TICKET_PATTERN="($KEYS_PATTERN)-[0-9]+"
+else
+    # Accept any project key (2-10 uppercase letters)
+    TICKET_PATTERN="[A-Z]{2,10}-[0-9]+"
+fi
+
+# Debug output
+if [ "$PUNT_HOOK_DEBUG" = "1" ]; then
+    echo "[PUNT] Validating commit message..."
+    echo "[PUNT] Pattern: $TICKET_PATTERN"
+    echo "[PUNT] Message: $(echo "$COMMIT_MSG" | head -1)"
+fi
+
+# Check for ticket reference
+if echo "$COMMIT_MSG" | grep -qE "$TICKET_PATTERN"; then
+    # Found a ticket reference
+    if [ "$PUNT_HOOK_DEBUG" = "1" ]; then
+        TICKET=$(echo "$COMMIT_MSG" | grep -oE "$TICKET_PATTERN" | head -1)
+        echo "[PUNT] Found ticket reference: $TICKET"
+    fi
+    exit 0
+fi
+
+# No ticket reference found
+if [ "$PUNT_REQUIRE_TICKET" = "require" ]; then
+    echo ""
+    echo "[PUNT] Error: Commit message must contain a ticket reference"
+    echo ""
+    echo "  Expected format: PROJECT-123"
+    if [ -n "$PUNT_PROJECT_KEYS" ]; then
+        echo "  Valid projects: $PUNT_PROJECT_KEYS"
+    fi
+    echo ""
+    echo "  Examples:"
+    echo "    fix: resolve bug in login (PUNT-123)"
+    echo "    fixes PUNT-456"
+    echo "    feat(auth): add password reset PROJ-789"
+    echo ""
+    echo "  To bypass this check, use: git commit --no-verify"
+    echo ""
+    exit 1
+else
+    # Just suggest (warning)
+    echo ""
+    echo "[PUNT] Warning: No ticket reference found in commit message"
+    echo "  Consider adding a ticket reference (e.g., PUNT-123)"
+    echo ""
+fi
+
+exit 0

@@ -1,0 +1,132 @@
+#!/bin/bash
+#
+# PUNT Git Hook: post-commit
+#
+# This hook runs after a commit is made and notifies PUNT about the commit.
+# It parses the commit message for ticket references (e.g., PUNT-123) and
+# updates tickets based on keywords:
+#   - "fixes PUNT-X" or "closes PUNT-X" -> moves ticket to Done
+#   - "wip PUNT-X" or "working on PUNT-X" -> moves ticket to In Progress
+#   - "PUNT-X" (standalone) -> logs reference
+#
+# Configuration (via environment variables):
+#   PUNT_API_KEY     - Your PUNT API key (required)
+#   PUNT_BASE_URL    - Base URL of PUNT server (default: http://localhost:3000)
+#   PUNT_HOOK_DEBUG  - Set to "1" to enable debug output
+#   PUNT_HOOK_QUIET  - Set to "1" to suppress all output
+#
+# Installation:
+#   1. Copy this file to your repository's .git/hooks/post-commit
+#   2. Make it executable: chmod +x .git/hooks/post-commit
+#   3. Set PUNT_API_KEY in your environment or .env file
+#
+
+set -e
+
+# Configuration
+PUNT_BASE_URL="${PUNT_BASE_URL:-http://localhost:3000}"
+PUNT_API_ENDPOINT="${PUNT_BASE_URL}/api/integrations/git-hook"
+
+# Check for required configuration
+if [ -z "$PUNT_API_KEY" ]; then
+    if [ -z "$PUNT_HOOK_QUIET" ]; then
+        echo "[PUNT] Warning: PUNT_API_KEY not set. Skipping ticket update."
+    fi
+    exit 0
+fi
+
+# Get commit information
+COMMIT_SHA=$(git rev-parse HEAD)
+COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+COMMIT_TIMESTAMP=$(git log -1 --pretty=%aI)
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+
+# Debug output
+if [ "$PUNT_HOOK_DEBUG" = "1" ]; then
+    echo "[PUNT] Processing commit: $COMMIT_SHA"
+    echo "[PUNT] Message: $(echo "$COMMIT_MESSAGE" | head -1)"
+    echo "[PUNT] Author: $COMMIT_AUTHOR"
+    echo "[PUNT] Branch: $BRANCH_NAME"
+    echo "[PUNT] Endpoint: $PUNT_API_ENDPOINT"
+fi
+
+# Escape special characters for JSON
+escape_json() {
+    local string="$1"
+    # Escape backslashes first, then other special chars
+    string="${string//\\/\\\\}"
+    string="${string//\"/\\\"}"
+    string="${string//$'\n'/\\n}"
+    string="${string//$'\r'/\\r}"
+    string="${string//$'\t'/\\t}"
+    echo "$string"
+}
+
+# Build JSON payload
+ESCAPED_MESSAGE=$(escape_json "$COMMIT_MESSAGE")
+ESCAPED_AUTHOR=$(escape_json "$COMMIT_AUTHOR")
+ESCAPED_BRANCH=$(escape_json "$BRANCH_NAME")
+
+JSON_PAYLOAD=$(cat <<EOF
+{
+  "commits": [
+    {
+      "message": "$ESCAPED_MESSAGE",
+      "sha": "$COMMIT_SHA",
+      "author": "$ESCAPED_AUTHOR",
+      "timestamp": "$COMMIT_TIMESTAMP",
+      "branch": "$ESCAPED_BRANCH"
+    }
+  ]
+}
+EOF
+)
+
+# Send to PUNT API
+if [ "$PUNT_HOOK_DEBUG" = "1" ]; then
+    echo "[PUNT] Sending payload..."
+fi
+
+# Make the API call
+RESPONSE=$(curl -s -w "\n%{http_code}" \
+    -X POST "$PUNT_API_ENDPOINT" \
+    -H "Content-Type: application/json" \
+    -H "X-API-Key: $PUNT_API_KEY" \
+    -d "$JSON_PAYLOAD" 2>/dev/null || echo -e "\n000")
+
+# Extract HTTP status code (last line) and body (everything else)
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
+
+# Handle response
+if [ "$HTTP_CODE" = "200" ]; then
+    if [ -z "$PUNT_HOOK_QUIET" ]; then
+        # Parse response for summary (using basic tools)
+        PROCESSED=$(echo "$RESPONSE_BODY" | grep -o '"processed":[0-9]*' | cut -d: -f2 || echo "0")
+        CLOSED=$(echo "$RESPONSE_BODY" | grep -o '"closed":[0-9]*' | cut -d: -f2 || echo "0")
+        IN_PROGRESS=$(echo "$RESPONSE_BODY" | grep -o '"inProgress":[0-9]*' | cut -d: -f2 || echo "0")
+
+        if [ "$PROCESSED" != "0" ]; then
+            echo "[PUNT] Updated $PROCESSED ticket(s): $CLOSED closed, $IN_PROGRESS in progress"
+        fi
+    fi
+elif [ "$HTTP_CODE" = "401" ]; then
+    if [ -z "$PUNT_HOOK_QUIET" ]; then
+        echo "[PUNT] Error: Invalid API key"
+    fi
+elif [ "$HTTP_CODE" = "000" ]; then
+    if [ -z "$PUNT_HOOK_QUIET" ]; then
+        echo "[PUNT] Warning: Could not connect to PUNT server at $PUNT_BASE_URL"
+    fi
+else
+    if [ "$PUNT_HOOK_DEBUG" = "1" ]; then
+        echo "[PUNT] Error: HTTP $HTTP_CODE"
+        echo "[PUNT] Response: $RESPONSE_BODY"
+    elif [ -z "$PUNT_HOOK_QUIET" ]; then
+        echo "[PUNT] Warning: Unexpected response (HTTP $HTTP_CODE)"
+    fi
+fi
+
+# Always exit successfully to not block the commit
+exit 0
