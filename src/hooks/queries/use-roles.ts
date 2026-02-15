@@ -1,8 +1,8 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { demoStorage, isDemoMode } from '@/lib/demo'
+import { showToast } from '@/lib/toast'
 import type { Permission, RoleWithPermissions } from '@/types'
 
 // Query keys for roles
@@ -102,11 +102,11 @@ export function useCreateRole(projectId: string) {
       return res.json() as Promise<RoleWithPermissions>
     },
     onSuccess: () => {
-      toast.success('Role created')
+      showToast.success('Role created')
       queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -141,7 +141,7 @@ export function useUpdateRole(projectId: string) {
       return res.json() as Promise<RoleWithPermissions>
     },
     onSuccess: (_data, variables) => {
-      toast.success('Role updated')
+      showToast.success('Role updated')
       queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
       queryClient.invalidateQueries({
         queryKey: roleKeys.single(projectId, variables.roleId),
@@ -150,7 +150,7 @@ export function useUpdateRole(projectId: string) {
       queryClient.invalidateQueries({ queryKey: ['members', 'project', projectId] })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -173,11 +173,11 @@ export function useDeleteRole(projectId: string) {
       return res.json()
     },
     onSuccess: () => {
-      toast.success('Role deleted')
+      showToast.success('Role deleted')
       queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -208,7 +208,7 @@ export function useReorderRoles(projectId: string) {
       queryClient.setQueryData(roleKeys.byProject(projectId), data)
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
       // Refetch to restore correct order
       queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
     },

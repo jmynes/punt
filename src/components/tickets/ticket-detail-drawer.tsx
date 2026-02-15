@@ -20,7 +20,6 @@ import {
 } from 'lucide-react'
 import type * as React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,6 +79,7 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketId } from '@/lib/ticket-format'
+import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
@@ -847,7 +847,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 onClick={() => {
                   const url = `${window.location.origin}${window.location.pathname}?ticket=${ticketKey}`
                   navigator.clipboard.writeText(url)
-                  toast.success('Link copied to clipboard', {
+                  showToast.success('Link copied to clipboard', {
                     description: ticketKey,
                   })
                 }}

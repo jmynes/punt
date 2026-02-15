@@ -1,10 +1,10 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { isDemoMode } from '@/lib/demo'
 import type { EmailProviderType, EmailSettings } from '@/lib/email/types'
 import type { RepoHostingProvider, SystemSettings } from '@/lib/system-settings'
+import { showToast } from '@/lib/toast'
 import { brandingKeys } from './use-branding'
 
 // Combined settings type that includes both upload and email settings
@@ -135,7 +135,7 @@ export function useUpdateSystemSettings() {
     mutationFn: async (data: UpdateSystemSettingsParams) => {
       // Demo mode: show info toast and return current settings
       if (isDemoMode()) {
-        toast.info('Settings are read-only in demo mode')
+        showToast.info('Settings are read-only in demo mode')
         return { ...DEMO_SYSTEM_SETTINGS, ...data }
       }
 
@@ -175,11 +175,11 @@ export function useUpdateSystemSettings() {
       if (context?.previousSettings) {
         queryClient.setQueryData(systemSettingsKeys.all, context.previousSettings)
       }
-      toast.error(err.message)
+      showToast.error(err.message)
     },
     onSuccess: () => {
       if (!isDemoMode()) {
-        toast.success('Settings updated')
+        showToast.success('Settings updated')
       }
     },
     onSettled: () => {
@@ -202,7 +202,7 @@ export function useUploadLogo() {
     mutationFn: async (file: File) => {
       // Demo mode: show info toast
       if (isDemoMode()) {
-        toast.info('Logo upload is disabled in demo mode')
+        showToast.info('Logo upload is disabled in demo mode')
         return { success: false, logoUrl: '' }
       }
 
@@ -232,10 +232,10 @@ export function useUploadLogo() {
           logoUrl: data.logoUrl,
         })
       }
-      toast.success('Logo uploaded')
+      showToast.success('Logo uploaded')
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
     onSettled: () => {
       if (!isDemoMode()) {
@@ -256,7 +256,7 @@ export function useDeleteLogo() {
     mutationFn: async () => {
       // Demo mode: show info toast
       if (isDemoMode()) {
-        toast.info('Logo deletion is disabled in demo mode')
+        showToast.info('Logo deletion is disabled in demo mode')
         return { success: false }
       }
 
@@ -282,10 +282,10 @@ export function useDeleteLogo() {
           logoUrl: null,
         })
       }
-      toast.success('Logo removed')
+      showToast.success('Logo removed')
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
     onSettled: () => {
       if (!isDemoMode()) {
@@ -304,7 +304,7 @@ export function useSendTestEmail() {
     mutationFn: async (email: string) => {
       // Demo mode: show info toast
       if (isDemoMode()) {
-        toast.info('Test email is disabled in demo mode')
+        showToast.info('Test email is disabled in demo mode')
         return { success: false }
       }
 
@@ -323,11 +323,11 @@ export function useSendTestEmail() {
     },
     onSuccess: (data) => {
       if (!isDemoMode() && data.success !== false) {
-        toast.success('Test email sent successfully')
+        showToast.success('Test email sent successfully')
       }
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }

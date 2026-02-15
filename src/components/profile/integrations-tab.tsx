@@ -2,7 +2,6 @@
 
 import { Bot, Check, Copy, Eye, EyeOff, KeyRound, Terminal, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { showToast } from '@/lib/toast'
 
 interface IntegrationsTabProps {
   isDemo: boolean
@@ -92,9 +92,9 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
       setMcpKeyVisible(true)
       setMcpHasKey(true)
       setMcpKeyHint(data.apiKey.slice(-4))
-      toast.success('MCP API key generated')
+      showToast.success('MCP API key generated')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to generate API key')
+      showToast.error(error instanceof Error ? error.message : 'Failed to generate API key')
     } finally {
       setMcpKeyLoading(false)
     }
@@ -110,9 +110,9 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
       setMcpKeyHint(null)
       setMcpNewKey(null)
       setMcpKeyVisible(false)
-      toast.success('MCP API key revoked')
+      showToast.success('MCP API key revoked')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to revoke API key')
+      showToast.error(error instanceof Error ? error.message : 'Failed to revoke API key')
     } finally {
       setMcpKeyLoading(false)
     }
@@ -125,9 +125,9 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
       setMcpKeyCopied(true)
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
       copyTimeoutRef.current = setTimeout(() => setMcpKeyCopied(false), 2000)
-      toast.success('API key copied to clipboard')
+      showToast.success('API key copied to clipboard')
     } catch {
-      toast.error('Failed to copy to clipboard')
+      showToast.error('Failed to copy to clipboard')
     }
   }, [mcpNewKey])
 

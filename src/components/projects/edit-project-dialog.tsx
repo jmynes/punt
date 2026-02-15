@@ -2,7 +2,6 @@
 
 import { AlertTriangle, Loader2, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
@@ -28,6 +27,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useDeleteProject, useUpdateProject } from '@/hooks/queries/use-projects'
 import { LABEL_COLORS } from '@/lib/constants'
+import { showToast } from '@/lib/toast'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -103,14 +103,14 @@ export function EditProjectDialog() {
       {
         onSuccess: () => {
           const newKey = keyChanged ? formData.key.toUpperCase() : originalKey
-          toast.success('Project updated', {
+          showToast.success('Project updated', {
             description: `${formData.name.trim()} (${newKey})`,
             duration: 4000,
           })
           handleClose()
         },
         onError: (error) => {
-          toast.error('Failed to update project', {
+          showToast.error('Failed to update project', {
             description: error.message,
           })
         },
@@ -127,7 +127,7 @@ export function EditProjectDialog() {
 
     deleteProject.mutate(editProjectId, {
       onSuccess: () => {
-        toast.success('Project deleted', {
+        showToast.success('Project deleted', {
           description: project.name,
           duration: 4000,
         })
@@ -135,7 +135,7 @@ export function EditProjectDialog() {
         handleClose()
       },
       onError: (error) => {
-        toast.error('Failed to delete project', {
+        showToast.error('Failed to delete project', {
           description: error.message,
         })
         setShowDeleteConfirm(false)

@@ -4,12 +4,12 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, CheckCircle2, Clock, FolderKanban, Layers, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef } from 'react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useProjects } from '@/hooks/queries/use-projects'
 import { demoStorage, isDemoMode } from '@/lib/demo'
+import { showToast } from '@/lib/toast'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -114,7 +114,7 @@ export default function DashboardPage() {
 
     if (invalidPath && !hasShownRedirectToast.current) {
       hasShownRedirectToast.current = true
-      toast.error('404 - Page Not Found', {
+      showToast.error('404 - Page Not Found', {
         description: `The page "${invalidPath}" doesn't exist. You've been redirected to the dashboard.`,
         duration: 5000,
       })

@@ -2,10 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { toast } from 'sonner'
 import { getTabId } from '@/hooks/use-realtime'
 import type { CreateTicketInput, UpdateTicketInput } from '@/lib/data-provider'
 import { getDataProvider } from '@/lib/data-provider'
+import { showToast } from '@/lib/toast'
 import { useBoardStore } from '@/stores/board-store'
 import type { Column, ColumnWithTickets, TicketFormData, TicketWithRelations } from '@/types'
 
@@ -152,7 +152,7 @@ export function useCreateTicket() {
       if (context?.tempTicket) {
         removeTicket(projectId, context.tempTicket.id)
       }
-      toast.error(err.message)
+      showToast.error(err.message)
     },
     onSuccess: (newTicket, { projectId }, context) => {
       // Replace temp ticket with real one from server
@@ -233,7 +233,7 @@ export function useUpdateTicket() {
       if (context?.previousColumns) {
         useBoardStore.getState().setColumns(projectId, context.previousColumns)
       }
-      toast.error(err.message)
+      showToast.error(err.message)
     },
     onSettled: (_data, _error, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
@@ -275,7 +275,7 @@ export function useDeleteTicket() {
       if (context?.deletedTicket && context?.columnId) {
         addTicket(projectId, context.columnId, context.deletedTicket)
       }
-      toast.error(err.message)
+      showToast.error(err.message)
     },
     onSettled: (_data, _error, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
@@ -316,7 +316,7 @@ export function useMoveTicket() {
       if (previousColumns) {
         useBoardStore.getState().setColumns(projectId, previousColumns)
       }
-      toast.error(err.message)
+      showToast.error(err.message)
     },
     onSettled: (_data, _error, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
@@ -514,7 +514,7 @@ export function useMoveTickets() {
       if (previousColumns) {
         useBoardStore.getState().setColumns(projectId, previousColumns)
       }
-      toast.error(err.message)
+      showToast.error(err.message)
     },
     onSettled: (_data, _error, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
@@ -593,7 +593,7 @@ export function useCreateLabel() {
       queryClient.invalidateQueries({ queryKey: labelKeys.byProject(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -623,7 +623,7 @@ export function useDeleteLabel() {
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -652,7 +652,7 @@ export function useUpdateLabel() {
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }

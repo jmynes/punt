@@ -2,7 +2,6 @@
 
 import { Camera, Palette, Shield, User } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { ImageCropDialog, resizeImageForCropper } from '@/components/profile/image-crop-dialog'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -11,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getTabId } from '@/hooks/use-realtime'
+import { showToast } from '@/lib/toast'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 
 interface UserData {
@@ -106,9 +106,9 @@ export function ProfileTab({
 
       onUserUpdate({ name })
       await onSessionUpdate()
-      toast.success('Display name updated')
+      showToast.success('Display name updated')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update profile')
+      showToast.error(error instanceof Error ? error.message : 'Failed to update profile')
     } finally {
       setProfileLoading(false)
     }
@@ -127,7 +127,7 @@ export function ProfileTab({
       setCropDialogOpen(true)
     } catch (error) {
       console.error('Failed to load image:', error)
-      toast.error('Failed to load image')
+      showToast.error('Failed to load image')
     }
   }
 
@@ -178,13 +178,13 @@ export function ProfileTab({
       }
 
       await onSessionUpdate()
-      toast.success('Avatar updated')
+      showToast.success('Avatar updated')
     } catch (error) {
       if (blobUrlRef.current) {
         URL.revokeObjectURL(blobUrlRef.current)
         blobUrlRef.current = null
       }
-      toast.error(error instanceof Error ? error.message : 'Failed to upload avatar')
+      showToast.error(error instanceof Error ? error.message : 'Failed to upload avatar')
     } finally {
       setAvatarLoading(false)
       selectedFileRef.current = null
@@ -222,9 +222,9 @@ export function ProfileTab({
 
       setOptimisticAvatar(null)
       await onSessionUpdate()
-      toast.success('Avatar removed')
+      showToast.success('Avatar removed')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove avatar')
+      showToast.error(error instanceof Error ? error.message : 'Failed to remove avatar')
     } finally {
       setAvatarLoading(false)
     }
@@ -253,9 +253,9 @@ export function ProfileTab({
       }
 
       await onSessionUpdate()
-      toast.success(color ? 'Avatar color updated' : 'Avatar color reset to default')
+      showToast.success(color ? 'Avatar color updated' : 'Avatar color reset to default')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update avatar color')
+      showToast.error(error instanceof Error ? error.message : 'Failed to update avatar color')
     } finally {
       setAvatarColorLoading(false)
     }

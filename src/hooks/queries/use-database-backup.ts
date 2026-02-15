@@ -2,11 +2,11 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { signOut } from 'next-auth/react'
-import { toast } from 'sonner'
 import type { ImportPreview } from '@/app/api/admin/database/preview/route'
 import type { DatabaseStats } from '@/app/api/admin/database/stats/route'
 import type { ImportResult } from '@/lib/database-import'
 import { isDemoMode } from '@/lib/demo'
+import { showToast } from '@/lib/toast'
 
 export type { ImportPreview, DatabaseStats }
 
@@ -55,7 +55,7 @@ export function useExportDatabase() {
   return useMutation({
     mutationFn: async (options: ExportOptions) => {
       if (isDemoMode()) {
-        toast.info('Database export is disabled in demo mode')
+        showToast.info('Database export is disabled in demo mode')
         return null
       }
 
@@ -112,10 +112,10 @@ export function useExportDatabase() {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      toast.success('Database exported successfully')
+      showToast.success('Database exported successfully')
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -132,7 +132,7 @@ export function usePreviewDatabase() {
   return useMutation({
     mutationFn: async (params: PreviewDatabaseParams): Promise<ImportPreview> => {
       if (isDemoMode()) {
-        toast.info('Database preview is disabled in demo mode')
+        showToast.info('Database preview is disabled in demo mode')
         throw new Error('Demo mode')
       }
 
@@ -174,7 +174,7 @@ export function useImportDatabase() {
   return useMutation({
     mutationFn: async (params: ImportDatabaseParams): Promise<ImportResult> => {
       if (isDemoMode()) {
-        toast.info('Database import is disabled in demo mode')
+        showToast.info('Database import is disabled in demo mode')
         throw new Error('Demo mode')
       }
 
@@ -199,11 +199,11 @@ export function useImportDatabase() {
         result.files.attachmentsRestored + result.files.avatarsRestored > 0
           ? `, ${result.files.attachmentsRestored + result.files.avatarsRestored} files`
           : ''
-      toast.success(`Database imported successfully (${total} records${fileInfo})`)
+      showToast.success(`Database imported successfully (${total} records${fileInfo})`)
     },
     onError: (err) => {
       if (err.message !== 'Demo mode') {
-        toast.error(err.message)
+        showToast.error(err.message)
       }
     },
   })
@@ -271,7 +271,7 @@ export function useWipeProjects() {
   return useMutation({
     mutationFn: async (params: WipeProjectsParams): Promise<WipeProjectsResult> => {
       if (isDemoMode()) {
-        toast.info('Project wipe is disabled in demo mode')
+        showToast.info('Project wipe is disabled in demo mode')
         throw new Error('Demo mode')
       }
 
@@ -292,7 +292,7 @@ export function useWipeProjects() {
     },
     onError: (err) => {
       if (err.message !== 'Demo mode') {
-        toast.error(err.message)
+        showToast.error(err.message)
       }
     },
   })
@@ -312,7 +312,7 @@ export function useWipeDatabase() {
   return useMutation({
     mutationFn: async (params: WipeDatabaseParams) => {
       if (isDemoMode()) {
-        toast.info('Database wipe is disabled in demo mode')
+        showToast.info('Database wipe is disabled in demo mode')
         throw new Error('Demo mode')
       }
 
@@ -332,7 +332,7 @@ export function useWipeDatabase() {
       return res.json()
     },
     onSuccess: () => {
-      toast.success('Database wiped successfully. Redirecting to login...')
+      showToast.success('Database wiped successfully. Redirecting to login...')
       // Sign out to clear the session cookie, then redirect to login
       setTimeout(() => {
         signOut({ callbackUrl: '/login' })
@@ -340,7 +340,7 @@ export function useWipeDatabase() {
     },
     onError: (err) => {
       if (err.message !== 'Demo mode') {
-        toast.error(err.message)
+        showToast.error(err.message)
       }
     },
   })

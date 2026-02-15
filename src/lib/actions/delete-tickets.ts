@@ -3,8 +3,8 @@
  * This module consolidates the delete logic used by context menu and keyboard shortcuts.
  */
 
-import { toast } from 'sonner'
 import { formatTicketId } from '@/lib/ticket-format'
+import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -68,7 +68,7 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
     for (const { ticket, columnId } of tickets) {
       boardStore.addTicket(projectId, columnId, ticket)
     }
-    toast.error('Failed to delete ticket(s)')
+    showToast.error('Failed to delete ticket(s)')
     onComplete?.()
     return { success: false, deletedTickets: [], error: 'API error' }
   }
@@ -127,7 +127,7 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
           )
         } catch (err) {
           console.error('Failed to restore deleted tickets via API:', err)
-          toast.error('Failed to restore tickets')
+          showToast.error('Failed to restore tickets')
         }
       }
     },

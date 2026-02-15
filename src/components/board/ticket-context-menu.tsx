@@ -27,7 +27,6 @@ import {
   useState,
 } from 'react'
 import { createPortal } from 'react-dom'
-import { toast } from 'sonner'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { resolutionConfig } from '@/components/common/resolution-badge'
 import { MoveToProjectDialog } from '@/components/tickets/move-to-project-dialog'
@@ -50,6 +49,7 @@ import { deleteTickets } from '@/lib/actions/delete-tickets'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketIds } from '@/lib/ticket-format'
+import { rawToast, showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
@@ -244,9 +244,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const ids = getIds()
     const ticketKeys = formatTicketIds(columns, ids)
     const count = ids.length
-    toast.success(count === 1 ? 'Ticket copied' : `${count} tickets copied`, {
+    showToast.success(count === 1 ? 'Ticket copied' : `${count} tickets copied`, {
       description: ticketKeys.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
-      duration: 2000,
+      duration: showToast.DURATION.SHORT,
     })
     setOpen(false)
     setSubmenu(null)
@@ -448,7 +448,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       updates.map((u) => u.ticketId),
     )
 
-    const toastId = toast.success(
+    const toastId = rawToast.success(
       updates.length === 1 ? 'Priority updated' : `${updates.length} priorities updated`,
       { description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '), duration: 3000 },
     )
@@ -515,7 +515,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           ? `${updates.length} tickets set to ${resolution}`
           : `Resolution cleared from ${updates.length} tickets`
 
-    const toastId = toast.success(msg, {
+    const toastId = rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: 3000,
     })
@@ -571,7 +571,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           ? `Assigned ${updates.length} tickets to ${user.name}`
           : `Unassigned ${updates.length} tickets`
 
-    const toastId = toast.success(msg, {
+    const toastId = rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: 3000,
     })
@@ -625,7 +625,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           ? `Set ${updates.length} tickets to ${points} point${points === 1 ? '' : 's'}`
           : `Cleared points from ${updates.length} tickets`
 
-    const toastId = toast.success(msg, {
+    const toastId = rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: 3000,
     })

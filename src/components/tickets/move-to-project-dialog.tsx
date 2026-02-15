@@ -2,7 +2,6 @@
 
 import { FolderOpen } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -14,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { useProjects } from '@/hooks/queries/use-projects'
 import { getTabId } from '@/hooks/use-realtime'
+import { showToast } from '@/lib/toast'
 import { useBoardStore } from '@/stores/board-store'
 import type { TicketWithRelations } from '@/types'
 
@@ -70,7 +70,7 @@ export function MoveToProjectDialog({
       // Remove ticket from current project's board
       removeTicket(projectId, ticket.id)
 
-      toast.success('Ticket moved', {
+      showToast.success('Ticket moved', {
         description: `${projectKey}-${ticket.number} moved to ${selectedProjectKey}-${data.ticket.number}`,
         duration: 5000,
       })
@@ -78,7 +78,7 @@ export function MoveToProjectDialog({
       onOpenChange(false)
       setSelectedProjectKey(null)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to move ticket')
+      showToast.error(error instanceof Error ? error.message : 'Failed to move ticket')
     } finally {
       setIsMoving(false)
     }

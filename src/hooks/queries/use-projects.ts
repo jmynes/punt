@@ -2,9 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { toast } from 'sonner'
 import { getTabId } from '@/hooks/use-realtime'
 import { getDataProvider, type ProjectSummary as ProviderProjectSummary } from '@/lib/data-provider'
+import { showToast } from '@/lib/toast'
 import { type ProjectSummary, useProjectsStore } from '@/stores/projects-store'
 
 export const projectKeys = {
@@ -119,7 +119,7 @@ export function useCreateProject() {
       if (context?.tempProject) {
         removeProject(context.tempProject.id)
       }
-      toast.error(err.message)
+      showToast.error(err.message)
     },
     onSuccess: (newProject, _, context) => {
       // Replace temp project with real one
@@ -127,7 +127,7 @@ export function useCreateProject() {
         removeProject(context.tempProject.id)
         addProject(newProject as ProjectSummary)
       }
-      toast.success('Project created')
+      showToast.success('Project created')
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: projectKeys.all })
@@ -171,10 +171,10 @@ export function useUpdateProject() {
       if (context?.previousProjects) {
         queryClient.setQueryData(projectKeys.all, context.previousProjects)
       }
-      toast.error(err.message)
+      showToast.error(err.message)
     },
     onSuccess: () => {
-      toast.success('Project updated')
+      showToast.success('Project updated')
     },
     onSettled: (_, __, variables) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.all })
@@ -214,10 +214,10 @@ export function useDeleteProject() {
       if (context?.previousProjects) {
         queryClient.setQueryData(projectKeys.all, context.previousProjects)
       }
-      toast.error(err.message)
+      showToast.error(err.message)
     },
     onSuccess: () => {
-      toast.success('Project deleted')
+      showToast.success('Project deleted')
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: projectKeys.all })

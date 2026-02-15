@@ -3,7 +3,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Plus, X } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,6 +19,7 @@ import { columnKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
+import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
@@ -137,7 +137,7 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
             queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
           } catch (err) {
             console.error('Failed to undo column create:', err)
-            toast.error('Failed to undo column creation')
+            showToast.error('Failed to undo column creation')
           } finally {
             useUndoStore.getState().setProcessing(false)
           }
@@ -170,7 +170,7 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
             queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
           } catch (err) {
             console.error('Failed to redo column create:', err)
-            toast.error('Failed to redo column creation')
+            showToast.error('Failed to redo column creation')
           } finally {
             useUndoStore.getState().setProcessing(false)
           }
@@ -186,7 +186,7 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
       setDialogOpen(false)
       setColumnName('')
     } catch (error) {
-      toast.error('Failed to create column', {
+      showToast.error('Failed to create column', {
         description: error instanceof Error ? error.message : 'An error occurred',
       })
     } finally {

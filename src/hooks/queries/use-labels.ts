@@ -1,10 +1,10 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { getTabId } from '@/hooks/use-realtime'
 import { getDataProvider } from '@/lib/data-provider'
 import { demoStorage, isDemoMode } from '@/lib/demo'
+import { showToast } from '@/lib/toast'
 import type { LabelSummary } from '@/types'
 
 // Label with ticket count for management views
@@ -101,7 +101,7 @@ export function useCreateLabel(projectId: string) {
       queryClient.invalidateQueries({ queryKey: labelKeys.byProjectWithCounts(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -125,12 +125,12 @@ export function useUpdateLabel(projectId: string) {
       return provider.updateLabel(projectId, labelId, data)
     },
     onSuccess: () => {
-      toast.success('Label updated')
+      showToast.success('Label updated')
       queryClient.invalidateQueries({ queryKey: labelKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: labelKeys.byProjectWithCounts(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -148,12 +148,12 @@ export function useDeleteLabel(projectId: string) {
       return { success: true }
     },
     onSuccess: () => {
-      toast.success('Label deleted')
+      showToast.success('Label deleted')
       queryClient.invalidateQueries({ queryKey: labelKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: labelKeys.byProjectWithCounts(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }

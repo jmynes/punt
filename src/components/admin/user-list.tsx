@@ -24,8 +24,6 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
-
 import { PageHeader } from '@/components/common'
 import {
   AlertDialog,
@@ -72,6 +70,7 @@ import {
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
 import { demoStorage, isDemoMode } from '@/lib/demo'
+import { showToast } from '@/lib/toast'
 import { useAdminUndoStore } from '@/stores/admin-undo-store'
 import { CreateUserDialog } from './create-user-dialog'
 
@@ -219,7 +218,7 @@ export function UserList() {
     }) => {
       if (isDemoMode()) {
         // Demo mode: simulate success
-        toast.info('User management is read-only in demo mode')
+        showToast.info('User management is read-only in demo mode')
         return { user: { username, ...updates }, updates, previousUser }
       }
       const res = await fetch(`/api/admin/users/${username}`, {
@@ -251,22 +250,22 @@ export function UserList() {
 
         if (updates.isSystemAdmin) {
           pushUserMakeAdmin([userSnapshot])
-          toast.success(`${user.name} is now an admin (Ctrl+Z to undo)`)
+          showToast.success(`${user.name} is now an admin (Ctrl+Z to undo)`)
         } else {
           pushUserRemoveAdmin([userSnapshot])
-          toast.success(`${user.name} is no longer an admin (Ctrl+Z to undo)`)
+          showToast.success(`${user.name} is no longer an admin (Ctrl+Z to undo)`)
         }
       }
     },
     onError: (error) => {
-      toast.error(error.message)
+      showToast.error(error.message)
     },
   })
 
   const deleteUser = useMutation({
     mutationFn: async ({ username, permanent }: { username: string; permanent: boolean }) => {
       if (isDemoMode()) {
-        toast.info('User management is read-only in demo mode')
+        showToast.info('User management is read-only in demo mode')
         return { action: 'demo' }
       }
       const url = permanent
@@ -282,11 +281,11 @@ export function UserList() {
     onSuccess: (data) => {
       if (data.action === 'demo') return
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      toast.success(data.action === 'deleted' ? 'User permanently deleted' : 'User disabled')
+      showToast.success(data.action === 'deleted' ? 'User permanently deleted' : 'User disabled')
       setDeleteUsername(null)
     },
     onError: (error) => {
-      toast.error(error.message)
+      showToast.error(error.message)
     },
   })
 
@@ -356,7 +355,7 @@ export function UserList() {
               ? 'admins'
               : 'non-admins'
             : 'in that state'
-        toast.info(
+        showToast.info(
           `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already ${state}`,
         )
         setSelectedIds(new Set())
@@ -379,15 +378,15 @@ export function UserList() {
           : ''
 
       if (failed === 0) {
-        toast.success(`${message}${extra} (Ctrl+Z to undo)`)
+        showToast.success(`${message}${extra} (Ctrl+Z to undo)`)
       } else {
-        toast.warning(`${message}, failed ${failed}`)
+        showToast.warning(`${message}, failed ${failed}`)
       }
       setSelectedIds(new Set())
       setBulkAction(null)
     },
     onError: () => {
-      toast.error('Bulk update failed')
+      showToast.error('Bulk update failed')
       setBulkAction(null)
     },
   })
@@ -436,21 +435,21 @@ export function UserList() {
       }
 
       if (succeeded === 0 && skipped > 0) {
-        toast.info(
+        showToast.info(
           `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already disabled`,
         )
       } else if (failed === 0) {
         const msg = `Disabled ${succeeded} user${succeeded !== 1 ? 's' : ''}`
         const extra = skipped > 0 ? ` (${skipped} already disabled)` : ''
-        toast.success(`${msg}${extra} (Ctrl+Z to undo)`)
+        showToast.success(`${msg}${extra} (Ctrl+Z to undo)`)
       } else {
-        toast.warning(`Disabled ${succeeded}, failed ${failed}`)
+        showToast.warning(`Disabled ${succeeded}, failed ${failed}`)
       }
       setSelectedIds(new Set())
       setBulkAction(null)
     },
     onError: () => {
-      toast.error('Bulk disable failed')
+      showToast.error('Bulk disable failed')
       setBulkAction(null)
     },
   })
@@ -499,21 +498,21 @@ export function UserList() {
       }
 
       if (succeeded === 0 && skipped > 0) {
-        toast.info(
+        showToast.info(
           `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already enabled`,
         )
       } else if (failed === 0) {
         const msg = `Enabled ${succeeded} user${succeeded !== 1 ? 's' : ''}`
         const extra = skipped > 0 ? ` (${skipped} already enabled)` : ''
-        toast.success(`${msg}${extra} (Ctrl+Z to undo)`)
+        showToast.success(`${msg}${extra} (Ctrl+Z to undo)`)
       } else {
-        toast.warning(`Enabled ${succeeded}, failed ${failed}`)
+        showToast.warning(`Enabled ${succeeded}, failed ${failed}`)
       }
       setSelectedIds(new Set())
       setBulkAction(null)
     },
     onError: () => {
-      toast.error('Bulk enable failed')
+      showToast.error('Bulk enable failed')
       setBulkAction(null)
     },
   })
@@ -560,9 +559,9 @@ export function UserList() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
       if (failed === 0) {
-        toast.success(`Permanently deleted ${succeeded} user${succeeded !== 1 ? 's' : ''}`)
+        showToast.success(`Permanently deleted ${succeeded} user${succeeded !== 1 ? 's' : ''}`)
       } else {
-        toast.warning(`Deleted ${succeeded}, failed ${failed}`)
+        showToast.warning(`Deleted ${succeeded}, failed ${failed}`)
       }
       setSelectedIds(new Set())
       closeBulkDeleteDialog()
@@ -634,11 +633,11 @@ export function UserList() {
       )
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
-      toast.success(
+      showToast.success(
         `${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Y to redo)`,
       )
     } catch {
-      toast.error('Failed to undo')
+      showToast.error('Failed to undo')
     }
   }, [undo, queryClient, tabId])
 
@@ -691,11 +690,11 @@ export function UserList() {
       )
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
-      toast.success(
+      showToast.success(
         `${verb} ${action.users.length} user${action.users.length !== 1 ? 's' : ''} (Ctrl+Z to undo)`,
       )
     } catch {
-      toast.error('Failed to redo')
+      showToast.error('Failed to redo')
     }
   }, [redo, queryClient, tabId])
 

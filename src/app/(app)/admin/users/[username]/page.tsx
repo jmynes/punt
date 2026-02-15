@@ -17,7 +17,6 @@ import {
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
-import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -32,6 +31,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useIsSystemAdmin } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
+import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useAdminUndoStore } from '@/stores/admin-undo-store'
 
@@ -250,7 +250,7 @@ function AdminUserProfileContent() {
       // Invalidate the cache to get fresh data
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', username] })
 
-      toast.success(isUndo ? `Role reverted to ${roleName}` : `Role updated to ${roleName}`)
+      showToast.success(isUndo ? `Role reverted to ${roleName}` : `Role updated to ${roleName}`)
     },
     [queryClient, username],
   )
@@ -270,7 +270,7 @@ function AdminUserProfileContent() {
           true,
         )
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to undo')
+        showToast.error(err instanceof Error ? err.message : 'Failed to undo')
         // Re-push the action since undo failed
         pushMemberRoleChange(action.member)
       }
@@ -292,7 +292,7 @@ function AdminUserProfileContent() {
           false,
         )
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to redo')
+        showToast.error(err instanceof Error ? err.message : 'Failed to redo')
       }
     }
   }, [redo, performRoleChange])
@@ -357,11 +357,11 @@ function AdminUserProfileContent() {
         },
       )
 
-      toast.success(
+      showToast.success(
         newValue ? `${user.name} is now an admin` : `${user.name} is no longer an admin`,
       )
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update user')
+      showToast.error(err instanceof Error ? err.message : 'Failed to update user')
     }
   }
 
@@ -402,9 +402,11 @@ function AdminUserProfileContent() {
         },
       )
 
-      toast.success(newValue ? `${user.name} has been enabled` : `${user.name} has been disabled`)
+      showToast.success(
+        newValue ? `${user.name} has been enabled` : `${user.name} has been disabled`,
+      )
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update user')
+      showToast.error(err instanceof Error ? err.message : 'Failed to update user')
     }
   }
 
@@ -465,14 +467,14 @@ function AdminUserProfileContent() {
         newRoleName,
       })
 
-      toast.success(`Role updated to ${newRoleName}`, {
+      showToast.success(`Role updated to ${newRoleName}`, {
         action: {
           label: 'Undo',
           onClick: handleUndo,
         },
       })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update role')
+      showToast.error(err instanceof Error ? err.message : 'Failed to update role')
     }
   }
 

@@ -3,8 +3,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Eye, EyeOff, Loader2, UserPlus } from 'lucide-react'
 import { useState } from 'react'
-import { toast } from 'sonner'
-
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -19,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { isDemoMode } from '@/lib/demo'
+import { showToast } from '@/lib/toast'
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false)
@@ -36,7 +35,7 @@ export function CreateUserDialog() {
     mutationFn: async () => {
       // Demo mode: show info toast and don't submit
       if (isDemoMode()) {
-        toast.info('User creation is disabled in demo mode')
+        showToast.info('User creation is disabled in demo mode')
         return { demo: true }
       }
 
@@ -64,11 +63,11 @@ export function CreateUserDialog() {
         return
       }
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      toast.success('User created successfully')
+      showToast.success('User created successfully')
       handleClose()
     },
     onError: (error) => {
-      toast.error(error.message)
+      showToast.error(error.message)
     },
   })
 

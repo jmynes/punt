@@ -3,7 +3,6 @@
 import { KeyRound, Mail, Trash2 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
-import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getTabId } from '@/hooks/use-realtime'
+import { showToast } from '@/lib/toast'
 
 interface UserData {
   id: string
@@ -78,9 +78,9 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
       await onSessionUpdate()
       setNewEmail('')
       setEmailPassword('')
-      toast.success('Email address updated')
+      showToast.success('Email address updated')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to change email')
+      showToast.error(error instanceof Error ? error.message : 'Failed to change email')
     } finally {
       setEmailLoading(false)
     }
@@ -90,7 +90,7 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
     e.preventDefault()
 
     if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match')
+      showToast.error('New passwords do not match')
       return
     }
 
@@ -112,9 +112,9 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-      toast.success('Password changed successfully')
+      showToast.success('Password changed successfully')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to change password')
+      showToast.error(error instanceof Error ? error.message : 'Failed to change password')
     } finally {
       setPasswordLoading(false)
     }
@@ -122,12 +122,12 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
 
   const handleDeleteAccount = async () => {
     if (isDemo) {
-      toast.error('Account deletion is not available in demo mode')
+      showToast.error('Account deletion is not available in demo mode')
       return
     }
 
     if (deleteConfirmation !== 'DELETE MY ACCOUNT') {
-      toast.error('Please type "DELETE MY ACCOUNT" to confirm')
+      showToast.error('Please type "DELETE MY ACCOUNT" to confirm')
       return
     }
 
@@ -149,10 +149,10 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
         throw new Error(data.error || 'Failed to delete account')
       }
 
-      toast.success('Account deleted. Signing out...')
+      showToast.success('Account deleted. Signing out...')
       await signOut({ callbackUrl: '/login' })
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete account')
+      showToast.error(error instanceof Error ? error.message : 'Failed to delete account')
       setDeleteLoading(false)
     }
   }

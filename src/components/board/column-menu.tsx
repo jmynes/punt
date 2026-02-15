@@ -11,7 +11,6 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
@@ -58,6 +57,7 @@ import {
   resolveColumnColor,
   resolveColumnIconName,
 } from '@/lib/status-icons'
+import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
@@ -165,11 +165,11 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
         // Invalidate column queries to refresh data
         queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
 
-        toast.success('Column moved', {
+        showToast.success('Column moved', {
           description: `"${column.name}" moved ${direction}`,
         })
       } catch (error) {
-        toast.error('Failed to move column', {
+        showToast.error('Failed to move column', {
           description: error instanceof Error ? error.message : 'An error occurred',
         })
       } finally {
@@ -284,7 +284,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
             queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
           } catch (err) {
             console.error('Failed to undo column rename:', err)
-            toast.error('Failed to undo column update')
+            showToast.error('Failed to undo column update')
           } finally {
             useUndoStore.getState().setProcessing(false)
           }
@@ -315,7 +315,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
             queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
           } catch (err) {
             console.error('Failed to redo column rename:', err)
-            toast.error('Failed to redo column update')
+            showToast.error('Failed to redo column update')
           } finally {
             useUndoStore.getState().setProcessing(false)
           }
@@ -342,7 +342,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
 
       setRenameOpen(false)
     } catch (error) {
-      toast.error('Failed to update column', {
+      showToast.error('Failed to update column', {
         description: error instanceof Error ? error.message : 'An error occurred',
       })
     } finally {
@@ -523,7 +523,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
             queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
           } catch (err) {
             console.error('Failed to undo column delete:', err)
-            toast.error('Failed to undo column deletion')
+            showToast.error('Failed to undo column deletion')
           } finally {
             useUndoStore.getState().setProcessing(false)
           }
@@ -573,7 +573,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
             queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
           } catch (err) {
             console.error('Failed to redo column delete:', err)
-            toast.error('Failed to redo column deletion')
+            showToast.error('Failed to redo column deletion')
           } finally {
             useUndoStore.getState().setProcessing(false)
           }
@@ -588,7 +588,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
 
       setDeleteOpen(false)
     } catch (error) {
-      toast.error('Failed to delete column', {
+      showToast.error('Failed to delete column', {
         description: error instanceof Error ? error.message : 'An error occurred',
       })
     } finally {
