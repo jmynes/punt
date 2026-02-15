@@ -1600,11 +1600,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       <>
                         <span className="flex items-center gap-1">
                           <MessageSquare className="h-3.5 w-3.5" />
-                          {ticket._count.comments} comments
+                          {ticket._count.comments}{' '}
+                          {ticket._count.comments === 1 ? 'comment' : 'comments'}
                         </span>
                         <span className="flex items-center gap-1">
                           <Paperclip className="h-3.5 w-3.5" />
-                          {tempAttachments.length} attachments
+                          {tempAttachments.length}{' '}
+                          {tempAttachments.length === 1 ? 'attachment' : 'attachments'}
                         </span>
                       </>
                     )}
