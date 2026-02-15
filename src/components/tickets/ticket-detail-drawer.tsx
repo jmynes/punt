@@ -58,13 +58,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { Textarea } from '@/components/ui/textarea'
 import {
   useAddAttachments,
   useRemoveAttachment,
   useUploadConfig,
 } from '@/hooks/queries/use-attachments'
-import { useAddComment, useTicketComments } from '@/hooks/queries/use-comments'
 import {
   useCreateLabel,
   useDeleteLabel,
@@ -99,6 +97,7 @@ import { PriorityBadge } from '../common/priority-badge'
 import { resolutionConfig } from '../common/resolution-badge'
 import { TypeBadge } from '../common/type-badge'
 import { AttachmentList } from './attachment-list'
+import { CommentsSection, type CommentsSectionRef } from './comments-section'
 import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
 import { DescriptionEditor } from './description-editor'
@@ -160,13 +159,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const updateLabelMutation = useUpdateLabel()
   const addAttachmentsMutation = useAddAttachments()
   const removeAttachmentMutation = useRemoveAttachment()
-  const addCommentMutation = useAddComment()
-
-  // Fetch comments for the ticket
-  const { data: comments = [], isLoading: commentsLoading } = useTicketComments(
-    projectId,
-    ticket?.id ?? '',
-  )
 
   // Get upload config for max attachments
   const { data: uploadConfig } = useUploadConfig()
@@ -223,6 +215,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [rememberPreference, setRememberPreference] = useState(false)
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
   const storyPointsInputRef = useRef<HTMLInputElement>(null)
+  const commentsSectionRef = useRef<CommentsSectionRef>(null)
+  const [hasPendingComment, setHasPendingComment] = useState(false)
 
   const { autoSaveOnDrawerClose, setAutoSaveOnDrawerClose } = useSettingsStore()
 
@@ -248,25 +242,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [tempCreatorId, setTempCreatorId] = useState<string | null>(null)
   const [tempAttachments, setTempAttachments] = useState<UploadedFileInfo[]>([])
   const [showRemoveAllAttachments, setShowRemoveAllAttachments] = useState(false)
-  const [commentText, setCommentText] = useState('')
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
-
-  // Callback for adding a comment
-  const handleAddComment = useCallback(async () => {
-    if (!projectId || !ticket?.id || !commentText.trim()) return
-
-    setIsSubmittingComment(true)
-    try {
-      await addCommentMutation.mutateAsync({
-        projectId,
-        ticketId: ticket.id,
-        content: commentText.trim(),
-      })
-      setCommentText('')
-    } finally {
-      setIsSubmittingComment(false)
-    }
-  }, [projectId, ticket?.id, commentText, addCommentMutation])
 
   // Ensure current user is always in the members list for assignment
   const membersWithCurrentUser = useMemo(() => {
@@ -469,6 +444,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const hasUnsavedChanges = useMemo(() => {
     if (!ticket) return false
     return (
+      hasPendingComment ||
       tempTitle !== ticket.title ||
       tempDescription !== (ticket.description || '') ||
       tempType !== ticket.type ||
@@ -499,6 +475,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     )
   }, [
     ticket,
+    hasPendingComment,
     tempTitle,
     tempDescription,
     tempType,
@@ -612,6 +589,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       updates,
       previousTicket: oldTicket,
     })
+
+    // Submit pending comment if any
+    if (commentsSectionRef.current?.hasPendingComment()) {
+      commentsSectionRef.current.submitPendingComment()
+    }
   }, [
     ticket,
     hasUnsavedChanges,
@@ -785,6 +767,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setTempParentId(ticket.parentId)
       setTempStatusId(ticket.columnId)
     }
+    // Discard pending comment
+    commentsSectionRef.current?.discardPendingComment()
     setEditingField(null)
   }
 
@@ -1623,94 +1607,29 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 <div className="flex items-center justify-between">
                   <Label className="text-zinc-400">Activity</Label>
                   <div className="flex items-center gap-4 text-xs text-zinc-500">
-                    <span className="flex items-center gap-1">
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Paperclip className="h-3.5 w-3.5" />
-                      {tempAttachments.length}{' '}
-                      {tempAttachments.length === 1 ? 'attachment' : 'attachments'}
-                    </span>
+                    {ticket._count && (
+                      <>
+                        <span className="flex items-center gap-1">
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          {ticket._count.comments} comments
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Paperclip className="h-3.5 w-3.5" />
+                          {tempAttachments.length} attachments
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                {/* Comments list */}
-                {commentsLoading ? (
-                  <div className="text-sm text-zinc-500">Loading comments...</div>
-                ) : comments.length > 0 ? (
-                  <div className="space-y-3">
-                    {comments.map((comment) => (
-                      <div
-                        key={comment.id}
-                        className={cn(
-                          'rounded-lg border p-3',
-                          comment.isSystemGenerated
-                            ? 'border-amber-500/30 bg-amber-500/5'
-                            : 'border-zinc-700 bg-zinc-800/50',
-                        )}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <Avatar className="h-6 w-6">
-                            {comment.author.avatar && (
-                              <AvatarImage src={comment.author.avatar} alt={comment.author.name} />
-                            )}
-                            <AvatarFallback
-                              className="text-xs"
-                              style={{
-                                backgroundColor:
-                                  comment.author.avatarColor ||
-                                  getAvatarColor(comment.author.id || comment.author.name),
-                              }}
-                            >
-                              {getInitials(comment.author.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="text-sm font-medium text-zinc-200 truncate">
-                              {comment.author.name}
-                            </span>
-                            {comment.isSystemGenerated && (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] px-1.5 py-0 h-4 border-amber-500/50 text-amber-400"
-                              >
-                                {comment.source === 'mcp' ? 'MCP' : 'System'}
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="text-xs text-zinc-500 flex-shrink-0">
-                            {format(new Date(comment.createdAt), "MMM d 'at' h:mm a")}
-                          </span>
-                        </div>
-                        <div className="text-sm text-zinc-300 whitespace-pre-wrap">
-                          {comment.content}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-
-                {/* Comment input */}
-                <div className="space-y-2">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    rows={3}
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    className="resize-none bg-zinc-900 border-zinc-700 focus:border-amber-500"
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={handleAddComment}
-                      disabled={!commentText.trim() || isSubmittingComment}
-                    >
-                      {isSubmittingComment ? 'Posting...' : 'Comment'}
-                    </Button>
-                  </div>
-                </div>
+                {/* Comments */}
+                <CommentsSection
+                  ref={commentsSectionRef}
+                  projectId={projectKey}
+                  ticketId={ticket.id}
+                  ticketKey={`${projectKey}-${ticket.number}`}
+                  onPendingCommentChange={setHasPendingComment}
+                />
               </div>
             </div>
           </ScrollArea>

@@ -1,10 +1,13 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import {
+  type CommentData,
   createComment,
   createTicket,
+  deleteComment,
   deleteTicket,
   listColumns,
+  listComments,
   listLabels,
   listSprints,
   listTickets,
@@ -944,4 +947,134 @@ export function registerTicketTools(server: McpServer) {
       return textResponse(`Deleted **${key}**: ${escapeMarkdown(existingTicket.title)}`)
     },
   )
+
+  // list_comments - List all comments on a ticket
+  server.tool(
+    'list_comments',
+    'List all comments on a ticket',
+    {
+      key: z.string().describe('Ticket key (e.g., PUNT-2)'),
+    },
+    async ({ key }) => {
+      const parsed = parseTicketKey(key)
+      if (!parsed) {
+        return errorResponse(`Invalid ticket key format: ${key}`)
+      }
+
+      // Get the ticket to find its ID
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
+      }
+
+      const ticket = ticketsResult.data?.find((t) => t.number === parsed.number)
+      if (!ticket) {
+        return errorResponse(`Ticket not found: ${key}`)
+      }
+
+      const result = await listComments(parsed.projectKey, ticket.id)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      const comments = result.data ?? []
+      if (comments.length === 0) {
+        return textResponse(`No comments on **${key}**`)
+      }
+
+      return textResponse(formatCommentList(key, comments))
+    },
+  )
+
+  // add_comment - Add a comment to a ticket
+  server.tool(
+    'add_comment',
+    'Add a comment to a ticket',
+    {
+      key: z.string().describe('Ticket key (e.g., PUNT-2)'),
+      content: z.string().min(1).describe('Comment content (supports markdown)'),
+    },
+    async ({ key, content }) => {
+      const parsed = parseTicketKey(key)
+      if (!parsed) {
+        return errorResponse(`Invalid ticket key format: ${key}`)
+      }
+
+      // Get the ticket to find its ID
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
+      }
+
+      const ticket = ticketsResult.data?.find((t) => t.number === parsed.number)
+      if (!ticket) {
+        return errorResponse(`Ticket not found: ${key}`)
+      }
+
+      const result = await createComment(parsed.projectKey, ticket.id, { content })
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      const comment = unwrapData(result)
+      return textResponse(
+        `Added comment to **${key}** by ${escapeMarkdown(comment.author.name)}:\n\n${escapeMarkdown(truncate(content, 200))}`,
+      )
+    },
+  )
+
+  // delete_comment - Delete a comment from a ticket
+  server.tool(
+    'delete_comment',
+    'Delete a comment from a ticket (must be comment author or have moderation permissions)',
+    {
+      key: z.string().describe('Ticket key (e.g., PUNT-2)'),
+      commentId: z.string().describe('Comment ID to delete'),
+    },
+    async ({ key, commentId }) => {
+      const parsed = parseTicketKey(key)
+      if (!parsed) {
+        return errorResponse(`Invalid ticket key format: ${key}`)
+      }
+
+      // Get the ticket to find its ID
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
+      }
+
+      const ticket = ticketsResult.data?.find((t) => t.number === parsed.number)
+      if (!ticket) {
+        return errorResponse(`Ticket not found: ${key}`)
+      }
+
+      const result = await deleteComment(parsed.projectKey, ticket.id, commentId)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      return textResponse(`Deleted comment from **${key}**`)
+    },
+  )
+}
+
+/**
+ * Format a list of comments for display
+ */
+function formatCommentList(ticketKey: string, comments: CommentData[]): string {
+  const lines: string[] = []
+  lines.push(`## Comments on ${ticketKey}`)
+  lines.push('')
+
+  for (const comment of comments) {
+    const date = formatDate(comment.createdAt)
+    const systemTag = comment.isSystemGenerated ? ` _(${comment.source || 'system'})_` : ''
+    lines.push(`### ${escapeMarkdown(comment.author.name)}${systemTag} - ${date}`)
+    lines.push(`_ID: ${comment.id}_`)
+    lines.push('')
+    lines.push(escapeMarkdown(comment.content))
+    lines.push('')
+  }
+
+  return lines.join('\n')
 }
