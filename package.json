@@ -30,6 +30,7 @@
     "release": "node scripts/release.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@auth/prisma-adapter": "^2.11.1",
     "@codemirror/commands": "^6.10.2",
     "@codemirror/language-data": "^6.5.2",

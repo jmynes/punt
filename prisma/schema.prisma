@@ -32,6 +32,9 @@ model User {
   // MCP API access
   mcpApiKey String? @unique // API key for MCP authentication
 
+  // Claude Chat API access
+  anthropicApiKey String? // User's own Anthropic API key for embedded chat
+
   // Ticket relations
   assignedTickets  Ticket[]        @relation("Assignee")
   createdTickets   Ticket[]        @relation("Creator")

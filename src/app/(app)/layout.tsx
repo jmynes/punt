@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ChatFAB, ChatPanel } from '@/components/chat'
 import { EmailVerificationBanner } from '@/components/common/email-verification-banner'
 import { Dialogs } from '@/components/dialogs'
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
@@ -20,6 +21,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <MobileNotice />
       <Dialogs />
       <KeyboardShortcuts />
+      <ChatPanel />
+      <ChatFAB />
     </div>
   )
 }
