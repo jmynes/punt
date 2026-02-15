@@ -5,6 +5,8 @@
  * and category groupings for the role-based access control system.
  */
 
+import { logger } from '@/lib/logger'
+
 // Permission categories for UI grouping
 export const PERMISSION_CATEGORIES = {
   PROJECT: 'project',
@@ -243,14 +245,30 @@ export function isValidPermission(value: string): value is Permission {
   return ALL_PERMISSIONS.includes(value as Permission)
 }
 
+// Maximum size for permission JSON to prevent memory exhaustion attacks
+const MAX_PERMISSIONS_JSON_SIZE = 10_000 // 10KB should be plenty for permissions
+
 // Parse and validate a permissions array from JSON
 export function parsePermissions(json: string | null): Permission[] {
   if (!json) return []
+  // Security: Prevent memory exhaustion from oversized JSON
+  if (json.length > MAX_PERMISSIONS_JSON_SIZE) {
+    logger.warn(
+      `Permissions JSON exceeds size limit (${json.length} > ${MAX_PERMISSIONS_JSON_SIZE} bytes). ` +
+        'This may indicate corrupted data or an attack attempt.',
+    )
+    return []
+  }
   try {
     const parsed = JSON.parse(json)
-    if (!Array.isArray(parsed)) return []
+    if (!Array.isArray(parsed)) {
+      logger.warn('Permissions JSON is not an array. Using empty permissions.')
+      return []
+    }
     return parsed.filter(isValidPermission)
-  } catch {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    logger.warn(`Failed to parse permissions JSON: ${errorMessage}. Using empty permissions.`)
     return []
   }
 }

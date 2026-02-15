@@ -40,19 +40,42 @@ export function validationError(result: { success: false; error: ZodError }): Ne
 }
 
 /**
- * Creates a rate limit exceeded response.
+ * Format a duration in milliseconds to a human-readable string.
+ */
+function formatWaitTime(ms: number): string {
+  const seconds = Math.ceil(ms / 1000)
+  if (seconds < 60) {
+    return `${seconds} second${seconds === 1 ? '' : 's'}`
+  }
+  const minutes = Math.ceil(seconds / 60)
+  if (minutes < 60) {
+    return `${minutes} minute${minutes === 1 ? '' : 's'}`
+  }
+  const hours = Math.ceil(minutes / 60)
+  return `${hours} hour${hours === 1 ? '' : 's'}`
+}
+
+/**
+ * Creates a rate limit exceeded response with a human-readable wait time.
  *
  * @param rateLimit - The rate limit result with remaining count and reset time
  * @returns NextResponse with 429 status and rate limit headers
  */
 export function rateLimitExceeded(rateLimit: { remaining: number; resetAt: Date }): NextResponse {
+  const waitMs = rateLimit.resetAt.getTime() - Date.now()
+  const waitTime = formatWaitTime(Math.max(0, waitMs))
+
   return NextResponse.json(
-    { error: 'Too many requests. Please try again later.' },
+    {
+      error: `Too many requests. Please try again in ${waitTime}.`,
+      retryAfter: rateLimit.resetAt.toISOString(),
+    },
     {
       status: 429,
       headers: {
         'X-RateLimit-Remaining': String(rateLimit.remaining),
         'X-RateLimit-Reset': rateLimit.resetAt.toISOString(),
+        'Retry-After': String(Math.ceil(Math.max(0, waitMs) / 1000)),
       },
     },
   )

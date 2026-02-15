@@ -31,8 +31,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { username, password } = parsed.data
 
+        // Normalize username to NFC form for consistent matching
+        // Registration also normalizes to NFC, so this ensures login works
+        // regardless of which Unicode form the client sends
+        const normalizedUsername = username.normalize('NFC')
+
         const user = await db.user.findUnique({
-          where: { username },
+          where: { username: normalizedUsername },
         })
 
         if (!user || !user.passwordHash) {

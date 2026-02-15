@@ -120,11 +120,15 @@ export interface SendEmailResult {
 
 /**
  * Sanitize an email display name to prevent header injection attacks.
- * Removes or escapes characters that could be used to:
- * - Break out of quoted strings (")
- * - Inject fake email addresses (< >)
- * - Inject new headers (\r \n)
- * - Escape sequences (\)
+ * Uses a whitelist approach - only allows safe characters:
+ * - Alphanumeric (any language via Unicode Letter/Number categories)
+ * - Common punctuation (spaces, hyphens, apostrophes, periods, commas)
+ *
+ * This prevents:
+ * - Header injection (\r \n)
+ * - Email address injection (< >)
+ * - Quoted-string escaping (" \)
+ * - Any other potentially dangerous characters
  *
  * @param name The display name to sanitize
  * @returns Sanitized display name safe for email headers
@@ -132,14 +136,18 @@ export interface SendEmailResult {
 export function sanitizeEmailDisplayName(name: string): string {
   if (!name) return ''
 
-  // Remove characters that could be used for header injection
-  // - \r\n: Header injection (most critical)
-  // - < >: Could inject email addresses
-  // - " \: Could break quoted-string format
-  return name
-    .replace(/[\r\n]/g, '') // Remove newlines (header injection)
-    .replace(/[<>]/g, '') // Remove angle brackets (email injection)
-    .replace(/["\\]/g, '') // Remove quotes and backslash (format breaking)
+  // Normalize Unicode to NFC form for consistent handling
+  const normalized = name.normalize('NFC')
+
+  // Whitelist approach: only allow safe characters
+  // - Unicode letters and numbers (supports international names)
+  // - Common punctuation: space, hyphen, apostrophe, period, comma
+  // This is safer than blacklisting dangerous characters
+  const sanitized = normalized
+    .replace(/[^\p{L}\p{N}\s\-'.,]/gu, '') // Keep only safe chars
+    .replace(/\s+/g, ' ') // Collapse multiple spaces
     .trim()
     .slice(0, 100) // Enforce max length
+
+  return sanitized
 }

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { rateLimitExceeded } from '@/lib/api-utils'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { DEFAULT_ROLE_NAMES } from '@/lib/permissions'
 import { createDefaultRolesForProject } from '@/lib/permissions/create-default-roles'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -94,10 +96,18 @@ export async function GET() {
 
 /**
  * POST /api/projects - Create a new project
+ * Rate limited: 10 projects per hour per user
  */
 export async function POST(request: Request) {
   try {
     const user = await requireAuth()
+
+    // Rate limit project creation to prevent resource exhaustion
+    const clientIp = getClientIp(request)
+    const rateLimit = await checkRateLimit(`${clientIp}:${user.id}`, 'projects/create')
+    if (!rateLimit.allowed) {
+      return rateLimitExceeded(rateLimit)
+    }
 
     const body = await request.json()
     const parsed = createProjectSchema.safeParse(body)

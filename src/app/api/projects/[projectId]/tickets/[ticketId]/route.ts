@@ -21,7 +21,7 @@ const updateTicketSchema = z.object({
   columnId: z.string().min(1).optional(),
   order: z.number().optional(),
   assigneeId: z.string().nullable().optional(),
-  creatorId: z.string().nullable().optional(),
+  reporterId: z.string().nullable().optional(),
   sprintId: z.string().nullable().optional(),
   parentId: z.string().nullable().optional(),
   storyPoints: z.number().nullable().optional(),
@@ -115,7 +115,7 @@ export async function PATCH(
       return validationError(parsed)
     }
 
-    const { labelIds, watcherIds, ...updateData } = parsed.data
+    const { labelIds, watcherIds, reporterId, ...updateData } = parsed.data
 
     // If changing column, verify new column belongs to project
     if (updateData.columnId && updateData.columnId !== existingTicket.columnId) {
@@ -171,10 +171,10 @@ export async function PATCH(
       }
     }
 
-    // Validate creatorId (reporter) is a project member (if provided and not null)
-    if (updateData.creatorId !== undefined && updateData.creatorId !== null) {
+    // Validate reporterId is a project member (if provided and not null)
+    if (reporterId !== undefined && reporterId !== null) {
       const reporterMembership = await db.projectMember.findUnique({
-        where: { userId_projectId: { userId: updateData.creatorId, projectId } },
+        where: { userId_projectId: { userId: reporterId, projectId } },
       })
       if (!reporterMembership) {
         return badRequestError('Reporter must be a project member')
@@ -202,6 +202,11 @@ export async function PATCH(
       if (value !== undefined) {
         dbUpdateData[key] = value
       }
+    }
+
+    // Map reporterId to creatorId (API uses "reporter", DB uses "creator")
+    if (reporterId !== undefined) {
+      dbUpdateData.creatorId = reporterId
     }
 
     // Cast type and priority if provided

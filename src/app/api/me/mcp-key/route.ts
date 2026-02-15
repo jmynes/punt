@@ -1,12 +1,22 @@
-import { randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-utils'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 
 /**
+ * Hash an MCP API key using SHA-256
+ * SHA-256 is appropriate for high-entropy API keys (256 bits of randomness)
+ * Unlike passwords, these keys can't be brute-forced due to their entropy
+ */
+function hashMcpKey(apiKey: string): string {
+  return createHash('sha256').update(apiKey).digest('hex')
+}
+
+/**
  * GET /api/me/mcp-key - Get current MCP API key status
- * Returns whether user has an MCP key and a hint (last 4 chars) for identification
+ * Returns whether user has an MCP key (we can only check if hash exists,
+ * not show a hint since we no longer store the plaintext key)
  */
 export async function GET() {
   try {
@@ -17,9 +27,11 @@ export async function GET() {
       select: { mcpApiKey: true },
     })
 
+    // Note: Since we now store hashes, we can't show a hint of the original key
+    // We can only indicate whether a key exists
     return NextResponse.json({
       hasKey: !!user?.mcpApiKey,
-      keyHint: user?.mcpApiKey ? user.mcpApiKey.slice(-4) : null,
+      keyHint: null, // No longer available since keys are hashed
     })
   } catch (error) {
     return handleApiError(error, 'get MCP key status')
@@ -29,6 +41,7 @@ export async function GET() {
 /**
  * POST /api/me/mcp-key - Generate a new MCP API key
  * Format: mcp_ + 64 hex chars (from crypto.randomBytes(32))
+ * Stores SHA-256 hash of the key (not plaintext)
  * Replaces any existing key
  */
 export async function POST() {
@@ -38,12 +51,17 @@ export async function POST() {
     // Generate a secure random API key: mcp_ prefix + 64 hex chars
     const apiKey = `mcp_${randomBytes(32).toString('hex')}`
 
+    // Store the SHA-256 hash, not the plaintext key
+    // This protects against database breaches
+    const keyHash = hashMcpKey(apiKey)
+
     await db.user.update({
       where: { id: currentUser.id },
-      data: { mcpApiKey: apiKey },
+      data: { mcpApiKey: keyHash },
     })
 
     // Return the full key only on creation - user must save it
+    // This is the only time the plaintext key is available
     return NextResponse.json({
       apiKey,
       message: 'Save this key - it will not be shown again',

@@ -229,13 +229,35 @@ export async function DELETE(
       )
     }
 
-    // Delete the role
-    await db.role.delete({
-      where: { id: roleId },
+    // Use a transaction to prevent race condition where members could be added
+    // between the check above and the delete. The role has onDelete: Cascade
+    // which would delete all members if we didn't have this safety check.
+    await db.$transaction(async (tx) => {
+      // Re-check member count inside transaction to prevent race condition
+      const memberCount = await tx.projectMember.count({
+        where: { roleId },
+      })
+
+      if (memberCount > 0) {
+        throw new Error('ROLE_HAS_MEMBERS')
+      }
+
+      await tx.role.delete({
+        where: { id: roleId },
+      })
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    // Handle the specific error from our transaction
+    if (error instanceof Error && error.message === 'ROLE_HAS_MEMBERS') {
+      return NextResponse.json(
+        {
+          error: 'Cannot delete role with members. Reassign members first.',
+        },
+        { status: 400 },
+      )
+    }
     return handleApiError(error, 'delete role')
   }
 }
