@@ -23,28 +23,28 @@ export const resolutionConfig: Record<
   },
   "Won't Fix": {
     icon: Ban,
-    className: 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
-    color: '#d4d4d8',
+    className: 'border-zinc-600 bg-zinc-800/50 text-zinc-400',
+    color: '#a1a1aa',
   },
   Duplicate: {
     icon: Copy,
-    className: 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
-    color: '#d4d4d8',
+    className: 'border-orange-600 bg-orange-900/30 text-orange-400',
+    color: '#fb923c',
   },
   'Cannot Reproduce': {
     icon: HelpCircle,
-    className: 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
-    color: '#d4d4d8',
+    className: 'border-purple-600 bg-purple-900/30 text-purple-400',
+    color: '#c084fc',
   },
   Incomplete: {
     icon: MinusCircle,
-    className: 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
-    color: '#d4d4d8',
+    className: 'border-amber-600 bg-amber-900/30 text-amber-400',
+    color: '#fbbf24',
   },
   "Won't Do": {
     icon: XCircle,
-    className: 'border-zinc-600 bg-zinc-800/50 text-zinc-300',
-    color: '#d4d4d8',
+    className: 'border-red-600 bg-red-900/30 text-red-400',
+    color: '#f87171',
   },
 }
 
