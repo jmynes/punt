@@ -60,16 +60,18 @@ function CommitStatusInline({ status }: CommitStatusProps) {
   let colorClass = 'text-zinc-400'
 
   if (status.status === 'ahead') {
-    message = `${status.aheadBy} ahead`
+    const s = status.aheadBy === 1 ? '' : 's'
+    message = `${status.aheadBy} local change${s}`
     colorClass = 'text-blue-400'
   } else if (status.status === 'behind') {
-    message = `${status.behindBy} behind`
+    const s = status.behindBy === 1 ? '' : 's'
+    message = `${status.behindBy} new commit${s} upstream`
     colorClass = 'text-amber-400'
   } else if (status.status === 'diverged') {
-    message = `${status.aheadBy}↑ ${status.behindBy}↓`
+    message = `${status.aheadBy} local, ${status.behindBy} upstream`
     colorClass = 'text-amber-400'
   } else if (status.status === 'unknown') {
-    message = 'unrecognized commit'
+    message = 'custom build'
     colorClass = 'text-zinc-500'
   }
 
