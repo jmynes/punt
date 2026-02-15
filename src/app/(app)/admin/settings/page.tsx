@@ -56,11 +56,11 @@ export default function AdminSettingsPage() {
 
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-auto">
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-zinc-800">
+        <div className="flex gap-1 mb-6 border-b border-zinc-800 overflow-x-auto flex-nowrap">
           <Link
             href="/admin/settings?tab=email"
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
               activeTab === 'email'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
@@ -72,7 +72,7 @@ export default function AdminSettingsPage() {
           <Link
             href="/admin/settings?tab=branding"
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
               activeTab === 'branding'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
@@ -84,7 +84,7 @@ export default function AdminSettingsPage() {
           <Link
             href="/admin/settings?tab=uploads"
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
               activeTab === 'uploads'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
@@ -96,7 +96,7 @@ export default function AdminSettingsPage() {
           <Link
             href="/admin/settings?tab=board"
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
               activeTab === 'board'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
@@ -108,7 +108,7 @@ export default function AdminSettingsPage() {
           <Link
             href="/admin/settings?tab=roles"
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
               activeTab === 'roles'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
@@ -120,7 +120,7 @@ export default function AdminSettingsPage() {
           <Link
             href="/admin/settings?tab=repository"
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
               activeTab === 'repository'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
@@ -132,7 +132,7 @@ export default function AdminSettingsPage() {
           <Link
             href="/admin/settings?tab=database"
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
               activeTab === 'database'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
