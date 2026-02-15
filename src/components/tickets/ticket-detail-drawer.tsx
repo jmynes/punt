@@ -97,7 +97,7 @@ import { PriorityBadge } from '../common/priority-badge'
 import { resolutionConfig } from '../common/resolution-badge'
 import { TypeBadge } from '../common/type-badge'
 import { AttachmentList } from './attachment-list'
-import { CommentsSection } from './comments-section'
+import { CommentsSection, type CommentsSectionRef } from './comments-section'
 import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
 import { DescriptionEditor } from './description-editor'
@@ -215,6 +215,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [rememberPreference, setRememberPreference] = useState(false)
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
   const storyPointsInputRef = useRef<HTMLInputElement>(null)
+  const commentsSectionRef = useRef<CommentsSectionRef>(null)
+  const [hasPendingComment, setHasPendingComment] = useState(false)
 
   const { autoSaveOnDrawerClose, setAutoSaveOnDrawerClose } = useSettingsStore()
 
@@ -442,6 +444,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const hasUnsavedChanges = useMemo(() => {
     if (!ticket) return false
     return (
+      hasPendingComment ||
       tempTitle !== ticket.title ||
       tempDescription !== (ticket.description || '') ||
       tempType !== ticket.type ||
@@ -472,6 +475,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     )
   }, [
     ticket,
+    hasPendingComment,
     tempTitle,
     tempDescription,
     tempType,
@@ -585,6 +589,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       updates,
       previousTicket: oldTicket,
     })
+
+    // Submit pending comment if any
+    if (commentsSectionRef.current?.hasPendingComment()) {
+      commentsSectionRef.current.submitPendingComment()
+    }
   }, [
     ticket,
     hasUnsavedChanges,
@@ -758,6 +767,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setTempParentId(ticket.parentId)
       setTempStatusId(ticket.columnId)
     }
+    // Discard pending comment
+    commentsSectionRef.current?.discardPendingComment()
     setEditingField(null)
   }
 
@@ -1613,9 +1624,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
                 {/* Comments */}
                 <CommentsSection
+                  ref={commentsSectionRef}
                   projectId={projectKey}
                   ticketId={ticket.id}
                   ticketKey={`${projectKey}-${ticket.number}`}
+                  onPendingCommentChange={setHasPendingComment}
                 />
               </div>
             </div>
