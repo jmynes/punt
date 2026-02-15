@@ -96,6 +96,7 @@ import { InlineCodeText } from '../common/inline-code'
 import { PriorityBadge } from '../common/priority-badge'
 import { resolutionConfig } from '../common/resolution-badge'
 import { TypeBadge } from '../common/type-badge'
+import { AttachmentList } from './attachment-list'
 import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
 import { DescriptionEditor } from './description-editor'
@@ -1406,30 +1407,50 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               )}
 
               {/* Attachments */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label className="text-zinc-400 flex items-center gap-2">
                   <Paperclip className="h-4 w-4" />
                   Attachments
                 </Label>
+
+                {/* Existing attachments with preview modal support */}
+                {tempAttachments.length > 0 && (
+                  <AttachmentList
+                    attachments={tempAttachments.map((a) => ({
+                      id: a.id,
+                      filename: a.filename,
+                      originalName: a.originalName,
+                      mimetype: a.mimetype,
+                      size: a.size,
+                      url: a.url,
+                      category: getMimeTypeCategory(a.mimetype),
+                    }))}
+                    onRemove={(fileId) => {
+                      const removed = tempAttachments.find((a) => a.id === fileId)
+                      if (removed && ticket) {
+                        removeAttachmentMutation.mutate({
+                          projectId,
+                          ticketId: ticket.id,
+                          attachmentId: removed.id,
+                        })
+                      }
+                      setTempAttachments(tempAttachments.filter((a) => a.id !== fileId))
+                    }}
+                    layout="grid"
+                  />
+                )}
+
+                {/* Upload zone for adding new files */}
                 <FileUpload
-                  value={tempAttachments}
+                  value={[]}
                   onChange={(files) => {
                     const newFiles = files as UploadedFileInfo[]
-                    const currentIds = new Set(tempAttachments.map((a) => a.id))
-                    const newIds = new Set(newFiles.map((f) => f.id))
-
-                    // Find added files (in new but not in current)
-                    const addedFiles = newFiles.filter((f) => !currentIds.has(f.id))
-
-                    // Find removed files (in current but not in new)
-                    const removedFiles = tempAttachments.filter((a) => !newIds.has(a.id))
-
-                    // Handle persistence - add new files to database
-                    if (ticket && addedFiles.length > 0) {
+                    if (newFiles.length > 0 && ticket) {
+                      // Persist new files to database
                       addAttachmentsMutation.mutate({
                         projectId,
                         ticketId: ticket.id,
-                        attachments: addedFiles.map((f) => ({
+                        attachments: newFiles.map((f) => ({
                           filename: f.filename,
                           originalName: f.originalName,
                           mimeType: f.mimetype,
@@ -1437,23 +1458,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                           url: f.url,
                         })),
                       })
+                      // Add to local state
+                      setTempAttachments([...tempAttachments, ...newFiles])
                     }
-
-                    // Remove deleted files from database
-                    if (ticket) {
-                      for (const removed of removedFiles) {
-                        removeAttachmentMutation.mutate({
-                          projectId,
-                          ticketId: ticket.id,
-                          attachmentId: removed.id,
-                        })
-                      }
-                    }
-
-                    // Update local state
-                    setTempAttachments(newFiles)
                   }}
-                  maxFiles={uploadConfig?.maxAttachmentsPerTicket ?? 20}
+                  maxFiles={(uploadConfig?.maxAttachmentsPerTicket ?? 20) - tempAttachments.length}
                 />
               </div>
 

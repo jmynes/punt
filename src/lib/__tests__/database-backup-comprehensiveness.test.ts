@@ -1080,7 +1080,7 @@ describe('Database Backup Comprehensiveness', () => {
       expect(settings).not.toBeNull()
       expect(settings?.defaultSprintDuration).toBe(21)
       expect(settings?.autoCarryOverIncomplete).toBe(false)
-      expect(JSON.parse(settings?.doneColumnIds)).toContain(column.id)
+      expect(JSON.parse(settings?.doneColumnIds ?? '[]')).toContain(column.id)
     })
   })
 })

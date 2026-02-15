@@ -21,20 +21,15 @@ export const resolutionConfig: Record<
     className: 'border-green-600 bg-green-900/30 text-green-400',
     color: '#4ade80',
   },
-  "Won't Fix": {
-    icon: Ban,
+  'Cannot Reproduce': {
+    icon: HelpCircle,
     className: 'border-zinc-600 bg-zinc-800/50 text-zinc-400',
     color: '#a1a1aa',
   },
   Duplicate: {
     icon: Copy,
-    className: 'border-orange-600 bg-orange-900/30 text-orange-400',
-    color: '#fb923c',
-  },
-  'Cannot Reproduce': {
-    icon: HelpCircle,
-    className: 'border-purple-600 bg-purple-900/30 text-purple-400',
-    color: '#c084fc',
+    className: 'border-zinc-600 bg-zinc-800/50 text-zinc-400',
+    color: '#a1a1aa',
   },
   Incomplete: {
     icon: MinusCircle,
@@ -43,6 +38,11 @@ export const resolutionConfig: Record<
   },
   "Won't Do": {
     icon: XCircle,
+    className: 'border-red-600 bg-red-900/30 text-red-400',
+    color: '#f87171',
+  },
+  "Won't Fix": {
+    icon: Ban,
     className: 'border-red-600 bg-red-900/30 text-red-400',
     color: '#f87171',
   },

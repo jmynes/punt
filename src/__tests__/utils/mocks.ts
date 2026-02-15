@@ -59,6 +59,7 @@ export const createMockTicket = (overrides?: Partial<TicketWithRelations>): Tick
     affectedVersion: null,
     fixVersion: null,
     resolution: null,
+    resolvedAt: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     projectId: 'project-1',

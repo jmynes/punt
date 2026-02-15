@@ -84,11 +84,11 @@ export const INVERSE_LINK_TYPES: Record<LinkType, LinkType> = {
 // Resolution values for closed/done tickets
 export const RESOLUTIONS = [
   'Done',
-  "Won't Fix",
-  'Duplicate',
   'Cannot Reproduce',
+  'Duplicate',
   'Incomplete',
   "Won't Do",
+  "Won't Fix",
 ] as const
 export type Resolution = (typeof RESOLUTIONS)[number]
 

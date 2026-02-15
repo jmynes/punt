@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Columns3,
   Database,
   Home,
   KeyRound,
@@ -14,6 +15,7 @@ import {
   Pencil,
   Plug,
   Plus,
+  RefreshCw,
   Settings,
   Shield,
   SlidersHorizontal,
@@ -385,6 +387,21 @@ export function SidebarContent({
                         File Uploads
                       </Button>
                     </Link>
+                    <Link href="/admin/settings?tab=board" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings' &&
+                            searchParams.get('tab') === 'board' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Columns3 className="h-3 w-3" />
+                        Board
+                      </Button>
+                    </Link>
                     <Link href="/admin/settings?tab=roles" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -398,6 +415,21 @@ export function SidebarContent({
                       >
                         <Shield className="h-3 w-3" />
                         Default Roles
+                      </Button>
+                    </Link>
+                    <Link href="/admin/settings?tab=updates" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings' &&
+                            searchParams.get('tab') === 'updates' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        Updates
                       </Button>
                     </Link>
                     <Link href="/admin/settings?tab=database" onClick={handleLinkClick}>

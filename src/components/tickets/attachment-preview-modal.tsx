@@ -197,9 +197,9 @@ export function AttachmentPreviewModal({
   const isVideo = file.category === 'video'
 
   return (
-    <Dialog open={!!file} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={!!file} onOpenChange={(open) => !open && onClose()} modal={false}>
       <DialogContent
-        className="max-w-6xl h-[90vh] border-zinc-800 bg-zinc-950 p-0 flex flex-col"
+        className="max-w-[90vw] w-full h-[90vh] border-zinc-800 bg-zinc-950 p-0 flex flex-col"
         showCloseButton={false}
       >
         <DialogHeader className="sr-only">
@@ -378,11 +378,30 @@ export function AttachmentPreviewModal({
 
           {/* PDF preview */}
           {isPdf && (
-            <iframe
-              src={`${file.url}#toolbar=0&navpanes=0`}
-              className="w-full h-full border-0"
+            <object
+              data={file.url}
+              type="application/pdf"
+              className="w-full h-full"
               title={file.originalName}
-            />
+            >
+              {/* Fallback for browsers that can't display PDF inline */}
+              <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
+                <FileText className="h-16 w-16 text-zinc-500" />
+                <p className="text-zinc-400 text-center">
+                  PDF preview not available in this browser.
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF
+                  </Button>
+                  <Button variant="outline" onClick={handleOpenExternal}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open in new tab
+                  </Button>
+                </div>
+              </div>
+            </object>
           )}
 
           {/* Document fallback */}
