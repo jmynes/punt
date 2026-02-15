@@ -243,9 +243,14 @@ export function isValidPermission(value: string): value is Permission {
   return ALL_PERMISSIONS.includes(value as Permission)
 }
 
+// Maximum size for permission JSON to prevent memory exhaustion attacks
+const MAX_PERMISSIONS_JSON_SIZE = 10_000 // 10KB should be plenty for permissions
+
 // Parse and validate a permissions array from JSON
 export function parsePermissions(json: string | null): Permission[] {
   if (!json) return []
+  // Security: Prevent memory exhaustion from oversized JSON
+  if (json.length > MAX_PERMISSIONS_JSON_SIZE) return []
   try {
     const parsed = JSON.parse(json)
     if (!Array.isArray(parsed)) return []

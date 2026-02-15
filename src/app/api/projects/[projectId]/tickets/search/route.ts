@@ -42,7 +42,9 @@ export async function GET(
 
     // Check if query matches a ticket key pattern (e.g., "PUNT-123" or just "123")
     let ticketNumber: number | null = null
-    const keyPattern = new RegExp(`^${project.key}-(\\d+)$`, 'i')
+    // Escape regex metacharacters in project key to prevent ReDoS attacks
+    const escapedKey = project.key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const keyPattern = new RegExp(`^${escapedKey}-(\\d+)$`, 'i')
     const keyMatch = query.match(keyPattern)
     if (keyMatch) {
       ticketNumber = Number.parseInt(keyMatch[1], 10)

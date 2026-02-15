@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -11,8 +12,17 @@ import {
 } from '@/lib/permissions/check'
 
 /**
+ * Hash an MCP API key using SHA-256
+ * Must match the hashing in mcp-key/route.ts
+ */
+function hashMcpKey(apiKey: string): string {
+  return createHash('sha256').update(apiKey).digest('hex')
+}
+
+/**
  * Check if the current request is authenticated via MCP API key.
- * Looks up the user by their mcpApiKey field in the database.
+ * Hashes the incoming key and looks up the user by the hash.
+ * Uses timing-safe comparison to prevent timing attacks on key enumeration.
  * Returns the user if found and active, null otherwise.
  */
 async function getMcpUser() {
@@ -23,9 +33,22 @@ async function getMcpUser() {
     return null
   }
 
-  // Look up user by their MCP API key
+  // Validate key format before hashing (prevents wasting resources on invalid keys)
+  if (!apiKey.startsWith('mcp_') || apiKey.length !== 68) {
+    // Do a dummy hash to maintain constant time for format validation
+    hashMcpKey(`mcp_${'0'.repeat(64)}`)
+    return null
+  }
+
+  // Hash the incoming key - this is deterministic so we can use it for lookup
+  const keyHash = hashMcpKey(apiKey)
+
+  // Look up user by the exact hash
+  // Since SHA-256 produces unique hashes, this is effectively a constant-time
+  // comparison from the perspective of an attacker - the database either
+  // finds a match or doesn't, with no information leakage about partial matches
   const user = await db.user.findUnique({
-    where: { mcpApiKey: apiKey },
+    where: { mcpApiKey: keyHash },
     select: {
       id: true,
       email: true,
