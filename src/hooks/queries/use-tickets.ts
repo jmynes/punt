@@ -409,7 +409,7 @@ export async function updateTicketAPI(
   if ('storyPoints' in updates) apiUpdates.storyPoints = updates.storyPoints
   if ('estimate' in updates) apiUpdates.estimate = updates.estimate
   if ('assigneeId' in updates) apiUpdates.assigneeId = updates.assigneeId
-  if ('creatorId' in updates) apiUpdates.creatorId = updates.creatorId
+  if ('creatorId' in updates) apiUpdates.reporterId = updates.creatorId // Map to API field name
   if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
   if ('parentId' in updates) apiUpdates.parentId = updates.parentId
   if ('startDate' in updates) apiUpdates.startDate = updates.startDate
