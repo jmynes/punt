@@ -199,7 +199,7 @@ export function AttachmentPreviewModal({
   return (
     <Dialog open={!!file} onOpenChange={(open) => !open && onClose()} modal={false}>
       <DialogContent
-        className="max-w-[90vw] w-full h-[90vh] border-zinc-800 bg-zinc-950 p-0 flex flex-col"
+        className="max-w-[90vw] sm:max-w-[90vw] w-full h-[90vh] border-zinc-800 bg-zinc-950 p-0 flex flex-col"
         showCloseButton={false}
       >
         <DialogHeader className="sr-only">
@@ -210,7 +210,7 @@ export function AttachmentPreviewModal({
         {/* Toolbar */}
         <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-2 bg-zinc-900/80 flex-shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-sm font-medium text-zinc-200 truncate max-w-[300px]">
+            <span className="text-sm font-medium text-zinc-200 truncate max-w-[50vw]">
               {file.originalName}
             </span>
             {files.length > 1 && (
