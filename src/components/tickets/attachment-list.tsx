@@ -210,7 +210,14 @@ export function AttachmentList({
           files={attachments}
           onClose={() => setPreviewFile(null)}
           onNavigate={setPreviewFile}
-          onDelete={onRemove ? (file) => onRemove(file.id) : undefined}
+          onDelete={
+            onRemove
+              ? (file) => {
+                  setFileToDelete(file)
+                  setPreviewFile(null)
+                }
+              : undefined
+          }
         />
 
         {/* Delete Confirmation Dialog */}
@@ -346,7 +353,14 @@ export function AttachmentList({
         files={attachments}
         onClose={() => setPreviewFile(null)}
         onNavigate={setPreviewFile}
-        onDelete={onRemove ? (file) => onRemove(file.id) : undefined}
+        onDelete={
+          onRemove
+            ? (file) => {
+                setFileToDelete(file)
+                setPreviewFile(null)
+              }
+            : undefined
+        }
       />
 
       {/* Delete Confirmation Dialog */}

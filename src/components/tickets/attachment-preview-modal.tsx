@@ -14,17 +14,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -58,8 +48,6 @@ export function AttachmentPreviewModal({
   const [zoom, setZoom] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const deleteButtonRef = useRef<HTMLButtonElement>(null)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [isFullscreen, setIsFullscreen] = useState(false)
 
@@ -76,16 +64,6 @@ export function AttachmentPreviewModal({
       setPosition({ x: 0, y: 0 })
     }
   }, [fileId])
-
-  // Focus delete button when confirmation dialog opens
-  useEffect(() => {
-    if (showDeleteConfirm && deleteButtonRef.current) {
-      const timer = setTimeout(() => {
-        deleteButtonRef.current?.focus()
-      }, 50)
-      return () => clearTimeout(timer)
-    }
-  }, [showDeleteConfirm])
 
   const handleZoomIn = useCallback(() => {
     setZoom((z) => Math.min(z + ZOOM_STEP, MAX_ZOOM))
@@ -303,12 +281,12 @@ export function AttachmentPreviewModal({
             >
               <ExternalLink className="h-4 w-4" />
             </Button>
-            {onDelete && (
+            {onDelete && file && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-zinc-400 hover:text-red-400"
-                onClick={() => setShowDeleteConfirm(true)}
+                onClick={() => onDelete(file)}
                 title="Delete"
               >
                 <Trash2 className="h-4 w-4" />
@@ -478,37 +456,6 @@ export function AttachmentPreviewModal({
           <span>Esc to close</span>
         </div>
       </DialogContent>
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="bg-zinc-900 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete{' '}
-              <span className="font-medium text-zinc-200">{file?.originalName}</span>? This action
-              can be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              ref={deleteButtonRef}
-              onClick={() => {
-                if (file && onDelete) {
-                  onDelete(file)
-                  onClose()
-                }
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Dialog>
   )
 }
