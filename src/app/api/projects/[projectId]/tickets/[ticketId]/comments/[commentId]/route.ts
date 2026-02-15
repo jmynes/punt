@@ -4,7 +4,7 @@ import { badRequestError, handleApiError, notFoundError, validationError } from 
 import { requireAuth, requireMembership, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
-import { hasPermission } from '@/lib/permissions'
+import { hasPermission } from '@/lib/permissions/check'
 import { USER_SELECT_SUMMARY } from '@/lib/prisma-selects'
 
 const updateCommentSchema = z.object({
