@@ -81,6 +81,10 @@ async function extractBackupJsonFromZip(
   return parseBackupJson(backupJson, password)
 }
 
+// Maximum size for backup JSON to prevent memory exhaustion attacks
+// 500MB should be plenty for most backups while preventing DoS
+const MAX_BACKUP_JSON_SIZE = 500 * 1024 * 1024
+
 /**
  * Parses and validates backup JSON content
  */
@@ -88,6 +92,11 @@ function parseBackupJson(
   content: string,
   password?: string,
 ): { success: true; parsed: ParsedBackup } | ImportError {
+  // Security: Prevent memory exhaustion from oversized JSON
+  if (content.length > MAX_BACKUP_JSON_SIZE) {
+    return { success: false, error: 'Backup file too large (max 500MB)' }
+  }
+
   let parsed: unknown
 
   try {
