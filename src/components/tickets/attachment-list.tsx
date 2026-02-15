@@ -10,7 +10,7 @@ import {
   MoreHorizontal,
   Trash2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,6 +72,18 @@ export function AttachmentList({
 }: AttachmentListProps) {
   const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null)
   const [fileToDelete, setFileToDelete] = useState<UploadedFile | null>(null)
+  const deleteButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Focus delete button when dialog opens
+  useEffect(() => {
+    if (fileToDelete && deleteButtonRef.current) {
+      // Small delay to ensure dialog is rendered
+      const timer = setTimeout(() => {
+        deleteButtonRef.current?.focus()
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [fileToDelete])
 
   if (attachments.length === 0) {
     return null
@@ -351,9 +363,9 @@ export function AttachmentList({
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
+              ref={deleteButtonRef}
               onClick={handleConfirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
-              autoFocus
             >
               Delete
             </AlertDialogAction>

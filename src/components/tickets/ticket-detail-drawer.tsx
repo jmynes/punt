@@ -1410,10 +1410,22 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
               {/* Attachments */}
               <div className="space-y-3">
-                <Label className="text-zinc-400 flex items-center gap-2">
-                  <Paperclip className="h-4 w-4" />
-                  Attachments
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-zinc-400 flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    Attachments
+                  </Label>
+                  <span
+                    className={cn(
+                      'text-xs tabular-nums',
+                      tempAttachments.length >= (uploadConfig?.maxAttachmentsPerTicket ?? 20)
+                        ? 'text-amber-500'
+                        : 'text-zinc-500',
+                    )}
+                  >
+                    {tempAttachments.length}/{uploadConfig?.maxAttachmentsPerTicket ?? 20}
+                  </span>
+                </div>
 
                 {/* Existing attachments with preview modal support */}
                 {tempAttachments.length > 0 && (
@@ -1488,70 +1500,79 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   />
                 )}
 
-                {/* Upload zone for adding new files */}
-                <FileUpload
-                  value={[]}
-                  onChange={(files) => {
-                    const newFiles = files as UploadedFileInfo[]
-                    if (newFiles.length > 0 && ticket) {
-                      const ticketKey = `${projectKey}-${ticket.number}`
-                      const fileNames =
-                        newFiles.length === 1
-                          ? `"${newFiles[0].originalName}"`
-                          : `${newFiles.length} files`
-                      // Add to local state immediately
-                      setTempAttachments([...tempAttachments, ...newFiles])
-                      // Create a stable reference for the toast ID
-                      let toastIdRef: string | number = ''
-                      toastIdRef = showToast.withUndo(`Added ${fileNames} to ${ticketKey}`, {
-                        onUndo: () => {
-                          // Undo: remove the added attachments
-                          undoByToastId(toastIdRef)
-                          for (const f of newFiles) {
-                            removeAttachmentMutation.mutate({
-                              projectId,
-                              ticketId: ticket.id,
-                              attachmentId: f.id,
-                            })
-                          }
-                          setTempAttachments((prev) =>
-                            prev.filter((a) => !newFiles.some((nf) => nf.id === a.id)),
-                          )
-                        },
-                      })
-                      pushAttachmentAdd(
-                        projectId,
-                        newFiles.map((f) => ({
+                {/* Upload zone or limit reached message */}
+                {tempAttachments.length >= (uploadConfig?.maxAttachmentsPerTicket ?? 20) ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2.5 text-sm text-zinc-500">
+                    <Paperclip className="h-4 w-4 flex-shrink-0" />
+                    <span>Attachment limit reached. Remove an attachment to upload more.</span>
+                  </div>
+                ) : (
+                  <FileUpload
+                    value={[]}
+                    onChange={(files) => {
+                      const newFiles = files as UploadedFileInfo[]
+                      if (newFiles.length > 0 && ticket) {
+                        const ticketKey = `${projectKey}-${ticket.number}`
+                        const fileNames =
+                          newFiles.length === 1
+                            ? `"${newFiles[0].originalName}"`
+                            : `${newFiles.length} files`
+                        // Add to local state immediately
+                        setTempAttachments([...tempAttachments, ...newFiles])
+                        // Create a stable reference for the toast ID
+                        let toastIdRef: string | number = ''
+                        toastIdRef = showToast.withUndo(`Added ${fileNames} to ${ticketKey}`, {
+                          onUndo: () => {
+                            // Undo: remove the added attachments
+                            undoByToastId(toastIdRef)
+                            for (const f of newFiles) {
+                              removeAttachmentMutation.mutate({
+                                projectId,
+                                ticketId: ticket.id,
+                                attachmentId: f.id,
+                              })
+                            }
+                            setTempAttachments((prev) =>
+                              prev.filter((a) => !newFiles.some((nf) => nf.id === a.id)),
+                            )
+                          },
+                        })
+                        pushAttachmentAdd(
+                          projectId,
+                          newFiles.map((f) => ({
+                            projectId,
+                            ticketId: ticket.id,
+                            ticketKey,
+                            attachment: {
+                              id: f.id,
+                              filename: f.filename,
+                              originalName: f.originalName,
+                              mimetype: f.mimetype,
+                              size: f.size,
+                              url: f.url,
+                            },
+                          })),
+                          toastIdRef,
+                        )
+                        // Persist new files to database
+                        addAttachmentsMutation.mutate({
                           projectId,
                           ticketId: ticket.id,
-                          ticketKey,
-                          attachment: {
-                            id: f.id,
+                          attachments: newFiles.map((f) => ({
                             filename: f.filename,
                             originalName: f.originalName,
-                            mimetype: f.mimetype,
+                            mimeType: f.mimetype,
                             size: f.size,
                             url: f.url,
-                          },
-                        })),
-                        toastIdRef,
-                      )
-                      // Persist new files to database
-                      addAttachmentsMutation.mutate({
-                        projectId,
-                        ticketId: ticket.id,
-                        attachments: newFiles.map((f) => ({
-                          filename: f.filename,
-                          originalName: f.originalName,
-                          mimeType: f.mimetype,
-                          size: f.size,
-                          url: f.url,
-                        })),
-                      })
+                          })),
+                        })
+                      }
+                    }}
+                    maxFiles={
+                      (uploadConfig?.maxAttachmentsPerTicket ?? 20) - tempAttachments.length
                     }
-                  }}
-                  maxFiles={(uploadConfig?.maxAttachmentsPerTicket ?? 20) - tempAttachments.length}
-                />
+                  />
+                )}
               </div>
 
               <Separator className="bg-zinc-800" />
@@ -1569,7 +1590,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                         </span>
                         <span className="flex items-center gap-1">
                           <Paperclip className="h-3.5 w-3.5" />
-                          {ticket._count.attachments} attachments
+                          {tempAttachments.length} attachments
                         </span>
                       </>
                     )}
