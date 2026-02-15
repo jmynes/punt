@@ -239,6 +239,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [tempStatusId, setTempStatusId] = useState<string | null>(null)
   const [tempCreatorId, setTempCreatorId] = useState<string | null>(null)
   const [tempAttachments, setTempAttachments] = useState<UploadedFileInfo[]>([])
+  const [showRemoveAllAttachments, setShowRemoveAllAttachments] = useState(false)
 
   // Ensure current user is always in the members list for assignment
   const membersWithCurrentUser = useMemo(() => {
@@ -1415,16 +1416,29 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     <Paperclip className="h-4 w-4" />
                     Attachments
                   </Label>
-                  <span
-                    className={cn(
-                      'text-xs tabular-nums',
-                      tempAttachments.length >= (uploadConfig?.maxAttachmentsPerTicket ?? 20)
-                        ? 'text-amber-500'
-                        : 'text-zinc-500',
+                  <div className="flex items-center gap-2">
+                    {tempAttachments.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs text-zinc-500 hover:text-red-400"
+                        onClick={() => setShowRemoveAllAttachments(true)}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Remove all
+                      </Button>
                     )}
-                  >
-                    {tempAttachments.length}/{uploadConfig?.maxAttachmentsPerTicket ?? 20}
-                  </span>
+                    <span
+                      className={cn(
+                        'text-xs tabular-nums',
+                        tempAttachments.length >= (uploadConfig?.maxAttachmentsPerTicket ?? 20)
+                          ? 'text-amber-500'
+                          : 'text-zinc-500',
+                      )}
+                    >
+                      {tempAttachments.length}/{uploadConfig?.maxAttachmentsPerTicket ?? 20}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Existing attachments with preview modal support */}
@@ -1683,6 +1697,95 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             >
               <Trash2 className="h-4 w-4 mr-1" />
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove all attachments confirmation dialog */}
+      <AlertDialog open={showRemoveAllAttachments} onOpenChange={setShowRemoveAllAttachments}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">Remove all attachments?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Are you sure you want to remove all {tempAttachments.length} attachments from{' '}
+              <span className="font-mono text-zinc-300">{ticketKey}</span>? This action can be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!ticket) return
+                const attachmentsToRemove = [...tempAttachments]
+                const count = attachmentsToRemove.length
+
+                // Clear local state immediately
+                setTempAttachments([])
+
+                // Create toast with undo
+                let toastIdRef: string | number = ''
+                toastIdRef = showToast.withUndo(
+                  `Removed ${count} attachment${count === 1 ? '' : 's'} from ${ticketKey}`,
+                  {
+                    onUndo: () => {
+                      // Re-add all attachments
+                      undoByToastId(toastIdRef)
+                      for (const attachment of attachmentsToRemove) {
+                        addAttachmentsMutation.mutate({
+                          projectId,
+                          ticketId: ticket.id,
+                          attachments: [
+                            {
+                              filename: attachment.filename,
+                              originalName: attachment.originalName,
+                              mimeType: attachment.mimetype,
+                              size: attachment.size,
+                              url: attachment.url,
+                            },
+                          ],
+                        })
+                      }
+                      setTempAttachments(attachmentsToRemove)
+                    },
+                  },
+                )
+
+                // Push to undo store
+                pushAttachmentDelete(
+                  projectId,
+                  attachmentsToRemove.map((a) => ({
+                    projectId,
+                    ticketId: ticket.id,
+                    ticketKey,
+                    attachment: {
+                      id: a.id,
+                      filename: a.filename,
+                      originalName: a.originalName,
+                      mimetype: a.mimetype,
+                      size: a.size,
+                      url: a.url,
+                    },
+                  })),
+                  toastIdRef,
+                )
+
+                // Delete all attachments from server
+                for (const attachment of attachmentsToRemove) {
+                  removeAttachmentMutation.mutate({
+                    projectId,
+                    ticketId: ticket.id,
+                    attachmentId: attachment.id,
+                  })
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Remove all
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

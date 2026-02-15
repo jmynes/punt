@@ -9,6 +9,7 @@ import {
   Maximize2,
   Minimize2,
   RotateCcw,
+  Trash2,
   X,
   ZoomIn,
   ZoomOut,
@@ -30,6 +31,7 @@ interface AttachmentPreviewModalProps {
   files?: UploadedFile[]
   onClose: () => void
   onNavigate?: (file: UploadedFile) => void
+  onDelete?: (file: UploadedFile) => void
 }
 
 const MIN_ZOOM = 0.25
@@ -41,6 +43,7 @@ export function AttachmentPreviewModal({
   files = [],
   onClose,
   onNavigate,
+  onDelete,
 }: AttachmentPreviewModalProps) {
   const [zoom, setZoom] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
@@ -278,6 +281,22 @@ export function AttachmentPreviewModal({
             >
               <ExternalLink className="h-4 w-4" />
             </Button>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-zinc-400 hover:text-red-400"
+                onClick={() => {
+                  if (file) {
+                    onDelete(file)
+                    onClose()
+                  }
+                }}
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
