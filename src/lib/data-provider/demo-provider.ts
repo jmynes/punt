@@ -175,8 +175,8 @@ export class DemoDataProvider implements DataProvider {
     ticketId: string,
     data: UpdateTicketInput,
   ): Promise<TicketWithRelations> {
-    // Build the updates object (exclude creatorId from spread to avoid type conflicts)
-    const { creatorId: _creatorId, ...restData } = data
+    // Build the updates object (exclude reporterId from spread to avoid type conflicts)
+    const { reporterId: _reporterId, ...restData } = data
     const updates: Partial<TicketWithRelations> = { ...restData }
 
     // Handle labels
@@ -198,11 +198,11 @@ export class DemoDataProvider implements DataProvider {
         : null
     }
 
-    // Handle reporter/creator
-    if (data.creatorId !== undefined && data.creatorId !== null) {
+    // Handle reporter/creator (API uses reporterId, internal uses creatorId)
+    if (data.reporterId !== undefined && data.reporterId !== null) {
       const allUsers = [DEMO_USER_SUMMARY, ...DEMO_TEAM_SUMMARIES]
-      updates.creatorId = data.creatorId
-      updates.creator = allUsers.find((u) => u.id === data.creatorId) || DEMO_USER_SUMMARY
+      updates.creatorId = data.reporterId
+      updates.creator = allUsers.find((u) => u.id === data.reporterId) || DEMO_USER_SUMMARY
     }
 
     const updated = demoStorage.updateTicket(projectId, ticketId, updates)

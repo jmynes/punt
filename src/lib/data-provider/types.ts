@@ -59,7 +59,7 @@ export interface UpdateTicketInput {
   columnId?: string
   order?: number
   assigneeId?: string | null
-  creatorId?: string | null
+  reporterId?: string | null // Maps to creatorId in database
   sprintId?: string | null
   parentId?: string | null
   storyPoints?: number | null
