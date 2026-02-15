@@ -1,7 +1,7 @@
 'use client'
 
 import { formatDistanceToNow } from 'date-fns'
-import { Bot, Check, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react'
+import { Bot, Check, Pencil, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import {
   AlertDialog,
@@ -15,12 +15,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
 import {
   type CommentInfo,
@@ -175,7 +169,7 @@ export function CommentsSection({ projectId, ticketId }: CommentsSectionProps) {
                 </AvatarFallback>
               </Avatar>
 
-              <div className="flex-1 min-w-0">
+              <div className="group relative flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-zinc-200">{comment.author.name}</span>
                   <span className="text-xs text-zinc-500">
@@ -191,6 +185,33 @@ export function CommentsSection({ projectId, ticketId }: CommentsSectionProps) {
                     </span>
                   )}
                 </div>
+
+                {(canEditComment(comment) || canDeleteComment(comment)) && !editingCommentId && (
+                  <div className="absolute right-0 top-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {canEditComment(comment) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                        onClick={() => handleStartEdit(comment)}
+                        title="Edit comment"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    )}
+                    {canDeleteComment(comment) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-zinc-400 hover:text-red-400 hover:bg-zinc-800"
+                        onClick={() => setCommentToDelete(comment)}
+                        title="Delete comment"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                )}
 
                 {editingCommentId === comment.id ? (
                   <div className="mt-2 space-y-2">
@@ -222,47 +243,9 @@ export function CommentsSection({ projectId, ticketId }: CommentsSectionProps) {
                     </div>
                   </div>
                 ) : (
-                  <div className="group relative mt-1">
-                    <p className="text-sm text-zinc-300 whitespace-pre-wrap break-words">
-                      {comment.content}
-                    </p>
-
-                    {(canEditComment(comment) || canDeleteComment(comment)) && (
-                      <div className="absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 bg-zinc-800 hover:bg-zinc-700"
-                            >
-                              <MoreHorizontal className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
-                            {canEditComment(comment) && (
-                              <DropdownMenuItem
-                                onClick={() => handleStartEdit(comment)}
-                                className="cursor-pointer"
-                              >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                            )}
-                            {canDeleteComment(comment) && (
-                              <DropdownMenuItem
-                                onClick={() => setCommentToDelete(comment)}
-                                className="cursor-pointer text-red-400 focus:text-red-400"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    )}
-                  </div>
+                  <p className="mt-1 text-sm text-zinc-300 whitespace-pre-wrap break-words">
+                    {comment.content}
+                  </p>
                 )}
               </div>
             </div>
