@@ -80,6 +80,7 @@ export function useAddComment() {
       queryClient.invalidateQueries({
         queryKey: ticketKeys.byProject(projectId),
       })
+      showToast.success('Comment added')
     },
     onError: (err) => {
       showToast.error(err.message)
@@ -142,6 +143,9 @@ export function useUpdateComment() {
       }
 
       return { previousComments }
+    },
+    onSuccess: () => {
+      showToast.success('Comment updated')
     },
     onError: (err, { projectId, ticketId }, context) => {
       if (context?.previousComments) {
@@ -207,6 +211,9 @@ export function useDeleteComment() {
       }
 
       return { previousComments }
+    },
+    onSuccess: () => {
+      showToast.success('Comment deleted')
     },
     onError: (err, { projectId, ticketId }, context) => {
       if (context?.previousComments) {
