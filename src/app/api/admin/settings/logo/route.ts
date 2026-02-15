@@ -1,4 +1,5 @@
 import { unlink } from 'node:fs/promises'
+import path from 'node:path'
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
@@ -104,8 +105,15 @@ export async function POST(request: Request) {
     // Delete old logo file if exists
     if (currentSettings?.logoUrl?.startsWith('/uploads/branding/')) {
       try {
+        const brandingDir = fileStorage.join(process.cwd(), 'public', 'uploads', 'branding')
         const oldPath = fileStorage.join(process.cwd(), 'public', currentSettings.logoUrl)
-        await unlink(oldPath)
+
+        // Security: Verify resolved path is within the branding directory
+        const resolvedPath = path.resolve(oldPath)
+        const resolvedBrandingDir = path.resolve(brandingDir)
+        if (resolvedPath.startsWith(resolvedBrandingDir + path.sep)) {
+          await unlink(oldPath)
+        }
       } catch {
         // Ignore errors deleting old file
       }
@@ -158,8 +166,15 @@ export async function DELETE(request: Request) {
     // Delete logo file if exists
     if (currentSettings?.logoUrl?.startsWith('/uploads/branding/')) {
       try {
+        const brandingDir = fileStorage.join(process.cwd(), 'public', 'uploads', 'branding')
         const logoPath = fileStorage.join(process.cwd(), 'public', currentSettings.logoUrl)
-        await unlink(logoPath)
+
+        // Security: Verify resolved path is within the branding directory
+        const resolvedPath = path.resolve(logoPath)
+        const resolvedBrandingDir = path.resolve(brandingDir)
+        if (resolvedPath.startsWith(resolvedBrandingDir + path.sep)) {
+          await unlink(logoPath)
+        }
       } catch {
         // Ignore errors deleting file
       }

@@ -1,4 +1,5 @@
 import { unlink } from 'node:fs/promises'
+import path from 'node:path'
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
@@ -106,8 +107,15 @@ export async function POST(request: Request) {
     // Delete old avatar file if exists
     if (existingUser?.avatar?.startsWith('/uploads/avatars/')) {
       try {
+        const avatarDir = fileStorage.join(process.cwd(), 'public', 'uploads', 'avatars')
         const oldPath = fileStorage.join(process.cwd(), 'public', existingUser.avatar)
-        await unlink(oldPath)
+
+        // Security: Verify resolved path is within the avatars directory
+        const resolvedPath = path.resolve(oldPath)
+        const resolvedAvatarDir = path.resolve(avatarDir)
+        if (resolvedPath.startsWith(resolvedAvatarDir + path.sep)) {
+          await unlink(oldPath)
+        }
       } catch {
         // Ignore errors deleting old file
       }
@@ -164,8 +172,15 @@ export async function DELETE(request: Request) {
     // Delete avatar file if exists
     if (existingUser?.avatar?.startsWith('/uploads/avatars/')) {
       try {
+        const avatarDir = fileStorage.join(process.cwd(), 'public', 'uploads', 'avatars')
         const avatarPath = fileStorage.join(process.cwd(), 'public', existingUser.avatar)
-        await unlink(avatarPath)
+
+        // Security: Verify resolved path is within the avatars directory
+        const resolvedPath = path.resolve(avatarPath)
+        const resolvedAvatarDir = path.resolve(avatarDir)
+        if (resolvedPath.startsWith(resolvedAvatarDir + path.sep)) {
+          await unlink(avatarPath)
+        }
       } catch {
         // Ignore errors deleting file
       }

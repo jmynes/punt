@@ -201,6 +201,22 @@ export async function PATCH(
       }
     }
 
+    // Prevent removing or disabling the last system admin
+    const isRemovingAdmin = body.isSystemAdmin === false && existingUser.isSystemAdmin
+    const isDisablingAdmin =
+      body.isActive === false && existingUser.isSystemAdmin && existingUser.isActive
+    if (isRemovingAdmin || isDisablingAdmin) {
+      const adminCount = await db.user.count({
+        where: { isSystemAdmin: true, isActive: true },
+      })
+      if (adminCount <= 1) {
+        return NextResponse.json(
+          { error: 'Cannot remove or disable the last system administrator' },
+          { status: 400 },
+        )
+      }
+    }
+
     const parsed = updateUserSchema.safeParse(body)
 
     if (!parsed.success) {
