@@ -460,6 +460,13 @@ export interface CreateCommentInput {
   source?: string
 }
 
+export async function listComments(projectKey: string, ticketId: string) {
+  return apiRequest<CommentData[]>(
+    'GET',
+    `/api/projects/${projectKey}/tickets/${ticketId}/comments`,
+  )
+}
+
 export async function createComment(
   projectKey: string,
   ticketId: string,
@@ -469,5 +476,12 @@ export async function createComment(
     'POST',
     `/api/projects/${projectKey}/tickets/${ticketId}/comments`,
     data,
+  )
+}
+
+export async function deleteComment(projectKey: string, ticketId: string, commentId: string) {
+  return apiRequest<{ success: boolean }>(
+    'DELETE',
+    `/api/projects/${projectKey}/tickets/${ticketId}/comments/${commentId}`,
   )
 }

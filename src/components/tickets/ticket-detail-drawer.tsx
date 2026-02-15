@@ -58,7 +58,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { Textarea } from '@/components/ui/textarea'
 import {
   useAddAttachments,
   useRemoveAttachment,
@@ -98,6 +97,7 @@ import { PriorityBadge } from '../common/priority-badge'
 import { resolutionConfig } from '../common/resolution-badge'
 import { TypeBadge } from '../common/type-badge'
 import { AttachmentList } from './attachment-list'
+import { CommentsSection } from './comments-section'
 import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
 import { DescriptionEditor } from './description-editor'
@@ -1611,19 +1611,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   </div>
                 </div>
 
-                {/* Comment input */}
-                <div className="space-y-2">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    rows={3}
-                    className="resize-none bg-zinc-900 border-zinc-700 focus:border-amber-500"
-                  />
-                  <div className="flex justify-end">
-                    <Button size="sm" variant="primary">
-                      Comment
-                    </Button>
-                  </div>
-                </div>
+                {/* Comments */}
+                <CommentsSection projectId={projectKey} ticketId={ticket.id} />
               </div>
             </div>
           </ScrollArea>
