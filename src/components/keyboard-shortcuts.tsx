@@ -1851,6 +1851,133 @@ export function KeyboardShortcuts() {
             })
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
+          } else if (entry.action.type === 'attachmentDelete') {
+            const action = entry.action
+            // Undo attachment delete: re-add the attachments
+            undoStore.pushRedo(entry)
+            const tabId = getTabId()
+            ;(async () => {
+              try {
+                for (const item of action.attachments) {
+                  await fetch(
+                    `/api/projects/${item.projectId}/tickets/${item.ticketId}/attachments`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(tabId && { 'X-Tab-Id': tabId }),
+                      },
+                      body: JSON.stringify({
+                        attachments: [
+                          {
+                            filename: item.attachment.filename,
+                            originalName: item.attachment.originalName,
+                            mimeType: item.attachment.mimetype,
+                            size: item.attachment.size,
+                            url: item.attachment.url,
+                          },
+                        ],
+                      }),
+                    },
+                  )
+                }
+                queryClient.invalidateQueries({ queryKey: ['attachments'] })
+                queryClient.invalidateQueries({ queryKey: ['tickets'] })
+              } catch (err) {
+                console.error('Failed to undo attachment delete:', err)
+                showToast.error('Failed to restore attachment')
+              }
+            })()
+
+            const fileNames =
+              action.attachments.length === 1
+                ? `"${action.attachments[0].attachment.originalName}"`
+                : `${action.attachments.length} attachments`
+            let currentId = entry.toastId
+            const toastId = showToast.withUndo(`Restored ${fileNames}`, {
+              onUndo: () => {
+                // Redo delete
+                const redoEntry = useUndoStore.getState().redoByToastId(currentId)
+                if (redoEntry && redoEntry.action.type === 'attachmentDelete') {
+                  const tabId2 = getTabId()
+                  for (const item of redoEntry.action.attachments) {
+                    fetch(
+                      `/api/projects/${item.projectId}/tickets/${item.ticketId}/attachments/${item.attachment.id}`,
+                      {
+                        method: 'DELETE',
+                        headers: { ...(tabId2 && { 'X-Tab-Id': tabId2 }) },
+                      },
+                    ).catch(console.error)
+                  }
+                  queryClient.invalidateQueries({ queryKey: ['attachments'] })
+                  queryClient.invalidateQueries({ queryKey: ['tickets'] })
+                }
+              },
+            })
+            undoStore.updateRedoToastId(currentId, toastId)
+            currentId = toastId
+          } else if (entry.action.type === 'attachmentAdd') {
+            const action = entry.action
+            // Undo attachment add: delete the attachments
+            undoStore.pushRedo(entry)
+            const tabId = getTabId()
+            ;(async () => {
+              try {
+                for (const item of action.attachments) {
+                  await fetch(
+                    `/api/projects/${item.projectId}/tickets/${item.ticketId}/attachments/${item.attachment.id}`,
+                    {
+                      method: 'DELETE',
+                      headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
+                    },
+                  )
+                }
+                queryClient.invalidateQueries({ queryKey: ['attachments'] })
+                queryClient.invalidateQueries({ queryKey: ['tickets'] })
+              } catch (err) {
+                console.error('Failed to undo attachment add:', err)
+                showToast.error('Failed to remove attachment')
+              }
+            })()
+
+            const fileNames =
+              action.attachments.length === 1
+                ? `"${action.attachments[0].attachment.originalName}"`
+                : `${action.attachments.length} attachments`
+            let currentId = entry.toastId
+            const toastId = showToast.withUndo(`Removed ${fileNames}`, {
+              onUndo: () => {
+                // Redo add
+                const redoEntry = useUndoStore.getState().redoByToastId(currentId)
+                if (redoEntry && redoEntry.action.type === 'attachmentAdd') {
+                  const tabId2 = getTabId()
+                  for (const item of redoEntry.action.attachments) {
+                    fetch(`/api/projects/${item.projectId}/tickets/${item.ticketId}/attachments`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(tabId2 && { 'X-Tab-Id': tabId2 }),
+                      },
+                      body: JSON.stringify({
+                        attachments: [
+                          {
+                            filename: item.attachment.filename,
+                            originalName: item.attachment.originalName,
+                            mimeType: item.attachment.mimetype,
+                            size: item.attachment.size,
+                            url: item.attachment.url,
+                          },
+                        ],
+                      }),
+                    }).catch(console.error)
+                  }
+                  queryClient.invalidateQueries({ queryKey: ['attachments'] })
+                  queryClient.invalidateQueries({ queryKey: ['tickets'] })
+                }
+              },
+            })
+            undoStore.updateRedoToastId(currentId, toastId)
+            currentId = toastId
           }
         }
       }
@@ -2660,6 +2787,127 @@ export function KeyboardShortcuts() {
               newToastId,
               true,
             )
+          } else if (entry.action.type === 'attachmentDelete') {
+            const action = entry.action
+            // Redo attachment delete: delete the attachments again
+            const tabId = getTabId()
+            ;(async () => {
+              try {
+                for (const item of action.attachments) {
+                  await fetch(
+                    `/api/projects/${item.projectId}/tickets/${item.ticketId}/attachments/${item.attachment.id}`,
+                    {
+                      method: 'DELETE',
+                      headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
+                    },
+                  )
+                }
+                queryClient.invalidateQueries({ queryKey: ['attachments'] })
+                queryClient.invalidateQueries({ queryKey: ['tickets'] })
+              } catch (err) {
+                console.error('Failed to redo attachment delete:', err)
+                showToast.error('Failed to delete attachment')
+              }
+            })()
+
+            const fileNames =
+              action.attachments.length === 1
+                ? `"${action.attachments[0].attachment.originalName}"`
+                : `${action.attachments.length} attachments`
+            const newToastId = showToast.withUndo(`Deleted ${fileNames}`, {
+              onUndo: () => {
+                // Undo delete = re-add
+                const undoEntry = useUndoStore.getState().undoByToastId(newToastId)
+                if (undoEntry && undoEntry.action.type === 'attachmentDelete') {
+                  const tabId2 = getTabId()
+                  for (const item of undoEntry.action.attachments) {
+                    fetch(`/api/projects/${item.projectId}/tickets/${item.ticketId}/attachments`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(tabId2 && { 'X-Tab-Id': tabId2 }),
+                      },
+                      body: JSON.stringify({
+                        attachments: [
+                          {
+                            filename: item.attachment.filename,
+                            originalName: item.attachment.originalName,
+                            mimeType: item.attachment.mimetype,
+                            size: item.attachment.size,
+                            url: item.attachment.url,
+                          },
+                        ],
+                      }),
+                    }).catch(console.error)
+                  }
+                  queryClient.invalidateQueries({ queryKey: ['attachments'] })
+                  queryClient.invalidateQueries({ queryKey: ['tickets'] })
+                }
+              },
+            })
+            redoStore.pushAttachmentDelete(entry.projectId, action.attachments, newToastId, true)
+          } else if (entry.action.type === 'attachmentAdd') {
+            const action = entry.action
+            // Redo attachment add: add the attachments again
+            const tabId = getTabId()
+            ;(async () => {
+              try {
+                for (const item of action.attachments) {
+                  await fetch(
+                    `/api/projects/${item.projectId}/tickets/${item.ticketId}/attachments`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(tabId && { 'X-Tab-Id': tabId }),
+                      },
+                      body: JSON.stringify({
+                        attachments: [
+                          {
+                            filename: item.attachment.filename,
+                            originalName: item.attachment.originalName,
+                            mimeType: item.attachment.mimetype,
+                            size: item.attachment.size,
+                            url: item.attachment.url,
+                          },
+                        ],
+                      }),
+                    },
+                  )
+                }
+                queryClient.invalidateQueries({ queryKey: ['attachments'] })
+                queryClient.invalidateQueries({ queryKey: ['tickets'] })
+              } catch (err) {
+                console.error('Failed to redo attachment add:', err)
+                showToast.error('Failed to add attachment')
+              }
+            })()
+
+            const fileNames =
+              action.attachments.length === 1
+                ? `"${action.attachments[0].attachment.originalName}"`
+                : `${action.attachments.length} attachments`
+            const newToastId = showToast.withUndo(`Added ${fileNames}`, {
+              onUndo: () => {
+                // Undo add = delete
+                const undoEntry = useUndoStore.getState().undoByToastId(newToastId)
+                if (undoEntry && undoEntry.action.type === 'attachmentAdd') {
+                  const tabId2 = getTabId()
+                  for (const item of undoEntry.action.attachments) {
+                    fetch(
+                      `/api/projects/${item.projectId}/tickets/${item.ticketId}/attachments/${item.attachment.id}`,
+                      {
+                        method: 'DELETE',
+                        headers: { ...(tabId2 && { 'X-Tab-Id': tabId2 }) },
+                      },
+                    ).catch(console.error)
+                  }
+                  queryClient.invalidateQueries({ queryKey: ['attachments'] })
+                  queryClient.invalidateQueries({ queryKey: ['tickets'] })
+                }
+              },
+            })
+            redoStore.pushAttachmentAdd(entry.projectId, action.attachments, newToastId, true)
           }
         }
       }
