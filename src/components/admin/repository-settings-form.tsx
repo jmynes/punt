@@ -195,15 +195,20 @@ export function RepositorySettingsForm() {
             </div>
           </div>
 
-          {/* Update Check Results */}
-          {updateResult && (
-            <div className="mt-4 pt-4 border-t border-zinc-800">
-              {updateResult.error ? (
+          {/* Update Check Results - show when checking or have results */}
+          {(checkForUpdates.isPending || updateResult) && (
+            <div className="mt-4 pt-4 border-t border-zinc-800 min-h-[3rem]">
+              {checkForUpdates.isPending ? (
+                <div className="flex items-center gap-2 text-zinc-400">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Checking for updates...</span>
+                </div>
+              ) : updateResult?.error ? (
                 <div className="flex items-center gap-2 text-red-400">
                   <AlertCircle className="h-4 w-4" />
                   <span className="text-sm">{updateResult.error}</span>
                 </div>
-              ) : updateResult.updateAvailable ? (
+              ) : updateResult?.updateAvailable ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-amber-400">
                     <AlertCircle className="h-4 w-4" />
@@ -241,17 +246,18 @@ export function RepositorySettingsForm() {
                     )}
                   </div>
                 </div>
-              ) : (
-                <div className="flex items-center gap-2 text-green-400">
-                  <Check className="h-4 w-4" />
-                  <span className="text-sm">You&apos;re running the latest release</span>
-                </div>
-              )}
-
-              {/* Commit status - show ahead/behind info */}
-              {!updateResult.error && updateResult.commitStatus && (
-                <CommitStatusDisplay status={updateResult.commitStatus} />
-              )}
+              ) : updateResult ? (
+                <>
+                  <div className="flex items-center gap-2 text-green-400">
+                    <Check className="h-4 w-4" />
+                    <span className="text-sm">You&apos;re running the latest release</span>
+                  </div>
+                  {/* Commit status - show ahead/behind info */}
+                  {updateResult.commitStatus && (
+                    <CommitStatusDisplay status={updateResult.commitStatus} />
+                  )}
+                </>
+              ) : null}
             </div>
           )}
 
@@ -263,17 +269,8 @@ export function RepositorySettingsForm() {
               disabled={checkForUpdates.isPending}
               className="text-zinc-300"
             >
-              {checkForUpdates.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Checking...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Check for Updates
-                </>
-              )}
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Check for Updates
             </Button>
           </div>
         </CardContent>
