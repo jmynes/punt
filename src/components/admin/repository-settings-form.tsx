@@ -55,39 +55,27 @@ interface CommitStatusProps {
   }
 }
 
-function CommitStatusDisplay({ status }: CommitStatusProps) {
-  // Don't show anything if we're identical to main
-  if (status.status === 'identical') {
-    return null
-  }
-
-  // Build the message based on status
+function CommitStatusInline({ status }: CommitStatusProps) {
   let message = ''
   let colorClass = 'text-zinc-400'
 
   if (status.status === 'ahead') {
-    message = `${status.aheadBy} commit${status.aheadBy === 1 ? '' : 's'} ahead of main`
+    message = `${status.aheadBy} ahead`
     colorClass = 'text-blue-400'
   } else if (status.status === 'behind') {
-    message = `${status.behindBy} commit${status.behindBy === 1 ? '' : 's'} behind main`
+    message = `${status.behindBy} behind`
     colorClass = 'text-amber-400'
   } else if (status.status === 'diverged') {
-    message = `${status.aheadBy} ahead, ${status.behindBy} behind main`
+    message = `${status.aheadBy}↑ ${status.behindBy}↓`
     colorClass = 'text-amber-400'
   } else if (status.status === 'unknown') {
-    // Commit not found in upstream - likely a fork or unpushed branch
-    message = 'Build from unrecognized commit (fork or local branch)'
+    message = 'unrecognized commit'
     colorClass = 'text-zinc-500'
   }
 
   if (!message) return null
 
-  return (
-    <div className={`flex items-center gap-2 ${colorClass}`}>
-      <GitCommit className="h-4 w-4 flex-shrink-0" />
-      <span className="text-xs">{message}</span>
-    </div>
-  )
+  return <span className={colorClass}>{message}</span>
 }
 
 export function RepositorySettingsForm() {
@@ -195,53 +183,51 @@ export function RepositorySettingsForm() {
             </div>
           </div>
 
-          {/* Update Check Section - always present to prevent reflow */}
-          <div className="mt-4 pt-4 border-t border-zinc-800 flex items-center justify-between gap-4">
-            <div className="flex-1 min-h-[1.5rem]">
+          {/* Update Check Section - fixed height to prevent reflow */}
+          <div className="mt-4 pt-4 border-t border-zinc-800 flex items-start justify-between gap-4 h-[2.5rem]">
+            <div className="flex items-center gap-2 text-sm h-full">
               {checkForUpdates.isPending ? (
-                <div className="flex items-center gap-2 text-zinc-400">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Checking for updates...</span>
-                </div>
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                  <span className="text-zinc-400">Checking for updates...</span>
+                </>
               ) : updateResult?.error ? (
-                <div className="flex items-center gap-2 text-red-400">
-                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                  <span className="text-sm">{updateResult.error}</span>
-                </div>
+                <>
+                  <AlertCircle className="h-4 w-4 text-red-400" />
+                  <span className="text-red-400">{updateResult.error}</span>
+                </>
               ) : updateResult?.updateAvailable ? (
-                <div className="flex items-center gap-2 text-amber-400">
-                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                  <span className="text-sm">
-                    <span className="font-medium">Update available:</span>{' '}
+                <>
+                  <AlertCircle className="h-4 w-4 text-amber-400" />
+                  <span className="text-amber-400">
+                    Update available:{' '}
                     <span className="font-mono">{updateResult.remote.latestVersion}</span>
-                    {updateResult.remote.releaseUrl && (
+                  </span>
+                  {updateResult.remote.releaseUrl && (
+                    <a
+                      href={updateResult.remote.releaseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-amber-500 hover:text-amber-400"
+                    >
+                      View <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </>
+              ) : updateResult ? (
+                <>
+                  <Check className="h-4 w-4 text-green-400" />
+                  <span className="text-green-400">Latest release</span>
+                  {updateResult.commitStatus &&
+                    updateResult.commitStatus.status !== 'identical' && (
                       <>
-                        {' '}
-                        <a
-                          href={updateResult.remote.releaseUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-amber-500 hover:text-amber-400"
-                        >
-                          View
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
+                        <span className="text-zinc-600">·</span>
+                        <CommitStatusInline status={updateResult.commitStatus} />
                       </>
                     )}
-                  </span>
-                </div>
-              ) : updateResult ? (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-green-400">
-                    <Check className="h-4 w-4 flex-shrink-0" />
-                    <span className="text-sm">Running the latest release</span>
-                  </div>
-                  {updateResult.commitStatus && (
-                    <CommitStatusDisplay status={updateResult.commitStatus} />
-                  )}
-                </div>
+                </>
               ) : (
-                <span className="text-sm text-zinc-500">Click to check for updates</span>
+                <span className="text-zinc-500">Click to check for updates</span>
               )}
             </div>
             <Button
@@ -252,7 +238,7 @@ export function RepositorySettingsForm() {
               className="text-zinc-300 flex-shrink-0"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Check for Updates
+              Check
             </Button>
           </div>
         </CardContent>
