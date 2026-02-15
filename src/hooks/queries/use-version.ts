@@ -61,7 +61,11 @@ export function useCheckForUpdates() {
             publishedAt: null,
           },
           updateAvailable: false,
-          commitsBehind: false,
+          commitStatus: {
+            aheadBy: 0,
+            behindBy: 0,
+            status: 'unknown' as const,
+          },
           repoUrl: 'https://github.com/jmynes/punt/',
           error: 'Update checking is disabled in demo mode',
         }

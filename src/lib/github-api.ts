@@ -135,6 +135,65 @@ export async function getLatestCommit(
   }
 }
 
+export interface CommitComparison {
+  aheadBy: number
+  behindBy: number
+  status: 'ahead' | 'behind' | 'identical' | 'diverged'
+}
+
+/**
+ * Compare two commits to see how many commits ahead/behind
+ * Uses GitHub's compare API: base...head
+ * Returns ahead_by (head is ahead of base) and behind_by (head is behind base)
+ */
+export async function compareCommits(
+  repoUrl: string,
+  baseCommit: string,
+  headCommit: string,
+): Promise<CommitComparison | null> {
+  const parsed = parseGitHubUrl(repoUrl)
+  if (!parsed) {
+    return null
+  }
+
+  // If commits are the same, no need to call API
+  if (baseCommit === headCommit) {
+    return { aheadBy: 0, behindBy: 0, status: 'identical' }
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/compare/${baseCommit}...${headCommit}`,
+      {
+        headers: {
+          Accept: 'application/vnd.github.v3+json',
+          'User-Agent': 'PUNT-Update-Checker',
+        },
+        next: { revalidate: 300 },
+      },
+    )
+
+    if (!response.ok) {
+      // 404 likely means one of the commits doesn't exist in this repo
+      // (e.g., local commit from a fork not pushed to upstream)
+      if (response.status === 404) {
+        return null
+      }
+      throw new Error(`GitHub API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return {
+      aheadBy: data.ahead_by || 0,
+      behindBy: data.behind_by || 0,
+      status: data.status as 'ahead' | 'behind' | 'identical' | 'diverged',
+    }
+  } catch (error) {
+    console.error('Failed to compare commits:', error)
+    return null
+  }
+}
+
 /**
  * Compare semantic versions
  * Returns:

@@ -47,6 +47,50 @@ function formatDate(dateString: string | null): string {
   }
 }
 
+interface CommitStatusProps {
+  status: {
+    aheadBy: number
+    behindBy: number
+    status: 'ahead' | 'behind' | 'identical' | 'diverged' | 'unknown'
+  }
+  remoteCommitShort: string | null
+}
+
+function CommitStatusDisplay({ status, remoteCommitShort }: CommitStatusProps) {
+  // Don't show anything if we're identical to main
+  if (status.status === 'identical') {
+    return null
+  }
+
+  // Build the message based on status
+  let message = ''
+  let colorClass = 'text-zinc-400'
+
+  if (status.status === 'ahead') {
+    message = `${status.aheadBy} commit${status.aheadBy === 1 ? '' : 's'} ahead of main`
+    colorClass = 'text-blue-400'
+  } else if (status.status === 'behind') {
+    message = `${status.behindBy} commit${status.behindBy === 1 ? '' : 's'} behind main`
+    colorClass = 'text-amber-400'
+  } else if (status.status === 'diverged') {
+    message = `${status.aheadBy} ahead, ${status.behindBy} behind main`
+    colorClass = 'text-amber-400'
+  } else if (status.status === 'unknown') {
+    // Commit not found in upstream - likely a fork or unpushed branch
+    message = 'Build from unrecognized commit (fork or local branch)'
+    colorClass = 'text-zinc-500'
+  }
+
+  if (!message) return null
+
+  return (
+    <div className={`mt-2 flex items-center gap-2 ${colorClass}`}>
+      <GitCommit className="h-4 w-4" />
+      <span className="text-xs">{message}</span>
+    </div>
+  )
+}
+
 export function RepositorySettingsForm() {
   const { data: settings, isLoading, error } = useSystemSettings()
   const { data: localVersion } = useLocalVersion()
@@ -201,22 +245,17 @@ export function RepositorySettingsForm() {
               ) : (
                 <div className="flex items-center gap-2 text-green-400">
                   <Check className="h-4 w-4" />
-                  <span className="text-sm">You&apos;re running the latest version</span>
+                  <span className="text-sm">You&apos;re running the latest release</span>
                 </div>
               )}
 
-              {/* Commit status */}
-              {!updateResult.error &&
-                updateResult.commitsBehind &&
-                !updateResult.updateAvailable && (
-                  <div className="mt-2 flex items-center gap-2 text-zinc-400">
-                    <GitCommit className="h-4 w-4" />
-                    <span className="text-xs">
-                      Your build is behind the latest commit (
-                      {updateResult.remote.latestCommitShort})
-                    </span>
-                  </div>
-                )}
+              {/* Commit status - show ahead/behind info */}
+              {!updateResult.error && updateResult.commitStatus && (
+                <CommitStatusDisplay
+                  status={updateResult.commitStatus}
+                  remoteCommitShort={updateResult.remote.latestCommitShort}
+                />
+              )}
             </div>
           )}
 

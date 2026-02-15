@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
-import { compareVersions, getLatestCommit, getLatestRelease } from '@/lib/github-api'
+import {
+  compareCommits,
+  compareVersions,
+  getLatestCommit,
+  getLatestRelease,
+} from '@/lib/github-api'
 import { getSystemSettings } from '@/lib/system-settings'
 
 const DEFAULT_REPO_URL = 'https://github.com/jmynes/punt/'
@@ -21,8 +26,14 @@ export interface UpdateCheckResult {
     releaseName: string | null
     publishedAt: string | null
   }
+  // Release comparison
   updateAvailable: boolean
-  commitsBehind: boolean
+  // Commit comparison
+  commitStatus: {
+    aheadBy: number
+    behindBy: number
+    status: 'ahead' | 'behind' | 'identical' | 'diverged' | 'unknown'
+  }
   repoUrl: string
   error?: string
 }
@@ -50,14 +61,34 @@ export async function GET() {
       getLatestCommit(repoUrl),
     ])
 
-    // Determine if updates are available
+    // Determine if a new release is available
     let updateAvailable = false
     if (latestRelease && localVersion !== 'unknown') {
       updateAvailable = compareVersions(localVersion, latestRelease.tag_name) < 0
     }
 
-    // Check if we're behind on commits
-    const commitsBehind = latestCommit ? localCommit !== latestCommit.sha : false
+    // Compare commits to see ahead/behind status
+    let commitStatus: UpdateCheckResult['commitStatus'] = {
+      aheadBy: 0,
+      behindBy: 0,
+      status: 'unknown',
+    }
+
+    if (latestCommit && localCommit !== 'unknown') {
+      if (localCommit === latestCommit.sha) {
+        commitStatus = { aheadBy: 0, behindBy: 0, status: 'identical' }
+      } else {
+        // Compare local commit against remote main
+        // We're asking: how does local compare to remote?
+        // base = remote (main), head = local
+        const comparison = await compareCommits(repoUrl, latestCommit.sha, localCommit)
+        if (comparison) {
+          commitStatus = comparison
+        }
+        // If comparison fails (e.g., local commit not in upstream repo),
+        // status remains 'unknown'
+      }
+    }
 
     const result: UpdateCheckResult = {
       local: {
@@ -75,7 +106,7 @@ export async function GET() {
         publishedAt: latestRelease?.published_at || null,
       },
       updateAvailable,
-      commitsBehind,
+      commitStatus,
       repoUrl,
     }
 
