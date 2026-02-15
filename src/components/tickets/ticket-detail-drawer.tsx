@@ -84,6 +84,7 @@ import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
 import type {
   IssueType,
   LabelSummary,
@@ -148,6 +149,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const { openCreateTicketWithData } = useUIStore()
   const currentUser = useCurrentUser()
   const members = useProjectMembers(projectId)
+  const { pushAttachmentAdd, pushAttachmentDelete, undoByToastId } = useUndoStore()
 
   // API mutations
   const updateTicketMutation = useUpdateTicket()
@@ -1428,13 +1430,59 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     onRemove={(fileId) => {
                       const removed = tempAttachments.find((a) => a.id === fileId)
                       if (removed && ticket) {
+                        const ticketKey = `${projectKey}-${ticket.number}`
+                        // Remove from local state immediately
+                        setTempAttachments(tempAttachments.filter((a) => a.id !== fileId))
+                        // Create a stable reference for the toast ID
+                        let toastIdRef: string | number = ''
+                        toastIdRef = showToast.withUndo(
+                          `Deleted "${removed.originalName}" from ${ticketKey}`,
+                          {
+                            onUndo: () => {
+                              // Undo: re-add the attachment
+                              undoByToastId(toastIdRef)
+                              addAttachmentsMutation.mutate({
+                                projectId,
+                                ticketId: ticket.id,
+                                attachments: [
+                                  {
+                                    filename: removed.filename,
+                                    originalName: removed.originalName,
+                                    mimeType: removed.mimetype,
+                                    size: removed.size,
+                                    url: removed.url,
+                                  },
+                                ],
+                              })
+                              setTempAttachments((prev) => [...prev, removed])
+                            },
+                          },
+                        )
+                        pushAttachmentDelete(
+                          projectId,
+                          [
+                            {
+                              projectId,
+                              ticketId: ticket.id,
+                              ticketKey,
+                              attachment: {
+                                id: removed.id,
+                                filename: removed.filename,
+                                originalName: removed.originalName,
+                                mimetype: removed.mimetype,
+                                size: removed.size,
+                                url: removed.url,
+                              },
+                            },
+                          ],
+                          toastIdRef,
+                        )
                         removeAttachmentMutation.mutate({
                           projectId,
                           ticketId: ticket.id,
                           attachmentId: removed.id,
                         })
                       }
-                      setTempAttachments(tempAttachments.filter((a) => a.id !== fileId))
                     }}
                     layout="grid"
                   />
@@ -1446,6 +1494,48 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   onChange={(files) => {
                     const newFiles = files as UploadedFileInfo[]
                     if (newFiles.length > 0 && ticket) {
+                      const ticketKey = `${projectKey}-${ticket.number}`
+                      const fileNames =
+                        newFiles.length === 1
+                          ? `"${newFiles[0].originalName}"`
+                          : `${newFiles.length} files`
+                      // Add to local state immediately
+                      setTempAttachments([...tempAttachments, ...newFiles])
+                      // Create a stable reference for the toast ID
+                      let toastIdRef: string | number = ''
+                      toastIdRef = showToast.withUndo(`Added ${fileNames} to ${ticketKey}`, {
+                        onUndo: () => {
+                          // Undo: remove the added attachments
+                          undoByToastId(toastIdRef)
+                          for (const f of newFiles) {
+                            removeAttachmentMutation.mutate({
+                              projectId,
+                              ticketId: ticket.id,
+                              attachmentId: f.id,
+                            })
+                          }
+                          setTempAttachments((prev) =>
+                            prev.filter((a) => !newFiles.some((nf) => nf.id === a.id)),
+                          )
+                        },
+                      })
+                      pushAttachmentAdd(
+                        projectId,
+                        newFiles.map((f) => ({
+                          projectId,
+                          ticketId: ticket.id,
+                          ticketKey,
+                          attachment: {
+                            id: f.id,
+                            filename: f.filename,
+                            originalName: f.originalName,
+                            mimetype: f.mimetype,
+                            size: f.size,
+                            url: f.url,
+                          },
+                        })),
+                        toastIdRef,
+                      )
                       // Persist new files to database
                       addAttachmentsMutation.mutate({
                         projectId,
@@ -1458,8 +1548,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                           url: f.url,
                         })),
                       })
-                      // Add to local state
-                      setTempAttachments([...tempAttachments, ...newFiles])
                     }
                   }}
                   maxFiles={(uploadConfig?.maxAttachmentsPerTicket ?? 20) - tempAttachments.length}

@@ -29,6 +29,22 @@ interface SprintMovedTicket {
   toSprintId: string | null
 }
 
+interface AttachmentInfo {
+  id: string
+  filename: string
+  originalName: string
+  mimetype: string
+  size: number
+  url: string
+}
+
+interface AttachmentAction {
+  projectId: string
+  ticketId: string
+  ticketKey: string
+  attachment: AttachmentInfo
+}
+
 // Different types of undoable actions
 // Note: projectCreate and projectDelete are not supported since projects are now server-backed
 type UndoAction =
@@ -69,6 +85,14 @@ type UndoAction =
       type: 'columnCreate'
       columnId: string
       columnName: string
+    }
+  | {
+      type: 'attachmentAdd'
+      attachments: AttachmentAction[]
+    }
+  | {
+      type: 'attachmentDelete'
+      attachments: AttachmentAction[]
     }
 
 interface UndoEntry {
@@ -184,6 +208,22 @@ interface UndoState {
     projectId: string,
     columnId: string,
     columnName: string,
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
+
+  // Add an attachment add action to the undo stack
+  pushAttachmentAdd: (
+    projectId: string,
+    attachments: AttachmentAction[],
+    toastId: string | number,
+    isRedo?: boolean,
+  ) => void
+
+  // Add an attachment delete action to the undo stack
+  pushAttachmentDelete: (
+    projectId: string,
+    attachments: AttachmentAction[],
     toastId: string | number,
     isRedo?: boolean,
   ) => void
@@ -531,6 +571,52 @@ export const useUndoStore = create<UndoState>((set, get) => ({
             type: 'columnCreate',
             columnId,
             columnName,
+          },
+          timestamp: Date.now(),
+          toastId,
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushAttachmentAdd: (projectId, attachments, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Attachment Add ${isRedo ? '(Redo)' : ''}`, {
+      count: attachments.length,
+      attachmentIds: attachments.map((a) => a.attachment.id),
+      projectId,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: {
+            type: 'attachmentAdd',
+            attachments: attachments.map((a) => ({ ...a, attachment: { ...a.attachment } })),
+          },
+          timestamp: Date.now(),
+          toastId,
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushAttachmentDelete: (projectId, attachments, toastId, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Attachment Delete ${isRedo ? '(Redo)' : ''}`, {
+      count: attachments.length,
+      attachmentIds: attachments.map((a) => a.attachment.id),
+      projectId,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: {
+            type: 'attachmentDelete',
+            attachments: attachments.map((a) => ({ ...a, attachment: { ...a.attachment } })),
           },
           timestamp: Date.now(),
           toastId,
