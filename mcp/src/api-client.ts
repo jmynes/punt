@@ -434,3 +434,40 @@ export async function listRoles(projectKey: string) {
     ] as RoleData[],
   }
 }
+
+// ============================================================================
+// Comments API
+// ============================================================================
+
+export interface CommentData {
+  id: string
+  content: string
+  createdAt: string
+  updatedAt: string
+  isSystemGenerated: boolean
+  source: string | null
+  author: {
+    id: string
+    name: string
+    email: string | null
+    avatar: string | null
+  }
+}
+
+export interface CreateCommentInput {
+  content: string
+  isSystemGenerated?: boolean
+  source?: string
+}
+
+export async function createComment(
+  projectKey: string,
+  ticketId: string,
+  data: CreateCommentInput,
+) {
+  return apiRequest<CommentData>(
+    'POST',
+    `/api/projects/${projectKey}/tickets/${ticketId}/comments`,
+    data,
+  )
+}

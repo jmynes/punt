@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import {
+  createComment,
   createTicket,
   deleteTicket,
   listColumns,
@@ -414,6 +415,12 @@ export function registerTicketTools(server: McpServer) {
         .string()
         .optional()
         .describe('Parent ticket key (e.g., "PUNT-1") for creating subtasks'),
+      context: z
+        .string()
+        .optional()
+        .describe(
+          'Context or reasoning for creating this ticket. When provided, this will be logged as a system comment on the ticket for audit trail purposes.',
+        ),
     },
     async ({
       projectKey,
@@ -435,6 +442,7 @@ export function registerTicketTools(server: McpServer) {
       affectedVersion,
       fixVersion,
       parent,
+      context,
     }) => {
       // Get columns to find columnId
       const columnsResult = await listColumns(projectKey)
@@ -574,6 +582,20 @@ export function registerTicketTools(server: McpServer) {
       }
 
       const ticket = unwrapData(result)
+
+      // If context was provided, create a system comment to log it
+      if (context) {
+        const commentResult = await createComment(projectKey, ticket.id, {
+          content: `**MCP Context:**\n\n${context}`,
+          isSystemGenerated: true,
+          source: 'mcp',
+        })
+        // Log but don't fail if comment creation fails
+        if (commentResult.error) {
+          console.warn(`Failed to create context comment: ${commentResult.error}`)
+        }
+      }
+
       return textResponse(formatTicketCreated(ticket, projectKey.toUpperCase()))
     },
   )
@@ -612,6 +634,12 @@ export function registerTicketTools(server: McpServer) {
         .nullable()
         .optional()
         .describe('Parent ticket key (e.g., "PUNT-1") or null to remove parent'),
+      context: z
+        .string()
+        .optional()
+        .describe(
+          'Context or reasoning for this update. When provided, this will be logged as a system comment on the ticket for audit trail purposes.',
+        ),
     },
     async ({
       key,
@@ -632,6 +660,7 @@ export function registerTicketTools(server: McpServer) {
       affectedVersion,
       fixVersion,
       parent,
+      context,
     }) => {
       const parsed = parseTicketKey(key)
       if (!parsed) {
@@ -769,6 +798,20 @@ export function registerTicketTools(server: McpServer) {
       }
 
       const ticket = unwrapData(result)
+
+      // If context was provided, create a system comment to log it
+      if (context) {
+        const commentResult = await createComment(parsed.projectKey, ticket.id, {
+          content: `**MCP Context:**\n\n${context}`,
+          isSystemGenerated: true,
+          source: 'mcp',
+        })
+        // Log but don't fail if comment creation fails
+        if (commentResult.error) {
+          console.warn(`Failed to create context comment: ${commentResult.error}`)
+        }
+      }
+
       const upperKey = parsed.projectKey.toUpperCase()
       return textResponse(
         formatTicketUpdated(`${upperKey}-${ticket.number}`, existingTicket, ticket),
