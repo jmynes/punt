@@ -1,6 +1,7 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
 import { showToast } from '@/lib/toast'
 import type { AttachmentInfo } from '@/types'
@@ -97,9 +98,9 @@ export function useAddAttachments() {
       queryClient.invalidateQueries({
         queryKey: attachmentKeys.forTicket(projectId, ticketId),
       })
-      // Also invalidate ticket query to update attachment count
+      // Also invalidate tickets query to update attachment count on board/backlog
       queryClient.invalidateQueries({
-        queryKey: ['tickets', projectId, ticketId],
+        queryKey: ticketKeys.byProject(projectId),
       })
     },
     onError: (err) => {
@@ -172,9 +173,9 @@ export function useRemoveAttachment() {
       queryClient.invalidateQueries({
         queryKey: attachmentKeys.forTicket(projectId, ticketId),
       })
-      // Also invalidate ticket query to update attachment count
+      // Also invalidate tickets query to update attachment count on board/backlog
       queryClient.invalidateQueries({
-        queryKey: ['tickets', projectId, ticketId],
+        queryKey: ticketKeys.byProject(projectId),
       })
     },
   })
