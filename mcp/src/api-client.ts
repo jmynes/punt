@@ -485,3 +485,83 @@ export async function deleteComment(projectKey: string, ticketId: string, commen
     `/api/projects/${projectKey}/tickets/${ticketId}/comments/${commentId}`,
   )
 }
+
+export async function updateComment(
+  projectKey: string,
+  ticketId: string,
+  commentId: string,
+  content: string,
+) {
+  return apiRequest<CommentData>(
+    'PATCH',
+    `/api/projects/${projectKey}/tickets/${ticketId}/comments/${commentId}`,
+    { content },
+  )
+}
+
+// ============================================================================
+// Ticket Links API
+// ============================================================================
+
+export interface TicketLinkData {
+  id: string
+  linkType: string
+  fromTicket: {
+    id: string
+    number: number
+    title: string
+    type: string
+    column: { name: string }
+  }
+  toTicket: {
+    id: string
+    number: number
+    title: string
+    type: string
+    column: { name: string }
+  }
+  createdAt: string
+}
+
+export async function listTicketLinks(projectKey: string, ticketId: string) {
+  return apiRequest<TicketLinkData[]>(
+    'GET',
+    `/api/projects/${projectKey}/tickets/${ticketId}/links`,
+  )
+}
+
+export interface CreateTicketLinkInput {
+  toTicketId: string
+  linkType: string
+}
+
+export async function createTicketLink(
+  projectKey: string,
+  ticketId: string,
+  data: CreateTicketLinkInput,
+) {
+  return apiRequest<TicketLinkData>(
+    'POST',
+    `/api/projects/${projectKey}/tickets/${ticketId}/links`,
+    data,
+  )
+}
+
+export async function deleteTicketLink(projectKey: string, ticketId: string, linkId: string) {
+  return apiRequest<{ success: boolean }>(
+    'DELETE',
+    `/api/projects/${projectKey}/tickets/${ticketId}/links/${linkId}`,
+  )
+}
+
+// ============================================================================
+// Ticket Search API
+// ============================================================================
+
+export async function searchTickets(projectKey: string, query: string) {
+  const encodedQuery = encodeURIComponent(query)
+  return apiRequest<TicketData[]>(
+    'GET',
+    `/api/projects/${projectKey}/tickets/search?q=${encodedQuery}`,
+  )
+}

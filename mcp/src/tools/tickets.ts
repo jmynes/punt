@@ -4,16 +4,22 @@ import {
   type CommentData,
   createComment,
   createTicket,
+  createTicketLink,
   deleteComment,
   deleteTicket,
+  deleteTicketLink,
   listColumns,
   listComments,
   listLabels,
   listSprints,
+  listTicketLinks,
   listTickets,
   listUsers,
+  searchTickets,
   type TicketData,
+  type TicketLinkData,
   unwrapData,
+  updateComment,
   updateTicket,
 } from '../api-client.js'
 import {
@@ -1056,6 +1062,254 @@ export function registerTicketTools(server: McpServer) {
       return textResponse(`Deleted comment from **${key}**`)
     },
   )
+
+  // update_comment - Update a comment on a ticket
+  server.tool(
+    'update_comment',
+    'Update a comment on a ticket (must be comment author)',
+    {
+      key: z.string().describe('Ticket key (e.g., PUNT-2)'),
+      commentId: z.string().describe('Comment ID to update'),
+      content: z.string().min(1).describe('New comment content (supports markdown)'),
+    },
+    async ({ key, commentId, content }) => {
+      const parsed = parseTicketKey(key)
+      if (!parsed) {
+        return errorResponse(`Invalid ticket key format: ${key}`)
+      }
+
+      // Get the ticket to find its ID
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
+      }
+
+      const ticket = ticketsResult.data?.find((t) => t.number === parsed.number)
+      if (!ticket) {
+        return errorResponse(`Ticket not found: ${key}`)
+      }
+
+      const result = await updateComment(parsed.projectKey, ticket.id, commentId, content)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      return textResponse(
+        `Updated comment on **${key}**:\n\n${escapeMarkdown(truncate(content, 200))}`,
+      )
+    },
+  )
+
+  // search_tickets - Full-text search across tickets
+  server.tool(
+    'search_tickets',
+    'Search tickets by text across title and description',
+    {
+      projectKey: z.string().describe('Project key (e.g., PUNT)'),
+      query: z.string().min(1).describe('Search query'),
+    },
+    async ({ projectKey, query }) => {
+      const result = await searchTickets(projectKey, query)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      const tickets = result.data ?? []
+      if (tickets.length === 0) {
+        return textResponse(`No tickets found matching "${escapeMarkdown(query)}" in ${projectKey}`)
+      }
+
+      return textResponse(
+        `## Search Results for "${escapeMarkdown(query)}" in ${projectKey}\n\n` +
+          formatTicketList(tickets, projectKey),
+      )
+    },
+  )
+
+  // list_ticket_links - List all links for a ticket
+  server.tool(
+    'list_ticket_links',
+    'List all links (blocks, relates to, duplicates, etc.) for a ticket',
+    {
+      key: z.string().describe('Ticket key (e.g., PUNT-2)'),
+    },
+    async ({ key }) => {
+      const parsed = parseTicketKey(key)
+      if (!parsed) {
+        return errorResponse(`Invalid ticket key format: ${key}`)
+      }
+
+      // Get the ticket to find its ID
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
+      }
+
+      const ticket = ticketsResult.data?.find((t) => t.number === parsed.number)
+      if (!ticket) {
+        return errorResponse(`Ticket not found: ${key}`)
+      }
+
+      const result = await listTicketLinks(parsed.projectKey, ticket.id)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      const links = result.data ?? []
+      if (links.length === 0) {
+        return textResponse(`No links on **${key}**`)
+      }
+
+      return textResponse(formatTicketLinkList(key, parsed.projectKey, links))
+    },
+  )
+
+  // add_ticket_link - Create a link between two tickets
+  server.tool(
+    'add_ticket_link',
+    'Create a link between two tickets',
+    {
+      fromKey: z.string().describe('Source ticket key (e.g., PUNT-2)'),
+      toKey: z.string().describe('Target ticket key (e.g., PUNT-5)'),
+      linkType: z
+        .enum([
+          'blocks',
+          'is_blocked_by',
+          'relates_to',
+          'duplicates',
+          'is_duplicated_by',
+          'clones',
+          'is_cloned_by',
+        ])
+        .describe('Type of link'),
+    },
+    async ({ fromKey, toKey, linkType }) => {
+      const fromParsed = parseTicketKey(fromKey)
+      const toParsed = parseTicketKey(toKey)
+
+      if (!fromParsed) {
+        return errorResponse(`Invalid ticket key format: ${fromKey}`)
+      }
+      if (!toParsed) {
+        return errorResponse(`Invalid ticket key format: ${toKey}`)
+      }
+
+      // Get both tickets to find their IDs
+      const fromTicketsResult = await listTickets(fromParsed.projectKey)
+      if (fromTicketsResult.error) {
+        return errorResponse(fromTicketsResult.error)
+      }
+
+      const fromTicket = fromTicketsResult.data?.find((t) => t.number === fromParsed.number)
+      if (!fromTicket) {
+        return errorResponse(`Ticket not found: ${fromKey}`)
+      }
+
+      // If same project, use same list; otherwise fetch the other project
+      let toTicket: TicketData | undefined
+      if (fromParsed.projectKey === toParsed.projectKey) {
+        toTicket = fromTicketsResult.data?.find((t) => t.number === toParsed.number)
+      } else {
+        const toTicketsResult = await listTickets(toParsed.projectKey)
+        if (toTicketsResult.error) {
+          return errorResponse(toTicketsResult.error)
+        }
+        toTicket = toTicketsResult.data?.find((t) => t.number === toParsed.number)
+      }
+
+      if (!toTicket) {
+        return errorResponse(`Ticket not found: ${toKey}`)
+      }
+
+      const result = await createTicketLink(fromParsed.projectKey, fromTicket.id, {
+        toTicketId: toTicket.id,
+        linkType,
+      })
+
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      const linkLabel = linkType.replace(/_/g, ' ')
+      return textResponse(`Created link: **${fromKey}** ${linkLabel} **${toKey}**`)
+    },
+  )
+
+  // remove_ticket_link - Remove a link between tickets
+  server.tool(
+    'remove_ticket_link',
+    'Remove a link from a ticket',
+    {
+      key: z.string().describe('Ticket key (e.g., PUNT-2)'),
+      linkId: z.string().describe('Link ID to remove (from list_ticket_links)'),
+    },
+    async ({ key, linkId }) => {
+      const parsed = parseTicketKey(key)
+      if (!parsed) {
+        return errorResponse(`Invalid ticket key format: ${key}`)
+      }
+
+      // Get the ticket to find its ID
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
+      }
+
+      const ticket = ticketsResult.data?.find((t) => t.number === parsed.number)
+      if (!ticket) {
+        return errorResponse(`Ticket not found: ${key}`)
+      }
+
+      const result = await deleteTicketLink(parsed.projectKey, ticket.id, linkId)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      return textResponse(`Removed link from **${key}**`)
+    },
+  )
+}
+
+/**
+ * Format a list of ticket links for display
+ */
+function formatTicketLinkList(
+  ticketKey: string,
+  projectKey: string,
+  links: TicketLinkData[],
+): string {
+  const lines: string[] = []
+  lines.push(`## Links on ${ticketKey}`)
+  lines.push('')
+
+  // Group links by type
+  const grouped: Record<string, TicketLinkData[]> = {}
+  for (const link of links) {
+    if (!grouped[link.linkType]) {
+      grouped[link.linkType] = []
+    }
+    grouped[link.linkType].push(link)
+  }
+
+  for (const [linkType, typeLinks] of Object.entries(grouped)) {
+    const label = linkType.replace(/_/g, ' ')
+    lines.push(`### ${label}`)
+    for (const link of typeLinks) {
+      // Determine which ticket is the "other" one
+      const otherTicket =
+        link.fromTicket.number === Number.parseInt(ticketKey.split('-')[1], 10)
+          ? link.toTicket
+          : link.fromTicket
+      const otherKey = `${projectKey}-${otherTicket.number}`
+      lines.push(
+        `- **${otherKey}**: ${escapeMarkdown(otherTicket.title)} _(${otherTicket.type}, ${escapeMarkdown(otherTicket.column.name)})_`,
+      )
+      lines.push(`  _Link ID: ${link.id}_`)
+    }
+    lines.push('')
+  }
+
+  return lines.join('\n')
 }
 
 /**
