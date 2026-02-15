@@ -699,6 +699,13 @@ export function KeyboardShortcuts() {
         return
       }
 
+      // Ctrl/Cmd + I: Toggle Claude Chat panel
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'i' || e.key === 'I')) {
+        e.preventDefault()
+        useUIStore.getState().toggleChatPanel()
+        return
+      }
+
       // Check for Ctrl/Cmd + Z (Undo) - must check before redo to avoid conflicts
       if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
         e.preventDefault()
@@ -2777,6 +2784,12 @@ export function KeyboardShortcuts() {
                   <span>Paste copied tickets</span>
                   <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
                     Ctrl / Cmd + V
+                  </kbd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Open Claude Chat</span>
+                  <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
+                    Ctrl / Cmd + I
                   </kbd>
                 </div>
                 <div className="flex items-center justify-between">

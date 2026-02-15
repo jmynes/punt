@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import type { TicketFormData } from '@/types'
 
+interface ChatContext {
+  projectId?: string
+  ticketKey?: string
+}
+
 interface UIState {
   // Sidebar
   sidebarOpen: boolean
@@ -52,6 +57,13 @@ interface UIState {
   drawerFocusField: string | null
   openTicketWithFocus: (ticketId: string, field: string) => void
   clearDrawerFocusField: () => void
+
+  // Chat panel
+  chatPanelOpen: boolean
+  setChatPanelOpen: (open: boolean) => void
+  toggleChatPanel: () => void
+  chatContext: ChatContext
+  setChatContext: (context: ChatContext) => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -107,4 +119,11 @@ export const useUIStore = create<UIState>((set) => ({
   openTicketWithFocus: (ticketId, field) =>
     set({ activeTicketId: ticketId, drawerFocusField: field }),
   clearDrawerFocusField: () => set({ drawerFocusField: null }),
+
+  // Chat panel
+  chatPanelOpen: false,
+  setChatPanelOpen: (open) => set({ chatPanelOpen: open }),
+  toggleChatPanel: () => set((state) => ({ chatPanelOpen: !state.chatPanelOpen })),
+  chatContext: {},
+  setChatContext: (context) => set({ chatContext: context }),
 }))
