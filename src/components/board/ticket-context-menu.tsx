@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ClipboardCopy,
   ClipboardPaste,
+  FolderOpen,
   Hash,
   Pencil,
   Plus,
@@ -29,6 +30,7 @@ import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { resolutionConfig } from '@/components/common/resolution-badge'
+import { MoveToProjectDialog } from '@/components/tickets/move-to-project-dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -98,6 +100,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   )
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<TicketWithRelations[]>([])
+  const [showMoveToProject, setShowMoveToProject] = useState(false)
   // Track if component has mounted to avoid hydration mismatch
   const [isMounted, setIsMounted] = useState(false)
 
@@ -1074,6 +1077,18 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                 onMouseEnter={closeSubmenu}
                 onClick={doPaste}
               />
+              {!multi && (
+                <MenuButton
+                  icon={<FolderOpen className="h-4 w-4" />}
+                  label="Move to Project"
+                  onMouseEnter={closeSubmenu}
+                  onClick={() => {
+                    setShowMoveToProject(true)
+                    setOpen(false)
+                    setSubmenu(null)
+                  }}
+                />
+              )}
               <MenuButton
                 icon={<Trash2 className="h-4 w-4" />}
                 label="Delete"
@@ -1356,6 +1371,15 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+      {isMounted && (
+        <MoveToProjectDialog
+          open={showMoveToProject}
+          onOpenChange={setShowMoveToProject}
+          ticket={ticket}
+          projectKey={ticket.project?.key || ''}
+          projectId={projectId}
+        />
       )}
     </>
   )
