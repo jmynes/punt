@@ -58,8 +58,8 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
   emailVerification: false,
   emailInvitations: true,
   // Repository configuration
-  canonicalRepoUrl: null,
-  repoHostingProvider: null,
+  canonicalRepoUrl: 'https://github.com/jmynes/punt/',
+  repoHostingProvider: 'github',
   forkRepoUrl: null,
 }
 

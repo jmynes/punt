@@ -6,24 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-system-settings'
-import type { RepoHostingProvider } from '@/lib/system-settings'
 
-const HOSTING_PROVIDERS: { value: RepoHostingProvider; label: string }[] = [
-  { value: 'github', label: 'GitHub' },
-  { value: 'gitlab', label: 'GitLab' },
-  { value: 'bitbucket', label: 'Bitbucket' },
-  { value: 'gitea', label: 'Gitea' },
-  { value: 'codeberg', label: 'Codeberg' },
-  { value: 'other', label: 'Other' },
-]
+const DEFAULT_REPO_URL = 'https://github.com/jmynes/punt/'
 
 // Simple URL validation - allows http and https URLs
 function isValidUrl(url: string): boolean {
@@ -40,67 +25,46 @@ export function RepositorySettingsForm() {
   const { data: settings, isLoading, error } = useSystemSettings()
   const updateSettings = useUpdateSystemSettings()
 
-  // Local form state
-  const [canonicalRepoUrl, setCanonicalRepoUrl] = useState('')
-  const [repoHostingProvider, setRepoHostingProvider] = useState<RepoHostingProvider | ''>('')
-  const [forkRepoUrl, setForkRepoUrl] = useState('')
+  // Local form state - default to the canonical Punt repo
+  const [repoUrl, setRepoUrl] = useState(DEFAULT_REPO_URL)
 
   // Validation state
-  const [canonicalUrlError, setCanonicalUrlError] = useState<string | null>(null)
-  const [forkUrlError, setForkUrlError] = useState<string | null>(null)
+  const [urlError, setUrlError] = useState<string | null>(null)
 
   // Sync form state when settings are loaded
   useEffect(() => {
     if (settings) {
-      setCanonicalRepoUrl(settings.canonicalRepoUrl ?? '')
-      setRepoHostingProvider(settings.repoHostingProvider ?? '')
-      setForkRepoUrl(settings.forkRepoUrl ?? '')
+      // Use saved value if exists, otherwise use default
+      setRepoUrl(settings.canonicalRepoUrl ?? DEFAULT_REPO_URL)
     }
   }, [settings])
 
-  // Validate URLs on change
+  // Validate URL on change
   useEffect(() => {
-    if (canonicalRepoUrl && !isValidUrl(canonicalRepoUrl)) {
-      setCanonicalUrlError('Please enter a valid URL (http:// or https://)')
+    if (repoUrl && !isValidUrl(repoUrl)) {
+      setUrlError('Please enter a valid URL (http:// or https://)')
     } else {
-      setCanonicalUrlError(null)
+      setUrlError(null)
     }
-  }, [canonicalRepoUrl])
+  }, [repoUrl])
 
-  useEffect(() => {
-    if (forkRepoUrl && !isValidUrl(forkRepoUrl)) {
-      setForkUrlError('Please enter a valid URL (http:// or https://)')
-    } else {
-      setForkUrlError(null)
-    }
-  }, [forkRepoUrl])
-
-  const hasChanges =
-    settings &&
-    (canonicalRepoUrl !== (settings.canonicalRepoUrl ?? '') ||
-      repoHostingProvider !== (settings.repoHostingProvider ?? '') ||
-      forkRepoUrl !== (settings.forkRepoUrl ?? ''))
-
-  const hasErrors = canonicalUrlError !== null || forkUrlError !== null
+  // Compare against saved value (or default if never saved)
+  const savedUrl = settings?.canonicalRepoUrl ?? DEFAULT_REPO_URL
+  const hasChanges = settings && repoUrl !== savedUrl
 
   const handleSave = () => {
-    if (hasErrors) return
+    if (urlError) return
 
     updateSettings.mutate({
-      canonicalRepoUrl: canonicalRepoUrl || null,
-      repoHostingProvider: (repoHostingProvider as RepoHostingProvider) || null,
-      forkRepoUrl: forkRepoUrl || null,
+      canonicalRepoUrl: repoUrl || null,
+      // Auto-detect GitHub
+      repoHostingProvider: repoUrl?.includes('github.com') ? 'github' : null,
     })
   }
 
   const handleReset = () => {
-    if (settings) {
-      setCanonicalRepoUrl(settings.canonicalRepoUrl ?? '')
-      setRepoHostingProvider(settings.repoHostingProvider ?? '')
-      setForkRepoUrl(settings.forkRepoUrl ?? '')
-      setCanonicalUrlError(null)
-      setForkUrlError(null)
-    }
+    setRepoUrl(savedUrl)
+    setUrlError(null)
   }
 
   if (isLoading) {
@@ -123,94 +87,34 @@ export function RepositorySettingsForm() {
 
   return (
     <div className="space-y-6">
-      {/* Canonical Repository */}
       <Card className="border-zinc-800 bg-zinc-900/50">
         <CardHeader>
           <div className="flex items-center gap-2">
             <GitBranch className="h-5 w-5 text-amber-500" />
-            <CardTitle className="text-zinc-100">Upstream Repository</CardTitle>
+            <CardTitle className="text-zinc-100">Punt Repository</CardTitle>
           </div>
           <CardDescription className="text-zinc-400">
-            Configure the canonical (upstream) repository URL. This is where updates come from.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Hosting Provider */}
-          <div className="space-y-2">
-            <Label htmlFor="hostingProvider" className="text-zinc-300">
-              Hosting Provider
-            </Label>
-            <Select
-              value={repoHostingProvider}
-              onValueChange={(value) => setRepoHostingProvider(value as RepoHostingProvider)}
-            >
-              <SelectTrigger className="w-full max-w-xs">
-                <SelectValue placeholder="Select a provider" />
-              </SelectTrigger>
-              <SelectContent>
-                {HOSTING_PROVIDERS.map((provider) => (
-                  <SelectItem key={provider.value} value={provider.value}>
-                    {provider.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-zinc-500">
-              The hosting platform where the upstream repository is hosted.
-            </p>
-          </div>
-
-          {/* Canonical URL */}
-          <div className="space-y-2">
-            <Label htmlFor="canonicalRepoUrl" className="text-zinc-300">
-              Canonical Repository URL
-            </Label>
-            <Input
-              id="canonicalRepoUrl"
-              type="url"
-              value={canonicalRepoUrl}
-              onChange={(e) => setCanonicalRepoUrl(e.target.value)}
-              className="bg-zinc-800 border-zinc-700 text-zinc-100 max-w-lg"
-              placeholder="https://github.com/owner/repo"
-            />
-            {canonicalUrlError ? (
-              <p className="text-xs text-red-400">{canonicalUrlError}</p>
-            ) : (
-              <p className="text-xs text-zinc-500">
-                The upstream repository URL that this installation should sync from for updates.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Fork Configuration */}
-      <Card className="border-zinc-800 bg-zinc-900/50">
-        <CardHeader>
-          <CardTitle className="text-zinc-100">Fork Repository</CardTitle>
-          <CardDescription className="text-zinc-400">
-            If this is a fork, configure the fork URL separately from the upstream.
+            The source repository for Punt. Change this if you&apos;re running a fork.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="forkRepoUrl" className="text-zinc-300">
-              Fork Repository URL
+            <Label htmlFor="repoUrl" className="text-zinc-300">
+              Repository URL
             </Label>
             <Input
-              id="forkRepoUrl"
+              id="repoUrl"
               type="url"
-              value={forkRepoUrl}
-              onChange={(e) => setForkRepoUrl(e.target.value)}
+              value={repoUrl}
+              onChange={(e) => setRepoUrl(e.target.value)}
               className="bg-zinc-800 border-zinc-700 text-zinc-100 max-w-lg"
-              placeholder="https://github.com/your-org/punt-fork"
+              placeholder={DEFAULT_REPO_URL}
             />
-            {forkUrlError ? (
-              <p className="text-xs text-red-400">{forkUrlError}</p>
+            {urlError ? (
+              <p className="text-xs text-red-400">{urlError}</p>
             ) : (
               <p className="text-xs text-zinc-500">
-                Optional. If you are running a fork, enter the URL here. This can be used for
-                linking back to your forked repository.
+                The repository URL used for linking to source code and checking for updates.
               </p>
             )}
           </div>
@@ -232,7 +136,7 @@ export function RepositorySettingsForm() {
 
         <Button
           onClick={handleSave}
-          disabled={!hasChanges || hasErrors || updateSettings.isPending}
+          disabled={!hasChanges || urlError !== null || updateSettings.isPending}
           variant="primary"
         >
           {updateSettings.isPending ? (
