@@ -3,9 +3,9 @@
  * This module consolidates the paste logic used by context menu and keyboard shortcuts.
  */
 
-import { toast } from 'sonner'
 import { batchCreateTicketsAPI, batchDeleteTicketsAPI } from '@/hooks/queries/use-tickets'
 import { formatTicketId } from '@/lib/ticket-format'
+import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -166,7 +166,7 @@ export function pasteTickets(params: PasteTicketsParams): PasteResult {
       for (const { ticket } of newTickets) {
         currentBoardState.removeTicket(projectId, ticket.id)
       }
-      toast.error('Failed to paste tickets')
+      showToast.error('Failed to paste tickets')
     }
   })()
 

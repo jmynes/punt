@@ -3,7 +3,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +33,7 @@ import { getTabId } from '@/hooks/use-realtime'
 import { pasteTickets } from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
+import { rawToast, showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -577,7 +577,7 @@ export function KeyboardShortcuts() {
               console.error('Failed to persist arrow key move:', err)
               // Rollback on error
               boardStore.setColumns(projectId, originalColumns)
-              toast.error('Failed to move ticket(s)')
+              showToast.error('Failed to move ticket(s)')
             }
           })()
 
@@ -681,9 +681,9 @@ export function KeyboardShortcuts() {
         const columnsSnapshot = useBoardStore.getState().getColumns(projectId)
         const ticketKeys = formatTicketIds(columnsSnapshot, Array.from(selectedTicketIds))
         const count = selectedTicketIds.size
-        toast.success(count === 1 ? 'Ticket copied' : `${count} tickets copied`, {
+        showToast.success(count === 1 ? 'Ticket copied' : `${count} tickets copied`, {
           description: ticketKeys.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
-          duration: 2000,
+          duration: showToast.DURATION.SHORT,
         })
         return
       }
@@ -713,7 +713,7 @@ export function KeyboardShortcuts() {
         if (undoStore.isProcessing) return // Block while API call is in flight
         const entry = undoStore.popUndo()
         if (entry) {
-          toast.dismiss(entry.toastId)
+          rawToast.dismiss(entry.toastId)
 
           const showUndo = useSettingsStore.getState().showUndoButtons
 
@@ -765,7 +765,7 @@ export function KeyboardShortcuts() {
                 }
               } catch (err) {
                 console.error('Failed to restore tickets:', err)
-                toast.error('Failed to restore tickets')
+                showToast.error('Failed to restore tickets')
               }
             })()
 
@@ -1691,7 +1691,7 @@ export function KeyboardShortcuts() {
                 queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(entry.projectId) })
               } catch (err) {
                 console.error('Failed to undo column delete:', err)
-                toast.error('Failed to restore column')
+                showToast.error('Failed to restore column')
               } finally {
                 useUndoStore.getState().setProcessing(false)
               }
@@ -2143,7 +2143,7 @@ export function KeyboardShortcuts() {
               })
               .filter(Boolean)
 
-            const newToastId = toast.success(
+            const newToastId = rawToast.success(
               action.moves.length === 1 ? 'Ticket moved' : `${action.moves.length} tickets moved`,
               {
                 description:
@@ -2168,7 +2168,7 @@ export function KeyboardShortcuts() {
                         } catch (err) {
                           console.error('Failed to persist move undo:', err)
                         }
-                        toast.success(
+                        rawToast.success(
                           action.moves.length === 1
                             ? 'Move undone'
                             : `${action.moves.length} moves undone`,
@@ -2247,12 +2247,12 @@ export function KeyboardShortcuts() {
                 for (const { ticket } of redoTickets) {
                   redoRemoveTicket(entry.projectId, ticket.id)
                 }
-                toast.error('Failed to redo paste')
+                rawToast.error('Failed to redo paste')
               }
             })()
 
             const redoPasteTicketKeys = redoTickets.map(({ ticket }) => formatTicketId(ticket))
-            const newPasteToastId = toast.success(
+            const newPasteToastId = rawToast.success(
               redoTickets.length === 1 ? 'Ticket pasted' : `${redoTickets.length} tickets pasted`,
               {
                 description:
@@ -2283,7 +2283,7 @@ export function KeyboardShortcuts() {
                             console.error('Failed to delete tickets on undo:', err)
                           })
                         }
-                        toast.success(
+                        rawToast.success(
                           redoTickets.length === 1
                             ? 'Paste undone'
                             : `${redoTickets.length} pastes undone`,
@@ -2319,7 +2319,7 @@ export function KeyboardShortcuts() {
               })
 
             const ticketKey = formatTicketId(action.ticket)
-            const newToastId = toast.success('Ticket created', {
+            const newToastId = rawToast.success('Ticket created', {
               description: ticketKey,
               duration: 5000,
               action: showUndo
@@ -2339,7 +2339,7 @@ export function KeyboardShortcuts() {
                         .finally(() => {
                           useUndoStore.getState().setProcessing(false)
                         })
-                      toast.success('Ticket creation undone', { duration: 2000 })
+                      rawToast.success('Ticket creation undone', { duration: 2000 })
                     },
                   }
                 : undefined,
@@ -2375,7 +2375,7 @@ export function KeyboardShortcuts() {
               }
             })()
 
-            const newToastId = toast.success(
+            const newToastId = rawToast.success(
               action.moves.length === 1 ? 'Ticket moved' : `${action.moves.length} tickets moved`,
               {
                 description: `Moved to ${action.toSprintName}`,
@@ -2401,7 +2401,7 @@ export function KeyboardShortcuts() {
                         } catch (err) {
                           console.error('Failed to persist sprint move undo:', err)
                         }
-                        toast.success(
+                        rawToast.success(
                           action.moves.length === 1
                             ? 'Sprint move undone'
                             : `${action.moves.length} sprint moves undone`,
@@ -2459,7 +2459,7 @@ export function KeyboardShortcuts() {
               }
             })()
 
-            const newToastId = toast.success('Column updated', {
+            const newToastId = rawToast.success('Column updated', {
               description: `Renamed to "${action.newName}"`,
               duration: 5000,
               action: showUndo
@@ -2497,7 +2497,7 @@ export function KeyboardShortcuts() {
                           queryKey: columnKeys.byProject(entry.projectId),
                         })
                         redoStore.pushRedo(entry)
-                        toast.success('Column update undone', { duration: 2000 })
+                        rawToast.success('Column update undone', { duration: 2000 })
                       } catch (err) {
                         console.error('Failed to undo column rename:', err)
                       } finally {
@@ -2568,7 +2568,7 @@ export function KeyboardShortcuts() {
               }
             })()
 
-            const newToastId = toast.error('Column deleted', {
+            const newToastId = rawToast.error('Column deleted', {
               description: `"${action.column.name}" deleted`,
               duration: 5000,
               action: showUndo
@@ -2643,7 +2643,7 @@ export function KeyboardShortcuts() {
                         queryClient.invalidateQueries({
                           queryKey: ticketKeys.byProject(entry.projectId),
                         })
-                        toast.success('Column restored', { duration: 2000 })
+                        rawToast.success('Column restored', { duration: 2000 })
                       } catch (err) {
                         console.error('Failed to undo column delete:', err)
                       } finally {

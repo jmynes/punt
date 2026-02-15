@@ -12,7 +12,6 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
@@ -41,6 +40,7 @@ import {
 import { useHasPermission } from '@/hooks/use-permissions'
 import { LABEL_COLORS } from '@/lib/constants'
 import { PERMISSIONS } from '@/lib/permissions'
+import { showToast } from '@/lib/toast'
 import { cn, getLabelStyles } from '@/lib/utils'
 
 /**
@@ -240,7 +240,7 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
   const handleSave = useCallback(async () => {
     const name = editName.trim()
     if (!name) {
-      toast.error('Label name is required')
+      showToast.error('Label name is required')
       return
     }
 
@@ -249,7 +249,7 @@ export function LabelsTab({ projectId }: LabelsTabProps) {
         { name, color: editColor },
         {
           onSuccess: (newLabel) => {
-            toast.success('Label created')
+            showToast.success('Label created')
             setIsCreating(false)
             setSelectedLabelId(newLabel.id)
             setHasChanges(false)

@@ -3,7 +3,6 @@
 import { Check, ChevronsUpDown, Palette, Plus, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { HexColorPicker } from 'react-colorful'
-import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { LABEL_COLORS } from '@/lib/constants'
+import { showToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { LabelSummary } from '@/types'
@@ -488,7 +488,7 @@ export function ColorPickerBody({
       if (hideColorRemovalWarning) {
         // Skip modal, remove directly
         removeCustomColor(color)
-        toast.success('Color removed from swatches')
+        showToast.success('Color removed from swatches')
       } else {
         // Show confirmation modal
         setColorToRemove(color)
@@ -508,7 +508,7 @@ export function ColorPickerBody({
 
     removeCustomColor(colorToRemove)
     setColorToRemove(null)
-    toast.success('Color removed from swatches')
+    showToast.success('Color removed from swatches')
   }, [colorToRemove, dontShowAgain, removeCustomColor, setHideColorRemovalWarning])
 
   // Merge extra presets (deduplicated) with standard label colors

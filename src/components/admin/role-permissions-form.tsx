@@ -17,7 +17,6 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, GitCompare, Loader2, Plus, RotateCcw, Shield, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { toast } from 'sonner'
 import { RoleCompareDialog } from '@/components/projects/permissions/role-compare-dialog'
 import { RoleEditorPanel } from '@/components/projects/permissions/role-editor-panel'
 import {
@@ -38,6 +37,7 @@ import {
   ROLE_POSITIONS,
   ROLE_PRESETS,
 } from '@/lib/permissions/presets'
+import { showToast } from '@/lib/toast'
 import type { RoleWithPermissions } from '@/types'
 
 interface RoleConfig {
@@ -144,12 +144,12 @@ export function RolePermissionsForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
-      toast.success('Role settings saved')
+      showToast.success('Role settings saved')
       setHasChanges(false)
       setIsCreating(false)
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to save')
+      showToast.error(err instanceof Error ? err.message : 'Failed to save')
     },
   })
 
@@ -164,14 +164,14 @@ export function RolePermissionsForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
-      toast.success('Role settings reset to defaults')
+      showToast.success('Role settings reset to defaults')
       setHasChanges(false)
       setCustomRoles([])
       setIsCreating(false)
       setSelectedId('Owner')
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Failed to reset')
+      showToast.error(err instanceof Error ? err.message : 'Failed to reset')
     },
   })
 
@@ -313,7 +313,7 @@ export function RolePermissionsForm() {
       setCustomRoles((prev) => [...prev, newRole])
       setSelectedId(id)
       setIsCreating(false)
-      toast.success(`Cloned "${source.name}"`)
+      showToast.success(`Cloned "${source.name}"`)
     },
     [localSettings, customRoles],
   )
@@ -326,7 +326,7 @@ export function RolePermissionsForm() {
       if (selectedId === roleId) {
         setSelectedId('Owner')
       }
-      if (role) toast.success(`Removed "${role.name}"`)
+      if (role) showToast.success(`Removed "${role.name}"`)
     },
     [customRoles, selectedId],
   )
@@ -425,7 +425,7 @@ export function RolePermissionsForm() {
 
   const handleCreateRole = () => {
     if (!editName.trim()) {
-      toast.error('Role name is required')
+      showToast.error('Role name is required')
       return
     }
     const id = `custom-${Date.now()}-${nextCustomId++}`

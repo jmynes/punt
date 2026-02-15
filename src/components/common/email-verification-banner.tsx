@@ -3,10 +3,10 @@
 import { AlertTriangle, Loader2, Mail, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useEmailVerificationStatus } from '@/hooks/queries/use-email-verification'
 import { isDemoMode } from '@/lib/demo'
+import { showToast } from '@/lib/toast'
 
 /**
  * Wrapper that skips email verification banner in demo mode
@@ -57,20 +57,20 @@ function EmailVerificationBannerInner() {
 
       if (!res.ok) {
         if (res.status === 429) {
-          toast.error('Too many requests. Please try again later.')
+          showToast.error('Too many requests. Please try again later.')
         } else {
-          toast.error(data.error || 'Failed to send verification email')
+          showToast.error(data.error || 'Failed to send verification email')
         }
         return
       }
 
       if (data.alreadyVerified) {
-        toast.success('Email is already verified')
+        showToast.success('Email is already verified')
       } else {
-        toast.success('Verification email sent!')
+        showToast.success('Verification email sent!')
       }
     } catch {
-      toast.error('Failed to send verification email')
+      showToast.error('Failed to send verification email')
     } finally {
       setIsSending(false)
     }

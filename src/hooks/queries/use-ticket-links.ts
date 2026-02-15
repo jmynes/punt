@@ -1,8 +1,8 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { getTabId } from '@/hooks/use-realtime'
+import { showToast } from '@/lib/toast'
 import type { LinkType, TicketLinkSummary } from '@/types'
 import { ticketKeys } from './use-tickets'
 
@@ -82,10 +82,10 @@ export function useCreateTicketLink() {
         queryKey: ticketLinkKeys.byTicket(projectId, targetTicketId),
       })
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
-      toast.success('Link created successfully')
+      showToast.success('Link created')
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -130,10 +130,10 @@ export function useDeleteTicketLink() {
         queryKey: ticketLinkKeys.byTicket(projectId, targetTicketId),
       })
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
-      toast.success('Link removed')
+      showToast.success('Link removed')
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }

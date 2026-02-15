@@ -3,7 +3,6 @@
 import { AlertTriangle, Loader2, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useDeleteProject, useProjectDetail, useUpdateProject } from '@/hooks/queries/use-projects'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
+import { showToast } from '@/lib/toast'
 
 type AddColumnVisibility = 'inherit' | 'show' | 'hide'
 
@@ -148,13 +148,13 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
 
     deleteProject.mutate(project.id, {
       onSuccess: () => {
-        toast.success('Project deleted', {
+        showToast.success('Project deleted', {
           description: project.name,
         })
         router.push('/')
       },
       onError: (error) => {
-        toast.error('Failed to delete project', {
+        showToast.error('Failed to delete project', {
           description: error.message,
         })
       },

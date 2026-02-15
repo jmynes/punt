@@ -1,10 +1,10 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
 import { getDataProvider } from '@/lib/data-provider'
+import { showToast } from '@/lib/toast'
 import type {
   ProjectSprintSettingsData,
   SprintCompletionOptions,
@@ -111,12 +111,12 @@ export function useCreateSprint(projectId: string) {
       }) as Promise<SprintWithMetrics>
     },
     onSuccess: () => {
-      toast.success('Sprint created')
+      showToast.success('Sprint created')
       // Invalidate all sprint-related queries (broader invalidation to ensure UI updates)
       queryClient.invalidateQueries({ queryKey: ['sprints'] })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -150,13 +150,13 @@ export function useUpdateSprint(projectId: string) {
       }) as Promise<SprintWithMetrics>
     },
     onSuccess: (_, { sprintId }) => {
-      toast.success('Sprint updated')
+      showToast.success('Sprint updated')
       queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: sprintKeys.detail(projectId, sprintId) })
       queryClient.invalidateQueries({ queryKey: sprintKeys.active(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -174,11 +174,11 @@ export function useDeleteSprint(projectId: string) {
       return { success: true }
     },
     onSuccess: () => {
-      toast.success('Sprint deleted')
+      showToast.success('Sprint deleted')
       queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -207,12 +207,12 @@ export function useStartSprint(projectId: string) {
       }) as Promise<SprintWithMetrics>
     },
     onSuccess: () => {
-      toast.success('Sprint started')
+      showToast.success('Sprint started')
       queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: sprintKeys.active(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -264,14 +264,14 @@ export function useCompleteSprint(projectId: string) {
         message += ` ${completed} completed.`
       }
 
-      toast.success(message)
+      showToast.success(message)
       queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: sprintKeys.active(projectId) })
       // Also invalidate tickets as they may have been moved
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -311,12 +311,12 @@ export function useExtendSprint(projectId: string) {
     },
     onSuccess: (result) => {
       const endDateStr = result.endDate ? new Date(result.endDate).toLocaleDateString() : 'unknown'
-      toast.success(`Sprint extended until ${endDateStr}`)
+      showToast.success(`Sprint extended until ${endDateStr}`)
       queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
       queryClient.invalidateQueries({ queryKey: sprintKeys.active(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -364,11 +364,11 @@ export function useUpdateSprintSettings(projectId: string) {
       return provider.updateSprintSettings(projectId, data)
     },
     onSuccess: () => {
-      toast.success('Sprint settings updated')
+      showToast.success('Sprint settings updated')
       queryClient.invalidateQueries({ queryKey: sprintKeys.settings(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }

@@ -2,7 +2,6 @@
 
 import { AlertTriangle, Eye, EyeOff, FolderX, Loader2, Lock, Shield } from 'lucide-react'
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -14,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useWipeProjects } from '@/hooks/queries/use-database-backup'
+import { showToast } from '@/lib/toast'
 
 interface DatabaseWipeProjectsDialogProps {
   open: boolean
@@ -63,7 +63,7 @@ export function DatabaseWipeProjectsDialog({
       })
       setResult({ projects: res.counts.projects, tickets: res.counts.tickets })
       setStep('success')
-      toast.success('All projects wiped successfully')
+      showToast.success('All projects wiped successfully')
     } catch {
       // Error shown via toast, return to confirm step
       setStep('confirm')

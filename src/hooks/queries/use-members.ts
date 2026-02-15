@@ -1,9 +1,9 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { getTabId } from '@/hooks/use-realtime'
 import { demoStorage, isDemoMode } from '@/lib/demo'
+import { showToast } from '@/lib/toast'
 import type { Permission, ProjectMemberWithRole } from '@/types'
 
 // Query keys for members
@@ -116,7 +116,7 @@ export function useUpdateMember(projectId: string) {
       return res.json() as Promise<MemberDetails>
     },
     onSuccess: (_data, variables) => {
-      toast.success('Member updated')
+      showToast.success('Member updated')
       queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
       queryClient.invalidateQueries({
         queryKey: memberKeys.single(projectId, variables.memberId),
@@ -125,7 +125,7 @@ export function useUpdateMember(projectId: string) {
       queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -151,7 +151,7 @@ export function useRemoveMember(projectId: string) {
       return res.json()
     },
     onSuccess: () => {
-      toast.success('Member removed')
+      showToast.success('Member removed')
       queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
       // Also invalidate roles to update member counts
       queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
@@ -159,7 +159,7 @@ export function useRemoveMember(projectId: string) {
       queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }
@@ -198,7 +198,7 @@ export function useAddMember(projectId: string) {
       return res.json() as Promise<ProjectMemberWithRole>
     },
     onSuccess: () => {
-      toast.success('Member added')
+      showToast.success('Member added')
       queryClient.invalidateQueries({ queryKey: memberKeys.byProject(projectId) })
       // Also invalidate roles to update member counts
       queryClient.invalidateQueries({ queryKey: ['roles', 'project', projectId] })
@@ -206,7 +206,7 @@ export function useAddMember(projectId: string) {
       queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(projectId) })
     },
     onError: (err) => {
-      toast.error(err.message)
+      showToast.error(err.message)
     },
   })
 }

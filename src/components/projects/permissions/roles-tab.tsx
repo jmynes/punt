@@ -33,7 +33,6 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,6 +84,7 @@ import { getTabId } from '@/hooks/use-realtime'
 import { LABEL_COLORS } from '@/lib/constants'
 import { PERMISSIONS } from '@/lib/permissions'
 import { type DefaultRoleName, ROLE_POSITIONS, ROLE_PRESETS } from '@/lib/permissions/presets'
+import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import {
   type BulkMemberRoleSnapshot,
@@ -358,9 +358,9 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
           roleName,
         }
         pushMemberAdd(projectId, [snapshot])
-        toast.success(`Added ${userName} as ${roleName} (Ctrl+Z to undo)`)
+        showToast.success(`Added ${userName} as ${roleName} (Ctrl+Z to undo)`)
       } catch {
-        toast.error('Failed to add member')
+        showToast.error('Failed to add member')
       }
     },
     [projectId, roles, invalidateMemberQueries, pushMemberAdd],
@@ -398,9 +398,9 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
           newRoleName,
         }
         pushBulkMemberRoleChange(projectId, [snapshot])
-        toast.success(`Changed ${userName} to ${newRoleName} (Ctrl+Z to undo)`)
+        showToast.success(`Changed ${userName} to ${newRoleName} (Ctrl+Z to undo)`)
       } catch {
-        toast.error('Failed to update role')
+        showToast.error('Failed to update role')
       }
     },
     [projectId, roles, invalidateMemberQueries, pushBulkMemberRoleChange],
@@ -426,9 +426,9 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
           roleName,
         }
         pushMemberRemove(projectId, [snapshot])
-        toast.success(`Removed ${userName} (Ctrl+Z to undo)`)
+        showToast.success(`Removed ${userName} (Ctrl+Z to undo)`)
       } catch {
-        toast.error('Failed to remove member')
+        showToast.error('Failed to remove member')
       }
     },
     [projectId, roles, invalidateMemberQueries, pushMemberRemove],
@@ -483,12 +483,12 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
         // Push to undo stack
         pushBulkMemberRoleChange(projectId, roleChanges)
 
-        toast.success(
+        showToast.success(
           `Moved ${count} member${count !== 1 ? 's' : ''} to ${newRoleName} (Ctrl+Z to undo)`,
         )
         setMemberSelectedIds(new Set())
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to update roles')
+        showToast.error(err instanceof Error ? err.message : 'Failed to update roles')
       } finally {
         setIsChangingBulkRole(false)
       }
@@ -546,10 +546,10 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
       // Push to undo stack
       pushMemberRemove(projectId, removedMembers)
 
-      toast.success(`Removed ${count} member${count !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
+      showToast.success(`Removed ${count} member${count !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
       setMemberSelectedIds(new Set())
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove members')
+      showToast.error(err instanceof Error ? err.message : 'Failed to remove members')
     } finally {
       setIsRemovingBulk(false)
       setShowBulkRemoveDialog(false)
@@ -585,11 +585,11 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
           }),
         )
         invalidateMemberQueries()
-        toast.success(
+        showToast.success(
           `Restored ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
         )
       } catch {
-        toast.error('Failed to restore members')
+        showToast.error('Failed to restore members')
       }
     } else if (action.type === 'memberAdd' && action.projectId === projectId) {
       try {
@@ -606,11 +606,11 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
           }),
         )
         invalidateMemberQueries()
-        toast.success(
+        showToast.success(
           `Removed ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
         )
       } catch {
-        toast.error('Failed to remove members')
+        showToast.error('Failed to remove members')
       }
     } else if (action.type === 'bulkMemberRoleChange' && action.projectId === projectId) {
       try {
@@ -628,11 +628,11 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
           }),
         )
         invalidateMemberQueries()
-        toast.success(
+        showToast.success(
           `Restored roles for ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
         )
       } catch {
-        toast.error('Failed to restore roles')
+        showToast.error('Failed to restore roles')
       }
     }
   }, [undo, projectId, members, invalidateMemberQueries])
@@ -657,11 +657,11 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
           }),
         )
         invalidateMemberQueries()
-        toast.success(
+        showToast.success(
           `Removed ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
         )
       } catch {
-        toast.error('Failed to remove members')
+        showToast.error('Failed to remove members')
       }
     } else if (action.type === 'memberAdd' && action.projectId === projectId) {
       try {
@@ -679,11 +679,11 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
           }),
         )
         invalidateMemberQueries()
-        toast.success(
+        showToast.success(
           `Added ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
         )
       } catch {
-        toast.error('Failed to add members')
+        showToast.error('Failed to add members')
       }
     } else if (action.type === 'bulkMemberRoleChange' && action.projectId === projectId) {
       try {
@@ -701,11 +701,11 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
           }),
         )
         invalidateMemberQueries()
-        toast.success(
+        showToast.success(
           `Updated roles for ${action.members.length} member${action.members.length !== 1 ? 's' : ''}`,
         )
       } catch {
-        toast.error('Failed to update roles')
+        showToast.error('Failed to update roles')
       }
     }
   }, [redo, projectId, members, invalidateMemberQueries])
@@ -895,7 +895,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
   // Save the role
   const handleSave = async () => {
     if (!editName.trim()) {
-      toast.error('Role name is required')
+      showToast.error('Role name is required')
       return
     }
 
@@ -949,7 +949,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
       setSelectedRoleId(newRole.id)
       setIsCreating(false)
       loadRoleData(newRole)
-      toast.success(`Cloned role "${role.name}"`)
+      showToast.success(`Cloned role "${role.name}"`)
     } catch {
       // Error handled by mutation
     }

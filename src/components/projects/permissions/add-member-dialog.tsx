@@ -3,7 +3,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronsUpDown, Loader2, UserPlus, Users, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
-import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,6 +35,7 @@ import {
 import { availableUserKeys, memberKeys, useAvailableUsers } from '@/hooks/queries/use-members'
 import { useProjectRoles } from '@/hooks/queries/use-roles'
 import { getTabId } from '@/hooks/use-realtime'
+import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor } from '@/lib/utils'
 import { type MemberSnapshot, useAdminUndoStore } from '@/stores/admin-undo-store'
 
@@ -162,10 +162,10 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
       pushMemberAdd(projectId, memberSnapshots)
 
       // Single toast for all members
-      toast.success(`Added ${count} member${count !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
+      showToast.success(`Added ${count} member${count !== 1 ? 's' : ''} (Ctrl+Z to undo)`)
       handleOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add members')
+      showToast.error(err instanceof Error ? err.message : 'Failed to add members')
     } finally {
       setIsSubmitting(false)
     }

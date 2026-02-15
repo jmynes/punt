@@ -1,4 +1,4 @@
-import { toast } from 'sonner'
+import { rawToast as toast } from '@/lib/toast'
 
 type ToastKind = 'success' | 'error'
 
