@@ -1,12 +1,23 @@
 'use client'
 
-import { GitBranch, Loader2, RotateCcw, Save } from 'lucide-react'
+import {
+  AlertCircle,
+  Check,
+  ExternalLink,
+  GitBranch,
+  GitCommit,
+  Loader2,
+  RefreshCw,
+  RotateCcw,
+  Save,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-system-settings'
+import { useCheckForUpdates, useLocalVersion } from '@/hooks/queries/use-version'
 
 const DEFAULT_REPO_URL = 'https://github.com/jmynes/punt/'
 
@@ -21,9 +32,26 @@ function isValidUrl(url: string): boolean {
   }
 }
 
+function formatDate(dateString: string | null): string {
+  if (!dateString) return 'Unknown'
+  try {
+    return new Date(dateString).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return 'Unknown'
+  }
+}
+
 export function RepositorySettingsForm() {
   const { data: settings, isLoading, error } = useSystemSettings()
+  const { data: localVersion } = useLocalVersion()
   const updateSettings = useUpdateSystemSettings()
+  const checkForUpdates = useCheckForUpdates()
 
   // Local form state - default to the canonical Punt repo
   const [repoUrl, setRepoUrl] = useState(DEFAULT_REPO_URL)
@@ -67,6 +95,10 @@ export function RepositorySettingsForm() {
     setUrlError(null)
   }
 
+  const handleCheckForUpdates = () => {
+    checkForUpdates.mutate()
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -85,8 +117,134 @@ export function RepositorySettingsForm() {
     )
   }
 
+  const updateResult = checkForUpdates.data
+
   return (
     <div className="space-y-6">
+      {/* Current Version */}
+      <Card className="border-zinc-800 bg-zinc-900/50">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <GitCommit className="h-5 w-5 text-amber-500" />
+            <CardTitle className="text-zinc-100">Installed Version</CardTitle>
+          </div>
+          <CardDescription className="text-zinc-400">
+            Current version of Punt running on this server.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4 max-w-md">
+            <div>
+              <p className="text-xs text-zinc-500 mb-1">Version</p>
+              <p className="text-sm font-mono text-zinc-100">
+                v{localVersion?.version || 'unknown'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-zinc-500 mb-1">Commit</p>
+              <p className="text-sm font-mono text-zinc-100">
+                {localVersion?.commitShort || 'unknown'}
+              </p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-xs text-zinc-500 mb-1">Built</p>
+              <p className="text-sm text-zinc-100">{formatDate(localVersion?.buildTime ?? null)}</p>
+            </div>
+          </div>
+
+          {/* Update Check Results */}
+          {updateResult && (
+            <div className="mt-4 pt-4 border-t border-zinc-800">
+              {updateResult.error ? (
+                <div className="flex items-center gap-2 text-red-400">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-sm">{updateResult.error}</span>
+                </div>
+              ) : updateResult.updateAvailable ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-amber-400">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Update available!</span>
+                  </div>
+                  <div className="pl-6 space-y-1">
+                    <p className="text-sm text-zinc-300">
+                      New version:{' '}
+                      <span className="font-mono text-amber-400">
+                        {updateResult.remote.latestVersion}
+                      </span>
+                      {updateResult.remote.releaseName &&
+                        updateResult.remote.releaseName !== updateResult.remote.latestVersion && (
+                          <span className="text-zinc-400">
+                            {' '}
+                            &mdash; {updateResult.remote.releaseName}
+                          </span>
+                        )}
+                    </p>
+                    {updateResult.remote.publishedAt && (
+                      <p className="text-xs text-zinc-500">
+                        Released {formatDate(updateResult.remote.publishedAt)}
+                      </p>
+                    )}
+                    {updateResult.remote.releaseUrl && (
+                      <a
+                        href={updateResult.remote.releaseUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm text-amber-500 hover:text-amber-400"
+                      >
+                        View release
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-green-400">
+                  <Check className="h-4 w-4" />
+                  <span className="text-sm">You&apos;re running the latest version</span>
+                </div>
+              )}
+
+              {/* Commit status */}
+              {!updateResult.error &&
+                updateResult.commitsBehind &&
+                !updateResult.updateAvailable && (
+                  <div className="mt-2 flex items-center gap-2 text-zinc-400">
+                    <GitCommit className="h-4 w-4" />
+                    <span className="text-xs">
+                      Your build is behind the latest commit (
+                      {updateResult.remote.latestCommitShort})
+                    </span>
+                  </div>
+                )}
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCheckForUpdates}
+              disabled={checkForUpdates.isPending}
+              className="text-zinc-300"
+            >
+              {checkForUpdates.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Check for Updates
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Repository Configuration */}
       <Card className="border-zinc-800 bg-zinc-900/50">
         <CardHeader>
           <div className="flex items-center gap-2">
