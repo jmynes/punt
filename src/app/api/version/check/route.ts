@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import {
+  type CommitComparison,
   compareCommits,
   compareVersions,
   getLatestCommit,
@@ -10,6 +11,17 @@ import {
 import { getSystemSettings } from '@/lib/system-settings'
 
 const DEFAULT_REPO_URL = 'https://github.com/jmynes/punt/'
+
+export interface ForkStatus {
+  forkUrl: string
+  forkLatestCommit: string | null
+  forkLatestCommitShort: string | null
+  // How the fork compares to local
+  forkVsLocal: CommitComparison | null
+  // How the fork compares to upstream
+  forkVsUpstream: CommitComparison | null
+  error?: string
+}
 
 export interface UpdateCheckResult {
   local: {
@@ -28,13 +40,15 @@ export interface UpdateCheckResult {
   }
   // Release comparison
   updateAvailable: boolean
-  // Commit comparison
+  // Commit comparison (local vs upstream)
   commitStatus: {
     aheadBy: number
     behindBy: number
     status: 'ahead' | 'behind' | 'identical' | 'diverged' | 'unknown'
   }
   repoUrl: string
+  // Fork comparison (optional)
+  forkStatus?: ForkStatus
   error?: string
 }
 
@@ -49,6 +63,7 @@ export async function GET() {
 
     const settings = await getSystemSettings()
     const repoUrl = settings.canonicalRepoUrl || DEFAULT_REPO_URL
+    const forkUrl = settings.forkRepoUrl
 
     const localVersion = process.env.NEXT_PUBLIC_APP_VERSION || 'unknown'
     const localCommit = process.env.NEXT_PUBLIC_GIT_COMMIT || 'unknown'
@@ -108,6 +123,65 @@ export async function GET() {
       updateAvailable,
       commitStatus,
       repoUrl,
+    }
+
+    // If fork URL is configured, fetch fork comparison
+    if (forkUrl) {
+      try {
+        const forkLatestCommit = await getLatestCommit(forkUrl)
+
+        if (forkLatestCommit) {
+          // Compare fork to local
+          let forkVsLocal: CommitComparison | null = null
+          if (localCommit !== 'unknown') {
+            if (localCommit === forkLatestCommit.sha) {
+              forkVsLocal = { aheadBy: 0, behindBy: 0, status: 'identical' }
+            } else {
+              // base = local, head = fork
+              // If fork is ahead, it means fork has commits local doesn't have
+              forkVsLocal = await compareCommits(forkUrl, localCommit, forkLatestCommit.sha)
+            }
+          }
+
+          // Compare fork to upstream
+          let forkVsUpstream: CommitComparison | null = null
+          if (latestCommit) {
+            if (latestCommit.sha === forkLatestCommit.sha) {
+              forkVsUpstream = { aheadBy: 0, behindBy: 0, status: 'identical' }
+            } else {
+              // base = upstream, head = fork
+              // If fork is ahead, it means fork has commits upstream doesn't have
+              forkVsUpstream = await compareCommits(forkUrl, latestCommit.sha, forkLatestCommit.sha)
+            }
+          }
+
+          result.forkStatus = {
+            forkUrl,
+            forkLatestCommit: forkLatestCommit.sha,
+            forkLatestCommitShort: forkLatestCommit.sha.slice(0, 7),
+            forkVsLocal,
+            forkVsUpstream,
+          }
+        } else {
+          result.forkStatus = {
+            forkUrl,
+            forkLatestCommit: null,
+            forkLatestCommitShort: null,
+            forkVsLocal: null,
+            forkVsUpstream: null,
+            error: 'Could not fetch fork commit info. Check the repository URL.',
+          }
+        }
+      } catch (forkError) {
+        result.forkStatus = {
+          forkUrl,
+          forkLatestCommit: null,
+          forkLatestCommitShort: null,
+          forkVsLocal: null,
+          forkVsUpstream: null,
+          error: forkError instanceof Error ? forkError.message : 'Failed to check fork status',
+        }
+      }
     }
 
     // Add error if we couldn't fetch remote info
