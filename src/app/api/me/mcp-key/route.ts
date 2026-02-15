@@ -9,7 +9,7 @@ import { db } from '@/lib/db'
  * SHA-256 is appropriate for high-entropy API keys (256 bits of randomness)
  * Unlike passwords, these keys can't be brute-forced due to their entropy
  */
-export function hashMcpKey(apiKey: string): string {
+function hashMcpKey(apiKey: string): string {
   return createHash('sha256').update(apiKey).digest('hex')
 }
 
