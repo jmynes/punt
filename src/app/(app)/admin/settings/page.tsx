@@ -56,7 +56,7 @@ export default function AdminSettingsPage() {
 
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-auto">
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-zinc-800 overflow-x-auto flex-nowrap">
+        <div className="flex gap-1 mb-6 border-b border-zinc-800">
           <Link
             href="/admin/settings?tab=email"
             className={cn(
