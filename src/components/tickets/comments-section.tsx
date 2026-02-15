@@ -46,6 +46,7 @@ export function CommentsSection({ projectId, ticketId, ticketKey }: CommentsSect
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
   const [commentToDelete, setCommentToDelete] = useState<CommentInfo | null>(null)
+  const [showCancelConfirm, setShowCancelConfirm] = useState<'new' | 'edit' | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const editTextareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -127,10 +128,39 @@ export function CommentsSection({ projectId, ticketId, ticketKey }: CommentsSect
         handleAddComment()
       }
     }
-    // Cancel edit on Escape
-    if (e.key === 'Escape' && isEdit) {
-      handleCancelEdit()
+    // Handle Escape - stop propagation to prevent drawer from closing
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+
+      if (isEdit) {
+        // Check if content has changed from original
+        const originalComment = comments.find((c) => c.id === editingCommentId)
+        if (editContent.trim() && editContent !== originalComment?.content) {
+          setShowCancelConfirm('edit')
+        } else {
+          handleCancelEdit()
+        }
+      } else {
+        // New comment - check if there's content
+        if (newComment.trim()) {
+          setShowCancelConfirm('new')
+        } else {
+          // No content, just blur the textarea
+          textareaRef.current?.blur()
+        }
+      }
     }
+  }
+
+  const handleConfirmCancel = () => {
+    if (showCancelConfirm === 'edit') {
+      handleCancelEdit()
+    } else if (showCancelConfirm === 'new') {
+      setNewComment('')
+      textareaRef.current?.blur()
+    }
+    setShowCancelConfirm(null)
   }
 
   if (isLoading) {
@@ -236,7 +266,18 @@ export function CommentsSection({ projectId, ticketId, ticketKey }: CommentsSect
                         <Check className="h-4 w-4 mr-1" />
                         Save
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          const originalComment = comments.find((c) => c.id === editingCommentId)
+                          if (editContent.trim() && editContent !== originalComment?.content) {
+                            setShowCancelConfirm('edit')
+                          } else {
+                            handleCancelEdit()
+                          }
+                        }}
+                      >
                         <X className="h-4 w-4 mr-1" />
                         Cancel
                       </Button>
@@ -301,6 +342,32 @@ export function CommentsSection({ projectId, ticketId, ticketKey }: CommentsSect
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel confirmation dialog */}
+      <AlertDialog
+        open={!!showCancelConfirm}
+        onOpenChange={(open) => !open && setShowCancelConfirm(null)}
+      >
+        <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard Comment?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              You have unsaved changes. Are you sure you want to discard your comment?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
+              Keep Editing
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancel}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              Discard
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
