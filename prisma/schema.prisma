@@ -515,6 +515,11 @@ model SystemSettings {
   // Keys: "Owner", "Admin", "Member", "Viewer"
   // Values: array of permission strings
   defaultRolePermissions String?
+
+  // Repository configuration
+  canonicalRepoUrl     String? // Upstream repository URL (e.g., https://github.com/owner/repo)
+  repoHostingProvider  String? // github, gitlab, bitbucket, gitea, codeberg, other
+  forkRepoUrl          String? // Fork repository URL (if different from canonical)
 }
 
 // Password reset tokens (for forgot password flow)

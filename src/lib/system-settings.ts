@@ -29,6 +29,9 @@ const DEFAULT_SETTINGS = {
   ],
 }
 
+// Supported hosting providers for repository configuration
+export type RepoHostingProvider = 'github' | 'gitlab' | 'bitbucket' | 'gitea' | 'codeberg' | 'other'
+
 export interface SystemSettings {
   id: string
   updatedAt: Date
@@ -49,6 +52,10 @@ export interface SystemSettings {
   allowedDocumentTypes: string[]
   // Board settings
   showAddColumnButton: boolean
+  // Repository configuration
+  canonicalRepoUrl: string | null
+  repoHostingProvider: RepoHostingProvider | null
+  forkRepoUrl: string | null
 }
 
 export interface UploadConfig {
@@ -116,6 +123,10 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     ),
     // Board settings
     showAddColumnButton: settings.showAddColumnButton,
+    // Repository configuration
+    canonicalRepoUrl: settings.canonicalRepoUrl,
+    repoHostingProvider: settings.repoHostingProvider as RepoHostingProvider | null,
+    forkRepoUrl: settings.forkRepoUrl,
   }
 }
 

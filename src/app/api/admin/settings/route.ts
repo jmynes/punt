@@ -7,6 +7,9 @@ import { getEmailSettings } from '@/lib/email/settings'
 import { projectEvents } from '@/lib/events'
 import { getSystemSettings } from '@/lib/system-settings'
 
+// URL validation regex - allows http(s) URLs
+const urlRegex = /^https?:\/\/[^\s/$.?#].[^\s]*$/i
+
 const UpdateSettingsSchema = z.object({
   // Branding settings
   appName: z.string().min(1).max(50).optional(),
@@ -45,6 +48,14 @@ const UpdateSettingsSchema = z.object({
   emailWelcome: z.boolean().optional(),
   emailVerification: z.boolean().optional(),
   emailInvitations: z.boolean().optional(),
+
+  // Repository configuration
+  canonicalRepoUrl: z.string().regex(urlRegex, 'Invalid URL format').max(500).optional().nullable(),
+  repoHostingProvider: z
+    .enum(['github', 'gitlab', 'bitbucket', 'gitea', 'codeberg', 'other'])
+    .optional()
+    .nullable(),
+  forkRepoUrl: z.string().regex(urlRegex, 'Invalid URL format').max(500).optional().nullable(),
 })
 
 /**
@@ -169,6 +180,17 @@ export async function PATCH(request: Request) {
     }
     if (updates.emailInvitations !== undefined) {
       updateData.emailInvitations = updates.emailInvitations
+    }
+
+    // Repository configuration
+    if (updates.canonicalRepoUrl !== undefined) {
+      updateData.canonicalRepoUrl = updates.canonicalRepoUrl
+    }
+    if (updates.repoHostingProvider !== undefined) {
+      updateData.repoHostingProvider = updates.repoHostingProvider
+    }
+    if (updates.forkRepoUrl !== undefined) {
+      updateData.forkRepoUrl = updates.forkRepoUrl
     }
 
     // Upsert to handle case where settings don't exist yet
