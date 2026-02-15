@@ -7,14 +7,16 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
+  FileImage,
   FileWarning,
   Loader2,
   Lock,
+  Paperclip,
   Shield,
   Trash2,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -26,19 +28,34 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { type ImportDatabaseParams, useImportDatabase } from '@/hooks/queries/use-database-backup'
+import {
+  type ImportDatabaseParams,
+  type ImportPreview,
+  useImportDatabase,
+  usePreviewDatabase,
+} from '@/hooks/queries/use-database-backup'
 import type { ImportResult } from '@/lib/database-import'
 
 interface DatabaseImportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   fileContent: string // Base64 encoded
-  isZip: boolean
+  // isZip is kept for backwards compatibility but no longer used
+  // (preview response includes this info)
+  isZip?: boolean
   isEncrypted: boolean
   onComplete: () => void
 }
 
-type Step = 'warning' | 'credentials' | 'confirm' | 'importing' | 'success' | 'error'
+type Step =
+  | 'loading'
+  | 'preview'
+  | 'warning'
+  | 'credentials'
+  | 'confirm'
+  | 'importing'
+  | 'success'
+  | 'error'
 
 const REQUIRED_CONFIRMATION = 'DELETE ALL DATA'
 
@@ -46,11 +63,10 @@ export function DatabaseImportDialog({
   open,
   onOpenChange,
   fileContent,
-  isZip,
   isEncrypted: initialIsEncrypted,
   onComplete,
 }: DatabaseImportDialogProps) {
-  const [step, setStep] = useState<Step>('warning')
+  const [step, setStep] = useState<Step>('loading')
   const [decryptionPassword, setDecryptionPassword] = useState('')
   const [showDecryptionPassword, setShowDecryptionPassword] = useState(false)
   const [needsPassword, setNeedsPassword] = useState(initialIsEncrypted)
@@ -58,15 +74,79 @@ export function DatabaseImportDialog({
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [confirmText, setConfirmText] = useState('')
+  const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const previewMutation = usePreviewDatabase()
   const importMutation = useImportDatabase()
   const [verifying, setVerifying] = useState(false)
   const [credentialError, setCredentialError] = useState<string | null>(null)
 
+  // Use refs to prevent infinite re-renders from mutation state changes
+  const isLoadingRef = useRef(false)
+  const previewMutateRef = useRef(previewMutation.mutateAsync)
+  previewMutateRef.current = previewMutation.mutateAsync
+
+  // Load preview when dialog opens or when retrying with password
+  useEffect(() => {
+    if (!open || step !== 'loading') {
+      isLoadingRef.current = false
+      return
+    }
+
+    // Prevent duplicate calls
+    if (isLoadingRef.current) return
+    isLoadingRef.current = true
+
+    let cancelled = false
+
+    const loadPreview = async () => {
+      setError(null)
+      try {
+        const previewResult = await previewMutateRef.current({
+          content: fileContent,
+          decryptionPassword: needsPassword ? decryptionPassword : undefined,
+        })
+        if (cancelled) return
+        setPreview(previewResult)
+        setStep('preview')
+      } catch (err) {
+        if (cancelled) return
+        const errorMessage = err instanceof Error ? err.message : 'Failed to preview backup'
+        // Check if it's an encryption error
+        if (errorMessage.includes('encrypted') || errorMessage.includes('password')) {
+          setNeedsPassword(true)
+          setStep('preview') // Show preview step with password input
+          setError(errorMessage)
+        } else {
+          setError(errorMessage)
+          setStep('error')
+        }
+      } finally {
+        if (!cancelled) {
+          isLoadingRef.current = false
+        }
+      }
+    }
+
+    loadPreview()
+
+    return () => {
+      cancelled = true
+      isLoadingRef.current = false
+    }
+  }, [open, step, fileContent, needsPassword, decryptionPassword])
+
+  const handleRetryPreview = () => {
+    if (!decryptionPassword && needsPassword) return
+    setStep('loading') // useEffect will trigger loadPreview when step is 'loading'
+  }
+
   const handleNext = async () => {
-    if (step === 'warning') {
+    if (step === 'preview') {
+      setStep('warning')
+    } else if (step === 'warning') {
       setStep('credentials')
     } else if (step === 'credentials') {
       setVerifying(true)
@@ -92,7 +172,9 @@ export function DatabaseImportDialog({
   }
 
   const handleBack = () => {
-    if (step === 'credentials') {
+    if (step === 'warning') {
+      setStep('preview')
+    } else if (step === 'credentials') {
       setStep('warning')
     } else if (step === 'confirm') {
       setStep('credentials')
@@ -122,7 +204,7 @@ export function DatabaseImportDialog({
       // Check if it's an encryption error
       if (errorMessage.includes('encrypted') || errorMessage.includes('password')) {
         setNeedsPassword(true)
-        setStep('warning')
+        setStep('preview')
         setError(errorMessage)
       } else {
         setError(errorMessage)
@@ -132,7 +214,7 @@ export function DatabaseImportDialog({
   }
 
   const handleClose = () => {
-    if (step === 'importing') return // Don't allow closing during import
+    if (step === 'importing' || step === 'loading') return // Don't allow closing during import/loading
 
     onOpenChange(false)
 
@@ -145,11 +227,12 @@ export function DatabaseImportDialog({
     }
 
     // Reset state
-    setStep('warning')
+    setStep('loading')
     setDecryptionPassword('')
     setUsername('')
     setPassword('')
     setConfirmText('')
+    setPreview(null)
     setResult(null)
     setError(null)
     setCredentialError(null)
@@ -167,17 +250,38 @@ export function DatabaseImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" showCloseButton={step !== 'importing'}>
-        {/* Step 1: Warning */}
-        {step === 'warning' && (
+      <DialogContent
+        className="sm:max-w-md"
+        showCloseButton={step !== 'importing' && step !== 'loading'}
+      >
+        {/* Step 0: Loading Preview */}
+        {step === 'loading' && (
           <>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-red-400">
-                <AlertTriangle className="h-5 w-5" />
-                Danger Zone
+              <DialogTitle className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+                Analyzing Backup
+              </DialogTitle>
+              <DialogDescription>Parsing and validating the backup file...</DialogDescription>
+            </DialogHeader>
+
+            <div className="py-8 flex flex-col items-center justify-center gap-4">
+              <Loader2 className="h-12 w-12 animate-spin text-amber-500" />
+              <p className="text-sm text-zinc-400">This may take a moment for large backups...</p>
+            </div>
+          </>
+        )}
+
+        {/* Step 1: Preview */}
+        {step === 'preview' && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Archive className="h-5 w-5 text-blue-400" />
+                Import Preview
               </DialogTitle>
               <DialogDescription>
-                You are about to import a database backup. Please read carefully.
+                Review what will be imported from this backup file.
               </DialogDescription>
             </DialogHeader>
 
@@ -188,24 +292,8 @@ export function DatabaseImportDialog({
                 </div>
               )}
 
-              <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg space-y-2">
-                <p className="text-sm text-red-300 font-medium">This action will:</p>
-                <ul className="text-sm text-red-300/80 space-y-1 ml-4 list-disc">
-                  <li>Permanently delete ALL existing data</li>
-                  <li>Replace it with data from the backup file</li>
-                  <li>Log out all users (sessions will be invalidated)</li>
-                  <li>Cannot be undone</li>
-                </ul>
-              </div>
-
-              {isZip && (
-                <div className="flex items-center gap-2 text-sm text-blue-400">
-                  <Archive className="h-4 w-4" />
-                  This backup includes files (attachments and/or avatars)
-                </div>
-              )}
-
-              {(needsPassword || initialIsEncrypted) && (
+              {/* Password input if needed */}
+              {needsPassword && !preview && (
                 <div className="space-y-2">
                   <Label htmlFor="decryptionPassword" className="text-zinc-300">
                     Backup Password
@@ -236,17 +324,157 @@ export function DatabaseImportDialog({
                   </div>
                 </div>
               )}
+
+              {/* Preview data */}
+              {preview && (
+                <>
+                  <div className="bg-zinc-800 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-400">Exported:</span>
+                      <span className="text-zinc-200">
+                        {new Date(preview.exportedAt).toLocaleString()}
+                      </span>
+                    </div>
+                    {preview.isZip && (
+                      <div className="flex items-center gap-2 text-sm text-blue-400">
+                        <Archive className="h-4 w-4" />
+                        ZIP archive with files
+                      </div>
+                    )}
+                    {preview.includesAttachments && (
+                      <div className="flex items-center gap-2 text-sm text-green-400">
+                        <Paperclip className="h-4 w-4" />
+                        Includes ticket attachments
+                      </div>
+                    )}
+                    {preview.includesAvatars && (
+                      <div className="flex items-center gap-2 text-sm text-green-400">
+                        <FileImage className="h-4 w-4" />
+                        Includes profile pictures
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-zinc-800 rounded-lg p-4 space-y-2">
+                    <p className="text-sm font-medium text-zinc-300">Records to import:</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                      {preview.counts.users > 0 && (
+                        <>
+                          <span className="text-zinc-400">Users:</span>
+                          <span className="text-zinc-200">{preview.counts.users}</span>
+                        </>
+                      )}
+                      {preview.counts.projects > 0 && (
+                        <>
+                          <span className="text-zinc-400">Projects:</span>
+                          <span className="text-zinc-200">{preview.counts.projects}</span>
+                        </>
+                      )}
+                      {preview.counts.tickets > 0 && (
+                        <>
+                          <span className="text-zinc-400">Tickets:</span>
+                          <span className="text-zinc-200">{preview.counts.tickets}</span>
+                        </>
+                      )}
+                      {preview.counts.sprints > 0 && (
+                        <>
+                          <span className="text-zinc-400">Sprints:</span>
+                          <span className="text-zinc-200">{preview.counts.sprints}</span>
+                        </>
+                      )}
+                      {preview.counts.labels > 0 && (
+                        <>
+                          <span className="text-zinc-400">Labels:</span>
+                          <span className="text-zinc-200">{preview.counts.labels}</span>
+                        </>
+                      )}
+                      {preview.counts.columns > 0 && (
+                        <>
+                          <span className="text-zinc-400">Columns:</span>
+                          <span className="text-zinc-200">{preview.counts.columns}</span>
+                        </>
+                      )}
+                      {preview.counts.comments > 0 && (
+                        <>
+                          <span className="text-zinc-400">Comments:</span>
+                          <span className="text-zinc-200">{preview.counts.comments}</span>
+                        </>
+                      )}
+                      {preview.counts.attachments > 0 && (
+                        <>
+                          <span className="text-zinc-400">Attachments:</span>
+                          <span className="text-zinc-200">{preview.counts.attachments}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleNext}
-                disabled={needsPassword && !decryptionPassword}
-              >
+              {needsPassword && !preview ? (
+                <Button
+                  variant="primary"
+                  onClick={handleRetryPreview}
+                  disabled={!decryptionPassword || previewMutation.isPending}
+                >
+                  {previewMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Decrypt & Preview
+                </Button>
+              ) : (
+                <Button variant="destructive" onClick={handleNext} disabled={!preview}>
+                  Continue to Import
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
+            </DialogFooter>
+          </>
+        )}
+
+        {/* Step 2: Warning */}
+        {step === 'warning' && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-400">
+                <AlertTriangle className="h-5 w-5" />
+                Danger Zone
+              </DialogTitle>
+              <DialogDescription>
+                You are about to import a database backup. Please read carefully.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg space-y-2">
+                <p className="text-sm text-red-300 font-medium">This action will:</p>
+                <ul className="text-sm text-red-300/80 space-y-1 ml-4 list-disc">
+                  <li>Permanently delete ALL existing data</li>
+                  <li>Replace it with data from the backup file</li>
+                  <li>Log out all users (sessions will be invalidated)</li>
+                  <li>Cannot be undone</li>
+                </ul>
+              </div>
+
+              {preview && (
+                <div className="bg-zinc-800 rounded-lg p-3 text-sm">
+                  <span className="text-zinc-400">Importing: </span>
+                  <span className="text-zinc-200">
+                    {preview.counts.users} users, {preview.counts.projects} projects,{' '}
+                    {preview.counts.tickets} tickets
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={handleBack}>
+                Back
+              </Button>
+              <Button variant="destructive" onClick={handleNext}>
                 I Understand
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -254,7 +482,7 @@ export function DatabaseImportDialog({
           </>
         )}
 
-        {/* Step 2: Credential Verification */}
+        {/* Step 3: Credential Verification */}
         {step === 'credentials' && (
           <>
             <DialogHeader>
@@ -333,7 +561,7 @@ export function DatabaseImportDialog({
           </>
         )}
 
-        {/* Step 3: Type Confirmation */}
+        {/* Step 4: Type Confirmation */}
         {step === 'confirm' && (
           <>
             <DialogHeader>
@@ -379,7 +607,7 @@ export function DatabaseImportDialog({
           </>
         )}
 
-        {/* Step 4: Importing */}
+        {/* Step 5: Importing */}
         {step === 'importing' && (
           <>
             <DialogHeader>
@@ -400,7 +628,7 @@ export function DatabaseImportDialog({
           </>
         )}
 
-        {/* Step 5: Success */}
+        {/* Step 6: Success */}
         {step === 'success' && result && (
           <>
             <DialogHeader>
@@ -529,16 +757,18 @@ export function DatabaseImportDialog({
           </>
         )}
 
-        {/* Step 6: Error */}
+        {/* Step 7: Error */}
         {step === 'error' && (
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-red-400">
                 <AlertTriangle className="h-5 w-5" />
-                Import Failed
+                {preview ? 'Import Failed' : 'Preview Failed'}
               </DialogTitle>
               <DialogDescription>
-                The import could not be completed. Your existing data has not been modified.
+                {preview
+                  ? 'The import could not be completed. Your existing data has not been modified.'
+                  : 'Could not parse the backup file.'}
               </DialogDescription>
             </DialogHeader>
 
@@ -552,7 +782,10 @@ export function DatabaseImportDialog({
               <Button variant="outline" onClick={handleClose}>
                 Close
               </Button>
-              <Button variant="destructive" onClick={() => setStep('warning')}>
+              <Button
+                variant="destructive"
+                onClick={() => setStep(preview ? 'warning' : 'loading')}
+              >
                 Try Again
               </Button>
             </DialogFooter>

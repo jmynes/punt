@@ -354,12 +354,12 @@ describe('Database Backup/Restore', () => {
     describe('generateExportFilename', () => {
       it('should generate .json filename when no files included', () => {
         const filename = generateExportFilename(false)
-        expect(filename).toMatch(/^punt-backup-\d{4}-\d{2}-\d{2}\.json$/)
+        expect(filename).toMatch(/^punt-backup-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json$/)
       })
 
       it('should generate .zip filename when files included', () => {
         const filename = generateExportFilename(true)
-        expect(filename).toMatch(/^punt-backup-\d{4}-\d{2}-\d{2}\.zip$/)
+        expect(filename).toMatch(/^punt-backup-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.zip$/)
       })
     })
   })

@@ -364,7 +364,9 @@ export async function createEncryptedDatabaseExport(
  * Generates a filename for the export
  */
 export function generateExportFilename(includeFiles: boolean): string {
-  const date = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+  const now = new Date()
+  const date = now.toISOString().split('T')[0] // YYYY-MM-DD
+  const time = now.toISOString().split('T')[1].split('.')[0].replace(/:/g, '-') // HH-MM-SS
   const extension = includeFiles ? 'zip' : 'json'
-  return `punt-backup-${date}.${extension}`
+  return `punt-backup-${date}_${time}.${extension}`
 }
