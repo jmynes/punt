@@ -10,7 +10,17 @@ import {
   MoreHorizontal,
   Trash2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -61,9 +71,29 @@ export function AttachmentList({
   layout = 'list',
 }: AttachmentListProps) {
   const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null)
+  const [fileToDelete, setFileToDelete] = useState<UploadedFile | null>(null)
+  const deleteButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Focus delete button when dialog opens
+  useEffect(() => {
+    if (fileToDelete && deleteButtonRef.current) {
+      // Small delay to ensure dialog is rendered
+      const timer = setTimeout(() => {
+        deleteButtonRef.current?.focus()
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [fileToDelete])
 
   if (attachments.length === 0) {
     return null
+  }
+
+  const handleConfirmDelete = () => {
+    if (fileToDelete && onRemove) {
+      onRemove(fileToDelete.id)
+    }
+    setFileToDelete(null)
   }
 
   const handleDownload = (file: UploadedFile) => {
@@ -162,7 +192,7 @@ export function AttachmentList({
                       size="icon"
                       variant="ghost"
                       className="h-8 w-8 text-white hover:bg-red-500/50"
-                      onClick={() => onRemove(file.id)}
+                      onClick={() => setFileToDelete(file)}
                       title="Remove"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -180,7 +210,40 @@ export function AttachmentList({
           files={attachments}
           onClose={() => setPreviewFile(null)}
           onNavigate={setPreviewFile}
+          onDelete={
+            onRemove
+              ? (file) => {
+                  setFileToDelete(file)
+                  setPreviewFile(null)
+                }
+              : undefined
+          }
         />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>
+          <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
+              <AlertDialogDescription className="text-zinc-400">
+                Are you sure you want to delete{' '}
+                <span className="font-medium text-zinc-200">{fileToDelete?.originalName}</span>?
+                This action can be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </>
     )
   }
@@ -270,7 +333,7 @@ export function AttachmentList({
                   </DropdownMenuItem>
                   {!readonly && onRemove && (
                     <DropdownMenuItem
-                      onClick={() => onRemove(file.id)}
+                      onClick={() => setFileToDelete(file)}
                       className="cursor-pointer text-red-400 focus:text-red-400"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
@@ -290,7 +353,41 @@ export function AttachmentList({
         files={attachments}
         onClose={() => setPreviewFile(null)}
         onNavigate={setPreviewFile}
+        onDelete={
+          onRemove
+            ? (file) => {
+                setFileToDelete(file)
+                setPreviewFile(null)
+              }
+            : undefined
+        }
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>
+        <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Are you sure you want to delete{' '}
+              <span className="font-medium text-zinc-200">{fileToDelete?.originalName}</span>? This
+              action can be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              ref={deleteButtonRef}
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

@@ -276,7 +276,7 @@ export function KanbanColumn({
             {/* Drop zone indicator when empty and not dragging */}
             {sortedTickets.length === 0 && !activeTicketId && dragSelectionIds.length === 0 && (
               <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-lg">
-                <span className="text-xs text-zinc-600">Drop tickets here</span>
+                <span className="text-xs text-zinc-600 select-none">Drop tickets here</span>
               </div>
             )}
           </div>

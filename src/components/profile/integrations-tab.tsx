@@ -133,11 +133,11 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
 
   const handleSaveAnthropicKey = async () => {
     if (!anthropicKeyInput.trim()) {
-      toast.error('Please enter an API key')
+      showToast.error('Please enter an API key')
       return
     }
     if (!anthropicKeyInput.startsWith('sk-ant-')) {
-      toast.error('Invalid key format (should start with sk-ant-)')
+      showToast.error('Invalid key format (should start with sk-ant-)')
       return
     }
     setAnthropicKeyLoading(true)
@@ -153,9 +153,9 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
       setAnthropicKeyHint(data.keyHint)
       setAnthropicKeyInput('')
       setAnthropicKeyVisible(false)
-      toast.success('Anthropic API key saved')
+      showToast.success('Anthropic API key saved')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save API key')
+      showToast.error(error instanceof Error ? error.message : 'Failed to save API key')
     } finally {
       setAnthropicKeyLoading(false)
     }
@@ -169,9 +169,9 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
       if (!res.ok) throw new Error(data.error || 'Failed to remove API key')
       setAnthropicHasKey(false)
       setAnthropicKeyHint(null)
-      toast.success('Anthropic API key removed')
+      showToast.success('Anthropic API key removed')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove API key')
+      showToast.error(error instanceof Error ? error.message : 'Failed to remove API key')
     } finally {
       setAnthropicKeyLoading(false)
     }

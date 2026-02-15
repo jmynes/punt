@@ -9,6 +9,7 @@ import {
   Maximize2,
   Minimize2,
   RotateCcw,
+  Trash2,
   X,
   ZoomIn,
   ZoomOut,
@@ -30,6 +31,7 @@ interface AttachmentPreviewModalProps {
   files?: UploadedFile[]
   onClose: () => void
   onNavigate?: (file: UploadedFile) => void
+  onDelete?: (file: UploadedFile) => void
 }
 
 const MIN_ZOOM = 0.25
@@ -41,6 +43,7 @@ export function AttachmentPreviewModal({
   files = [],
   onClose,
   onNavigate,
+  onDelete,
 }: AttachmentPreviewModalProps) {
   const [zoom, setZoom] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
@@ -197,9 +200,9 @@ export function AttachmentPreviewModal({
   const isVideo = file.category === 'video'
 
   return (
-    <Dialog open={!!file} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={!!file} onOpenChange={(open) => !open && onClose()} modal={false}>
       <DialogContent
-        className="max-w-6xl h-[90vh] border-zinc-800 bg-zinc-950 p-0 flex flex-col"
+        className="max-w-[90vw] sm:max-w-[90vw] w-full h-[90vh] border-zinc-800 bg-zinc-950 p-0 flex flex-col"
         showCloseButton={false}
       >
         <DialogHeader className="sr-only">
@@ -210,7 +213,7 @@ export function AttachmentPreviewModal({
         {/* Toolbar */}
         <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-2 bg-zinc-900/80 flex-shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-sm font-medium text-zinc-200 truncate max-w-[300px]">
+            <span className="text-sm font-medium text-zinc-200 truncate max-w-[50vw]">
               {file.originalName}
             </span>
             {files.length > 1 && (
@@ -278,6 +281,17 @@ export function AttachmentPreviewModal({
             >
               <ExternalLink className="h-4 w-4" />
             </Button>
+            {onDelete && file && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-zinc-400 hover:text-red-400"
+                onClick={() => onDelete(file)}
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -378,11 +392,30 @@ export function AttachmentPreviewModal({
 
           {/* PDF preview */}
           {isPdf && (
-            <iframe
-              src={`${file.url}#toolbar=0&navpanes=0`}
-              className="w-full h-full border-0"
+            <object
+              data={file.url}
+              type="application/pdf"
+              className="w-full h-full"
               title={file.originalName}
-            />
+            >
+              {/* Fallback for browsers that can't display PDF inline */}
+              <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
+                <FileText className="h-16 w-16 text-zinc-500" />
+                <p className="text-zinc-400 text-center">
+                  PDF preview not available in this browser.
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF
+                  </Button>
+                  <Button variant="outline" onClick={handleOpenExternal}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open in new tab
+                  </Button>
+                </div>
+              </div>
+            </object>
           )}
 
           {/* Document fallback */}

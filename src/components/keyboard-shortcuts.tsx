@@ -1852,6 +1852,9 @@ export function KeyboardShortcuts() {
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
           }
+          // Note: attachmentAdd/attachmentDelete are not handled via Ctrl+Z/Y because
+          // attachment IDs change when re-created on the server, causing duplicates.
+          // Attachment undo is handled via the toast undo button for single operations.
         }
       }
 
@@ -2661,6 +2664,9 @@ export function KeyboardShortcuts() {
               true,
             )
           }
+          // Note: attachmentAdd/attachmentDelete are not handled via Ctrl+Y (redo) because
+          // attachment IDs change when re-created on the server, causing duplicates.
+          // Attachment undo is handled via the toast undo button for single operations.
         }
       }
     }

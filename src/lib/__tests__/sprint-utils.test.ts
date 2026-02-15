@@ -88,15 +88,6 @@ function createMockSprint(overrides: Partial<SprintSummary> = {}): SprintSummary
     startDate: null,
     endDate: null,
     status: 'planning',
-    projectId: 'project-1',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    ticketCount: 0,
-    completedTicketCount: 0,
-    incompleteTicketCount: 0,
-    totalStoryPoints: 0,
-    completedStoryPoints: 0,
-    incompleteStoryPoints: 0,
     ...overrides,
   }
 }
@@ -296,18 +287,18 @@ describe('Sprint Utils', () => {
     })
 
     it('should return true when past end date', () => {
-      const sprint = createMockSprint({ endDate: '2024-06-14' })
+      const sprint = createMockSprint({ endDate: new Date('2024-06-14') })
       expect(isSprintExpired(sprint)).toBe(true)
     })
 
     it('should return false when end date is in the future', () => {
-      const sprint = createMockSprint({ endDate: '2024-06-20' })
+      const sprint = createMockSprint({ endDate: new Date('2024-06-20') })
       expect(isSprintExpired(sprint)).toBe(false)
     })
 
     it('should return true when end date is today (same day at midnight)', () => {
       // Testing edge case - end date at start of day is before current time
-      const sprint = createMockSprint({ endDate: '2024-06-15' })
+      const sprint = createMockSprint({ endDate: new Date('2024-06-15') })
       expect(isSprintExpired(sprint)).toBe(false) // Same day should not be expired
     })
   })

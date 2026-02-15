@@ -61,7 +61,7 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
     (e: React.MouseEvent) => {
       e.stopPropagation()
       dismissAddColumn(projectId)
-      toast('Add Column button hidden', {
+      showToast.info('Add Column button hidden', {
         description: 'Click the + at the end of the board to show it again',
         duration: 4000,
       })

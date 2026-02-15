@@ -467,11 +467,8 @@ function AdminUserProfileContent() {
         newRoleName,
       })
 
-      showToast.success(`Role updated to ${newRoleName}`, {
-        action: {
-          label: 'Undo',
-          onClick: handleUndo,
-        },
+      showToast.withUndo(`Role updated to ${newRoleName}`, {
+        onUndo: handleUndo,
       })
     } catch (err) {
       showToast.error(err instanceof Error ? err.message : 'Failed to update role')

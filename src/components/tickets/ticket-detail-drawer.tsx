@@ -84,6 +84,7 @@ import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
 import type {
   IssueType,
   LabelSummary,
@@ -96,6 +97,7 @@ import { InlineCodeText } from '../common/inline-code'
 import { PriorityBadge } from '../common/priority-badge'
 import { resolutionConfig } from '../common/resolution-badge'
 import { TypeBadge } from '../common/type-badge'
+import { AttachmentList } from './attachment-list'
 import type { ParentTicketOption } from './create-ticket-dialog'
 import { DatePicker } from './date-picker'
 import { DescriptionEditor } from './description-editor'
@@ -147,6 +149,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const { openCreateTicketWithData } = useUIStore()
   const currentUser = useCurrentUser()
   const members = useProjectMembers(projectId)
+  const { pushAttachmentAdd, pushAttachmentDelete, undoByToastId } = useUndoStore()
 
   // API mutations
   const updateTicketMutation = useUpdateTicket()
@@ -236,6 +239,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [tempStatusId, setTempStatusId] = useState<string | null>(null)
   const [tempCreatorId, setTempCreatorId] = useState<string | null>(null)
   const [tempAttachments, setTempAttachments] = useState<UploadedFileInfo[]>([])
+  const [showRemoveAllAttachments, setShowRemoveAllAttachments] = useState(false)
 
   // Ensure current user is always in the members list for assignment
   const membersWithCurrentUser = useMemo(() => {
@@ -1406,55 +1410,183 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               )}
 
               {/* Attachments */}
-              <div className="space-y-2">
-                <Label className="text-zinc-400 flex items-center gap-2">
-                  <Paperclip className="h-4 w-4" />
-                  Attachments
-                </Label>
-                <FileUpload
-                  value={tempAttachments}
-                  onChange={(files) => {
-                    const newFiles = files as UploadedFileInfo[]
-                    const currentIds = new Set(tempAttachments.map((a) => a.id))
-                    const newIds = new Set(newFiles.map((f) => f.id))
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-zinc-400 flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    Attachments
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    {tempAttachments.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs text-zinc-500 hover:text-red-400"
+                        onClick={() => setShowRemoveAllAttachments(true)}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Remove all
+                      </Button>
+                    )}
+                    <span
+                      className={cn(
+                        'text-xs tabular-nums',
+                        tempAttachments.length >= (uploadConfig?.maxAttachmentsPerTicket ?? 20)
+                          ? 'text-amber-500'
+                          : 'text-zinc-500',
+                      )}
+                    >
+                      {tempAttachments.length}/{uploadConfig?.maxAttachmentsPerTicket ?? 20}
+                    </span>
+                  </div>
+                </div>
 
-                    // Find added files (in new but not in current)
-                    const addedFiles = newFiles.filter((f) => !currentIds.has(f.id))
-
-                    // Find removed files (in current but not in new)
-                    const removedFiles = tempAttachments.filter((a) => !newIds.has(a.id))
-
-                    // Handle persistence - add new files to database
-                    if (ticket && addedFiles.length > 0) {
-                      addAttachmentsMutation.mutate({
-                        projectId,
-                        ticketId: ticket.id,
-                        attachments: addedFiles.map((f) => ({
-                          filename: f.filename,
-                          originalName: f.originalName,
-                          mimeType: f.mimetype,
-                          size: f.size,
-                          url: f.url,
-                        })),
-                      })
-                    }
-
-                    // Remove deleted files from database
-                    if (ticket) {
-                      for (const removed of removedFiles) {
+                {/* Existing attachments with preview modal support */}
+                {tempAttachments.length > 0 && (
+                  <AttachmentList
+                    attachments={tempAttachments.map((a) => ({
+                      id: a.id,
+                      filename: a.filename,
+                      originalName: a.originalName,
+                      mimetype: a.mimetype,
+                      size: a.size,
+                      url: a.url,
+                      category: getMimeTypeCategory(a.mimetype),
+                    }))}
+                    onRemove={(fileId) => {
+                      const removed = tempAttachments.find((a) => a.id === fileId)
+                      if (removed && ticket) {
+                        const ticketKey = `${projectKey}-${ticket.number}`
+                        // Remove from local state immediately
+                        setTempAttachments(tempAttachments.filter((a) => a.id !== fileId))
+                        // Create a stable reference for the toast ID
+                        let toastIdRef: string | number = ''
+                        toastIdRef = showToast.withUndo(
+                          `Deleted "${removed.originalName}" from ${ticketKey}`,
+                          {
+                            onUndo: () => {
+                              // Undo: re-add the attachment
+                              undoByToastId(toastIdRef)
+                              addAttachmentsMutation.mutate({
+                                projectId,
+                                ticketId: ticket.id,
+                                attachments: [
+                                  {
+                                    filename: removed.filename,
+                                    originalName: removed.originalName,
+                                    mimeType: removed.mimetype,
+                                    size: removed.size,
+                                    url: removed.url,
+                                  },
+                                ],
+                              })
+                              setTempAttachments((prev) => [...prev, removed])
+                            },
+                          },
+                        )
+                        pushAttachmentDelete(
+                          projectId,
+                          [
+                            {
+                              projectId,
+                              ticketId: ticket.id,
+                              ticketKey,
+                              attachment: {
+                                id: removed.id,
+                                filename: removed.filename,
+                                originalName: removed.originalName,
+                                mimetype: removed.mimetype,
+                                size: removed.size,
+                                url: removed.url,
+                              },
+                            },
+                          ],
+                          toastIdRef,
+                        )
                         removeAttachmentMutation.mutate({
                           projectId,
                           ticketId: ticket.id,
                           attachmentId: removed.id,
                         })
                       }
-                    }
+                    }}
+                    layout="grid"
+                  />
+                )}
 
-                    // Update local state
-                    setTempAttachments(newFiles)
-                  }}
-                  maxFiles={uploadConfig?.maxAttachmentsPerTicket ?? 20}
-                />
+                {/* Upload zone or limit reached message */}
+                {tempAttachments.length >= (uploadConfig?.maxAttachmentsPerTicket ?? 20) ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2.5 text-sm text-zinc-500">
+                    <Paperclip className="h-4 w-4 flex-shrink-0" />
+                    <span>Attachment limit reached. Remove an attachment to upload more.</span>
+                  </div>
+                ) : (
+                  <FileUpload
+                    value={[]}
+                    onChange={(files) => {
+                      const newFiles = files as UploadedFileInfo[]
+                      if (newFiles.length > 0 && ticket) {
+                        const ticketKey = `${projectKey}-${ticket.number}`
+                        const fileNames =
+                          newFiles.length === 1
+                            ? `"${newFiles[0].originalName}"`
+                            : `${newFiles.length} files`
+                        // Add to local state immediately
+                        setTempAttachments([...tempAttachments, ...newFiles])
+                        // Create a stable reference for the toast ID
+                        let toastIdRef: string | number = ''
+                        toastIdRef = showToast.withUndo(`Added ${fileNames} to ${ticketKey}`, {
+                          onUndo: () => {
+                            // Undo: remove the added attachments
+                            undoByToastId(toastIdRef)
+                            for (const f of newFiles) {
+                              removeAttachmentMutation.mutate({
+                                projectId,
+                                ticketId: ticket.id,
+                                attachmentId: f.id,
+                              })
+                            }
+                            setTempAttachments((prev) =>
+                              prev.filter((a) => !newFiles.some((nf) => nf.id === a.id)),
+                            )
+                          },
+                        })
+                        pushAttachmentAdd(
+                          projectId,
+                          newFiles.map((f) => ({
+                            projectId,
+                            ticketId: ticket.id,
+                            ticketKey,
+                            attachment: {
+                              id: f.id,
+                              filename: f.filename,
+                              originalName: f.originalName,
+                              mimetype: f.mimetype,
+                              size: f.size,
+                              url: f.url,
+                            },
+                          })),
+                          toastIdRef,
+                        )
+                        // Persist new files to database
+                        addAttachmentsMutation.mutate({
+                          projectId,
+                          ticketId: ticket.id,
+                          attachments: newFiles.map((f) => ({
+                            filename: f.filename,
+                            originalName: f.originalName,
+                            mimeType: f.mimetype,
+                            size: f.size,
+                            url: f.url,
+                          })),
+                        })
+                      }
+                    }}
+                    maxFiles={
+                      (uploadConfig?.maxAttachmentsPerTicket ?? 20) - tempAttachments.length
+                    }
+                  />
+                )}
               </div>
 
               <Separator className="bg-zinc-800" />
@@ -1472,7 +1604,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                         </span>
                         <span className="flex items-center gap-1">
                           <Paperclip className="h-3.5 w-3.5" />
-                          {ticket._count.attachments} attachments
+                          {tempAttachments.length} attachments
                         </span>
                       </>
                     )}
@@ -1565,6 +1697,95 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             >
               <Trash2 className="h-4 w-4 mr-1" />
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove all attachments confirmation dialog */}
+      <AlertDialog open={showRemoveAllAttachments} onOpenChange={setShowRemoveAllAttachments}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">Remove all attachments?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Are you sure you want to remove all {tempAttachments.length} attachments from{' '}
+              <span className="font-mono text-zinc-300">{ticketKey}</span>? This action can be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!ticket) return
+                const attachmentsToRemove = [...tempAttachments]
+                const count = attachmentsToRemove.length
+
+                // Clear local state immediately
+                setTempAttachments([])
+
+                // Create toast with undo
+                let toastIdRef: string | number = ''
+                toastIdRef = showToast.withUndo(
+                  `Removed ${count} attachment${count === 1 ? '' : 's'} from ${ticketKey}`,
+                  {
+                    onUndo: () => {
+                      // Re-add all attachments
+                      undoByToastId(toastIdRef)
+                      for (const attachment of attachmentsToRemove) {
+                        addAttachmentsMutation.mutate({
+                          projectId,
+                          ticketId: ticket.id,
+                          attachments: [
+                            {
+                              filename: attachment.filename,
+                              originalName: attachment.originalName,
+                              mimeType: attachment.mimetype,
+                              size: attachment.size,
+                              url: attachment.url,
+                            },
+                          ],
+                        })
+                      }
+                      setTempAttachments(attachmentsToRemove)
+                    },
+                  },
+                )
+
+                // Push to undo store
+                pushAttachmentDelete(
+                  projectId,
+                  attachmentsToRemove.map((a) => ({
+                    projectId,
+                    ticketId: ticket.id,
+                    ticketKey,
+                    attachment: {
+                      id: a.id,
+                      filename: a.filename,
+                      originalName: a.originalName,
+                      mimetype: a.mimetype,
+                      size: a.size,
+                      url: a.url,
+                    },
+                  })),
+                  toastIdRef,
+                )
+
+                // Delete all attachments from server
+                for (const attachment of attachmentsToRemove) {
+                  removeAttachmentMutation.mutate({
+                    projectId,
+                    ticketId: ticket.id,
+                    attachmentId: attachment.id,
+                  })
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Remove all
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
