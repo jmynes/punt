@@ -1612,7 +1612,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 </div>
 
                 {/* Comments */}
-                <CommentsSection projectId={projectKey} ticketId={ticket.id} />
+                <CommentsSection
+                  projectId={projectKey}
+                  ticketId={ticket.id}
+                  ticketKey={`${projectKey}-${ticket.number}`}
+                />
               </div>
             </div>
           </ScrollArea>

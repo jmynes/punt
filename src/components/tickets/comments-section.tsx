@@ -31,9 +31,10 @@ import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 interface CommentsSectionProps {
   projectId: string
   ticketId: string
+  ticketKey: string
 }
 
-export function CommentsSection({ projectId, ticketId }: CommentsSectionProps) {
+export function CommentsSection({ projectId, ticketId, ticketKey }: CommentsSectionProps) {
   const { data: comments = [], isLoading } = useTicketComments(projectId, ticketId)
   const addComment = useAddComment()
   const updateComment = useUpdateComment()
@@ -63,7 +64,7 @@ export function CommentsSection({ projectId, ticketId }: CommentsSectionProps) {
     const content = newComment.trim()
     if (!content) return
 
-    await addComment.mutateAsync({ projectId, ticketId, content })
+    await addComment.mutateAsync({ projectId, ticketId, ticketKey, content })
     setNewComment('')
   }
 
@@ -84,6 +85,7 @@ export function CommentsSection({ projectId, ticketId }: CommentsSectionProps) {
     await updateComment.mutateAsync({
       projectId,
       ticketId,
+      ticketKey,
       commentId: editingCommentId,
       content,
     })
@@ -97,6 +99,7 @@ export function CommentsSection({ projectId, ticketId }: CommentsSectionProps) {
     await deleteComment.mutateAsync({
       projectId,
       ticketId,
+      ticketKey,
       commentId: commentToDelete.id,
     })
     setCommentToDelete(null)

@@ -55,6 +55,7 @@ export function useAddComment() {
     }: {
       projectId: string
       ticketId: string
+      ticketKey: string
       content: string
     }) => {
       const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`, {
@@ -71,7 +72,7 @@ export function useAddComment() {
       }
       return res.json() as Promise<CommentInfo>
     },
-    onSuccess: (newComment, { projectId, ticketId }) => {
+    onSuccess: (newComment, { projectId, ticketId, ticketKey }) => {
       // Optimistically add the comment to the cache
       queryClient.setQueryData<CommentInfo[]>(commentKeys.forTicket(projectId, ticketId), (old) =>
         old ? [...old, newComment] : [newComment],
@@ -80,7 +81,7 @@ export function useAddComment() {
       queryClient.invalidateQueries({
         queryKey: ticketKeys.byProject(projectId),
       })
-      showToast.success('Comment added')
+      showToast.success(`Comment added to ${ticketKey}`)
     },
     onError: (err) => {
       showToast.error(err.message)
@@ -103,6 +104,7 @@ export function useUpdateComment() {
     }: {
       projectId: string
       ticketId: string
+      ticketKey: string
       commentId: string
       content: string
     }) => {
@@ -144,8 +146,8 @@ export function useUpdateComment() {
 
       return { previousComments }
     },
-    onSuccess: () => {
-      showToast.success('Comment updated')
+    onSuccess: (_, { ticketKey }) => {
+      showToast.success(`Comment updated on ${ticketKey}`)
     },
     onError: (err, { projectId, ticketId }, context) => {
       if (context?.previousComments) {
@@ -178,6 +180,7 @@ export function useDeleteComment() {
     }: {
       projectId: string
       ticketId: string
+      ticketKey: string
       commentId: string
     }) => {
       const res = await fetch(
@@ -212,8 +215,8 @@ export function useDeleteComment() {
 
       return { previousComments }
     },
-    onSuccess: () => {
-      showToast.success('Comment deleted')
+    onSuccess: (_, { ticketKey }) => {
+      showToast.success(`Comment deleted from ${ticketKey}`)
     },
     onError: (err, { projectId, ticketId }, context) => {
       if (context?.previousComments) {
