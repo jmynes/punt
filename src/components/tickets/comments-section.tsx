@@ -289,14 +289,27 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
           />
           <div className="flex items-center justify-between">
             <span className="text-xs text-zinc-500">Ctrl+Enter to submit</span>
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={handleAddComment}
-              disabled={!newComment.trim() || addComment.isPending}
-            >
-              {addComment.isPending ? 'Adding...' : 'Comment'}
-            </Button>
+            <div className="flex items-center gap-2">
+              {newComment.trim() && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setNewComment('')}
+                  className="text-zinc-400 hover:text-zinc-200"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Cancel
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={handleAddComment}
+                disabled={!newComment.trim() || addComment.isPending}
+              >
+                {addComment.isPending ? 'Adding...' : 'Comment'}
+              </Button>
+            </div>
           </div>
         </div>
 
