@@ -61,6 +61,43 @@ export function CommentsSection({ projectId, ticketId, ticketKey }: CommentsSect
     }
   }, [editingCommentId])
 
+  // Capture-phase listener to intercept Escape before Radix UI Dialog handles it
+  useEffect(() => {
+    const handleEscapeCapture = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+
+      // Check if we're focused on the new comment textarea
+      if (document.activeElement === textareaRef.current) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (newComment.trim()) {
+          setShowCancelConfirm('new')
+        } else {
+          textareaRef.current?.blur()
+        }
+        return
+      }
+
+      // Check if we're focused on the edit textarea
+      if (document.activeElement === editTextareaRef.current && editingCommentId) {
+        e.preventDefault()
+        e.stopPropagation()
+        const originalComment = comments.find((c) => c.id === editingCommentId)
+        if (editContent.trim() && editContent !== originalComment?.content) {
+          setShowCancelConfirm('edit')
+        } else {
+          setEditingCommentId(null)
+          setEditContent('')
+        }
+        return
+      }
+    }
+
+    // Use capture phase to intercept before Radix UI
+    document.addEventListener('keydown', handleEscapeCapture, true)
+    return () => document.removeEventListener('keydown', handleEscapeCapture, true)
+  }, [newComment, editingCommentId, editContent, comments])
+
   const handleAddComment = async () => {
     const content = newComment.trim()
     if (!content) return
@@ -128,29 +165,8 @@ export function CommentsSection({ projectId, ticketId, ticketKey }: CommentsSect
         handleAddComment()
       }
     }
-    // Handle Escape - stop propagation to prevent drawer from closing
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      e.stopPropagation()
-
-      if (isEdit) {
-        // Check if content has changed from original
-        const originalComment = comments.find((c) => c.id === editingCommentId)
-        if (editContent.trim() && editContent !== originalComment?.content) {
-          setShowCancelConfirm('edit')
-        } else {
-          handleCancelEdit()
-        }
-      } else {
-        // New comment - check if there's content
-        if (newComment.trim()) {
-          setShowCancelConfirm('new')
-        } else {
-          // No content, just blur the textarea
-          textareaRef.current?.blur()
-        }
-      }
-    }
+    // Note: Escape is handled in the capture-phase useEffect above
+    // to intercept it before Radix UI Dialog closes
   }
 
   const handleConfirmCancel = () => {
