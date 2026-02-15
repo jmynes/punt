@@ -5,6 +5,7 @@
 
 import { type BrandingSettings, DEFAULT_BRANDING } from '@/lib/branding'
 import { db } from '@/lib/db'
+import { logger } from '@/lib/logger'
 
 export type { BrandingSettings } from '@/lib/branding'
 export { DEFAULT_BRANDING } from '@/lib/branding'
@@ -69,13 +70,24 @@ export interface UploadConfig {
 }
 
 /**
- * Parse JSON string array from database, with fallback to default
+ * Parse JSON string array from database, with fallback to default.
+ * Logs a warning if parsing fails to aid in debugging corrupted data.
  */
-function parseJsonArray(jsonString: string, fallback: string[]): string[] {
+function parseJsonArray(jsonString: string, fallback: string[], fieldName?: string): string[] {
   try {
     const parsed = JSON.parse(jsonString)
-    return Array.isArray(parsed) ? parsed : fallback
-  } catch {
+    if (!Array.isArray(parsed)) {
+      logger.warn(
+        `System settings JSON field${fieldName ? ` '${fieldName}'` : ''} is not an array, using fallback`,
+      )
+      return fallback
+    }
+    return parsed
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    logger.warn(
+      `Failed to parse system settings JSON${fieldName ? ` '${fieldName}'` : ''}: ${errorMessage}. Using fallback.`,
+    )
     return fallback
   }
 }
@@ -112,14 +124,17 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     allowedImageTypes: parseJsonArray(
       settings.allowedImageTypes,
       DEFAULT_SETTINGS.allowedImageTypes,
+      'allowedImageTypes',
     ),
     allowedVideoTypes: parseJsonArray(
       settings.allowedVideoTypes,
       DEFAULT_SETTINGS.allowedVideoTypes,
+      'allowedVideoTypes',
     ),
     allowedDocumentTypes: parseJsonArray(
       settings.allowedDocumentTypes,
       DEFAULT_SETTINGS.allowedDocumentTypes,
+      'allowedDocumentTypes',
     ),
     // Board settings
     showAddColumnButton: settings.showAddColumnButton,

@@ -36,8 +36,9 @@ export class ResendProvider implements EmailProvider {
 
     try {
       const sanitizedName = sanitizeEmailDisplayName(this.settings.emailFromName)
+      // Quote the display name for RFC 5322 compliance and consistency with SMTP
       const from = sanitizedName
-        ? `${sanitizedName} <${this.settings.emailFromAddress}>`
+        ? `"${sanitizedName}" <${this.settings.emailFromAddress}>`
         : this.settings.emailFromAddress
 
       const { data, error } = await this.client.emails.send({
