@@ -124,6 +124,7 @@ export function SortableRoleItem({
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation()
+                    if (action.disabled) return
                     action.onClick()
                   }}
                   disabled={action.disabled}
