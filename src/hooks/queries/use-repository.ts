@@ -5,6 +5,12 @@ import { getTabId } from '@/hooks/use-realtime'
 import { showToast } from '@/lib/toast'
 import type { RepoProvider } from '@/types'
 
+export interface EnvironmentBranch {
+  id: string
+  environment: string
+  branchName: string
+}
+
 export const repositoryKeys = {
   all: ['repository'] as const,
   detail: (projectKey: string) => ['repository', projectKey] as const,
@@ -22,6 +28,7 @@ export interface RepositoryConfig {
   branchTemplate: string | null
   agentGuidance: string | null
   monorepoPath: string | null
+  environmentBranches: EnvironmentBranch[] | null
   // Effective values (with system defaults)
   effectiveBranchTemplate: string
   effectiveAgentGuidance: string | null
@@ -60,6 +67,7 @@ export interface UpdateRepositoryInput {
   branchTemplate?: string | null
   agentGuidance?: string | null
   monorepoPath?: string | null
+  environmentBranches?: EnvironmentBranch[] | null
 }
 
 /**

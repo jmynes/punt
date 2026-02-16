@@ -1,33 +1,21 @@
 'use client'
 
-import { ExternalLink, GitBranch, Info, Loader2 } from 'lucide-react'
+import { ExternalLink, GitBranch, GripVertical, Info, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useRepositoryConfig, useUpdateRepository } from '@/hooks/queries/use-repository'
+import {
+  type EnvironmentBranch,
+  useRepositoryConfig,
+  useUpdateRepository,
+} from '@/hooks/queries/use-repository'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { previewBranchName, validateBranchTemplate } from '@/lib/branch-utils'
 import { PERMISSIONS } from '@/lib/permissions'
-import { REPO_PROVIDERS, type RepoProvider } from '@/types'
-
-const PROVIDER_LABELS: Record<RepoProvider, string> = {
-  github: 'GitHub',
-  gitlab: 'GitLab',
-  bitbucket: 'Bitbucket',
-  gitea: 'Gitea',
-  codeberg: 'Codeberg',
-  other: 'Other',
-}
 
 interface RepositoryTabProps {
   projectId: string
@@ -36,12 +24,19 @@ interface RepositoryTabProps {
 
 interface FormData {
   repositoryUrl: string
-  repositoryProvider: RepoProvider | ''
   localPath: string
   defaultBranch: string
   branchTemplate: string
   monorepoPath: string
+  environmentBranches: EnvironmentBranch[]
 }
+
+// Preset environment suggestions
+const ENVIRONMENT_PRESETS = [
+  { environment: 'production', branchName: 'main' },
+  { environment: 'staging', branchName: 'staging' },
+  { environment: 'development', branchName: 'develop' },
+]
 
 export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
   const { data: config, isLoading } = useRepositoryConfig(projectKey)
@@ -51,11 +46,11 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
 
   const [formData, setFormData] = useState<FormData>({
     repositoryUrl: '',
-    repositoryProvider: '',
     localPath: '',
     defaultBranch: '',
     branchTemplate: '',
     monorepoPath: '',
+    environmentBranches: [],
   })
   const [hasChanges, setHasChanges] = useState(false)
   const [branchTemplateError, setBranchTemplateError] = useState<string | null>(null)
@@ -100,11 +95,11 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
     if (config) {
       setFormData({
         repositoryUrl: config.repositoryUrl || '',
-        repositoryProvider: (config.repositoryProvider as RepoProvider) || '',
         localPath: config.localPath || '',
         defaultBranch: config.defaultBranch || '',
         branchTemplate: config.branchTemplate || '',
         monorepoPath: config.monorepoPath || '',
+        environmentBranches: config.environmentBranches || [],
       })
       setHasChanges(false)
     }
@@ -114,13 +109,21 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
   useEffect(() => {
     if (!config) return
 
+    const configBranches = config.environmentBranches || []
+    const branchesChanged =
+      formData.environmentBranches.length !== configBranches.length ||
+      formData.environmentBranches.some((b, i) => {
+        const orig = configBranches[i]
+        return !orig || b.environment !== orig.environment || b.branchName !== orig.branchName
+      })
+
     const changed =
       formData.repositoryUrl !== (config.repositoryUrl || '') ||
-      formData.repositoryProvider !== (config.repositoryProvider || '') ||
       formData.localPath !== (config.localPath || '') ||
       formData.defaultBranch !== (config.defaultBranch || '') ||
       formData.branchTemplate !== (config.branchTemplate || '') ||
-      formData.monorepoPath !== (config.monorepoPath || '')
+      formData.monorepoPath !== (config.monorepoPath || '') ||
+      branchesChanged
 
     setHasChanges(changed)
   }, [formData, config])
@@ -140,11 +143,12 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
 
     updateRepository.mutate({
       repositoryUrl: formData.repositoryUrl || null,
-      repositoryProvider: (formData.repositoryProvider as RepoProvider) || null,
       localPath: formData.localPath || null,
       defaultBranch: formData.defaultBranch || null,
       branchTemplate: formData.branchTemplate || null,
       monorepoPath: formData.monorepoPath || null,
+      environmentBranches:
+        formData.environmentBranches.length > 0 ? formData.environmentBranches : null,
     })
   }, [canEditSettings, formData, updateRepository])
 
@@ -152,14 +156,66 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
     if (config) {
       setFormData({
         repositoryUrl: config.repositoryUrl || '',
-        repositoryProvider: (config.repositoryProvider as RepoProvider) || '',
         localPath: config.localPath || '',
         defaultBranch: config.defaultBranch || '',
         branchTemplate: config.branchTemplate || '',
         monorepoPath: config.monorepoPath || '',
+        environmentBranches: config.environmentBranches || [],
       })
     }
   }, [config])
+
+  // Environment branch handlers
+  const addEnvironmentBranch = useCallback(() => {
+    const newBranch: EnvironmentBranch = {
+      id: crypto.randomUUID(),
+      environment: '',
+      branchName: '',
+    }
+    setFormData((prev) => ({
+      ...prev,
+      environmentBranches: [...prev.environmentBranches, newBranch],
+    }))
+  }, [])
+
+  const updateEnvironmentBranch = useCallback(
+    (id: string, field: 'environment' | 'branchName', value: string) => {
+      setFormData((prev) => ({
+        ...prev,
+        environmentBranches: prev.environmentBranches.map((b) =>
+          b.id === id ? { ...b, [field]: value } : b,
+        ),
+      }))
+    },
+    [],
+  )
+
+  const removeEnvironmentBranch = useCallback((id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      environmentBranches: prev.environmentBranches.filter((b) => b.id !== id),
+    }))
+  }, [])
+
+  const addPresetBranches = useCallback(() => {
+    const existingEnvs = new Set(
+      formData.environmentBranches.map((b) => b.environment.toLowerCase()),
+    )
+    const newBranches = ENVIRONMENT_PRESETS.filter(
+      (p) => !existingEnvs.has(p.environment.toLowerCase()),
+    ).map((p) => ({
+      id: crypto.randomUUID(),
+      environment: p.environment,
+      branchName: p.branchName,
+    }))
+
+    if (newBranches.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        environmentBranches: [...prev.environmentBranches, ...newBranches],
+      }))
+    }
+  }, [formData.environmentBranches])
 
   const isPending = updateRepository.isPending
   const isDisabled = !canEditSettings || isPending
@@ -210,34 +266,6 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
               <p className="text-xs text-zinc-500">
                 The HTTPS URL for the repository (e.g., GitHub, GitLab, Bitbucket).
               </p>
-            </div>
-
-            {/* Repository Provider */}
-            <div className="space-y-2">
-              <Label htmlFor="repository-provider" className="text-zinc-300">
-                Hosting Provider
-              </Label>
-              <Select
-                value={formData.repositoryProvider}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    repositoryProvider: value as RepoProvider,
-                  }))
-                }
-                disabled={isDisabled}
-              >
-                <SelectTrigger className="bg-zinc-900 border-zinc-700 text-zinc-100">
-                  <SelectValue placeholder="Select provider..." />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-700">
-                  {REPO_PROVIDERS.map((provider) => (
-                    <SelectItem key={provider} value={provider}>
-                      {PROVIDER_LABELS[provider]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Default Branch */}
@@ -315,6 +343,135 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                 disabled={isDisabled}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Environment Branches Card */}
+        <Card className="bg-zinc-900/50 border-zinc-800">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base text-zinc-100 flex items-center gap-2">
+                  <GitBranch className="h-4 w-4" />
+                  Environment Branches
+                </CardTitle>
+                <CardDescription className="mt-1.5">
+                  Define branches for different deployment environments.
+                </CardDescription>
+              </div>
+              {!isDisabled && (
+                <div className="flex items-center gap-2">
+                  {formData.environmentBranches.length === 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addPresetBranches}
+                      className="text-xs border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                    >
+                      Add Defaults
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addEnvironmentBranch}
+                    className="text-xs border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Add Branch
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {formData.environmentBranches.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="w-12 h-12 rounded-full bg-zinc-800/50 flex items-center justify-center mb-3">
+                  <GitBranch className="h-5 w-5 text-zinc-600" />
+                </div>
+                <p className="text-sm text-zinc-500 mb-1">No environment branches configured</p>
+                <p className="text-xs text-zinc-600">
+                  Add branches to track deployments across environments
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="max-h-[280px]">
+                <div className="space-y-2 pr-3">
+                  {/* Header row */}
+                  <div className="grid grid-cols-[1fr,1fr,40px] gap-3 px-1 pb-2 border-b border-zinc-800/50">
+                    <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                      Environment
+                    </span>
+                    <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                      Branch Name
+                    </span>
+                    <span />
+                  </div>
+
+                  {/* Branch rows */}
+                  {formData.environmentBranches.map((branch, index) => (
+                    <div
+                      key={branch.id}
+                      className="group grid grid-cols-[1fr,1fr,40px] gap-3 items-center p-2 rounded-lg bg-zinc-800/30 border border-zinc-800/50 hover:border-zinc-700/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <GripVertical className="h-4 w-4 text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
+                        <Input
+                          value={branch.environment}
+                          onChange={(e) =>
+                            updateEnvironmentBranch(branch.id, 'environment', e.target.value)
+                          }
+                          placeholder="e.g., production"
+                          disabled={isDisabled}
+                          className="h-8 bg-zinc-900/50 border-zinc-700/50 text-zinc-200 placeholder:text-zinc-600 text-sm focus:border-amber-600/50 focus:ring-amber-600/20"
+                        />
+                      </div>
+                      <div className="flex items-center">
+                        <Input
+                          value={branch.branchName}
+                          onChange={(e) =>
+                            updateEnvironmentBranch(branch.id, 'branchName', e.target.value)
+                          }
+                          placeholder="e.g., main"
+                          disabled={isDisabled}
+                          className="h-8 bg-zinc-900/50 border-zinc-700/50 text-zinc-200 placeholder:text-zinc-600 font-mono text-sm focus:border-amber-600/50 focus:ring-amber-600/20"
+                        />
+                      </div>
+                      <div className="flex justify-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeEnvironmentBranch(branch.id)}
+                          disabled={isDisabled}
+                          className="h-8 w-8 p-0 text-zinc-600 hover:text-red-400 hover:bg-red-950/30 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+
+            {formData.environmentBranches.length > 0 && !isDisabled && (
+              <div className="mt-3 pt-3 border-t border-zinc-800/50">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={addEnvironmentBranch}
+                  className="w-full h-8 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 border border-dashed border-zinc-800 hover:border-zinc-700"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Add another branch
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

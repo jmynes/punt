@@ -11,6 +11,12 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { getSystemSettings } from '@/lib/system-settings'
 import { REPO_PROVIDERS, type RepoProvider } from '@/types'
 
+const environmentBranchSchema = z.object({
+  id: z.string(),
+  environment: z.string(),
+  branchName: z.string(),
+})
+
 const updateRepositorySchema = z.object({
   repositoryUrl: z.string().url().nullable().optional(),
   repositoryProvider: z.enum(REPO_PROVIDERS).nullable().optional(),
@@ -19,6 +25,7 @@ const updateRepositorySchema = z.object({
   branchTemplate: z.string().nullable().optional(),
   agentGuidance: z.string().nullable().optional(),
   monorepoPath: z.string().nullable().optional(),
+  environmentBranches: z.array(environmentBranchSchema).nullable().optional(),
 })
 
 /**
@@ -52,6 +59,7 @@ export async function GET(
         branchTemplate: true,
         agentGuidance: true,
         monorepoPath: true,
+        environmentBranches: true,
       },
     })
 
@@ -61,6 +69,16 @@ export async function GET(
 
     // Get system defaults for effective values
     const systemSettings = await getSystemSettings()
+
+    // Parse environmentBranches from JSON string
+    let environmentBranches = null
+    if (project.environmentBranches) {
+      try {
+        environmentBranches = JSON.parse(project.environmentBranches)
+      } catch {
+        environmentBranches = null
+      }
+    }
 
     return NextResponse.json({
       projectId: project.id,
@@ -74,6 +92,7 @@ export async function GET(
       branchTemplate: project.branchTemplate,
       agentGuidance: project.agentGuidance,
       monorepoPath: project.monorepoPath,
+      environmentBranches,
       // Effective values (project settings with system defaults as fallback)
       effectiveBranchTemplate: project.branchTemplate ?? systemSettings.defaultBranchTemplate,
       effectiveAgentGuidance: project.agentGuidance ?? systemSettings.defaultAgentGuidance,
@@ -128,9 +147,17 @@ export async function PATCH(
 
     const updates = parsed.data
 
+    // Prepare data for database - stringify environmentBranches if present
+    const dbData: Record<string, unknown> = { ...updates }
+    if (updates.environmentBranches !== undefined) {
+      dbData.environmentBranches = updates.environmentBranches
+        ? JSON.stringify(updates.environmentBranches)
+        : null
+    }
+
     const project = await db.project.update({
       where: { id: projectId },
-      data: updates,
+      data: dbData,
       select: {
         id: true,
         key: true,
@@ -142,11 +169,22 @@ export async function PATCH(
         branchTemplate: true,
         agentGuidance: true,
         monorepoPath: true,
+        environmentBranches: true,
       },
     })
 
     // Get system defaults for effective values
     const systemSettings = await getSystemSettings()
+
+    // Parse environmentBranches from JSON string
+    let parsedEnvironmentBranches = null
+    if (project.environmentBranches) {
+      try {
+        parsedEnvironmentBranches = JSON.parse(project.environmentBranches)
+      } catch {
+        parsedEnvironmentBranches = null
+      }
+    }
 
     return NextResponse.json({
       projectId: project.id,
@@ -160,6 +198,7 @@ export async function PATCH(
       branchTemplate: project.branchTemplate,
       agentGuidance: project.agentGuidance,
       monorepoPath: project.monorepoPath,
+      environmentBranches: parsedEnvironmentBranches,
       // Effective values
       effectiveBranchTemplate: project.branchTemplate ?? systemSettings.defaultBranchTemplate,
       effectiveAgentGuidance: project.agentGuidance ?? systemSettings.defaultAgentGuidance,
