@@ -63,6 +63,17 @@ export function formatDate(date: Date | string): string {
 }
 
 /**
+ * Format a date with time for display (YYYY-MM-DD HH:MM UTC)
+ */
+export function formatDateTime(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  const datePart = d.toISOString().split('T')[0]
+  const hours = d.getUTCHours().toString().padStart(2, '0')
+  const minutes = d.getUTCMinutes().toString().padStart(2, '0')
+  return `${datePart} ${hours}:${minutes} UTC`
+}
+
+/**
  * Format a ticket for full detail display (get_ticket).
  * Organized into sections with compact key-value layout.
  */
@@ -103,7 +114,7 @@ export function formatTicket(ticket: {
   lines.push(`**Priority:** ${ticket.priority}  `)
   if (ticket.column) lines.push(`**Status:** ${escapeMarkdown(ticket.column.name)}  `)
   if (ticket.resolution) lines.push(`**Resolution:** ${escapeMarkdown(ticket.resolution)}  `)
-  if (ticket.resolvedAt) lines.push(`**Resolved:** ${formatDate(ticket.resolvedAt)}  `)
+  if (ticket.resolvedAt) lines.push(`**Resolved:** ${formatDateTime(ticket.resolvedAt)}  `)
   if (ticket.parent) {
     const parentKey = `${projectKey}-${ticket.parent.number}`
     lines.push(
