@@ -38,19 +38,35 @@ function SheetOverlay({
   )
 }
 
+type SheetContentProps = React.ComponentProps<typeof SheetPrimitive.Content> & {
+  side?: 'top' | 'right' | 'bottom' | 'left'
+}
+
 function SheetContent({
   className,
   children,
   side = 'right',
+  onInteractOutside,
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Content> & {
-  side?: 'top' | 'right' | 'bottom' | 'left'
-}) {
+}: SheetContentProps) {
+  // Handle outside interactions, preventing close when clicking on Sonner toasts
+  const handleInteractOutside: SheetContentProps['onInteractOutside'] = (event) => {
+    // Check if the click target is inside a Sonner toast
+    const target = event.target as HTMLElement
+    if (target?.closest('[data-sonner-toaster]')) {
+      event.preventDefault()
+      return
+    }
+    // Call the original handler if provided
+    onInteractOutside?.(event)
+  }
+
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        onInteractOutside={handleInteractOutside}
         className={cn(
           'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
           side === 'right' &&

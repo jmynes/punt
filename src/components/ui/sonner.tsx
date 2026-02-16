@@ -14,6 +14,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme="dark"
       className="toaster group"
+      // Ensure toasts remain clickable even when modal dialogs are open
+      // Radix Dialog can disable pointer events on sibling elements
+      style={{ pointerEvents: 'auto' }}
       icons={{
         success: <CircleCheckIcon className="size-4 text-emerald-400" />,
         info: <InfoIcon className="size-4 text-blue-400" />,
@@ -22,6 +25,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
         loading: <Loader2Icon className="size-4 animate-spin text-zinc-400" />,
       }}
       toastOptions={{
+        // Ensure individual toasts and their buttons are clickable
+        style: { pointerEvents: 'auto' },
         classNames: {
           toast: 'text-white shadow-xl !border-2 !border-solid',
           title: 'text-white font-medium',
