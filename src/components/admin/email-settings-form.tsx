@@ -4,7 +4,6 @@ import { AlertCircle, Info, Loader2, Mail, Save, Send } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -15,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import {
   useSendTestEmail,
   useSystemSettings,
@@ -137,16 +137,16 @@ export function EmailSettingsForm() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Master Toggle */}
-          <div className="flex items-center space-x-3">
-            <Checkbox
-              id="emailEnabled"
-              checked={emailEnabled}
-              onCheckedChange={(checked) => setEmailEnabled(checked === true)}
-              className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-            />
+          <div className="flex items-center justify-between">
             <Label htmlFor="emailEnabled" className="text-zinc-300 cursor-pointer">
               Enable email functionality
             </Label>
+            <Switch
+              id="emailEnabled"
+              checked={emailEnabled}
+              onCheckedChange={(checked) => setEmailEnabled(checked === true)}
+              className="data-[state=checked]:bg-amber-600"
+            />
           </div>
 
           {emailEnabled && (
@@ -272,16 +272,16 @@ export function EmailSettingsForm() {
                         />
                       </div>
                       <div className="space-y-2 flex items-end">
-                        <div className="flex items-center space-x-2 pb-2">
-                          <Checkbox
-                            id="smtpSecure"
-                            checked={smtpSecure}
-                            onCheckedChange={(checked) => setSmtpSecure(checked === true)}
-                            className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                          />
+                        <div className="flex items-center justify-between w-full pb-2">
                           <Label htmlFor="smtpSecure" className="text-zinc-300 cursor-pointer">
                             Use TLS/SSL
                           </Label>
+                          <Switch
+                            id="smtpSecure"
+                            checked={smtpSecure}
+                            onCheckedChange={(checked) => setSmtpSecure(checked === true)}
+                            className="data-[state=checked]:bg-amber-600"
+                          />
                         </div>
                       </div>
                     </div>
@@ -327,43 +327,37 @@ export function EmailSettingsForm() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="emailPasswordReset"
-                  checked={emailPasswordReset}
-                  onCheckedChange={(checked) => setEmailPasswordReset(checked === true)}
-                  className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                />
+              <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="emailPasswordReset" className="text-zinc-300 cursor-pointer">
                     Password Reset
                   </Label>
                   <p className="text-xs text-zinc-500">Send password reset emails</p>
                 </div>
+                <Switch
+                  id="emailPasswordReset"
+                  checked={emailPasswordReset}
+                  onCheckedChange={(checked) => setEmailPasswordReset(checked === true)}
+                  className="data-[state=checked]:bg-amber-600"
+                />
               </div>
 
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="emailWelcome"
-                  checked={emailWelcome}
-                  onCheckedChange={(checked) => setEmailWelcome(checked === true)}
-                  className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                />
+              <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="emailWelcome" className="text-zinc-300 cursor-pointer">
                     Welcome Emails
                   </Label>
                   <p className="text-xs text-zinc-500">Send welcome emails to new users</p>
                 </div>
+                <Switch
+                  id="emailWelcome"
+                  checked={emailWelcome}
+                  onCheckedChange={(checked) => setEmailWelcome(checked === true)}
+                  className="data-[state=checked]:bg-amber-600"
+                />
               </div>
 
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="emailVerification"
-                  checked={emailVerification}
-                  onCheckedChange={(checked) => setEmailVerification(checked === true)}
-                  className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                />
+              <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="emailVerification" className="text-zinc-300 cursor-pointer">
                     Email Verification
@@ -372,16 +366,15 @@ export function EmailSettingsForm() {
                     Prompt users to verify their email addresses
                   </p>
                 </div>
+                <Switch
+                  id="emailVerification"
+                  checked={emailVerification}
+                  onCheckedChange={(checked) => setEmailVerification(checked === true)}
+                  className="data-[state=checked]:bg-amber-600"
+                />
               </div>
 
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="emailInvitations"
-                  checked={emailInvitations}
-                  onCheckedChange={(checked) => setEmailInvitations(checked === true)}
-                  className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                  disabled
-                />
+              <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="emailInvitations" className="text-zinc-400 cursor-not-allowed">
                     Project Invitations
@@ -390,6 +383,13 @@ export function EmailSettingsForm() {
                     Send project invitation emails (coming soon)
                   </p>
                 </div>
+                <Switch
+                  id="emailInvitations"
+                  checked={emailInvitations}
+                  onCheckedChange={(checked) => setEmailInvitations(checked === true)}
+                  className="data-[state=checked]:bg-amber-600"
+                  disabled
+                />
               </div>
             </div>
           </CardContent>

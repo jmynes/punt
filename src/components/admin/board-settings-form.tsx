@@ -4,8 +4,8 @@ import { Loader2, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-system-settings'
 
 export function BoardSettingsForm() {
@@ -58,13 +58,7 @@ export function BoardSettingsForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="showAddColumnButton"
-              checked={showAddColumnButton}
-              onCheckedChange={(checked) => setShowAddColumnButton(checked === true)}
-              className="mt-0.5 border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-            />
+          <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <Label htmlFor="showAddColumnButton" className="text-zinc-300 cursor-pointer">
                 Show &quot;Add Column&quot; button on boards
@@ -75,6 +69,12 @@ export function BoardSettingsForm() {
                 Projects can override this setting.
               </p>
             </div>
+            <Switch
+              id="showAddColumnButton"
+              checked={showAddColumnButton}
+              onCheckedChange={(checked) => setShowAddColumnButton(checked === true)}
+              className="data-[state=checked]:bg-amber-600"
+            />
           </div>
 
           {/* Save/Reset buttons */}
