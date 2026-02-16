@@ -10,6 +10,8 @@ import { DEMO_TEAM_SUMMARIES, DEMO_USER_SUMMARY } from '../demo/demo-data'
 import { demoStorage } from '../demo/demo-storage'
 import type {
   BrandingSettings,
+  BurndownData,
+  BurndownUnit,
   CompleteSprintInput,
   CreateLabelInput,
   CreateProjectInput,
@@ -407,6 +409,22 @@ export class DemoDataProvider implements DataProvider {
       defaultSprintDuration: data.defaultSprintDuration ?? 14,
       autoCarryOverIncomplete: data.autoCarryOverIncomplete ?? false,
       doneColumnIds: data.doneColumnIds ?? [],
+    }
+  }
+
+  // ============================================================================
+  // Burndown
+  // ============================================================================
+
+  async getBurndownData(
+    _projectId: string,
+    _sprintId: string,
+    _unit?: BurndownUnit,
+  ): Promise<BurndownData> {
+    return {
+      sprint: { id: '', name: '', startDate: '', endDate: null, status: '' },
+      unit: 'points',
+      dataPoints: [],
     }
   }
 

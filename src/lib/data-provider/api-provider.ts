@@ -8,6 +8,8 @@
 import type { ColumnWithTickets, LabelSummary, SprintSummary, TicketWithRelations } from '@/types'
 import type {
   BrandingSettings,
+  BurndownData,
+  BurndownUnit,
   CompleteSprintInput,
   CreateLabelInput,
   CreateProjectInput,
@@ -293,6 +295,19 @@ export class APIDataProvider implements DataProvider {
       method: 'PATCH',
       body: JSON.stringify(data),
     })
+  }
+
+  // ============================================================================
+  // Burndown
+  // ============================================================================
+
+  async getBurndownData(
+    projectId: string,
+    sprintId: string,
+    unit: BurndownUnit = 'points',
+  ): Promise<BurndownData> {
+    const params = unit === 'tickets' ? '?unit=tickets' : ''
+    return this.fetchJson(`/api/projects/${projectId}/sprints/${sprintId}/burndown${params}`)
   }
 
   // ============================================================================

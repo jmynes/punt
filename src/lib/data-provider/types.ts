@@ -179,6 +179,33 @@ export interface SprintSettings {
 }
 
 // ============================================================================
+// Burndown Types
+// ============================================================================
+
+export interface BurndownDataPoint {
+  date: string
+  day: number
+  ideal: number
+  remaining: number
+  scope: number
+  completed: number
+}
+
+export type BurndownUnit = 'points' | 'tickets'
+
+export interface BurndownData {
+  sprint: {
+    id: string
+    name: string
+    startDate: string
+    endDate: string | null
+    status: string
+  }
+  unit: BurndownUnit
+  dataPoints: BurndownDataPoint[]
+}
+
+// ============================================================================
 // Data Provider Interface
 // ============================================================================
 
@@ -245,6 +272,9 @@ export interface DataProvider {
 
   // Members (read-only in demo mode)
   getProjectMembers(projectId: string): Promise<UserSummary[]>
+
+  // Burndown
+  getBurndownData(projectId: string, sprintId: string, unit?: BurndownUnit): Promise<BurndownData>
 
   // Dashboard
   getDashboardStats(): Promise<DashboardStats>
