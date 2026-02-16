@@ -1,6 +1,6 @@
 'use client'
 
-import { KeyRound, Mail, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, KeyRound, Mail, Trash2 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import {
@@ -41,16 +41,21 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
   // Email change state
   const [newEmail, setNewEmail] = useState('')
   const [emailPassword, setEmailPassword] = useState('')
+  const [showEmailPassword, setShowEmailPassword] = useState(false)
   const [emailLoading, setEmailLoading] = useState(false)
 
   // Password form state
   const [currentPassword, setCurrentPassword] = useState('')
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [newPassword, setNewPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [passwordLoading, setPasswordLoading] = useState(false)
 
   // Delete account state
   const [deletePassword, setDeletePassword] = useState('')
+  const [showDeletePassword, setShowDeletePassword] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
 
@@ -189,14 +194,25 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
               <Label htmlFor="emailPassword" className="text-zinc-300">
                 Confirm with Password
               </Label>
-              <Input
-                id="emailPassword"
-                type="password"
-                value={emailPassword}
-                onChange={(e) => setEmailPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="bg-zinc-900 border-zinc-700 focus:border-amber-500 max-w-md"
-              />
+              <div className="relative max-w-md">
+                <Input
+                  id="emailPassword"
+                  type={showEmailPassword ? 'text' : 'password'}
+                  value={emailPassword}
+                  onChange={(e) => setEmailPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="bg-zinc-900 border-zinc-700 focus:border-amber-500 pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                  onClick={() => setShowEmailPassword(!showEmailPassword)}
+                >
+                  {showEmailPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
             <div className="flex justify-end max-w-md">
               <Button
@@ -228,41 +244,82 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
               <Label htmlFor="currentPassword" className="text-zinc-300">
                 Current Password
               </Label>
-              <Input
-                id="currentPassword"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
-                className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
-              />
+              <div className="relative">
+                <Input
+                  id="currentPassword"
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="bg-zinc-900 border-zinc-700 focus:border-amber-500 pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  {showCurrentPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="newPassword" className="text-zinc-300">
                   New Password
                 </Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
-                  className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
-                />
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500 pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-zinc-300">
                   Confirm New Password
                 </Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                  className="bg-zinc-900 border-zinc-700 focus:border-amber-500"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    className="bg-zinc-900 border-zinc-700 focus:border-amber-500 pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
             <div className="bg-zinc-800/50 rounded-lg p-3 text-xs text-zinc-400 space-y-1">
@@ -328,14 +385,29 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
                     <Label htmlFor="deletePassword" className="text-zinc-300">
                       Enter your password
                     </Label>
-                    <Input
-                      id="deletePassword"
-                      type="password"
-                      value={deletePassword}
-                      onChange={(e) => setDeletePassword(e.target.value)}
-                      placeholder="Your password"
-                      className="bg-zinc-900 border-zinc-700"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="deletePassword"
+                        type={showDeletePassword ? 'text' : 'password'}
+                        value={deletePassword}
+                        onChange={(e) => setDeletePassword(e.target.value)}
+                        placeholder="Your password"
+                        className="bg-zinc-900 border-zinc-700 pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                        onClick={() => setShowDeletePassword(!showDeletePassword)}
+                      >
+                        {showDeletePassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="deleteConfirmation" className="text-zinc-300">
