@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCompleteSprint, useProjectSprints, useSprintDetail } from '@/hooks/queries/use-sprints'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSprintStore } from '@/stores/sprint-store'
@@ -112,6 +113,11 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
       },
     )
   }, [sprintCompleteId, action, targetSprintId, createNextSprint, completeSprint, handleClose])
+
+  useCtrlSave({
+    onSave: handleSubmit,
+    enabled: sprintCompleteOpen && !!sprintCompleteId && !completeSprint.isPending,
+  })
 
   if (!sprintCompleteId) return null
 

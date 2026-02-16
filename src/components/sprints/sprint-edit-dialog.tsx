@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { useProjectSprints, useUpdateSprint } from '@/hooks/queries/use-sprints'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -112,6 +113,11 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
       formData.endDate?.getTime() !==
         (sprint.endDate ? new Date(sprint.endDate).getTime() : undefined) ||
       formData.budget !== (sprint.budget?.toString() || ''))
+
+  useCtrlSave({
+    onSave: handleSubmit,
+    enabled: sprintEditOpen && isValid && !!hasChanges && !updateSprint.isPending,
+  })
 
   return (
     <Dialog open={sprintEditOpen} onOpenChange={handleOpenChange}>
