@@ -4,11 +4,11 @@ import { Settings } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { PageHeader } from '@/components/common'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSettingsStore } from '@/stores/settings-store'
@@ -78,11 +78,11 @@ export default function PreferencesPage() {
                   When pasting a single ticket, automatically open it in the detail drawer
                 </p>
               </div>
-              <Checkbox
+              <Switch
                 id="open-single-pasted"
                 checked={openSinglePastedTicket}
                 onCheckedChange={(checked) => setOpenSinglePastedTicket(checked === true)}
-                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                className="data-[state=checked]:bg-amber-600"
               />
             </div>
 
@@ -98,11 +98,11 @@ export default function PreferencesPage() {
                   confirmation dialog
                 </p>
               </div>
-              <Checkbox
+              <Switch
                 id="auto-save-drawer"
                 checked={autoSaveOnDrawerClose}
                 onCheckedChange={(checked) => setAutoSaveOnDrawerClose(checked === true)}
-                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                className="data-[state=checked]:bg-amber-600"
               />
             </div>
 
@@ -118,11 +118,11 @@ export default function PreferencesPage() {
                   confirmation dialog
                 </p>
               </div>
-              <Checkbox
+              <Switch
                 id="auto-save-role-editor"
                 checked={autoSaveOnRoleEditorClose}
                 onCheckedChange={(checked) => setAutoSaveOnRoleEditorClose(checked === true)}
-                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                className="data-[state=checked]:bg-amber-600"
               />
             </div>
 
@@ -138,11 +138,11 @@ export default function PreferencesPage() {
                   operations
                 </p>
               </div>
-              <Checkbox
+              <Switch
                 id="show-undo-buttons"
                 checked={showUndoButtons}
                 onCheckedChange={(checked) => setShowUndoButtons(checked === true)}
-                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                className="data-[state=checked]:bg-amber-600"
               />
             </div>
           </CardContent>
@@ -167,11 +167,11 @@ export default function PreferencesPage() {
                   always reset to their default sort order on page load.
                 </p>
               </div>
-              <Checkbox
+              <Switch
                 id="persist-table-sort"
                 checked={persistTableSort}
                 onCheckedChange={(checked) => setPersistTableSort(checked === true)}
-                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                className="data-[state=checked]:bg-amber-600"
               />
             </div>
           </CardContent>
@@ -287,11 +287,11 @@ export default function PreferencesPage() {
                   swatches
                 </p>
               </div>
-              <Checkbox
+              <Switch
                 id="hide-color-removal-warning"
                 checked={hideColorRemovalWarning}
                 onCheckedChange={(checked) => setHideColorRemovalWarning(checked === true)}
-                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                className="data-[state=checked]:bg-amber-600"
               />
             </div>
           </CardContent>
@@ -315,11 +315,11 @@ export default function PreferencesPage() {
                   Keep the admin settings section expanded in the sidebar
                 </p>
               </div>
-              <Checkbox
+              <Switch
                 id="sidebar-admin"
                 checked={sidebarExpandedSections.admin ?? false}
                 onCheckedChange={(checked) => setSidebarSectionExpanded('admin', checked === true)}
-                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                className="data-[state=checked]:bg-amber-600"
               />
             </div>
 
@@ -334,13 +334,13 @@ export default function PreferencesPage() {
                   Keep the profile tabs section expanded in the sidebar
                 </p>
               </div>
-              <Checkbox
+              <Switch
                 id="sidebar-profile"
                 checked={sidebarExpandedSections.profile ?? false}
                 onCheckedChange={(checked) =>
                   setSidebarSectionExpanded('profile', checked === true)
                 }
-                className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                className="data-[state=checked]:bg-amber-600"
               />
             </div>
 
@@ -355,7 +355,7 @@ export default function PreferencesPage() {
                         Keep project settings sections expanded in the sidebar
                       </p>
                     </div>
-                    <Checkbox
+                    <Switch
                       id="sidebar-all-projects"
                       checked={projects.every((p) => sidebarExpandedSections[p.id] ?? false)}
                       onCheckedChange={(checked) => {
@@ -363,7 +363,7 @@ export default function PreferencesPage() {
                           setSidebarSectionExpanded(project.id, checked === true)
                         }
                       }}
-                      className="mt-1 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                      className="data-[state=checked]:bg-amber-600"
                     />
                   </div>
                   <div className="space-y-3 mt-3">
@@ -381,13 +381,13 @@ export default function PreferencesPage() {
                             {project.name}
                           </Label>
                         </div>
-                        <Checkbox
+                        <Switch
                           id={`sidebar-project-${project.id}`}
                           checked={sidebarExpandedSections[project.id] ?? false}
                           onCheckedChange={(checked) =>
                             setSidebarSectionExpanded(project.id, checked === true)
                           }
-                          className="border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                          className="data-[state=checked]:bg-amber-600"
                         />
                       </div>
                     ))}
