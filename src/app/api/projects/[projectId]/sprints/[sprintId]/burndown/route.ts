@@ -56,7 +56,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         sprint: {
           id: sprint.id,
           name: sprint.name,
-          startDate: sprint.startDate?.toISOString() ?? null,
+          startDate: null,
           endDate: sprint.endDate?.toISOString() ?? null,
           status: sprint.status,
         },
