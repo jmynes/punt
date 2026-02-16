@@ -185,12 +185,18 @@ export async function GET(request: Request, { params }: RouteParams) {
       dayNum++
     }
 
-    // Ideal guideline: straight line from latest scope to 0 at sprint end
-    const latestScope = rawPoints.length > 0 ? rawPoints[rawPoints.length - 1].scope : 0
+    // Guideline: straight line from commitment to 0 at sprint end.
+    // Jira anchors this to the original sprint commitment (day 1 scope) — it stays
+    // fixed even when scope changes mid-sprint, so being above/below the line is
+    // meaningful. When the sprint starts with 0 scope (tickets added progressively),
+    // fall back to max scope so the guideline is still useful.
+    const day1Scope = rawPoints.length > 0 ? rawPoints[0].scope : 0
+    const maxScope = rawPoints.reduce((max, p) => Math.max(max, p.scope), 0)
+    const commitment = day1Scope > 0 ? day1Scope : maxScope
 
     const dataPoints = rawPoints.map((point) => {
       const dayIndex = point.day - 1
-      const ideal = Math.max(0, latestScope - (latestScope * dayIndex) / totalDays)
+      const ideal = Math.max(0, commitment - (commitment * dayIndex) / totalDays)
 
       return {
         date: point.date,
