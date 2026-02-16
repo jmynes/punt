@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCreateProject } from '@/hooks/queries/use-projects'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { LABEL_COLORS } from '@/lib/constants'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -124,6 +125,11 @@ export function CreateProjectDialog() {
   }, [formData, createProject, handleClose, setActiveProjectId, router])
 
   const isValid = formData.name.trim().length > 0 && formData.key.trim().length >= 2
+
+  useCtrlSave({
+    onSave: handleSubmit,
+    enabled: createProjectOpen && isValid && !createProject.isPending,
+  })
 
   return (
     <Dialog open={createProjectOpen} onOpenChange={setCreateProjectOpen}>

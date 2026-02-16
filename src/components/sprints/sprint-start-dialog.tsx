@@ -21,6 +21,7 @@ import {
   useSprintSettings,
   useStartSprint,
 } from '@/hooks/queries/use-sprints'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -81,9 +82,14 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
     )
   }, [sprintStartId, startDate, endDate, startSprint, handleClose])
 
-  if (!sprintStartId) return null
-
   const hasActiveSprint = !!activeSprint
+
+  useCtrlSave({
+    onSave: handleSubmit,
+    enabled: sprintStartOpen && !!sprintStartId && !hasActiveSprint && !startSprint.isPending,
+  })
+
+  if (!sprintStartId) return null
 
   return (
     <Dialog open={sprintStartOpen} onOpenChange={(open) => !open && handleClose()}>

@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { useCreateSprint, useSprintSettings } from '@/hooks/queries/use-sprints'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -101,6 +102,11 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
   }, [formData, createSprint, handleClose])
 
   const isValid = formData.name.trim().length > 0
+
+  useCtrlSave({
+    onSave: handleSubmit,
+    enabled: sprintCreateOpen && isValid && !createSprint.isPending,
+  })
 
   return (
     <Dialog open={sprintCreateOpen} onOpenChange={handleOpenChange}>
