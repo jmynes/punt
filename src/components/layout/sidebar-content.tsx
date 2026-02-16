@@ -24,6 +24,7 @@ import {
   Tag,
   Target,
   Trash2,
+  TrendingDown,
   Upload,
   User,
   Users,
@@ -635,6 +636,20 @@ export function SidebarContent({
                           >
                             <Target className="h-3.5 w-3.5" />
                             Sprints
+                          </Button>
+                        </Link>
+                        <Link href={`/projects/${project.key}/burndown`} onClick={handleLinkClick}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                              'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 h-8',
+                              pathname === `/projects/${project.key}/burndown` &&
+                                'bg-zinc-800/50 text-zinc-100',
+                            )}
+                          >
+                            <TrendingDown className="h-3.5 w-3.5" />
+                            Charts
                           </Button>
                         </Link>
                         <ProjectSettingsLink
