@@ -91,8 +91,17 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
     { name: '{number}', description: 'Ticket number only (e.g., 42)' },
     { name: '{slug}', description: 'Slugified ticket title' },
     { name: '{project}', description: 'Project key (e.g., PUNT)' },
-    { name: '/', description: 'Path separator' },
-    { name: '-', description: 'Hyphen separator' },
+  ]
+
+  // Branch template presets
+  const templatePresets = [
+    {
+      name: 'Default',
+      template: '{type}/{key}-{slug}',
+      description: 'e.g., feat/PUNT-42-add-login',
+    },
+    { name: 'Simple', template: '{key}-{slug}', description: 'e.g., PUNT-42-add-login' },
+    { name: 'Flat', template: '{type}-{key}-{slug}', description: 'e.g., feat-PUNT-42-add-login' },
   ]
 
   // Insert a variable at the cursor position
@@ -558,6 +567,38 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                 disabled={isDisabled}
               />
               {branchTemplateError && <p className="text-xs text-red-400">{branchTemplateError}</p>}
+
+              {/* Template presets */}
+              <div className="flex flex-wrap gap-1.5">
+                <span className="text-xs text-zinc-500 mr-1 self-center">Presets:</span>
+                {templatePresets.map((preset) => (
+                  <Tooltip key={preset.name}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({ ...prev, branchTemplate: preset.template }))
+                        }
+                        disabled={isDisabled}
+                        className={`px-2 py-0.5 text-xs rounded border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                          formData.branchTemplate === preset.template
+                            ? 'bg-amber-900/50 text-amber-300 border-amber-600/50'
+                            : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 border-zinc-700 hover:border-zinc-600'
+                        }`}
+                      >
+                        {preset.name}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      <code className="font-mono">{preset.template}</code>
+                      <br />
+                      <span className="text-zinc-400">{preset.description}</span>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+
+              {/* Variable insert buttons */}
               <div className="flex flex-wrap gap-1.5">
                 <span className="text-xs text-zinc-500 mr-1 self-center">Insert:</span>
                 {templateVariables.map((v) => (
@@ -577,25 +618,39 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                     </TooltipContent>
                   </Tooltip>
                 ))}
-                <span className="text-zinc-700 self-center">|</span>
+                <span className="text-zinc-700 self-center mx-1">|</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({ ...prev, branchTemplate: '{type}/{key}-{slug}' }))
-                      }
+                      onClick={() => insertVariable('/')}
                       disabled={isDisabled}
-                      className="px-2 py-0.5 text-xs rounded bg-amber-900/30 text-amber-400 hover:bg-amber-900/50 hover:text-amber-300 border border-amber-700/50 hover:border-amber-600/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-2 py-0.5 text-xs font-mono rounded bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Default
+                      /
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs">
-                    Use default pattern: {'{type}/{key}-{slug}'}
+                    Path separator
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => insertVariable('-')}
+                      disabled={isDisabled}
+                      className="px-2 py-0.5 text-xs font-mono rounded bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      -
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    Hyphen separator
                   </TooltipContent>
                 </Tooltip>
               </div>
+
               <p className="text-xs text-zinc-500">Leave empty to use the system default.</p>
             </div>
 
