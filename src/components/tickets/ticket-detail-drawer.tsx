@@ -214,6 +214,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [_pendingClose, setPendingClose] = useState(false)
   const [rememberPreference, setRememberPreference] = useState(false)
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
+  const removeAllAttachmentsButtonRef = useRef<HTMLButtonElement>(null)
   const storyPointsInputRef = useRef<HTMLInputElement>(null)
   const commentsSectionRef = useRef<CommentsSectionRef>(null)
   const [hasPendingComment, setHasPendingComment] = useState(false)
@@ -621,15 +622,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     updateTicketMutation,
     availableLabels,
   ])
-
-  // Focus delete button when dialog opens
-  useEffect(() => {
-    if (showDeleteConfirm) {
-      setTimeout(() => {
-        deleteButtonRef.current?.focus()
-      }, 0)
-    }
-  }, [showDeleteConfirm])
 
   if (!ticket) return null
 
@@ -1684,7 +1676,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+        <AlertDialogContent
+          className="bg-zinc-950 border-zinc-800"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault()
+            deleteButtonRef.current?.focus()
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">Delete ticket?</AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
@@ -1712,7 +1710,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
       {/* Remove all attachments confirmation dialog */}
       <AlertDialog open={showRemoveAllAttachments} onOpenChange={setShowRemoveAllAttachments}>
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+        <AlertDialogContent
+          className="bg-zinc-950 border-zinc-800"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault()
+            removeAllAttachmentsButtonRef.current?.focus()
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">Remove all attachments?</AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
@@ -1726,6 +1730,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
+              ref={removeAllAttachmentsButtonRef}
               onClick={() => {
                 if (!ticket) return
                 const attachmentsToRemove = [...tempAttachments]
