@@ -1,14 +1,16 @@
 'use client'
 
-import { Loader2, Settings, Shield, Tag, Users } from 'lucide-react'
+import { Bot, GitBranch, Loader2, Settings, Shield, Tag, Users } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
 import { PageHeader } from '@/components/common'
 import { MembersTab } from '@/components/projects/permissions/members-tab'
 import { RolesTab } from '@/components/projects/permissions/roles-tab'
+import { AgentsTab } from '@/components/projects/settings/agents-tab'
 import { GeneralTab } from '@/components/projects/settings/general-tab'
 import { LabelsTab } from '@/components/projects/settings/labels-tab'
+import { RepositoryTab } from '@/components/projects/settings/repository-tab'
 import { useHasPermission, useMyPermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -17,9 +19,9 @@ import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
 
-type SettingsTab = 'general' | 'members' | 'labels' | 'roles'
+type SettingsTab = 'general' | 'members' | 'labels' | 'roles' | 'repository' | 'agents'
 
-const VALID_TABS: SettingsTab[] = ['general', 'members', 'labels', 'roles']
+const VALID_TABS: SettingsTab[] = ['general', 'members', 'labels', 'roles', 'repository', 'agents']
 
 function isValidTab(tab: string | null): tab is SettingsTab {
   return tab !== null && VALID_TABS.includes(tab as SettingsTab)
@@ -122,6 +124,10 @@ export default function ProjectSettingsPage() {
         return canManageLabels ? 'labels' : firstAccessibleTab()
       case 'roles':
         return canManageRoles ? 'roles' : firstAccessibleTab()
+      case 'repository':
+        return canViewSettings ? 'repository' : firstAccessibleTab()
+      case 'agents':
+        return canViewSettings ? 'agents' : firstAccessibleTab()
       default:
         return firstAccessibleTab()
     }
@@ -199,6 +205,34 @@ export default function ProjectSettingsPage() {
               Roles
             </Link>
           )}
+          {canViewSettings && (
+            <Link
+              href={`/projects/${projectKey}/settings?tab=repository`}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+                effectiveTab === 'repository'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <GitBranch className="h-4 w-4" />
+              Repository
+            </Link>
+          )}
+          {canViewSettings && (
+            <Link
+              href={`/projects/${projectKey}/settings?tab=agents`}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+                effectiveTab === 'agents'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Bot className="h-4 w-4" />
+              Agents
+            </Link>
+          )}
         </div>
 
         {/* Tab Content */}
@@ -220,6 +254,10 @@ export default function ProjectSettingsPage() {
           )}
           {effectiveTab === 'labels' && <LabelsTab projectId={projectId} />}
           {effectiveTab === 'roles' && <RolesTab projectId={projectId} projectKey={projectKey} />}
+          {effectiveTab === 'repository' && (
+            <RepositoryTab projectId={projectId} projectKey={projectKey} />
+          )}
+          {effectiveTab === 'agents' && <AgentsTab projectId={projectId} projectKey={projectKey} />}
         </div>
 
         {/* Footer spacer */}

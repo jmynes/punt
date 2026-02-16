@@ -393,3 +393,51 @@ export interface ProjectWithRoles {
   roles: RoleSummary[]
   members: ProjectMemberWithRole[]
 }
+
+// ============================================================================
+// Repository Integration Types
+// ============================================================================
+
+// Supported repository hosting providers
+export const REPO_PROVIDERS = [
+  'github',
+  'gitlab',
+  'bitbucket',
+  'gitea',
+  'codeberg',
+  'other',
+] as const
+export type RepoProvider = (typeof REPO_PROVIDERS)[number]
+
+// Repository configuration for a project
+export interface ProjectRepositoryConfig {
+  repositoryUrl: string | null
+  repositoryProvider: RepoProvider | null
+  localPath: string | null
+  defaultBranch: string | null
+  branchTemplate: string | null
+  agentGuidance: string | null
+  monorepoPath: string | null
+}
+
+// Repository context for AI agents
+export interface RepositoryContext {
+  projectKey: string
+  projectName: string
+  // Repository configuration
+  repositoryUrl: string | null
+  repositoryProvider: RepoProvider | null
+  localPath: string | null
+  defaultBranch: string | null
+  monorepoPath: string | null
+  // Branch generation
+  branchTemplate: string
+  // Agent guidance
+  agentGuidance: string | null
+  // Ticket context for branch generation
+  ticketKey?: string
+  ticketType?: IssueType
+  ticketTitle?: string
+  // Generated branch name (when ticket context provided)
+  suggestedBranch?: string
+}

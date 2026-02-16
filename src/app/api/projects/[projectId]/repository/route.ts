@@ -1,0 +1,187 @@
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import {
+  requireAuth,
+  requireMembership,
+  requirePermission,
+  requireProjectByKey,
+} from '@/lib/auth-helpers'
+import { db } from '@/lib/db'
+import { PERMISSIONS } from '@/lib/permissions'
+import { getSystemSettings } from '@/lib/system-settings'
+import { REPO_PROVIDERS, type RepoProvider } from '@/types'
+
+const updateRepositorySchema = z.object({
+  repositoryUrl: z.string().url().nullable().optional(),
+  repositoryProvider: z.enum(REPO_PROVIDERS).nullable().optional(),
+  localPath: z.string().nullable().optional(),
+  defaultBranch: z.string().nullable().optional(),
+  branchTemplate: z.string().nullable().optional(),
+  agentGuidance: z.string().nullable().optional(),
+  monorepoPath: z.string().nullable().optional(),
+})
+
+/**
+ * GET /api/projects/[projectId]/repository - Get repository configuration
+ * Requires project membership
+ */
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ projectId: string }> },
+) {
+  try {
+    const user = await requireAuth()
+    const { projectId: projectKey } = await params
+
+    // Resolve project key to ID
+    const projectId = await requireProjectByKey(projectKey)
+
+    // Check project membership
+    await requireMembership(user.id, projectId)
+
+    const project = await db.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        key: true,
+        name: true,
+        repositoryUrl: true,
+        repositoryProvider: true,
+        localPath: true,
+        defaultBranch: true,
+        branchTemplate: true,
+        agentGuidance: true,
+        monorepoPath: true,
+      },
+    })
+
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
+
+    // Get system defaults for effective values
+    const systemSettings = await getSystemSettings()
+
+    return NextResponse.json({
+      projectId: project.id,
+      projectKey: project.key,
+      projectName: project.name,
+      // Project-level settings
+      repositoryUrl: project.repositoryUrl,
+      repositoryProvider: project.repositoryProvider as RepoProvider | null,
+      localPath: project.localPath,
+      defaultBranch: project.defaultBranch,
+      branchTemplate: project.branchTemplate,
+      agentGuidance: project.agentGuidance,
+      monorepoPath: project.monorepoPath,
+      // Effective values (project settings with system defaults as fallback)
+      effectiveBranchTemplate: project.branchTemplate ?? systemSettings.defaultBranchTemplate,
+      effectiveAgentGuidance: project.agentGuidance ?? systemSettings.defaultAgentGuidance,
+      // System defaults for reference
+      systemDefaults: {
+        branchTemplate: systemSettings.defaultBranchTemplate,
+        agentGuidance: systemSettings.defaultAgentGuidance,
+      },
+    })
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      }
+      if (error.message.startsWith('Forbidden:')) {
+        return NextResponse.json({ error: error.message }, { status: 403 })
+      }
+    }
+    console.error('Failed to fetch repository config:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+/**
+ * PATCH /api/projects/[projectId]/repository - Update repository configuration
+ * Requires PROJECT_SETTINGS permission
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ projectId: string }> },
+) {
+  try {
+    const user = await requireAuth()
+    const { projectId: projectKey } = await params
+
+    // Resolve project key to ID
+    const projectId = await requireProjectByKey(projectKey)
+
+    // Check project settings permission
+    await requirePermission(user.id, projectId, PERMISSIONS.PROJECT_SETTINGS)
+
+    const body = await request.json()
+    const parsed = updateRepositorySchema.safeParse(body)
+
+    if (!parsed.success) {
+      console.error('Repository config validation error:', parsed.error.flatten())
+      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
+    }
+
+    const updates = parsed.data
+
+    const project = await db.project.update({
+      where: { id: projectId },
+      data: updates,
+      select: {
+        id: true,
+        key: true,
+        name: true,
+        repositoryUrl: true,
+        repositoryProvider: true,
+        localPath: true,
+        defaultBranch: true,
+        branchTemplate: true,
+        agentGuidance: true,
+        monorepoPath: true,
+      },
+    })
+
+    // Get system defaults for effective values
+    const systemSettings = await getSystemSettings()
+
+    return NextResponse.json({
+      projectId: project.id,
+      projectKey: project.key,
+      projectName: project.name,
+      // Project-level settings
+      repositoryUrl: project.repositoryUrl,
+      repositoryProvider: project.repositoryProvider as RepoProvider | null,
+      localPath: project.localPath,
+      defaultBranch: project.defaultBranch,
+      branchTemplate: project.branchTemplate,
+      agentGuidance: project.agentGuidance,
+      monorepoPath: project.monorepoPath,
+      // Effective values
+      effectiveBranchTemplate: project.branchTemplate ?? systemSettings.defaultBranchTemplate,
+      effectiveAgentGuidance: project.agentGuidance ?? systemSettings.defaultAgentGuidance,
+      // System defaults
+      systemDefaults: {
+        branchTemplate: systemSettings.defaultBranchTemplate,
+        agentGuidance: systemSettings.defaultAgentGuidance,
+      },
+    })
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      if (error.message === 'Project not found') {
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      }
+      if (error.message.startsWith('Forbidden:')) {
+        return NextResponse.json({ error: error.message }, { status: 403 })
+      }
+    }
+    console.error('Failed to update repository config:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

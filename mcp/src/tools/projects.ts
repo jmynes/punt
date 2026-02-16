@@ -4,8 +4,10 @@ import {
   createProject,
   deleteProject,
   getProject,
+  getRepositoryConfig,
   listProjects,
   type ProjectData,
+  type RepositoryConfigData,
   unwrapData,
   updateProject,
 } from '../api-client.js'
@@ -15,7 +17,7 @@ import { errorResponse, escapeMarkdown, safeTableCell, textResponse } from '../u
  * Format a project for detailed display (get_project).
  * Uses compact key-value layout with sections.
  */
-function formatProjectDetail(project: ProjectData): string {
+function formatProjectDetail(project: ProjectData, repoConfig?: RepositoryConfigData): string {
   const lines: string[] = []
   // Escape user-controlled project name
   lines.push(`## ${project.key}: ${escapeMarkdown(project.name)}`)
@@ -46,6 +48,25 @@ function formatProjectDetail(project: ProjectData): string {
       // Escape user-controlled user and role names
       lines.push(`- ${escapeMarkdown(m.user.name)} (${escapeMarkdown(m.role.name)})`)
     }
+  }
+
+  // Repository configuration
+  if (repoConfig && (repoConfig.repositoryUrl || repoConfig.localPath)) {
+    lines.push('')
+    lines.push('**Repository:**')
+    if (repoConfig.repositoryUrl) {
+      lines.push(`- URL: ${repoConfig.repositoryUrl}`)
+    }
+    if (repoConfig.localPath) {
+      lines.push(`- Local Path: \`${repoConfig.localPath}\``)
+    }
+    if (repoConfig.defaultBranch) {
+      lines.push(`- Default Branch: ${repoConfig.defaultBranch}`)
+    }
+    if (repoConfig.monorepoPath) {
+      lines.push(`- Monorepo Path: \`${repoConfig.monorepoPath}\``)
+    }
+    lines.push(`- Branch Template: \`${repoConfig.effectiveBranchTemplate}\``)
   }
 
   return lines.join('\n')
@@ -166,7 +187,7 @@ export function registerProjectTools(server: McpServer) {
   // get_project - Get project details
   server.tool(
     'get_project',
-    'Get project details including columns and members',
+    'Get project details including columns, members, and repository configuration',
     {
       key: z.string().describe('Project key (e.g., PUNT)'),
     },
@@ -176,7 +197,11 @@ export function registerProjectTools(server: McpServer) {
         return errorResponse(result.error)
       }
 
-      return textResponse(formatProjectDetail(unwrapData(result)))
+      // Also fetch repository configuration
+      const repoResult = await getRepositoryConfig(key)
+      const repoConfig = repoResult.error ? undefined : unwrapData(repoResult)
+
+      return textResponse(formatProjectDetail(unwrapData(result), repoConfig))
     },
   )
 

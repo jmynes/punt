@@ -8,6 +8,7 @@ import { registerColumnTools } from './tools/columns.js'
 import { registerLabelTools } from './tools/labels.js'
 import { registerMemberTools } from './tools/members.js'
 import { registerProjectTools } from './tools/projects.js'
+import { registerRepositoryTools } from './tools/repository.js'
 import { registerSprintTools } from './tools/sprints.js'
 import { registerTicketTools } from './tools/tickets.js'
 
@@ -23,6 +24,7 @@ registerSprintTools(server)
 registerMemberTools(server)
 registerLabelTools(server)
 registerColumnTools(server)
+registerRepositoryTools(server)
 
 // Connect via stdio
 const transport = new StdioServerTransport()
