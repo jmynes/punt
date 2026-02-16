@@ -71,6 +71,14 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
         })
       : null
 
+    const commitPatternsText =
+      config?.commitPatterns && config.commitPatterns.length > 0
+        ? config.commitPatterns
+            .filter((p) => p.enabled !== false)
+            .map((p) => `  - "${p.pattern}" → ${p.action}`)
+            .join('\n')
+        : null
+
     const context = [
       `# Project: ${config?.projectName} (${config?.projectKey})`,
       '',
@@ -84,6 +92,9 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
       '',
       envBranchesText && 'Environment Branches:',
       envBranchesText,
+      '',
+      commitPatternsText && 'Commit Patterns (Hooks):',
+      commitPatternsText,
       '',
       config?.effectiveAgentGuidance && '## Agent Guidance',
       config?.effectiveAgentGuidance,
@@ -259,6 +270,32 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
                           <span className="text-emerald-400">{branch.branchName}</span>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+                {config?.commitPatterns && config.commitPatterns.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-zinc-500">Commit Patterns (Hooks):</span>
+                    <div className="ml-2 mt-1 space-y-0.5">
+                      {config.commitPatterns
+                        .filter((p) => p.enabled !== false)
+                        .map((pattern) => (
+                          <div key={pattern.id} className="text-zinc-400">
+                            <span className="text-zinc-500">•</span>{' '}
+                            <span className="text-sky-400">&quot;{pattern.pattern}&quot;</span> →{' '}
+                            <span
+                              className={
+                                pattern.action === 'close'
+                                  ? 'text-emerald-400'
+                                  : pattern.action === 'in_progress'
+                                    ? 'text-amber-400'
+                                    : 'text-sky-400'
+                              }
+                            >
+                              {pattern.action}
+                            </span>
+                          </div>
+                        ))}
                     </div>
                   </div>
                 )}

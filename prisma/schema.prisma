@@ -152,6 +152,8 @@ model Project {
   agentGuidance       String? // Markdown instructions for AI agents working on this project
   monorepoPath        String? // Path within monorepo (e.g., "packages/frontend")
   environmentBranches String? // JSON array of {id, environment, branchName} objects
+  webhookSecret       String? // Secret for verifying GitHub/GitLab webhook signatures
+  commitPatterns      String? // JSON array of custom commit patterns for webhook processing
 
   columns        Column[]
   tickets        Ticket[]

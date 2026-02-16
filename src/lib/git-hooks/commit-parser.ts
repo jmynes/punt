@@ -11,6 +11,14 @@
 
 export type TicketAction = 'close' | 'reference' | 'in_progress'
 
+export interface CommitPattern {
+  id: string
+  pattern: string
+  action: TicketAction
+  isRegex?: boolean
+  enabled?: boolean
+}
+
 export interface TicketReference {
   /** Project key (e.g., "PUNT") */
   projectKey: string
@@ -161,6 +169,110 @@ export function parseCommitMessage(message: string): ParsedCommit {
         ticketKey,
         action: 'reference',
       })
+    }
+  }
+
+  // Finally, find standalone ticket references (default to 'reference' action)
+  const standalonePattern = buildStandaloneTicketPattern()
+  for (const match of getAllMatches(standalonePattern, message)) {
+    const ticketKey = `${match[1].toUpperCase()}-${match[2]}`
+    if (!seenTickets.has(ticketKey)) {
+      seenTickets.add(ticketKey)
+      tickets.push({
+        projectKey: match[1].toUpperCase(),
+        ticketNumber: parseInt(match[2], 10),
+        ticketKey,
+        action: 'reference',
+      })
+    }
+  }
+
+  return {
+    message,
+    tickets,
+  }
+}
+
+/**
+ * Parse a commit message using custom patterns.
+ * If no custom patterns are provided, falls back to the default parser.
+ *
+ * @param message - The commit message to parse
+ * @param customPatterns - Custom patterns to use instead of defaults
+ * @returns ParsedCommit object with extracted ticket references
+ */
+export function parseCommitMessageWithPatterns(
+  message: string,
+  customPatterns?: CommitPattern[] | null,
+): ParsedCommit {
+  // If no custom patterns, use default behavior
+  if (!customPatterns || customPatterns.length === 0) {
+    return parseCommitMessage(message)
+  }
+
+  const tickets: TicketReference[] = []
+  const seenTickets = new Set<string>()
+
+  // Group patterns by action
+  const closePatterns = customPatterns
+    .filter((p) => p.action === 'close' && p.enabled !== false && p.pattern)
+    .map((p) => p.pattern)
+  const wipPatterns = customPatterns
+    .filter((p) => p.action === 'in_progress' && p.enabled !== false && p.pattern)
+    .map((p) => p.pattern)
+  const refPatterns = customPatterns
+    .filter((p) => p.action === 'reference' && p.enabled !== false && p.pattern)
+    .map((p) => p.pattern)
+
+  // Process patterns in order of precedence: close > wip > reference
+  if (closePatterns.length > 0) {
+    const closePattern = buildActionPattern(closePatterns)
+    for (const match of getAllMatches(closePattern, message)) {
+      const ticketKey = match[2].toUpperCase()
+      if (!seenTickets.has(ticketKey)) {
+        seenTickets.add(ticketKey)
+        const [projectKey, numberStr] = ticketKey.split('-')
+        tickets.push({
+          projectKey,
+          ticketNumber: parseInt(numberStr, 10),
+          ticketKey,
+          action: 'close',
+        })
+      }
+    }
+  }
+
+  if (wipPatterns.length > 0) {
+    const wipPattern = buildActionPattern(wipPatterns)
+    for (const match of getAllMatches(wipPattern, message)) {
+      const ticketKey = match[2].toUpperCase()
+      if (!seenTickets.has(ticketKey)) {
+        seenTickets.add(ticketKey)
+        const [projectKey, numberStr] = ticketKey.split('-')
+        tickets.push({
+          projectKey,
+          ticketNumber: parseInt(numberStr, 10),
+          ticketKey,
+          action: 'in_progress',
+        })
+      }
+    }
+  }
+
+  if (refPatterns.length > 0) {
+    const refPattern = buildActionPattern(refPatterns)
+    for (const match of getAllMatches(refPattern, message)) {
+      const ticketKey = match[2].toUpperCase()
+      if (!seenTickets.has(ticketKey)) {
+        seenTickets.add(ticketKey)
+        const [projectKey, numberStr] = ticketKey.split('-')
+        tickets.push({
+          projectKey,
+          ticketNumber: parseInt(numberStr, 10),
+          ticketKey,
+          action: 'reference',
+        })
+      }
     }
   }
 

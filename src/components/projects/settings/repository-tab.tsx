@@ -1,16 +1,6 @@
 'use client'
 
-import {
-  ArrowRight,
-  ExternalLink,
-  GitBranch,
-  Info,
-  Loader2,
-  Plus,
-  Server,
-  Trash2,
-  X,
-} from 'lucide-react'
+import { ArrowRight, ExternalLink, GitBranch, Info, Loader2, Plus, Server, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -48,7 +38,6 @@ const ENVIRONMENT_PRESETS = [
   { environment: 'development', branchName: 'develop', color: 'emerald' },
 ] as const
 
-// Get color classes for environment badge
 function getEnvironmentColor(env: string): { bg: string; text: string; border: string } {
   const normalized = env.toLowerCase().trim()
   if (normalized.includes('prod')) {

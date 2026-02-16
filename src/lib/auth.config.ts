@@ -19,10 +19,11 @@ export const authConfig: NextAuthConfig = {
         return true
       }
 
-      // Allow requests with MCP API key header through to API routes
+      // Allow requests with API key header through to API routes
+      // Accepts both X-API-Key (git hooks) and X-MCP-API-Key (MCP)
       // Actual key validation happens in getMcpUser() via database lookup
       if (nextUrl.pathname.startsWith('/api/')) {
-        const apiKey = headers.get('X-MCP-API-Key')
+        const apiKey = headers.get('X-API-Key') || headers.get('X-MCP-API-Key')
         if (apiKey) {
           return true
         }
@@ -38,6 +39,7 @@ export const authConfig: NextAuthConfig = {
       const isOnAuthApi = nextUrl.pathname.startsWith('/api/auth')
       const isOnInvite = nextUrl.pathname.startsWith('/invite')
       const isOnBrandingApi = nextUrl.pathname === '/api/branding'
+      const isOnWebhooksApi = nextUrl.pathname.startsWith('/api/webhooks')
 
       // Allow auth API routes
       if (isOnAuthApi) {
@@ -46,6 +48,11 @@ export const authConfig: NextAuthConfig = {
 
       // Allow public branding API (used by login page and header)
       if (isOnBrandingApi) {
+        return true
+      }
+
+      // Allow webhooks API (authenticates via signature verification)
+      if (isOnWebhooksApi) {
         return true
       }
 
