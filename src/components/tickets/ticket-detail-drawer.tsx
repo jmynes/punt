@@ -1832,42 +1832,64 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
                 // Track current toast ID for undo/redo chain
                 let currentToastId: string | number | undefined
+                // Track current attachment IDs - these change when undo re-creates them
+                let currentAttachmentIds = attachmentsToRemove.map((a) => a.id)
 
                 const toastId = showUndoRedoToast('error', {
                   title: `${count} attachment${count === 1 ? '' : 's'} removed`,
                   description: ticketKey,
                   showUndoButtons: true,
-                  onUndo: (id) => {
+                  onUndo: async (id) => {
                     // Move to redo stack
                     undoByToastId(id)
-                    // Re-add all attachments
+                    // Re-add all attachments and track new IDs
+                    const restoredAttachments: UploadedFileInfo[] = []
+                    const newIds: string[] = []
                     for (const attachment of attachmentsToRemove) {
-                      addAttachmentsMutation.mutate({
-                        projectId,
-                        ticketId: ticket.id,
-                        attachments: [
-                          {
-                            filename: attachment.filename,
+                      try {
+                        const newAttachments = await addAttachmentsMutation.mutateAsync({
+                          projectId,
+                          ticketId: ticket.id,
+                          attachments: [
+                            {
+                              filename: attachment.filename,
+                              originalName: attachment.originalName,
+                              mimeType: attachment.mimetype,
+                              size: attachment.size,
+                              url: attachment.url,
+                            },
+                          ],
+                        })
+                        if (newAttachments?.[0]) {
+                          newIds.push(newAttachments[0].id)
+                          restoredAttachments.push({
+                            id: newAttachments[0].id,
+                            filename: newAttachments[0].filename,
                             originalName: attachment.originalName,
-                            mimeType: attachment.mimetype,
-                            size: attachment.size,
-                            url: attachment.url,
-                          },
-                        ],
-                      })
+                            mimetype: newAttachments[0].mimeType,
+                            size: newAttachments[0].size,
+                            url: newAttachments[0].url,
+                            category: getMimeTypeCategory(newAttachments[0].mimeType),
+                          })
+                        }
+                      } catch (err) {
+                        console.error('Failed to restore attachment:', err)
+                      }
                     }
-                    setTempAttachments(attachmentsToRemove)
+                    // Update tracked IDs to new server-assigned IDs
+                    currentAttachmentIds = newIds
+                    setTempAttachments(restoredAttachments)
                   },
                   onRedo: (id) => {
                     // Move back to undo stack
                     useUndoStore.getState().redoByToastId(id)
-                    // Re-delete all attachments
+                    // Re-delete all attachments using tracked IDs
                     setTempAttachments([])
-                    for (const attachment of attachmentsToRemove) {
+                    for (const attachmentId of currentAttachmentIds) {
                       removeAttachmentMutation.mutate({
                         projectId,
                         ticketId: ticket.id,
-                        attachmentId: attachment.id,
+                        attachmentId,
                       })
                     }
                   },
