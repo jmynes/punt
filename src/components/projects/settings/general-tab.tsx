@@ -89,6 +89,7 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
     color: project.color,
   })
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [hasChanges, setHasChanges] = useState(false)
 
   const keyChanged = formData.key !== project.key
@@ -445,13 +446,40 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
       )}
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          setShowDeleteConfirm(open)
+          if (!open) {
+            setDeleteConfirmText('')
+          }
+        }}
+      >
         <AlertDialogContent className="bg-zinc-950 border-zinc-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete &quot;{project.name}&quot;? This action cannot be
-              undone and will remove all associated tickets.
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 text-zinc-400">
+                <p>
+                  Are you sure you want to delete &quot;{project.name}&quot;? This action cannot be
+                  undone and will remove all associated tickets.
+                </p>
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    To confirm, type <span className="font-mono text-red-400">{project.key}</span>{' '}
+                    below:
+                  </p>
+                  <Input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                    placeholder={`Type ${project.key} to confirm`}
+                    className="bg-zinc-900 border-zinc-700 text-zinc-100 font-mono uppercase"
+                    autoComplete="off"
+                    disabled={deleteProject.isPending}
+                  />
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -463,8 +491,8 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleteProject.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleteProject.isPending || deleteConfirmText !== project.key}
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {deleteProject.isPending ? (
                 <>
