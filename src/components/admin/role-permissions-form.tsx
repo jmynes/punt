@@ -381,13 +381,13 @@ export function RolePermissionsForm() {
       })
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to delete role')
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to delete role')
       }
 
-      // Update local state
-      setCustomRoles(newCustomRoles)
-      queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+      // Wait for the query to refetch - this updates `data` which syncs to local state
+      // Don't manually update customRoles to avoid flash of "unsaved changes"
+      await queryClient.refetchQueries({ queryKey: ['admin', 'settings', 'roles'] })
       showToast.success(`Deleted "${roleName}"`)
     } catch (err) {
       showToast.error(err instanceof Error ? err.message : 'Failed to delete role')
