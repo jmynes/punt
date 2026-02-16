@@ -1474,16 +1474,18 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
                         // Track current toast ID for undo/redo chain
                         let currentToastId: string | number | undefined
+                        // Track current attachment ID - this changes when undo re-creates the attachment
+                        let currentAttachmentId = removed.id
 
                         const toastId = showUndoRedoToast('error', {
                           title: 'Attachment deleted',
                           description: `"${removed.originalName}" from ${ticketKey}`,
                           showUndoButtons: true,
-                          onUndo: (id) => {
+                          onUndo: async (id) => {
                             // Move to redo stack
                             undoByToastId(id)
-                            // Re-add the attachment
-                            addAttachmentsMutation.mutate({
+                            // Re-add the attachment and capture new ID
+                            const newAttachments = await addAttachmentsMutation.mutateAsync({
                               projectId,
                               ticketId: ticket.id,
                               attachments: [
@@ -1496,17 +1498,35 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                                 },
                               ],
                             })
-                            setTempAttachments((prev) => [...prev, removed])
+                            // Update the tracked ID to the new server-assigned ID
+                            if (newAttachments?.[0]?.id) {
+                              currentAttachmentId = newAttachments[0].id
+                              // Convert AttachmentInfo to UploadedFileInfo format
+                              const restoredAttachment: UploadedFileInfo = {
+                                id: newAttachments[0].id,
+                                filename: newAttachments[0].filename,
+                                originalName: removed.originalName, // Preserve original name
+                                mimetype: newAttachments[0].mimeType,
+                                size: newAttachments[0].size,
+                                url: newAttachments[0].url,
+                                category: getMimeTypeCategory(newAttachments[0].mimeType),
+                              }
+                              setTempAttachments((prev) => [...prev, restoredAttachment])
+                            } else {
+                              setTempAttachments((prev) => [...prev, removed])
+                            }
                           },
                           onRedo: (id) => {
                             // Move back to undo stack
                             useUndoStore.getState().redoByToastId(id)
-                            // Re-delete the attachment
-                            setTempAttachments((prev) => prev.filter((a) => a.id !== fileId))
+                            // Re-delete the attachment using tracked ID
+                            setTempAttachments((prev) =>
+                              prev.filter((a) => a.id !== currentAttachmentId),
+                            )
                             removeAttachmentMutation.mutate({
                               projectId,
                               ticketId: ticket.id,
-                              attachmentId: removed.id,
+                              attachmentId: currentAttachmentId,
                             })
                           },
                           onUndoneToast: (newId) => {

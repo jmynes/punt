@@ -616,28 +616,3 @@ input[type="number"] {
   box-shadow: 0 0 0 1px rgb(63 63 70) !important; /* zinc-700 */
 }
 
-/* Sonner toast container - ensure always interactive, even with modal dialogs open
- * Radix Dialog sets inert attribute on elements outside the dialog, preventing interaction.
- * We explicitly override this for the toaster so undo buttons remain clickable.
- */
-[data-sonner-toaster] {
-  pointer-events: auto !important;
-}
-
-/* Prevent inert attribute from disabling toast interactions */
-[data-sonner-toaster][inert] {
-  pointer-events: auto !important;
-}
-
-/* Ensure individual toasts and their buttons are always clickable */
-[data-sonner-toast] {
-  pointer-events: auto !important;
-}
-
-[data-sonner-toast] [data-button],
-[data-sonner-toast] [data-action],
-[data-sonner-toast] [data-cancel],
-[data-sonner-toast] [data-close-button] {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
