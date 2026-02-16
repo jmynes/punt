@@ -423,10 +423,10 @@ export function RolePermissionsForm() {
     setEditPermissions([])
   }
 
-  const handleCreateRole = () => {
+  const handleCreateRole = (): CustomRole | null => {
     if (!editName.trim()) {
       showToast.error('Role name is required')
-      return
+      return null
     }
     const id = `custom-${Date.now()}-${nextCustomId++}`
     const maxPos = Math.max(
@@ -445,13 +445,18 @@ export function RolePermissionsForm() {
     setCustomRoles((prev) => [...prev, newRole])
     setIsCreating(false)
     setSelectedId(id)
+    return newRole
   }
 
   const handleSave = () => {
+    let rolesToSave = customRoles
     if (isCreating) {
-      handleCreateRole()
+      const newRole = handleCreateRole()
+      if (!newRole) return // Validation failed
+      // Include the new role in the mutation since setState is async
+      rolesToSave = [...customRoles, newRole]
     }
-    updateMutation.mutate({ settings: localSettings, customRoles })
+    updateMutation.mutate({ settings: localSettings, customRoles: rolesToSave })
   }
 
   const handleReset = () => {
