@@ -1,7 +1,7 @@
 'use client'
 
 import { ExternalLink, GitBranch, Info, Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -59,6 +59,41 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
   })
   const [hasChanges, setHasChanges] = useState(false)
   const [branchTemplateError, setBranchTemplateError] = useState<string | null>(null)
+  const branchInputRef = useRef<HTMLInputElement>(null)
+
+  // Template variables that can be inserted
+  const templateVariables = [
+    { name: '{type}', description: 'Ticket type (bug, feat, etc.)' },
+    { name: '{key}', description: 'Full ticket key (e.g., PUNT-42)' },
+    { name: '{number}', description: 'Ticket number only (e.g., 42)' },
+    { name: '{slug}', description: 'Slugified ticket title' },
+    { name: '{project}', description: 'Project key (e.g., PUNT)' },
+    { name: '/', description: 'Path separator' },
+    { name: '-', description: 'Hyphen separator' },
+  ]
+
+  // Insert a variable at the cursor position
+  const insertVariable = useCallback(
+    (variable: string) => {
+      const input = branchInputRef.current
+      if (!input) return
+
+      const start = input.selectionStart ?? formData.branchTemplate.length
+      const end = input.selectionEnd ?? formData.branchTemplate.length
+      const newValue =
+        formData.branchTemplate.slice(0, start) + variable + formData.branchTemplate.slice(end)
+
+      setFormData((prev) => ({ ...prev, branchTemplate: newValue }))
+
+      // Restore focus and set cursor after the inserted variable
+      requestAnimationFrame(() => {
+        input.focus()
+        const newCursorPos = start + variable.length
+        input.setSelectionRange(newCursorPos, newCursorPos)
+      })
+    },
+    [formData.branchTemplate],
+  )
 
   // Update form when config loads
   useEffect(() => {
@@ -301,6 +336,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                 Branch Name Template
               </Label>
               <Input
+                ref={branchInputRef}
                 id="branch-template"
                 value={formData.branchTemplate}
                 onChange={(e) =>
@@ -311,10 +347,45 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                 disabled={isDisabled}
               />
               {branchTemplateError && <p className="text-xs text-red-400">{branchTemplateError}</p>}
-              <p className="text-xs text-zinc-500">
-                Leave empty to use the system default. Variables: {'{key}'}, {'{number}'},{' '}
-                {'{type}'}, {'{slug}'}, {'{project}'}
-              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="text-xs text-zinc-500 mr-1 self-center">Insert:</span>
+                {templateVariables.map((v) => (
+                  <Tooltip key={v.name}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => insertVariable(v.name)}
+                        disabled={isDisabled}
+                        className="px-2 py-0.5 text-xs font-mono rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 border border-zinc-700 hover:border-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {v.name}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      {v.description}
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+                <span className="text-zinc-700 self-center">|</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({ ...prev, branchTemplate: '{type}/{key}-{slug}' }))
+                      }
+                      disabled={isDisabled}
+                      className="px-2 py-0.5 text-xs rounded bg-amber-900/30 text-amber-400 hover:bg-amber-900/50 hover:text-amber-300 border border-amber-700/50 hover:border-amber-600/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Default
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    Use default pattern: {'{type}/{key}-{slug}'}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="text-xs text-zinc-500">Leave empty to use the system default.</p>
             </div>
 
             {/* Preview */}
