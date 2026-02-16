@@ -20,6 +20,7 @@ import {
   useSystemSettings,
   useUpdateSystemSettings,
 } from '@/hooks/queries/use-system-settings'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import type { EmailProviderType } from '@/lib/email/types'
 
 export function EmailSettingsForm() {
@@ -91,6 +92,12 @@ export function EmailSettingsForm() {
       emailInvitations,
     })
   }
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save
+  useCtrlSave({
+    onSave: handleSave,
+    enabled: hasChanges && !updateSettings.isPending,
+  })
 
   const handleSendTestEmail = () => {
     if (testEmailAddress) {

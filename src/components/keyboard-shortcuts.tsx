@@ -2826,10 +2826,16 @@ export function KeyboardShortcuts() {
               </div>
             </div>
 
-            {/* Undo/Redo */}
+            {/* Save / Undo / Redo */}
             <div>
-              <h3 className="text-sm font-semibold text-zinc-200 mb-2">Undo / Redo</h3>
+              <h3 className="text-sm font-semibold text-zinc-200 mb-2">Save / Undo / Redo</h3>
               <div className="space-y-2 text-sm text-zinc-400">
+                <div className="flex items-center justify-between">
+                  <span>Save changes (in forms/drawers)</span>
+                  <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
+                    Ctrl / Cmd + S
+                  </kbd>
+                </div>
                 <div className="flex items-center justify-between">
                   <span>Undo last action</span>
                   <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRepositoryConfig, useUpdateRepository } from '@/hooks/queries/use-repository'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { previewBranchName } from '@/lib/branch-utils'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -108,6 +109,12 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
 
   const isPending = updateRepository.isPending
   const isDisabled = !canEditSettings || isPending
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save
+  useCtrlSave({
+    onSave: handleSave,
+    enabled: hasChanges && !isDisabled,
+  })
 
   if (isLoading) {
     return (
