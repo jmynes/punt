@@ -1,6 +1,7 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { getTabId } from '@/hooks/use-realtime'
 import { demoStorage, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 import type { Permission, RoleWithPermissions } from '@/types'
@@ -92,6 +93,7 @@ export function useCreateRole(projectId: string) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
         },
         body: JSON.stringify(data),
       })
@@ -131,6 +133,7 @@ export function useUpdateRole(projectId: string) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
         },
         body: JSON.stringify(data),
       })
@@ -165,6 +168,9 @@ export function useDeleteRole(projectId: string) {
     mutationFn: async (roleId: string) => {
       const res = await fetch(`/api/projects/${projectId}/roles/${roleId}`, {
         method: 'DELETE',
+        headers: {
+          'X-Tab-Id': getTabId(),
+        },
       })
       if (!res.ok) {
         const error = await res.json()
@@ -194,6 +200,7 @@ export function useReorderRoles(projectId: string) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
         },
         body: JSON.stringify({ roleIds }),
       })
