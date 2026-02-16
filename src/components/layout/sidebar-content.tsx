@@ -1,11 +1,13 @@
 'use client'
 
 import {
+  Bot,
   Check,
   ChevronDown,
   ChevronRight,
   Columns3,
   Database,
+  GitBranch,
   Home,
   KeyRound,
   Layers,
@@ -783,6 +785,36 @@ function ProjectSettingsLink({
               >
                 <Shield className="h-3 w-3" />
                 Roles
+              </Button>
+            </Link>
+          )}
+          {canViewSettings && (
+            <Link href={`/projects/${projectKey}/settings?tab=repository`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  isOnSettingsPage && currentTab === 'repository' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <GitBranch className="h-3 w-3" />
+                Repository
+              </Button>
+            </Link>
+          )}
+          {canViewSettings && (
+            <Link href={`/projects/${projectKey}/settings?tab=agents`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  isOnSettingsPage && currentTab === 'agents' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Bot className="h-3 w-3" />
+                Agents
               </Button>
             </Link>
           )}
