@@ -37,6 +37,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { getTabId } from '@/hooks/use-realtime'
 import { LABEL_COLORS } from '@/lib/constants'
 import type { Permission } from '@/lib/permissions/constants'
@@ -547,6 +548,12 @@ export function RolePermissionsForm() {
       setCustomRoles([])
     }
   }
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save
+  useCtrlSave({
+    onSave: handleSave,
+    enabled: hasChanges && !updateMutation.isPending,
+  })
 
   if (isLoading) {
     return (

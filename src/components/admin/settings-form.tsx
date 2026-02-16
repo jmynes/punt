@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-system-settings'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 
 // All available MIME types that can be enabled
 const ALL_IMAGE_TYPES = [
@@ -79,6 +80,24 @@ export function SettingsForm() {
         JSON.stringify(settings.allowedVideoTypes.sort()) ||
       JSON.stringify(allowedDocumentTypes.sort()) !==
         JSON.stringify(settings.allowedDocumentTypes.sort()))
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save
+  useCtrlSave({
+    onSave: () => {
+      if (hasChanges) {
+        updateSettings.mutate({
+          maxImageSizeMB,
+          maxVideoSizeMB,
+          maxDocumentSizeMB,
+          maxAttachmentsPerTicket,
+          allowedImageTypes,
+          allowedVideoTypes,
+          allowedDocumentTypes,
+        })
+      }
+    },
+    enabled: hasChanges && !updateSettings.isPending,
+  })
 
   const handleSave = () => {
     updateSettings.mutate({

@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-system-settings'
 import { useCheckForUpdates, useLocalVersion } from '@/hooks/queries/use-version'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 
 const DEFAULT_REPO_URL = 'https://github.com/jmynes/punt/'
 
@@ -208,6 +209,12 @@ export function RepositorySettingsForm() {
   const handleCheckForUpdates = () => {
     checkForUpdates.mutate()
   }
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save
+  useCtrlSave({
+    onSave: handleSave,
+    enabled: hasChanges && !urlError && !forkUrlError && !updateSettings.isPending,
+  })
 
   if (isLoading) {
     return (

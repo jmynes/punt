@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { getTabId } from '@/hooks/use-realtime'
 import { showToast } from '@/lib/toast'
 import { getAvatarColor, getInitials } from '@/lib/utils'
@@ -83,6 +84,21 @@ export function ProfileTab({
 
   const displayAvatar = getDisplayAvatar()
   const displayName = name || user.name || ''
+
+  // Check if profile name has changed
+  const hasProfileChanges = name.trim() !== user.name
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save profile
+  useCtrlSave({
+    onSave: () => {
+      // Trigger form submit programmatically
+      const form = document.querySelector('form[data-profile-form]') as HTMLFormElement
+      if (form) {
+        form.requestSubmit()
+      }
+    },
+    enabled: hasProfileChanges && !profileLoading && !!name.trim(),
+  })
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -275,7 +291,7 @@ export function ProfileTab({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleProfileUpdate} className="space-y-4">
+          <form data-profile-form onSubmit={handleProfileUpdate} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-zinc-300">
                 Name

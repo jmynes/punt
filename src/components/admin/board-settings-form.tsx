@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-system-settings'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 
 export function BoardSettingsForm() {
   const { data: settings, isLoading, error } = useSystemSettings()
@@ -32,6 +33,12 @@ export function BoardSettingsForm() {
       setShowAddColumnButton(settings.showAddColumnButton)
     }
   }
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save
+  useCtrlSave({
+    onSave: handleSave,
+    enabled: hasChanges && !updateSettings.isPending,
+  })
 
   if (isLoading) {
     return (

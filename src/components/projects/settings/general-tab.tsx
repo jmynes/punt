@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { useDeleteProject, useProjectDetail, useUpdateProject } from '@/hooks/queries/use-projects'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showToast } from '@/lib/toast'
@@ -192,6 +193,12 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
   const isValid = formData.name.trim().length > 0 && formData.key.length > 0
   const isPending = updateProject.isPending || deleteProject.isPending
   const isDisabled = !canEditSettings || isPending
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save
+  useCtrlSave({
+    onSave: handleSave,
+    enabled: hasChanges && isValid && !isDisabled,
+  })
 
   return (
     <div className="space-y-6">

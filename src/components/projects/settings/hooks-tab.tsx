@@ -42,6 +42,7 @@ import {
   useRepositoryConfig,
   useWebhookSecret,
 } from '@/hooks/queries/use-repository'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 
@@ -183,6 +184,12 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
 
   const isDisabled = !canEditSettings
   const hasWebhookSecret = config?.hasWebhookSecret || generatedSecret
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save
+  useCtrlSave({
+    onSave: savePatterns,
+    enabled: patternsHaveChanges && !isDisabled,
+  })
 
   if (isLoading) {
     return (

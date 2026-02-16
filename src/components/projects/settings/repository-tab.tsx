@@ -13,6 +13,7 @@ import {
   useRepositoryConfig,
   useUpdateRepository,
 } from '@/hooks/queries/use-repository'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { previewBranchName, validateBranchTemplate } from '@/lib/branch-utils'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -246,6 +247,12 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
   const isPending = updateRepository.isPending
   const isDisabled = !canEditSettings || isPending
   const isValid = !branchTemplateError
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save
+  useCtrlSave({
+    onSave: handleSave,
+    enabled: hasChanges && isValid && !isDisabled,
+  })
 
   if (isLoading) {
     return (

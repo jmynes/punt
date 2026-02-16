@@ -13,6 +13,7 @@ import {
   useUpdateSystemSettings,
   useUploadLogo,
 } from '@/hooks/queries/use-system-settings'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { DEFAULT_BRANDING } from '@/lib/branding'
 
 export function BrandingSettingsForm() {
@@ -53,6 +54,12 @@ export function BrandingSettingsForm() {
       logoGradientTo,
     })
   }
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save
+  useCtrlSave({
+    onSave: handleSave,
+    enabled: hasChanges && !updateSettings.isPending,
+  })
 
   const handleResetToDefaults = () => {
     setAppName(DEFAULT_BRANDING.appName)

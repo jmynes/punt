@@ -71,6 +71,7 @@ import {
   useUpdateLabel,
   useUpdateTicket,
 } from '@/hooks/queries/use-tickets'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
@@ -622,6 +623,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     updateTicketMutation,
     availableLabels,
   ])
+
+  // Ctrl+S / Cmd+S keyboard shortcut to save
+  useCtrlSave({
+    onSave: handleSave,
+    enabled: hasUnsavedChanges,
+  })
 
   if (!ticket) return null
 
