@@ -22,6 +22,7 @@ import {
   useProjectSprints,
   useUpdateLabel,
 } from '@/hooks/queries/use-tickets'
+import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -348,6 +349,11 @@ export function CreateTicketDialog() {
   ])
 
   const isValid = formData.title.trim().length > 0 && !!projectId
+
+  useCtrlSave({
+    onSave: handleSubmit,
+    enabled: createTicketOpen && isValid && !isSubmitting,
+  })
 
   return (
     <Dialog open={createTicketOpen} onOpenChange={setCreateTicketOpen}>

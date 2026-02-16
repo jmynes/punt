@@ -253,7 +253,7 @@ function NoApiKeyMessage() {
         <p className="mt-1 text-sm text-zinc-400">Add your Anthropic API key to use Claude Chat</p>
       </div>
       <Button asChild className="bg-purple-600 hover:bg-purple-700">
-        <Link href="/settings?tab=integrations">Go to Settings</Link>
+        <Link href="/profile?tab=integrations">Go to Settings</Link>
       </Button>
     </div>
   )
