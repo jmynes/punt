@@ -77,6 +77,28 @@ export function DatabaseWipeProjectsDialog({
     window.location.href = '/admin/settings?tab=database'
   }
 
+  const handleVerify = async () => {
+    setVerifying(true)
+    setVerifyError(null)
+    try {
+      const res = await fetch('/api/auth/verify-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: confirmPassword }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setVerifyError(data.error || 'Invalid password')
+        return
+      }
+      setStep('confirm')
+    } catch {
+      setVerifyError('Failed to verify credentials')
+    } finally {
+      setVerifying(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md bg-zinc-900 border-zinc-800">
@@ -158,6 +180,12 @@ export function DatabaseWipeProjectsDialog({
                     autoComplete="off"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && confirmPassword && !verifying) {
+                        e.preventDefault()
+                        handleVerify()
+                      }
+                    }}
                     placeholder="Enter your password"
                     className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10 ${!showPassword ? 'password-mask' : ''}`}
                   />
@@ -177,27 +205,7 @@ export function DatabaseWipeProjectsDialog({
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={async () => {
-                    setVerifying(true)
-                    setVerifyError(null)
-                    try {
-                      const res = await fetch('/api/auth/verify-credentials', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ password: confirmPassword }),
-                      })
-                      if (!res.ok) {
-                        const data = await res.json()
-                        setVerifyError(data.error || 'Invalid password')
-                        return
-                      }
-                      setStep('confirm')
-                    } catch {
-                      setVerifyError('Failed to verify credentials')
-                    } finally {
-                      setVerifying(false)
-                    }
-                  }}
+                  onClick={handleVerify}
                   disabled={!confirmPassword || verifying}
                 >
                   {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
