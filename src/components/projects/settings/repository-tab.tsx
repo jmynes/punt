@@ -1,6 +1,16 @@
 'use client'
 
-import { ExternalLink, GitBranch, GripVertical, Info, Loader2, Plus, Trash2 } from 'lucide-react'
+import {
+  ArrowRight,
+  ExternalLink,
+  GitBranch,
+  Info,
+  Loader2,
+  Plus,
+  Server,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,12 +41,30 @@ interface FormData {
   environmentBranches: EnvironmentBranch[]
 }
 
-// Preset environment suggestions
+// Preset environment suggestions with colors
 const ENVIRONMENT_PRESETS = [
-  { environment: 'production', branchName: 'main' },
-  { environment: 'staging', branchName: 'staging' },
-  { environment: 'development', branchName: 'develop' },
-]
+  { environment: 'production', branchName: 'main', color: 'rose' },
+  { environment: 'staging', branchName: 'staging', color: 'amber' },
+  { environment: 'development', branchName: 'develop', color: 'emerald' },
+] as const
+
+// Get color classes for environment badge
+function getEnvironmentColor(env: string): { bg: string; text: string; border: string } {
+  const normalized = env.toLowerCase().trim()
+  if (normalized.includes('prod')) {
+    return { bg: 'bg-rose-950/50', text: 'text-rose-300', border: 'border-rose-800/50' }
+  }
+  if (normalized.includes('stag') || normalized.includes('pre')) {
+    return { bg: 'bg-amber-950/50', text: 'text-amber-300', border: 'border-amber-800/50' }
+  }
+  if (normalized.includes('dev') || normalized.includes('local')) {
+    return { bg: 'bg-emerald-950/50', text: 'text-emerald-300', border: 'border-emerald-800/50' }
+  }
+  if (normalized.includes('test') || normalized.includes('qa')) {
+    return { bg: 'bg-sky-950/50', text: 'text-sky-300', border: 'border-sky-800/50' }
+  }
+  return { bg: 'bg-zinc-800/50', text: 'text-zinc-300', border: 'border-zinc-700/50' }
+}
 
 export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
   const { data: config, isLoading } = useRepositoryConfig(projectKey)
@@ -347,129 +375,155 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
         </Card>
 
         {/* Environment Branches Card */}
-        <Card className="bg-zinc-900/50 border-zinc-800">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base text-zinc-100 flex items-center gap-2">
-                  <GitBranch className="h-4 w-4" />
-                  Environment Branches
-                </CardTitle>
-                <CardDescription className="mt-1.5">
-                  Define branches for different deployment environments.
-                </CardDescription>
-              </div>
-              {!isDisabled && (
-                <div className="flex items-center gap-2">
-                  {formData.environmentBranches.length === 0 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addPresetBranches}
-                      className="text-xs border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
-                    >
-                      Add Defaults
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addEnvironmentBranch}
-                    className="text-xs border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
-                    Add Branch
-                  </Button>
-                </div>
-              )}
-            </div>
+        <Card className="bg-zinc-900/50 border-zinc-800 overflow-hidden">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base text-zinc-100 flex items-center gap-2">
+              <Server className="h-4 w-4" />
+              Environment Branches
+            </CardTitle>
+            <CardDescription>
+              Map deployment environments to their corresponding git branches.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {formData.environmentBranches.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <div className="w-12 h-12 rounded-full bg-zinc-800/50 flex items-center justify-center mb-3">
-                  <GitBranch className="h-5 w-5 text-zinc-600" />
-                </div>
-                <p className="text-sm text-zinc-500 mb-1">No environment branches configured</p>
-                <p className="text-xs text-zinc-600">
-                  Add branches to track deployments across environments
-                </p>
-              </div>
-            ) : (
-              <ScrollArea className="max-h-[280px]">
-                <div className="space-y-2 pr-3">
-                  {/* Header row */}
-                  <div className="grid grid-cols-[1fr,1fr,40px] gap-3 px-1 pb-2 border-b border-zinc-800/50">
-                    <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                      Environment
-                    </span>
-                    <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                      Branch Name
-                    </span>
-                    <span />
+              /* Empty state */
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-b from-zinc-800/20 to-transparent rounded-xl pointer-events-none" />
+                <div className="relative flex flex-col items-center py-10 px-4">
+                  {/* Visual diagram showing the concept */}
+                  <div className="flex items-center gap-3 mb-6 opacity-40">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-rose-950/50 border border-rose-800/30">
+                      <span className="text-xs font-medium text-rose-300/70">production</span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-zinc-600" />
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-800/50 border border-zinc-700/30">
+                      <GitBranch className="h-3 w-3 text-zinc-500" />
+                      <span className="text-xs font-mono text-zinc-400/70">main</span>
+                    </div>
                   </div>
 
-                  {/* Branch rows */}
-                  {formData.environmentBranches.map((branch, index) => (
-                    <div
-                      key={branch.id}
-                      className="group grid grid-cols-[1fr,1fr,40px] gap-3 items-center p-2 rounded-lg bg-zinc-800/30 border border-zinc-800/50 hover:border-zinc-700/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
-                        <Input
-                          value={branch.environment}
-                          onChange={(e) =>
-                            updateEnvironmentBranch(branch.id, 'environment', e.target.value)
-                          }
-                          placeholder="e.g., production"
-                          disabled={isDisabled}
-                          className="h-8 bg-zinc-900/50 border-zinc-700/50 text-zinc-200 placeholder:text-zinc-600 text-sm focus:border-amber-600/50 focus:ring-amber-600/20"
-                        />
-                      </div>
-                      <div className="flex items-center">
-                        <Input
-                          value={branch.branchName}
-                          onChange={(e) =>
-                            updateEnvironmentBranch(branch.id, 'branchName', e.target.value)
-                          }
-                          placeholder="e.g., main"
-                          disabled={isDisabled}
-                          className="h-8 bg-zinc-900/50 border-zinc-700/50 text-zinc-200 placeholder:text-zinc-600 font-mono text-sm focus:border-amber-600/50 focus:ring-amber-600/20"
-                        />
-                      </div>
-                      <div className="flex justify-center">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeEnvironmentBranch(branch.id)}
-                          disabled={isDisabled}
-                          className="h-8 w-8 p-0 text-zinc-600 hover:text-red-400 hover:bg-red-950/30 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
+                  <p className="text-sm text-zinc-400 mb-1">No environment mappings configured</p>
+                  <p className="text-xs text-zinc-600 mb-5 text-center max-w-[280px]">
+                    Define which branches correspond to each deployment environment
+                  </p>
 
-            {formData.environmentBranches.length > 0 && !isDisabled && (
-              <div className="mt-3 pt-3 border-t border-zinc-800/50">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={addEnvironmentBranch}
-                  className="w-full h-8 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 border border-dashed border-zinc-800 hover:border-zinc-700"
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  Add another branch
-                </Button>
+                  {!isDisabled && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addPresetBranches}
+                        className="text-xs bg-zinc-800/50 border-zinc-700 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 hover:border-zinc-600"
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1.5" />
+                        Add Common Environments
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Branch list */
+              <div className="space-y-2">
+                <ScrollArea className="max-h-[300px]">
+                  <div className="space-y-2 pr-2">
+                    {formData.environmentBranches.map((branch) => {
+                      const colors = getEnvironmentColor(branch.environment)
+                      const hasValues = branch.environment.trim() || branch.branchName.trim()
+
+                      return (
+                        <div
+                          key={branch.id}
+                          className="group relative flex items-center gap-2 p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 hover:border-zinc-700/50 transition-all duration-150"
+                        >
+                          {/* Environment input with color indicator */}
+                          <div className="flex-1 min-w-0">
+                            <div className="relative">
+                              <Input
+                                value={branch.environment}
+                                onChange={(e) =>
+                                  updateEnvironmentBranch(branch.id, 'environment', e.target.value)
+                                }
+                                placeholder="environment"
+                                disabled={isDisabled}
+                                className={`h-9 pl-3 pr-3 bg-zinc-900/60 border text-sm font-medium transition-colors ${
+                                  hasValues && branch.environment.trim()
+                                    ? `${colors.border} ${colors.text}`
+                                    : 'border-zinc-700/50 text-zinc-300 placeholder:text-zinc-600'
+                                }`}
+                              />
+                              {branch.environment.trim() && (
+                                <div
+                                  className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full ${colors.bg.replace('/50', '')}`}
+                                />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Arrow connector */}
+                          <div className="flex-shrink-0 flex items-center justify-center w-8">
+                            <ArrowRight className="h-4 w-4 text-zinc-600" />
+                          </div>
+
+                          {/* Branch input */}
+                          <div className="flex-1 min-w-0">
+                            <div className="relative">
+                              <GitBranch className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
+                              <Input
+                                value={branch.branchName}
+                                onChange={(e) =>
+                                  updateEnvironmentBranch(branch.id, 'branchName', e.target.value)
+                                }
+                                placeholder="branch"
+                                disabled={isDisabled}
+                                className="h-9 pl-8 pr-3 bg-zinc-900/60 border-zinc-700/50 text-zinc-200 placeholder:text-zinc-600 font-mono text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Delete button */}
+                          {!isDisabled && (
+                            <button
+                              type="button"
+                              onClick={() => removeEnvironmentBranch(branch.id)}
+                              className="flex-shrink-0 p-1.5 rounded-md text-zinc-600 hover:text-rose-400 hover:bg-rose-950/30 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-150"
+                              aria-label="Remove mapping"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </ScrollArea>
+
+                {/* Add button */}
+                {!isDisabled && (
+                  <button
+                    type="button"
+                    onClick={addEnvironmentBranch}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs text-zinc-500 hover:text-zinc-300 bg-zinc-800/20 hover:bg-zinc-800/40 border border-dashed border-zinc-800 hover:border-zinc-700 transition-all duration-150"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add mapping
+                  </button>
+                )}
+
+                {/* Quick add presets hint */}
+                {!isDisabled && formData.environmentBranches.length < 3 && (
+                  <div className="flex items-center justify-center pt-2">
+                    <button
+                      type="button"
+                      onClick={addPresetBranches}
+                      className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+                    >
+                      + Add missing defaults (prod, staging, dev)
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
