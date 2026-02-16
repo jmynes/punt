@@ -507,6 +507,12 @@ export function DatabaseImportDialog({
                   autoComplete="off"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && username && password && !verifying) {
+                      e.preventDefault()
+                      handleNext()
+                    }
+                  }}
                   placeholder="Your username"
                   className="bg-zinc-800 border-zinc-700 text-zinc-100"
                 />
@@ -530,6 +536,12 @@ export function DatabaseImportDialog({
                     autoComplete="off"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && username && password && !verifying) {
+                        e.preventDefault()
+                        handleNext()
+                      }
+                    }}
                     placeholder="Your password"
                     className={`bg-zinc-800 border-zinc-700 text-zinc-100 pr-10 ${!showPassword ? 'password-mask' : ''}`}
                   />

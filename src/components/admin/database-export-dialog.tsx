@@ -251,6 +251,12 @@ export function DatabaseExportDialog({
                     autoComplete="off"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && confirmPassword) {
+                        e.preventDefault()
+                        handleExport()
+                      }
+                    }}
                     placeholder="Enter your password"
                     className={`bg-zinc-800 border-zinc-700 text-zinc-100 pr-10 ${!showPassword ? 'password-mask' : ''}`}
                   />
