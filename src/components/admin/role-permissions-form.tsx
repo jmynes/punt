@@ -322,13 +322,26 @@ export function RolePermissionsForm() {
     (roleId: string) => {
       if (['Owner', 'Admin', 'Member'].includes(roleId)) return
       const role = customRoles.find((r) => r.id === roleId)
-      setCustomRoles((prev) => prev.filter((r) => r.id !== roleId))
+
+      // If we're deleting the selected role, select an adjacent role
       if (selectedId === roleId) {
-        setSelectedId('Owner')
+        const allRoleIds = [...roleOrder, ...customRoles.map((r) => r.id)]
+        const currentIndex = allRoleIds.indexOf(roleId)
+
+        // Try to select the previous role, or next if this is the first custom role
+        if (currentIndex > 0) {
+          setSelectedId(allRoleIds[currentIndex - 1])
+        } else if (allRoleIds.length > 1) {
+          setSelectedId(allRoleIds[1])
+        } else {
+          setSelectedId('Owner')
+        }
       }
+
+      setCustomRoles((prev) => prev.filter((r) => r.id !== roleId))
       if (role) showToast.success(`Removed "${role.name}"`)
     },
-    [customRoles, selectedId],
+    [customRoles, selectedId, roleOrder],
   )
 
   // Build actions for each role item
