@@ -187,6 +187,13 @@ export interface ProjectData {
   _count?: { tickets: number; members: number }
 }
 
+// Environment branch mapping
+export interface EnvironmentBranch {
+  id: string
+  environment: string
+  branchName: string
+}
+
 // Repository configuration for a project
 export interface RepositoryConfigData {
   projectId: string
@@ -200,6 +207,7 @@ export interface RepositoryConfigData {
   branchTemplate: string | null
   agentGuidance: string | null
   monorepoPath: string | null
+  environmentBranches: EnvironmentBranch[] | null
   // Effective values (with system defaults)
   effectiveBranchTemplate: string
   effectiveAgentGuidance: string | null

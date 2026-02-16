@@ -118,6 +118,15 @@ function formatRepositoryContext(
   }
   lines.push('')
 
+  // Environment branches
+  if (config.environmentBranches && config.environmentBranches.length > 0) {
+    lines.push('### Environment Branches')
+    for (const branch of config.environmentBranches) {
+      lines.push(`- **${branch.environment}:** \`${branch.branchName}\``)
+    }
+    lines.push('')
+  }
+
   // Agent guidance
   if (config.effectiveAgentGuidance) {
     lines.push('### Agent Guidance')

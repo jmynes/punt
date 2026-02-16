@@ -242,7 +242,7 @@ Schema in `prisma/schema.prisma`. Key models:
 - **EmailVerificationToken**: Email verification with hashed tokens, target email, expiration.
 
 **Projects:**
-- **Project**: name, key (unique), description, color, showAddColumnButton. Relations: columns, tickets, members, labels, sprints, invitations, sprintSettings, roles.
+- **Project**: name, key (unique), description, color, showAddColumnButton. Repository integration: repositoryUrl, repositoryProvider, localPath, defaultBranch, branchTemplate, agentGuidance, monorepoPath, environmentBranches (JSON). Relations: columns, tickets, members, labels, sprints, invitations, sprintSettings, roles.
 - **ProjectMember**: User-project relationship via roleId (references Role). Optional per-member permission overrides (JSON array of permission strings).
 - **Role**: Custom roles with name, color, description, permissions (JSON array), isDefault (built-in roles can't be deleted), position (display ordering). Unique constraint: `[projectId, name]`.
 - **Column**: Board columns with order, icon, color fields.
@@ -263,7 +263,7 @@ Schema in `prisma/schema.prisma`. Key models:
 
 **System:**
 - **Invitation**: Project invitations with token, role, status, expiration.
-- **SystemSettings**: Singleton for upload config (max sizes, allowed MIME types), branding (appName, logoUrl, logoLetter, logoGradientFrom/To), email configuration (provider: none/smtp/resend/console, SMTP settings, feature toggles for passwordReset/welcome/verification/invitations), board settings (showAddColumnButton), and defaultRolePermissions for new projects.
+- **SystemSettings**: Singleton for upload config (max sizes, allowed MIME types), branding (appName, logoUrl, logoLetter, logoGradientFrom/To), email configuration (provider: none/smtp/resend/console, SMTP settings, feature toggles for passwordReset/welcome/verification/invitations), board settings (showAddColumnButton), defaultRolePermissions for new projects, and repository defaults (defaultBranchTemplate, defaultAgentGuidance).
 
 Types generated to `@/generated/prisma/client`, re-exported with relations from `@/types/index.ts`.
 
@@ -494,15 +494,18 @@ PUNT includes an MCP (Model Context Protocol) server for conversational ticket m
 - When auditing or reviewing tickets (e.g. checking for missing fields, evaluating points), query all columns and statuses — not just To Do.
 - Use your best judgement to scope queries when context makes it obvious (e.g. "what's left to do" implies non-Done tickets), but be transparent about it.
 
-**Available tools (31 total):**
+**Available tools (44 total):**
 | Category | Tools |
 |----------|-------|
-| Tickets | `get_ticket`, `list_tickets`, `create_ticket`, `update_ticket`, `move_ticket`, `delete_ticket` |
+| Tickets | `get_ticket`, `list_tickets`, `create_ticket`, `update_ticket`, `move_ticket`, `delete_ticket`, `search_tickets` |
+| Comments | `list_comments`, `add_comment`, `update_comment`, `delete_comment` |
+| Ticket Links | `list_ticket_links`, `add_ticket_link`, `remove_ticket_link` |
 | Projects | `list_projects`, `get_project`, `create_project`, `update_project`, `delete_project` |
 | Sprints | `list_sprints`, `get_sprint`, `create_sprint`, `update_sprint`, `start_sprint`, `complete_sprint`, `delete_sprint` |
 | Members | `list_members`, `add_member`, `remove_member`, `change_member_role`, `list_users` |
 | Labels | `list_labels`, `create_label`, `update_label`, `delete_label`, `add_label_to_ticket`, `remove_label_from_ticket` |
 | Columns | `list_columns`, `create_column`, `rename_column`, `reorder_column`, `delete_column` |
+| Repository | `get_repo_context`, `get_branch_name` |
 
 **Key files:**
 - `mcp/src/index.ts` - Server entry point, tool registrations
@@ -511,6 +514,7 @@ PUNT includes an MCP (Model Context Protocol) server for conversational ticket m
 - `mcp/src/tools/projects.ts` - Project/member/column tools
 - `mcp/src/tools/sprints.ts` - Sprint lifecycle tools
 - `mcp/src/tools/labels.ts` - Label management tools
+- `mcp/src/tools/repository.ts` - Repository context and branch name tools
 - `mcp/src/utils.ts` - Formatting helpers (markdown output)
 
 **Environment:**
@@ -555,6 +559,39 @@ cd /tmp/worktree-<branch-name>
 ```
 
 **Use `??` (nullish coalescing), not `||`:** For values where `0`, `false`, or empty string are valid, always use `??`. Example: `storyPoints ?? null` not `storyPoints || null` (the latter silently discards `0`).
+
+### Repository Integration
+
+PUNT supports per-project repository configuration for AI agent context. This allows agents to know which codebase a project manages.
+
+**Project Settings UI:**
+- **Repository Tab** (`/projects/[key]/settings?tab=repository`): Configure repository URL, local path, default branch, monorepo path, branch template, and environment branches
+- **Agents Tab** (`/projects/[key]/settings?tab=agents`): Configure agent guidance markdown with context preview
+
+**Configuration fields:**
+- `repositoryUrl` - HTTPS URL of the repository (GitHub, GitLab, etc.)
+- `localPath` - Absolute filesystem path where repo is cloned
+- `defaultBranch` - Primary branch name (e.g., main, master)
+- `monorepoPath` - Relative path within a monorepo (e.g., packages/frontend)
+- `branchTemplate` - Template for generating branch names from tickets (e.g., `{type}/{key}-{slug}`)
+- `agentGuidance` - Markdown instructions for AI agents
+- `environmentBranches` - JSON array mapping environments to branches (e.g., production → main)
+
+**Branch template variables:**
+- `{type}` - Ticket type mapped to conventional commit prefix (bug→fix, story→feat, task→chore)
+- `{key}` - Full ticket key (e.g., PUNT-42)
+- `{number}` - Ticket number only (e.g., 42)
+- `{slug}` - Slugified ticket title
+- `{project}` - Project key lowercase
+
+**MCP tools for repository context:**
+- `get_repo_context` - Get full repository context including URL, paths, branch template, environment branches, and agent guidance. Optionally pass a ticket number to get a suggested branch name.
+- `get_branch_name` - Generate a branch name for a specific ticket using the project's branch template.
+
+**API endpoint:**
+- `GET/PATCH /api/projects/[projectId]/repository` - Get/update repository configuration
+
+**Configuration hierarchy:** Project settings override system defaults (`SystemSettings.defaultBranchTemplate`, `SystemSettings.defaultAgentGuidance`).
 
 ### Workflow Conventions
 

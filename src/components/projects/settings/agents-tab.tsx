@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRepositoryConfig, useUpdateRepository } from '@/hooks/queries/use-repository'
 import { useHasPermission } from '@/hooks/use-permissions'
+import { previewBranchName } from '@/lib/branch-utils'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showToast } from '@/lib/toast'
 
@@ -56,6 +57,20 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
   }, [config])
 
   const handleCopyContext = useCallback(() => {
+    const envBranchesText =
+      config?.environmentBranches && config.environmentBranches.length > 0
+        ? config.environmentBranches.map((b) => `  - ${b.environment}: ${b.branchName}`).join('\n')
+        : null
+
+    const branchExample = config?.effectiveBranchTemplate
+      ? previewBranchName(config.effectiveBranchTemplate, {
+          projectKey: config.projectKey,
+          ticketNumber: 42,
+          ticketType: 'bug',
+          ticketTitle: 'Fix login button',
+        })
+      : null
+
     const context = [
       `# Project: ${config?.projectName} (${config?.projectKey})`,
       '',
@@ -65,6 +80,10 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
       config?.monorepoPath && `Monorepo Path: ${config.monorepoPath}`,
       '',
       config?.effectiveBranchTemplate && `Branch Template: ${config.effectiveBranchTemplate}`,
+      branchExample && `  → e.g. ${branchExample}`,
+      '',
+      envBranchesText && 'Environment Branches:',
+      envBranchesText,
       '',
       config?.effectiveAgentGuidance && '## Agent Guidance',
       config?.effectiveAgentGuidance,
@@ -216,7 +235,31 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
                 {config?.effectiveBranchTemplate && (
                   <div>
                     <span className="text-zinc-500">Branch Template:</span>{' '}
-                    {config.effectiveBranchTemplate}
+                    <span className="text-zinc-300">{config.effectiveBranchTemplate}</span>
+                    <div className="ml-4 text-zinc-600 italic">
+                      → e.g.{' '}
+                      <span className="text-amber-400/80 not-italic">
+                        {previewBranchName(config.effectiveBranchTemplate, {
+                          projectKey: config.projectKey,
+                          ticketNumber: 42,
+                          ticketType: 'bug',
+                          ticketTitle: 'Fix login button',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {config?.environmentBranches && config.environmentBranches.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-zinc-500">Environment Branches:</span>
+                    <div className="ml-2 mt-1 space-y-0.5">
+                      {config.environmentBranches.map((branch) => (
+                        <div key={branch.id} className="text-zinc-400">
+                          <span className="text-zinc-500">•</span> {branch.environment}:{' '}
+                          <span className="text-emerald-400">{branch.branchName}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {config?.effectiveAgentGuidance && (
