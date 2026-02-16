@@ -143,6 +143,16 @@ model Project {
 
   showAddColumnButton Boolean? // null = inherit from global SystemSettings
 
+  // Repository integration configuration
+  repositoryUrl       String? // Repository URL (e.g., https://github.com/owner/repo)
+  repositoryProvider  String? // github, gitlab, bitbucket, gitea, codeberg, other
+  localPath           String? // Local filesystem path to the repo (for agent context)
+  defaultBranch       String? // Default branch name (e.g., main, master)
+  branchTemplate      String? // Branch naming template (e.g., "{type}/{key}-{slug}")
+  agentGuidance       String? // Markdown instructions for AI agents working on this project
+  monorepoPath        String? // Path within monorepo (e.g., "packages/frontend")
+  environmentBranches String? // JSON array of {id, environment, branchName} objects
+
   columns        Column[]
   tickets        Ticket[]
   members        ProjectMember[]
@@ -523,10 +533,14 @@ model SystemSettings {
   // Values: array of permission strings
   defaultRolePermissions String?
 
-  // Repository configuration
+  // Repository configuration (global defaults)
   canonicalRepoUrl     String? // Upstream repository URL (e.g., https://github.com/owner/repo)
   repoHostingProvider  String? // github, gitlab, bitbucket, gitea, codeberg, other
   forkRepoUrl          String? // Fork repository URL (if different from canonical)
+
+  // Agent configuration (global defaults)
+  defaultBranchTemplate   String  @default("{type}/{key}-{slug}") // Default branch naming template
+  defaultAgentGuidance    String? // Default Markdown instructions for AI agents
 }
 
 // Password reset tokens (for forgot password flow)

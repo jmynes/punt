@@ -61,6 +61,9 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
   canonicalRepoUrl: 'https://github.com/jmynes/punt/',
   repoHostingProvider: 'github',
   forkRepoUrl: null,
+  // Agent configuration defaults
+  defaultBranchTemplate: '{type}/{key}-{slug}',
+  defaultAgentGuidance: null,
 }
 
 /**

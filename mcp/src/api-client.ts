@@ -101,10 +101,13 @@ export interface TicketData {
   project?: { id: string; key: string; name: string }
 }
 
-export async function getTicket(projectKey: string, ticketNumber: number) {
+export async function getTicket(
+  projectKey: string,
+  ticketNumber: number,
+): Promise<ApiResponse<TicketData>> {
   // First get all tickets and find by number (API doesn't have direct get by number)
   const result = await listTickets(projectKey)
-  if (result.error) return result
+  if (result.error) return { error: result.error }
   const ticket = result.data?.find((t) => t.number === ticketNumber)
   if (!ticket) {
     return { error: `Ticket ${projectKey}-${ticketNumber} not found` }
@@ -182,6 +185,37 @@ export interface ProjectData {
   columns?: Array<{ id: string; name: string; order: number }>
   members?: Array<{ user: { id: string; name: string }; role: { name: string } }>
   _count?: { tickets: number; members: number }
+}
+
+// Environment branch mapping
+export interface EnvironmentBranch {
+  id: string
+  environment: string
+  branchName: string
+}
+
+// Repository configuration for a project
+export interface RepositoryConfigData {
+  projectId: string
+  projectKey: string
+  projectName: string
+  // Project-level settings
+  repositoryUrl: string | null
+  repositoryProvider: string | null
+  localPath: string | null
+  defaultBranch: string | null
+  branchTemplate: string | null
+  agentGuidance: string | null
+  monorepoPath: string | null
+  environmentBranches: EnvironmentBranch[] | null
+  // Effective values (with system defaults)
+  effectiveBranchTemplate: string
+  effectiveAgentGuidance: string | null
+  // System defaults for reference
+  systemDefaults: {
+    branchTemplate: string
+    agentGuidance: string | null
+  }
 }
 
 export async function listProjects() {
@@ -559,4 +593,12 @@ export async function searchTickets(projectKey: string, query: string) {
     'GET',
     `/api/projects/${projectKey}/tickets/search?q=${encodedQuery}`,
   )
+}
+
+// ============================================================================
+// Repository API
+// ============================================================================
+
+export async function getRepositoryConfig(projectKey: string) {
+  return apiRequest<RepositoryConfigData>('GET', `/api/projects/${projectKey}/repository`)
 }

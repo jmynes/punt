@@ -46,6 +46,8 @@ function createMockSettings(overrides: Partial<SystemSettings> = {}): SystemSett
     canonicalRepoUrl: null,
     repoHostingProvider: null,
     forkRepoUrl: null,
+    defaultBranchTemplate: '{type}/{key}-{slug}',
+    defaultAgentGuidance: null,
     ...overrides,
   }
 }

@@ -57,6 +57,9 @@ export interface SystemSettings {
   canonicalRepoUrl: string | null
   repoHostingProvider: RepoHostingProvider | null
   forkRepoUrl: string | null
+  // Agent configuration defaults
+  defaultBranchTemplate: string
+  defaultAgentGuidance: string | null
 }
 
 export interface UploadConfig {
@@ -142,6 +145,9 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     canonicalRepoUrl: settings.canonicalRepoUrl,
     repoHostingProvider: settings.repoHostingProvider as RepoHostingProvider | null,
     forkRepoUrl: settings.forkRepoUrl,
+    // Agent configuration defaults
+    defaultBranchTemplate: settings.defaultBranchTemplate,
+    defaultAgentGuidance: settings.defaultAgentGuidance,
   }
 }
 
