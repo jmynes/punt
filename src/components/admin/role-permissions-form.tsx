@@ -203,6 +203,9 @@ export function RolePermissionsForm() {
 
   // Check for changes from saved state
   useEffect(() => {
+    // Skip change detection during delete to prevent flash of "unsaved changes"
+    if (isDeleting) return
+
     if (data?.roleSettings) {
       const defaultsChanged = (['Owner', 'Admin', 'Member'] as DefaultRoleName[]).some((role) => {
         const original = data.roleSettings[role]
@@ -223,7 +226,7 @@ export function RolePermissionsForm() {
         JSON.stringify(customRoles) !== JSON.stringify(savedCustom)
       setHasChanges(defaultsChanged || customChanged || isCreating)
     }
-  }, [localSettings, customRoles, data, isCreating])
+  }, [localSettings, customRoles, data, isCreating, isDeleting])
 
   // Check if current settings match hard-coded defaults
   useEffect(() => {
