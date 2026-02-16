@@ -1,5 +1,6 @@
 'use client'
 
+import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import {
   AlertDialog,
@@ -11,6 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useDeleteProject } from '@/hooks/queries/use-projects'
@@ -31,6 +33,7 @@ export function MobileNav() {
   } = useUIStore()
   const { projects, isLoading } = useProjectsStore()
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   const deleteProject = useDeleteProject()
 
@@ -83,25 +86,61 @@ export function MobileNav() {
       {/* Delete confirmation dialog */}
       <AlertDialog
         open={!!deleteProjectId}
-        onOpenChange={(open) => !open && setDeleteProjectId(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteProjectId(null)
+            setDeleteConfirmText('')
+          }
+        }}
       >
         <AlertDialogContent className="bg-zinc-950 border-zinc-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This will remove
-              the project and all its tickets. This action cannot be undone.
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 text-zinc-400">
+                <p>
+                  Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This action
+                  cannot be undone and will remove all associated tickets.
+                </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-zinc-300">
+                    Type{' '}
+                    <span className="font-mono font-bold text-red-400">{projectToDelete?.key}</span>{' '}
+                    to confirm:
+                  </p>
+                  <Input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                    placeholder={`Type ${projectToDelete?.key} to confirm`}
+                    className="bg-zinc-900 border-zinc-700 text-zinc-100 font-mono uppercase"
+                    autoComplete="off"
+                    disabled={deleteProject.isPending}
+                  />
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+            <AlertDialogCancel
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              disabled={deleteProject.isPending}
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteProject}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleteProject.isPending || deleteConfirmText !== projectToDelete?.key}
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Delete Project
+              {deleteProject.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Project'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
