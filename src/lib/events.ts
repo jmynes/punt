@@ -25,6 +25,11 @@ export type ProjectEventType = 'project.created' | 'project.updated' | 'project.
 export type LabelEventType = 'label.created' | 'label.updated' | 'label.deleted'
 
 /**
+ * Event types for role operations
+ */
+export type RoleEventType = 'role.created' | 'role.updated' | 'role.deleted' | 'role.reordered'
+
+/**
  * Event types for sprint operations
  */
 export type SprintEventType =
@@ -89,6 +94,18 @@ export interface LabelEvent {
   type: LabelEventType
   projectId: string
   labelId: string
+  userId: string
+  tabId?: string // Optional tab ID for self-skip
+  timestamp: number
+}
+
+/**
+ * Payload for role events
+ */
+export interface RoleEvent {
+  type: RoleEventType
+  projectId: string
+  roleId: string
   userId: string
   tabId?: string // Optional tab ID for self-skip
   timestamp: number
@@ -251,6 +268,13 @@ class ProjectEventEmitter extends EventEmitter {
   }
 
   /**
+   * Emit a role event to all subscribers of a project
+   */
+  emitRoleEvent(event: RoleEvent) {
+    this.emit(`project:${event.projectId}`, event)
+  }
+
+  /**
    * Emit a sprint event to all subscribers of a project
    */
   emitSprintEvent(event: SprintEvent) {
@@ -258,12 +282,12 @@ class ProjectEventEmitter extends EventEmitter {
   }
 
   /**
-   * Subscribe to events for a specific project (tickets, labels, and sprints)
+   * Subscribe to events for a specific project (tickets, labels, roles, and sprints)
    * Returns an unsubscribe function
    */
   subscribeToProject(
     projectId: string,
-    callback: (event: TicketEvent | LabelEvent | SprintEvent) => void,
+    callback: (event: TicketEvent | LabelEvent | RoleEvent | SprintEvent) => void,
   ): () => void {
     const eventName = `project:${projectId}`
     this.on(eventName, callback)

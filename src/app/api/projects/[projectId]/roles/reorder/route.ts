@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { handleApiError, validationError } from '@/lib/api-utils'
 import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { PERMISSIONS, parsePermissions } from '@/lib/permissions'
 
 // Schema for reordering roles
@@ -91,6 +92,18 @@ export async function POST(
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
     }))
+
+    // Emit SSE event for real-time updates
+    // Use empty roleId since this is a bulk reorder operation
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitRoleEvent({
+      type: 'role.reordered',
+      projectId,
+      roleId: '',
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+    })
 
     return NextResponse.json(rolesWithPermissions)
   } catch (error) {

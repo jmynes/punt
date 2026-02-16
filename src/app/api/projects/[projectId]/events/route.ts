@@ -1,5 +1,11 @@
 import { requireAuth, requireMembership, requireProjectByKey } from '@/lib/auth-helpers'
-import { type LabelEvent, projectEvents, type SprintEvent, type TicketEvent } from '@/lib/events'
+import {
+  type LabelEvent,
+  projectEvents,
+  type RoleEvent,
+  type SprintEvent,
+  type TicketEvent,
+} from '@/lib/events'
 
 /**
  * GET /api/projects/[projectId]/events - Server-Sent Events endpoint
@@ -45,8 +51,8 @@ export async function GET(
           encoder.encode(`data: ${JSON.stringify({ type: 'connected', userId: user.id })}\n\n`),
         )
 
-        // Subscribe to project events (tickets, labels, and sprints)
-        const handleEvent = (event: TicketEvent | LabelEvent | SprintEvent) => {
+        // Subscribe to project events (tickets, labels, roles, and sprints)
+        const handleEvent = (event: TicketEvent | LabelEvent | RoleEvent | SprintEvent) => {
           try {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
           } catch {

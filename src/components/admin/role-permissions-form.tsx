@@ -24,6 +24,16 @@ import {
   type RoleItemAction,
   SortableRoleItem,
 } from '@/components/projects/permissions/sortable-role-item'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -105,6 +115,8 @@ export function RolePermissionsForm() {
   const [roleOrder, setRoleOrder] = useState<DefaultRoleName[]>(['Owner', 'Admin', 'Member'])
   const [showDiff, setShowDiff] = useState(false)
   const [showCompareDialog, setShowCompareDialog] = useState(false)
+  const [deletingRole, setDeletingRole] = useState<CustomRole | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Form state for creating new roles
   const [editName, setEditName] = useState('')
@@ -191,6 +203,9 @@ export function RolePermissionsForm() {
 
   // Check for changes from saved state
   useEffect(() => {
+    // Skip change detection during delete to prevent flash of "unsaved changes"
+    if (isDeleting) return
+
     if (data?.roleSettings) {
       const defaultsChanged = (['Owner', 'Admin', 'Member'] as DefaultRoleName[]).some((role) => {
         const original = data.roleSettings[role]
@@ -211,7 +226,7 @@ export function RolePermissionsForm() {
         JSON.stringify(customRoles) !== JSON.stringify(savedCustom)
       setHasChanges(defaultsChanged || customChanged || isCreating)
     }
-  }, [localSettings, customRoles, data, isCreating])
+  }, [localSettings, customRoles, data, isCreating, isDeleting])
 
   // Check if current settings match hard-coded defaults
   useEffect(() => {
@@ -322,14 +337,65 @@ export function RolePermissionsForm() {
     (roleId: string) => {
       if (['Owner', 'Admin', 'Member'].includes(roleId)) return
       const role = customRoles.find((r) => r.id === roleId)
-      setCustomRoles((prev) => prev.filter((r) => r.id !== roleId))
-      if (selectedId === roleId) {
+      if (role) {
+        setDeletingRole(role)
+      }
+    },
+    [customRoles],
+  )
+
+  // Confirm and persist the delete immediately
+  const confirmDeleteRole = useCallback(async () => {
+    if (!deletingRole) return
+
+    setIsDeleting(true)
+    const roleId = deletingRole.id
+    const roleName = deletingRole.name
+
+    // Calculate new custom roles list without the deleted role
+    const newCustomRoles = customRoles.filter((r) => r.id !== roleId)
+
+    // If we're deleting the selected role, select an adjacent role
+    if (selectedId === roleId) {
+      const allRoleIds = [...roleOrder, ...customRoles.map((r) => r.id)]
+      const currentIndex = allRoleIds.indexOf(roleId)
+
+      if (currentIndex > 0) {
+        setSelectedId(allRoleIds[currentIndex - 1])
+      } else if (allRoleIds.length > 1) {
+        setSelectedId(allRoleIds[1])
+      } else {
         setSelectedId('Owner')
       }
-      if (role) showToast.success(`Removed "${role.name}"`)
-    },
-    [customRoles, selectedId],
-  )
+    }
+
+    try {
+      // Persist immediately to the server
+      const res = await fetch('/api/admin/settings/roles', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify({ ...localSettings, customRoles: newCustomRoles }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to delete role')
+      }
+
+      // Wait for the query to refetch - this updates `data` which syncs to local state
+      // Don't manually update customRoles to avoid flash of "unsaved changes"
+      await queryClient.refetchQueries({ queryKey: ['admin', 'settings', 'roles'] })
+      showToast.success(`Deleted "${roleName}"`)
+    } catch (err) {
+      showToast.error(err instanceof Error ? err.message : 'Failed to delete role')
+    } finally {
+      setIsDeleting(false)
+      setDeletingRole(null)
+    }
+  }, [deletingRole, customRoles, selectedId, roleOrder, localSettings, queryClient])
 
   // Build actions for each role item
   const getRoleActions = useCallback(
@@ -423,10 +489,10 @@ export function RolePermissionsForm() {
     setEditPermissions([])
   }
 
-  const handleCreateRole = () => {
+  const handleCreateRole = (): CustomRole | null => {
     if (!editName.trim()) {
       showToast.error('Role name is required')
-      return
+      return null
     }
     const id = `custom-${Date.now()}-${nextCustomId++}`
     const maxPos = Math.max(
@@ -445,13 +511,18 @@ export function RolePermissionsForm() {
     setCustomRoles((prev) => [...prev, newRole])
     setIsCreating(false)
     setSelectedId(id)
+    return newRole
   }
 
   const handleSave = () => {
+    let rolesToSave = customRoles
     if (isCreating) {
-      handleCreateRole()
+      const newRole = handleCreateRole()
+      if (!newRole) return // Validation failed
+      // Include the new role in the mutation since setState is async
+      rolesToSave = [...customRoles, newRole]
     }
-    updateMutation.mutate({ settings: localSettings, customRoles })
+    updateMutation.mutate({ settings: localSettings, customRoles: rolesToSave })
   }
 
   const handleReset = () => {
@@ -696,6 +767,36 @@ export function RolePermissionsForm() {
           roles={compareRoles}
         />
       )}
+
+      {/* Delete role confirmation dialog */}
+      <AlertDialog open={!!deletingRole} onOpenChange={(open) => !open && setDeletingRole(null)}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">Delete Role</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Are you sure you want to delete the role{' '}
+              <span className="text-zinc-200 font-medium">"{deletingRole?.name}"</span>? This will
+              remove it from the default roles for new projects.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isDeleting}
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteRole}
+              className="bg-red-600 hover:bg-red-500 text-white"
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete Role
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

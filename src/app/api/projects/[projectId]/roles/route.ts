@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { handleApiError, validationError } from '@/lib/api-utils'
 import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { isValidPermission, PERMISSIONS, parsePermissions } from '@/lib/permissions'
 import { isMember } from '@/lib/permissions/check'
 
@@ -144,6 +145,17 @@ export async function POST(
         createdAt: true,
         updatedAt: true,
       },
+    })
+
+    // Emit SSE event for real-time updates
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitRoleEvent({
+      type: 'role.created',
+      projectId,
+      roleId: role.id,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
     })
 
     return NextResponse.json(

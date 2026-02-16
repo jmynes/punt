@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { handleApiError, notFoundError } from '@/lib/api-utils'
 import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { isValidPermission, PERMISSIONS, parsePermissions } from '@/lib/permissions'
 import { isMember } from '@/lib/permissions/check'
 
@@ -162,6 +163,17 @@ export async function PATCH(
       },
     })
 
+    // Emit SSE event for real-time updates
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitRoleEvent({
+      type: 'role.updated',
+      projectId,
+      roleId: role.id,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
+    })
+
     return NextResponse.json({
       id: role.id,
       name: role.name,
@@ -185,7 +197,7 @@ export async function PATCH(
  * Cannot delete default roles or roles with members
  */
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ projectId: string; roleId: string }> },
 ) {
   try {
@@ -245,6 +257,17 @@ export async function DELETE(
       await tx.role.delete({
         where: { id: roleId },
       })
+    })
+
+    // Emit SSE event for real-time updates
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitRoleEvent({
+      type: 'role.deleted',
+      projectId,
+      roleId,
+      userId: user.id,
+      tabId,
+      timestamp: Date.now(),
     })
 
     return NextResponse.json({ success: true })
