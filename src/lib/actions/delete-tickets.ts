@@ -122,6 +122,30 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
                 // Replace temp ticket with server ticket
                 currentBoardStore.removeTicket(projectId, ticket.id)
                 currentBoardStore.addTicket(projectId, columnId, serverTicket)
+
+                // Restore attachments if any
+                if (ticket.attachments && ticket.attachments.length > 0) {
+                  try {
+                    await fetch(
+                      `/api/projects/${projectId}/tickets/${serverTicket.id}/attachments`,
+                      {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          attachments: ticket.attachments.map((a) => ({
+                            filename: a.filename,
+                            originalName: a.filename,
+                            mimeType: a.mimeType,
+                            size: a.size,
+                            url: a.url,
+                          })),
+                        }),
+                      },
+                    )
+                  } catch (attachErr) {
+                    console.error('Failed to restore attachments:', attachErr)
+                  }
+                }
               }),
             ),
           )

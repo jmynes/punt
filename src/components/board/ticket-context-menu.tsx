@@ -104,6 +104,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<TicketWithRelations[]>([])
   const [showMoveToProject, setShowMoveToProject] = useState(false)
+  const deleteButtonRef = useRef<HTMLButtonElement>(null)
   // Track if component has mounted to avoid hydration mismatch
   const [isMounted, setIsMounted] = useState(false)
 
@@ -1341,7 +1342,13 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             if (!open) setPendingDelete([])
           }}
         >
-          <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogContent
+            className="bg-zinc-950 border-zinc-800"
+            onOpenAutoFocus={(e) => {
+              e.preventDefault()
+              deleteButtonRef.current?.focus()
+            }}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle className="text-zinc-100">
                 Delete {pendingDelete.length === 1 ? 'ticket' : `${pendingDelete.length} tickets`}?
@@ -1365,6 +1372,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
+                ref={deleteButtonRef}
                 onClick={confirmDeleteNow}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
