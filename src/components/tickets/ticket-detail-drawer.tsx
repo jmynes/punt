@@ -66,7 +66,6 @@ import {
 import {
   useCreateLabel,
   useDeleteLabel,
-  useDeleteTicket,
   useProjectLabels,
   useProjectSprints,
   useUpdateLabel,
@@ -74,6 +73,7 @@ import {
 } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
+import { deleteTickets } from '@/lib/actions/delete-tickets'
 import { PERMISSIONS } from '@/lib/permissions'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
@@ -154,7 +154,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
   // API mutations
   const updateTicketMutation = useUpdateTicket()
-  const deleteTicketMutation = useDeleteTicket()
   const createLabelMutation = useCreateLabel()
   const deleteLabelMutation = useDeleteLabel()
   const updateLabelMutation = useUpdateLabel()
@@ -765,21 +764,15 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     setEditingField(null)
   }
 
-  const handleDelete = () => {
-    const columnId = ticket.columnId
-    const deletedTicket = { ...ticket }
-
+  const handleDelete = async () => {
     setShowDeleteConfirm(false)
-
-    // Use API mutation (optimistic delete is handled by the mutation)
-    deleteTicketMutation.mutate({
-      projectId,
-      ticketId: ticket.id,
-      columnId,
-      deletedTicket,
-    })
-
     onClose()
+
+    // Use unified delete action with toast and undo support
+    await deleteTickets({
+      projectId,
+      tickets: [{ ticket, columnId: ticket.columnId }],
+    })
   }
 
   const handleClone = () => {
