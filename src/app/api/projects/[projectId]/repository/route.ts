@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import {
@@ -11,10 +12,26 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { getSystemSettings } from '@/lib/system-settings'
 import { REPO_PROVIDERS, type RepoProvider } from '@/types'
 
+/**
+ * Generate a secure random webhook secret.
+ * Format: whsec_<32 random hex chars> (36 chars total)
+ */
+function generateWebhookSecret(): string {
+  return `whsec_${randomBytes(16).toString('hex')}`
+}
+
 const environmentBranchSchema = z.object({
   id: z.string(),
   environment: z.string(),
   branchName: z.string(),
+})
+
+const commitPatternSchema = z.object({
+  id: z.string(),
+  pattern: z.string(), // The pattern text (e.g., "fixes", "closes", "wip")
+  action: z.enum(['close', 'in_progress', 'reference']),
+  isRegex: z.boolean().optional(), // Whether pattern is a regex
+  enabled: z.boolean().optional(),
 })
 
 const updateRepositorySchema = z.object({
@@ -26,6 +43,10 @@ const updateRepositorySchema = z.object({
   agentGuidance: z.string().nullable().optional(),
   monorepoPath: z.string().nullable().optional(),
   environmentBranches: z.array(environmentBranchSchema).nullable().optional(),
+  commitPatterns: z.array(commitPatternSchema).nullable().optional(),
+  // Webhook secret actions
+  generateWebhookSecret: z.boolean().optional(), // Generate new secret
+  clearWebhookSecret: z.boolean().optional(), // Remove secret
 })
 
 /**
@@ -60,6 +81,8 @@ export async function GET(
         agentGuidance: true,
         monorepoPath: true,
         environmentBranches: true,
+        webhookSecret: true,
+        commitPatterns: true,
       },
     })
 
@@ -80,6 +103,16 @@ export async function GET(
       }
     }
 
+    // Parse commitPatterns from JSON string
+    let commitPatterns = null
+    if (project.commitPatterns) {
+      try {
+        commitPatterns = JSON.parse(project.commitPatterns)
+      } catch {
+        commitPatterns = null
+      }
+    }
+
     return NextResponse.json({
       projectId: project.id,
       projectKey: project.key,
@@ -93,6 +126,9 @@ export async function GET(
       agentGuidance: project.agentGuidance,
       monorepoPath: project.monorepoPath,
       environmentBranches,
+      commitPatterns,
+      // Webhook integration (only expose whether secret exists, not the secret itself)
+      hasWebhookSecret: !!project.webhookSecret,
       // Effective values (project settings with system defaults as fallback)
       effectiveBranchTemplate: project.branchTemplate ?? systemSettings.defaultBranchTemplate,
       effectiveAgentGuidance: project.agentGuidance ?? systemSettings.defaultAgentGuidance,
@@ -148,11 +184,33 @@ export async function PATCH(
     const updates = parsed.data
 
     // Prepare data for database - stringify environmentBranches if present
-    const dbData: Record<string, unknown> = { ...updates }
+    const dbData: Record<string, unknown> = {}
+
+    // Copy over standard fields (excluding action flags)
+    if (updates.repositoryUrl !== undefined) dbData.repositoryUrl = updates.repositoryUrl
+    if (updates.repositoryProvider !== undefined)
+      dbData.repositoryProvider = updates.repositoryProvider
+    if (updates.localPath !== undefined) dbData.localPath = updates.localPath
+    if (updates.defaultBranch !== undefined) dbData.defaultBranch = updates.defaultBranch
+    if (updates.branchTemplate !== undefined) dbData.branchTemplate = updates.branchTemplate
+    if (updates.agentGuidance !== undefined) dbData.agentGuidance = updates.agentGuidance
+    if (updates.monorepoPath !== undefined) dbData.monorepoPath = updates.monorepoPath
     if (updates.environmentBranches !== undefined) {
       dbData.environmentBranches = updates.environmentBranches
         ? JSON.stringify(updates.environmentBranches)
         : null
+    }
+    if (updates.commitPatterns !== undefined) {
+      dbData.commitPatterns = updates.commitPatterns ? JSON.stringify(updates.commitPatterns) : null
+    }
+
+    // Handle webhook secret actions
+    let newWebhookSecret: string | null = null
+    if (updates.generateWebhookSecret) {
+      newWebhookSecret = generateWebhookSecret()
+      dbData.webhookSecret = newWebhookSecret
+    } else if (updates.clearWebhookSecret) {
+      dbData.webhookSecret = null
     }
 
     const project = await db.project.update({
@@ -170,6 +228,8 @@ export async function PATCH(
         agentGuidance: true,
         monorepoPath: true,
         environmentBranches: true,
+        webhookSecret: true,
+        commitPatterns: true,
       },
     })
 
@@ -186,6 +246,16 @@ export async function PATCH(
       }
     }
 
+    // Parse commitPatterns from JSON string
+    let parsedCommitPatterns = null
+    if (project.commitPatterns) {
+      try {
+        parsedCommitPatterns = JSON.parse(project.commitPatterns)
+      } catch {
+        parsedCommitPatterns = null
+      }
+    }
+
     return NextResponse.json({
       projectId: project.id,
       projectKey: project.key,
@@ -199,6 +269,11 @@ export async function PATCH(
       agentGuidance: project.agentGuidance,
       monorepoPath: project.monorepoPath,
       environmentBranches: parsedEnvironmentBranches,
+      commitPatterns: parsedCommitPatterns,
+      // Webhook integration
+      hasWebhookSecret: !!project.webhookSecret,
+      // Only return the secret when it was just generated (for copying)
+      ...(newWebhookSecret ? { webhookSecret: newWebhookSecret } : {}),
       // Effective values
       effectiveBranchTemplate: project.branchTemplate ?? systemSettings.defaultBranchTemplate,
       effectiveAgentGuidance: project.agentGuidance ?? systemSettings.defaultAgentGuidance,

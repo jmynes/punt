@@ -11,6 +11,16 @@ export interface EnvironmentBranch {
   branchName: string
 }
 
+export type CommitPatternAction = 'close' | 'in_progress' | 'reference'
+
+export interface CommitPattern {
+  id: string
+  pattern: string // The pattern text (e.g., "fixes", "closes", "wip")
+  action: CommitPatternAction
+  isRegex?: boolean // Whether pattern is a regex
+  enabled?: boolean
+}
+
 export const repositoryKeys = {
   all: ['repository'] as const,
   detail: (projectKey: string) => ['repository', projectKey] as const,
@@ -29,6 +39,10 @@ export interface RepositoryConfig {
   agentGuidance: string | null
   monorepoPath: string | null
   environmentBranches: EnvironmentBranch[] | null
+  commitPatterns: CommitPattern[] | null
+  // Webhook integration
+  hasWebhookSecret: boolean
+  webhookSecret?: string // Only present when newly generated
   // Effective values (with system defaults)
   effectiveBranchTemplate: string
   effectiveAgentGuidance: string | null
@@ -68,6 +82,10 @@ export interface UpdateRepositoryInput {
   agentGuidance?: string | null
   monorepoPath?: string | null
   environmentBranches?: EnvironmentBranch[] | null
+  commitPatterns?: CommitPattern[] | null
+  // Webhook secret actions
+  generateWebhookSecret?: boolean
+  clearWebhookSecret?: boolean
 }
 
 /**
@@ -131,6 +149,97 @@ export function useUpdateRepository(projectKey: string) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: repositoryKeys.detail(projectKey) })
+    },
+  })
+}
+
+/**
+ * Update commit patterns for a project
+ */
+export function useCommitPatterns(projectKey: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (patterns: CommitPattern[] | null) => {
+      const res = await fetch(`/api/projects/${projectKey}/repository`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify({ commitPatterns: patterns }),
+      })
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Failed to update commit patterns' }))
+        throw new Error(error.error || 'Failed to update commit patterns')
+      }
+      return res.json() as Promise<RepositoryConfig>
+    },
+    onMutate: async (patterns) => {
+      await queryClient.cancelQueries({ queryKey: repositoryKeys.detail(projectKey) })
+      const previousConfig = queryClient.getQueryData<RepositoryConfig>(
+        repositoryKeys.detail(projectKey),
+      )
+      if (previousConfig) {
+        queryClient.setQueryData<RepositoryConfig>(repositoryKeys.detail(projectKey), {
+          ...previousConfig,
+          commitPatterns: patterns,
+        })
+      }
+      return { previousConfig }
+    },
+    onError: (err, _, context) => {
+      if (context?.previousConfig) {
+        queryClient.setQueryData(repositoryKeys.detail(projectKey), context.previousConfig)
+      }
+      showToast.error(err.message)
+    },
+    onSuccess: () => {
+      showToast.success('Commit patterns updated')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: repositoryKeys.detail(projectKey) })
+    },
+  })
+}
+
+/**
+ * Generate or clear webhook secret for a project
+ * Returns the new secret when generating (for copying)
+ */
+export function useWebhookSecret(projectKey: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (action: 'generate' | 'clear') => {
+      const res = await fetch(`/api/projects/${projectKey}/repository`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify({
+          generateWebhookSecret: action === 'generate',
+          clearWebhookSecret: action === 'clear',
+        }),
+      })
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Failed to update webhook secret' }))
+        throw new Error(error.error || 'Failed to update webhook secret')
+      }
+      return res.json() as Promise<RepositoryConfig>
+    },
+    onError: (err) => {
+      showToast.error(err.message)
+    },
+    onSuccess: (data, action) => {
+      if (action === 'generate') {
+        showToast.success('Webhook secret generated')
+      } else {
+        showToast.success('Webhook secret removed')
+      }
+      // Update the query cache
+      queryClient.setQueryData<RepositoryConfig>(repositoryKeys.detail(projectKey), data)
     },
   })
 }

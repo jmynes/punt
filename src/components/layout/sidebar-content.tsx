@@ -27,6 +27,7 @@ import {
   Upload,
   User,
   Users,
+  Webhook,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
@@ -800,6 +801,21 @@ function ProjectSettingsLink({
               >
                 <GitBranch className="h-3 w-3" />
                 Repository
+              </Button>
+            </Link>
+          )}
+          {canViewSettings && (
+            <Link href={`/projects/${projectKey}/settings?tab=hooks`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  isOnSettingsPage && currentTab === 'hooks' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Webhook className="h-3 w-3" />
+                Hooks
               </Button>
             </Link>
           )}

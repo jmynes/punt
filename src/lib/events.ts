@@ -71,7 +71,7 @@ export interface TicketEvent {
   type: TicketEventType
   projectId: string
   ticketId: string
-  userId: string
+  userId?: string // Optional for webhook/system events
   tabId?: string // Optional tab ID for self-skip (when same user has multiple tabs)
   timestamp: number
 }

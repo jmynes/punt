@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -6,6 +7,14 @@ import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { parseCommitMessage, type TicketAction } from '@/lib/git-hooks'
 import { isCompletedColumn } from '@/lib/sprint-utils'
+
+/**
+ * Hash an MCP API key using SHA-256
+ * Must match the hashing in auth-helpers.ts
+ */
+function hashMcpKey(apiKey: string): string {
+  return createHash('sha256').update(apiKey).digest('hex')
+}
 
 /**
  * Git Hook Integration API
@@ -45,6 +54,8 @@ interface TicketUpdate {
 
 /**
  * Authenticate via API key (same as MCP).
+ * Accepts both X-API-Key and X-MCP-API-Key headers.
+ * Hashes the key and looks up by hash (matching auth-helpers.ts behavior).
  * Returns the user if authenticated, null otherwise.
  */
 async function authenticateApiKey() {
@@ -55,8 +66,18 @@ async function authenticateApiKey() {
     return null
   }
 
+  // Validate key format before hashing (prevents wasting resources on invalid keys)
+  if (!apiKey.startsWith('mcp_') || apiKey.length !== 68) {
+    // Do a dummy hash to maintain constant time for format validation
+    hashMcpKey(`mcp_${'0'.repeat(64)}`)
+    return null
+  }
+
+  // Hash the incoming key - database stores hashed keys
+  const keyHash = hashMcpKey(apiKey)
+
   const user = await db.user.findUnique({
-    where: { mcpApiKey: apiKey },
+    where: { mcpApiKey: keyHash },
     select: {
       id: true,
       name: true,
