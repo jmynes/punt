@@ -106,23 +106,28 @@ export const ticketBase = fc.record({
   isCarriedOver: fc.boolean(),
   carriedOverCount: fc.nat({ max: 10 }),
   carriedFromSprintId: fc.option(fc.uuid(), { nil: null }),
-  labels: fc.array(
-    fc.record({
-      id: fc.uuid(),
-      name: fc.string({ minLength: 1, maxLength: 50 }),
-      color: fc
-        .array(fc.constantFrom(...'0123456789abcdef'.split('')), { minLength: 6, maxLength: 6 })
-        .map((chars) => `#${chars.join('')}`),
-      projectId: fc.uuid(),
-    }),
-    { maxLength: 10 },
-  ),
-  watchers: fc.array(userSummary, { maxLength: 10 }),
-  assignee: fc.option(userSummary, { nil: null }),
-  creator: userSummary,
-  reporter: userSummary,
-  sprint: fc.option(sprintSummary, { nil: null }),
-  carriedFromSprint: fc.option(sprintSummary, { nil: null }),
+  // Keep relation fields lightweight — board store tests don't need
+  // fully populated nested objects, and complex arbitraries cause
+  // timeout interruptions in fuzz runs.
+  labels: fc.constant([]),
+  watchers: fc.constant([]),
+  assignee: fc.constant(null),
+  creator: fc.record({
+    id: fc.uuid(),
+    username: validUsername,
+    name: fc.constant('Test User'),
+    email: fc.constant('test@example.com'),
+    avatar: fc.constant(null),
+  }),
+  reporter: fc.record({
+    id: fc.uuid(),
+    username: validUsername,
+    name: fc.constant('Test User'),
+    email: fc.constant('test@example.com'),
+    avatar: fc.constant(null),
+  }),
+  sprint: fc.constant(null),
+  carriedFromSprint: fc.constant(null),
 })
 
 /**

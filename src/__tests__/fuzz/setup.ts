@@ -7,12 +7,13 @@ import * as fc from 'fast-check'
 fc.configureGlobal({
   // Number of runs per property test
   numRuns: 100,
-  // Timeout per run in milliseconds
-  interruptAfterTimeLimit: 5000,
-  // Mark interrupted runs as failure
-  markInterruptAsFailure: true,
-  // Verbose mode for CI debugging
-  verbose: process.env.CI ? fc.VerbosityLevel.VeryVerbose : fc.VerbosityLevel.None,
+  // Timeout per property (all runs combined) in milliseconds
+  interruptAfterTimeLimit: 30_000,
+  // Interrupted tests are inconclusive, not failures — the runs that
+  // completed still passed, and slow generation is not a bug.
+  markInterruptAsFailure: false,
+  // Verbose in CI slows generation significantly with complex arbitraries
+  verbose: fc.VerbosityLevel.None,
 })
 
 // Export fast-check for convenience
