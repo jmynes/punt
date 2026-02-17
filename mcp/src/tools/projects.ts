@@ -14,6 +14,30 @@ import {
 import { errorResponse, escapeMarkdown, safeTableCell, textResponse } from '../utils.js'
 
 /**
+ * Project colors for auto-assignment when not specified.
+ * These are pleasant, distinct colors suitable for project identification.
+ */
+const PROJECT_COLORS = [
+  '#3b82f6', // blue
+  '#10b981', // emerald
+  '#f59e0b', // amber
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#06b6d4', // cyan
+  '#f97316', // orange
+  '#84cc16', // lime
+  '#6366f1', // indigo
+  '#14b8a6', // teal
+]
+
+/**
+ * Pick a random color from the project colors palette.
+ */
+function getRandomProjectColor(): string {
+  return PROJECT_COLORS[Math.floor(Math.random() * PROJECT_COLORS.length)]
+}
+
+/**
  * Format a project for detailed display (get_project).
  * Uses compact key-value layout with sections.
  */
@@ -213,14 +237,22 @@ export function registerProjectTools(server: McpServer) {
       name: z.string().min(1).describe('Project name'),
       key: z.string().min(2).max(10).describe('Project key (2-10 uppercase letters/numbers)'),
       description: z.string().optional().describe('Project description'),
-      color: z.string().optional().describe('Project color (hex, e.g., #3b82f6)'),
+      color: z
+        .string()
+        .optional()
+        .describe(
+          'Project color (hex, e.g., #3b82f6). If not provided, a random color is assigned.',
+        ),
     },
     async ({ name, key, description, color }) => {
+      // Auto-assign a random color if not provided (API requires color)
+      const projectColor = color ?? getRandomProjectColor()
+
       const result = await createProject({
         name,
         key: key.toUpperCase(),
         description,
-        color,
+        color: projectColor,
       })
 
       if (result.error) {
