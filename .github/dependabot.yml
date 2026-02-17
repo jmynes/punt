@@ -23,6 +23,7 @@ updates:
           - "eslint*"
           - "prettier*"
           - "biome*"
+          - "@biomejs/*"
           - "vitest*"
           - "@testing-library/*"
         update-types:
@@ -34,11 +35,17 @@ updates:
           - "eslint*"
           - "prettier*"
           - "biome*"
+          - "@biomejs/*"
           - "vitest*"
           - "@testing-library/*"
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # lexical is pinned by @mdxeditor/editor (^0.35.0) — upgrading causes
+      # dual-version type conflicts. Remove this when mdxeditor supports lexical 0.40+
+      - dependency-name: "lexical"
+      - dependency-name: "@lexical/*"
     # Always create PRs for security updates regardless of grouping
     labels:
       - "dependencies"

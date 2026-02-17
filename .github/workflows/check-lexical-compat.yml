@@ -1,0 +1,60 @@
+# Checks if @mdxeditor/editor has updated its lexical dependency past ^0.35.0
+# When it has, we can remove the lexical ignore rules from dependabot.yml
+name: Check lexical compatibility
+
+on:
+  schedule:
+    # Every Monday at 10:00 ET (after dependabot runs at 09:00)
+    - cron: '0 14 * * 1'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check mdxeditor lexical dependency
+        id: check
+        run: |
+          LEXICAL_DEP=$(npm view @mdxeditor/editor@latest dependencies.lexical 2>/dev/null || echo "unknown")
+          echo "lexical_dep=$LEXICAL_DEP" >> "$GITHUB_OUTPUT"
+
+          # Check if it's still pinned to ^0.35.x
+          if echo "$LEXICAL_DEP" | grep -q "^\^0\.35\."; then
+            echo "still_pinned=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "still_pinned=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open issue if lexical constraint changed
+        if: steps.check.outputs.still_pinned == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'chore(deps): @mdxeditor/editor now supports lexical beyond ^0.35.0';
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'dependencies',
+            });
+            if (issues.some(i => i.title === title)) {
+              console.log('Issue already exists, skipping');
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: [
+                `@mdxeditor/editor@latest now depends on \`lexical: ${process.env.LEXICAL_DEP}\`.`,
+                '',
+                'We can now:',
+                '1. Remove the `lexical` / `@lexical/*` ignore rules from `.github/dependabot.yml`',
+                '2. Let dependabot create PRs for lexical upgrades',
+                '',
+                'See the original ignore commit for context.',
+              ].join('\n'),
+              labels: ['dependencies'],
+            });
+        env:
+          LEXICAL_DEP: ${{ steps.check.outputs.lexical_dep }}
