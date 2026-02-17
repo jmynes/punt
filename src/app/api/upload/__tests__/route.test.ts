@@ -69,16 +69,13 @@ describe('Upload API Route', () => {
 
     it('should reject files that are too large', async () => {
       // Create a file that's actually 11MB (larger than the 10MB limit)
-      const largeContent = new Array(11 * 1024 * 1024)
-        .fill(0)
-        .map(() => 'a')
-        .join('')
+      const largeContent = new Uint8Array(11 * 1024 * 1024)
       const largeFile = new File([largeContent], 'large.jpg', { type: 'image/jpeg' })
       const formData = createMockFormData([largeFile])
-      const request = new Request('http://localhost/api/upload', {
-        method: 'POST',
-        body: formData,
-      })
+      // jsdom 28 mangles file metadata (size, name) during Request → formData()
+      // round-trip, so we bypass its multipart serialization here
+      const request = new Request('http://localhost/api/upload', { method: 'POST' })
+      vi.spyOn(request, 'formData').mockResolvedValue(formData)
 
       const response = await POST(request)
       const data = await response.json()
