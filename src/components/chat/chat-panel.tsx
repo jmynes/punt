@@ -1,7 +1,7 @@
 'use client'
 
 import { BotIcon, KeyIcon, Loader2Icon } from 'lucide-react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -214,7 +214,7 @@ export function ChatPanel() {
         {/* Messages area */}
         <div className="flex-1 overflow-y-auto p-4">
           {hasApiKey === false ? (
-            <NoApiKeyMessage />
+            <NoApiKeyMessage onNavigate={() => setChatPanelOpen(false)} />
           ) : messages.length === 0 ? (
             <EmptyState />
           ) : (
@@ -242,7 +242,24 @@ export function ChatPanel() {
   )
 }
 
-function NoApiKeyMessage() {
+function NoApiKeyMessage({ onNavigate }: { onNavigate: () => void }) {
+  const router = useRouter()
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  // Autofocus the button when shown
+  useEffect(() => {
+    // Small delay to ensure the sheet animation has completed
+    const timer = setTimeout(() => {
+      buttonRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const handleClick = () => {
+    onNavigate()
+    router.push('/profile?tab=integrations')
+  }
+
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-500/20">
@@ -252,8 +269,8 @@ function NoApiKeyMessage() {
         <p className="font-medium text-zinc-100">API Key Required</p>
         <p className="mt-1 text-sm text-zinc-400">Add your Anthropic API key to use Claude Chat</p>
       </div>
-      <Button asChild className="bg-purple-600 hover:bg-purple-700">
-        <Link href="/profile?tab=integrations">Go to Settings</Link>
+      <Button ref={buttonRef} onClick={handleClick} className="bg-purple-600 hover:bg-purple-700">
+        Go to Settings
       </Button>
     </div>
   )
