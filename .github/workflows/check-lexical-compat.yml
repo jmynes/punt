@@ -27,7 +27,7 @@ jobs:
 
       - name: Open issue if lexical constraint changed
         if: steps.check.outputs.still_pinned == 'false'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const title = 'chore(deps): @mdxeditor/editor now supports lexical beyond ^0.35.0';
