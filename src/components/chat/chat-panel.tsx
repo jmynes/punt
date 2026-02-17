@@ -29,18 +29,32 @@ export function ChatPanel() {
   const { chatPanelOpen, setChatPanelOpen, chatContext } = useUIStore()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null)
+  const [isConfigured, setIsConfigured] = useState<boolean | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
-  // Check if user has API key
+  // Check if user has configured their chat provider
   useEffect(() => {
-    if (chatPanelOpen && hasApiKey === null) {
-      fetch('/api/me/anthropic-key')
+    if (chatPanelOpen && isConfigured === null) {
+      // First check provider and session status
+      fetch('/api/me/claude-session')
         .then((res) => res.json())
-        .then((data) => setHasApiKey(data.hasKey))
-        .catch(() => setHasApiKey(false))
+        .then((data) => {
+          const userProvider = data.provider || 'anthropic'
+
+          if (userProvider === 'claude-cli') {
+            // Claude CLI just needs session
+            setIsConfigured(data.hasSession)
+          } else {
+            // Anthropic needs API key - check that endpoint
+            return fetch('/api/me/anthropic-key')
+              .then((res) => res.json())
+              .then((keyData) => setIsConfigured(keyData.hasKey))
+          }
+        })
+        .catch(() => setIsConfigured(false))
     }
-  }, [chatPanelOpen, hasApiKey])
+  }, [chatPanelOpen, isConfigured])
 
   // Scroll to bottom on new messages
   // biome-ignore lint/correctness/useExhaustiveDependencies: we need to scroll when messages change
@@ -119,6 +133,9 @@ export function ChatPanel() {
       setMessages((prev) => [...prev, assistantMessage])
 
       try {
+        // Create abort controller for this request
+        abortControllerRef.current = new AbortController()
+
         // Build message history for API
         const apiMessages = [...messages, userMessage].map((m) => ({
           role: m.role,
@@ -132,6 +149,7 @@ export function ChatPanel() {
             messages: apiMessages,
             context: chatContext,
           }),
+          signal: abortControllerRef.current.signal,
         })
 
         if (!response.ok) {
@@ -169,30 +187,41 @@ export function ChatPanel() {
           }
         }
       } catch (error) {
+        // Ignore abort errors (user cancelled)
+        if (error instanceof Error && error.name === 'AbortError') {
+          return
+        }
         const errorMessage = error instanceof Error ? error.message : 'An error occurred'
         setMessages((prev) =>
           prev.map((m) => (m.id === assistantId ? { ...m, content: `Error: ${errorMessage}` } : m)),
         )
       } finally {
         setIsLoading(false)
+        abortControllerRef.current = null
       }
     },
     [messages, chatContext, isLoading, handleStreamEvent],
   )
 
   const clearChat = () => {
+    // Abort any in-progress request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
     setMessages([])
+    setIsLoading(false)
   }
 
   return (
     <Sheet open={chatPanelOpen} onOpenChange={setChatPanelOpen}>
       <SheetContent side="right" className="flex w-full flex-col p-0 sm:max-w-md">
-        <SheetHeader className="border-b border-zinc-800 px-4 py-3">
+        <SheetHeader className="border-b border-zinc-800 px-4 py-3 pr-14">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600">
               <BotIcon className="h-4 w-4 text-white" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <SheetTitle className="text-base">Claude Chat</SheetTitle>
               <SheetDescription className="text-xs">
                 Manage tickets with natural language
@@ -203,7 +232,7 @@ export function ChatPanel() {
                 variant="ghost"
                 size="sm"
                 onClick={clearChat}
-                className="text-xs text-zinc-400 hover:text-zinc-100"
+                className="text-xs text-zinc-400 hover:text-zinc-100 shrink-0"
               >
                 Clear
               </Button>
@@ -213,8 +242,8 @@ export function ChatPanel() {
 
         {/* Messages area */}
         <div className="flex-1 overflow-y-auto p-4">
-          {hasApiKey === false ? (
-            <NoApiKeyMessage onNavigate={() => setChatPanelOpen(false)} />
+          {isConfigured === false ? (
+            <NotConfiguredMessage onNavigate={() => setChatPanelOpen(false)} />
           ) : messages.length === 0 ? (
             <EmptyState />
           ) : (
@@ -234,15 +263,15 @@ export function ChatPanel() {
         </div>
 
         {/* Input area */}
-        {hasApiKey !== false && (
-          <ChatInput onSend={sendMessage} disabled={isLoading || hasApiKey === null} />
+        {isConfigured !== false && (
+          <ChatInput onSend={sendMessage} disabled={isLoading || isConfigured === null} />
         )}
       </SheetContent>
     </Sheet>
   )
 }
 
-function NoApiKeyMessage({ onNavigate }: { onNavigate: () => void }) {
+function NotConfiguredMessage({ onNavigate }: { onNavigate: () => void }) {
   const router = useRouter()
   const buttonRef = useRef<HTMLButtonElement>(null)
 
@@ -266,8 +295,10 @@ function NoApiKeyMessage({ onNavigate }: { onNavigate: () => void }) {
         <KeyIcon className="h-6 w-6 text-yellow-400" />
       </div>
       <div>
-        <p className="font-medium text-zinc-100">API Key Required</p>
-        <p className="mt-1 text-sm text-zinc-400">Add your Anthropic API key to use Claude Chat</p>
+        <p className="font-medium text-zinc-100">Configuration Required</p>
+        <p className="mt-1 text-sm text-zinc-400">
+          Configure your chat provider in settings to use Claude Chat
+        </p>
       </div>
       <Button ref={buttonRef} onClick={handleClick} className="bg-purple-600 hover:bg-purple-700">
         Go to Settings
