@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { handleApiError } from '@/lib/api-utils'
 import { requireAuth } from '@/lib/auth-helpers'
+import { encryptSession } from '@/lib/chat/encryption'
 import { db } from '@/lib/db'
 
 /**
@@ -51,13 +52,23 @@ export async function POST() {
     // Generate a secure random API key: mcp_ prefix + 64 hex chars
     const apiKey = `mcp_${randomBytes(32).toString('hex')}`
 
-    // Store the SHA-256 hash, not the plaintext key
-    // This protects against database breaches
+    // Store the SHA-256 hash for API authentication
+    // This protects against database breaches for validation
     const keyHash = hashMcpKey(apiKey)
+
+    // Also store encrypted version for Claude CLI chat feature
+    // This allows the chat provider to retrieve the raw key
+    let encryptedKey: string | null = null
+    if (process.env.SESSION_ENCRYPTION_SECRET) {
+      encryptedKey = encryptSession(apiKey)
+    }
 
     await db.user.update({
       where: { id: currentUser.id },
-      data: { mcpApiKey: keyHash },
+      data: {
+        mcpApiKey: keyHash,
+        mcpApiKeyEncrypted: encryptedKey,
+      },
     })
 
     // Return the full key only on creation - user must save it
@@ -80,7 +91,10 @@ export async function DELETE() {
 
     await db.user.update({
       where: { id: currentUser.id },
-      data: { mcpApiKey: null },
+      data: {
+        mcpApiKey: null,
+        mcpApiKeyEncrypted: null,
+      },
     })
 
     return NextResponse.json({ success: true })

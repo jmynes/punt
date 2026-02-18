@@ -30,10 +30,13 @@ model User {
   isActive          Boolean   @default(true)
 
   // MCP API access
-  mcpApiKey String? @unique // API key for MCP authentication
+  mcpApiKey          String? @unique // SHA-256 hash of API key for authentication
+  mcpApiKeyEncrypted String?         // Encrypted raw API key for Claude CLI chat feature
 
   // Claude Chat API access
-  anthropicApiKey String? // User's own Anthropic API key for embedded chat
+  anthropicApiKey        String? // User's own Anthropic API key for embedded chat
+  chatProvider           String? // Preferred chat provider: "anthropic" | "claude-cli"
+  claudeSessionEncrypted String? // Encrypted Claude CLI session credentials (experimental)
 
   // Ticket relations
   assignedTickets  Ticket[]        @relation("Assignee")
@@ -59,6 +62,9 @@ model User {
 
   // Attachment relations
   uploadedAttachments Attachment[] @relation("Uploader")
+
+  // Chat relations
+  chatSessions ChatSession[]
 }
 
 // Auth.js Account model for OAuth providers (future-proofing)
@@ -163,6 +169,7 @@ model Project {
   invitations    Invitation[]
   sprintSettings ProjectSprintSettings?
   roles          Role[]
+  chatSessions   ChatSession[]
 }
 
 model ProjectMember {
@@ -570,4 +577,41 @@ model EmailVerificationToken {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// Chat session for storing conversation history
+model ChatSession {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Owner
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Optional project context (for project-scoped conversations)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([userId, updatedAt])
+}
+
+// Individual chat messages within a session
+model ChatMessage {
+  id        String   @id @default(cuid())
+  role      String // "user" | "assistant"
+  content   String
+  metadata  String? // JSON: tool calls, errors, etc.
+  createdAt DateTime @default(now())
+
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([sessionId, createdAt])
 }

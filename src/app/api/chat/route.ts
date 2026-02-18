@@ -1,15 +1,15 @@
 /**
  * POST /api/chat - Streaming chat endpoint with Claude
- * Proxies requests to Anthropic API using user's API key
+ * Routes to the appropriate provider based on user preference
+ * Optionally persists messages to a chat session
  */
 
-import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod/v4'
 import { requireAuth } from '@/lib/auth-helpers'
 import { buildSystemPrompt } from '@/lib/chat/context'
-import { executeTool } from '@/lib/chat/executor'
-import { type ChatToolName, chatTools } from '@/lib/chat/tools'
+import { getUserProvider, type StreamEvent } from '@/lib/chat/providers'
 import { db } from '@/lib/db'
+import type { ChatToolCall } from '@/types'
 
 const chatRequestSchema = z.object({
   messages: z.array(
@@ -24,26 +24,28 @@ const chatRequestSchema = z.object({
       ticketKey: z.string().optional(),
     })
     .optional(),
+  sessionId: z.string().nullish(), // Allow null, undefined, or string
 })
+
+/**
+ * Generate a session name from the first message
+ */
+function generateSessionName(firstMessage: string): string {
+  let name = firstMessage.slice(0, 50).trim()
+  if (firstMessage.length > 50) {
+    const lastSpace = name.lastIndexOf(' ')
+    if (lastSpace > 20) {
+      name = `${name.slice(0, lastSpace)}...`
+    } else {
+      name = `${name}...`
+    }
+  }
+  return name || 'New conversation'
+}
 
 export async function POST(request: Request) {
   try {
     const currentUser = await requireAuth()
-
-    // Get user's Anthropic API key
-    const user = await db.user.findUnique({
-      where: { id: currentUser.id },
-      select: { anthropicApiKey: true },
-    })
-
-    if (!user?.anthropicApiKey) {
-      return new Response(
-        JSON.stringify({
-          error: 'No Anthropic API key configured. Add your key in Profile > Integrations.',
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      )
-    }
 
     const body = await request.json()
     const result = chatRequestSchema.safeParse(body)
@@ -55,120 +57,142 @@ export async function POST(request: Request) {
       })
     }
 
-    const { messages, context } = result.data
+    const { messages, context, sessionId: providedSessionId } = result.data
+
+    // Get user's preferred provider
+    const provider = await getUserProvider(currentUser.id)
+
+    // Check if provider is configured
+    const isConfigured = await provider.isConfigured(currentUser.id)
+    if (!isConfigured) {
+      const providerName = provider.name
+      return new Response(
+        JSON.stringify({
+          error: `${providerName} is not configured. Set it up in Profile > Integrations.`,
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+
+    // Handle session creation/validation
+    let sessionId = providedSessionId
+    if (sessionId) {
+      // Verify ownership of existing session
+      const session = await db.chatSession.findUnique({
+        where: { id: sessionId },
+        select: { userId: true },
+      })
+      if (!session || session.userId !== currentUser.id) {
+        return new Response(JSON.stringify({ error: 'Invalid session' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+    } else {
+      // Create new session - get the last user message for the name
+      const lastUserMessage = messages.filter((m) => m.role === 'user').pop()
+      const sessionName = generateSessionName(lastUserMessage?.content || 'New conversation')
+
+      const session = await db.chatSession.create({
+        data: {
+          name: sessionName,
+          userId: currentUser.id,
+          projectId: context?.projectId || null,
+        },
+      })
+      sessionId = session.id
+    }
+
+    // Persist the user message (the last one in messages array)
+    const lastUserMessage = messages[messages.length - 1]
+    if (lastUserMessage && lastUserMessage.role === 'user') {
+      await db.chatMessage.create({
+        data: {
+          role: 'user',
+          content: lastUserMessage.content,
+          sessionId,
+        },
+      })
+    }
 
     // Build system prompt with context
     const systemPrompt = await buildSystemPrompt(context ?? {})
 
-    // Initialize Anthropic client with user's API key
-    const anthropic = new Anthropic({
-      apiKey: user.anthropicApiKey,
-    })
-
     // Create a readable stream for the response
     const encoder = new TextEncoder()
+    let controllerClosed = false
+
+    // Collect assistant response for persistence
+    let assistantContent = ''
+    const toolCalls: ChatToolCall[] = []
+
     const stream = new ReadableStream({
       async start(controller) {
+        const onEvent = (event: StreamEvent) => {
+          if (controllerClosed) return
+
+          // Collect content and tool calls for persistence
+          if (event.type === 'text' && event.content) {
+            assistantContent += event.content
+          } else if (event.type === 'tool_start' && event.name) {
+            toolCalls.push({
+              name: event.name,
+              input: event.input || {},
+              status: 'running',
+            })
+          } else if (event.type === 'tool_end' && event.name) {
+            const tool = toolCalls.find((t) => t.name === event.name && t.status === 'running')
+            if (tool) {
+              tool.status = 'completed'
+              tool.result = event.result
+              tool.success = event.success
+            }
+          }
+
+          // Also include sessionId in the response for the client
+          const eventWithSession = { ...event, sessionId }
+
+          try {
+            const data = JSON.stringify(eventWithSession)
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+          } catch {
+            // Controller may have been closed
+          }
+        }
+
         try {
-          // Convert messages to Anthropic format
-          // Use Anthropic.Messages.MessageParam type to allow both text and tool results
-          let currentMessages: Anthropic.Messages.MessageParam[] = messages.map((m) => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-          }))
+          await provider.sendMessage({
+            messages,
+            context,
+            userId: currentUser.id,
+            systemPrompt,
+            onEvent,
+          })
 
-          // Run conversation loop (handles tool calls)
-          let continueLoop = true
-
-          while (continueLoop) {
-            const response = await anthropic.messages.create({
-              model: 'claude-sonnet-4-20250514',
-              max_tokens: 4096,
-              system: systemPrompt,
-              tools: chatTools,
-              messages: currentMessages,
+          // Persist assistant message after completion
+          if (assistantContent || toolCalls.length > 0) {
+            await db.chatMessage.create({
+              data: {
+                role: 'assistant',
+                content: assistantContent,
+                metadata: toolCalls.length > 0 ? JSON.stringify({ toolCalls }) : null,
+                sessionId: sessionId!,
+              },
             })
 
-            // Process response content
-            let hasToolUse = false
-            const toolResults: Array<{
-              type: 'tool_result'
-              tool_use_id: string
-              content: string
-            }> = []
-
-            for (const block of response.content) {
-              if (block.type === 'text') {
-                // Stream text to client
-                const data = JSON.stringify({ type: 'text', content: block.text })
-                controller.enqueue(encoder.encode(`data: ${data}\n\n`))
-              } else if (block.type === 'tool_use') {
-                hasToolUse = true
-
-                // Notify client about tool execution
-                const toolStart = JSON.stringify({
-                  type: 'tool_start',
-                  name: block.name,
-                  input: block.input,
-                })
-                controller.enqueue(encoder.encode(`data: ${toolStart}\n\n`))
-
-                // Execute the tool
-                const toolResult = await executeTool(
-                  block.name as ChatToolName,
-                  block.input as Record<string, unknown>,
-                  currentUser.id,
-                )
-
-                // Notify client about tool result
-                const toolEnd = JSON.stringify({
-                  type: 'tool_end',
-                  name: block.name,
-                  result: toolResult.result,
-                  success: toolResult.success,
-                })
-                controller.enqueue(encoder.encode(`data: ${toolEnd}\n\n`))
-
-                toolResults.push({
-                  type: 'tool_result',
-                  tool_use_id: block.id,
-                  content: toolResult.result,
-                })
-              }
-            }
-
-            // If there were tool calls, continue the conversation
-            if (hasToolUse && response.stop_reason === 'tool_use') {
-              // Add assistant response and tool results to messages
-              currentMessages = [
-                ...currentMessages,
-                { role: 'assistant' as const, content: response.content },
-                { role: 'user' as const, content: toolResults },
-              ]
-            } else {
-              continueLoop = false
-            }
+            // Update session timestamp
+            await db.chatSession.update({
+              where: { id: sessionId! },
+              data: { updatedAt: new Date() },
+            })
           }
-
-          // Send done signal
-          controller.enqueue(encoder.encode('data: {"type":"done"}\n\n'))
-          controller.close()
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'An error occurred'
-
-          // Check for specific Anthropic errors
-          let userMessage = errorMessage
-          if (errorMessage.includes('Invalid API Key')) {
-            userMessage =
-              'Invalid Anthropic API key. Please check your key in Profile > Integrations.'
-          } else if (errorMessage.includes('rate_limit')) {
-            userMessage = 'Rate limit exceeded. Please wait a moment and try again.'
-          }
-
-          const errorData = JSON.stringify({ type: 'error', error: userMessage })
-          controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
-          controller.close()
+          onEvent({ type: 'error', error: errorMessage })
         }
+
+        controllerClosed = true
+        controller.close()
       },
     })
 

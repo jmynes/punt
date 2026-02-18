@@ -7,6 +7,8 @@ import type { Permission as PermissionType } from '@/lib/permissions'
 // Re-export Prisma types
 export type {
   Attachment,
+  ChatMessage,
+  ChatSession,
   Column,
   Comment,
   Label,
@@ -440,4 +442,56 @@ export interface RepositoryContext {
   ticketTitle?: string
   // Generated branch name (when ticket context provided)
   suggestedBranch?: string
+}
+
+// ============================================================================
+// Chat Types
+// ============================================================================
+
+// Chat message roles
+export const CHAT_ROLES = ['user', 'assistant'] as const
+export type ChatRole = (typeof CHAT_ROLES)[number]
+
+// Tool call status
+export const TOOL_CALL_STATUSES = ['pending', 'running', 'completed'] as const
+export type ToolCallStatus = (typeof TOOL_CALL_STATUSES)[number]
+
+// Tool call data stored in message metadata
+export interface ChatToolCall {
+  name: string
+  input: Record<string, unknown>
+  result?: string
+  success?: boolean
+  status: ToolCallStatus
+}
+
+// Metadata for chat messages
+export interface ChatMessageMetadata {
+  toolCalls?: ChatToolCall[]
+  error?: string
+}
+
+// Chat session summary for listing
+export interface ChatSessionSummary {
+  id: string
+  name: string
+  projectId: string | null
+  createdAt: Date
+  updatedAt: Date
+  messageCount: number
+  lastMessage?: string
+}
+
+// Chat message data
+export interface ChatMessageData {
+  id: string
+  role: ChatRole
+  content: string
+  metadata: ChatMessageMetadata | null
+  createdAt: Date
+}
+
+// Full chat session with messages
+export interface ChatSessionWithMessages extends ChatSessionSummary {
+  messages: ChatMessageData[]
 }
