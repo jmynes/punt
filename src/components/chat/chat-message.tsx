@@ -2,12 +2,35 @@
 
 import { BotIcon, CheckCircleIcon, WrenchIcon, XCircleIcon } from 'lucide-react'
 import type React from 'react'
+import { useEffect, useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import type { UserSummary } from '@/types'
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+function useElapsedSeconds(startTime: Date | undefined, isActive: boolean): number {
+  const [elapsed, setElapsed] = useState(() => {
+    if (!startTime) return 0
+    return Math.floor((Date.now() - new Date(startTime).getTime()) / 1000)
+  })
+
+  useEffect(() => {
+    if (!isActive || !startTime) return
+
+    // Update immediately in case component re-renders
+    setElapsed(Math.floor((Date.now() - new Date(startTime).getTime()) / 1000))
+
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - new Date(startTime).getTime()) / 1000))
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [startTime, isActive])
+
+  return elapsed
 }
 
 export interface ChatMessage {
@@ -34,6 +57,8 @@ interface ChatMessageProps {
 
 export function ChatMessageComponent({ message, user }: ChatMessageProps) {
   const isUser = message.role === 'user'
+  const isThinking = !isUser && message.sentAt && !message.completedAt
+  const elapsedSeconds = useElapsedSeconds(message.sentAt, isThinking)
 
   return (
     <div className={cn('flex gap-3', isUser ? 'flex-row-reverse' : 'flex-row')}>
@@ -87,9 +112,15 @@ export function ChatMessageComponent({ message, user }: ChatMessageProps) {
               isUser ? 'text-blue-200' : 'text-zinc-500',
             )}
           >
-            {message.sentAt && <span>{formatTime(new Date(message.sentAt))}</span>}
-            {message.completedAt && !isUser && (
-              <span>• done {formatTime(new Date(message.completedAt))}</span>
+            {isThinking ? (
+              <span className="text-yellow-400">{elapsedSeconds}s</span>
+            ) : (
+              <>
+                {message.sentAt && <span>{formatTime(new Date(message.sentAt))}</span>}
+                {message.completedAt && !isUser && (
+                  <span>• done {formatTime(new Date(message.completedAt))}</span>
+                )}
+              </>
             )}
           </div>
         )}

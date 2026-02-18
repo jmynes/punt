@@ -99,6 +99,8 @@ export function ChatPanel() {
           content: m.content,
           toolCalls: transformMetadataToToolCalls(m.metadata),
           sentAt: new Date(m.createdAt),
+          // Messages loaded from DB are already completed
+          completedAt: m.role === 'assistant' ? new Date(m.createdAt) : undefined,
         }))
         setMessages(loadedMessages)
       } else if (!currentSessionId) {
@@ -270,7 +272,7 @@ export function ChatPanel() {
           return
         }
         const errorMessage = error instanceof Error ? error.message : 'An error occurred'
-        updateMessage(assistantId, { content: `Error: ${errorMessage}` })
+        updateMessage(assistantId, { content: `Error: ${errorMessage}`, completedAt: new Date() })
       } finally {
         setIsLoading(false)
         abortControllerRef.current = null
