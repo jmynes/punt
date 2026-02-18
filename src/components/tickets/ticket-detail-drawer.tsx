@@ -1421,7 +1421,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     Attachments
                   </Label>
                   <div className="flex items-center gap-2">
-                    {tempAttachments.length > 1 && (
+                    {tempAttachments.length >= 1 && (
                       <Button
                         variant="ghost"
                         size="sm"
