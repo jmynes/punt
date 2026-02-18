@@ -24,6 +24,7 @@ const environmentBranchSchema = z.object({
   id: z.string(),
   environment: z.string(),
   branchName: z.string(),
+  color: z.string().optional(),
 })
 
 const commitPatternSchema = z.object({

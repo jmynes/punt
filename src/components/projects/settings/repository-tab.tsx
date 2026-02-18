@@ -566,10 +566,10 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                               <PopoverContent
                                 side="bottom"
                                 align="end"
-                                className="w-[280px] p-3 bg-zinc-900 border-zinc-700"
+                                className="w-[280px] px-3 py-0 bg-zinc-900 border-zinc-700"
                               >
                                 <ColorPickerBody
-                                  activeColor={branch.color || DEFAULT_ENVIRONMENT_COLORS[0]}
+                                  activeColor={branch.color ?? DEFAULT_ENVIRONMENT_COLORS[0]}
                                   onColorChange={(color) =>
                                     updateEnvironmentBranch(branch.id, 'color', color)
                                   }
