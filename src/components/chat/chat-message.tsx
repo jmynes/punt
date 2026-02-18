@@ -1,6 +1,6 @@
 'use client'
 
-import { BotIcon, CheckCircleIcon, WrenchIcon, XCircleIcon } from 'lucide-react'
+import { BotIcon, CheckCircleIcon, TimerIcon, WrenchIcon, XCircleIcon } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -112,15 +112,30 @@ export function ChatMessageComponent({ message, user }: ChatMessageProps) {
               isUser ? 'text-blue-200' : 'text-zinc-500',
             )}
           >
-            {isThinking ? (
-              <span className="text-yellow-400">{elapsedSeconds}s</span>
+            {isUser ? (
+              message.sentAt && <span>{formatTime(new Date(message.sentAt))}</span>
+            ) : isThinking ? (
+              <span className="inline-flex items-center gap-1 text-yellow-400">
+                <TimerIcon className="h-3 w-3" />
+                {elapsedSeconds}s
+              </span>
             ) : (
-              <>
-                {message.sentAt && <span>{formatTime(new Date(message.sentAt))}</span>}
-                {message.completedAt && !isUser && (
-                  <span>• done {formatTime(new Date(message.completedAt))}</span>
-                )}
-              </>
+              message.completedAt && (
+                <span>
+                  {formatTime(new Date(message.completedAt))}
+                  {message.sentAt && (
+                    <span className="ml-1 inline-flex items-center gap-0.5 text-yellow-400">
+                      <TimerIcon className="h-3 w-3" />(
+                      {Math.round(
+                        (new Date(message.completedAt).getTime() -
+                          new Date(message.sentAt).getTime()) /
+                          1000,
+                      )}
+                      s)
+                    </span>
+                  )}
+                </span>
+              )
             )}
           </div>
         )}
