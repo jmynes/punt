@@ -2,11 +2,14 @@
 
 import { GripHorizontalIcon, SendIcon } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { SlashCommandMenu } from '@/components/chat/slash-command-menu'
 import { Button } from '@/components/ui/button'
+import { filterCommands, parseSlashCommand, type SlashCommand } from '@/lib/chat/commands'
 import { cn } from '@/lib/utils'
 
 interface ChatInputProps {
   onSend: (message: string) => void
+  onCommand: (command: SlashCommand, args?: string) => void
   disabled?: boolean
   placeholder?: string
 }
@@ -17,11 +20,15 @@ const MAX_HEIGHT = 300
 
 export function ChatInput({
   onSend,
+  onCommand,
   disabled,
   placeholder = 'Ask me about your tickets...',
 }: ChatInputProps) {
   const [value, setValue] = useState('')
   const [height, setHeight] = useState(MIN_HEIGHT)
+  const [showCommandMenu, setShowCommandMenu] = useState(false)
+  const [commandFilter, setCommandFilter] = useState('')
+  const [selectedIndex, setSelectedIndex] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
@@ -93,9 +100,57 @@ export function ChatInput({
     }
   }, [value])
 
+  // Update command menu state based on input value
+  useEffect(() => {
+    if (value.startsWith('/')) {
+      const parsed = parseSlashCommand(value)
+      if (parsed.partial !== undefined) {
+        setCommandFilter(parsed.partial)
+        setShowCommandMenu(true)
+      } else if (parsed.command) {
+        // Full command typed, hide menu
+        setShowCommandMenu(false)
+      } else {
+        // Just "/" typed
+        setCommandFilter('')
+        setShowCommandMenu(true)
+      }
+    } else {
+      setShowCommandMenu(false)
+      setCommandFilter('')
+    }
+  }, [value])
+
+  const handleCommandSelect = useCallback(
+    (command: SlashCommand) => {
+      if (command.requiresArg) {
+        // Insert command and wait for args
+        setValue(`/${command.name} `)
+        setShowCommandMenu(false)
+        textareaRef.current?.focus()
+      } else {
+        // Execute command immediately
+        onCommand(command)
+        setValue('')
+        setShowCommandMenu(false)
+      }
+    },
+    [onCommand],
+  )
+
   const handleSubmit = () => {
     const trimmed = value.trim()
     if (trimmed && !disabled) {
+      // Check if it's a slash command
+      const parsed = parseSlashCommand(trimmed)
+      if (parsed.isCommand && parsed.command) {
+        onCommand(parsed.command, parsed.args)
+        setValue('')
+        setHeight(MIN_HEIGHT)
+        setShowCommandMenu(false)
+        return
+      }
+
       onSend(trimmed)
       setValue('')
       setHeight(MIN_HEIGHT) // Reset to default after sending
@@ -103,6 +158,33 @@ export function ChatInput({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    const commands = filterCommands(commandFilter)
+
+    if (showCommandMenu && commands.length > 0) {
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault()
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : commands.length - 1))
+          return
+        case 'ArrowDown':
+          e.preventDefault()
+          setSelectedIndex((prev) => (prev < commands.length - 1 ? prev + 1 : 0))
+          return
+        case 'Enter':
+          e.preventDefault()
+          handleCommandSelect(commands[selectedIndex])
+          return
+        case 'Escape':
+          e.preventDefault()
+          setShowCommandMenu(false)
+          return
+        case 'Tab':
+          e.preventDefault()
+          handleCommandSelect(commands[selectedIndex])
+          return
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
@@ -119,7 +201,15 @@ export function ChatInput({
         <GripHorizontalIcon className="h-3 w-3 text-zinc-600" />
       </div>
 
-      <div className="flex items-center gap-2 px-4 pb-4">
+      <div className="relative flex items-center gap-2 px-4 pb-4">
+        <SlashCommandMenu
+          open={showCommandMenu}
+          filter={commandFilter}
+          onSelect={handleCommandSelect}
+          onClose={() => setShowCommandMenu(false)}
+          selectedIndex={selectedIndex}
+          onSelectedIndexChange={setSelectedIndex}
+        />
         <textarea
           ref={textareaRef}
           value={value}

@@ -1,5 +1,6 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import { BotIcon, KeyIcon, Loader2Icon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -11,10 +12,20 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import {
+  chatKeys,
+  useChatSession,
+  useDeleteChatSession,
+  useRenameChatSession,
+} from '@/hooks/queries/use-chat-sessions'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { getHelpText, type SlashCommand } from '@/lib/chat/commands'
+import { showToast } from '@/lib/toast'
+import { transformMetadataToToolCalls, useChatStore } from '@/stores/chat-store'
 import { useUIStore } from '@/stores/ui-store'
 import { ChatInput } from './chat-input'
 import { type ChatMessage, ChatMessageComponent } from './chat-message'
+import { SessionSelector } from './session-selector'
 
 interface StreamEvent {
   type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error'
@@ -28,12 +39,27 @@ interface StreamEvent {
 
 export function ChatPanel() {
   const { chatPanelOpen, setChatPanelOpen, chatContext } = useUIStore()
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const {
+    currentSessionId,
+    setCurrentSessionId,
+    messages,
+    setMessages,
+    addMessage,
+    updateMessage,
+    clearMessages,
+    _hasHydrated,
+  } = useChatStore()
   const [isLoading, setIsLoading] = useState(false)
   const [isConfigured, setIsConfigured] = useState<boolean | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const currentUser = useCurrentUser()
+  const queryClient = useQueryClient()
+
+  // React Query hooks for session operations
+  const { data: sessionData, isLoading: isLoadingSession } = useChatSession(currentSessionId)
+  const renameSession = useRenameChatSession()
+  const deleteSession = useDeleteChatSession()
 
   // Check if user has configured their chat provider
   useEffect(() => {
@@ -58,58 +84,70 @@ export function ChatPanel() {
     }
   }, [chatPanelOpen, isConfigured])
 
+  // Load messages when session changes
+  useEffect(() => {
+    if (sessionData?.messages) {
+      const loadedMessages: ChatMessage[] = sessionData.messages.map((m) => ({
+        id: m.id,
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+        toolCalls: transformMetadataToToolCalls(m.metadata),
+      }))
+      setMessages(loadedMessages)
+    }
+  }, [sessionData, setMessages])
+
   // Scroll to bottom on new messages
   // biome-ignore lint/correctness/useExhaustiveDependencies: we need to scroll when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const handleStreamEvent = useCallback((messageId: string, event: StreamEvent) => {
-    setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id !== messageId) return m
+  const handleStreamEvent = useCallback(
+    (messageId: string, event: StreamEvent) => {
+      const message = messages.find((m) => m.id === messageId)
+      if (!message) return
 
-        switch (event.type) {
-          case 'text':
-            return { ...m, content: m.content + (event.content || '') }
+      switch (event.type) {
+        case 'text':
+          updateMessage(messageId, { content: message.content + (event.content || '') })
+          break
 
-          case 'tool_start':
-            return {
-              ...m,
-              toolCalls: [
-                ...(m.toolCalls || []),
-                {
-                  name: event.name || 'unknown',
-                  input: event.input || {},
-                  status: 'running' as const,
-                },
-              ],
-            }
+        case 'tool_start':
+          updateMessage(messageId, {
+            toolCalls: [
+              ...(message.toolCalls || []),
+              {
+                name: event.name || 'unknown',
+                input: event.input || {},
+                status: 'running' as const,
+              },
+            ],
+          })
+          break
 
-          case 'tool_end':
-            return {
-              ...m,
-              toolCalls: m.toolCalls?.map((t) =>
-                t.name === event.name && t.status === 'running'
-                  ? {
-                      ...t,
-                      status: 'completed' as const,
-                      result: event.result,
-                      success: event.success,
-                    }
-                  : t,
-              ),
-            }
+        case 'tool_end':
+          updateMessage(messageId, {
+            toolCalls: message.toolCalls?.map((t) =>
+              t.name === event.name && t.status === 'running'
+                ? {
+                    ...t,
+                    status: 'completed' as const,
+                    result: event.result,
+                    success: event.success,
+                  }
+                : t,
+            ),
+          })
+          break
 
-          case 'error':
-            return { ...m, content: `${m.content}\n\nError: ${event.error}` }
-
-          default:
-            return m
-        }
-      }),
-    )
-  }, [])
+        case 'error':
+          updateMessage(messageId, { content: `${message.content}\n\nError: ${event.error}` })
+          break
+      }
+    },
+    [messages, updateMessage],
+  )
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -121,7 +159,7 @@ export function ChatPanel() {
         role: 'user',
         content,
       }
-      setMessages((prev) => [...prev, userMessage])
+      addMessage(userMessage)
       setIsLoading(true)
 
       // Create assistant message placeholder
@@ -132,13 +170,13 @@ export function ChatPanel() {
         content: '',
         toolCalls: [],
       }
-      setMessages((prev) => [...prev, assistantMessage])
+      addMessage(assistantMessage)
 
       try {
         // Create abort controller for this request
         abortControllerRef.current = new AbortController()
 
-        // Build message history for API
+        // Build message history for API (include user message we just added)
         const apiMessages = [...messages, userMessage].map((m) => ({
           role: m.role,
           content: m.content,
@@ -150,6 +188,7 @@ export function ChatPanel() {
           body: JSON.stringify({
             messages: apiMessages,
             context: chatContext,
+            sessionId: currentSessionId,
           }),
           signal: abortControllerRef.current.signal,
         })
@@ -167,6 +206,7 @@ export function ChatPanel() {
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
         let buffer = ''
+        let newSessionId: string | null = null
 
         while (true) {
           const { done, value } = await reader.read()
@@ -180,7 +220,10 @@ export function ChatPanel() {
             if (line.startsWith('data: ')) {
               const data = line.slice(6)
               try {
-                const event: StreamEvent = JSON.parse(data)
+                const event: StreamEvent & { sessionId?: string } = JSON.parse(data)
+                if (event.sessionId && !currentSessionId) {
+                  newSessionId = event.sessionId
+                }
                 handleStreamEvent(assistantId, event)
               } catch {
                 // Ignore parse errors
@@ -188,32 +231,106 @@ export function ChatPanel() {
             }
           }
         }
+
+        // If a new session was created, update the store
+        if (newSessionId) {
+          setCurrentSessionId(newSessionId)
+          queryClient.invalidateQueries({ queryKey: chatKeys.all })
+        }
       } catch (error) {
         // Ignore abort errors (user cancelled)
         if (error instanceof Error && error.name === 'AbortError') {
           return
         }
         const errorMessage = error instanceof Error ? error.message : 'An error occurred'
-        setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, content: `Error: ${errorMessage}` } : m)),
-        )
+        updateMessage(assistantId, { content: `Error: ${errorMessage}` })
       } finally {
         setIsLoading(false)
         abortControllerRef.current = null
       }
     },
-    [messages, chatContext, isLoading, handleStreamEvent],
+    [
+      messages,
+      chatContext,
+      isLoading,
+      handleStreamEvent,
+      addMessage,
+      updateMessage,
+      currentSessionId,
+      setCurrentSessionId,
+      queryClient,
+    ],
   )
 
-  const clearChat = () => {
+  const clearChat = useCallback(() => {
     // Abort any in-progress request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
-    setMessages([])
+    clearMessages()
     setIsLoading(false)
-  }
+  }, [clearMessages])
+
+  // Handle slash commands
+  const handleCommand = useCallback(
+    (command: SlashCommand, args?: string) => {
+      switch (command.name) {
+        case 'new':
+          clearChat()
+          setCurrentSessionId(null)
+          showToast.success('Started new conversation')
+          break
+
+        case 'clear':
+          clearChat()
+          showToast.success('Conversation cleared')
+          break
+
+        case 'rename':
+          if (!currentSessionId) {
+            showToast.error('No conversation to rename')
+            return
+          }
+          if (!args?.trim()) {
+            showToast.error('Please provide a name: /rename <name>')
+            return
+          }
+          renameSession.mutate({ sessionId: currentSessionId, name: args.trim() })
+          break
+
+        case 'delete':
+          if (!currentSessionId) {
+            showToast.error('No conversation to delete')
+            return
+          }
+          if (confirm('Delete this conversation?')) {
+            deleteSession.mutate(currentSessionId)
+            setCurrentSessionId(null)
+            clearMessages()
+          }
+          break
+
+        case 'help':
+          // Add a local help message
+          addMessage({
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: getHelpText(),
+          })
+          break
+      }
+    },
+    [
+      currentSessionId,
+      setCurrentSessionId,
+      clearChat,
+      clearMessages,
+      renameSession,
+      deleteSession,
+      addMessage,
+    ],
+  )
 
   return (
     <Sheet open={chatPanelOpen} onOpenChange={setChatPanelOpen}>
@@ -224,7 +341,8 @@ export function ChatPanel() {
               <BotIcon className="h-4 w-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <SheetTitle className="text-base">Claude Chat</SheetTitle>
+              <SheetTitle className="text-base sr-only">Claude Chat</SheetTitle>
+              <SessionSelector currentSessionId={currentSessionId} onSelect={setCurrentSessionId} />
               <SheetDescription className="text-xs">
                 Manage tickets with natural language
               </SheetDescription>
@@ -266,7 +384,11 @@ export function ChatPanel() {
 
         {/* Input area */}
         {isConfigured !== false && (
-          <ChatInput onSend={sendMessage} disabled={isLoading || isConfigured === null} />
+          <ChatInput
+            onSend={sendMessage}
+            onCommand={handleCommand}
+            disabled={isLoading || isConfigured === null}
+          />
         )}
       </SheetContent>
     </Sheet>
