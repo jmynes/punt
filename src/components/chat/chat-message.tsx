@@ -121,17 +121,17 @@ export function ChatMessageComponent({ message, user }: ChatMessageProps) {
               </span>
             ) : (
               message.completedAt && (
-                <span>
+                <span className="inline-flex items-center">
                   {formatTime(new Date(message.completedAt))}
                   {message.sentAt && (
                     <span className="ml-1 inline-flex items-center gap-0.5 text-yellow-400">
-                      <TimerIcon className="h-3 w-3" />(
+                      <TimerIcon className="h-3 w-3" />
                       {Math.round(
                         (new Date(message.completedAt).getTime() -
                           new Date(message.sentAt).getTime()) /
                           1000,
                       )}
-                      s)
+                      s
                     </span>
                   )}
                 </span>

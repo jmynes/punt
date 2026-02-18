@@ -68,7 +68,7 @@ export function SessionSelector({ currentSessionId, onSelect, projectId }: Sessi
                 {sessions.map((session) => (
                   <CommandItem
                     key={session.id}
-                    value={session.name}
+                    value={`${session.id}-${session.name}`}
                     onSelect={() => handleSelect(session.id)}
                     className="flex items-center justify-between group"
                   >
