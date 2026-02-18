@@ -151,13 +151,14 @@ export class ClaudeCliProvider implements ChatProvider {
   }): Promise<void> {
     const { tempDir, credentials, messages, systemPrompt, mcpApiKey, onEvent } = params
 
-    // Set up temp directory with credentials
+    // Set up temp directory with credentials (restrictive permissions for security)
     const claudeDir = join(tempDir, '.claude')
-    await mkdir(claudeDir, { recursive: true })
+    await mkdir(claudeDir, { recursive: true, mode: 0o700 })
 
     // Write credentials file (note: Claude CLI uses .credentials.json with leading dot)
+    // Use restrictive permissions (owner read/write only) since this contains auth tokens
     const credentialsPath = join(claudeDir, '.credentials.json')
-    await writeFile(credentialsPath, JSON.stringify(credentials))
+    await writeFile(credentialsPath, JSON.stringify(credentials), { mode: 0o600 })
 
     // Write MCP config (PUNT server only)
     const mcpConfig = {
@@ -175,8 +176,9 @@ export class ClaudeCliProvider implements ChatProvider {
           }
         : {},
     }
+    // Write MCP config with restrictive permissions (contains API key)
     const mcpConfigPath = join(tempDir, '.mcp.json')
-    await writeFile(mcpConfigPath, JSON.stringify(mcpConfig))
+    await writeFile(mcpConfigPath, JSON.stringify(mcpConfig), { mode: 0o600 })
 
     // Build the prompt with system context and conversation history
     const fullPrompt = this.buildPrompt(messages, systemPrompt)
