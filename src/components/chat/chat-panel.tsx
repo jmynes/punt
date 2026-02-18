@@ -247,7 +247,7 @@ export function ChatPanel() {
           {isConfigured === false ? (
             <NotConfiguredMessage onNavigate={() => setChatPanelOpen(false)} />
           ) : messages.length === 0 ? (
-            <EmptyState />
+            <EmptyState onSuggestionClick={sendMessage} />
           ) : (
             <div className="flex flex-col gap-4">
               {messages.map((message) => (
@@ -309,7 +309,7 @@ function NotConfiguredMessage({ onNavigate }: { onNavigate: () => void }) {
   )
 }
 
-function EmptyState() {
+function EmptyState({ onSuggestionClick }: { onSuggestionClick: (message: string) => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-600/20">
@@ -328,9 +328,14 @@ function EmptyState() {
           'Show sprint status',
           'What tickets are high priority?',
         ].map((suggestion) => (
-          <span key={suggestion} className="rounded-full bg-zinc-800 px-3 py-1.5 text-zinc-300">
+          <button
+            type="button"
+            key={suggestion}
+            onClick={() => onSuggestionClick(suggestion)}
+            className="rounded-full bg-zinc-800 px-3 py-1.5 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100 transition-colors cursor-pointer"
+          >
             {suggestion}
-          </span>
+          </button>
         ))}
       </div>
     </div>
