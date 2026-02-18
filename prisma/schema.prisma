@@ -30,7 +30,8 @@ model User {
   isActive          Boolean   @default(true)
 
   // MCP API access
-  mcpApiKey String? @unique // API key for MCP authentication
+  mcpApiKey          String? @unique // SHA-256 hash of API key for authentication
+  mcpApiKeyEncrypted String?         // Encrypted raw API key for Claude CLI chat feature
 
   // Claude Chat API access
   anthropicApiKey        String? // User's own Anthropic API key for embedded chat

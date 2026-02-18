@@ -83,10 +83,10 @@ export class ClaudeCliProvider implements ChatProvider {
   async sendMessage(params: ChatProviderParams): Promise<void> {
     const { messages, userId, systemPrompt, onEvent } = params
 
-    // Get user's encrypted session
+    // Get user's encrypted session and MCP key
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { claudeSessionEncrypted: true, mcpApiKey: true },
+      select: { claudeSessionEncrypted: true, mcpApiKeyEncrypted: true },
     })
 
     if (!user?.claudeSessionEncrypted) {
@@ -118,6 +118,17 @@ export class ClaudeCliProvider implements ChatProvider {
       return
     }
 
+    // Decrypt MCP API key if available (for PUNT MCP server access)
+    let mcpApiKey: string | null = null
+    if (user.mcpApiKeyEncrypted) {
+      try {
+        mcpApiKey = decryptSession(user.mcpApiKeyEncrypted)
+      } catch {
+        // MCP key decryption failed - chat will work but without PUNT tools
+        console.warn('[Claude CLI] Failed to decrypt MCP API key')
+      }
+    }
+
     // Create temporary directory for this session
     const sessionId = randomUUID()
     const tempDir = join(tmpdir(), `punt-chat-${sessionId}`)
@@ -128,7 +139,7 @@ export class ClaudeCliProvider implements ChatProvider {
         credentials,
         messages,
         systemPrompt,
-        mcpApiKey: user.mcpApiKey,
+        mcpApiKey,
         onEvent,
       })
     } finally {
@@ -170,7 +181,7 @@ export class ClaudeCliProvider implements ChatProvider {
               args: ['--dir', join(process.cwd(), 'mcp'), 'exec', 'tsx', 'src/index.ts'],
               env: {
                 MCP_API_KEY: mcpApiKey,
-                MCP_BASE_URL: process.env.MCP_BASE_URL || 'http://localhost:3000',
+                PUNT_API_URL: process.env.PUNT_API_URL || 'http://localhost:3000',
               },
             },
           }
