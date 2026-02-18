@@ -198,7 +198,7 @@ export function SidebarContent({
           )
         })}
         {/* Profile with collapsible tabs */}
-        <div>
+        <div className="pl-2">
           <div className="flex items-center">
             <button
               type="button"
@@ -275,7 +275,7 @@ export function SidebarContent({
           </CollapsibleSection>
         </div>
         {/* Preferences with collapsible tabs */}
-        <div>
+        <div className="pl-2">
           <div className="flex items-center">
             <button
               type="button"
