@@ -1,7 +1,7 @@
 'use client'
 
-import { SendIcon } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { GripHorizontalIcon, SendIcon } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -17,7 +17,12 @@ export function ChatInput({
   placeholder = 'Ask me about your tickets...',
 }: ChatInputProps) {
   const [value, setValue] = useState('')
+  const [height, setHeight] = useState(40) // Default single row height
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const isDraggingRef = useRef(false)
+  const startYRef = useRef(0)
+  const startHeightRef = useRef(0)
 
   // Autofocus when component mounts
   useEffect(() => {
@@ -29,15 +34,40 @@ export function ChatInput({
     }
   }, [disabled])
 
-  // Auto-resize textarea when value changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: we need to resize when value changes
+  // Handle drag resize from top
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      isDraggingRef.current = true
+      startYRef.current = e.clientY
+      startHeightRef.current = height
+      document.body.style.cursor = 'ns-resize'
+      document.body.style.userSelect = 'none'
+    },
+    [height],
+  )
+
   useEffect(() => {
-    const textarea = textareaRef.current
-    if (textarea) {
-      textarea.style.height = 'auto'
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return
+      // Dragging up (negative deltaY) should increase height
+      const deltaY = startYRef.current - e.clientY
+      const newHeight = Math.min(300, Math.max(40, startHeightRef.current + deltaY))
+      setHeight(newHeight)
     }
-  }, [value])
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
 
   const handleSubmit = () => {
     const trimmed = value.trim()
@@ -55,30 +85,40 @@ export function ChatInput({
   }
 
   return (
-    <div className="flex items-end gap-2 border-t border-zinc-800 bg-zinc-900 p-4">
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        disabled={disabled}
-        rows={1}
-        className={cn(
-          'flex-1 resize-none rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm',
-          'text-zinc-100 placeholder:text-zinc-500',
-          'focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
-        )}
-      />
-      <Button
-        onClick={handleSubmit}
-        disabled={disabled || !value.trim()}
-        size="icon"
-        className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white"
+    <div ref={containerRef} className="border-t border-zinc-800 bg-zinc-900">
+      {/* Drag handle at top */}
+      <div
+        onMouseDown={handleMouseDown}
+        className="flex items-center justify-center h-4 cursor-ns-resize hover:bg-zinc-800 transition-colors"
       >
-        <SendIcon className="h-4 w-4" />
-      </Button>
+        <GripHorizontalIcon className="h-3 w-3 text-zinc-600" />
+      </div>
+
+      <div className="flex items-center gap-2 px-4 pb-4">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={disabled}
+          style={{ height: `${height}px` }}
+          className={cn(
+            'flex-1 resize-none rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm',
+            'text-zinc-100 placeholder:text-zinc-500',
+            'focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+          )}
+        />
+        <Button
+          onClick={handleSubmit}
+          disabled={disabled || !value.trim()}
+          size="icon"
+          className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white"
+        >
+          <SendIcon className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   )
 }
