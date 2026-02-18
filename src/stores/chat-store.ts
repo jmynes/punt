@@ -50,7 +50,16 @@ export const useChatStore = create<ChatState>()(
         })),
       updateMessage: (id, updates) =>
         set((state) => ({
-          messages: state.messages.map((m) => (m.id === id ? { ...m, ...updates } : m)),
+          messages: state.messages.map((m) => {
+            if (m.id !== id) return m
+            // Handle text append specially - if updates has appendContent, append it
+            const newContent =
+              'appendContent' in updates
+                ? m.content + ((updates as { appendContent: string }).appendContent || '')
+                : (updates.content ?? m.content)
+            const { appendContent: _, ...rest } = updates as { appendContent?: string }
+            return { ...m, ...rest, content: newContent }
+          }),
         })),
       clearMessages: () => set({ messages: [] }),
 

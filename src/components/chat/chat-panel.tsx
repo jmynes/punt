@@ -116,48 +116,59 @@ export function ChatPanel() {
 
   const handleStreamEvent = useCallback(
     (messageId: string, event: StreamEvent) => {
-      const message = messages.find((m) => m.id === messageId)
-      if (!message) return
-
       switch (event.type) {
         case 'text':
-          updateMessage(messageId, { content: message.content + (event.content || '') })
+          // Use appendContent to avoid stale closure issues
+          updateMessage(messageId, { appendContent: event.content || '' } as Partial<ChatMessage>)
           break
 
-        case 'tool_start':
-          updateMessage(messageId, {
-            toolCalls: [
-              ...(message.toolCalls || []),
-              {
-                name: event.name || 'unknown',
-                input: event.input || {},
-                status: 'running' as const,
-              },
-            ],
-          })
+        case 'tool_start': {
+          // For tool calls, we need to read current state - use the store directly
+          const currentMessages = useChatStore.getState().messages
+          const message = currentMessages.find((m) => m.id === messageId)
+          if (message) {
+            updateMessage(messageId, {
+              toolCalls: [
+                ...(message.toolCalls || []),
+                {
+                  name: event.name || 'unknown',
+                  input: event.input || {},
+                  status: 'running' as const,
+                },
+              ],
+            })
+          }
           break
+        }
 
-        case 'tool_end':
-          updateMessage(messageId, {
-            toolCalls: message.toolCalls?.map((t) =>
-              t.name === event.name && t.status === 'running'
-                ? {
-                    ...t,
-                    status: 'completed' as const,
-                    result: event.result,
-                    success: event.success,
-                  }
-                : t,
-            ),
-          })
+        case 'tool_end': {
+          const msgs = useChatStore.getState().messages
+          const msg = msgs.find((m) => m.id === messageId)
+          if (msg) {
+            updateMessage(messageId, {
+              toolCalls: msg.toolCalls?.map((t) =>
+                t.name === event.name && t.status === 'running'
+                  ? {
+                      ...t,
+                      status: 'completed' as const,
+                      result: event.result,
+                      success: event.success,
+                    }
+                  : t,
+              ),
+            })
+          }
           break
+        }
 
         case 'error':
-          updateMessage(messageId, { content: `${message.content}\n\nError: ${event.error}` })
+          updateMessage(messageId, {
+            appendContent: `\n\nError: ${event.error}`,
+          } as Partial<ChatMessage>)
           break
       }
     },
-    [messages, updateMessage],
+    [updateMessage],
   )
 
   const sendMessage = useCallback(
