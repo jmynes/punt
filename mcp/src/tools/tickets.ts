@@ -265,6 +265,12 @@ export function registerTicketTools(server: McpServer) {
         .string()
         .optional()
         .describe('Parent ticket key (e.g., "PUNT-5") to filter subtasks'),
+      hasAttachments: z
+        .boolean()
+        .optional()
+        .describe(
+          'Filter by attachment presence: true for tickets with attachments, false for tickets without',
+        ),
       search: z
         .string()
         .optional()
@@ -282,10 +288,12 @@ export function registerTicketTools(server: McpServer) {
       resolution,
       missingFields,
       parent,
+      hasAttachments,
       search,
       limit,
     }) => {
-      const result = await listTickets(projectKey)
+      // Pass hasAttachments to API for server-side filtering when possible
+      const result = await listTickets(projectKey, { hasAttachments })
       if (result.error) {
         return errorResponse(result.error)
       }
@@ -294,6 +302,10 @@ export function registerTicketTools(server: McpServer) {
 
       // Apply filters
       const appliedFilters: string[] = []
+      // hasAttachments is filtered server-side, but track it for the filter note
+      if (hasAttachments !== undefined) {
+        appliedFilters.push(`hasAttachments: ${hasAttachments}`)
+      }
       if (column) {
         tickets = tickets.filter((t) => t.column.name.toLowerCase().includes(column.toLowerCase()))
         appliedFilters.push(`column: ${column}`)
@@ -360,6 +372,7 @@ export function registerTicketTools(server: McpServer) {
         tickets = tickets.filter((t) => missingFields.some((field) => fieldChecks[field](t)))
         appliedFilters.push(`missing: ${missingFields.join(', ')}`)
       }
+      // Note: hasAttachments is filtered server-side (added to appliedFilters above)
       if (search) {
         const searchLower = search.toLowerCase()
         tickets = tickets.filter(

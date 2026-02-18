@@ -84,6 +84,7 @@ export default function SprintPlanningPage() {
     filterBySprint,
     filterByPoints,
     filterByDueDate,
+    filterByAttachments,
     searchQuery,
     showSubtasks,
   } = useBacklogStore()
@@ -102,6 +103,7 @@ export default function SprintPlanningPage() {
         filterBySprint,
         filterByPoints,
         filterByDueDate,
+        filterByAttachments,
         showSubtasks,
       }),
     [
@@ -117,6 +119,7 @@ export default function SprintPlanningPage() {
       filterBySprint,
       filterByPoints,
       filterByDueDate,
+      filterByAttachments,
       showSubtasks,
     ],
   )

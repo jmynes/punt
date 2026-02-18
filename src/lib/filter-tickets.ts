@@ -12,6 +12,7 @@ export interface TicketFilterOptions {
   filterBySprint: string | null
   filterByPoints: { operator: '<' | '>' | '=' | '<=' | '>='; value: number } | null
   filterByDueDate: { from?: Date; to?: Date; includeNone: boolean; includeOverdue: boolean }
+  filterByAttachments: 'has' | 'none' | null
   showSubtasks: boolean
 }
 
@@ -110,6 +111,17 @@ export function filterTickets(
         default:
           return false
       }
+    })
+  }
+
+  // Attachments filter
+  if (options.filterByAttachments) {
+    result = result.filter((t) => {
+      const attachmentCount = t._count?.attachments ?? 0
+      if (options.filterByAttachments === 'has') {
+        return attachmentCount > 0
+      }
+      return attachmentCount === 0
     })
   }
 

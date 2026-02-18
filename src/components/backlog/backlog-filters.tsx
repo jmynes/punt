@@ -18,6 +18,7 @@ import {
   Hash,
   Layers,
   Lightbulb,
+  Paperclip,
   RotateCcw,
   Search,
   User,
@@ -114,6 +115,8 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
     setFilterByPoints,
     filterByDueDate,
     setFilterByDueDate,
+    filterByAttachments,
+    setFilterByAttachments,
     clearFilters,
     filterButtons,
     setFilterConfigOpen,
@@ -179,6 +182,7 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
     filterByDueDate.to ||
     filterByDueDate.includeNone ||
     filterByDueDate.includeOverdue ||
+    filterByAttachments !== null ||
     (typeof filterBySprint === 'string' && filterBySprint.length > 0) ||
     searchQuery.length > 0
 
@@ -861,6 +865,45 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
           </Popover>
         )
       }
+
+      case 'attachments':
+        return (
+          <DropdownMenu key="attachments">
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0">
+                <Paperclip className="mr-2 h-4 w-4 text-orange-400" />
+                Attachments
+                {filterByAttachments && (
+                  <Badge variant="secondary" className="ml-2">
+                    1
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Filter by attachments</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem
+                checked={filterByAttachments === 'has'}
+                onCheckedChange={() =>
+                  setFilterByAttachments(filterByAttachments === 'has' ? null : 'has')
+                }
+              >
+                <Paperclip className="mr-2 h-4 w-4 text-orange-400" />
+                Has attachments
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filterByAttachments === 'none'}
+                onCheckedChange={() =>
+                  setFilterByAttachments(filterByAttachments === 'none' ? null : 'none')
+                }
+              >
+                <X className="mr-2 h-4 w-4 text-zinc-400" />
+                No attachments
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
 
       default:
         return null

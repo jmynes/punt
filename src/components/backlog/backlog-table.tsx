@@ -74,6 +74,7 @@ export function BacklogTable({
     filterBySprint,
     filterByPoints,
     filterByDueDate,
+    filterByAttachments,
     searchQuery,
     showSubtasks,
     setColumnConfigOpen,
@@ -187,6 +188,7 @@ export function BacklogTable({
       filterBySprint,
       filterByPoints,
       filterByDueDate,
+      filterByAttachments,
       showSubtasks,
     })
 
@@ -306,6 +308,7 @@ export function BacklogTable({
     filterBySprint,
     filterByPoints,
     filterByDueDate,
+    filterByAttachments,
     sort,
     hasManualOrder,
     projectKey,

@@ -39,6 +39,7 @@ export const FILTER_BUTTON_TYPES = [
   'sprint',
   'storyPoints',
   'dueDate',
+  'attachments',
 ] as const
 
 export type FilterButtonId = (typeof FILTER_BUTTON_TYPES)[number]
@@ -59,6 +60,7 @@ export const DEFAULT_FILTER_BUTTONS: FilterButton[] = [
   { id: 'sprint', label: 'Sprint', visible: true },
   { id: 'storyPoints', label: 'Points', visible: true },
   { id: 'dueDate', label: 'Due Date', visible: true },
+  { id: 'attachments', label: 'Attachments', visible: true },
 ]
 
 export interface BacklogColumn {
@@ -184,6 +186,8 @@ interface BacklogState {
     includeNone: boolean
     includeOverdue: boolean
   }) => void
+  filterByAttachments: 'has' | 'none' | null
+  setFilterByAttachments: (filter: 'has' | 'none' | null) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
   clearFilters: () => void
@@ -281,6 +285,8 @@ export const useBacklogStore = create<BacklogState>()(
         includeOverdue: false,
       },
       setFilterByDueDate: (filter) => set({ filterByDueDate: filter }),
+      filterByAttachments: null,
+      setFilterByAttachments: (filter) => set({ filterByAttachments: filter }),
       searchQuery: '',
       setSearchQuery: (query) => set({ searchQuery: query }),
       clearFilters: () =>
@@ -299,6 +305,7 @@ export const useBacklogStore = create<BacklogState>()(
             includeNone: false,
             includeOverdue: false,
           },
+          filterByAttachments: null,
           searchQuery: '',
         }),
 
