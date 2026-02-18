@@ -378,7 +378,9 @@ export default function PreferencesPage() {
                     onClick={() =>
                       showToast.withUndo('Item deleted', {
                         description: 'TEST-1',
-                        onUndo: () => showToast.success('Undo successful'),
+                        onUndo: () => {
+                          showToast.success('Undo successful')
+                        },
                       })
                     }
                   >
