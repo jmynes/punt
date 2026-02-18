@@ -1421,7 +1421,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     Attachments
                   </Label>
                   <div className="flex items-center gap-2">
-                    {tempAttachments.length > 1 && (
+                    {tempAttachments.length >= 1 && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1856,8 +1856,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">Remove all attachments?</AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to remove all {tempAttachments.length} attachments from{' '}
-              <span className="font-mono text-zinc-300">{ticketKey}</span>? This action can be
+              Are you sure you want to remove{' '}
+              {tempAttachments.length === 1
+                ? 'this attachment'
+                : `all ${tempAttachments.length} attachments`}{' '}
+              from <span className="font-mono text-zinc-300">{ticketKey}</span>? This action can be
               undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
