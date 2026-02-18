@@ -47,9 +47,12 @@ const createTicketSchema = z.object({
 /**
  * GET /api/projects/[projectId]/tickets - List all tickets for a project
  * Requires project membership
+ *
+ * Query parameters:
+ * - hasAttachments: 'true' | 'false' - filter by whether ticket has attachments
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ projectId: string }> },
 ) {
   try {
@@ -60,8 +63,24 @@ export async function GET(
     // Check project membership
     await requireMembership(user.id, projectId)
 
+    // Parse query parameters
+    const url = new URL(request.url)
+    const hasAttachmentsParam = url.searchParams.get('hasAttachments')
+
+    // Build where clause
+    const where: { projectId: string; attachments?: { some?: object; none?: object } } = {
+      projectId,
+    }
+
+    // Filter by attachment presence
+    if (hasAttachmentsParam === 'true') {
+      where.attachments = { some: {} }
+    } else if (hasAttachmentsParam === 'false') {
+      where.attachments = { none: {} }
+    }
+
     const tickets = await db.ticket.findMany({
-      where: { projectId },
+      where,
       select: TICKET_SELECT_FULL,
       orderBy: [{ columnId: 'asc' }, { order: 'asc' }],
     })

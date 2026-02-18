@@ -72,6 +72,7 @@ export function SprintBacklogView({
     filterBySprint,
     filterByPoints,
     filterByDueDate,
+    filterByAttachments,
     searchQuery,
     showSubtasks,
   } = useBacklogStore()
@@ -104,6 +105,7 @@ export function SprintBacklogView({
       filterBySprint,
       filterByPoints,
       filterByDueDate,
+      filterByAttachments,
       showSubtasks,
     })
   }, [
@@ -119,6 +121,7 @@ export function SprintBacklogView({
     filterBySprint,
     filterByPoints,
     filterByDueDate,
+    filterByAttachments,
     showSubtasks,
   ])
 

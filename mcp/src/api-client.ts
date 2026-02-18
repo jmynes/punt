@@ -99,6 +99,7 @@ export interface TicketData {
   parent: { id: string; number: number; title: string; type: string } | null
   labels: Array<{ id: string; name: string; color: string }>
   project?: { id: string; key: string; name: string }
+  _count?: { comments: number; subtasks: number; attachments: number }
 }
 
 export async function getTicket(
@@ -115,8 +116,18 @@ export async function getTicket(
   return { data: ticket }
 }
 
-export async function listTickets(projectKey: string) {
-  return apiRequest<TicketData[]>('GET', `/api/projects/${projectKey}/tickets`)
+export interface ListTicketsOptions {
+  hasAttachments?: boolean
+}
+
+export async function listTickets(projectKey: string, options?: ListTicketsOptions) {
+  const params = new URLSearchParams()
+  if (options?.hasAttachments !== undefined) {
+    params.set('hasAttachments', String(options.hasAttachments))
+  }
+  const query = params.toString()
+  const path = `/api/projects/${projectKey}/tickets${query ? `?${query}` : ''}`
+  return apiRequest<TicketData[]>('GET', path)
 }
 
 export interface CreateTicketInput {

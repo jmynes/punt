@@ -28,6 +28,7 @@ import {
   GripVertical,
   Hash,
   Layers,
+  Paperclip,
   RotateCcw,
   User,
   Zap,
@@ -56,6 +57,7 @@ const filterButtonIcons: Record<FilterButtonId, React.ComponentType<{ className?
   sprint: Flag,
   storyPoints: Hash,
   dueDate: Calendar,
+  attachments: Paperclip,
 }
 
 const filterButtonColors: Record<FilterButtonId, string> = {
@@ -68,6 +70,7 @@ const filterButtonColors: Record<FilterButtonId, string> = {
   sprint: 'text-amber-400',
   storyPoints: 'text-green-400',
   dueDate: 'text-pink-400',
+  attachments: 'text-orange-400',
 }
 
 interface SortableFilterItemProps {
