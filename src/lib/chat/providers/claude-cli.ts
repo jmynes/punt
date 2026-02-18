@@ -40,12 +40,24 @@ const DISALLOWED_TOOLS = [
 // Maximum agentic turns before stopping
 const MAX_TURNS = 20
 
-// Timeout in milliseconds
-const TIMEOUT_MS = 60000
+// Timeout in milliseconds (3 minutes to allow for MCP server startup)
+const TIMEOUT_MS = 180000
 
 interface StreamJsonEvent {
-  type: 'text' | 'tool_use' | 'tool_result' | 'done' | 'error' | 'system'
+  type: 'text' | 'tool_use' | 'tool_result' | 'done' | 'error' | 'system' | 'assistant' | 'result'
+  subtype?: string
   text?: string
+  // For assistant messages
+  message?: {
+    content?: Array<{
+      type: string
+      text?: string
+      name?: string
+      input?: unknown
+    }>
+  }
+  // For result events
+  num_turns?: number
   tool?: {
     name: string
     input?: Record<string, unknown>
@@ -53,7 +65,6 @@ interface StreamJsonEvent {
   result?: string
   success?: boolean
   error?: string
-  message?: string
 }
 
 export class ClaudeCliProvider implements ChatProvider {
@@ -147,7 +158,6 @@ export class ClaudeCliProvider implements ChatProvider {
     // Write credentials file (note: Claude CLI uses .credentials.json with leading dot)
     const credentialsPath = join(claudeDir, '.credentials.json')
     await writeFile(credentialsPath, JSON.stringify(credentials))
-    console.log('[Claude CLI] Wrote credentials to:', credentialsPath)
 
     // Write MCP config (PUNT server only)
     const mcpConfig = {
@@ -165,16 +175,14 @@ export class ClaudeCliProvider implements ChatProvider {
           }
         : {},
     }
-    await writeFile(join(tempDir, '.mcp.json'), JSON.stringify(mcpConfig))
+    const mcpConfigPath = join(tempDir, '.mcp.json')
+    await writeFile(mcpConfigPath, JSON.stringify(mcpConfig))
 
     // Build the prompt with system context and conversation history
     const fullPrompt = this.buildPrompt(messages, systemPrompt)
 
     // Spawn Claude CLI with restrictions
     const claudeConfigDir = join(tempDir, '.claude')
-    console.log('[Claude CLI] Spawning with tempDir:', tempDir)
-    console.log('[Claude CLI] CLAUDE_CONFIG_DIR:', claudeConfigDir)
-    console.log('[Claude CLI] Prompt length:', fullPrompt.length)
 
     const proc = spawn(
       'claude',
@@ -183,8 +191,11 @@ export class ClaudeCliProvider implements ChatProvider {
         fullPrompt,
         '--output-format',
         'stream-json',
+        '--verbose', // Required for stream-json with --print
         '--disallowedTools',
         DISALLOWED_TOOLS,
+        '--mcp-config',
+        mcpConfigPath, // Absolute path to MCP config
         '--strict-mcp-config',
         '--max-turns',
         String(MAX_TURNS),
@@ -200,22 +211,8 @@ export class ClaudeCliProvider implements ChatProvider {
       },
     )
 
-    console.log('[Claude CLI] Process spawned, PID:', proc.pid)
-    console.log(
-      '[Claude CLI] Full command: claude',
-      [
-        '-p',
-        `"${fullPrompt.substring(0, 50)}..."`,
-        '--output-format',
-        'stream-json',
-        '--disallowedTools',
-        DISALLOWED_TOOLS,
-        '--strict-mcp-config',
-        '--max-turns',
-        String(MAX_TURNS),
-        '--dangerously-skip-permissions',
-      ].join(' '),
-    )
+    // Close stdin to signal no more input (required for Claude CLI to proceed)
+    proc.stdin?.end()
 
     // Handle process with timeout
     await this.processOutput(proc, onEvent)
@@ -255,14 +252,17 @@ export class ClaudeCliProvider implements ChatProvider {
       // Set up timeout
       timeoutHandle = setTimeout(() => {
         proc.kill('SIGKILL')
-        onEvent({ type: 'error', error: 'Request timed out after 60 seconds' })
+        onEvent({ type: 'error', error: 'Request timed out after 3 minutes' })
         resolve()
       }, TIMEOUT_MS)
 
       // Handle stdout (streaming JSON)
+      if (proc.stdout) {
+        proc.stdout.setEncoding('utf8')
+      }
+
       proc.stdout?.on('data', (chunk: Buffer) => {
         const chunkStr = chunk.toString()
-        console.log('[Claude CLI stdout] Received chunk:', chunkStr.substring(0, 200))
         buffer += chunkStr
 
         // Process complete lines
@@ -276,18 +276,18 @@ export class ClaudeCliProvider implements ChatProvider {
             const event = JSON.parse(line) as StreamJsonEvent
             this.handleStreamEvent(event, onEvent)
           } catch {
-            // Non-JSON line, log it
-            console.log('[Claude CLI stdout] Non-JSON line:', line)
+            // Non-JSON line, ignore
           }
         }
       })
 
       // Handle stderr (errors/warnings)
       proc.stderr?.on('data', (chunk: Buffer) => {
-        const text = chunk.toString()
-        console.error('[Claude CLI stderr]:', text)
-        // Surface any stderr output to help debug
-        onEvent({ type: 'text', content: `[stderr] ${text.trim()}\n` })
+        const text = chunk.toString().trim()
+        // Only surface meaningful errors to the user
+        if (text && !text.includes('[DEBUG]')) {
+          console.error('[Claude CLI stderr]:', text)
+        }
       })
 
       // Handle process exit
@@ -322,6 +322,31 @@ export class ClaudeCliProvider implements ChatProvider {
 
   private handleStreamEvent(event: StreamJsonEvent, onEvent: (event: StreamEvent) => void): void {
     switch (event.type) {
+      case 'system':
+        // Initialization event - ignore
+        break
+
+      case 'assistant':
+        // Extract text from assistant message content
+        if (event.message?.content) {
+          for (const block of event.message.content) {
+            if (block.type === 'text' && block.text) {
+              onEvent({ type: 'text', content: block.text })
+            } else if (block.type === 'tool_use') {
+              onEvent({
+                type: 'tool_start',
+                name: block.name,
+                input: block.input as Record<string, unknown> | undefined,
+              })
+            }
+          }
+        }
+        break
+
+      case 'result':
+        // Final result - ignore
+        break
+
       case 'text':
         if (event.text) {
           onEvent({ type: 'text', content: event.text })
@@ -350,7 +375,7 @@ export class ClaudeCliProvider implements ChatProvider {
         break
 
       case 'error':
-        onEvent({ type: 'error', error: event.error || event.message || 'Unknown error' })
+        onEvent({ type: 'error', error: event.error || 'Unknown error' })
         break
 
       case 'done':
