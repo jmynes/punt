@@ -27,6 +27,12 @@ export default function PreferencesPage() {
     setAutoSaveOnRoleEditorClose,
     showUndoButtons,
     setShowUndoButtons,
+    toastAutoDismiss,
+    setToastAutoDismiss,
+    toastDismissDelay,
+    setToastDismissDelay,
+    errorToastAutoDismiss,
+    setErrorToastAutoDismiss,
     persistTableSort,
     setPersistTableSort,
     sidebarExpandedSections,
@@ -171,6 +177,90 @@ export default function PreferencesPage() {
                 id="persist-table-sort"
                 checked={persistTableSort}
                 onCheckedChange={(checked) => setPersistTableSort(checked === true)}
+                className="data-[state=checked]:bg-amber-600"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Toast Notifications */}
+        <Card className="border-zinc-800 bg-zinc-900/50">
+          <CardHeader>
+            <CardTitle className="text-zinc-100">Toast Notifications</CardTitle>
+            <CardDescription className="text-zinc-500">
+              Configure how toast notifications behave
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-start justify-between space-x-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="toast-auto-dismiss" className="text-zinc-300">
+                  Auto-dismiss toasts
+                </Label>
+                <p className="text-sm text-zinc-500">
+                  Automatically dismiss toast notifications after the configured delay. When
+                  disabled, toasts remain visible until manually closed.
+                </p>
+              </div>
+              <Switch
+                id="toast-auto-dismiss"
+                checked={toastAutoDismiss}
+                onCheckedChange={(checked) => setToastAutoDismiss(checked === true)}
+                className="data-[state=checked]:bg-amber-600"
+              />
+            </div>
+
+            <Separator className="bg-zinc-800" />
+
+            <div className="flex items-start justify-between space-x-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="toast-dismiss-delay" className="text-zinc-300">
+                  Dismiss delay
+                </Label>
+                <p className="text-sm text-zinc-500">
+                  How long toasts remain visible before automatically dismissing (in seconds)
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="toast-dismiss-delay"
+                  type="number"
+                  min={1}
+                  max={30}
+                  step={1}
+                  value={toastDismissDelay / 1000}
+                  onChange={(e) => {
+                    const seconds = Number.parseFloat(e.target.value)
+                    if (!Number.isNaN(seconds) && seconds >= 1 && seconds <= 30) {
+                      setToastDismissDelay(seconds * 1000)
+                    }
+                  }}
+                  disabled={!toastAutoDismiss}
+                  className={cn(
+                    'w-20 border-zinc-700 bg-zinc-900 text-zinc-100 focus:border-amber-500',
+                    !toastAutoDismiss && 'opacity-50',
+                  )}
+                />
+                <span className="text-sm text-zinc-500">seconds</span>
+              </div>
+            </div>
+
+            <Separator className="bg-zinc-800" />
+
+            <div className="flex items-start justify-between space-x-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="error-toast-auto-dismiss" className="text-zinc-300">
+                  Auto-dismiss error toasts
+                </Label>
+                <p className="text-sm text-zinc-500">
+                  Automatically dismiss error notifications. When disabled, error toasts remain
+                  visible until manually closed, giving you more time to read them.
+                </p>
+              </div>
+              <Switch
+                id="error-toast-auto-dismiss"
+                checked={errorToastAutoDismiss}
+                onCheckedChange={(checked) => setErrorToastAutoDismiss(checked === true)}
                 className="data-[state=checked]:bg-amber-600"
               />
             </div>

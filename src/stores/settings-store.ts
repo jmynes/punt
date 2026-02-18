@@ -29,6 +29,14 @@ interface SettingsState {
   showUndoButtons: boolean
   setShowUndoButtons: (value: boolean) => void
 
+  // Toast notification preferences
+  toastAutoDismiss: boolean
+  setToastAutoDismiss: (value: boolean) => void
+  toastDismissDelay: number // in milliseconds
+  setToastDismissDelay: (value: number) => void
+  errorToastAutoDismiss: boolean
+  setErrorToastAutoDismiss: (value: boolean) => void
+
   // Sidebar settings section expanded state
   sidebarExpandedSections: Record<string, boolean> // keyed by 'admin' or project ID
   setSidebarSectionExpanded: (key: string, expanded: boolean) => void
@@ -72,6 +80,14 @@ export const useSettingsStore = create<SettingsState>()(
       // Show undo/redo buttons on toast notifications (on by default)
       showUndoButtons: true,
       setShowUndoButtons: (value) => set({ showUndoButtons: value }),
+
+      // Toast notification preferences (all auto-dismiss on by default)
+      toastAutoDismiss: true,
+      setToastAutoDismiss: (value) => set({ toastAutoDismiss: value }),
+      toastDismissDelay: 4000, // 4 seconds default
+      setToastDismissDelay: (value) => set({ toastDismissDelay: value }),
+      errorToastAutoDismiss: true,
+      setErrorToastAutoDismiss: (value) => set({ errorToastAutoDismiss: value }),
 
       // Sidebar settings sections - default collapsed
       sidebarExpandedSections: {},
