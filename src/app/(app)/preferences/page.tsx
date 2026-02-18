@@ -5,12 +5,14 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import { PageHeader } from '@/components/common'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
+import { showToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSettingsStore } from '@/stores/settings-store'
@@ -324,6 +326,77 @@ export default function PreferencesPage() {
                     onCheckedChange={(checked) => setErrorToastAutoDismiss(checked === true)}
                     className="data-[state=checked]:bg-amber-600"
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Toast Tester */}
+            <Card className="border-zinc-800 bg-zinc-900/50">
+              <CardHeader>
+                <CardTitle className="text-zinc-100">Toast Tester</CardTitle>
+                <CardDescription className="text-zinc-500">
+                  Trigger sample toasts to preview your notification settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => showToast.success('Operation completed successfully')}
+                  >
+                    Success
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      showToast.error('Something went wrong', {
+                        description: 'Please try again later',
+                      })
+                    }
+                  >
+                    Error
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => showToast.info('Here is some useful information')}
+                  >
+                    Info
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => showToast.warning('Proceed with caution')}
+                  >
+                    Warning
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      showToast.withUndo('Item deleted', {
+                        description: 'TEST-1',
+                        onUndo: () => showToast.success('Undo successful'),
+                      })
+                    }
+                  >
+                    With Undo
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      showToast.loading(new Promise((resolve) => setTimeout(resolve, 2000)), {
+                        loadingMessage: 'Saving changes...',
+                        successMessage: 'Changes saved',
+                        errorMessage: 'Failed to save',
+                      })
+                    }
+                  >
+                    Loading (2s)
+                  </Button>
                 </div>
               </CardContent>
             </Card>
