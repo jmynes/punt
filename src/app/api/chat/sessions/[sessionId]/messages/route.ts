@@ -14,7 +14,7 @@ const addMessageSchema = z.object({
         .array(
           z.object({
             name: z.string(),
-            input: z.record(z.unknown()),
+            input: z.record(z.string(), z.unknown()),
             result: z.string().optional(),
             success: z.boolean().optional(),
             status: z.enum(['pending', 'running', 'completed']),
