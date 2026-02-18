@@ -58,11 +58,17 @@ function getToastPreferences() {
 
 /**
  * Get the effective duration for a toast based on user preferences.
- * @param requestedDuration - The duration requested by the caller
+ * When no explicit duration is requested, returns the user's configured dismiss delay.
+ * When an explicit duration is requested, returns the greater of that duration and
+ * the user's dismiss delay — explicit durations are treated as minimums, not scaled.
+ * @param requestedDuration - The duration requested by the caller (treated as a minimum)
  * @param isError - Whether this is an error toast
  * @returns The effective duration to use
  */
-function getEffectiveDuration(requestedDuration: number | undefined, isError = false): number {
+export function getEffectiveDuration(
+  requestedDuration: number | undefined,
+  isError = false,
+): number {
   const prefs = getToastPreferences()
   const autoDismiss = isError ? prefs.errorAutoDismiss : prefs.autoDismiss
 
@@ -70,11 +76,10 @@ function getEffectiveDuration(requestedDuration: number | undefined, isError = f
     return TOAST_DURATION.INFINITE
   }
 
-  // If a specific duration was requested, scale it by the user's preference ratio
+  // If a specific duration was requested, honor it as a minimum —
+  // the user's dismiss delay can extend it, but never shorten it
   if (requestedDuration !== undefined) {
-    const defaultDuration = TOAST_DURATION.DEFAULT
-    const ratio = prefs.dismissDelay / defaultDuration
-    return Math.round(requestedDuration * ratio)
+    return Math.max(requestedDuration, prefs.dismissDelay)
   }
 
   return prefs.dismissDelay

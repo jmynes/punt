@@ -33,7 +33,7 @@ import { getTabId } from '@/hooks/use-realtime'
 import { pasteTickets } from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
-import { rawToast, showToast } from '@/lib/toast'
+import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -291,7 +291,7 @@ export function KeyboardShortcuts() {
               reorderedTicketIds.length === 1
                 ? `${ticketKeys[0]} moved ${direction}`
                 : `${ticketKeys.join(', ')} moved ${direction}`,
-            duration: 5000,
+            duration: getEffectiveDuration(5000),
             showUndoButtons: useSettingsStore.getState().showUndoButtons,
             onUndo: async (id) => {
               const undoEntry = useUndoStore.getState().undoByToastId(id)
@@ -589,7 +589,7 @@ export function KeyboardShortcuts() {
               moves.length === 1
                 ? `${ticketKeys[0]} moved to ${toName}`
                 : `${ticketKeys.join(', ')} moved to ${toName}`,
-            duration: 5000,
+            duration: getEffectiveDuration(5000),
             showUndoButtons: useSettingsStore.getState().showUndoButtons,
             onUndo: async (id) => {
               const undoEntry = useUndoStore.getState().undoByToastId(id)
@@ -1908,7 +1908,7 @@ export function KeyboardShortcuts() {
                   : `${action.tickets.length} tickets deleted`,
               description:
                 action.tickets.length === 1 ? delTicketKeys[0] : delTicketKeys.join(', '),
-              duration: 5000,
+              duration: getEffectiveDuration(5000),
               showUndoButtons: showUndo,
               onUndo: async (id) => {
                 const undoEntry = useUndoStore.getState().undoByToastId(id)
@@ -2153,7 +2153,7 @@ export function KeyboardShortcuts() {
                   action.moves.length === 1
                     ? `${ticketKeys[0]} moved to ${action.toColumnName}`
                     : `${ticketKeys.join(', ')} moved to ${action.toColumnName}`,
-                duration: 5000,
+                duration: getEffectiveDuration(5000),
                 action: showUndo
                   ? {
                       label: 'Undo',
@@ -2175,7 +2175,7 @@ export function KeyboardShortcuts() {
                           action.moves.length === 1
                             ? 'Move undone'
                             : `${action.moves.length} moves undone`,
-                          { duration: 2000 },
+                          { duration: getEffectiveDuration(2000) },
                         )
                       },
                     }
@@ -2262,7 +2262,7 @@ export function KeyboardShortcuts() {
                   redoTickets.length === 1
                     ? redoPasteTicketKeys[0]
                     : redoPasteTicketKeys.join(', '),
-                duration: 5000,
+                duration: getEffectiveDuration(5000),
                 action: showUndo
                   ? {
                       label: 'Undo',
@@ -2290,7 +2290,7 @@ export function KeyboardShortcuts() {
                           redoTickets.length === 1
                             ? 'Paste undone'
                             : `${redoTickets.length} pastes undone`,
-                          { duration: 2000 },
+                          { duration: getEffectiveDuration(2000) },
                         )
                       },
                     }
@@ -2324,7 +2324,7 @@ export function KeyboardShortcuts() {
             const ticketKey = formatTicketId(action.ticket)
             const newToastId = rawToast.success('Ticket created', {
               description: ticketKey,
-              duration: 5000,
+              duration: getEffectiveDuration(5000),
               action: showUndo
                 ? {
                     label: 'Undo',
@@ -2342,7 +2342,9 @@ export function KeyboardShortcuts() {
                         .finally(() => {
                           useUndoStore.getState().setProcessing(false)
                         })
-                      rawToast.success('Ticket creation undone', { duration: 2000 })
+                      rawToast.success('Ticket creation undone', {
+                        duration: getEffectiveDuration(2000),
+                      })
                     },
                   }
                 : undefined,
@@ -2382,7 +2384,7 @@ export function KeyboardShortcuts() {
               action.moves.length === 1 ? 'Ticket moved' : `${action.moves.length} tickets moved`,
               {
                 description: `Moved to ${action.toSprintName}`,
-                duration: 5000,
+                duration: getEffectiveDuration(5000),
                 action: showUndo
                   ? {
                       label: 'Undo',
@@ -2408,7 +2410,7 @@ export function KeyboardShortcuts() {
                           action.moves.length === 1
                             ? 'Sprint move undone'
                             : `${action.moves.length} sprint moves undone`,
-                          { duration: 2000 },
+                          { duration: getEffectiveDuration(2000) },
                         )
                       },
                     }
@@ -2464,7 +2466,7 @@ export function KeyboardShortcuts() {
 
             const newToastId = rawToast.success('Column updated', {
               description: `Renamed to "${action.newName}"`,
-              duration: 5000,
+              duration: getEffectiveDuration(5000),
               action: showUndo
                 ? {
                     label: 'Undo',
@@ -2500,7 +2502,9 @@ export function KeyboardShortcuts() {
                           queryKey: columnKeys.byProject(entry.projectId),
                         })
                         redoStore.pushRedo(entry)
-                        rawToast.success('Column update undone', { duration: 2000 })
+                        rawToast.success('Column update undone', {
+                          duration: getEffectiveDuration(2000),
+                        })
                       } catch (err) {
                         console.error('Failed to undo column rename:', err)
                       } finally {
@@ -2573,7 +2577,7 @@ export function KeyboardShortcuts() {
 
             const newToastId = rawToast.error('Column deleted', {
               description: `"${action.column.name}" deleted`,
-              duration: 5000,
+              duration: getEffectiveDuration(5000),
               action: showUndo
                 ? {
                     label: 'Undo',
@@ -2646,7 +2650,9 @@ export function KeyboardShortcuts() {
                         queryClient.invalidateQueries({
                           queryKey: ticketKeys.byProject(entry.projectId),
                         })
-                        rawToast.success('Column restored', { duration: 2000 })
+                        rawToast.success('Column restored', {
+                          duration: getEffectiveDuration(2000),
+                        })
                       } catch (err) {
                         console.error('Failed to undo column delete:', err)
                       } finally {

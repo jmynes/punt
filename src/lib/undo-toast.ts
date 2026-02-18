@@ -1,4 +1,4 @@
-import { rawToast as toast } from '@/lib/toast'
+import { getEffectiveDuration, rawToast as toast } from '@/lib/toast'
 
 type ToastKind = 'success' | 'error'
 
@@ -38,12 +38,15 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
   } = opts
 
   const toastFn = kind === 'error' ? toast.error : toast.success
+  const isError = kind === 'error'
+  const effectiveDuration = getEffectiveDuration(duration, isError)
+  const confirmDuration = getEffectiveDuration(2000, isError)
 
   let toastId: string | number | undefined
 
   toastId = toastFn(title, {
     description,
-    duration,
+    duration: effectiveDuration,
     action: showUndoButtons
       ? {
           label: undoLabel,
@@ -52,7 +55,7 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
             if (onRedo && showUndoButtons) {
               const undoneToastId = toastFn(undoneTitle, {
                 description: undoneDescription,
-                duration: 2000,
+                duration: confirmDuration,
                 action: {
                   label: redoLabel,
                   onClick: () => {
@@ -60,7 +63,7 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
                     let redoneToastId: string | number | undefined
                     redoneToastId = toastFn(redoneTitle, {
                       description: redoneDescription,
-                      duration: 2000,
+                      duration: confirmDuration,
                       action: {
                         label: undoLabel,
                         onClick: () => {
