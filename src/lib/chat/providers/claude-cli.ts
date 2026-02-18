@@ -44,7 +44,16 @@ const MAX_TURNS = 20
 const TIMEOUT_MS = 180000
 
 interface StreamJsonEvent {
-  type: 'text' | 'tool_use' | 'tool_result' | 'done' | 'error' | 'system' | 'assistant' | 'result'
+  type:
+    | 'text'
+    | 'tool_use'
+    | 'tool_result'
+    | 'done'
+    | 'error'
+    | 'system'
+    | 'assistant'
+    | 'result'
+    | 'user'
   subtype?: string
   text?: string
   // For assistant messages
