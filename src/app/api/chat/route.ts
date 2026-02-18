@@ -24,7 +24,7 @@ const chatRequestSchema = z.object({
       ticketKey: z.string().optional(),
     })
     .optional(),
-  sessionId: z.string().optional(),
+  sessionId: z.string().nullish(), // Allow null, undefined, or string
 })
 
 /**
