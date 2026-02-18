@@ -79,15 +79,18 @@ export function ChatInput({
     const textarea = textareaRef.current
     if (!textarea) return
 
-    // Temporarily set height to auto to measure scrollHeight
-    textarea.style.height = 'auto'
-    const scrollHeight = textarea.scrollHeight
+    // First, set to minimum height to get accurate scrollHeight measurement
+    textarea.style.height = `${MIN_HEIGHT}px`
 
-    // Always enforce minimum, only grow beyond for multi-line content
-    const newHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, scrollHeight))
-
-    textarea.style.height = `${newHeight}px`
-    setHeight(newHeight)
+    // Only grow if content actually overflows (scrollHeight > clientHeight)
+    // This prevents expanding for single-line text where browser reports larger scrollHeight
+    if (textarea.scrollHeight > textarea.clientHeight) {
+      const newHeight = Math.min(MAX_HEIGHT, textarea.scrollHeight)
+      textarea.style.height = `${newHeight}px`
+      setHeight(newHeight)
+    } else {
+      setHeight(MIN_HEIGHT)
+    }
   }, [value])
 
   const handleSubmit = () => {
