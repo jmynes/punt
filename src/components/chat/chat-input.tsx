@@ -69,11 +69,33 @@ export function ChatInput({
     }
   }, [])
 
+  // Auto-grow textarea to fit content (only grow, don't shrink below min)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: we need to measure when value changes
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    // Temporarily set height to auto to measure scrollHeight
+    const currentHeight = textarea.offsetHeight
+    textarea.style.height = 'auto'
+    const scrollHeight = textarea.scrollHeight
+
+    // Only grow if content needs more space, otherwise keep at minimum (40px)
+    // This prevents single-line text from expanding the textarea
+    const minHeight = 40
+    const maxHeight = 300
+    const newHeight = scrollHeight > minHeight ? Math.min(maxHeight, scrollHeight) : minHeight
+
+    textarea.style.height = `${newHeight}px`
+    setHeight(newHeight)
+  }, [value])
+
   const handleSubmit = () => {
     const trimmed = value.trim()
     if (trimmed && !disabled) {
       onSend(trimmed)
       setValue('')
+      setHeight(40) // Reset to default after sending
     }
   }
 
