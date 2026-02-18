@@ -47,6 +47,7 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
   toastId = toastFn(title, {
     description,
     duration: effectiveDuration,
+    closeButton: isError && !Number.isFinite(effectiveDuration),
     action: showUndoButtons
       ? {
           label: undoLabel,

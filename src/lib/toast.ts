@@ -141,10 +141,22 @@ function success(message: string, options?: ToastOptions): ToastId {
  * Use for failed operations, validation errors, etc.
  */
 function error(message: string, options?: ToastOptions): ToastId {
+  const duration = getEffectiveDuration(options?.duration, true)
+  const persistent = !Number.isFinite(duration)
   return toast.error(message, {
     description: options?.description,
-    duration: getEffectiveDuration(options?.duration, true),
+    duration,
     id: options?.id,
+    closeButton: persistent,
+    cancel: persistent
+      ? {
+          label: 'Copy',
+          onClick: () => {
+            const text = options?.description ? `${message}: ${options.description}` : message
+            void navigator.clipboard.writeText(text)
+          },
+        }
+      : undefined,
   })
 }
 
@@ -195,16 +207,28 @@ function withUndo(message: string, options: UndoToastOptions): ToastId {
  * Use when showing deleted/removed state that can be restored.
  */
 function errorWithUndo(message: string, options: UndoToastOptions): ToastId {
+  const duration = getEffectiveDuration(options.duration ?? TOAST_DURATION.WITH_ACTION, true)
+  const persistent = !Number.isFinite(duration)
   return toast.error(message, {
     description: options.description,
-    duration: getEffectiveDuration(options.duration ?? TOAST_DURATION.WITH_ACTION, true),
+    duration,
     id: options.id,
+    closeButton: persistent,
     action: {
       label: options.undoLabel ?? 'Undo',
       onClick: () => {
         void options.onUndo()
       },
     },
+    cancel: persistent
+      ? {
+          label: 'Copy',
+          onClick: () => {
+            const text = options.description ? `${message}: ${options.description}` : message
+            void navigator.clipboard.writeText(text)
+          },
+        }
+      : undefined,
   })
 }
 
