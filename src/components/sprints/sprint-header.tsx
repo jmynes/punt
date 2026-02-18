@@ -473,22 +473,24 @@ function ProgressMeters({
                   />
                 )}
               </div>
-              <div className="flex items-center gap-0.5 text-xs min-w-[44px]">
+              <div className="flex items-center gap-0.5 text-sm min-w-[52px]">
                 {hasFilter ? (
                   <>
-                    <span className={cn('font-bold tabular-nums', textColor)}>
+                    <span className={cn('font-semibold tabular-nums', textColor)}>
                       {filteredCompletedCount}
                     </span>
                     <span className="text-zinc-600">/</span>
-                    <span className="text-zinc-500 tabular-nums">{filteredTotalCount}</span>
+                    <span className="text-zinc-500 font-medium tabular-nums">
+                      {filteredTotalCount}
+                    </span>
                   </>
                 ) : (
                   <>
-                    <span className={cn('font-bold tabular-nums', textColor)}>
+                    <span className={cn('font-semibold tabular-nums', textColor)}>
                       {completedCount}
                     </span>
                     <span className="text-zinc-600">/</span>
-                    <span className="text-zinc-500 tabular-nums">{totalCount}</span>
+                    <span className="text-zinc-500 font-medium tabular-nums">{totalCount}</span>
                   </>
                 )}
               </div>
@@ -496,9 +498,9 @@ function ProgressMeters({
 
             {/* Overall stats shown below when filtered */}
             {hasFilter && (
-              <div className="flex items-center gap-1 text-[10px] text-zinc-600">
+              <div className="flex items-center gap-1 text-xs text-zinc-600">
                 <span>Sprint:</span>
-                <span className="tabular-nums">
+                <span className="font-medium tabular-nums">
                   {completedCount}/{totalCount}
                 </span>
               </div>
@@ -560,22 +562,24 @@ function ProgressMeters({
                   />
                 )}
               </div>
-              <div className="flex items-center gap-0.5 text-xs min-w-[44px]">
+              <div className="flex items-center gap-0.5 text-sm min-w-[52px]">
                 {hasFilter ? (
                   <>
-                    <span className={cn('font-bold tabular-nums', textColor)}>
+                    <span className={cn('font-semibold tabular-nums', textColor)}>
                       {filteredCompletedPoints}
                     </span>
                     <span className="text-zinc-600">/</span>
-                    <span className="text-zinc-500 tabular-nums">{filteredTotalPoints}</span>
+                    <span className="text-zinc-500 font-medium tabular-nums">
+                      {filteredTotalPoints}
+                    </span>
                   </>
                 ) : (
                   <>
-                    <span className={cn('font-bold tabular-nums', textColor)}>
+                    <span className={cn('font-semibold tabular-nums', textColor)}>
                       {completedPoints}
                     </span>
                     <span className="text-zinc-600">/</span>
-                    <span className="text-zinc-500 tabular-nums">{totalPoints}</span>
+                    <span className="text-zinc-500 font-medium tabular-nums">{totalPoints}</span>
                   </>
                 )}
               </div>
@@ -583,9 +587,9 @@ function ProgressMeters({
 
             {/* Overall stats shown below when filtered */}
             {hasFilter && (
-              <div className="flex items-center gap-1 text-[10px] text-zinc-600">
+              <div className="flex items-center gap-1 text-xs text-zinc-600">
                 <span>Sprint:</span>
-                <span className="tabular-nums">
+                <span className="font-medium tabular-nums">
                   {completedPoints}/{totalPoints}
                 </span>
               </div>
@@ -668,11 +672,11 @@ function BudgetMeter({ totalPoints, budget }: { totalPoints: number; budget: num
                 style={{ width: `${budgetPercent}%` }}
               />
             </div>
-            <div className="flex items-center gap-0.5 text-xs min-w-[44px]">
-              <span className={cn('font-bold tabular-nums', colors.text)}>{totalPoints}</span>
+            <div className="flex items-center gap-0.5 text-sm min-w-[52px]">
+              <span className={cn('font-semibold tabular-nums', colors.text)}>{totalPoints}</span>
               <span className="text-zinc-600">/</span>
-              <span className="text-zinc-500 tabular-nums">{budget}</span>
-              <span className="text-zinc-600 text-[10px] ml-0.5">pts</span>
+              <span className="text-zinc-500 font-medium tabular-nums">{budget}</span>
+              <span className="text-zinc-600 text-xs ml-0.5">pts</span>
             </div>
           </div>
 
