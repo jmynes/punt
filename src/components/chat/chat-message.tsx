@@ -1,7 +1,10 @@
 'use client'
 
-import { BotIcon, CheckCircleIcon, UserIcon, WrenchIcon, XCircleIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { BotIcon, CheckCircleIcon, WrenchIcon, XCircleIcon } from 'lucide-react'
+import type React from 'react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import type { UserSummary } from '@/types'
 
 export interface ChatMessage {
   id: string
@@ -20,26 +23,32 @@ export interface ToolCall {
 
 interface ChatMessageProps {
   message: ChatMessage
+  user?: UserSummary | null
 }
 
-export function ChatMessageComponent({ message }: ChatMessageProps) {
+export function ChatMessageComponent({ message, user }: ChatMessageProps) {
   const isUser = message.role === 'user'
 
   return (
     <div className={cn('flex gap-3', isUser ? 'flex-row-reverse' : 'flex-row')}>
       {/* Avatar */}
-      <div
-        className={cn(
-          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-          isUser ? 'bg-blue-600' : 'bg-purple-600',
-        )}
-      >
-        {isUser ? (
-          <UserIcon className="h-4 w-4 text-white" />
-        ) : (
+      {isUser && user ? (
+        <Avatar className="h-8 w-8 shrink-0">
+          <AvatarImage src={user.avatar || undefined} alt={user.name} />
+          <AvatarFallback
+            className="text-xs text-white font-medium"
+            style={{
+              backgroundColor: user.avatarColor || getAvatarColor(user.id || user.name),
+            }}
+          >
+            {getInitials(user.name)}
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-600">
           <BotIcon className="h-4 w-4 text-white" />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Message content */}
       <div
@@ -57,8 +66,12 @@ export function ChatMessageComponent({ message }: ChatMessageProps) {
           </div>
         )}
 
-        {/* Text content */}
-        {message.content && <div className="whitespace-pre-wrap text-sm">{message.content}</div>}
+        {/* Text content with basic markdown */}
+        {message.content && (
+          <div className="whitespace-pre-wrap text-sm">
+            <FormattedText text={message.content} />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -84,4 +97,59 @@ function ToolCallBadge({ tool }: { tool: ToolCall }) {
 
 function formatToolName(name: string): string {
   return name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+/**
+ * Simple markdown parser that renders bold, italic, and inline code
+ * Uses React elements instead of dangerouslySetInnerHTML for safety
+ */
+function FormattedText({ text }: { text: string }) {
+  let key = 0
+
+  // Process patterns: **bold**, *italic*, `code`
+  const processText = (input: string): React.ReactNode[] => {
+    const result: React.ReactNode[] = []
+    let lastIndex = 0
+
+    // Combined regex for all patterns - use matchAll instead of exec loop
+    const combinedRegex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g
+    const matches = Array.from(input.matchAll(combinedRegex))
+
+    for (const match of matches) {
+      // Add text before match
+      if (match.index !== undefined && match.index > lastIndex) {
+        result.push(input.slice(lastIndex, match.index))
+      }
+
+      const matched = match[0]
+      if (matched.startsWith('**') && matched.endsWith('**')) {
+        result.push(
+          <strong key={key++} className="font-semibold">
+            {matched.slice(2, -2)}
+          </strong>,
+        )
+      } else if (matched.startsWith('*') && matched.endsWith('*')) {
+        result.push(<em key={key++}>{matched.slice(1, -1)}</em>)
+      } else if (matched.startsWith('`') && matched.endsWith('`')) {
+        result.push(
+          <code key={key++} className="bg-zinc-900 px-1 rounded text-xs text-amber-400">
+            {matched.slice(1, -1)}
+          </code>,
+        )
+      }
+
+      if (match.index !== undefined) {
+        lastIndex = match.index + matched.length
+      }
+    }
+
+    // Add remaining text
+    if (lastIndex < input.length) {
+      result.push(input.slice(lastIndex))
+    }
+
+    return result.length > 0 ? result : [input]
+  }
+
+  return <>{processText(text)}</>
 }

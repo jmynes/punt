@@ -333,10 +333,26 @@ export class ClaudeCliProvider implements ChatProvider {
     })
   }
 
+  // Track running tools to mark them complete when we see user/assistant events
+  private runningTools: Set<string> = new Set()
+
   private handleStreamEvent(event: StreamJsonEvent, onEvent: (event: StreamEvent) => void): void {
     switch (event.type) {
       case 'system':
-        // Initialization event - ignore
+        // Initialization event - clear tool tracking
+        this.runningTools.clear()
+        break
+
+      case 'user':
+        // User event contains tool results - mark all running tools as complete
+        for (const toolName of this.runningTools) {
+          onEvent({
+            type: 'tool_end',
+            name: toolName,
+            success: true,
+          })
+        }
+        this.runningTools.clear()
         break
 
       case 'assistant':
@@ -345,7 +361,8 @@ export class ClaudeCliProvider implements ChatProvider {
           for (const block of event.message.content) {
             if (block.type === 'text' && block.text) {
               onEvent({ type: 'text', content: block.text })
-            } else if (block.type === 'tool_use') {
+            } else if (block.type === 'tool_use' && block.name) {
+              this.runningTools.add(block.name)
               onEvent({
                 type: 'tool_start',
                 name: block.name,
@@ -357,7 +374,15 @@ export class ClaudeCliProvider implements ChatProvider {
         break
 
       case 'result':
-        // Final result - ignore
+        // Final result - mark any remaining tools as complete
+        for (const toolName of this.runningTools) {
+          onEvent({
+            type: 'tool_end',
+            name: toolName,
+            success: event.subtype === 'success',
+          })
+        }
+        this.runningTools.clear()
         break
 
       case 'text':

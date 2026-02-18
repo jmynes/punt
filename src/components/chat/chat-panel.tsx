@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { useCurrentUser } from '@/hooks/use-current-user'
 import { useUIStore } from '@/stores/ui-store'
 import { ChatInput } from './chat-input'
 import { type ChatMessage, ChatMessageComponent } from './chat-message'
@@ -32,6 +33,7 @@ export function ChatPanel() {
   const [isConfigured, setIsConfigured] = useState<boolean | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const currentUser = useCurrentUser()
 
   // Check if user has configured their chat provider
   useEffect(() => {
@@ -249,7 +251,7 @@ export function ChatPanel() {
           ) : (
             <div className="flex flex-col gap-4">
               {messages.map((message) => (
-                <ChatMessageComponent key={message.id} message={message} />
+                <ChatMessageComponent key={message.id} message={message} user={currentUser} />
               ))}
               {isLoading && messages[messages.length - 1]?.content === '' && (
                 <div className="flex items-center gap-2 text-sm text-zinc-400">

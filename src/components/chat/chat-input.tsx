@@ -19,6 +19,16 @@ export function ChatInput({
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Autofocus when component mounts
+  useEffect(() => {
+    if (!disabled) {
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 100) // Small delay to ensure sheet animation completes
+      return () => clearTimeout(timer)
+    }
+  }, [disabled])
+
   // Auto-resize textarea when value changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: we need to resize when value changes
   useEffect(() => {
@@ -65,7 +75,7 @@ export function ChatInput({
         onClick={handleSubmit}
         disabled={disabled || !value.trim()}
         size="icon"
-        className="shrink-0 bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+        className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white"
       >
         <SendIcon className="h-4 w-4" />
       </Button>
