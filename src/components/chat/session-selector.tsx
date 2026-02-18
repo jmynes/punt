@@ -74,7 +74,7 @@ export function SessionSelector({ currentSessionId, onSelect, projectId }: Sessi
                   >
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="truncate">{session.name}</span>
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-xs text-zinc-500 group-data-[selected=true]:text-zinc-300">
                         {formatRelativeTime(session.updatedAt)} · {session.messageCount} messages
                       </span>
                     </div>

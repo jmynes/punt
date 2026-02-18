@@ -53,6 +53,7 @@ export function ChatPanel() {
   const [isConfigured, setIsConfigured] = useState<boolean | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const prevSessionIdRef = useRef<string | null>(null)
   const currentUser = useCurrentUser()
   const queryClient = useQueryClient()
 
@@ -84,19 +85,26 @@ export function ChatPanel() {
     }
   }, [chatPanelOpen, isConfigured])
 
-  // Load messages when session changes
+  // Load messages when switching to a different session
   useEffect(() => {
-    if (currentSessionId && sessionData?.messages) {
-      const loadedMessages: ChatMessage[] = sessionData.messages.map((m) => ({
-        id: m.id,
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-        toolCalls: transformMetadataToToolCalls(m.metadata),
-      }))
-      setMessages(loadedMessages)
-    } else if (!currentSessionId) {
-      // New conversation - clear messages
-      clearMessages()
+    // Only load from DB when actually switching sessions, not on data refresh
+    const sessionChanged = currentSessionId !== prevSessionIdRef.current
+    prevSessionIdRef.current = currentSessionId
+
+    if (sessionChanged) {
+      if (currentSessionId && sessionData?.messages) {
+        const loadedMessages: ChatMessage[] = sessionData.messages.map((m) => ({
+          id: m.id,
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          toolCalls: transformMetadataToToolCalls(m.metadata),
+          sentAt: new Date(m.createdAt),
+        }))
+        setMessages(loadedMessages)
+      } else if (!currentSessionId) {
+        // New conversation - clear messages
+        clearMessages()
+      }
     }
   }, [currentSessionId, sessionData, setMessages, clearMessages])
 
