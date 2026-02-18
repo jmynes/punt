@@ -11,13 +11,17 @@ interface ChatInputProps {
   placeholder?: string
 }
 
+// Height constants: 22px content + 16px padding (8px x 2) + 2px border (1px x 2) = 40px
+const MIN_HEIGHT = 40
+const MAX_HEIGHT = 300
+
 export function ChatInput({
   onSend,
   disabled,
   placeholder = 'Ask me about your tickets...',
 }: ChatInputProps) {
   const [value, setValue] = useState('')
-  const [height, setHeight] = useState(40) // Default single row height
+  const [height, setHeight] = useState(MIN_HEIGHT)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
@@ -51,7 +55,7 @@ export function ChatInput({
       if (!isDraggingRef.current) return
       // Dragging up (negative deltaY) should increase height
       const deltaY = startYRef.current - e.clientY
-      const newHeight = Math.min(300, Math.max(40, startHeightRef.current + deltaY))
+      const newHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, startHeightRef.current + deltaY))
       setHeight(newHeight)
     }
 
@@ -76,15 +80,11 @@ export function ChatInput({
     if (!textarea) return
 
     // Temporarily set height to auto to measure scrollHeight
-    const currentHeight = textarea.offsetHeight
     textarea.style.height = 'auto'
     const scrollHeight = textarea.scrollHeight
 
-    // Only grow if content needs more space, otherwise keep at minimum (40px)
-    // This prevents single-line text from expanding the textarea
-    const minHeight = 40
-    const maxHeight = 300
-    const newHeight = scrollHeight > minHeight ? Math.min(maxHeight, scrollHeight) : minHeight
+    // Always enforce minimum, only grow beyond for multi-line content
+    const newHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, scrollHeight))
 
     textarea.style.height = `${newHeight}px`
     setHeight(newHeight)
@@ -95,7 +95,7 @@ export function ChatInput({
     if (trimmed && !disabled) {
       onSend(trimmed)
       setValue('')
-      setHeight(40) // Reset to default after sending
+      setHeight(MIN_HEIGHT) // Reset to default after sending
     }
   }
 
