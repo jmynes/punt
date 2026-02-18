@@ -86,7 +86,7 @@ export function ChatPanel() {
 
   // Load messages when session changes
   useEffect(() => {
-    if (sessionData?.messages) {
+    if (currentSessionId && sessionData?.messages) {
       const loadedMessages: ChatMessage[] = sessionData.messages.map((m) => ({
         id: m.id,
         role: m.role as 'user' | 'assistant',
@@ -94,8 +94,11 @@ export function ChatPanel() {
         toolCalls: transformMetadataToToolCalls(m.metadata),
       }))
       setMessages(loadedMessages)
+    } else if (!currentSessionId) {
+      // New conversation - clear messages
+      clearMessages()
     }
-  }, [sessionData, setMessages])
+  }, [currentSessionId, sessionData, setMessages, clearMessages])
 
   // Scroll to bottom on new messages
   // biome-ignore lint/correctness/useExhaustiveDependencies: we need to scroll when messages change

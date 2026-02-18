@@ -35,8 +35,8 @@ export const useChatStore = create<ChatState>()(
       setCurrentSessionId: (id) =>
         set({
           currentSessionId: id,
-          // Clear messages when switching sessions - they'll be loaded from DB
-          messages: [],
+          // Don't clear messages here - let the useEffect in chat-panel handle it
+          // This prevents a flash of empty state when switching to cached sessions
         }),
 
       // Message management
