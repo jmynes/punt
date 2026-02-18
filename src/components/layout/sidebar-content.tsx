@@ -198,7 +198,7 @@ export function SidebarContent({
           )
         })}
         {/* Profile with collapsible tabs */}
-        <div className="pl-2.5">
+        <div className="pl-[9px]">
           <div className="flex items-center">
             <button
               type="button"
@@ -275,7 +275,7 @@ export function SidebarContent({
           </CollapsibleSection>
         </div>
         {/* Preferences with collapsible tabs */}
-        <div className="pl-2.5">
+        <div className="pl-[9px]">
           <div className="flex items-center">
             <button
               type="button"
@@ -398,7 +398,7 @@ export function SidebarContent({
                   Users
                 </Button>
               </Link>
-              <div className="pl-2.5">
+              <div className="pl-[9px]">
                 <div className="flex items-center">
                   <button
                     type="button"
@@ -603,7 +603,7 @@ export function SidebarContent({
                 const isExpanded = expandedProjectIds.has(project.id)
                 const isOnProjectPage = pathname.startsWith(`/projects/${project.key}`)
                 return (
-                  <div key={project.id} className="pl-2.5">
+                  <div key={project.id} className="pl-[9px]">
                     <div className="relative flex items-center">
                       <button
                         type="button"
@@ -794,7 +794,7 @@ function ProjectSettingsLink({
   const currentTab = searchParams.get('tab')
 
   return (
-    <div className="pl-2.5">
+    <div className="pl-[9px]">
       <div className="flex items-center">
         <button
           type="button"
