@@ -9,6 +9,7 @@ export interface EnvironmentBranch {
   id: string
   environment: string
   branchName: string
+  color?: string
 }
 
 export type CommitPatternAction = 'close' | 'in_progress' | 'reference'

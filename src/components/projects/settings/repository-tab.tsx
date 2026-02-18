@@ -1,11 +1,23 @@
 'use client'
 
-import { ArrowRight, ExternalLink, GitBranch, Info, Loader2, Plus, Server, X } from 'lucide-react'
+import {
+  ArrowRight,
+  ExternalLink,
+  GitBranch,
+  Info,
+  Loader2,
+  Palette,
+  Plus,
+  Server,
+  X,
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ColorPickerBody } from '@/components/tickets/label-select'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -34,12 +46,38 @@ interface FormData {
 
 // Preset environment suggestions with colors
 const ENVIRONMENT_PRESETS = [
-  { environment: 'production', branchName: 'main', color: 'rose' },
-  { environment: 'staging', branchName: 'staging', color: 'amber' },
-  { environment: 'development', branchName: 'develop', color: 'emerald' },
+  { environment: 'production', branchName: 'main', color: '#ef4444' }, // red
+  { environment: 'staging', branchName: 'staging', color: '#fbbf24' }, // amber
+  { environment: 'development', branchName: 'develop', color: '#4ade80' }, // green
 ] as const
 
-function getEnvironmentColor(env: string): { bg: string; text: string; border: string } {
+// Default colors for new environment branches (cycles through these)
+const DEFAULT_ENVIRONMENT_COLORS = [
+  '#ef4444', // red
+  '#fbbf24', // amber
+  '#4ade80', // green
+  '#3b82f6', // blue
+  '#a855f7', // purple
+  '#ec4899', // pink
+  '#14b8a6', // teal
+  '#fb923c', // orange
+]
+
+function getEnvironmentColor(
+  env: string,
+  customColor?: string,
+): { bg: string; text: string; border: string; hex?: string } {
+  // If a custom color is provided, use it
+  if (customColor) {
+    return {
+      bg: 'transparent',
+      text: 'inherit',
+      border: 'border-transparent',
+      hex: customColor,
+    }
+  }
+
+  // Fallback to auto-detection based on environment name
   const normalized = env.toLowerCase().trim()
   if (normalized.includes('prod')) {
     return { bg: 'bg-rose-950/50', text: 'text-rose-300', border: 'border-rose-800/50' }
@@ -141,7 +179,12 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
       formData.environmentBranches.length !== configBranches.length ||
       formData.environmentBranches.some((b, i) => {
         const orig = configBranches[i]
-        return !orig || b.environment !== orig.environment || b.branchName !== orig.branchName
+        return (
+          !orig ||
+          b.environment !== orig.environment ||
+          b.branchName !== orig.branchName ||
+          b.color !== orig.color
+        )
       })
 
     const changed =
@@ -194,19 +237,23 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
 
   // Environment branch handlers
   const addEnvironmentBranch = useCallback(() => {
-    const newBranch: EnvironmentBranch = {
-      id: crypto.randomUUID(),
-      environment: '',
-      branchName: '',
-    }
-    setFormData((prev) => ({
-      ...prev,
-      environmentBranches: [...prev.environmentBranches, newBranch],
-    }))
+    setFormData((prev) => {
+      const nextColorIndex = prev.environmentBranches.length % DEFAULT_ENVIRONMENT_COLORS.length
+      const newBranch: EnvironmentBranch = {
+        id: crypto.randomUUID(),
+        environment: '',
+        branchName: '',
+        color: DEFAULT_ENVIRONMENT_COLORS[nextColorIndex],
+      }
+      return {
+        ...prev,
+        environmentBranches: [...prev.environmentBranches, newBranch],
+      }
+    })
   }, [])
 
   const updateEnvironmentBranch = useCallback(
-    (id: string, field: 'environment' | 'branchName', value: string) => {
+    (id: string, field: 'environment' | 'branchName' | 'color', value: string) => {
       setFormData((prev) => ({
         ...prev,
         environmentBranches: prev.environmentBranches.map((b) =>
@@ -234,6 +281,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
       id: crypto.randomUUID(),
       environment: p.environment,
       branchName: p.branchName,
+      color: p.color,
     }))
 
     if (newBranches.length > 0) {
@@ -435,8 +483,9 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                 <ScrollArea className="max-h-[300px]">
                   <div className="space-y-2 pr-2">
                     {formData.environmentBranches.map((branch) => {
-                      const colors = getEnvironmentColor(branch.environment)
+                      const colors = getEnvironmentColor(branch.environment, branch.color)
                       const hasValues = branch.environment.trim() || branch.branchName.trim()
+                      const hasCustomColor = Boolean(branch.color)
 
                       return (
                         <div
@@ -455,11 +504,18 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                                 disabled={isDisabled}
                                 className={`h-9 pl-3 pr-3 bg-zinc-900/60 border text-sm font-medium transition-colors ${
                                   hasValues && branch.environment.trim()
-                                    ? `${colors.border} ${colors.text}`
+                                    ? hasCustomColor
+                                      ? 'border-zinc-700/50 text-zinc-200'
+                                      : `${colors.border} ${colors.text}`
                                     : 'border-zinc-700/50 text-zinc-300 placeholder:text-zinc-600'
                                 }`}
+                                style={
+                                  hasCustomColor && hasValues && branch.environment.trim()
+                                    ? { borderLeftColor: branch.color, borderLeftWidth: '3px' }
+                                    : undefined
+                                }
                               />
-                              {branch.environment.trim() && (
+                              {!hasCustomColor && branch.environment.trim() && (
                                 <div
                                   className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full ${colors.bg.replace('/50', '')}`}
                                 />
@@ -487,6 +543,41 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                               />
                             </div>
                           </div>
+
+                          {/* Color picker */}
+                          {!isDisabled && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="flex-shrink-0 p-1.5 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700/50 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-150"
+                                  aria-label="Change color"
+                                >
+                                  {branch.color ? (
+                                    <div
+                                      className="h-4 w-4 rounded-full border border-zinc-600"
+                                      style={{ backgroundColor: branch.color }}
+                                    />
+                                  ) : (
+                                    <Palette className="h-4 w-4" />
+                                  )}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                side="bottom"
+                                align="end"
+                                className="w-[280px] p-0 bg-zinc-900 border-zinc-700"
+                              >
+                                <ColorPickerBody
+                                  activeColor={branch.color || DEFAULT_ENVIRONMENT_COLORS[0]}
+                                  onColorChange={(color) =>
+                                    updateEnvironmentBranch(branch.id, 'color', color)
+                                  }
+                                  extraPresets={DEFAULT_ENVIRONMENT_COLORS}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          )}
 
                           {/* Delete button */}
                           {!isDisabled && (
