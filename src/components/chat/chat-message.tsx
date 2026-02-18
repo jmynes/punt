@@ -57,7 +57,7 @@ interface ChatMessageProps {
 
 export function ChatMessageComponent({ message, user }: ChatMessageProps) {
   const isUser = message.role === 'user'
-  const isThinking = !isUser && message.sentAt && !message.completedAt
+  const isThinking = !isUser && !!message.sentAt && !message.completedAt
   const elapsedSeconds = useElapsedSeconds(message.sentAt, isThinking)
 
   return (
