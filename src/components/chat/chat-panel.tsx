@@ -156,22 +156,24 @@ export function ChatPanel() {
     async (content: string) => {
       if (!content.trim() || isLoading) return
 
-      // Add user message
+      // Add user message with timestamp
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'user',
         content,
+        sentAt: new Date(),
       }
       addMessage(userMessage)
       setIsLoading(true)
 
-      // Create assistant message placeholder
+      // Create assistant message placeholder with start timestamp
       const assistantId = crypto.randomUUID()
       const assistantMessage: ChatMessage = {
         id: assistantId,
         role: 'assistant',
         content: '',
         toolCalls: [],
+        sentAt: new Date(),
       }
       addMessage(assistantMessage)
 
@@ -234,6 +236,9 @@ export function ChatPanel() {
             }
           }
         }
+
+        // Mark assistant message as completed
+        updateMessage(assistantId, { completedAt: new Date() })
 
         // If a new session was created, update the store
         if (newSessionId) {

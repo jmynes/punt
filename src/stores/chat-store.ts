@@ -8,6 +8,8 @@ export interface LocalChatMessage {
   role: 'user' | 'assistant'
   content: string
   toolCalls?: ChatToolCall[]
+  sentAt?: Date // When message was sent/initiated
+  completedAt?: Date // When assistant response finished
 }
 
 interface ChatState {

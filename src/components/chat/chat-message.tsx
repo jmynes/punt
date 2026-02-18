@@ -6,11 +6,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import type { UserSummary } from '@/types'
 
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
   toolCalls?: ToolCall[]
+  sentAt?: Date // When message was sent/initiated
+  completedAt?: Date // When assistant response finished
 }
 
 export interface ToolCall {
@@ -70,6 +76,21 @@ export function ChatMessageComponent({ message, user }: ChatMessageProps) {
         {message.content && (
           <div className="whitespace-pre-wrap text-sm">
             <FormattedText text={message.content} />
+          </div>
+        )}
+
+        {/* Timestamps */}
+        {(message.sentAt || message.completedAt) && (
+          <div
+            className={cn(
+              'flex gap-2 text-[10px] mt-1',
+              isUser ? 'text-blue-200' : 'text-zinc-500',
+            )}
+          >
+            {message.sentAt && <span>{formatTime(new Date(message.sentAt))}</span>}
+            {message.completedAt && !isUser && (
+              <span>• done {formatTime(new Date(message.completedAt))}</span>
+            )}
           </div>
         )}
       </div>
