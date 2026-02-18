@@ -49,7 +49,7 @@ import { deleteTickets } from '@/lib/actions/delete-tickets'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
 import { formatTicketIds } from '@/lib/ticket-format'
-import { rawToast, showToast } from '@/lib/toast'
+import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
@@ -358,7 +358,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const toastId = showUndoRedoToast('success', {
       title: toastTitle,
       description: toastDescription,
-      duration: 3000,
+      duration: getEffectiveDuration(3000),
       showUndoButtons: showUndo,
       onUndo: async () => {
         boardStateMove.setColumns(projectId, beforeColumns)
@@ -451,7 +451,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
     const toastId = rawToast.success(
       updates.length === 1 ? 'Priority updated' : `${updates.length} priorities updated`,
-      { description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '), duration: 3000 },
+      {
+        description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+        duration: getEffectiveDuration(3000),
+      },
     )
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushUpdate(projectId, updates, toastId)
@@ -518,7 +521,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
     const toastId = rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
-      duration: 3000,
+      duration: getEffectiveDuration(3000),
     })
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushUpdate(projectId, updates, toastId)
@@ -574,7 +577,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
     const toastId = rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
-      duration: 3000,
+      duration: getEffectiveDuration(3000),
     })
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushUpdate(projectId, updates, toastId)
@@ -628,7 +631,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
     const toastId = rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
-      duration: 3000,
+      duration: getEffectiveDuration(3000),
     })
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushUpdate(projectId, updates, toastId)
@@ -689,7 +692,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const toastId = showUndoRedoToast('success', {
       title: count === 1 ? 'Removed from sprint' : `${count} tickets removed from sprint`,
       description: count === 1 ? `${ticketKeys[0]} sent to Backlog` : `Sent to Backlog`,
-      duration: 5000,
+      duration: getEffectiveDuration(5000),
       showUndoButtons: showUndo,
       onUndo: async (id) => {
         // Move to redo stack
@@ -834,7 +837,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           ? `Added to ${targetSprint.name}`
           : `${count} tickets added to ${targetSprint.name}`,
       description: count === 1 ? ticketKeys[0] : ticketKeys.join(', '),
-      duration: 5000,
+      duration: getEffectiveDuration(5000),
       showUndoButtons: showUndo,
       onUndo: async (id) => {
         // Move to redo stack

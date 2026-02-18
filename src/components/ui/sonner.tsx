@@ -32,7 +32,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
           title: 'text-white font-medium',
           description: 'text-zinc-300',
           actionButton: 'bg-amber-500 hover:bg-amber-600 text-black font-medium',
-          cancelButton: 'bg-zinc-700 hover:bg-zinc-600 text-white',
+          cancelButton: 'bg-zinc-600 hover:bg-zinc-500 text-white font-medium',
+          closeButton:
+            '!bg-zinc-800 !border-zinc-600 !text-zinc-300 hover:!bg-zinc-700 hover:!border-zinc-500 hover:!text-white',
           success: '!bg-zinc-950 !border-emerald-500',
           error: '!bg-zinc-950 !border-red-500',
           warning: '!bg-zinc-950 !border-amber-500',

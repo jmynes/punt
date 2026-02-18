@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  Bell,
   Bot,
   Check,
   ChevronDown,
@@ -20,6 +21,7 @@ import {
   RefreshCw,
   Settings,
   Shield,
+  Sliders,
   SlidersHorizontal,
   Tag,
   Target,
@@ -48,10 +50,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
 }
 
-const mainNavItems: NavItem[] = [
-  { title: 'Dashboard', href: '/', icon: Home },
-  { title: 'Preferences', href: '/preferences', icon: SlidersHorizontal },
-]
+const mainNavItems: NavItem[] = [{ title: 'Dashboard', href: '/', icon: Home }]
 
 // Animated collapsible container for smooth expand/collapse
 function CollapsibleSection({
@@ -121,6 +120,11 @@ export function SidebarContent({
   const profileExpanded = sidebarExpandedSections.profile ?? false
   const toggleProfileExpanded = useCallback(
     () => toggleSidebarSection('profile'),
+    [toggleSidebarSection],
+  )
+  const preferencesExpanded = sidebarExpandedSections.preferences ?? false
+  const togglePreferencesExpanded = useCallback(
+    () => toggleSidebarSection('preferences'),
     [toggleSidebarSection],
   )
   const adminSettingsExpanded = sidebarExpandedSections.admin ?? false
@@ -194,7 +198,7 @@ export function SidebarContent({
           )
         })}
         {/* Profile with collapsible tabs */}
-        <div>
+        <div className="pl-[9px]">
           <div className="flex items-center">
             <button
               type="button"
@@ -270,6 +274,83 @@ export function SidebarContent({
             </div>
           </CollapsibleSection>
         </div>
+        {/* Preferences with collapsible tabs */}
+        <div className="pl-[9px]">
+          <div className="flex items-center">
+            <button
+              type="button"
+              className="h-9 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
+              onClick={togglePreferencesExpanded}
+            >
+              {preferencesExpanded ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </button>
+            <Link href="/preferences" onClick={handleLinkClick} className="flex-1 min-w-0">
+              <Button
+                variant="ghost"
+                className={cn(
+                  'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 pl-1',
+                  pathname.startsWith('/preferences') && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Preferences
+              </Button>
+            </Link>
+          </div>
+          <CollapsibleSection expanded={preferencesExpanded}>
+            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+              <Link href="/preferences?tab=general" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/preferences' &&
+                      (searchParams.get('tab') === 'general' || !searchParams.get('tab')) &&
+                      'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Sliders className="h-3 w-3" />
+                  General
+                </Button>
+              </Link>
+              <Link href="/preferences?tab=notifications" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/preferences' &&
+                      searchParams.get('tab') === 'notifications' &&
+                      'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Bell className="h-3 w-3" />
+                  Notifications
+                </Button>
+              </Link>
+              <Link href="/preferences?tab=appearance" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/preferences' &&
+                      searchParams.get('tab') === 'appearance' &&
+                      'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Palette className="h-3 w-3" />
+                  Appearance
+                </Button>
+              </Link>
+            </div>
+          </CollapsibleSection>
+        </div>
       </div>
 
       {/* Admin section - only visible to system admins */}
@@ -317,7 +398,7 @@ export function SidebarContent({
                   Users
                 </Button>
               </Link>
-              <div>
+              <div className="pl-[9px]">
                 <div className="flex items-center">
                   <button
                     type="button"
@@ -522,7 +603,7 @@ export function SidebarContent({
                 const isExpanded = expandedProjectIds.has(project.id)
                 const isOnProjectPage = pathname.startsWith(`/projects/${project.key}`)
                 return (
-                  <div key={project.id}>
+                  <div key={project.id} className="pl-[9px]">
                     <div className="relative flex items-center">
                       <button
                         type="button"
@@ -713,7 +794,7 @@ function ProjectSettingsLink({
   const currentTab = searchParams.get('tab')
 
   return (
-    <div>
+    <div className="pl-[9px]">
       <div className="flex items-center">
         <button
           type="button"

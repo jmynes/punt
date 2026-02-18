@@ -6,6 +6,7 @@
  * - Consistent styling and messaging patterns
  * - Built-in undo/redo support
  * - Loading state helpers
+ * - User-configurable auto-dismiss behavior
  *
  * Usage:
  *   import { showToast } from '@/lib/toast'
@@ -19,6 +20,7 @@
  */
 
 import { toast } from 'sonner'
+import { useSettingsStore } from '@/stores/settings-store'
 
 // =============================================================================
 // Configuration
@@ -37,7 +39,51 @@ export const TOAST_DURATION = {
   WITH_ACTION: 5000,
   /** Longer visibility (6s) - for important messages users need to read */
   LONG: 6000,
+  /** Infinity - toast stays until manually dismissed */
+  INFINITE: Number.POSITIVE_INFINITY,
 } as const
+
+/**
+ * Get toast preferences from the settings store.
+ * Returns the user's configured toast behavior.
+ */
+function getToastPreferences() {
+  const state = useSettingsStore.getState()
+  return {
+    autoDismiss: state.toastAutoDismiss,
+    dismissDelay: state.toastDismissDelay,
+    errorAutoDismiss: state.errorToastAutoDismiss,
+  }
+}
+
+/**
+ * Get the effective duration for a toast based on user preferences.
+ * When no explicit duration is requested, returns the user's configured dismiss delay.
+ * When an explicit duration is requested, returns the greater of that duration and
+ * the user's dismiss delay — explicit durations are treated as minimums, not scaled.
+ * @param requestedDuration - The duration requested by the caller (treated as a minimum)
+ * @param isError - Whether this is an error toast
+ * @returns The effective duration to use
+ */
+export function getEffectiveDuration(
+  requestedDuration: number | undefined,
+  isError = false,
+): number {
+  const prefs = getToastPreferences()
+  const autoDismiss = isError ? prefs.errorAutoDismiss : prefs.autoDismiss
+
+  if (!autoDismiss) {
+    return TOAST_DURATION.INFINITE
+  }
+
+  // If a specific duration was requested, honor it as a minimum —
+  // the user's dismiss delay can extend it, but never shorten it
+  if (requestedDuration !== undefined) {
+    return Math.max(requestedDuration, prefs.dismissDelay)
+  }
+
+  return prefs.dismissDelay
+}
 
 // =============================================================================
 // Types
@@ -85,7 +131,7 @@ interface LoadingToastOptions {
 function success(message: string, options?: ToastOptions): ToastId {
   return toast.success(message, {
     description: options?.description,
-    duration: options?.duration ?? TOAST_DURATION.DEFAULT,
+    duration: getEffectiveDuration(options?.duration),
     id: options?.id,
   })
 }
@@ -95,10 +141,22 @@ function success(message: string, options?: ToastOptions): ToastId {
  * Use for failed operations, validation errors, etc.
  */
 function error(message: string, options?: ToastOptions): ToastId {
+  const duration = getEffectiveDuration(options?.duration, true)
+  const persistent = !Number.isFinite(duration)
   return toast.error(message, {
     description: options?.description,
-    duration: options?.duration ?? TOAST_DURATION.DEFAULT,
+    duration,
     id: options?.id,
+    closeButton: persistent,
+    cancel: persistent
+      ? {
+          label: 'Copy',
+          onClick: () => {
+            const text = options?.description ? `${message}: ${options.description}` : message
+            void navigator.clipboard.writeText(text)
+          },
+        }
+      : undefined,
   })
 }
 
@@ -109,7 +167,7 @@ function error(message: string, options?: ToastOptions): ToastId {
 function info(message: string, options?: ToastOptions): ToastId {
   return toast.info(message, {
     description: options?.description,
-    duration: options?.duration ?? TOAST_DURATION.DEFAULT,
+    duration: getEffectiveDuration(options?.duration),
     id: options?.id,
   })
 }
@@ -121,7 +179,7 @@ function info(message: string, options?: ToastOptions): ToastId {
 function warning(message: string, options?: ToastOptions): ToastId {
   return toast.warning(message, {
     description: options?.description,
-    duration: options?.duration ?? TOAST_DURATION.DEFAULT,
+    duration: getEffectiveDuration(options?.duration),
     id: options?.id,
   })
 }
@@ -133,7 +191,7 @@ function warning(message: string, options?: ToastOptions): ToastId {
 function withUndo(message: string, options: UndoToastOptions): ToastId {
   return toast.success(message, {
     description: options.description,
-    duration: options.duration ?? TOAST_DURATION.WITH_ACTION,
+    duration: getEffectiveDuration(options.duration ?? TOAST_DURATION.WITH_ACTION),
     id: options.id,
     action: {
       label: options.undoLabel ?? 'Undo',
@@ -149,16 +207,28 @@ function withUndo(message: string, options: UndoToastOptions): ToastId {
  * Use when showing deleted/removed state that can be restored.
  */
 function errorWithUndo(message: string, options: UndoToastOptions): ToastId {
+  const duration = getEffectiveDuration(options.duration ?? TOAST_DURATION.WITH_ACTION, true)
+  const persistent = !Number.isFinite(duration)
   return toast.error(message, {
     description: options.description,
-    duration: options.duration ?? TOAST_DURATION.WITH_ACTION,
+    duration,
     id: options.id,
+    closeButton: persistent,
     action: {
       label: options.undoLabel ?? 'Undo',
       onClick: () => {
         void options.onUndo()
       },
     },
+    cancel: persistent
+      ? {
+          label: 'Copy',
+          onClick: () => {
+            const text = options.description ? `${message}: ${options.description}` : message
+            void navigator.clipboard.writeText(text)
+          },
+        }
+      : undefined,
   })
 }
 
