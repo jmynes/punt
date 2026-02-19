@@ -391,6 +391,29 @@ export class DemoDataProvider implements DataProvider {
     return updated
   }
 
+  async reopenSprint(projectId: string, sprintId: string): Promise<SprintSummary> {
+    const sprint = demoStorage.getSprints(projectId).find((s) => s.id === sprintId)
+    if (!sprint) throw new Error('Sprint not found')
+
+    if (sprint.status !== 'completed') {
+      throw new Error('Can only reopen a completed sprint')
+    }
+
+    // Check if there's already an active sprint
+    const activeSprint = demoStorage.getActiveSprint(projectId)
+    if (activeSprint) {
+      throw new Error(
+        `Another sprint "${activeSprint.name}" is already active. Complete it first before reopening this sprint.`,
+      )
+    }
+
+    const updated = demoStorage.updateSprint(projectId, sprintId, {
+      status: 'active',
+    })
+    if (!updated) throw new Error('Sprint not found')
+    return updated
+  }
+
   async getSprintSettings(_projectId: string): Promise<SprintSettings> {
     // Return default sprint settings for demo mode
     return {
