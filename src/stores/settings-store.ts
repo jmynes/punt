@@ -46,6 +46,10 @@ interface SettingsState {
   hideColorRemovalWarning: boolean
   setHideColorRemovalWarning: (value: boolean) => void
 
+  // Keep ticket selection after context menu actions
+  keepSelectionAfterAction: boolean
+  setKeepSelectionAfterAction: (value: boolean) => void
+
   // Persist table sort configuration across page refreshes
   persistTableSort: boolean
   setPersistTableSort: (value: boolean) => void
@@ -119,6 +123,10 @@ export const useSettingsStore = create<SettingsState>()(
       // Hide color removal warning (off by default - show warning)
       hideColorRemovalWarning: false,
       setHideColorRemovalWarning: (value) => set({ hideColorRemovalWarning: value }),
+
+      // Keep selection after context menu actions (on by default)
+      keepSelectionAfterAction: true,
+      setKeepSelectionAfterAction: (value) => set({ keepSelectionAfterAction: value }),
 
       // Persist table sort across refreshes (on by default)
       persistTableSort: true,

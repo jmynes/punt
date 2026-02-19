@@ -979,7 +979,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   let portalContent: ReactNode = null
   if (isMounted && open) {
     portalContent = createPortal(
-      <>
+      // Stop click propagation so React's synthetic event bubbling through the portal
+      // doesn't reach parent click handlers (e.g. backlog table's click-to-deselect)
+      // biome-ignore lint/a11y/useKeyWithClickEvents: portal wrapper, not interactive
+      <div onClick={(e) => e.stopPropagation()}>
         {/* Invisible backdrop to block clicks on elements behind the menu */}
         <div
           className="fixed inset-0 z-[199]"
@@ -1328,7 +1331,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             )}
           </div>
         </div>
-      </>,
+      </div>,
       document.body,
     )
   }

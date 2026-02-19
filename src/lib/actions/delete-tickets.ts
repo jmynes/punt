@@ -49,7 +49,7 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
     boardStore.removeTicket(projectId, ticket.id)
   }
 
-  // Clear selection
+  // Clear selection (delete always clears since tickets are removed)
   useSelectionStore.getState().clearSelection()
 
   // Call API to delete

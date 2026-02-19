@@ -45,6 +45,8 @@ function PreferencesContent() {
     setAutoSaveOnDrawerClose,
     autoSaveOnRoleEditorClose,
     setAutoSaveOnRoleEditorClose,
+    keepSelectionAfterAction,
+    setKeepSelectionAfterAction,
     showUndoButtons,
     setShowUndoButtons,
     toastAutoDismiss,
@@ -195,6 +197,27 @@ function PreferencesContent() {
                     id="auto-save-role-editor"
                     checked={autoSaveOnRoleEditorClose}
                     onCheckedChange={(checked) => setAutoSaveOnRoleEditorClose(checked === true)}
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
+
+                <Separator className="bg-zinc-800" />
+
+                <div className="flex items-start justify-between space-x-4">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="keep-selection-after-action" className="text-zinc-300">
+                      Keep selection after actions
+                    </Label>
+                    <p className="text-sm text-zinc-500">
+                      Keep tickets selected after performing context menu actions or multi-drag
+                      operations, so you can quickly perform multiple actions on the same set of
+                      tickets
+                    </p>
+                  </div>
+                  <Switch
+                    id="keep-selection-after-action"
+                    checked={keepSelectionAfterAction}
+                    onCheckedChange={(checked) => setKeepSelectionAfterAction(checked === true)}
                     className="data-[state=checked]:bg-amber-600"
                   />
                 </div>
