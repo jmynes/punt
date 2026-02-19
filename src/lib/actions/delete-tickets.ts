@@ -46,13 +46,13 @@ async function fetchCommentsForTicket(
     return comments.map(
       (c: {
         content: string
-        authorId: string
+        author: { id: string }
         isSystemGenerated: boolean
         source: string | null
         createdAt: string
       }) => ({
         content: c.content,
-        authorId: c.authorId,
+        authorId: c.author.id, // author is an object, not authorId
         isSystemGenerated: c.isSystemGenerated ?? false,
         source: c.source ?? null,
         createdAt: c.createdAt,
@@ -251,6 +251,8 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
                   sprintId: ticket.sprintId,
                   labelIds: ticket.labels?.map((l) => l.id) ?? [],
                   watcherIds: ticket.watchers?.map((w) => w.id) ?? [],
+                  // Preserve original creation timestamp on restore
+                  createdAt: ticket.createdAt,
                 }),
               })
 
