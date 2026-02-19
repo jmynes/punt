@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useBudgetAlert } from '@/hooks/use-budget-alert'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { formatDaysRemaining, isCompletedColumn, isSprintExpired } from '@/lib/sprint-utils'
@@ -255,6 +256,9 @@ export function SprintSection({
   const isPlanning = sprint?.status === 'planning'
   const isActive = sprint?.status === 'active'
   const isCompleted = sprint?.status === 'completed'
+
+  // Monitor budget and trigger fire effect when crossing over-budget threshold
+  useBudgetAlert(projectId, sprint)
 
   const expired =
     isActive && sprint

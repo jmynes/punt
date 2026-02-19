@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useDeleteSprint, useProjectSprints } from '@/hooks/queries/use-sprints'
+import { useBudgetAlert } from '@/hooks/use-budget-alert'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import {
@@ -84,6 +85,9 @@ export function SprintHeader({
 
   const isPlanning = activeSprint?.status === 'planning'
   const isActive = activeSprint?.status === 'active'
+
+  // Monitor budget and trigger fire effect when crossing over-budget threshold
+  useBudgetAlert(projectId, activeSprint)
 
   if (isLoading) {
     return <div className={cn('h-16 bg-zinc-900/50 rounded-xl animate-pulse', className)} />

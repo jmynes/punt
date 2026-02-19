@@ -61,6 +61,8 @@ function PreferencesContent() {
     setSidebarSectionExpanded,
     hideColorRemovalWarning,
     setHideColorRemovalWarning,
+    enableParticleAnimations,
+    setEnableParticleAnimations,
   } = useSettingsStore()
 
   const projects = useProjectsStore((s) => s.projects)
@@ -554,6 +556,35 @@ function PreferencesContent() {
                     id="hide-color-removal-warning"
                     checked={hideColorRemovalWarning}
                     onCheckedChange={(checked) => setHideColorRemovalWarning(checked === true)}
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Animations */}
+            <Card className="border-zinc-800 bg-zinc-900/50">
+              <CardHeader>
+                <CardTitle className="text-zinc-100">Animations</CardTitle>
+                <CardDescription className="text-zinc-500">
+                  Control visual effects and celebration animations
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start justify-between space-x-4">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="enable-particle-animations" className="text-zinc-300">
+                      Particle celebrations
+                    </Label>
+                    <p className="text-sm text-zinc-500">
+                      Show confetti when completing sprints and fire effects when exceeding sprint
+                      budget. Automatically disabled when your system prefers reduced motion.
+                    </p>
+                  </div>
+                  <Switch
+                    id="enable-particle-animations"
+                    checked={enableParticleAnimations}
+                    onCheckedChange={(checked) => setEnableParticleAnimations(checked === true)}
                     className="data-[state=checked]:bg-amber-600"
                   />
                 </div>

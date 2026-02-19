@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select'
 import { useCompleteSprint, useProjectSprints, useSprintDetail } from '@/hooks/queries/use-sprints'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
+import { useParticles } from '@/hooks/use-particles'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSprintStore } from '@/stores/sprint-store'
@@ -39,6 +40,7 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
   const completeSprint = useCompleteSprint(projectId)
   const { data: sprints } = useProjectSprints(projectId)
   const { data: sprint } = useSprintDetail(projectId, sprintCompleteId ?? '')
+  const { triggerConfetti } = useParticles()
 
   const [action, setAction] = useState<SprintCompletionAction>('close_to_next')
   const [targetSprintId, setTargetSprintId] = useState<string>('__new__')
@@ -108,11 +110,21 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
       },
       {
         onSuccess: () => {
+          // Trigger celebration confetti
+          triggerConfetti()
           handleClose()
         },
       },
     )
-  }, [sprintCompleteId, action, targetSprintId, createNextSprint, completeSprint, handleClose])
+  }, [
+    sprintCompleteId,
+    action,
+    targetSprintId,
+    createNextSprint,
+    completeSprint,
+    handleClose,
+    triggerConfetti,
+  ])
 
   useCtrlSave({
     onSave: handleSubmit,

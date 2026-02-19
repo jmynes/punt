@@ -58,6 +58,10 @@ interface SettingsState {
   dismissedAddColumnProjects: string[]
   dismissAddColumn: (projectId: string) => void
   undismissAddColumn: (projectId: string) => void
+
+  // Particle animations for celebrations and warnings
+  enableParticleAnimations: boolean
+  setEnableParticleAnimations: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -145,6 +149,10 @@ export const useSettingsStore = create<SettingsState>()(
             (id) => id !== projectId,
           ),
         })),
+
+      // Particle animations (on by default)
+      enableParticleAnimations: true,
+      setEnableParticleAnimations: (value) => set({ enableParticleAnimations: value }),
     }),
     {
       name: 'punt-settings',
