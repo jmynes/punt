@@ -260,7 +260,7 @@ export function AutocompleteUI() {
         // and linkified by the markdown viewer during rendering
         let replacement: string
         if (suggestion.type === 'ticket') {
-          replacement = `${suggestion.projectKey}-${suggestion.ticket.number}`
+          replacement = `#${suggestion.projectKey}-${suggestion.ticket.number}`
         } else {
           // Insert as @username - will be linkified by markdown viewer
           replacement = `@${suggestion.user.username || suggestion.user.name}`
