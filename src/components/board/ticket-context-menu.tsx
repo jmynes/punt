@@ -1,5 +1,6 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import {
   CalendarMinus,
   CalendarPlus,
@@ -41,8 +42,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useProjectSprints } from '@/hooks/queries/use-sprints'
-import { updateTicketAPI } from '@/hooks/queries/use-tickets'
+import { sprintKeys, useProjectSprints } from '@/hooks/queries/use-sprints'
+import { ticketKeys as ticketQueryKeys, updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { pasteTickets } from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
@@ -121,6 +122,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution'
     anchor: { x: number; y: number; height: number; left: number }
   }>(null)
+
+  // Query client for invalidating sprint/ticket queries after sprint changes
+  const queryClient = useQueryClient()
 
   // Fetch sprints for add to sprint menu
   const { data: sprints = [] } = useProjectSprints(projectId)
@@ -752,6 +756,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         for (const { ticket } of ticketsInSprint) {
           await updateTicketAPI(projectId, ticket.id, { sprintId: null })
         }
+        // Invalidate sprint and ticket queries so other views reflect the change
+        queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
+        queryClient.invalidateQueries({ queryKey: ticketQueryKeys.byProject(projectId) })
       } catch (err) {
         console.error('Failed to persist sprint removal:', err)
       }
@@ -915,6 +922,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         for (const { ticket } of ticketsToAdd) {
           await updateTicketAPI(projectId, ticket.id, { sprintId: targetSprint.id })
         }
+        // Invalidate sprint and ticket queries so other views reflect the change
+        queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
+        queryClient.invalidateQueries({ queryKey: ticketQueryKeys.byProject(projectId) })
       } catch (err) {
         console.error('Failed to persist sprint addition:', err)
       }

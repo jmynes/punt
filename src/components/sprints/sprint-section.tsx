@@ -300,6 +300,15 @@ export function SprintSection({
     },
   })
 
+  // Droppable zone at the end of the ticket list for "drop after last item"
+  const { setNodeRef: setEndDropRef } = useDroppable({
+    id: `${droppableId}-end`,
+    data: {
+      type: 'section-end',
+      sprintId: sprint?.id ?? null,
+    },
+  })
+
   // Ticket IDs for sortable context - use sorted order
   const ticketIds = sortedTickets.map((t) => t.id)
 
@@ -668,6 +677,8 @@ export function SprintSection({
                 sort={sort}
                 onToggleSort={handleToggleSort}
               />
+              {/* Invisible droppable zone after the last ticket for "drop at end" */}
+              <div ref={setEndDropRef} className="h-2" />
             </div>
           )}
         </div>

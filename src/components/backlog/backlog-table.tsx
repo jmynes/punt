@@ -329,6 +329,14 @@ export function BacklogTable({
     },
   })
 
+  // Droppable zone at the end of the ticket list for "drop after last item"
+  const { setNodeRef: setEndDropRef } = useDroppable({
+    id: 'backlog-end',
+    data: {
+      type: 'backlog-end',
+    },
+  })
+
   // Handle drag start - track dragging tickets and clear selection if needed
   function handleDragStart(event: DragStartEvent) {
     const { active } = event
@@ -383,6 +391,12 @@ export function BacklogTable({
         return
       }
 
+      // Check if hovering over the end-of-list zone
+      if (over.data.current?.type === 'backlog-end') {
+        setDropPosition(filteredTickets.length)
+        return
+      }
+
       // Find the index of the ticket we're hovering over
       const overTicketIndex = filteredTickets.findIndex((t) => t.id === overId)
       if (overTicketIndex >= 0) {
@@ -404,12 +418,17 @@ export function BacklogTable({
     draggedIdsRef.current = []
 
     // If dropped on a sprint section, delegate to external handler
-    if (over?.data.current?.type === 'sprint-section') {
+    if (
+      over?.data.current?.type === 'sprint-section' ||
+      over?.data.current?.type === 'section-end'
+    ) {
       externalDragEnd?.(event)
       return
     }
 
-    if (!over || active.id === over.id) return
+    const isEndOfList = over?.data.current?.type === 'backlog-end'
+
+    if (!over || (!isEndOfList && active.id === over.id)) return
 
     const activeId = active.id as string
 
@@ -441,11 +460,16 @@ export function BacklogTable({
         const selectedInOrder = baseOrdered.filter((t) => selectedSet.has(t.id))
 
         // Determine insertion index in the remaining (unfiltered) list
-        let insertIndex = remaining.findIndex((t) => t.id === overId)
-        if (insertIndex === -1) insertIndex = remaining.length
-        // If over target is one of the selected (can happen in multi-select), put at end
-        if (selectedSet.has(overId)) {
+        let insertIndex: number
+        if (isEndOfList) {
           insertIndex = remaining.length
+        } else {
+          insertIndex = remaining.findIndex((t) => t.id === overId)
+          if (insertIndex === -1) insertIndex = remaining.length
+          // If over target is one of the selected (can happen in multi-select), put at end
+          if (selectedSet.has(overId)) {
+            insertIndex = remaining.length
+          }
         }
 
         const newOrder = [
@@ -467,9 +491,14 @@ export function BacklogTable({
       } else {
         // Single drag using base order
         const oldIndex = baseOrdered.findIndex((t) => t.id === activeId)
-        let targetIndex = baseOrdered.findIndex((t) => t.id === overId)
-        if (targetIndex === -1) {
+        let targetIndex: number
+        if (isEndOfList) {
           targetIndex = baseOrdered.length - 1
+        } else {
+          targetIndex = baseOrdered.findIndex((t) => t.id === overId)
+          if (targetIndex === -1) {
+            targetIndex = baseOrdered.length - 1
+          }
         }
 
         if (oldIndex !== -1 && targetIndex !== -1) {
@@ -662,8 +691,8 @@ export function BacklogTable({
               />
             </div>
           ) : (
-            // Spacer to fill remaining space - acts as drop zone for "end of list"
-            <div className="min-h-16 flex-1" />
+            // Spacer to fill remaining space - droppable zone for "drop after last item"
+            <div ref={setEndDropRef} className="min-h-16 flex-1" />
           )}
         </div>
 
