@@ -1423,33 +1423,32 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
               {/* Attachments - Collapsible Section */}
               <div className="space-y-3">
-                <button
-                  type="button"
-                  className="flex items-center justify-between w-full group"
-                  onClick={() => setIsAttachmentsExpanded(!isAttachmentsExpanded)}
-                >
-                  <Label className="text-zinc-400 flex items-center gap-2 cursor-pointer group-hover:text-zinc-300 transition-colors">
-                    {isAttachmentsExpanded ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                    <Paperclip className="h-4 w-4" />
-                    Attachments
-                    {tempAttachments.length > 0 && (
-                      <span className="text-xs text-zinc-500">({tempAttachments.length})</span>
-                    )}
-                  </Label>
+                <div className="flex items-center justify-between w-full">
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 group"
+                    onClick={() => setIsAttachmentsExpanded(!isAttachmentsExpanded)}
+                  >
+                    <Label className="text-zinc-400 flex items-center gap-2 cursor-pointer group-hover:text-zinc-300 transition-colors">
+                      {isAttachmentsExpanded ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                      <Paperclip className="h-4 w-4" />
+                      Attachments
+                      {tempAttachments.length > 0 && (
+                        <span className="text-xs text-zinc-500">({tempAttachments.length})</span>
+                      )}
+                    </Label>
+                  </button>
                   <div className="flex items-center gap-2">
                     {isAttachmentsExpanded && tempAttachments.length >= 1 && (
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-6 px-2 text-xs text-zinc-500 hover:text-red-400"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setShowRemoveAllAttachments(true)
-                        }}
+                        onClick={() => setShowRemoveAllAttachments(true)}
                       >
                         <Trash2 className="h-3 w-3 mr-1" />
                         Remove all
@@ -1466,7 +1465,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       {tempAttachments.length}/{uploadConfig?.maxAttachmentsPerTicket ?? 20}
                     </span>
                   </div>
-                </button>
+                </div>
 
                 {/* Collapsible content */}
                 {isAttachmentsExpanded && (
