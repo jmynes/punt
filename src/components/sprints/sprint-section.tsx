@@ -14,6 +14,7 @@ import {
   Pencil,
   Play,
   Plus,
+  RotateCcw,
   Target,
   Trash2,
   TrendingUp,
@@ -29,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useReopenSprint } from '@/hooks/queries/use-sprints'
 import { useBudgetAlert } from '@/hooks/use-budget-alert'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -95,6 +97,7 @@ export function SprintSection({
   const { columns } = useBacklogStore()
   const { getSprintSort, setSprintSort } = useSprintStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
+  const reopenSprintMutation = useReopenSprint(projectId)
 
   // Sort state: persisted via sprint store (keyed by sprint ID or 'backlog')
   const sectionId = sprint?.id ?? 'backlog'
@@ -329,6 +332,12 @@ export function SprintSection({
       onDelete(sprint.id)
     }
   }, [sprint, onDelete])
+
+  const handleReopenSprint = useCallback(() => {
+    if (sprint) {
+      reopenSprintMutation.mutate(sprint.id)
+    }
+  }, [sprint, reopenSprintMutation])
 
   return (
     <div
@@ -588,6 +597,17 @@ export function SprintSection({
                   >
                     <Target className="h-4 w-4 mr-2" />
                     Complete Sprint
+                  </DropdownMenuItem>
+                )}
+
+                {isCompleted && (
+                  <DropdownMenuItem
+                    onClick={handleReopenSprint}
+                    disabled={reopenSprintMutation.isPending}
+                    className="text-zinc-300 focus:bg-zinc-800"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Reopen Sprint
                   </DropdownMenuItem>
                 )}
 
