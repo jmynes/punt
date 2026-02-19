@@ -113,10 +113,8 @@ export function SidebarContent({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [editMode, setEditMode] = useState(false)
-  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set())
-  const [adminExpanded, setAdminExpanded] = useState(true)
-  const [projectsExpanded, setProjectsExpanded] = useState(true)
-  const { sidebarExpandedSections, toggleSidebarSection } = useSettingsStore()
+  const { sidebarExpandedSections, toggleSidebarSection, setSidebarSectionExpanded } =
+    useSettingsStore()
   const profileExpanded = sidebarExpandedSections.profile ?? false
   const toggleProfileExpanded = useCallback(
     () => toggleSidebarSection('profile'),
@@ -127,10 +125,36 @@ export function SidebarContent({
     () => toggleSidebarSection('preferences'),
     [toggleSidebarSection],
   )
+  // "Admin" top-level section (defaults to expanded)
+  const adminExpanded = sidebarExpandedSections['section-admin'] ?? true
+  const toggleAdminExpanded = useCallback(
+    () => toggleSidebarSection('section-admin'),
+    [toggleSidebarSection],
+  )
   const adminSettingsExpanded = sidebarExpandedSections.admin ?? false
   const setAdminSettingsExpanded = useCallback(
     (v: boolean) => useSettingsStore.getState().setSidebarSectionExpanded('admin', v),
     [],
+  )
+  // "Projects" top-level section (defaults to expanded)
+  const projectsExpanded = sidebarExpandedSections['section-projects'] ?? true
+  const toggleProjectsExpanded = useCallback(
+    () => toggleSidebarSection('section-projects'),
+    [toggleSidebarSection],
+  )
+  // Per-project collapsible state (defaults to expanded for new/unseen projects)
+  const isProjectExpanded = useCallback(
+    (projectId: string) => sidebarExpandedSections[`project-${projectId}`] ?? true,
+    [sidebarExpandedSections],
+  )
+  const toggleProjectExpanded = useCallback(
+    (projectId: string) => {
+      const key = `project-${projectId}`
+      // Default is true (expanded), so if not set yet, toggling should collapse
+      const current = sidebarExpandedSections[key] ?? true
+      setSidebarSectionExpanded(key, !current)
+    },
+    [sidebarExpandedSections, setSidebarSectionExpanded],
   )
   const isProjectSettingsExpanded = useCallback(
     (projectId: string) => sidebarExpandedSections[projectId] ?? false,
@@ -140,33 +164,6 @@ export function SidebarContent({
     (projectId: string) => toggleSidebarSection(projectId),
     [toggleSidebarSection],
   )
-
-  // Default all projects to expanded when they load
-  useEffect(() => {
-    if (projects.length > 0) {
-      setExpandedProjectIds((prev) => {
-        const newSet = new Set(prev)
-        for (const project of projects) {
-          if (!prev.has(project.id)) {
-            newSet.add(project.id)
-          }
-        }
-        return newSet
-      })
-    }
-  }, [projects])
-
-  const toggleProjectExpanded = (projectId: string) => {
-    setExpandedProjectIds((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(projectId)) {
-        newSet.delete(projectId)
-      } else {
-        newSet.add(projectId)
-      }
-      return newSet
-    })
-  }
 
   const handleLinkClick = () => {
     onLinkClick?.()
@@ -359,7 +356,7 @@ export function SidebarContent({
           <button
             type="button"
             className="flex items-center gap-1 px-3 mb-1 w-full text-left select-none"
-            onClick={() => setAdminExpanded(!adminExpanded)}
+            onClick={toggleAdminExpanded}
           >
             {adminExpanded ? (
               <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
@@ -546,7 +543,7 @@ export function SidebarContent({
           <button
             type="button"
             className="flex items-center gap-1 select-none"
-            onClick={() => setProjectsExpanded(!projectsExpanded)}
+            onClick={toggleProjectsExpanded}
           >
             {projectsExpanded ? (
               <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
@@ -600,7 +597,7 @@ export function SidebarContent({
             ) : (
               projects.map((project) => {
                 const isActive = activeProjectId === project.id
-                const isExpanded = expandedProjectIds.has(project.id)
+                const isExpanded = isProjectExpanded(project.id)
                 const isOnProjectPage = pathname.startsWith(`/projects/${project.key}`)
                 return (
                   <div key={project.id} className="pl-[9px]">
