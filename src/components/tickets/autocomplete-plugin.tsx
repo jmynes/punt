@@ -163,11 +163,6 @@ export function AutocompleteUI() {
   // Handle text input to detect triggers
   const checkForTrigger = useCallback(
     (editor: LexicalEditor) => {
-      // Don't close dropdown while user is interacting with it
-      if (isInteractingRef.current) {
-        return
-      }
-
       editor.getEditorState().read(() => {
         const selection = $getSelection()
         if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
@@ -231,6 +226,7 @@ export function AutocompleteUI() {
             position,
           })
         } else {
+          // No trigger found — always close, even if hovering on the dropdown
           setState((prev) => ({ ...prev, isOpen: false, triggerType: null }))
         }
       })
