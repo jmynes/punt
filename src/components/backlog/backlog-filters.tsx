@@ -245,13 +245,35 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
         return (
           <DropdownMenu key="type">
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0">
+              <Button variant="outline" size="sm" className="shrink-0 group">
                 <CheckSquare className="mr-2 h-4 w-4 text-blue-400" />
                 Type
                 {filterByType.length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {filterByType.length}
-                  </Badge>
+                  <>
+                    <Badge variant="secondary" className="ml-2">
+                      {filterByType.length}
+                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                      onPointerDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setFilterByType([])
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterByType([])
+                        }
+                      }}
+                      title="Clear type filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  </>
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -279,13 +301,35 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
         return (
           <DropdownMenu key="status">
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0">
+              <Button variant="outline" size="sm" className="shrink-0 group">
                 <Zap className="mr-2 h-4 w-4 text-cyan-400" />
                 Status
                 {filterByStatus.length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {filterByStatus.length}
-                  </Badge>
+                  <>
+                    <Badge variant="secondary" className="ml-2">
+                      {filterByStatus.length}
+                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                      onPointerDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setFilterByStatus([])
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterByStatus([])
+                        }
+                      }}
+                      title="Clear status filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  </>
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -313,13 +357,35 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
         return (
           <DropdownMenu key="resolution">
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0">
+              <Button variant="outline" size="sm" className="shrink-0 group">
                 <CheckCircle2 className="mr-2 h-4 w-4 text-green-400" />
                 Resolution
                 {filterByResolution.length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {filterByResolution.length}
-                  </Badge>
+                  <>
+                    <Badge variant="secondary" className="ml-2">
+                      {filterByResolution.length}
+                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                      onPointerDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setFilterByResolution([])
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterByResolution([])
+                        }
+                      }}
+                      title="Clear resolution filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  </>
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -356,13 +422,35 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
         return (
           <DropdownMenu key="priority">
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0">
+              <Button variant="outline" size="sm" className="shrink-0 group">
                 <ArrowUp className="mr-2 h-4 w-4 text-blue-400" />
                 Priority
                 {filterByPriority.length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {filterByPriority.length}
-                  </Badge>
+                  <>
+                    <Badge variant="secondary" className="ml-2">
+                      {filterByPriority.length}
+                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                      onPointerDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setFilterByPriority([])
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterByPriority([])
+                        }
+                      }}
+                      title="Clear priority filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  </>
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -390,13 +478,35 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
         return (
           <DropdownMenu key="assignee">
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0">
+              <Button variant="outline" size="sm" className="shrink-0 group">
                 <User className="mr-2 h-4 w-4 text-zinc-400" />
                 Assignee
                 {filterByAssignee.length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {filterByAssignee.length}
-                  </Badge>
+                  <>
+                    <Badge variant="secondary" className="ml-2">
+                      {filterByAssignee.length}
+                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                      onPointerDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setFilterByAssignee([])
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterByAssignee([])
+                        }
+                      }}
+                      title="Clear assignee filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  </>
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -447,13 +557,35 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
         return (
           <DropdownMenu key="labels">
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0">
+              <Button variant="outline" size="sm" className="shrink-0 group">
                 <Layers className="mr-2 h-4 w-4 text-purple-400" />
                 Labels
                 {filterByLabels.length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {filterByLabels.length}
-                  </Badge>
+                  <>
+                    <Badge variant="secondary" className="ml-2">
+                      {filterByLabels.length}
+                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                      onPointerDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setFilterByLabels([])
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterByLabels([])
+                        }
+                      }}
+                      title="Clear labels filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  </>
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -497,13 +629,35 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
         return (
           <DropdownMenu key="sprint">
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0">
+              <Button variant="outline" size="sm" className="shrink-0 group">
                 <Flag className="mr-2 h-4 w-4 text-amber-400" />
                 Sprint
                 {filterBySprint && (
-                  <Badge variant="secondary" className="ml-2">
-                    1
-                  </Badge>
+                  <>
+                    <Badge variant="secondary" className="ml-2">
+                      1
+                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                      onPointerDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setFilterBySprint(null)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterBySprint(null)
+                        }
+                      }}
+                      title="Clear sprint filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  </>
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -537,13 +691,35 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
         return (
           <DropdownMenu key="points">
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0">
+              <Button variant="outline" size="sm" className="shrink-0 group">
                 <Hash className="mr-2 h-4 w-4 text-green-400" />
                 Points
                 {filterByPoints && (
-                  <Badge variant="secondary" className="ml-2">
-                    1
-                  </Badge>
+                  <>
+                    <Badge variant="secondary" className="ml-2">
+                      1
+                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                      onPointerDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setFilterByPoints(null)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterByPoints(null)
+                        }
+                      }}
+                      title="Clear points filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  </>
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -738,13 +914,43 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
         return (
           <Popover key="dueDate">
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0">
+              <Button variant="outline" size="sm" className="shrink-0 group">
                 <Calendar className="mr-2 h-4 w-4 text-pink-400" />
                 Due Date
                 {hasActiveFilter && (
-                  <Badge variant="secondary" className="ml-2">
-                    {getBadgeText()}
-                  </Badge>
+                  <>
+                    <Badge variant="secondary" className="ml-2">
+                      {getBadgeText()}
+                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setFilterByDueDate({
+                          from: undefined,
+                          to: undefined,
+                          includeNone: false,
+                          includeOverdue: false,
+                        })
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation()
+                          setFilterByDueDate({
+                            from: undefined,
+                            to: undefined,
+                            includeNone: false,
+                            includeOverdue: false,
+                          })
+                        }
+                      }}
+                      title="Clear due date filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  </>
                 )}
               </Button>
             </PopoverTrigger>
@@ -870,13 +1076,35 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
         return (
           <DropdownMenu key="attachments">
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0">
+              <Button variant="outline" size="sm" className="shrink-0 group">
                 <Paperclip className="mr-2 h-4 w-4 text-orange-400" />
                 Attachments
                 {filterByAttachments && (
-                  <Badge variant="secondary" className="ml-2">
-                    1
-                  </Badge>
+                  <>
+                    <Badge variant="secondary" className="ml-2">
+                      1
+                    </Badge>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                      onPointerDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setFilterByAttachments(null)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFilterByAttachments(null)
+                        }
+                      }}
+                      title="Clear attachments filter"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  </>
                 )}
               </Button>
             </DropdownMenuTrigger>
