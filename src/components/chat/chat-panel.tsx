@@ -1,7 +1,7 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { BotIcon, KeyIcon, Loader2Icon } from 'lucide-react'
+import { BotIcon, EyeOffIcon, KeyIcon, Loader2Icon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,7 @@ import { useCurrentUser } from '@/hooks/use-current-user'
 import { getHelpText, type SlashCommand } from '@/lib/chat/commands'
 import { showToast } from '@/lib/toast'
 import { transformMetadataToToolCalls, useChatStore } from '@/stores/chat-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { ChatInput } from './chat-input'
 import { type ChatMessage, ChatMessageComponent } from './chat-message'
@@ -39,6 +40,8 @@ interface StreamEvent {
 
 export function ChatPanel() {
   const { chatPanelOpen, setChatPanelOpen, chatContext } = useUIStore()
+  const showChatPanel = useSettingsStore((s) => s.showChatPanel)
+  const setShowChatPanel = useSettingsStore((s) => s.setShowChatPanel)
   const {
     currentSessionId,
     setCurrentSessionId,
@@ -301,6 +304,12 @@ export function ChatPanel() {
     setIsLoading(false)
   }, [clearMessages])
 
+  const handleDismiss = useCallback(() => {
+    setChatPanelOpen(false)
+    setShowChatPanel(false)
+    showToast.info('Chat panel hidden. Re-enable in Preferences > Appearance.')
+  }, [setChatPanelOpen, setShowChatPanel])
+
   // Handle slash commands
   const handleCommand = useCallback(
     (command: SlashCommand, args?: string) => {
@@ -361,6 +370,10 @@ export function ChatPanel() {
     ],
   )
 
+  if (!showChatPanel) {
+    return null
+  }
+
   return (
     <Sheet open={chatPanelOpen} onOpenChange={setChatPanelOpen}>
       <SheetContent side="right" className="flex w-full flex-col p-0 sm:max-w-md">
@@ -386,6 +399,15 @@ export function ChatPanel() {
                 Clear
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDismiss}
+              className="h-8 w-8 text-zinc-400 hover:text-zinc-100 shrink-0"
+              title="Hide chat panel"
+            >
+              <EyeOffIcon className="h-4 w-4" />
+            </Button>
           </div>
         </SheetHeader>
 

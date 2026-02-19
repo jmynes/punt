@@ -62,6 +62,10 @@ interface SettingsState {
   // Particle animations for celebrations and warnings
   enableParticleAnimations: boolean
   setEnableParticleAnimations: (value: boolean) => void
+
+  // Chat panel visibility
+  showChatPanel: boolean
+  setShowChatPanel: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -153,6 +157,10 @@ export const useSettingsStore = create<SettingsState>()(
       // Particle animations (on by default)
       enableParticleAnimations: true,
       setEnableParticleAnimations: (value) => set({ enableParticleAnimations: value }),
+
+      // Chat panel visibility (on by default)
+      showChatPanel: true,
+      setShowChatPanel: (value) => set({ showChatPanel: value }),
     }),
     {
       name: 'punt-settings',

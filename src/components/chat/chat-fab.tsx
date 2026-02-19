@@ -2,10 +2,16 @@
 
 import { MessageSquareIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 
 export function ChatFAB() {
   const { chatPanelOpen, toggleChatPanel } = useUIStore()
+  const showChatPanel = useSettingsStore((s) => s.showChatPanel)
+
+  if (!showChatPanel) {
+    return null
+  }
 
   return (
     <button
