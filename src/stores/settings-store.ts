@@ -70,6 +70,10 @@ interface SettingsState {
   // Collapse attachments section by default in ticket drawer
   collapseAttachmentsByDefault: boolean
   setCollapseAttachmentsByDefault: (value: boolean) => void
+
+  // Use 24-hour time format (e.g., 14:00 instead of 2:00 PM)
+  use24HourTime: boolean
+  setUse24HourTime: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -169,6 +173,10 @@ export const useSettingsStore = create<SettingsState>()(
       // Collapse attachments section by default (off by default - expanded)
       collapseAttachmentsByDefault: false,
       setCollapseAttachmentsByDefault: (value) => set({ collapseAttachmentsByDefault: value }),
+
+      // Use 24-hour time format (off by default - uses 12-hour with AM/PM)
+      use24HourTime: false,
+      setUse24HourTime: (value) => set({ use24HourTime: value }),
     }),
     {
       name: 'punt-settings',

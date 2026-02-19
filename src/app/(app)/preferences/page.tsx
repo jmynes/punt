@@ -67,6 +67,8 @@ function PreferencesContent() {
     setEnableParticleAnimations,
     showChatPanel,
     setShowChatPanel,
+    use24HourTime,
+    setUse24HourTime,
   } = useSettingsStore()
 
   const projects = useProjectsStore((s) => s.projects)
@@ -273,6 +275,35 @@ function PreferencesContent() {
                     id="persist-table-sort"
                     checked={persistTableSort}
                     onCheckedChange={(checked) => setPersistTableSort(checked === true)}
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Display */}
+            <Card className="border-zinc-800 bg-zinc-900/50">
+              <CardHeader>
+                <CardTitle className="text-zinc-100">Display</CardTitle>
+                <CardDescription className="text-zinc-500">
+                  Configure how dates and times are displayed
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start justify-between space-x-4">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="use-24-hour-time" className="text-zinc-300">
+                      Use 24-hour time
+                    </Label>
+                    <p className="text-sm text-zinc-500">
+                      Display times in 24-hour format (e.g., 14:00) instead of 12-hour format (e.g.,
+                      2:00 PM)
+                    </p>
+                  </div>
+                  <Switch
+                    id="use-24-hour-time"
+                    checked={use24HourTime}
+                    onCheckedChange={(checked) => setUse24HourTime(checked === true)}
                     className="data-[state=checked]:bg-amber-600"
                   />
                 </div>
