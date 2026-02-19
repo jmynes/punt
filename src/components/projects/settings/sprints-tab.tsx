@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { TimePicker } from '@/components/ui/time-picker'
+import { TimeScroller } from '@/components/ui/time-scroller'
 import { useSprintSettings, useUpdateSprintSettings } from '@/hooks/queries/use-sprints'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useHasPermission } from '@/hooks/use-permissions'
@@ -140,14 +140,11 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
           {/* Default Start Time */}
           <div className="space-y-2">
             <Label className="text-zinc-300">Default Start Time</Label>
-            <div className="max-w-[200px]">
-              <TimePicker
-                value={formData.defaultStartTime}
-                onChange={(time) => setFormData((prev) => ({ ...prev, defaultStartTime: time }))}
-                disabled={isDisabled}
-                className="bg-zinc-900 border-zinc-700 text-zinc-100"
-              />
-            </div>
+            <TimeScroller
+              value={formData.defaultStartTime}
+              onChange={(time) => setFormData((prev) => ({ ...prev, defaultStartTime: time }))}
+              disabled={isDisabled}
+            />
             <p className="text-xs text-zinc-500">
               The default start time for new sprints (e.g., 09:00 for 9 AM)
             </p>
@@ -156,14 +153,11 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
           {/* Default End Time */}
           <div className="space-y-2">
             <Label className="text-zinc-300">Default End Time</Label>
-            <div className="max-w-[200px]">
-              <TimePicker
-                value={formData.defaultEndTime}
-                onChange={(time) => setFormData((prev) => ({ ...prev, defaultEndTime: time }))}
-                disabled={isDisabled}
-                className="bg-zinc-900 border-zinc-700 text-zinc-100"
-              />
-            </div>
+            <TimeScroller
+              value={formData.defaultEndTime}
+              onChange={(time) => setFormData((prev) => ({ ...prev, defaultEndTime: time }))}
+              disabled={isDisabled}
+            />
             <p className="text-xs text-zinc-500">
               The default end time for sprints (e.g., 17:00 for 5 PM)
             </p>

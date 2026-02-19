@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { TimePicker } from '@/components/ui/time-picker'
+import { TimeScroller } from '@/components/ui/time-scroller'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-system-settings'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 
@@ -74,14 +74,11 @@ export function SprintSettingsForm() {
           {/* Default Start Time */}
           <div className="space-y-2">
             <Label className="text-zinc-300">Default Sprint Start Time</Label>
-            <div className="max-w-[200px]">
-              <TimePicker
-                value={defaultSprintStartTime}
-                onChange={setDefaultSprintStartTime}
-                disabled={updateSettings.isPending}
-                className="bg-zinc-900 border-zinc-700 text-zinc-100"
-              />
-            </div>
+            <TimeScroller
+              value={defaultSprintStartTime}
+              onChange={setDefaultSprintStartTime}
+              disabled={updateSettings.isPending}
+            />
             <p className="text-xs text-zinc-500">
               The default time when sprints start (e.g., 09:00 for 9 AM). This is used as the
               initial value when creating new sprints.
@@ -91,14 +88,11 @@ export function SprintSettingsForm() {
           {/* Default End Time */}
           <div className="space-y-2">
             <Label className="text-zinc-300">Default Sprint End Time</Label>
-            <div className="max-w-[200px]">
-              <TimePicker
-                value={defaultSprintEndTime}
-                onChange={setDefaultSprintEndTime}
-                disabled={updateSettings.isPending}
-                className="bg-zinc-900 border-zinc-700 text-zinc-100"
-              />
-            </div>
+            <TimeScroller
+              value={defaultSprintEndTime}
+              onChange={setDefaultSprintEndTime}
+              disabled={updateSettings.isPending}
+            />
             <p className="text-xs text-zinc-500">
               The default time when sprints end (e.g., 17:00 for 5 PM). Sprints will be considered
               complete at this time on the end date.
