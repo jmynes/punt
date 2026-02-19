@@ -280,6 +280,12 @@ export function AutocompleteUI() {
         selection.focus.set(anchorNode.getKey(), newOffset, 'text')
       })
 
+      // Reset interaction state before closing - this is critical!
+      // When clicking a suggestion, onMouseEnter sets isInteractingRef to true.
+      // The dropdown is then removed from DOM, so onMouseLeave never fires.
+      // Without this reset, checkForTrigger will exit early on subsequent triggers.
+      isInteractingRef.current = false
+
       setState({
         isOpen: false,
         triggerType: null,
@@ -343,6 +349,8 @@ export function AutocompleteUI() {
             return false
 
           case 'Escape':
+            // Reset interaction state to ensure future triggers work
+            isInteractingRef.current = false
             setState({
               isOpen: false,
               triggerType: null,
