@@ -62,9 +62,9 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [endTime, setEndTime] = useState<string>('17:00')
 
-  // Initialize dates and times when sprint loads
+  // Initialize dates and times when sprint loads or dialog opens
   useEffect(() => {
-    if (sprint) {
+    if (sprint && sprintStartOpen) {
       // Use project-level default times or fall back to system defaults
       const defaultStartTime = settings?.defaultStartTime ?? '09:00'
       const defaultEndTime = settings?.defaultEndTime ?? '17:00'
@@ -95,6 +95,7 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
     }
   }, [
     sprint,
+    sprintStartOpen,
     settings?.defaultSprintDuration,
     settings?.defaultStartTime,
     settings?.defaultEndTime,

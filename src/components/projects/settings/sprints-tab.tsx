@@ -29,7 +29,7 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
   const { data: settings, isLoading } = useSprintSettings(projectId)
   const updateSettings = useUpdateSprintSettings(projectId)
 
-  const canEditSettings = useHasPermission(projectId, PERMISSIONS.PROJECT_SETTINGS)
+  const canEditSettings = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
 
   const [formData, setFormData] = useState<FormData>({
     defaultSprintDuration: 14,
