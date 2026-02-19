@@ -260,11 +260,15 @@ export function AutocompleteUI() {
         const afterCursor = textContent.slice(anchor.offset)
 
         // Generate replacement text
+        // Tickets are inserted as plain text and linkified by the markdown viewer
+        // Mentions are inserted as markdown links directly
         let replacement: string
         if (suggestion.type === 'ticket') {
           replacement = `${suggestion.projectKey}-${suggestion.ticket.number}`
         } else {
-          replacement = `@${suggestion.user.username || suggestion.user.name}`
+          const displayName = suggestion.user.username || suggestion.user.name
+          // Link to backlog filtered by assignee (useful for finding user's tickets)
+          replacement = `[@${displayName}](/projects/${projectKey}/backlog?assignee=${encodeURIComponent(suggestion.user.name)})`
         }
 
         // Replace the text
@@ -285,7 +289,7 @@ export function AutocompleteUI() {
         position: null,
       })
     },
-    [activeEditor],
+    [activeEditor, projectKey],
   )
 
   // Track when user is interacting with dropdown
