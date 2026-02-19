@@ -56,6 +56,7 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
     const [commentToDelete, setCommentToDelete] = useState<CommentInfo | null>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const editTextareaRef = useRef<HTMLTextAreaElement>(null)
+    const deleteButtonRef = useRef<HTMLButtonElement>(null)
 
     // Notify parent when pending comment state changes
     useEffect(() => {
@@ -318,7 +319,13 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
           open={!!commentToDelete}
           onOpenChange={(open) => !open && setCommentToDelete(null)}
         >
-          <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+          <AlertDialogContent
+            className="bg-zinc-900 border-zinc-800"
+            onOpenAutoFocus={(e) => {
+              e.preventDefault()
+              deleteButtonRef.current?.focus()
+            }}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Comment</AlertDialogTitle>
               <AlertDialogDescription className="text-zinc-400">
@@ -330,6 +337,7 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
+                ref={deleteButtonRef}
                 onClick={handleDeleteComment}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
