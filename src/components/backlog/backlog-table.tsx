@@ -418,12 +418,17 @@ export function BacklogTable({
     draggedIdsRef.current = []
 
     // If dropped on a sprint section, delegate to external handler
-    if (over?.data.current?.type === 'sprint-section') {
+    if (
+      over?.data.current?.type === 'sprint-section' ||
+      over?.data.current?.type === 'section-end'
+    ) {
       externalDragEnd?.(event)
       return
     }
 
-    if (!over || active.id === over.id) return
+    const isEndOfList = over?.data.current?.type === 'backlog-end'
+
+    if (!over || (!isEndOfList && active.id === over.id)) return
 
     const activeId = active.id as string
 
@@ -455,11 +460,16 @@ export function BacklogTable({
         const selectedInOrder = baseOrdered.filter((t) => selectedSet.has(t.id))
 
         // Determine insertion index in the remaining (unfiltered) list
-        let insertIndex = remaining.findIndex((t) => t.id === overId)
-        if (insertIndex === -1) insertIndex = remaining.length
-        // If over target is one of the selected (can happen in multi-select), put at end
-        if (selectedSet.has(overId)) {
+        let insertIndex: number
+        if (isEndOfList) {
           insertIndex = remaining.length
+        } else {
+          insertIndex = remaining.findIndex((t) => t.id === overId)
+          if (insertIndex === -1) insertIndex = remaining.length
+          // If over target is one of the selected (can happen in multi-select), put at end
+          if (selectedSet.has(overId)) {
+            insertIndex = remaining.length
+          }
         }
 
         const newOrder = [
@@ -481,9 +491,14 @@ export function BacklogTable({
       } else {
         // Single drag using base order
         const oldIndex = baseOrdered.findIndex((t) => t.id === activeId)
-        let targetIndex = baseOrdered.findIndex((t) => t.id === overId)
-        if (targetIndex === -1) {
+        let targetIndex: number
+        if (isEndOfList) {
           targetIndex = baseOrdered.length - 1
+        } else {
+          targetIndex = baseOrdered.findIndex((t) => t.id === overId)
+          if (targetIndex === -1) {
+            targetIndex = baseOrdered.length - 1
+          }
         }
 
         if (oldIndex !== -1 && targetIndex !== -1) {

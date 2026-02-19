@@ -361,7 +361,10 @@ export function SprintBacklogView({
       const ticketsChangingSprint = ticketsToMove.filter((t) => t.sprintId !== targetSprintId)
 
       // Case 1: Internal reordering within the same section
-      if (ticketsChangingSprint.length === 0 && overData?.type === 'ticket') {
+      if (
+        ticketsChangingSprint.length === 0 &&
+        (overData?.type === 'ticket' || overData?.type === 'section-end')
+      ) {
         const sourceSprintId = ticketsToMove[0]?.sprintId ?? null
         const sectionKey = sourceSprintId ?? 'backlog'
         const sectionTickets = ticketsBySprint[sectionKey] ?? []
@@ -371,7 +374,10 @@ export function SprintBacklogView({
 
         // Find indices
         const oldIndex = sectionTickets.findIndex((t) => t.id === activeId)
-        const newIndex = sectionTickets.findIndex((t) => t.id === overId)
+        const newIndex =
+          overData?.type === 'section-end'
+            ? sectionTickets.length - 1
+            : sectionTickets.findIndex((t) => t.id === overId)
 
         if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
           // Calculate new order values
