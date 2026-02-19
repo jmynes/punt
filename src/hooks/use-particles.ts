@@ -14,13 +14,14 @@ function prefersReducedMotion(): boolean {
 
 /**
  * Confetti configuration for sprint completion celebration
+ * Note: Using direct particle spawn instead of emitters (slim bundle doesn't include emitters)
  */
 export const confettiConfig = {
   fullScreen: { enable: true, zIndex: 9999 },
   fpsLimit: 120,
   particles: {
     number: {
-      value: 0, // Start with 0, emit via emitters
+      value: 100, // Spawn 100 particles immediately
     },
     color: {
       value: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'],
@@ -40,11 +41,11 @@ export const confettiConfig = {
       },
     },
     size: {
-      value: { min: 4, max: 8 },
+      value: { min: 4, max: 10 },
     },
     move: {
       enable: true,
-      speed: { min: 10, max: 20 },
+      speed: { min: 10, max: 25 },
       direction: 'bottom' as const,
       random: true,
       straight: false,
@@ -56,7 +57,7 @@ export const confettiConfig = {
         default: 'destroy' as const,
         top: 'none' as const,
       },
-      decay: 0.05,
+      decay: 0.02,
     },
     rotate: {
       value: { min: 0, max: 360 },
@@ -81,35 +82,19 @@ export const confettiConfig = {
       speed: { min: 5, max: 15 },
     },
   },
-  emitters: [
-    {
-      position: { x: 50, y: -5 },
-      rate: {
-        quantity: 15,
-        delay: 0.1,
-      },
-      size: {
-        width: 100,
-        height: 0,
-      },
-      life: {
-        duration: 0.5,
-        count: 1,
-      },
-    },
-  ],
   detectRetina: true,
 }
 
 /**
  * Fire/ember configuration for over-budget warning
+ * Note: Using direct particle spawn instead of emitters (slim bundle doesn't include emitters)
  */
 export const fireConfig = {
   fullScreen: { enable: true, zIndex: 9999 },
   fpsLimit: 120,
   particles: {
     number: {
-      value: 0,
+      value: 60, // Spawn 60 fire particles immediately
     },
     color: {
       value: ['#ef4444', '#f97316', '#fbbf24', '#dc2626'],
@@ -118,7 +103,7 @@ export const fireConfig = {
       type: 'circle',
     },
     opacity: {
-      value: { min: 0.3, max: 0.8 },
+      value: { min: 0.4, max: 0.9 },
       animation: {
         enable: true,
         speed: 1,
@@ -129,7 +114,7 @@ export const fireConfig = {
       },
     },
     size: {
-      value: { min: 2, max: 6 },
+      value: { min: 3, max: 8 },
       animation: {
         enable: true,
         speed: 3,
@@ -141,7 +126,7 @@ export const fireConfig = {
     },
     move: {
       enable: true,
-      speed: { min: 3, max: 8 },
+      speed: { min: 5, max: 12 },
       direction: 'top' as const,
       random: true,
       straight: false,
@@ -156,23 +141,6 @@ export const fireConfig = {
       },
     },
   },
-  emitters: [
-    {
-      position: { x: 50, y: 100 },
-      rate: {
-        quantity: 8,
-        delay: 0.1,
-      },
-      size: {
-        width: 60,
-        height: 0,
-      },
-      life: {
-        duration: 0.8,
-        count: 1,
-      },
-    },
-  ],
   detectRetina: true,
 }
 
