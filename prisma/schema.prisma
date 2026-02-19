@@ -488,6 +488,10 @@ model ProjectSprintSettings {
   autoCarryOverIncomplete Boolean @default(true)
   doneColumnIds           String  @default("[]") // JSON array
 
+  // Default times for sprint start/end (HH:mm format, e.g., "09:00")
+  defaultStartTime        String  @default("09:00")
+  defaultEndTime          String  @default("17:00")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -550,6 +554,10 @@ model SystemSettings {
   // Agent configuration (global defaults)
   defaultBranchTemplate   String  @default("{type}/{key}-{slug}") // Default branch naming template
   defaultAgentGuidance    String? // Default Markdown instructions for AI agents
+
+  // Default sprint times (system-wide defaults for new projects)
+  defaultSprintStartTime  String  @default("09:00") // HH:mm format
+  defaultSprintEndTime    String  @default("17:00") // HH:mm format
 }
 
 // Password reset tokens (for forgot password flow)

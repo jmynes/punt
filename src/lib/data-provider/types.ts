@@ -178,6 +178,8 @@ export interface SprintSettings {
   defaultSprintDuration: number
   autoCarryOverIncomplete: boolean
   doneColumnIds: string[]
+  defaultStartTime: string // HH:mm format (e.g., "09:00")
+  defaultEndTime: string // HH:mm format (e.g., "17:00")
 }
 
 // ============================================================================

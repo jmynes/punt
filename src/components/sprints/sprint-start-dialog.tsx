@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { TimePicker } from '@/components/ui/time-picker'
 import {
   useActiveSprint,
   useSprintDetail,
@@ -24,6 +25,26 @@ import {
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
+
+/**
+ * Extract time string (HH:mm) from a Date object
+ */
+function extractTimeFromDate(date: Date): string {
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
+/**
+ * Parse time string (HH:mm) and apply it to a date
+ */
+function applyTimeToDate(date: Date | null, time: string): Date | null {
+  if (!date) return null
+  const [hours, minutes] = time.split(':').map(Number)
+  const result = new Date(date)
+  result.setHours(hours, minutes, 0, 0)
+  return result
+}
 
 interface SprintStartDialogProps {
   projectId: string
@@ -37,42 +58,70 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
   const { data: settings } = useSprintSettings(projectId)
 
   const [startDate, setStartDate] = useState<Date | null>(null)
+  const [startTime, setStartTime] = useState<string>('09:00')
   const [endDate, setEndDate] = useState<Date | null>(null)
+  const [endTime, setEndTime] = useState<string>('17:00')
 
-  // Initialize dates when sprint loads
+  // Initialize dates and times when sprint loads
   useEffect(() => {
     if (sprint) {
+      // Use project-level default times or fall back to system defaults
+      const defaultStartTime = settings?.defaultStartTime ?? '09:00'
+      const defaultEndTime = settings?.defaultEndTime ?? '17:00'
+
       const start = sprint.startDate ? new Date(sprint.startDate) : new Date()
-      start.setHours(0, 0, 0, 0)
+      // If the existing date has meaningful time info (not midnight), use it
+      const existingStartTime = sprint.startDate
+        ? extractTimeFromDate(new Date(sprint.startDate))
+        : null
+      const hasStartTime = existingStartTime && existingStartTime !== '00:00'
+
       setStartDate(start)
+      setStartTime(hasStartTime ? existingStartTime : defaultStartTime)
 
       if (sprint.endDate) {
-        setEndDate(new Date(sprint.endDate))
+        const end = new Date(sprint.endDate)
+        const existingEndTime = extractTimeFromDate(end)
+        const hasEndTime = existingEndTime !== '00:00'
+        setEndDate(end)
+        setEndTime(hasEndTime ? existingEndTime : defaultEndTime)
       } else {
         const duration = settings?.defaultSprintDuration ?? 14
         const end = new Date(start)
         end.setDate(end.getDate() + duration)
         setEndDate(end)
+        setEndTime(defaultEndTime)
       }
     }
-  }, [sprint, settings?.defaultSprintDuration])
+  }, [
+    sprint,
+    settings?.defaultSprintDuration,
+    settings?.defaultStartTime,
+    settings?.defaultEndTime,
+  ])
 
   const handleClose = useCallback(() => {
     closeSprintStart()
     setTimeout(() => {
       setStartDate(null)
+      setStartTime('09:00')
       setEndDate(null)
+      setEndTime('17:00')
     }, 200)
   }, [closeSprintStart])
 
   const handleSubmit = useCallback(async () => {
     if (!sprintStartId) return
 
+    // Combine date and time for submission
+    const startDateTime = applyTimeToDate(startDate, startTime)
+    const endDateTime = applyTimeToDate(endDate, endTime)
+
     startSprint.mutate(
       {
         sprintId: sprintStartId,
-        startDate: startDate ?? undefined,
-        endDate: endDate ?? undefined,
+        startDate: startDateTime ?? undefined,
+        endDate: endDateTime ?? undefined,
       },
       {
         onSuccess: () => {
@@ -80,7 +129,7 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
         },
       },
     )
-  }, [sprintStartId, startDate, endDate, startSprint, handleClose])
+  }, [sprintStartId, startDate, startTime, endDate, endTime, startSprint, handleClose])
 
   const hasActiveSprint = !!activeSprint
 
@@ -125,11 +174,10 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
             </div>
           )}
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Start Date */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">Start Date</Label>
+          {/* Start Date & Time */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Start Date & Time</Label>
+            <div className="grid grid-cols-2 gap-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -154,11 +202,19 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
                   />
                 </PopoverContent>
               </Popover>
+              <TimePicker
+                value={startTime}
+                onChange={setStartTime}
+                disabled={startSprint.isPending || hasActiveSprint}
+                className="bg-zinc-900 border-zinc-700 text-zinc-100"
+              />
             </div>
+          </div>
 
-            {/* End Date */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">End Date</Label>
+          {/* End Date & Time */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">End Date & Time</Label>
+            <div className="grid grid-cols-2 gap-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -184,6 +240,12 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
                   />
                 </PopoverContent>
               </Popover>
+              <TimePicker
+                value={endTime}
+                onChange={setEndTime}
+                disabled={startSprint.isPending || hasActiveSprint}
+                className="bg-zinc-900 border-zinc-700 text-zinc-100"
+              />
             </div>
           </div>
 

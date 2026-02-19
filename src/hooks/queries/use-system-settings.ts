@@ -64,6 +64,9 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
   // Agent configuration defaults
   defaultBranchTemplate: '{type}/{key}-{slug}',
   defaultAgentGuidance: null,
+  // Default sprint times
+  defaultSprintStartTime: '09:00',
+  defaultSprintEndTime: '17:00',
 }
 
 /**
@@ -126,6 +129,10 @@ export interface UpdateSystemSettingsParams {
   canonicalRepoUrl?: string | null
   repoHostingProvider?: RepoHostingProvider | null
   forkRepoUrl?: string | null
+
+  // Default sprint times
+  defaultSprintStartTime?: string
+  defaultSprintEndTime?: string
 }
 
 /**

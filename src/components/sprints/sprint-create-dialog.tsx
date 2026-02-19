@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
+import { TimePicker } from '@/components/ui/time-picker'
 import { useCreateSprint, useSprintSettings } from '@/hooks/queries/use-sprints'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { cn } from '@/lib/utils'
@@ -26,7 +27,9 @@ interface FormData {
   name: string
   goal: string
   startDate: Date | null
+  startTime: string // HH:mm
   endDate: Date | null
+  endTime: string // HH:mm
   budget: string
 }
 
@@ -34,8 +37,21 @@ const DEFAULT_FORM: FormData = {
   name: '',
   goal: '',
   startDate: null,
+  startTime: '09:00',
   endDate: null,
+  endTime: '17:00',
   budget: '',
+}
+
+/**
+ * Parse time string (HH:mm) and apply it to a date
+ */
+function applyTimeToDate(date: Date | null, time: string): Date | null {
+  if (!date) return null
+  const [hours, minutes] = time.split(':').map(Number)
+  const result = new Date(date)
+  result.setHours(hours, minutes, 0, 0)
+  return result
 }
 
 interface SprintCreateDialogProps {
@@ -55,7 +71,7 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
     }, 200)
   }, [setSprintCreateOpen])
 
-  // Set default dates when dialog opens
+  // Set default dates and times when dialog opens
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (open && !formData.startDate) {
@@ -64,10 +80,17 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
         const duration = settings?.defaultSprintDuration ?? 14
         const endDate = new Date(today)
         endDate.setDate(endDate.getDate() + duration)
+
+        // Use project-level default times or fall back to system defaults
+        const defaultStartTime = settings?.defaultStartTime ?? '09:00'
+        const defaultEndTime = settings?.defaultEndTime ?? '17:00'
+
         setFormData((prev) => ({
           ...prev,
           startDate: today,
+          startTime: defaultStartTime,
           endDate,
+          endTime: defaultEndTime,
         }))
       }
       if (!open) {
@@ -76,7 +99,14 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
         setSprintCreateOpen(true)
       }
     },
-    [formData.startDate, settings?.defaultSprintDuration, handleClose, setSprintCreateOpen],
+    [
+      formData.startDate,
+      settings?.defaultSprintDuration,
+      settings?.defaultStartTime,
+      settings?.defaultEndTime,
+      handleClose,
+      setSprintCreateOpen,
+    ],
   )
 
   const handleSubmit = useCallback(async () => {
@@ -85,12 +115,16 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
     const budgetValue = formData.budget.trim()
     const budget = budgetValue ? Number.parseInt(budgetValue, 10) : null
 
+    // Combine date and time for submission
+    const startDateTime = applyTimeToDate(formData.startDate, formData.startTime)
+    const endDateTime = applyTimeToDate(formData.endDate, formData.endTime)
+
     createSprint.mutate(
       {
         name: formData.name.trim(),
         goal: formData.goal.trim() || null,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
+        startDate: startDateTime,
+        endDate: endDateTime,
         budget: budget && !Number.isNaN(budget) ? budget : null,
       },
       {
@@ -172,11 +206,10 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
             </p>
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Start Date */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">Start Date</Label>
+          {/* Start Date & Time */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Start Date & Time</Label>
+            <div className="grid grid-cols-2 gap-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -203,11 +236,19 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
                   />
                 </PopoverContent>
               </Popover>
+              <TimePicker
+                value={formData.startTime}
+                onChange={(time) => setFormData((prev) => ({ ...prev, startTime: time }))}
+                disabled={createSprint.isPending}
+                className="bg-zinc-900 border-zinc-700 text-zinc-100"
+              />
             </div>
+          </div>
 
-            {/* End Date */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">End Date</Label>
+          {/* End Date & Time */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">End Date & Time</Label>
+            <div className="grid grid-cols-2 gap-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -233,6 +274,12 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
                   />
                 </PopoverContent>
               </Popover>
+              <TimePicker
+                value={formData.endTime}
+                onChange={(time) => setFormData((prev) => ({ ...prev, endTime: time }))}
+                disabled={createSprint.isPending}
+                className="bg-zinc-900 border-zinc-700 text-zinc-100"
+              />
             </div>
           </div>
         </div>

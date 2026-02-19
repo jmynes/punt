@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  CalendarClock,
   Columns3,
   Database,
   Mail,
@@ -19,16 +20,26 @@ import { EmailSettingsForm } from '@/components/admin/email-settings-form'
 import { RepositorySettingsForm } from '@/components/admin/repository-settings-form'
 import { RolePermissionsForm } from '@/components/admin/role-permissions-form'
 import { SettingsForm } from '@/components/admin/settings-form'
+import { SprintSettingsForm } from '@/components/admin/sprint-settings-form'
 import { PageHeader } from '@/components/common'
 import { cn } from '@/lib/utils'
 
-type SettingsTab = 'email' | 'branding' | 'uploads' | 'board' | 'roles' | 'updates' | 'database'
+type SettingsTab =
+  | 'email'
+  | 'branding'
+  | 'uploads'
+  | 'board'
+  | 'sprints'
+  | 'roles'
+  | 'updates'
+  | 'database'
 
 const VALID_TABS: SettingsTab[] = [
   'email',
   'branding',
   'uploads',
   'board',
+  'sprints',
   'roles',
   'updates',
   'database',
@@ -106,6 +117,18 @@ export default function AdminSettingsPage() {
             Board
           </Link>
           <Link
+            href="/admin/settings?tab=sprints"
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+              activeTab === 'sprints'
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            <CalendarClock className="h-4 w-4" />
+            Sprints
+          </Link>
+          <Link
             href="/admin/settings?tab=roles"
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
@@ -148,6 +171,7 @@ export default function AdminSettingsPage() {
         {activeTab === 'branding' && <BrandingSettingsForm />}
         {activeTab === 'uploads' && <SettingsForm />}
         {activeTab === 'board' && <BoardSettingsForm />}
+        {activeTab === 'sprints' && <SprintSettingsForm />}
         {activeTab === 'roles' && <RolePermissionsForm />}
         {activeTab === 'updates' && <RepositorySettingsForm />}
         {activeTab === 'database' && <DatabaseSettings />}

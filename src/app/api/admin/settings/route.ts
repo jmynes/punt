@@ -56,6 +56,16 @@ const UpdateSettingsSchema = z.object({
     .optional()
     .nullable(),
   forkRepoUrl: z.string().regex(urlRegex, 'Invalid URL format').max(500).optional().nullable(),
+
+  // Default sprint times (system-wide defaults for new projects)
+  defaultSprintStartTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format (HH:mm)')
+    .optional(),
+  defaultSprintEndTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format (HH:mm)')
+    .optional(),
 })
 
 /**
@@ -191,6 +201,14 @@ export async function PATCH(request: Request) {
     }
     if (updates.forkRepoUrl !== undefined) {
       updateData.forkRepoUrl = updates.forkRepoUrl
+    }
+
+    // Default sprint times
+    if (updates.defaultSprintStartTime !== undefined) {
+      updateData.defaultSprintStartTime = updates.defaultSprintStartTime
+    }
+    if (updates.defaultSprintEndTime !== undefined) {
+      updateData.defaultSprintEndTime = updates.defaultSprintEndTime
     }
 
     // Upsert to handle case where settings don't exist yet

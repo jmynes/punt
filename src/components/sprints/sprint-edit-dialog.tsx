@@ -17,7 +17,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
-import { useProjectSprints, useUpdateSprint } from '@/hooks/queries/use-sprints'
+import { TimePicker } from '@/components/ui/time-picker'
+import { useProjectSprints, useSprintSettings, useUpdateSprint } from '@/hooks/queries/use-sprints'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
@@ -26,7 +27,9 @@ interface FormData {
   name: string
   goal: string
   startDate: Date | null
+  startTime: string // HH:mm
   endDate: Date | null
+  endTime: string // HH:mm
   budget: string
 }
 
@@ -34,8 +37,30 @@ const DEFAULT_FORM: FormData = {
   name: '',
   goal: '',
   startDate: null,
+  startTime: '09:00',
   endDate: null,
+  endTime: '17:00',
   budget: '',
+}
+
+/**
+ * Extract time string (HH:mm) from a Date object
+ */
+function extractTimeFromDate(date: Date): string {
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
+/**
+ * Parse time string (HH:mm) and apply it to a date
+ */
+function applyTimeToDate(date: Date | null, time: string): Date | null {
+  if (!date) return null
+  const [hours, minutes] = time.split(':').map(Number)
+  const result = new Date(date)
+  result.setHours(hours, minutes, 0, 0)
+  return result
 }
 
 interface SprintEditDialogProps {
@@ -45,6 +70,7 @@ interface SprintEditDialogProps {
 export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
   const { sprintEditOpen, sprintEditId, closeSprintEdit } = useUIStore()
   const { data: sprints } = useProjectSprints(projectId)
+  const { data: settings } = useSprintSettings(projectId)
   const updateSprint = useUpdateSprint(projectId)
   const [formData, setFormData] = useState<FormData>(DEFAULT_FORM)
 
@@ -54,15 +80,38 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
   // Populate form when sprint changes
   useEffect(() => {
     if (sprint && sprintEditOpen) {
+      // Use project-level default times or fall back to system defaults
+      const defaultStartTime = settings?.defaultStartTime ?? '09:00'
+      const defaultEndTime = settings?.defaultEndTime ?? '17:00'
+
+      let startTime = defaultStartTime
+      let endTime = defaultEndTime
+
+      // Extract time from existing dates if present and not midnight
+      if (sprint.startDate) {
+        const existingTime = extractTimeFromDate(new Date(sprint.startDate))
+        if (existingTime !== '00:00') {
+          startTime = existingTime
+        }
+      }
+      if (sprint.endDate) {
+        const existingTime = extractTimeFromDate(new Date(sprint.endDate))
+        if (existingTime !== '00:00') {
+          endTime = existingTime
+        }
+      }
+
       setFormData({
         name: sprint.name,
         goal: sprint.goal || '',
         startDate: sprint.startDate ? new Date(sprint.startDate) : null,
+        startTime,
         endDate: sprint.endDate ? new Date(sprint.endDate) : null,
+        endTime,
         budget: sprint.budget?.toString() || '',
       })
     }
-  }, [sprint, sprintEditOpen])
+  }, [sprint, sprintEditOpen, settings?.defaultStartTime, settings?.defaultEndTime])
 
   const handleClose = useCallback(() => {
     closeSprintEdit()
@@ -86,13 +135,17 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
     const budgetValue = formData.budget.trim()
     const budget = budgetValue ? Number.parseInt(budgetValue, 10) : null
 
+    // Combine date and time for submission
+    const startDateTime = applyTimeToDate(formData.startDate, formData.startTime)
+    const endDateTime = applyTimeToDate(formData.endDate, formData.endTime)
+
     updateSprint.mutate(
       {
         sprintId: sprintEditId,
         name: formData.name.trim(),
         goal: formData.goal.trim() || null,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
+        startDate: startDateTime,
+        endDate: endDateTime,
         budget: budget && !Number.isNaN(budget) ? budget : null,
       },
       {
@@ -104,14 +157,19 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
   }, [formData, sprintEditId, updateSprint, handleClose])
 
   const isValid = formData.name.trim().length > 0
+
+  // Build comparison values including times
+  const currentStartDateTime = applyTimeToDate(formData.startDate, formData.startTime)?.getTime()
+  const currentEndDateTime = applyTimeToDate(formData.endDate, formData.endTime)?.getTime()
+  const sprintStartDateTime = sprint?.startDate ? new Date(sprint.startDate).getTime() : undefined
+  const sprintEndDateTime = sprint?.endDate ? new Date(sprint.endDate).getTime() : undefined
+
   const hasChanges =
     sprint &&
     (formData.name !== sprint.name ||
       formData.goal !== (sprint.goal || '') ||
-      formData.startDate?.getTime() !==
-        (sprint.startDate ? new Date(sprint.startDate).getTime() : undefined) ||
-      formData.endDate?.getTime() !==
-        (sprint.endDate ? new Date(sprint.endDate).getTime() : undefined) ||
+      currentStartDateTime !== sprintStartDateTime ||
+      currentEndDateTime !== sprintEndDateTime ||
       formData.budget !== (sprint.budget?.toString() || ''))
 
   useCtrlSave({
@@ -183,11 +241,10 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
             </p>
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Start Date */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">Start Date</Label>
+          {/* Start Date & Time */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Start Date & Time</Label>
+            <div className="grid grid-cols-2 gap-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -214,11 +271,19 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
                   />
                 </PopoverContent>
               </Popover>
+              <TimePicker
+                value={formData.startTime}
+                onChange={(time) => setFormData((prev) => ({ ...prev, startTime: time }))}
+                disabled={updateSprint.isPending}
+                className="bg-zinc-900 border-zinc-700 text-zinc-100"
+              />
             </div>
+          </div>
 
-            {/* End Date */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">End Date</Label>
+          {/* End Date & Time */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">End Date & Time</Label>
+            <div className="grid grid-cols-2 gap-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -244,6 +309,12 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
                   />
                 </PopoverContent>
               </Popover>
+              <TimePicker
+                value={formData.endTime}
+                onChange={(time) => setFormData((prev) => ({ ...prev, endTime: time }))}
+                disabled={updateSprint.isPending}
+                className="bg-zinc-900 border-zinc-700 text-zinc-100"
+              />
             </div>
           </div>
         </div>

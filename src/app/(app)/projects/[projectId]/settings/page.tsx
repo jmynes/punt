@@ -1,6 +1,16 @@
 'use client'
 
-import { Bot, GitBranch, Loader2, Settings, Shield, Tag, Users, Webhook } from 'lucide-react'
+import {
+  Bot,
+  CalendarClock,
+  GitBranch,
+  Loader2,
+  Settings,
+  Shield,
+  Tag,
+  Users,
+  Webhook,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
@@ -12,6 +22,7 @@ import { GeneralTab } from '@/components/projects/settings/general-tab'
 import { HooksTab } from '@/components/projects/settings/hooks-tab'
 import { LabelsTab } from '@/components/projects/settings/labels-tab'
 import { RepositoryTab } from '@/components/projects/settings/repository-tab'
+import { SprintsTab } from '@/components/projects/settings/sprints-tab'
 import { useHasPermission, useMyPermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -20,13 +31,22 @@ import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
 
-type SettingsTab = 'general' | 'members' | 'labels' | 'roles' | 'repository' | 'hooks' | 'agents'
+type SettingsTab =
+  | 'general'
+  | 'members'
+  | 'labels'
+  | 'roles'
+  | 'sprints'
+  | 'repository'
+  | 'hooks'
+  | 'agents'
 
 const VALID_TABS: SettingsTab[] = [
   'general',
   'members',
   'labels',
   'roles',
+  'sprints',
   'repository',
   'hooks',
   'agents',
@@ -133,6 +153,8 @@ export default function ProjectSettingsPage() {
         return canManageLabels ? 'labels' : firstAccessibleTab()
       case 'roles':
         return canManageRoles ? 'roles' : firstAccessibleTab()
+      case 'sprints':
+        return canViewSettings ? 'sprints' : firstAccessibleTab()
       case 'repository':
         return canViewSettings ? 'repository' : firstAccessibleTab()
       case 'hooks':
@@ -218,6 +240,20 @@ export default function ProjectSettingsPage() {
           )}
           {canViewSettings && (
             <Link
+              href={`/projects/${projectKey}/settings?tab=sprints`}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+                effectiveTab === 'sprints'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <CalendarClock className="h-4 w-4" />
+              Sprints
+            </Link>
+          )}
+          {canViewSettings && (
+            <Link
               href={`/projects/${projectKey}/settings?tab=repository`}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
@@ -279,6 +315,9 @@ export default function ProjectSettingsPage() {
           )}
           {effectiveTab === 'labels' && <LabelsTab projectId={projectId} />}
           {effectiveTab === 'roles' && <RolesTab projectId={projectId} projectKey={projectKey} />}
+          {effectiveTab === 'sprints' && (
+            <SprintsTab projectId={projectId} projectKey={projectKey} />
+          )}
           {effectiveTab === 'repository' && (
             <RepositoryTab projectId={projectId} projectKey={projectKey} />
           )}
