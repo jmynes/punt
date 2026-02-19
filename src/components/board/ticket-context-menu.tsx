@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { sprintKeys, useProjectSprints } from '@/hooks/queries/use-sprints'
-import { ticketKeys, updateTicketAPI } from '@/hooks/queries/use-tickets'
+import { ticketKeys as ticketQueryKeys, updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { pasteTickets } from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
@@ -758,7 +758,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         }
         // Invalidate sprint and ticket queries so other views reflect the change
         queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
-        queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+        queryClient.invalidateQueries({ queryKey: ticketQueryKeys.byProject(projectId) })
       } catch (err) {
         console.error('Failed to persist sprint removal:', err)
       }
@@ -924,7 +924,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         }
         // Invalidate sprint and ticket queries so other views reflect the change
         queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
-        queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+        queryClient.invalidateQueries({ queryKey: ticketQueryKeys.byProject(projectId) })
       } catch (err) {
         console.error('Failed to persist sprint addition:', err)
       }
