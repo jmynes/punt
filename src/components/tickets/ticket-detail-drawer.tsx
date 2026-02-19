@@ -1118,6 +1118,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       markdown={tempDescription}
                       onChange={setTempDescription}
                       placeholder="Add a more detailed description..."
+                      tickets={columns.flatMap((col) => col.tickets)}
+                      members={membersWithCurrentUser}
+                      projectKey={projectKey}
                     />
                     <div className="flex gap-2">
                       <Button

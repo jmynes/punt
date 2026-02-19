@@ -12,7 +12,8 @@ import {
   tablePlugin,
   thematicBreakPlugin,
 } from '@mdxeditor/editor'
-import React, { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import '@mdxeditor/editor/style.css'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { linkifyTicketReferences } from '@/lib/ticket-references'
@@ -20,6 +21,8 @@ import { linkifyTicketReferences } from '@/lib/ticket-references'
 interface MarkdownViewerProps {
   markdown: string
   className?: string
+  /** Called when a ticket reference is clicked. If provided, uses this instead of navigation. */
+  onTicketClick?: (ticketKey: string) => void
 }
 
 /**
@@ -30,13 +33,52 @@ interface MarkdownViewerProps {
 export const MarkdownViewer = React.memo(function MarkdownViewer({
   markdown,
   className = '',
+  onTicketClick,
 }: MarkdownViewerProps) {
+  const router = useRouter()
   // Prevent hydration mismatch by only rendering on client
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  // Handle clicks on ticket reference links
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLElement
+      const link = target.closest('a')
+
+      if (!link) return
+
+      const href = link.getAttribute('href')
+      if (!href) return
+
+      // Check if this is a ticket reference link (e.g., /projects/PUNT/PUNT-123)
+      const ticketLinkMatch = href.match(/^\/projects\/([A-Z][A-Z0-9]+)\/([A-Z][A-Z0-9]+-\d+)$/)
+      if (!ticketLinkMatch) return
+
+      const ticketKey = ticketLinkMatch[2]
+
+      // Ctrl+click or middle click - let browser handle (open in new tab)
+      if (e.ctrlKey || e.metaKey || e.button === 1) {
+        return
+      }
+
+      // Prevent default MDXEditor link behavior
+      e.preventDefault()
+      e.stopPropagation()
+
+      // If custom handler provided, use it
+      if (onTicketClick) {
+        onTicketClick(ticketKey)
+      } else {
+        // Navigate to the ticket
+        router.push(href)
+      }
+    },
+    [router, onTicketClick],
+  )
 
   // Memoize plugins for read-only viewing (no toolbar, no editing features)
   const plugins = useMemo(
@@ -101,7 +143,19 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
   }
 
   return (
-    <div className={`markdown-viewer ${className}`}>
+    <div
+      className={`markdown-viewer ${className}`}
+      onClick={handleClick}
+      onKeyDown={(e) => {
+        // Handle keyboard navigation for accessibility
+        if (e.key === 'Enter') {
+          const target = e.target as HTMLElement
+          if (target.tagName === 'A') {
+            handleClick(e as unknown as React.MouseEvent<HTMLDivElement>)
+          }
+        }
+      }}
+    >
       <MDXEditor
         markdown={processedMarkdown}
         readOnly
