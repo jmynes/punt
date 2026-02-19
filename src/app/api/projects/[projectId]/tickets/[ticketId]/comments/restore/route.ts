@@ -16,8 +16,8 @@ const restoreCommentsSchema = z.object({
       content: z.string().min(1, 'Comment content is required'),
       authorId: z.string().min(1, 'Author ID is required'),
       isSystemGenerated: z.boolean().optional().default(false),
-      source: z.string().optional(),
-      createdAt: z.string().optional(), // ISO date string for preserving original timestamp
+      source: z.string().nullable().optional(),
+      createdAt: z.string().nullable().optional(), // ISO date string for preserving original timestamp
     }),
   ),
 })

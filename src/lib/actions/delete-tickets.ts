@@ -41,7 +41,9 @@ async function fetchCommentsForTicket(
 ): Promise<CommentForRestore[]> {
   try {
     const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`)
-    if (!res.ok) return []
+    if (!res.ok) {
+      return []
+    }
     const comments = await res.json()
     return comments.map(
       (c: {
@@ -111,14 +113,49 @@ async function fetchRestoreData(
 }
 
 /**
- * Restore comments and links for a ticket after it's been recreated.
+ * Restore attachments for a ticket after it's been recreated.
+ * Exported for use in keyboard shortcut undo handler.
  */
-async function restoreCommentsAndLinks(
+export async function restoreAttachments(
+  projectId: string,
+  serverTicketId: string,
+  attachments: Array<{ filename: string; mimeType: string; size: number; url: string }> | undefined,
+): Promise<void> {
+  if (!attachments || attachments.length === 0) {
+    return
+  }
+
+  try {
+    await fetch(`/api/projects/${projectId}/tickets/${serverTicketId}/attachments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        attachments: attachments.map((a) => ({
+          filename: a.filename,
+          originalName: a.filename,
+          mimeType: a.mimeType,
+          size: a.size,
+          url: a.url,
+        })),
+      }),
+    })
+  } catch (err) {
+    console.error('Failed to restore attachments:', err)
+  }
+}
+
+/**
+ * Restore comments and links for a ticket after it's been recreated.
+ * Exported for use in keyboard shortcut undo handler.
+ */
+export async function restoreCommentsAndLinks(
   projectId: string,
   serverTicketId: string,
   restoreData: TicketRestoreData | undefined,
 ): Promise<void> {
-  if (!restoreData) return
+  if (!restoreData) {
+    return
+  }
 
   const { comments, links } = restoreData
 
@@ -234,26 +271,27 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
         try {
           await Promise.all(
             ticketsWithRestoreData.map(async ({ ticket, columnId, restoreData }) => {
+              const createPayload = {
+                title: ticket.title,
+                description: ticket.description,
+                type: ticket.type,
+                priority: ticket.priority,
+                columnId,
+                storyPoints: ticket.storyPoints,
+                estimate: ticket.estimate,
+                startDate: ticket.startDate,
+                dueDate: ticket.dueDate,
+                assigneeId: ticket.assigneeId,
+                sprintId: ticket.sprintId,
+                labelIds: ticket.labels?.map((l) => l.id) ?? [],
+                watcherIds: ticket.watchers?.map((w) => w.id) ?? [],
+                // Preserve original creation timestamp on restore
+                createdAt: ticket.createdAt,
+              }
               const res = await fetch(`/api/projects/${projectId}/tickets`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  title: ticket.title,
-                  description: ticket.description,
-                  type: ticket.type,
-                  priority: ticket.priority,
-                  columnId,
-                  storyPoints: ticket.storyPoints,
-                  estimate: ticket.estimate,
-                  startDate: ticket.startDate,
-                  dueDate: ticket.dueDate,
-                  assigneeId: ticket.assigneeId,
-                  sprintId: ticket.sprintId,
-                  labelIds: ticket.labels?.map((l) => l.id) ?? [],
-                  watcherIds: ticket.watchers?.map((w) => w.id) ?? [],
-                  // Preserve original creation timestamp on restore
-                  createdAt: ticket.createdAt,
-                }),
+                body: JSON.stringify(createPayload),
               })
 
               if (!res.ok) throw new Error('Failed to restore ticket')
@@ -263,28 +301,8 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
               currentBoardStore.removeTicket(projectId, ticket.id)
               currentBoardStore.addTicket(projectId, columnId, serverTicket)
 
-              // Restore attachments if any
-              if (ticket.attachments && ticket.attachments.length > 0) {
-                try {
-                  await fetch(`/api/projects/${projectId}/tickets/${serverTicket.id}/attachments`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      attachments: ticket.attachments.map((a) => ({
-                        filename: a.filename,
-                        originalName: a.filename,
-                        mimeType: a.mimeType,
-                        size: a.size,
-                        url: a.url,
-                      })),
-                    }),
-                  })
-                } catch (attachErr) {
-                  console.error('Failed to restore attachments:', attachErr)
-                }
-              }
-
-              // Restore comments and links with original authors
+              // Restore attachments, comments, and links
+              await restoreAttachments(projectId, serverTicket.id, ticket.attachments)
               await restoreCommentsAndLinks(projectId, serverTicket.id, restoreData)
             }),
           )
