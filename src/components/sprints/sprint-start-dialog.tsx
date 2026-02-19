@@ -1,10 +1,9 @@
 'use client'
 
-import { format } from 'date-fns'
-import { AlertTriangle, CalendarIcon, Loader2 } from 'lucide-react'
+import { AlertTriangle, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
+import { DateTimePicker } from '@/components/ui/date-time-picker'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +13,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   useActiveSprint,
   useSprintDetail,
@@ -22,8 +20,12 @@ import {
   useStartSprint,
 } from '@/hooks/queries/use-sprints'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
-import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
+
+function parseTimeToHoursMinutes(time: string): { hours: number; minutes: number } {
+  const [h, m] = time.split(':').map(Number)
+  return { hours: h, minutes: m }
+}
 
 interface SprintStartDialogProps {
   projectId: string
@@ -36,32 +38,52 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
   const { data: activeSprint } = useActiveSprint(projectId)
   const { data: settings } = useSprintSettings(projectId)
 
-  const [startDate, setStartDate] = useState<Date | null>(null)
-  const [endDate, setEndDate] = useState<Date | null>(null)
+  const [startDateTime, setStartDateTime] = useState<Date | null>(null)
+  const [endDateTime, setEndDateTime] = useState<Date | null>(null)
 
-  // Initialize dates when sprint loads
+  // Initialize dates and times when sprint loads or dialog opens
   useEffect(() => {
-    if (sprint) {
+    if (sprint && sprintStartOpen) {
+      const defaultStartTime = settings?.defaultStartTime ?? '09:00'
+      const defaultEndTime = settings?.defaultEndTime ?? '17:00'
+
       const start = sprint.startDate ? new Date(sprint.startDate) : new Date()
-      start.setHours(0, 0, 0, 0)
-      setStartDate(start)
+      // If time is midnight and not intentional, apply default
+      if (start.getHours() === 0 && start.getMinutes() === 0) {
+        const { hours, minutes } = parseTimeToHoursMinutes(defaultStartTime)
+        start.setHours(hours, minutes, 0, 0)
+      }
+      setStartDateTime(start)
 
       if (sprint.endDate) {
-        setEndDate(new Date(sprint.endDate))
+        const end = new Date(sprint.endDate)
+        if (end.getHours() === 0 && end.getMinutes() === 0) {
+          const { hours, minutes } = parseTimeToHoursMinutes(defaultEndTime)
+          end.setHours(hours, minutes, 0, 0)
+        }
+        setEndDateTime(end)
       } else {
         const duration = settings?.defaultSprintDuration ?? 14
         const end = new Date(start)
         end.setDate(end.getDate() + duration)
-        setEndDate(end)
+        const { hours, minutes } = parseTimeToHoursMinutes(defaultEndTime)
+        end.setHours(hours, minutes, 0, 0)
+        setEndDateTime(end)
       }
     }
-  }, [sprint, settings?.defaultSprintDuration])
+  }, [
+    sprint,
+    sprintStartOpen,
+    settings?.defaultSprintDuration,
+    settings?.defaultStartTime,
+    settings?.defaultEndTime,
+  ])
 
   const handleClose = useCallback(() => {
     closeSprintStart()
     setTimeout(() => {
-      setStartDate(null)
-      setEndDate(null)
+      setStartDateTime(null)
+      setEndDateTime(null)
     }, 200)
   }, [closeSprintStart])
 
@@ -71,8 +93,8 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
     startSprint.mutate(
       {
         sprintId: sprintStartId,
-        startDate: startDate ?? undefined,
-        endDate: endDate ?? undefined,
+        startDate: startDateTime ?? undefined,
+        endDate: endDateTime ?? undefined,
       },
       {
         onSuccess: () => {
@@ -80,7 +102,7 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
         },
       },
     )
-  }, [sprintStartId, startDate, endDate, startSprint, handleClose])
+  }, [sprintStartId, startDateTime, endDateTime, startSprint, handleClose])
 
   const hasActiveSprint = !!activeSprint
 
@@ -125,73 +147,38 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
             </div>
           )}
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Start Date */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">Start Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      'bg-zinc-900 border-zinc-700 text-zinc-100 hover:bg-zinc-800',
-                      !startDate && 'text-zinc-500',
-                    )}
-                    disabled={startSprint.isPending || hasActiveSprint}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, 'MMM d, yyyy') : 'Select date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-zinc-900 border-zinc-700" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={startDate ?? undefined}
-                    onSelect={(date) => setStartDate(date ?? null)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+          {/* Start Date & Time */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Start Date & Time</Label>
+            <DateTimePicker
+              value={startDateTime}
+              onChange={setStartDateTime}
+              disabled={startSprint.isPending || hasActiveSprint}
+            />
+          </div>
 
-            {/* End Date */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">End Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      'bg-zinc-900 border-zinc-700 text-zinc-100 hover:bg-zinc-800',
-                      !endDate && 'text-zinc-500',
-                    )}
-                    disabled={startSprint.isPending || hasActiveSprint}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, 'MMM d, yyyy') : 'Select date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-zinc-900 border-zinc-700" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={endDate ?? undefined}
-                    onSelect={(date) => setEndDate(date ?? null)}
-                    disabled={(date) => (startDate ? date < startDate : false)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+          {/* End Date & Time */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">End Date & Time</Label>
+            <DateTimePicker
+              value={endDateTime}
+              onChange={setEndDateTime}
+              disabledDates={(date) => {
+                if (!startDateTime) return false
+                const startDay = new Date(startDateTime)
+                startDay.setHours(0, 0, 0, 0)
+                return date < startDay
+              }}
+              disabled={startSprint.isPending || hasActiveSprint}
+            />
           </div>
 
           {/* Duration info */}
-          {startDate && endDate && (
+          {startDateTime && endDateTime && (
             <p className="text-sm text-zinc-500">
               Duration:{' '}
-              {Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))} days
+              {Math.ceil((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60 * 24))}{' '}
+              days
             </p>
           )}
         </div>

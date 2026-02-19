@@ -428,6 +428,8 @@ export class DemoDataProvider implements DataProvider {
       defaultSprintDuration: 14,
       autoCarryOverIncomplete: false,
       doneColumnIds: [],
+      defaultStartTime: '09:00',
+      defaultEndTime: '17:00',
     }
   }
 
@@ -440,6 +442,8 @@ export class DemoDataProvider implements DataProvider {
       defaultSprintDuration: data.defaultSprintDuration ?? 14,
       autoCarryOverIncomplete: data.autoCarryOverIncomplete ?? false,
       doneColumnIds: data.doneColumnIds ?? [],
+      defaultStartTime: data.defaultStartTime ?? '09:00',
+      defaultEndTime: data.defaultEndTime ?? '17:00',
     }
   }
 

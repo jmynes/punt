@@ -221,8 +221,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const commentsSectionRef = useRef<CommentsSectionRef>(null)
   const [hasPendingComment, setHasPendingComment] = useState(false)
 
-  const { autoSaveOnDrawerClose, setAutoSaveOnDrawerClose, collapseAttachmentsByDefault } =
-    useSettingsStore()
+  const {
+    autoSaveOnDrawerClose,
+    setAutoSaveOnDrawerClose,
+    collapseAttachmentsByDefault,
+    use24HourTime,
+  } = useSettingsStore()
 
   // State for editing fields
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -1802,11 +1806,27 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
           {/* Footer actions */}
           <div className="flex items-center justify-between border-t border-zinc-800 px-6 py-4 flex-shrink-0">
             <div className="text-xs text-zinc-500 space-y-1">
-              <p>Created {format(ticket.createdAt, "MMM d, yyyy 'at' h:mm a")}</p>
-              <p>Updated {format(ticket.updatedAt, "MMM d, yyyy 'at' h:mm a")}</p>
+              <p>
+                Created{' '}
+                {format(
+                  ticket.createdAt,
+                  use24HourTime ? "MMM d, yyyy 'at' HH:mm" : "MMM d, yyyy 'at' h:mm a",
+                )}
+              </p>
+              <p>
+                Updated{' '}
+                {format(
+                  ticket.updatedAt,
+                  use24HourTime ? "MMM d, yyyy 'at' HH:mm" : "MMM d, yyyy 'at' h:mm a",
+                )}
+              </p>
               {ticket.resolvedAt && (
                 <p className="text-green-500">
-                  Resolved {format(new Date(ticket.resolvedAt), "MMM d, yyyy 'at' h:mm a")}
+                  Resolved{' '}
+                  {format(
+                    new Date(ticket.resolvedAt),
+                    use24HourTime ? "MMM d, yyyy 'at' HH:mm" : "MMM d, yyyy 'at' h:mm a",
+                  )}
                 </p>
               )}
             </div>

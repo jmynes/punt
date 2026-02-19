@@ -60,6 +60,9 @@ export interface SystemSettings {
   // Agent configuration defaults
   defaultBranchTemplate: string
   defaultAgentGuidance: string | null
+  // Default sprint times (system-wide defaults for new projects)
+  defaultSprintStartTime: string // HH:mm format (e.g., "09:00")
+  defaultSprintEndTime: string // HH:mm format (e.g., "17:00")
 }
 
 export interface UploadConfig {
@@ -148,6 +151,9 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     // Agent configuration defaults
     defaultBranchTemplate: settings.defaultBranchTemplate,
     defaultAgentGuidance: settings.defaultAgentGuidance,
+    // Default sprint times
+    defaultSprintStartTime: settings.defaultSprintStartTime,
+    defaultSprintEndTime: settings.defaultSprintEndTime,
   }
 }
 

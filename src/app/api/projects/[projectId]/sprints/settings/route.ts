@@ -10,10 +10,15 @@ import {
 import { db } from '@/lib/db'
 import { PERMISSIONS } from '@/lib/permissions'
 
+// Time format validation regex (HH:mm)
+const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/
+
 const updateSettingsSchema = z.object({
   defaultSprintDuration: z.number().int().min(1).max(90).optional(),
   autoCarryOverIncomplete: z.boolean().optional(),
   doneColumnIds: z.array(z.string()).optional(),
+  defaultStartTime: z.string().regex(timeRegex, 'Invalid time format (HH:mm)').optional(),
+  defaultEndTime: z.string().regex(timeRegex, 'Invalid time format (HH:mm)').optional(),
 })
 
 type RouteParams = { params: Promise<{ projectId: string }> }
@@ -43,6 +48,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
         defaultSprintDuration: 14,
         autoCarryOverIncomplete: true,
         doneColumnIds: '[]',
+        defaultStartTime: '09:00',
+        defaultEndTime: '17:00',
         createdAt: new Date(),
         updatedAt: new Date(),
       }
@@ -53,6 +60,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       defaultSprintDuration: settings.defaultSprintDuration,
       autoCarryOverIncomplete: settings.autoCarryOverIncomplete,
       doneColumnIds: JSON.parse(settings.doneColumnIds),
+      defaultStartTime: settings.defaultStartTime,
+      defaultEndTime: settings.defaultEndTime,
     })
   } catch (error) {
     return handleApiError(error, 'fetch sprint settings')
@@ -78,7 +87,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return validationError(result)
     }
 
-    const { defaultSprintDuration, autoCarryOverIncomplete, doneColumnIds } = result.data
+    const {
+      defaultSprintDuration,
+      autoCarryOverIncomplete,
+      doneColumnIds,
+      defaultStartTime,
+      defaultEndTime,
+    } = result.data
 
     const settings = await db.projectSprintSettings.upsert({
       where: { projectId },
@@ -87,11 +102,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         ...(defaultSprintDuration !== undefined && { defaultSprintDuration }),
         ...(autoCarryOverIncomplete !== undefined && { autoCarryOverIncomplete }),
         ...(doneColumnIds !== undefined && { doneColumnIds: JSON.stringify(doneColumnIds) }),
+        ...(defaultStartTime !== undefined && { defaultStartTime }),
+        ...(defaultEndTime !== undefined && { defaultEndTime }),
       },
       update: {
         ...(defaultSprintDuration !== undefined && { defaultSprintDuration }),
         ...(autoCarryOverIncomplete !== undefined && { autoCarryOverIncomplete }),
         ...(doneColumnIds !== undefined && { doneColumnIds: JSON.stringify(doneColumnIds) }),
+        ...(defaultStartTime !== undefined && { defaultStartTime }),
+        ...(defaultEndTime !== undefined && { defaultEndTime }),
       },
     })
 
@@ -99,6 +118,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       defaultSprintDuration: settings.defaultSprintDuration,
       autoCarryOverIncomplete: settings.autoCarryOverIncomplete,
       doneColumnIds: JSON.parse(settings.doneColumnIds),
+      defaultStartTime: settings.defaultStartTime,
+      defaultEndTime: settings.defaultEndTime,
     })
   } catch (error) {
     return handleApiError(error, 'update sprint settings')

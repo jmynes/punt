@@ -1,10 +1,9 @@
 'use client'
 
-import { format } from 'date-fns'
-import { CalendarIcon, Loader2 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { Loader2 } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
+import { DateTimePicker } from '@/components/ui/date-time-picker'
 import {
   Dialog,
   DialogContent,
@@ -15,27 +14,30 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { useCreateSprint, useSprintSettings } from '@/hooks/queries/use-sprints'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
-import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 
 interface FormData {
   name: string
   goal: string
-  startDate: Date | null
-  endDate: Date | null
+  startDateTime: Date | null
+  endDateTime: Date | null
   budget: string
 }
 
 const DEFAULT_FORM: FormData = {
   name: '',
   goal: '',
-  startDate: null,
-  endDate: null,
+  startDateTime: null,
+  endDateTime: null,
   budget: '',
+}
+
+function parseTimeToHoursMinutes(time: string): { hours: number; minutes: number } {
+  const [h, m] = time.split(':').map(Number)
+  return { hours: h, minutes: m }
 }
 
 interface SprintCreateDialogProps {
@@ -48,36 +50,47 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
   const { data: settings } = useSprintSettings(projectId)
   const [formData, setFormData] = useState<FormData>(DEFAULT_FORM)
 
+  // Apply settings-based defaults when dialog opens
+  useEffect(() => {
+    if (sprintCreateOpen) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const duration = settings?.defaultSprintDuration ?? 14
+      const endDate = new Date(today)
+      endDate.setDate(endDate.getDate() + duration)
+
+      const { hours: startH, minutes: startM } = parseTimeToHoursMinutes(
+        settings?.defaultStartTime ?? '09:00',
+      )
+      const { hours: endH, minutes: endM } = parseTimeToHoursMinutes(
+        settings?.defaultEndTime ?? '17:00',
+      )
+
+      const startDateTime = new Date(today)
+      startDateTime.setHours(startH, startM, 0, 0)
+
+      const endDateTime = new Date(endDate)
+      endDateTime.setHours(endH, endM, 0, 0)
+
+      setFormData((prev) => ({
+        ...prev,
+        startDateTime,
+        endDateTime,
+      }))
+    }
+  }, [
+    sprintCreateOpen,
+    settings?.defaultSprintDuration,
+    settings?.defaultStartTime,
+    settings?.defaultEndTime,
+  ])
+
   const handleClose = useCallback(() => {
     setSprintCreateOpen(false)
     setTimeout(() => {
       setFormData(DEFAULT_FORM)
     }, 200)
   }, [setSprintCreateOpen])
-
-  // Set default dates when dialog opens
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (open && !formData.startDate) {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const duration = settings?.defaultSprintDuration ?? 14
-        const endDate = new Date(today)
-        endDate.setDate(endDate.getDate() + duration)
-        setFormData((prev) => ({
-          ...prev,
-          startDate: today,
-          endDate,
-        }))
-      }
-      if (!open) {
-        handleClose()
-      } else {
-        setSprintCreateOpen(true)
-      }
-    },
-    [formData.startDate, settings?.defaultSprintDuration, handleClose, setSprintCreateOpen],
-  )
 
   const handleSubmit = useCallback(async () => {
     if (!formData.name.trim()) return
@@ -89,8 +102,8 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
       {
         name: formData.name.trim(),
         goal: formData.goal.trim() || null,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
+        startDate: formData.startDateTime,
+        endDate: formData.endDateTime,
         budget: budget && !Number.isNaN(budget) ? budget : null,
       },
       {
@@ -109,7 +122,7 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
   })
 
   return (
-    <Dialog open={sprintCreateOpen} onOpenChange={handleOpenChange}>
+    <Dialog open={sprintCreateOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800">
         <DialogHeader>
           <DialogTitle className="text-xl text-zinc-100">Create Sprint</DialogTitle>
@@ -172,68 +185,30 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
             </p>
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Start Date */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">Start Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      'bg-zinc-900 border-zinc-700 text-zinc-100 hover:bg-zinc-800',
-                      !formData.startDate && 'text-zinc-500',
-                    )}
-                    disabled={createSprint.isPending}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.startDate ? format(formData.startDate, 'MMM d, yyyy') : 'Select date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-zinc-900 border-zinc-700" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.startDate ?? undefined}
-                    onSelect={(date) =>
-                      setFormData((prev) => ({ ...prev, startDate: date ?? null }))
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+          {/* Start Date & Time */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Start Date & Time</Label>
+            <DateTimePicker
+              value={formData.startDateTime}
+              onChange={(date) => setFormData((prev) => ({ ...prev, startDateTime: date }))}
+              disabled={createSprint.isPending}
+            />
+          </div>
 
-            {/* End Date */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">End Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      'bg-zinc-900 border-zinc-700 text-zinc-100 hover:bg-zinc-800',
-                      !formData.endDate && 'text-zinc-500',
-                    )}
-                    disabled={createSprint.isPending}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.endDate ? format(formData.endDate, 'MMM d, yyyy') : 'Select date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-zinc-900 border-zinc-700" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.endDate ?? undefined}
-                    onSelect={(date) => setFormData((prev) => ({ ...prev, endDate: date ?? null }))}
-                    disabled={(date) => (formData.startDate ? date < formData.startDate : false)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+          {/* End Date & Time */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">End Date & Time</Label>
+            <DateTimePicker
+              value={formData.endDateTime}
+              onChange={(date) => setFormData((prev) => ({ ...prev, endDateTime: date }))}
+              disabledDates={(date) => {
+                if (!formData.startDateTime) return false
+                const startDay = new Date(formData.startDateTime)
+                startDay.setHours(0, 0, 0, 0)
+                return date < startDay
+              }}
+              disabled={createSprint.isPending}
+            />
           </div>
         </div>
 
