@@ -27,6 +27,7 @@ import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import { MarkdownViewer } from './markdown-viewer'
 
 interface CommentsSectionProps {
   projectId: string
@@ -266,9 +267,9 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
                       </div>
                     </div>
                   ) : (
-                    <p className="mt-1 text-sm text-zinc-300 whitespace-pre-wrap break-words">
-                      {comment.content}
-                    </p>
+                    <div className="mt-1 break-words">
+                      <MarkdownViewer markdown={comment.content} />
+                    </div>
                   )}
                 </div>
               </div>
