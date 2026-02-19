@@ -63,6 +63,8 @@ function PreferencesContent() {
     setHideColorRemovalWarning,
     enableParticleAnimations,
     setEnableParticleAnimations,
+    showChatPanel,
+    setShowChatPanel,
   } = useSettingsStore()
 
   const projects = useProjectsStore((s) => s.projects)
@@ -585,6 +587,35 @@ function PreferencesContent() {
                     id="enable-particle-animations"
                     checked={enableParticleAnimations}
                     onCheckedChange={(checked) => setEnableParticleAnimations(checked === true)}
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Chat Panel */}
+            <Card className="border-zinc-800 bg-zinc-900/50">
+              <CardHeader>
+                <CardTitle className="text-zinc-100">Chat Panel</CardTitle>
+                <CardDescription className="text-zinc-500">
+                  Control the Claude Chat panel visibility
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start justify-between space-x-4">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="enable-chat-panel" className="text-zinc-300">
+                      Enable chat panel
+                    </Label>
+                    <p className="text-sm text-zinc-500">
+                      Show the Claude Chat panel and floating action button. When disabled, the chat
+                      panel and FAB will be hidden from the interface.
+                    </p>
+                  </div>
+                  <Switch
+                    id="enable-chat-panel"
+                    checked={showChatPanel}
+                    onCheckedChange={(checked) => setShowChatPanel(checked === true)}
                     className="data-[state=checked]:bg-amber-600"
                   />
                 </div>
