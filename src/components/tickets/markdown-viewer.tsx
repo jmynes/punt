@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import '@mdxeditor/editor/style.css'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { linkifyTicketReferences } from '@/lib/ticket-references'
+import { linkifyMentions, linkifyTicketReferences } from '@/lib/ticket-references'
 
 interface MarkdownViewerProps {
   markdown: string
@@ -129,12 +129,13 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
   )
 
   // Preprocess markdown: strip trailing blank lines that MDXEditor converts to empty <p><br></p>,
-  // then convert ticket references into clickable links
+  // then convert ticket references and @mentions into styled text
   const processedMarkdown = useMemo(() => {
     // Remove trailing newlines/whitespace - MDXEditor adds <p><br></p> for these
     // This preserves intentional blank lines within content, only strips trailing ones
     const trimmed = markdown.trimEnd()
-    return linkifyTicketReferences(trimmed)
+    // Chain linkifiers: tickets become links, mentions become bold
+    return linkifyMentions(linkifyTicketReferences(trimmed))
   }, [markdown])
 
   // Show loading placeholder during SSR to prevent hydration mismatch

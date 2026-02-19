@@ -219,3 +219,127 @@ function linkifyLine(line: string): string {
 
   return resultLine
 }
+
+/**
+ * Regex pattern for matching @mention references.
+ * Matches patterns like @username, @john.doe, @user123.
+ * Must start with @ followed by alphanumeric chars, dots, underscores, or hyphens.
+ */
+export const MENTION_PATTERN = /@([a-zA-Z0-9][a-zA-Z0-9._-]*)/g
+
+/**
+ * Process markdown text and style @mention references as bold.
+ *
+ * This preserves existing markdown syntax by only replacing mentions
+ * that appear outside of:
+ * - Existing markdown links [text](url) or [text][ref]
+ * - Inline code `code`
+ * - Code blocks
+ * - URLs (http://... or https://...)
+ *
+ * @param markdown - The raw markdown string
+ * @returns The markdown with mentions styled as bold
+ *
+ * @example
+ * linkifyMentions("Hey @jordan, can you check this?")
+ * // Returns: "Hey **@jordan**, can you check this?"
+ */
+export function linkifyMentions(markdown: string): string {
+  if (!markdown) return markdown
+
+  // We process line-by-line to handle code blocks properly
+  const lines = markdown.split('\n')
+  let inCodeBlock = false
+  const result: string[] = []
+
+  for (const line of lines) {
+    // Check for code block fences
+    if (line.trimStart().startsWith('```')) {
+      inCodeBlock = !inCodeBlock
+      result.push(line)
+      continue
+    }
+
+    // Don't process lines inside code blocks
+    if (inCodeBlock) {
+      result.push(line)
+      continue
+    }
+
+    result.push(linkifyMentionsInLine(line))
+  }
+
+  return result.join('\n')
+}
+
+/**
+ * Process a single line of markdown, styling mentions as bold.
+ * Skips mentions inside inline code, existing links, and URLs.
+ */
+function linkifyMentionsInLine(line: string): string {
+  // Build a map of "protected" ranges that should not be processed
+  const protectedRanges: Array<{ start: number; end: number }> = []
+
+  // Protect existing markdown links: [text](url) and [text][ref]
+  const linkRegex = /\[([^\]]*)\]\(([^)]*)\)|\[([^\]]*)\]\[([^\]]*)\]/g
+  let linkMatch: RegExpExecArray | null
+  linkMatch = linkRegex.exec(line)
+  while (linkMatch !== null) {
+    protectedRanges.push({ start: linkMatch.index, end: linkMatch.index + linkMatch[0].length })
+    linkMatch = linkRegex.exec(line)
+  }
+
+  // Protect inline code: `code`
+  const codeRegex = /`[^`]+`/g
+  let codeMatch: RegExpExecArray | null
+  codeMatch = codeRegex.exec(line)
+  while (codeMatch !== null) {
+    protectedRanges.push({ start: codeMatch.index, end: codeMatch.index + codeMatch[0].length })
+    codeMatch = codeRegex.exec(line)
+  }
+
+  // Protect URLs
+  const urlRegex = /https?:\/\/[^\s)]+/g
+  let urlMatch: RegExpExecArray | null
+  urlMatch = urlRegex.exec(line)
+  while (urlMatch !== null) {
+    protectedRanges.push({ start: urlMatch.index, end: urlMatch.index + urlMatch[0].length })
+    urlMatch = urlRegex.exec(line)
+  }
+
+  // Now find and replace mentions that are NOT in protected ranges
+  const mentionRegex = new RegExp(MENTION_PATTERN.source, 'g')
+  let resultLine = ''
+  let lastIndex = 0
+  let mentionMatch: RegExpExecArray | null
+
+  mentionMatch = mentionRegex.exec(line)
+  while (mentionMatch !== null) {
+    const matchStart = mentionMatch.index
+    const matchEnd = matchStart + mentionMatch[0].length
+
+    // Check if this match is inside a protected range
+    const isProtected = protectedRanges.some(
+      (range) => matchStart >= range.start && matchEnd <= range.end,
+    )
+
+    // Add text before match
+    resultLine += line.slice(lastIndex, matchStart)
+
+    if (isProtected) {
+      // Keep as-is
+      resultLine += mentionMatch[0]
+    } else {
+      // Style as bold
+      resultLine += `**${mentionMatch[0]}**`
+    }
+
+    lastIndex = matchEnd
+    mentionMatch = mentionRegex.exec(line)
+  }
+
+  // Add remaining text
+  resultLine += line.slice(lastIndex)
+
+  return resultLine
+}
