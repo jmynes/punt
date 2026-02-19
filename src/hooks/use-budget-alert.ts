@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useParticles } from '@/hooks/use-particles'
 import { useBoardStore } from '@/stores/board-store'
 import type { SprintWithMetrics, TicketWithRelations } from '@/types'
@@ -28,22 +28,21 @@ export function useBudgetAlert(
   activeSprint: SprintWithMetrics | null | undefined,
 ) {
   const { triggerFire } = useParticles()
-  const { getColumns } = useBoardStore()
+  // Subscribe to the actual columns data so we re-render when tickets change
+  const columns = useBoardStore((s) => s.projects[projectId] ?? [])
 
   // Track previous budget percentage to detect threshold crossing
   const previousPercentRef = useRef<number | null>(null)
 
-  // Get current sprint points
-  const getCurrentPoints = useCallback(() => {
+  // Calculate current sprint points from columns
+  const currentPoints = useMemo(() => {
     if (!activeSprint) return 0
-    const columns = getColumns(projectId)
     const tickets = columns.flatMap((col) => col.tickets)
     return calculateSprintPoints(tickets, activeSprint.id)
-  }, [activeSprint, getColumns, projectId])
+  }, [activeSprint, columns])
 
   // Calculate current percentage
   const budget = activeSprint?.budget
-  const currentPoints = getCurrentPoints()
   const currentPercent = budget && budget > 0 ? currentPoints / budget : 0
 
   useEffect(() => {
