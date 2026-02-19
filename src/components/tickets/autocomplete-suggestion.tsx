@@ -71,6 +71,8 @@ export function AutocompleteSuggestion({
         top: position.top,
         left: position.left,
       }}
+      // Prevent editor from losing focus when interacting with the dropdown
+      onMouseDown={(e) => e.preventDefault()}
     >
       <div className="py-1">
         {suggestions.length === 0 && (
@@ -91,7 +93,11 @@ export function AutocompleteSuggestion({
               'hover:bg-zinc-800',
               index === activeIndex && 'bg-zinc-800',
             )}
-            onClick={() => onSelect(suggestion)}
+            onMouseDown={(e) => {
+              // Prevent editor from losing focus when clicking suggestions
+              e.preventDefault()
+              onSelect(suggestion)
+            }}
             onMouseEnter={() => setActiveIndex(index)}
           >
             {suggestion.type === 'ticket' ? (
