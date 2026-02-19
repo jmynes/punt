@@ -138,6 +138,14 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
     return linkifyMentions(linkifyTicketReferences(trimmed))
   }, [markdown])
 
+  // Generate a stable key based on markdown content to force MDXEditor remount when content changes.
+  // MDXEditor maintains internal state that doesn't sync with prop changes, so we need to remount
+  // when the markdown actually changes (e.g., after saving a description update).
+  const editorKey = useMemo(() => {
+    const content = processedMarkdown || ''
+    return `${content.length}-${content.substring(0, 100)}`
+  }, [processedMarkdown])
+
   // Show loading placeholder during SSR to prevent hydration mismatch
   if (!isMounted) {
     return <div className={`text-sm text-zinc-300 ${className}`}>{markdown}</div>
@@ -158,6 +166,7 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
       }}
     >
       <MDXEditor
+        key={editorKey}
         markdown={processedMarkdown}
         readOnly
         plugins={plugins}
