@@ -182,7 +182,8 @@ function linkifyLine(line: string): string {
   }
 
   // Now find and replace ticket keys that are NOT in protected ranges
-  const ticketRegex = new RegExp(TICKET_KEY_PATTERN.source, 'g')
+  // Match optional # prefix before ticket keys (e.g., #PUNT-123 or PUNT-123)
+  const ticketRegex = /#?([A-Z][A-Z0-9]+-\d+)\b/g
   let resultLine = ''
   let lastIndex = 0
   let ticketMatch: RegExpExecArray | null

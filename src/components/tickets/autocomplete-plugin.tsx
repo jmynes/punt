@@ -163,11 +163,6 @@ export function AutocompleteUI() {
   // Handle text input to detect triggers
   const checkForTrigger = useCallback(
     (editor: LexicalEditor) => {
-      // Don't close dropdown while user is interacting with it
-      if (isInteractingRef.current) {
-        return
-      }
-
       editor.getEditorState().read(() => {
         const selection = $getSelection()
         if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
@@ -231,6 +226,7 @@ export function AutocompleteUI() {
             position,
           })
         } else {
+          // No trigger found — always close, even if hovering on the dropdown
           setState((prev) => ({ ...prev, isOpen: false, triggerType: null }))
         }
       })
@@ -264,7 +260,7 @@ export function AutocompleteUI() {
         // and linkified by the markdown viewer during rendering
         let replacement: string
         if (suggestion.type === 'ticket') {
-          replacement = `${suggestion.projectKey}-${suggestion.ticket.number}`
+          replacement = `#${suggestion.projectKey}-${suggestion.ticket.number}`
         } else {
           // Insert as @username - will be linkified by markdown viewer
           replacement = `@${suggestion.user.username || suggestion.user.name}`
@@ -279,6 +275,12 @@ export function AutocompleteUI() {
         selection.anchor.set(anchorNode.getKey(), newOffset, 'text')
         selection.focus.set(anchorNode.getKey(), newOffset, 'text')
       })
+
+      // Reset interaction state before closing - this is critical!
+      // When clicking a suggestion, onMouseEnter sets isInteractingRef to true.
+      // The dropdown is then removed from DOM, so onMouseLeave never fires.
+      // Without this reset, checkForTrigger will exit early on subsequent triggers.
+      isInteractingRef.current = false
 
       setState({
         isOpen: false,
@@ -343,6 +345,8 @@ export function AutocompleteUI() {
             return false
 
           case 'Escape':
+            // Reset interaction state to ensure future triggers work
+            isInteractingRef.current = false
             setState({
               isOpen: false,
               triggerType: null,
