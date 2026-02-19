@@ -257,12 +257,14 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                       role="button"
                       tabIndex={0}
                       className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                      onClick={(e) => {
+                      onPointerDown={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         setFilterByType([])
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
                           e.stopPropagation()
                           setFilterByType([])
                         }
@@ -311,12 +313,14 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                       role="button"
                       tabIndex={0}
                       className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                      onClick={(e) => {
+                      onPointerDown={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         setFilterByStatus([])
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
                           e.stopPropagation()
                           setFilterByStatus([])
                         }
@@ -365,12 +369,14 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                       role="button"
                       tabIndex={0}
                       className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                      onClick={(e) => {
+                      onPointerDown={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         setFilterByResolution([])
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
                           e.stopPropagation()
                           setFilterByResolution([])
                         }
@@ -428,12 +434,14 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                       role="button"
                       tabIndex={0}
                       className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                      onClick={(e) => {
+                      onPointerDown={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         setFilterByPriority([])
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
                           e.stopPropagation()
                           setFilterByPriority([])
                         }
@@ -482,12 +490,14 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                       role="button"
                       tabIndex={0}
                       className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                      onClick={(e) => {
+                      onPointerDown={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         setFilterByAssignee([])
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
                           e.stopPropagation()
                           setFilterByAssignee([])
                         }
@@ -559,12 +569,14 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                       role="button"
                       tabIndex={0}
                       className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                      onClick={(e) => {
+                      onPointerDown={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         setFilterByLabels([])
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
                           e.stopPropagation()
                           setFilterByLabels([])
                         }
@@ -629,12 +641,14 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                       role="button"
                       tabIndex={0}
                       className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                      onClick={(e) => {
+                      onPointerDown={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         setFilterBySprint(null)
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
                           e.stopPropagation()
                           setFilterBySprint(null)
                         }
@@ -689,12 +703,14 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                       role="button"
                       tabIndex={0}
                       className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                      onClick={(e) => {
+                      onPointerDown={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         setFilterByPoints(null)
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
                           e.stopPropagation()
                           setFilterByPoints(null)
                         }
@@ -1072,12 +1088,14 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
                       role="button"
                       tabIndex={0}
                       className="ml-1 rounded-full p-0.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                      onClick={(e) => {
+                      onPointerDown={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         setFilterByAttachments(null)
                       }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
                           e.stopPropagation()
                           setFilterByAttachments(null)
                         }
