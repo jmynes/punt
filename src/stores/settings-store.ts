@@ -66,6 +66,10 @@ interface SettingsState {
   // Chat panel visibility
   showChatPanel: boolean
   setShowChatPanel: (value: boolean) => void
+
+  // Collapse attachments section by default in ticket drawer
+  collapseAttachmentsByDefault: boolean
+  setCollapseAttachmentsByDefault: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -161,6 +165,10 @@ export const useSettingsStore = create<SettingsState>()(
       // Chat panel visibility (on by default)
       showChatPanel: true,
       setShowChatPanel: (value) => set({ showChatPanel: value }),
+
+      // Collapse attachments section by default (off by default - expanded)
+      collapseAttachmentsByDefault: false,
+      setCollapseAttachmentsByDefault: (value) => set({ collapseAttachmentsByDefault: value }),
     }),
     {
       name: 'punt-settings',

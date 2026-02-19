@@ -47,6 +47,8 @@ function PreferencesContent() {
     setAutoSaveOnRoleEditorClose,
     keepSelectionAfterAction,
     setKeepSelectionAfterAction,
+    collapseAttachmentsByDefault,
+    setCollapseAttachmentsByDefault,
     showUndoButtons,
     setShowUndoButtons,
     toastAutoDismiss,
@@ -222,6 +224,26 @@ function PreferencesContent() {
                     id="keep-selection-after-action"
                     checked={keepSelectionAfterAction}
                     onCheckedChange={(checked) => setKeepSelectionAfterAction(checked === true)}
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
+
+                <Separator className="bg-zinc-800" />
+
+                <div className="flex items-start justify-between space-x-4">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="collapse-attachments" className="text-zinc-300">
+                      Collapse attachments by default
+                    </Label>
+                    <p className="text-sm text-zinc-500">
+                      Start with the attachments section collapsed when opening the ticket detail
+                      drawer
+                    </p>
+                  </div>
+                  <Switch
+                    id="collapse-attachments"
+                    checked={collapseAttachmentsByDefault}
+                    onCheckedChange={(checked) => setCollapseAttachmentsByDefault(checked === true)}
                     className="data-[state=checked]:bg-amber-600"
                   />
                 </div>

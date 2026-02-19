@@ -109,84 +109,109 @@ export function AttachmentList({
   if (layout === 'grid') {
     return (
       <>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {attachments.map((file) => {
             const Icon = getFileIcon(file.category)
             const isPdf = file.mimetype === 'application/pdf'
             return (
               <div
                 key={file.id}
-                className="group relative aspect-square overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900"
+                className="group relative flex flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 transition-colors"
               >
-                {file.category === 'image' ? (
-                  <img
-                    src={file.url}
-                    alt={file.originalName}
-                    className="h-full w-full cursor-pointer object-cover transition-transform group-hover:scale-105"
-                    onClick={() => handlePreview(file)}
-                  />
-                ) : file.category === 'video' ? (
-                  <video
-                    src={file.url}
-                    className="h-full w-full cursor-pointer object-cover"
-                    onClick={() => handlePreview(file)}
-                  >
-                    <track kind="captions" />
-                  </video>
-                ) : (
-                  <button
-                    type="button"
-                    className="flex h-full w-full cursor-pointer flex-col items-center justify-center p-4"
-                    onClick={() => handlePreview(file)}
-                  >
-                    <Icon className="h-8 w-8 text-zinc-500" />
-                    <p className="mt-2 truncate text-xs text-zinc-400">{file.originalName}</p>
-                    {isPdf && <span className="mt-1 text-xs text-amber-500">Click to preview</span>}
-                  </button>
-                )}
-
-                {/* Overlay actions */}
-                <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
-                  {canPreview(file) && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-white hover:bg-white/20"
+                {/* Thumbnail area */}
+                <div className="relative aspect-square overflow-hidden bg-zinc-900">
+                  {file.category === 'image' ? (
+                    <img
+                      src={file.url}
+                      alt={file.originalName}
+                      className="h-full w-full cursor-pointer object-cover transition-transform duration-200 group-hover:scale-105"
                       onClick={() => handlePreview(file)}
-                      title="Preview"
+                    />
+                  ) : file.category === 'video' ? (
+                    <button
+                      type="button"
+                      className="relative h-full w-full cursor-pointer"
+                      onClick={() => handlePreview(file)}
                     >
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                      <video src={file.url} className="h-full w-full object-cover">
+                        <track kind="captions" />
+                      </video>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                          <FileVideo className="h-5 w-5 text-white" />
+                        </div>
+                      </div>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="flex h-full w-full cursor-pointer flex-col items-center justify-center bg-gradient-to-br from-zinc-800/50 to-zinc-900 p-4 transition-colors hover:from-zinc-800 hover:to-zinc-900"
+                      onClick={() => handlePreview(file)}
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-800/80 mb-2">
+                        <Icon className="h-6 w-6 text-zinc-400" />
+                      </div>
+                      {isPdf && <span className="text-xs text-amber-500/80 font-medium">PDF</span>}
+                    </button>
                   )}
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-white hover:bg-white/20"
-                    onClick={() => handleDownload(file)}
-                    title="Download"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-white hover:bg-white/20"
-                    onClick={() => handleOpenExternal(file)}
-                    title="Open in new tab"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                  {!readonly && onRemove && (
+
+                  {/* Overlay actions */}
+                  <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/60 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                    {canPreview(file) && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-white hover:bg-white/20 hover:text-white"
+                        onClick={() => handlePreview(file)}
+                        title="Preview"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 text-white hover:bg-red-500/50"
-                      onClick={() => setFileToDelete(file)}
-                      title="Remove"
+                      className="h-8 w-8 text-white hover:bg-white/20 hover:text-white"
+                      onClick={() => handleDownload(file)}
+                      title="Download"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Download className="h-4 w-4" />
                     </Button>
-                  )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-white hover:bg-white/20 hover:text-white"
+                      onClick={() => handleOpenExternal(file)}
+                      title="Open in new tab"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                    {!readonly && onRemove && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-white hover:bg-red-500/50 hover:text-white"
+                        onClick={() => setFileToDelete(file)}
+                        title="Remove"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* File info footer */}
+                <div className="flex items-center gap-2 px-2.5 py-2 border-t border-zinc-800/50">
+                  <Icon className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="truncate text-xs font-medium text-zinc-300"
+                      title={file.originalName}
+                    >
+                      {file.originalName}
+                    </p>
+                    <p className="text-[10px] text-zinc-500">{formatFileSize(file.size)}</p>
+                  </div>
                 </div>
               </div>
             )
