@@ -3,6 +3,7 @@
 import {
   Bell,
   Bot,
+  CalendarClock,
   Check,
   ChevronDown,
   ChevronRight,
@@ -484,6 +485,21 @@ export function SidebarContent({
                         Board
                       </Button>
                     </Link>
+                    <Link href="/admin/settings?tab=sprints" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings' &&
+                            searchParams.get('tab') === 'sprints' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <CalendarClock className="h-3 w-3" />
+                        Sprints
+                      </Button>
+                    </Link>
                     <Link href="/admin/settings?tab=roles" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -879,6 +895,21 @@ function ProjectSettingsLink({
               >
                 <Shield className="h-3 w-3" />
                 Roles
+              </Button>
+            </Link>
+          )}
+          {canViewSettings && (
+            <Link href={`/projects/${projectKey}/settings?tab=sprints`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  isOnSettingsPage && currentTab === 'sprints' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <CalendarClock className="h-3 w-3" />
+                Sprints
               </Button>
             </Link>
           )}
