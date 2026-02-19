@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { useProjects } from '@/hooks/queries/use-projects'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { getStatusIcon } from '@/lib/status-icons'
 import { useBoardStore } from '@/stores/board-store'
@@ -67,6 +68,14 @@ export function TicketForm({
   const projectId = activeProjectId || '1'
   const members = useProjectMembers(projectId)
   const boardColumns = getColumns(projectId)
+  const { data: projects } = useProjects()
+
+  // Get all tickets for autocomplete
+  const allTickets = boardColumns.flatMap((col) => col.tickets)
+
+  // Get current project key
+  const currentProject = projects?.find((p) => p.id === projectId)
+  const projectKey = currentProject?.key || ''
 
   const updateField = <K extends keyof TicketFormData>(field: K, value: TicketFormData[K]) => {
     onChange({ ...data, [field]: value })
@@ -145,6 +154,9 @@ export function TicketForm({
           onChange={(value) => updateField('description', value)}
           disabled={disabled}
           placeholder="Add a more detailed description..."
+          tickets={allTickets}
+          members={members}
+          projectKey={projectKey}
         />
       </div>
 

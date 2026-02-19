@@ -21,6 +21,8 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@mdxeditor/editor/style.css'
 import { oneDark } from '@codemirror/theme-one-dark'
+import type { TicketWithRelations, UserSummary } from '@/types'
+import { autocompletePlugin } from './autocomplete-plugin'
 import { CustomBlockTypeSelect } from './custom-block-type-select'
 import { CustomCodeMirrorEditor } from './custom-codemirror-editor'
 import { CustomImageDialog } from './custom-image-dialog'
@@ -37,6 +39,12 @@ interface DescriptionEditorProps {
   onChange: (value: string) => void
   disabled?: boolean
   placeholder?: string
+  /** Tickets for #reference autocomplete */
+  tickets?: TicketWithRelations[]
+  /** Members for @mention autocomplete */
+  members?: UserSummary[]
+  /** Project key for ticket references (e.g., "PUNT") */
+  projectKey?: string
 }
 
 export const DescriptionEditor = React.memo(function DescriptionEditor({
@@ -44,6 +52,9 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
   onChange,
   disabled = false,
   placeholder = 'Add a more detailed description...',
+  tickets = [],
+  members = [],
+  projectKey = '',
 }: DescriptionEditorProps) {
   // Prevent hydration mismatch by only rendering on client
   const [isMounted, setIsMounted] = useState(false)
@@ -173,8 +184,14 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
       toolbarPlugin({
         toolbarContents,
       }),
+      // Autocomplete for #ticket references and @mentions
+      autocompletePlugin({
+        tickets,
+        members,
+        projectKey,
+      }),
     ],
-    [toolbarContents], // Recreate plugins when markdown changes to update diffMarkdown
+    [toolbarContents, tickets, members, projectKey], // Recreate plugins when autocomplete data changes
   )
 
   // Show placeholder during SSR to prevent hydration mismatch
