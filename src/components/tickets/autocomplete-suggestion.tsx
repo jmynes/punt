@@ -28,6 +28,8 @@ interface AutocompleteSuggestionProps {
   position: { top: number; left: number } | null
   isVisible: boolean
   searchText: string
+  /** Called when mouse enters/leaves the dropdown to prevent premature closing */
+  onInteractionChange?: (isInteracting: boolean) => void
 }
 
 /**
@@ -40,6 +42,7 @@ export function AutocompleteSuggestion({
   position,
   isVisible,
   searchText,
+  onInteractionChange,
 }: AutocompleteSuggestionProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(selectedIndex)
@@ -52,7 +55,9 @@ export function AutocompleteSuggestion({
   // Scroll selected item into view
   useEffect(() => {
     if (listRef.current && activeIndex >= 0) {
-      const selectedElement = listRef.current.children[activeIndex] as HTMLElement
+      // Buttons are inside a nested div, so we need to query for them
+      const buttons = listRef.current.querySelectorAll('button')
+      const selectedElement = buttons[activeIndex]
       if (selectedElement) {
         selectedElement.scrollIntoView({ block: 'nearest' })
       }
@@ -66,13 +71,18 @@ export function AutocompleteSuggestion({
   return (
     <div
       ref={listRef}
-      className="fixed z-[9999] w-72 max-h-60 overflow-y-auto rounded-md border border-zinc-700 bg-zinc-900 shadow-lg"
+      className="fixed z-[9999] w-72 max-h-60 overflow-y-auto rounded-md border border-zinc-700 bg-zinc-900 shadow-lg pointer-events-auto"
       style={{
         top: position.top,
         left: position.left,
       }}
       // Prevent editor from losing focus when interacting with the dropdown
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+      }}
+      onMouseEnter={() => onInteractionChange?.(true)}
+      onMouseLeave={() => onInteractionChange?.(false)}
     >
       <div className="py-1">
         {suggestions.length === 0 && (
@@ -96,6 +106,7 @@ export function AutocompleteSuggestion({
             onMouseDown={(e) => {
               // Prevent editor from losing focus when clicking suggestions
               e.preventDefault()
+              e.stopPropagation()
               onSelect(suggestion)
             }}
             onMouseEnter={() => setActiveIndex(index)}

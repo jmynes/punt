@@ -86,6 +86,8 @@ export function AutocompleteUI() {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const stateRef = useRef(state)
   stateRef.current = state
+  // Track when user is interacting with dropdown to prevent premature closing
+  const isInteractingRef = useRef(false)
 
   // Calculate filtered suggestions
   const suggestions = useMemo((): Suggestion[] => {
@@ -161,6 +163,11 @@ export function AutocompleteUI() {
   // Handle text input to detect triggers
   const checkForTrigger = useCallback(
     (editor: LexicalEditor) => {
+      // Don't close dropdown while user is interacting with it
+      if (isInteractingRef.current) {
+        return
+      }
+
       editor.getEditorState().read(() => {
         const selection = $getSelection()
         if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
@@ -281,6 +288,11 @@ export function AutocompleteUI() {
     [activeEditor],
   )
 
+  // Track when user is interacting with dropdown
+  const handleInteractionChange = useCallback((isInteracting: boolean) => {
+    isInteractingRef.current = isInteracting
+  }, [])
+
   // Set up editor listeners
   useEffect(() => {
     if (!activeEditor) return
@@ -364,6 +376,7 @@ export function AutocompleteUI() {
       position={state.position}
       isVisible={state.isOpen}
       searchText={state.searchText}
+      onInteractionChange={handleInteractionChange}
     />,
     document.body,
   )
