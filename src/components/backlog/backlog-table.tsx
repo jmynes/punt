@@ -329,6 +329,14 @@ export function BacklogTable({
     },
   })
 
+  // Droppable zone at the end of the ticket list for "drop after last item"
+  const { setNodeRef: setEndDropRef } = useDroppable({
+    id: 'backlog-end',
+    data: {
+      type: 'backlog-end',
+    },
+  })
+
   // Handle drag start - track dragging tickets and clear selection if needed
   function handleDragStart(event: DragStartEvent) {
     const { active } = event
@@ -380,6 +388,12 @@ export function BacklogTable({
       // If hovering over a dragged ticket, don't show indicator
       if (draggedIds.includes(overId)) {
         setDropPosition(null)
+        return
+      }
+
+      // Check if hovering over the end-of-list zone
+      if (over.data.current?.type === 'backlog-end') {
+        setDropPosition(filteredTickets.length)
         return
       }
 
@@ -662,8 +676,8 @@ export function BacklogTable({
               />
             </div>
           ) : (
-            // Spacer to fill remaining space - acts as drop zone for "end of list"
-            <div className="min-h-16 flex-1" />
+            // Spacer to fill remaining space - droppable zone for "drop after last item"
+            <div ref={setEndDropRef} className="min-h-16 flex-1" />
           )}
         </div>
 

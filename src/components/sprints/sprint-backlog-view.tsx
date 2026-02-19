@@ -267,14 +267,15 @@ export function SprintBacklogView({
       const overData = over.data.current
       const draggedIds = draggedIdsRef.current
 
-      // Check if hovering over a sprint section (droppable container)
+      // Check if hovering over a sprint section or end-of-list zone
       const isOverSection = overData?.type === 'sprint-section'
+      const isOverSectionEnd = overData?.type === 'section-end'
 
       let targetSectionId: string | undefined
       let forceInsertAtEnd = false
 
-      if (isOverSection) {
-        // Hovering over an empty section or section container
+      if (isOverSection || isOverSectionEnd) {
+        // Hovering over an empty section, section container, or end-of-list zone
         targetSectionId = (overData.sprintId as string | null) ?? 'backlog'
         forceInsertAtEnd = true
       } else {
@@ -345,7 +346,7 @@ export function SprintBacklogView({
       // Determine target sprint
       let targetSprintId: string | null = null
 
-      if (overData?.type === 'sprint-section') {
+      if (overData?.type === 'sprint-section' || overData?.type === 'section-end') {
         targetSprintId = overData.sprintId ?? null
       } else if (overData?.type === 'ticket') {
         const overTicket = overData.ticket as TicketWithRelations
