@@ -113,7 +113,6 @@ export function useParticles(): UseParticlesReturn {
               animation: {
                 enable: true,
                 speed: 0.5,
-                minimumValue: 0,
                 sync: false,
                 startValue: 'max',
                 destroy: 'min',
@@ -124,7 +123,6 @@ export function useParticles(): UseParticlesReturn {
               animation: {
                 enable: true,
                 speed: 1.5,
-                minimumValue: 0.3,
                 sync: false,
                 startValue: 'max',
                 destroy: 'min',
