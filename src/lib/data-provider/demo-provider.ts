@@ -163,12 +163,20 @@ export class DemoDataProvider implements DataProvider {
       ? allUsers.find((u) => u.id === data.reporterId) || DEMO_USER_SUMMARY
       : DEMO_USER_SUMMARY
 
+    // Convert createdAt to Date if provided (for undo/restore operations)
+    const createdAt = data.createdAt
+      ? data.createdAt instanceof Date
+        ? data.createdAt
+        : new Date(data.createdAt)
+      : undefined
+
     return demoStorage.createTicket(projectId, data.columnId, {
       ...data,
       labels,
       sprint,
       assignee,
       creator,
+      createdAt,
     })
   }
 
