@@ -2,7 +2,7 @@
 
 import { format } from 'date-fns'
 import { CalendarIcon, Loader2 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -64,50 +64,39 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
   const { data: settings } = useSprintSettings(projectId)
   const [formData, setFormData] = useState<FormData>(DEFAULT_FORM)
 
+  // Apply settings-based defaults when dialog opens
+  useEffect(() => {
+    if (sprintCreateOpen) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const duration = settings?.defaultSprintDuration ?? 14
+      const endDate = new Date(today)
+      endDate.setDate(endDate.getDate() + duration)
+
+      const defaultStartTime = settings?.defaultStartTime ?? '09:00'
+      const defaultEndTime = settings?.defaultEndTime ?? '17:00'
+
+      setFormData((prev) => ({
+        ...prev,
+        startDate: today,
+        startTime: defaultStartTime,
+        endDate,
+        endTime: defaultEndTime,
+      }))
+    }
+  }, [
+    sprintCreateOpen,
+    settings?.defaultSprintDuration,
+    settings?.defaultStartTime,
+    settings?.defaultEndTime,
+  ])
+
   const handleClose = useCallback(() => {
     setSprintCreateOpen(false)
     setTimeout(() => {
       setFormData(DEFAULT_FORM)
     }, 200)
   }, [setSprintCreateOpen])
-
-  // Set default dates and times when dialog opens
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (open && !formData.startDate) {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const duration = settings?.defaultSprintDuration ?? 14
-        const endDate = new Date(today)
-        endDate.setDate(endDate.getDate() + duration)
-
-        // Use project-level default times or fall back to system defaults
-        const defaultStartTime = settings?.defaultStartTime ?? '09:00'
-        const defaultEndTime = settings?.defaultEndTime ?? '17:00'
-
-        setFormData((prev) => ({
-          ...prev,
-          startDate: today,
-          startTime: defaultStartTime,
-          endDate,
-          endTime: defaultEndTime,
-        }))
-      }
-      if (!open) {
-        handleClose()
-      } else {
-        setSprintCreateOpen(true)
-      }
-    },
-    [
-      formData.startDate,
-      settings?.defaultSprintDuration,
-      settings?.defaultStartTime,
-      settings?.defaultEndTime,
-      handleClose,
-      setSprintCreateOpen,
-    ],
-  )
 
   const handleSubmit = useCallback(async () => {
     if (!formData.name.trim()) return
@@ -143,7 +132,7 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
   })
 
   return (
-    <Dialog open={sprintCreateOpen} onOpenChange={handleOpenChange}>
+    <Dialog open={sprintCreateOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800">
         <DialogHeader>
           <DialogTitle className="text-xl text-zinc-100">Create Sprint</DialogTitle>
