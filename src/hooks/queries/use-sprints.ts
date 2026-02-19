@@ -277,6 +277,29 @@ export function useCompleteSprint(projectId: string) {
 }
 
 /**
+ * Reopen a completed sprint
+ */
+export function useReopenSprint(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (sprintId: string) => {
+      const provider = getDataProvider(getTabId())
+      // Provider returns SprintSummary but API actually returns SprintWithMetrics
+      return provider.reopenSprint(projectId, sprintId) as Promise<SprintWithMetrics>
+    },
+    onSuccess: () => {
+      showToast.success('Sprint reopened')
+      queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
+      queryClient.invalidateQueries({ queryKey: sprintKeys.active(projectId) })
+    },
+    onError: (err) => {
+      showToast.error(err.message)
+    },
+  })
+}
+
+/**
  * Extend a sprint
  */
 export function useExtendSprint(projectId: string) {

@@ -8,6 +8,7 @@ import {
   MoreHorizontal,
   Pencil,
   Play,
+  RotateCcw,
   Target,
   Trash2,
 } from 'lucide-react'
@@ -20,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useReopenSprint } from '@/hooks/queries/use-sprints'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import {
@@ -45,6 +47,7 @@ interface SprintCardProps {
 export function SprintCard({ sprint, projectId, ticketCount = 0, onDelete }: SprintCardProps) {
   const { openSprintEdit, openSprintStart, openSprintComplete } = useUIStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
+  const reopenSprintMutation = useReopenSprint(projectId)
 
   const isPlanning = sprint.status === 'planning'
   const isActive = sprint.status === 'active'
@@ -124,6 +127,17 @@ export function SprintCard({ sprint, projectId, ticketCount = 0, onDelete }: Spr
                 >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                   Complete Sprint
+                </DropdownMenuItem>
+              )}
+
+              {isCompleted && (
+                <DropdownMenuItem
+                  onClick={() => reopenSprintMutation.mutate(sprint.id)}
+                  disabled={reopenSprintMutation.isPending}
+                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Reopen Sprint
                 </DropdownMenuItem>
               )}
 

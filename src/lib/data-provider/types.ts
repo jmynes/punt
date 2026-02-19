@@ -267,6 +267,7 @@ export interface DataProvider {
     data: CompleteSprintInput,
   ): Promise<SprintSummary>
   extendSprint(projectId: string, sprintId: string, data: ExtendSprintInput): Promise<SprintSummary>
+  reopenSprint(projectId: string, sprintId: string): Promise<SprintSummary>
   getSprintSettings(projectId: string): Promise<SprintSettings>
   updateSprintSettings(projectId: string, data: Partial<SprintSettings>): Promise<SprintSettings>
 

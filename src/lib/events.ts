@@ -38,6 +38,7 @@ export type SprintEventType =
   | 'sprint.deleted'
   | 'sprint.started'
   | 'sprint.completed'
+  | 'sprint.reopened'
 
 /**
  * Event types for user profile operations

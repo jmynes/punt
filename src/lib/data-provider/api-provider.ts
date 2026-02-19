@@ -283,6 +283,13 @@ export class APIDataProvider implements DataProvider {
     })
   }
 
+  async reopenSprint(projectId: string, sprintId: string): Promise<SprintSummary> {
+    return this.fetchJson(`/api/projects/${projectId}/sprints/${sprintId}/reopen`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    })
+  }
+
   async getSprintSettings(projectId: string): Promise<SprintSettings> {
     return this.fetchJson(`/api/projects/${projectId}/sprints/settings`)
   }
