@@ -3,7 +3,36 @@
  * These types are used by the unified action implementations.
  */
 
-import type { ColumnWithTickets, TicketWithRelations } from '@/types'
+import type { ColumnWithTickets, LinkType, TicketWithRelations } from '@/types'
+
+/**
+ * Comment data for storage during delete operations.
+ * Includes authorId to preserve original author when restoring.
+ */
+export interface CommentForRestore {
+  content: string
+  authorId: string
+  isSystemGenerated: boolean
+  source: string | null
+  createdAt: string // ISO date string
+}
+
+/**
+ * Ticket link data for storage during delete operations.
+ */
+export interface LinkForRestore {
+  linkType: LinkType
+  linkedTicketId: string
+  direction: 'outward' | 'inward'
+}
+
+/**
+ * Extended ticket data that includes comments and links for restoration.
+ */
+export interface TicketRestoreData {
+  comments: CommentForRestore[]
+  links: LinkForRestore[]
+}
 
 /**
  * Ticket with its column ID, used for paste and delete operations.
@@ -11,6 +40,13 @@ import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 export interface TicketWithColumn {
   ticket: TicketWithRelations
   columnId: string
+}
+
+/**
+ * Ticket with column ID and restore data (comments, links) for undo.
+ */
+export interface TicketWithRestoreData extends TicketWithColumn {
+  restoreData?: TicketRestoreData
 }
 
 /**

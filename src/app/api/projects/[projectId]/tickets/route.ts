@@ -42,6 +42,12 @@ const createTicketSchema = z.object({
   fixVersion: z.string().nullable().optional(),
   labelIds: z.array(z.string()).optional().default([]),
   watcherIds: z.array(z.string()).optional().default([]),
+  // For undo/restore operations - preserve original creation timestamp
+  createdAt: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => (val ? new Date(val) : undefined)),
 })
 
 /**

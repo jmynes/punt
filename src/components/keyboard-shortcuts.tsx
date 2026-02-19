@@ -31,7 +31,11 @@ import {
 } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
 import { pasteTickets } from '@/lib/actions'
-import { deleteTickets } from '@/lib/actions/delete-tickets'
+import {
+  deleteTickets,
+  restoreAttachments,
+  restoreCommentsAndLinks,
+} from '@/lib/actions/delete-tickets'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -751,16 +755,25 @@ export function KeyboardShortcuts() {
                     parentId: ticket.parentId,
                     labels: ticket.labels,
                     watchers: ticket.watchers,
+                    // Preserve original creation timestamp on restore
+                    createdAt: ticket.createdAt,
                   },
                 }))
                 const serverTickets = await batchCreateTicketsAPI(entry.projectId, ticketsToCreate)
                 // Replace temp tickets with server tickets
                 const boardState = useBoardStore.getState()
-                for (const { ticket: tempTicket, columnId } of action.tickets) {
+                for (const { ticket: tempTicket, columnId, restoreData } of action.tickets) {
                   const serverTicket = serverTickets.get(tempTicket.id)
                   if (serverTicket) {
                     boardState.removeTicket(entry.projectId, tempTicket.id)
                     boardState.addTicket(entry.projectId, columnId, serverTicket)
+                    // Restore attachments, comments, and links
+                    await restoreAttachments(
+                      entry.projectId,
+                      serverTicket.id,
+                      tempTicket.attachments,
+                    )
+                    await restoreCommentsAndLinks(entry.projectId, serverTicket.id, restoreData)
                   }
                 }
               } catch (err) {
@@ -845,17 +858,30 @@ export function KeyboardShortcuts() {
                         parentId: ticket.parentId,
                         labels: ticket.labels,
                         watchers: ticket.watchers,
+                        // Preserve original creation timestamp on restore
+                        createdAt: ticket.createdAt,
                       },
                     }))
                     const serverTickets = await batchCreateTicketsAPI(
                       undoEntry.projectId,
                       ticketsToCreate,
                     )
-                    for (const { ticket: tempTicket, columnId } of action.tickets) {
+                    for (const { ticket: tempTicket, columnId, restoreData } of action.tickets) {
                       const serverTicket = serverTickets.get(tempTicket.id)
                       if (serverTicket) {
                         boardState.removeTicket(undoEntry.projectId, tempTicket.id)
                         boardState.addTicket(undoEntry.projectId, columnId, serverTicket)
+                        // Restore attachments, comments, and links
+                        await restoreAttachments(
+                          undoEntry.projectId,
+                          serverTicket.id,
+                          tempTicket.attachments,
+                        )
+                        await restoreCommentsAndLinks(
+                          undoEntry.projectId,
+                          serverTicket.id,
+                          restoreData,
+                        )
                       }
                     }
                   } catch (err) {
@@ -1939,17 +1965,30 @@ export function KeyboardShortcuts() {
                         parentId: ticket.parentId,
                         labels: ticket.labels,
                         watchers: ticket.watchers,
+                        // Preserve original creation timestamp on restore
+                        createdAt: ticket.createdAt,
                       },
                     }))
                     const serverTickets = await batchCreateTicketsAPI(
                       undoEntry.projectId,
                       ticketsToCreate,
                     )
-                    for (const { ticket: tempTicket, columnId } of action.tickets) {
+                    for (const { ticket: tempTicket, columnId, restoreData } of action.tickets) {
                       const serverTicket = serverTickets.get(tempTicket.id)
                       if (serverTicket) {
                         boardState.removeTicket(undoEntry.projectId, tempTicket.id)
                         boardState.addTicket(undoEntry.projectId, columnId, serverTicket)
+                        // Restore attachments, comments, and links
+                        await restoreAttachments(
+                          undoEntry.projectId,
+                          serverTicket.id,
+                          tempTicket.attachments,
+                        )
+                        await restoreCommentsAndLinks(
+                          undoEntry.projectId,
+                          serverTicket.id,
+                          restoreData,
+                        )
                       }
                     }
                   } catch (err) {

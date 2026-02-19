@@ -1,9 +1,11 @@
 import { create } from 'zustand'
+import type { TicketRestoreData } from '@/lib/actions/types'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
 interface DeletedTicket {
   ticket: TicketWithRelations
   columnId: string
+  restoreData?: TicketRestoreData
 }
 
 interface MovedTicket {

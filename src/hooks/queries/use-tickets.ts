@@ -361,6 +361,8 @@ export async function createTicketAPI(
     startDate: ticketData.startDate ?? null,
     dueDate: ticketData.dueDate ?? null,
     labelIds: ticketData.labels?.map((l) => l.id) ?? [],
+    // For undo/restore operations - preserve original creation timestamp
+    createdAt: ticketData.createdAt ?? null,
   }
 
   return provider.createTicket(projectId, input)
