@@ -39,6 +39,7 @@ import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
@@ -630,7 +631,8 @@ export default function BacklogPage() {
             newOrderedTickets.map((t) => t.id),
           )
 
-          if (draggedIds.length > 1) {
+          // Clear selection after multi-drag (unless user prefers to keep it)
+          if (draggedIds.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
             clearSelection()
           }
 

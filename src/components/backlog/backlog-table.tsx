@@ -460,7 +460,10 @@ export function BacklogTable({
           projectId,
           newOrder.map((t) => t.id),
         )
-        clearSelection()
+        // Clear selection after multi-drag (unless user prefers to keep it)
+        if (!useSettingsStore.getState().keepSelectionAfterAction) {
+          clearSelection()
+        }
       } else {
         // Single drag using base order
         const oldIndex = baseOrdered.findIndex((t) => t.id === activeId)

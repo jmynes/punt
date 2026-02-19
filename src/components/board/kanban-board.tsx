@@ -380,8 +380,8 @@ export function KanbanBoard({
       beforeDragSnapshot.current = null
       draggedIdsRef.current = []
 
-      // Clear selection after multi-drag
-      if (draggedIds.length > 1) {
+      // Clear selection after multi-drag (unless user prefers to keep it)
+      if (draggedIds.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
         useSelectionStore.getState().clearSelection()
       }
     },
