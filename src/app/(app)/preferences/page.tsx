@@ -3,7 +3,7 @@
 import { Bell, Palette, Settings, Sliders } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useRef } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { PageHeader } from '@/components/common'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,6 +26,14 @@ function isValidTab(tab: string | null): tab is PreferencesTab {
 }
 
 export default function PreferencesPage() {
+  return (
+    <Suspense>
+      <PreferencesContent />
+    </Suspense>
+  )
+}
+
+function PreferencesContent() {
   const {
     openSinglePastedTicket,
     setOpenSinglePastedTicket,
