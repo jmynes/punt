@@ -167,27 +167,28 @@ function formatToolName(name: string): string {
 }
 
 /**
- * Simple markdown parser that renders bold, underline, italic, inline code, and bullet lists.
+ * Simple markdown parser that renders bold, italic, inline code, and bullet lists.
  * Uses React elements instead of dangerouslySetInnerHTML for safety.
  *
  * Supported syntax:
- * - **bold** text
- * - __underline__ text
+ * - **bold** or __bold__ text (standard markdown)
  * - *italic* or _italic_ text
  * - `inline code`
  * - Bullet lists: lines starting with `- ` or `* ` (at line start)
+ * - Nested inline formatting: **bold _italic_** works correctly
  */
 function FormattedText({ text }: { text: string }) {
   let key = 0
 
-  // Process inline patterns: **bold**, __underline__, *italic*, _italic_, `code`
+  // Process inline patterns: **bold**, __bold__, *italic*, _italic_, `code`
   // Order matters: ** before *, __ before _
+  // Recursively processes inner content for bold/italic (but not code spans)
   const processInline = (input: string): React.ReactNode[] => {
     const result: React.ReactNode[] = []
     let lastIndex = 0
 
     // Combined regex for all inline patterns
-    // Order: **bold** | __underline__ | `code` | *italic* | _italic_
+    // Order: **bold** | __bold__ | `code` | *italic* | _italic_
     const combinedRegex = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*]+\*|_[^_]+_)/g
     const matches = Array.from(input.matchAll(combinedRegex))
 
@@ -201,25 +202,26 @@ function FormattedText({ text }: { text: string }) {
       if (matched.startsWith('**') && matched.endsWith('**')) {
         result.push(
           <strong key={key++} className="font-semibold">
-            {matched.slice(2, -2)}
+            {processInline(matched.slice(2, -2))}
           </strong>,
         )
       } else if (matched.startsWith('__') && matched.endsWith('__')) {
         result.push(
-          <u key={key++} className="underline">
-            {matched.slice(2, -2)}
-          </u>,
+          <strong key={key++} className="font-semibold">
+            {processInline(matched.slice(2, -2))}
+          </strong>,
         )
       } else if (matched.startsWith('`') && matched.endsWith('`')) {
+        // Code spans: render literally, no recursive parsing
         result.push(
           <code key={key++} className="bg-zinc-900 px-1 rounded text-xs text-amber-400">
             {matched.slice(1, -1)}
           </code>,
         )
       } else if (matched.startsWith('*') && matched.endsWith('*')) {
-        result.push(<em key={key++}>{matched.slice(1, -1)}</em>)
+        result.push(<em key={key++}>{processInline(matched.slice(1, -1))}</em>)
       } else if (matched.startsWith('_') && matched.endsWith('_')) {
-        result.push(<em key={key++}>{matched.slice(1, -1)}</em>)
+        result.push(<em key={key++}>{processInline(matched.slice(1, -1))}</em>)
       }
 
       if (match.index !== undefined) {
@@ -263,11 +265,13 @@ function FormattedText({ text }: { text: string }) {
         bulletItems.push(processInline(bulletMatch[2]))
       } else {
         flushBullets()
-        // Add newline before non-first, non-bullet lines to preserve whitespace
-        if (result.length > 0) {
-          result.push('\n')
+        // Wrap each non-bullet line in a <div> so block elements stack naturally
+        // without literal '\n' characters causing whitespace-pre-wrap artifacts
+        if (line === '') {
+          result.push(<div key={key++} className="h-2" />)
+        } else {
+          result.push(<div key={key++}>{processInline(line)}</div>)
         }
-        result.push(...processInline(line))
       }
     }
 
