@@ -1,18 +1,7 @@
 'use client'
 
-import {
-  AlertTriangle,
-  Bot,
-  Check,
-  Copy,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Terminal,
-  Trash2,
-  Upload,
-} from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { AlertTriangle, Bot, Check, Eye, EyeOff, KeyRound, Trash2, Upload } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,30 +15,19 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { CodeBlock } from '@/components/ui/code-block'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { showToast } from '@/lib/toast'
 
-interface IntegrationsTabProps {
+interface ClaudeChatTabProps {
   isDemo: boolean
 }
 
 type ChatProvider = 'anthropic' | 'claude-cli'
 
-export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
-  const [mcpKeyLoading, setMcpKeyLoading] = useState(false)
-  const [mcpHasKey, setMcpHasKey] = useState(false)
-  const [mcpKeyHint, setMcpKeyHint] = useState<string | null>(null)
-  const [mcpNewKey, setMcpNewKey] = useState<string | null>(null)
-  const [mcpKeyVisible, setMcpKeyVisible] = useState(false)
-  const [mcpKeyFetched, setMcpKeyFetched] = useState(false)
-  const [mcpKeyCopied, setMcpKeyCopied] = useState(false)
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
+export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
   // Anthropic API key state
   const [anthropicKeyLoading, setAnthropicKeyLoading] = useState(false)
   const [anthropicHasKey, setAnthropicHasKey] = useState(false)
@@ -67,30 +45,6 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
   const [hasClaudeSession, setHasClaudeSession] = useState(false)
   const [sessionInput, setSessionInput] = useState('')
   const [sessionLoading, setSessionLoading] = useState(false)
-
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (isDemo || mcpKeyFetched) return
-    const fetchMcpKeyStatus = async () => {
-      try {
-        const res = await fetch('/api/me/mcp-key')
-        if (res.ok) {
-          const data = await res.json()
-          setMcpHasKey(data.hasKey)
-          setMcpKeyHint(data.keyHint)
-          setMcpKeyFetched(true)
-        }
-      } catch {
-        // Silently fail
-      }
-    }
-    fetchMcpKeyStatus()
-  }, [isDemo, mcpKeyFetched])
 
   useEffect(() => {
     if (isDemo || anthropicKeyFetched) return
@@ -128,55 +82,6 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
     }
     fetchProvider()
   }, [isDemo, providerFetched])
-
-  const handleGenerateMcpKey = async () => {
-    setMcpKeyLoading(true)
-    try {
-      const res = await fetch('/api/me/mcp-key', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to generate API key')
-      setMcpNewKey(data.apiKey)
-      setMcpKeyVisible(true)
-      setMcpHasKey(true)
-      setMcpKeyHint(data.apiKey.slice(-4))
-      showToast.success('MCP API key generated')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to generate API key')
-    } finally {
-      setMcpKeyLoading(false)
-    }
-  }
-
-  const handleRevokeMcpKey = async () => {
-    setMcpKeyLoading(true)
-    try {
-      const res = await fetch('/api/me/mcp-key', { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to revoke API key')
-      setMcpHasKey(false)
-      setMcpKeyHint(null)
-      setMcpNewKey(null)
-      setMcpKeyVisible(false)
-      showToast.success('MCP API key revoked')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to revoke API key')
-    } finally {
-      setMcpKeyLoading(false)
-    }
-  }
-
-  const handleCopyMcpKey = useCallback(async () => {
-    if (!mcpNewKey) return
-    try {
-      await navigator.clipboard.writeText(mcpNewKey)
-      setMcpKeyCopied(true)
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
-      copyTimeoutRef.current = setTimeout(() => setMcpKeyCopied(false), 2000)
-      showToast.success('API key copied to clipboard')
-    } catch {
-      showToast.error('Failed to copy to clipboard')
-    }
-  }, [mcpNewKey])
 
   const handleSaveAnthropicKey = async () => {
     if (!anthropicKeyInput.trim()) {
@@ -319,40 +224,16 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
         <Card className="border-zinc-800 bg-zinc-900/50">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
-              <Terminal className="h-5 w-5 text-amber-500" />
-              <CardTitle className="text-zinc-100">MCP API Key</CardTitle>
-            </div>
-            <CardDescription className="text-zinc-500">
-              API key management is not available in demo mode
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="px-4 py-6 text-center text-zinc-500 bg-zinc-800/30 rounded-lg border border-zinc-700/50">
-              <Terminal className="h-12 w-12 mx-auto mb-3 text-zinc-600" />
-              <p className="text-sm">
-                MCP API keys are only available when running the full PUNT application.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-zinc-800 bg-zinc-900/50">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-2">
               <Bot className="h-5 w-5 text-violet-500" />
               <CardTitle className="text-zinc-100">Claude Chat</CardTitle>
             </div>
             <CardDescription className="text-zinc-500">
-              AI chat is not available in demo mode
+              Chat configuration is not available in demo mode
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="px-4 py-6 text-center text-zinc-500 bg-zinc-800/30 rounded-lg border border-zinc-700/50">
-              <Bot className="h-12 w-12 mx-auto mb-3 text-zinc-600" />
-              <p className="text-sm">
-                Claude Chat requires an Anthropic API key and is only available when running the
-                full PUNT application.
-              </p>
+              <p className="text-sm">Sign in to a real PUNT instance to configure Claude Chat.</p>
             </div>
           </CardContent>
         </Card>
@@ -362,312 +243,6 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="border-zinc-800 bg-zinc-900/50">
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <Terminal className="h-5 w-5 text-amber-500" />
-            <CardTitle className="text-zinc-100">MCP API Key</CardTitle>
-          </div>
-          <CardDescription className="text-zinc-500">
-            Generate an API key to use with the MCP server for AI-assisted ticket management
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {mcpHasKey && !mcpNewKey && (
-            <div className="flex items-center gap-3 px-3 py-2 bg-zinc-800/50 border border-zinc-700 rounded-lg">
-              <KeyRound className="h-4 w-4 text-emerald-500 shrink-0" />
-              <p className="text-sm text-zinc-300">
-                Active key ending in{' '}
-                <code className="text-amber-400 font-mono">...{mcpKeyHint}</code>
-              </p>
-            </div>
-          )}
-
-          {mcpNewKey && (
-            <div className="space-y-3">
-              <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                <p className="text-sm text-amber-400 font-medium mb-1">
-                  Save this key now -- it will not be shown again
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 relative">
-                  <Input
-                    readOnly
-                    value={mcpKeyVisible ? mcpNewKey : mcpNewKey.replace(/./g, '\u2022')}
-                    className="bg-zinc-900 border-zinc-700 font-mono text-sm pr-20"
-                  />
-                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-zinc-400 hover:text-zinc-200"
-                      onClick={() => setMcpKeyVisible(!mcpKeyVisible)}
-                    >
-                      {mcpKeyVisible ? (
-                        <EyeOff className="h-3.5 w-3.5" />
-                      ) : (
-                        <Eye className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-zinc-400 hover:text-zinc-200"
-                      onClick={handleCopyMcpKey}
-                    >
-                      {mcpKeyCopied ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-zinc-700 hover:bg-zinc-800 hover:border-amber-500/50"
-                  disabled={mcpKeyLoading}
-                >
-                  <KeyRound className="h-4 w-4 mr-2" />
-                  {mcpHasKey ? 'Regenerate Key' : 'Generate Key'}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="bg-zinc-900 border-zinc-800">
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="text-zinc-100">
-                    {mcpHasKey ? 'Regenerate MCP API Key?' : 'Generate MCP API Key?'}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription className="text-zinc-400">
-                    {mcpHasKey
-                      ? 'This will invalidate your current API key.'
-                      : 'A new API key will be generated. Save it securely.'}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleGenerateMcpKey}
-                    className="bg-amber-600 hover:bg-amber-700 text-white"
-                  >
-                    {mcpHasKey ? 'Regenerate' : 'Generate'}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-
-            {mcpHasKey && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-zinc-400 hover:text-red-400"
-                    disabled={mcpKeyLoading}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Revoke Key
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="bg-zinc-900 border-zinc-800">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="text-zinc-100">
-                      Revoke MCP API Key?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="text-zinc-400">
-                      This will permanently delete your API key.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleRevokeMcpKey}
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      Revoke Key
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
-
-          <div className="rounded-lg border border-zinc-700/50 overflow-hidden">
-            <div className="bg-gradient-to-r from-zinc-800/80 to-zinc-800/40 px-4 py-3 border-b border-zinc-700/50">
-              <h4 className="text-sm font-semibold text-zinc-100">Setup Guide</h4>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Configure MCP to use PUNT with Claude Code or Claude Desktop
-              </p>
-            </div>
-
-            <div className="p-4 space-y-6 bg-zinc-900/30">
-              {/* Step 1 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">
-                    1
-                  </span>
-                  <h5 className="text-sm font-medium text-zinc-200">
-                    Add the PUNT MCP server to your client
-                  </h5>
-                </div>
-
-                <div className="ml-9 space-y-3">
-                  <p className="text-xs text-zinc-400">
-                    Create a{' '}
-                    <code className="text-amber-400 bg-zinc-800 px-1 rounded">.mcp.json</code> file
-                    in your project root:
-                  </p>
-
-                  <CodeBlock
-                    language="json"
-                    filename=".mcp.json"
-                    code={`{
-  "mcpServers": {
-    "punt": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "punt-mcp"]
-    }
-  }
-}`}
-                  />
-
-                  <details className="group">
-                    <summary className="text-xs text-zinc-500 cursor-pointer hover:text-zinc-400 transition-colors">
-                      Running from source?
-                    </summary>
-                    <div className="mt-2 pl-3 border-l-2 border-zinc-700">
-                      <CodeBlock
-                        language="bash"
-                        code="pnpm --dir /path/to/punt/mcp exec tsx src/index.ts"
-                      />
-                    </div>
-                  </details>
-                </div>
-              </div>
-
-              {/* Step 2 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">
-                    2
-                  </span>
-                  <h5 className="text-sm font-medium text-zinc-200">Save your credentials</h5>
-                </div>
-
-                <div className="ml-9 space-y-3">
-                  <p className="text-xs text-zinc-400">
-                    Create a credentials file in your config directory:
-                  </p>
-
-                  <Tabs defaultValue="linux" className="w-full">
-                    <TabsList className="bg-zinc-800/50 p-0.5 h-8">
-                      <TabsTrigger
-                        value="linux"
-                        className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
-                      >
-                        Linux
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="macos"
-                        className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
-                      >
-                        macOS
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="windows"
-                        className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
-                      >
-                        Windows
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="linux" className="mt-2">
-                      <CodeBlock
-                        language="bash"
-                        filename="~/.config/punt/credentials.json"
-                        code={`{
-  "servers": {
-    "default": {
-      "url": "${typeof window !== 'undefined' ? window.location.origin : 'https://your-punt-server.com'}",
-      "apiKey": "YOUR_API_KEY_HERE"
-    }
-  },
-  "activeServer": "default"
-}`}
-                      />
-                    </TabsContent>
-
-                    <TabsContent value="macos" className="mt-2">
-                      <CodeBlock
-                        language="bash"
-                        filename="~/Library/Application Support/punt/credentials.json"
-                        code={`{
-  "servers": {
-    "default": {
-      "url": "${typeof window !== 'undefined' ? window.location.origin : 'https://your-punt-server.com'}",
-      "apiKey": "YOUR_API_KEY_HERE"
-    }
-  },
-  "activeServer": "default"
-}`}
-                      />
-                    </TabsContent>
-
-                    <TabsContent value="windows" className="mt-2">
-                      <CodeBlock
-                        language="bash"
-                        filename="%APPDATA%\\punt\\credentials.json"
-                        code={`{
-  "servers": {
-    "default": {
-      "url": "${typeof window !== 'undefined' ? window.location.origin : 'https://your-punt-server.com'}",
-      "apiKey": "YOUR_API_KEY_HERE"
-    }
-  },
-  "activeServer": "default"
-}`}
-                      />
-                    </TabsContent>
-                  </Tabs>
-                </div>
-              </div>
-
-              {/* Step 3 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">
-                    3
-                  </span>
-                  <h5 className="text-sm font-medium text-zinc-200">Restart your MCP client</h5>
-                </div>
-
-                <div className="ml-9">
-                  <p className="text-xs text-zinc-400">
-                    Changes to{' '}
-                    <code className="text-amber-400 bg-zinc-800 px-1 rounded">.mcp.json</code>{' '}
-                    require a restart. Credentials are hot-reloaded every 5 seconds.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card className="border-zinc-800 bg-zinc-900/50">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">

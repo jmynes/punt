@@ -9,6 +9,7 @@ interface CodeBlockProps {
   language?: 'json' | 'bash' | 'text'
   filename?: string
   className?: string
+  onCopy?: () => void
 }
 
 /**
@@ -186,7 +187,13 @@ function highlightBash(code: string): React.ReactNode[] {
   })
 }
 
-export function CodeBlock({ code, language = 'text', filename, className }: CodeBlockProps) {
+export function CodeBlock({
+  code,
+  language = 'text',
+  filename,
+  className,
+  onCopy,
+}: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -194,12 +201,13 @@ export function CodeBlock({ code, language = 'text', filename, className }: Code
     try {
       await navigator.clipboard.writeText(code)
       setCopied(true)
+      onCopy?.()
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       timeoutRef.current = setTimeout(() => setCopied(false), 2000)
     } catch {
       // Silently fail
     }
-  }, [code])
+  }, [code, onCopy])
 
   const highlightedCode =
     language === 'json' ? highlightJson(code) : language === 'bash' ? highlightBash(code) : code
@@ -224,8 +232,7 @@ export function CodeBlock({ code, language = 'text', filename, className }: Code
           onClick={handleCopy}
           className={cn(
             'absolute top-2 right-2 p-1.5 rounded-md transition-all',
-            'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800',
-            'opacity-0 group-hover:opacity-100 focus:opacity-100',
+            'text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800',
             copied && 'text-emerald-400 hover:text-emerald-400',
           )}
           aria-label={copied ? 'Copied' : 'Copy code'}
