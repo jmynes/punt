@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { authConfig } from '@/lib/auth.config'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
+import { checkRateLimit } from '@/lib/rate-limit'
 import {
   decryptTotpSecret,
   markRecoveryCodeUsed,
@@ -71,6 +72,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!totpCode) {
             // Throw a specific error that the client can detect
             throw new Error('2FA_REQUIRED')
+          }
+
+          // Rate limit TOTP attempts by username to prevent brute-force
+          const totpRateLimit = await checkRateLimit(normalizedUsername, 'auth/2fa')
+          if (!totpRateLimit.allowed) {
+            throw new Error('RATE_LIMITED')
           }
 
           const useRecoveryCode = isRecoveryCode === 'true'

@@ -59,7 +59,11 @@ export function LoginForm() {
         })
 
         if (!checkRes.ok) {
-          setError('Invalid username or password')
+          if (checkRes.status === 429) {
+            setError('Too many login attempts. Please try again later.')
+          } else {
+            setError('Invalid username or password')
+          }
           setIsLoading(false)
           return
         }
@@ -114,11 +118,15 @@ export function LoginForm() {
         })
 
         if (result?.error) {
-          setError(
-            useRecoveryCode
-              ? 'Invalid recovery code'
-              : 'Invalid verification code. Please try again.',
-          )
+          if (result.code === 'RATE_LIMITED' || result.error.includes('RATE_LIMITED')) {
+            setError('Too many verification attempts. Please try again later.')
+          } else {
+            setError(
+              useRecoveryCode
+                ? 'Invalid recovery code'
+                : 'Invalid verification code. Please try again.',
+            )
+          }
           setIsLoading(false)
           return
         }
