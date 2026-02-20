@@ -18,6 +18,7 @@ export type {
   Role,
   Sprint,
   Ticket,
+  TicketActivity,
   TicketEdit,
   TicketLink,
   TicketSprintHistory,

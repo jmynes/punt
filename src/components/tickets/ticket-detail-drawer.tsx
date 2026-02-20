@@ -9,6 +9,7 @@ import {
   ChevronUp,
   Clock,
   Copy,
+  History,
   Layers,
   Lightbulb,
   Link2,
@@ -99,6 +100,7 @@ import { InlineCodeText } from '../common/inline-code'
 import { PriorityBadge } from '../common/priority-badge'
 import { resolutionConfig } from '../common/resolution-badge'
 import { TypeBadge } from '../common/type-badge'
+import { ActivityTimeline } from './activity-timeline'
 import { AttachmentList } from './attachment-list'
 import { CommentsSection, type CommentsSectionRef } from './comments-section'
 import type { ParentTicketOption } from './create-ticket-dialog'
@@ -221,6 +223,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const storyPointsInputRef = useRef<HTMLInputElement>(null)
   const commentsSectionRef = useRef<CommentsSectionRef>(null)
   const [hasPendingComment, setHasPendingComment] = useState(false)
+  const [activityView, setActivityView] = useState<'comments' | 'timeline'>('comments')
 
   const {
     autoSaveOnDrawerClose,
@@ -1824,33 +1827,59 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               {/* Activity section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-zinc-400">Activity</Label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setActivityView('comments')}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors',
+                        activityView === 'comments'
+                          ? 'bg-zinc-800 text-zinc-200'
+                          : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50',
+                      )}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      Comments
+                      {ticket._count && ticket._count.comments > 0 && (
+                        <span className="text-xs text-zinc-500">({ticket._count.comments})</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActivityView('timeline')}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors',
+                        activityView === 'timeline'
+                          ? 'bg-zinc-800 text-zinc-200'
+                          : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50',
+                      )}
+                    >
+                      <History className="h-3.5 w-3.5" />
+                      Activity
+                    </button>
+                  </div>
                   <div className="flex items-center gap-4 text-xs text-zinc-500">
-                    {ticket._count && (
-                      <>
-                        <span className="flex items-center gap-1">
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          {ticket._count.comments}{' '}
-                          {ticket._count.comments === 1 ? 'comment' : 'comments'}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Paperclip className="h-3.5 w-3.5" />
-                          {tempAttachments.length}{' '}
-                          {tempAttachments.length === 1 ? 'attachment' : 'attachments'}
-                        </span>
-                      </>
+                    {ticket._count && activityView === 'comments' && (
+                      <span className="flex items-center gap-1">
+                        <Paperclip className="h-3.5 w-3.5" />
+                        {tempAttachments.length}{' '}
+                        {tempAttachments.length === 1 ? 'attachment' : 'attachments'}
+                      </span>
                     )}
                   </div>
                 </div>
 
-                {/* Comments */}
-                <CommentsSection
-                  ref={commentsSectionRef}
-                  projectId={projectKey}
-                  ticketId={ticket.id}
-                  ticketKey={`${projectKey}-${ticket.number}`}
-                  onPendingCommentChange={setHasPendingComment}
-                />
+                {activityView === 'comments' ? (
+                  <CommentsSection
+                    ref={commentsSectionRef}
+                    projectId={projectKey}
+                    ticketId={ticket.id}
+                    ticketKey={`${projectKey}-${ticket.number}`}
+                    onPendingCommentChange={setHasPendingComment}
+                  />
+                ) : (
+                  <ActivityTimeline projectId={projectKey} ticketId={ticket.id} />
+                )}
               </div>
             </div>
           </ScrollArea>
