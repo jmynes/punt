@@ -61,7 +61,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="hidden lg:flex h-[calc(100vh-3.5rem)] w-72 flex-col border-r border-zinc-800 bg-zinc-950">
+      <aside className="hidden lg:flex h-full w-72 flex-col border-r border-zinc-800 bg-zinc-950">
         <ScrollArea className="flex-1">
           <SidebarContent
             currentUser={currentUser}

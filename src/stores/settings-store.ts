@@ -74,6 +74,10 @@ interface SettingsState {
   // Use 24-hour time format (e.g., 14:00 instead of 2:00 PM)
   use24HourTime: boolean
   setUse24HourTime: (value: boolean) => void
+
+  // Warn before navigating away from role simulation
+  warnOnSimulationLeave: boolean
+  setWarnOnSimulationLeave: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -177,6 +181,10 @@ export const useSettingsStore = create<SettingsState>()(
       // Use 24-hour time format (off by default - uses 12-hour with AM/PM)
       use24HourTime: false,
       setUse24HourTime: (value) => set({ use24HourTime: value }),
+
+      // Warn before navigating away from role simulation (on by default)
+      warnOnSimulationLeave: true,
+      setWarnOnSimulationLeave: (value) => set({ warnOnSimulationLeave: value }),
     }),
     {
       name: 'punt-settings',

@@ -69,6 +69,8 @@ function PreferencesContent() {
     setShowChatPanel,
     use24HourTime,
     setUse24HourTime,
+    warnOnSimulationLeave,
+    setWarnOnSimulationLeave,
   } = useSettingsStore()
 
   const projects = useProjectsStore((s) => s.projects)
@@ -246,6 +248,35 @@ function PreferencesContent() {
                     id="collapse-attachments"
                     checked={collapseAttachmentsByDefault}
                     onCheckedChange={(checked) => setCollapseAttachmentsByDefault(checked === true)}
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Role Simulation */}
+            <Card className="border-zinc-800 bg-zinc-900/50">
+              <CardHeader>
+                <CardTitle className="text-zinc-100">Role Simulation</CardTitle>
+                <CardDescription className="text-zinc-500">
+                  Configure behavior when navigating away from a project during role simulation
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start justify-between space-x-4">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="warn-on-simulation-leave" className="text-zinc-300">
+                      Warn before leaving role simulation
+                    </Label>
+                    <p className="text-sm text-zinc-500">
+                      Show a confirmation dialog before navigating away from a project while
+                      simulating a role. When disabled, the simulation ends automatically.
+                    </p>
+                  </div>
+                  <Switch
+                    id="warn-on-simulation-leave"
+                    checked={warnOnSimulationLeave}
+                    onCheckedChange={(checked) => setWarnOnSimulationLeave(checked === true)}
                     className="data-[state=checked]:bg-amber-600"
                   />
                 </div>
