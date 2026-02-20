@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { rateLimitExceeded } from '@/lib/api-utils'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const checkSchema = z.object({
   username: z.string().min(1),
@@ -15,6 +17,12 @@ const checkSchema = z.object({
  */
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request)
+    const rateLimit = await checkRateLimit(ip, 'auth/login')
+    if (!rateLimit.allowed) {
+      return rateLimitExceeded(rateLimit)
+    }
+
     const body = await request.json()
     const parsed = checkSchema.safeParse(body)
 

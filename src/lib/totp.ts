@@ -1,16 +1,15 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto'
 import { authenticator } from 'otplib'
 import QRCode from 'qrcode'
 import { hashPassword, verifyPassword } from '@/lib/password'
 
-// Encryption key derived from AUTH_SECRET (must be set)
+// Encryption key derived from AUTH_SECRET using HKDF for proper domain separation
 function getEncryptionKey(): Buffer {
   const secret = process.env.AUTH_SECRET
   if (!secret) {
     throw new Error('AUTH_SECRET environment variable is required for TOTP encryption')
   }
-  // Derive a 32-byte key from AUTH_SECRET using SHA-256
-  return createHash('sha256').update(secret).digest()
+  return Buffer.from(hkdfSync('sha256', secret, 'punt-totp-secret-encryption', '', 32))
 }
 
 /**

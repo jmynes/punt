@@ -12,14 +12,13 @@ import {
 
 /**
  * POST /api/me/2fa/setup - Generate TOTP secret and QR code URI
- * Returns the secret, QR code, and manual entry key.
+ * Returns the QR code and manual entry key.
  * Does NOT enable 2FA yet - user must verify with /api/me/2fa/verify first.
  */
 export async function POST() {
   try {
     if (isDemoMode()) {
       return NextResponse.json({
-        secret: 'DEMO_SECRET_KEY_BASE32',
         qrCodeUrl: 'data:image/png;base64,demo',
         manualEntryKey: 'DEMO SECRET KEY BASE32',
       })
@@ -65,7 +64,6 @@ export async function POST() {
     const manualEntryKey = secret.replace(/(.{4})/g, '$1 ').trim()
 
     return NextResponse.json({
-      secret,
       qrCodeUrl,
       manualEntryKey,
     })
