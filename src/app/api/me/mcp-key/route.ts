@@ -4,6 +4,7 @@ import { handleApiError } from '@/lib/api-utils'
 import { requireAuth } from '@/lib/auth-helpers'
 import { encryptSession } from '@/lib/chat/encryption'
 import { db } from '@/lib/db'
+import { clearMcpKeyFile, writeMcpKeyFile } from '@/lib/mcp-key-file'
 
 /**
  * Hash an MCP API key using SHA-256
@@ -71,6 +72,9 @@ export async function POST() {
       },
     })
 
+    // Write key to .mcp-key file for hot-reload by MCP server
+    writeMcpKeyFile(apiKey)
+
     // Return the full key only on creation - user must save it
     // This is the only time the plaintext key is available
     return NextResponse.json({
@@ -96,6 +100,9 @@ export async function DELETE() {
         mcpApiKeyEncrypted: null,
       },
     })
+
+    // Remove .mcp-key file so MCP server stops using the revoked key
+    clearMcpKeyFile()
 
     return NextResponse.json({ success: true })
   } catch (error) {

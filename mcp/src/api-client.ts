@@ -1,14 +1,15 @@
 /**
  * API client for PUNT server
- * Uses the MCP_API_KEY for authentication and handles all HTTP communication
+ * Uses the MCP API key for authentication and handles all HTTP communication.
+ *
+ * The API key is resolved dynamically on each request via the key resolver,
+ * which reads from a key file (.mcp-key) with env var fallback. This enables
+ * hot-reloading the key without restarting Claude Code or the dev server.
  */
 
-const API_BASE_URL = process.env.PUNT_API_URL || 'http://localhost:3000'
-const MCP_API_KEY = process.env.MCP_API_KEY
+import { resolveApiKey } from './key-resolver.js'
 
-if (!MCP_API_KEY) {
-  console.error('Warning: MCP_API_KEY not set. API calls will fail authentication.')
-}
+const API_BASE_URL = process.env.PUNT_API_URL || 'http://localhost:3000'
 
 interface ApiResponse<T> {
   data?: T
@@ -41,7 +42,7 @@ async function apiRequest<T>(
       method,
       headers: {
         'Content-Type': 'application/json',
-        'X-MCP-API-Key': MCP_API_KEY || '',
+        'X-MCP-API-Key': resolveApiKey(),
       },
       body: body ? JSON.stringify(body) : undefined,
     })
