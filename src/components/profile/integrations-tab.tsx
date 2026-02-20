@@ -502,15 +502,15 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
             )}
           </div>
 
-          <div className="bg-zinc-800/50 rounded-lg p-3 text-xs text-zinc-400 space-y-4">
-            <p className="font-medium text-zinc-300">How to configure MCP</p>
+          <div className="bg-zinc-800/50 rounded-lg p-3 text-xs text-zinc-300 space-y-4">
+            <p className="font-medium text-zinc-200">How to configure MCP</p>
 
             <div className="space-y-2">
-              <p className="text-zinc-300 font-medium">
+              <p className="text-zinc-200 font-medium">
                 Step 1: Add the PUNT MCP server to your client
               </p>
-              <p className="text-zinc-500">
-                For <span className="text-zinc-400">Claude Code</span>, create{' '}
+              <p>
+                For <span className="text-zinc-100">Claude Code</span>, create{' '}
                 <code className="text-amber-400">.mcp.json</code> in your project root:
               </p>
               <pre className="bg-zinc-900 rounded p-2 overflow-x-auto text-[11px] text-zinc-300">
@@ -524,7 +524,7 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
   }
 }`}
               </pre>
-              <p className="text-zinc-500 mt-2">
+              <p className="mt-2">
                 Or if running from source, use{' '}
                 <code className="text-amber-400">
                   pnpm --dir /path/to/punt/mcp exec tsx src/index.ts
@@ -533,23 +533,21 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
             </div>
 
             <div className="space-y-2">
-              <p className="text-zinc-300 font-medium">Step 2: Save your credentials</p>
-              <p className="text-zinc-500">
-                Create a credentials file in your user config directory:
-              </p>
-              <ul className="space-y-1 list-disc list-inside text-zinc-500">
+              <p className="text-zinc-200 font-medium">Step 2: Save your credentials</p>
+              <p>Create a credentials file in your user config directory:</p>
+              <ul className="space-y-1 list-disc list-inside">
                 <li>
-                  <span className="text-zinc-400">Linux:</span>{' '}
+                  <span className="text-zinc-100">Linux:</span>{' '}
                   <code className="text-amber-400">~/.config/punt/credentials.json</code>
                 </li>
                 <li>
-                  <span className="text-zinc-400">macOS:</span>{' '}
+                  <span className="text-zinc-100">macOS:</span>{' '}
                   <code className="text-amber-400">
                     ~/Library/Application Support/punt/credentials.json
                   </code>
                 </li>
                 <li>
-                  <span className="text-zinc-400">Windows:</span>{' '}
+                  <span className="text-zinc-100">Windows:</span>{' '}
                   <code className="text-amber-400">%APPDATA%\punt\credentials.json</code>
                 </li>
               </ul>
@@ -566,7 +564,7 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
               </pre>
             </div>
 
-            <p className="text-zinc-500">
+            <p className="text-zinc-400">
               Restart your MCP client after making changes. Credentials are re-read every 5 seconds.
             </p>
           </div>
