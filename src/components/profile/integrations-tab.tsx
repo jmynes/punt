@@ -26,9 +26,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CodeBlock } from '@/components/ui/code-block'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { showToast } from '@/lib/toast'
 
@@ -502,19 +504,37 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
             )}
           </div>
 
-          <div className="bg-zinc-800/50 rounded-lg p-3 text-xs text-zinc-300 space-y-4">
-            <p className="font-medium text-zinc-200">How to configure MCP</p>
+          <div className="rounded-lg border border-zinc-700/50 overflow-hidden">
+            <div className="bg-gradient-to-r from-zinc-800/80 to-zinc-800/40 px-4 py-3 border-b border-zinc-700/50">
+              <h4 className="text-sm font-semibold text-zinc-100">Setup Guide</h4>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Configure MCP to use PUNT with Claude Code or Claude Desktop
+              </p>
+            </div>
 
-            <div className="space-y-2">
-              <p className="text-zinc-200 font-medium">
-                Step 1: Add the PUNT MCP server to your client
-              </p>
-              <p>
-                For <span className="text-zinc-100">Claude Code</span>, create{' '}
-                <code className="text-amber-400">.mcp.json</code> in your project root:
-              </p>
-              <pre className="bg-zinc-900 rounded p-2 overflow-x-auto text-[11px] text-zinc-300">
-                {`{
+            <div className="p-4 space-y-6 bg-zinc-900/30">
+              {/* Step 1 */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">
+                    1
+                  </span>
+                  <h5 className="text-sm font-medium text-zinc-200">
+                    Add the PUNT MCP server to your client
+                  </h5>
+                </div>
+
+                <div className="ml-9 space-y-3">
+                  <p className="text-xs text-zinc-400">
+                    Create a{' '}
+                    <code className="text-amber-400 bg-zinc-800 px-1 rounded">.mcp.json</code> file
+                    in your project root:
+                  </p>
+
+                  <CodeBlock
+                    language="json"
+                    filename=".mcp.json"
+                    code={`{
   "mcpServers": {
     "punt": {
       "type": "stdio",
@@ -523,36 +543,63 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
     }
   }
 }`}
-              </pre>
-              <p className="mt-2">
-                Or if running from source, use{' '}
-                <code className="text-amber-400">
-                  pnpm --dir /path/to/punt/mcp exec tsx src/index.ts
-                </code>
-              </p>
-            </div>
+                  />
 
-            <div className="space-y-2">
-              <p className="text-zinc-200 font-medium">Step 2: Save your credentials</p>
-              <p>Create a credentials file in your user config directory:</p>
-              <ul className="space-y-1 list-disc list-inside">
-                <li>
-                  <span className="text-zinc-100">Linux:</span>{' '}
-                  <code className="text-amber-400">~/.config/punt/credentials.json</code>
-                </li>
-                <li>
-                  <span className="text-zinc-100">macOS:</span>{' '}
-                  <code className="text-amber-400">
-                    ~/Library/Application Support/punt/credentials.json
-                  </code>
-                </li>
-                <li>
-                  <span className="text-zinc-100">Windows:</span>{' '}
-                  <code className="text-amber-400">%APPDATA%\punt\credentials.json</code>
-                </li>
-              </ul>
-              <pre className="bg-zinc-900 rounded p-2 overflow-x-auto text-[11px] text-zinc-300 mt-2">
-                {`{
+                  <details className="group">
+                    <summary className="text-xs text-zinc-500 cursor-pointer hover:text-zinc-400 transition-colors">
+                      Running from source?
+                    </summary>
+                    <div className="mt-2 pl-3 border-l-2 border-zinc-700">
+                      <CodeBlock
+                        language="bash"
+                        code="pnpm --dir /path/to/punt/mcp exec tsx src/index.ts"
+                      />
+                    </div>
+                  </details>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">
+                    2
+                  </span>
+                  <h5 className="text-sm font-medium text-zinc-200">Save your credentials</h5>
+                </div>
+
+                <div className="ml-9 space-y-3">
+                  <p className="text-xs text-zinc-400">
+                    Create a credentials file in your config directory:
+                  </p>
+
+                  <Tabs defaultValue="linux" className="w-full">
+                    <TabsList className="bg-zinc-800/50 p-0.5 h-8">
+                      <TabsTrigger
+                        value="linux"
+                        className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
+                      >
+                        Linux
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="macos"
+                        className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
+                      >
+                        macOS
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="windows"
+                        className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
+                      >
+                        Windows
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="linux" className="mt-2">
+                      <CodeBlock
+                        language="bash"
+                        filename="~/.config/punt/credentials.json"
+                        code={`{
   "servers": {
     "default": {
       "url": "${typeof window !== 'undefined' ? window.location.origin : 'https://your-punt-server.com'}",
@@ -561,12 +608,62 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
   },
   "activeServer": "default"
 }`}
-              </pre>
-            </div>
+                      />
+                    </TabsContent>
 
-            <p className="text-zinc-400">
-              Restart your MCP client after making changes. Credentials are re-read every 5 seconds.
-            </p>
+                    <TabsContent value="macos" className="mt-2">
+                      <CodeBlock
+                        language="bash"
+                        filename="~/Library/Application Support/punt/credentials.json"
+                        code={`{
+  "servers": {
+    "default": {
+      "url": "${typeof window !== 'undefined' ? window.location.origin : 'https://your-punt-server.com'}",
+      "apiKey": "YOUR_API_KEY_HERE"
+    }
+  },
+  "activeServer": "default"
+}`}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="windows" className="mt-2">
+                      <CodeBlock
+                        language="bash"
+                        filename="%APPDATA%\\punt\\credentials.json"
+                        code={`{
+  "servers": {
+    "default": {
+      "url": "${typeof window !== 'undefined' ? window.location.origin : 'https://your-punt-server.com'}",
+      "apiKey": "YOUR_API_KEY_HERE"
+    }
+  },
+  "activeServer": "default"
+}`}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">
+                    3
+                  </span>
+                  <h5 className="text-sm font-medium text-zinc-200">Restart your MCP client</h5>
+                </div>
+
+                <div className="ml-9">
+                  <p className="text-xs text-zinc-400">
+                    Changes to{' '}
+                    <code className="text-amber-400 bg-zinc-800 px-1 rounded">.mcp.json</code>{' '}
+                    require a restart. Credentials are hot-reloaded every 5 seconds.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
