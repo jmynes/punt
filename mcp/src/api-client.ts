@@ -13,7 +13,7 @@
  * - Cross-platform support
  */
 
-import { resolveApiKey, resolveApiUrl } from './credentials.js'
+import { getCredentialsFilePath, resolveApiKey, resolveApiUrl } from './credentials.js'
 
 interface ApiResponse<T> {
   data?: T
@@ -39,6 +39,18 @@ async function apiRequest<T>(
   path: string,
   body?: unknown,
 ): Promise<ApiResponse<T>> {
+  const apiKey = resolveApiKey()
+  if (!apiKey) {
+    const credPath = getCredentialsFilePath()
+    return {
+      error:
+        'MCP credentials not configured. Either:\n' +
+        `1. Create credentials file at ${credPath}\n` +
+        '2. Set PUNT_API_KEY and PUNT_API_URL environment variables\n' +
+        'See: https://github.com/your-org/punt#mcp-server for setup instructions',
+    }
+  }
+
   const baseUrl = resolveApiUrl()
   const url = `${baseUrl}${path}`
 
@@ -47,7 +59,7 @@ async function apiRequest<T>(
       method,
       headers: {
         'Content-Type': 'application/json',
-        'X-MCP-API-Key': resolveApiKey(),
+        'X-MCP-API-Key': apiKey,
       },
       body: body ? JSON.stringify(body) : undefined,
     })
