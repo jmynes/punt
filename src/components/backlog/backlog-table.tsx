@@ -18,18 +18,21 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
-import { Settings2, TrendingUp } from 'lucide-react'
+import { Code2, Settings2, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DropZone, type TableContext, TicketTable } from '@/components/table'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { filterTickets } from '@/lib/filter-tickets'
+import { evaluateQuery } from '@/lib/query-evaluator'
+import { parse, QueryParseError } from '@/lib/query-parser'
 import { type SortConfig, useBacklogStore } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { BacklogFilters } from './backlog-filters'
+import { QueryInput } from './query-input'
 
 interface BacklogTableProps {
   tickets: TicketWithRelations[]
@@ -81,6 +84,10 @@ export function BacklogTable({
     backlogOrder,
     setBacklogOrder,
     clearBacklogOrder: _clearBacklogOrder,
+    queryMode,
+    setQueryMode,
+    queryText,
+    setQueryText,
   } = useBacklogStore()
   const persistTableSort = useSettingsStore((s) => s.persistTableSort)
 
@@ -174,23 +181,58 @@ export function BacklogTable({
     }),
   )
 
+  // Parse query for error display
+  const queryError = useMemo(() => {
+    if (!queryMode || !queryText.trim()) return null
+    try {
+      parse(queryText)
+      return null
+    } catch (err) {
+      if (err instanceof QueryParseError) {
+        return err.message
+      }
+      return 'Invalid query'
+    }
+  }, [queryMode, queryText])
+
   // Filter and sort tickets
   const filteredTickets = useMemo(() => {
-    const result = filterTickets(orderedTickets, {
-      searchQuery,
-      projectKey,
-      filterByType,
-      filterByPriority,
-      filterByStatus,
-      filterByResolution,
-      filterByAssignee,
-      filterByLabels,
-      filterBySprint,
-      filterByPoints,
-      filterByDueDate,
-      filterByAttachments,
-      showSubtasks,
-    })
+    let result: TicketWithRelations[]
+
+    if (queryMode && queryText.trim()) {
+      // Query mode: use the query parser/evaluator
+      try {
+        const ast = parse(queryText)
+        result = evaluateQuery(ast, orderedTickets, statusColumns, projectKey)
+        // Still filter subtasks if disabled
+        if (!showSubtasks) {
+          result = result.filter((t) => t.type !== 'subtask')
+        }
+      } catch {
+        // If the query is invalid, show all tickets
+        result = [...orderedTickets]
+        if (!showSubtasks) {
+          result = result.filter((t) => t.type !== 'subtask')
+        }
+      }
+    } else {
+      // Standard filter mode
+      result = filterTickets(orderedTickets, {
+        searchQuery,
+        projectKey,
+        filterByType,
+        filterByPriority,
+        filterByStatus,
+        filterByResolution,
+        filterByAssignee,
+        filterByLabels,
+        filterBySprint,
+        filterByPoints,
+        filterByDueDate,
+        filterByAttachments,
+        showSubtasks,
+      })
+    }
 
     // Sort (skip if using manual order from drag & drop)
     if (sort && !hasManualOrder) {
@@ -312,6 +354,9 @@ export function BacklogTable({
     sort,
     hasManualOrder,
     projectKey,
+    queryMode,
+    queryText,
+    statusColumns,
   ])
 
   const visibleColumns = columns.filter((c) => c.visible)
@@ -566,17 +611,53 @@ export function BacklogTable({
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4 border-b border-zinc-800 px-4 py-3">
-        <BacklogFilters projectId={projectId} statusColumns={statusColumns} />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setColumnConfigOpen(true)}
-          className="shrink-0"
-        >
-          <Settings2 className="mr-2 h-4 w-4" />
-          Columns
-        </Button>
+      <div className="flex flex-col border-b border-zinc-800">
+        <div className="flex items-center justify-between gap-4 px-4 py-3">
+          {queryMode ? (
+            <div className="flex-1">
+              <QueryInput
+                value={queryText}
+                onChange={setQueryText}
+                onClear={() => {
+                  setQueryText('')
+                  setQueryMode(false)
+                }}
+                error={queryError}
+              />
+            </div>
+          ) : (
+            <BacklogFilters projectId={projectId} statusColumns={statusColumns} />
+          )}
+          <div className="flex shrink-0 items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={queryMode ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setQueryMode(!queryMode)}
+                  className={queryMode ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}
+                >
+                  <Code2 className="mr-2 h-4 w-4" />
+                  Query
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+                <p className="text-xs text-zinc-100">
+                  {queryMode ? 'Switch to standard filters' : 'Switch to query language mode'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setColumnConfigOpen(true)}
+              className="shrink-0"
+            >
+              <Settings2 className="mr-2 h-4 w-4" />
+              Columns
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Summary header */}

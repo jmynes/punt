@@ -212,6 +212,12 @@ interface BacklogState {
   filterConfigOpen: boolean
   setFilterConfigOpen: (open: boolean) => void
 
+  // Query mode (JQL-like filtering)
+  queryMode: boolean
+  setQueryMode: (enabled: boolean) => void
+  queryText: string
+  setQueryText: (query: string) => void
+
   // Manual backlog ordering (per project)
   backlogOrder: Record<string, string[]>
   setBacklogOrder: (projectId: string, orderedIds: string[]) => void
@@ -374,6 +380,17 @@ export const useBacklogStore = create<BacklogState>()(
         }),
       filterConfigOpen: false,
       setFilterConfigOpen: (open) => set({ filterConfigOpen: open }),
+
+      // Query mode
+      queryMode: false,
+      setQueryMode: (enabled) =>
+        set((state) => ({
+          queryMode: enabled,
+          // Clear query text when disabling query mode
+          queryText: enabled ? state.queryText : '',
+        })),
+      queryText: '',
+      setQueryText: (query) => set({ queryText: query }),
 
       backlogOrder: {},
       setBacklogOrder: (projectId, orderedIds) =>
