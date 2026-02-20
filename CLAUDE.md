@@ -510,6 +510,8 @@ PUNT includes an MCP (Model Context Protocol) server for conversational ticket m
 **Key files:**
 - `mcp/src/index.ts` - Server entry point, tool registrations
 - `mcp/src/api-client.ts` - HTTP client for PUNT API calls
+- `mcp/src/config.ts` - Cross-platform config directory resolution
+- `mcp/src/credentials.ts` - Credential file reading and server resolution
 - `mcp/src/tools/tickets.ts` - Ticket CRUD tools
 - `mcp/src/tools/projects.ts` - Project/member/column tools
 - `mcp/src/tools/sprints.ts` - Sprint lifecycle tools
@@ -517,25 +519,73 @@ PUNT includes an MCP (Model Context Protocol) server for conversational ticket m
 - `mcp/src/tools/repository.ts` - Repository context and branch name tools
 - `mcp/src/utils.ts` - Formatting helpers (markdown output)
 
-**Environment:**
-- `MCP_API_KEY` - User's API key (from `/api/me/mcp-key`)
-- `MCP_BASE_URL` - PUNT server URL (default: `http://localhost:3000`)
+**Credentials Configuration:**
+
+Store MCP credentials in your user config directory (cross-platform):
+
+| Platform | Path |
+|----------|------|
+| Linux | `~/.config/punt/credentials.json` (or `$XDG_CONFIG_HOME/punt/`) |
+| macOS | `~/Library/Application Support/punt/credentials.json` |
+| Windows | `%APPDATA%\punt\credentials.json` |
+
+**Credentials file format:**
+```json
+{
+  "servers": {
+    "default": {
+      "url": "https://punt.example.com",
+      "apiKey": "mcp_xxxxx..."
+    },
+    "local": {
+      "url": "http://localhost:3000",
+      "apiKey": "mcp_yyyyy..."
+    }
+  },
+  "activeServer": "default"
+}
+```
+
+This supports:
+- **Multiple PUNT servers**: Work, personal, local dev environments
+- **Named server profiles**: Switch between servers via `PUNT_SERVER` env var
+- **Hot-reload**: Credentials are re-read every 5 seconds (no restart needed)
+
+**Resolution priority:**
+1. `PUNT_API_KEY` + `PUNT_API_URL` env vars (CI/automation)
+2. `PUNT_SERVER` env var → lookup named server in credentials.json
+3. `activeServer` from credentials.json
+4. Fallback to "default" server
 
 **Prerequisites for full workflow:**
-- `pnpm dev` running on port 3000 (MCP calls the PUNT API)
+- PUNT server running (local `pnpm dev` or remote)
+- Credentials configured in user config directory
 - [GitHub CLI (`gh`)](https://cli.github.com/) authenticated — used for PR creation, merging, and issue management
 - Git configured for the repository
 
 **Running the MCP server:**
 ```bash
 cd mcp && pnpm install  # First time only
-MCP_API_KEY=your-key pnpm --dir mcp exec tsx src/index.ts
+pnpm --dir mcp exec tsx src/index.ts
 ```
 
-**Configuration** (`.mcp.json` — gitignored, contains secrets):
+**Claude Code configuration** (`.mcp.json` — gitignored):
 
-The `.mcp.json` file lives in the project root but is **gitignored** because it contains the API key. Claude Code reads it automatically per-project. The MCP server requires the dev server (`pnpm dev`) to be running on port 3000, since it calls the PUNT API. If MCP tools return HTML instead of JSON, the dev server is not running.
+The `.mcp.json` file tells Claude Code how to launch the MCP server. Credentials are read from the user config directory, not from this file.
 
+```json
+{
+  "mcpServers": {
+    "punt": {
+      "type": "stdio",
+      "command": "pnpm",
+      "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"]
+    }
+  }
+}
+```
+
+For CI/automation, override with environment variables:
 ```json
 {
   "mcpServers": {
@@ -544,7 +594,8 @@ The `.mcp.json` file lives in the project root but is **gitignored** because it 
       "command": "pnpm",
       "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
       "env": {
-        "MCP_API_KEY": "<user's key from POST /api/me/mcp-key>"
+        "PUNT_API_KEY": "$MCP_API_KEY",
+        "PUNT_API_URL": "https://punt.example.com"
       }
     }
   }

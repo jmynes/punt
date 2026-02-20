@@ -1,14 +1,19 @@
 /**
  * API client for PUNT server
- * Uses the MCP_API_KEY for authentication and handles all HTTP communication
+ * Uses the MCP API key for authentication and handles all HTTP communication.
+ *
+ * Credentials are resolved from the user's config directory:
+ * - Linux: ~/.config/punt/credentials.json
+ * - macOS: ~/Library/Application Support/punt/credentials.json
+ * - Windows: %APPDATA%\punt\credentials.json
+ *
+ * This enables:
+ * - Multiple named server profiles (work, local, etc.)
+ * - Hot-reloading credentials without restarting
+ * - Cross-platform support
  */
 
-const API_BASE_URL = process.env.PUNT_API_URL || 'http://localhost:3000'
-const MCP_API_KEY = process.env.MCP_API_KEY
-
-if (!MCP_API_KEY) {
-  console.error('Warning: MCP_API_KEY not set. API calls will fail authentication.')
-}
+import { resolveApiKey, resolveApiUrl } from './credentials.js'
 
 interface ApiResponse<T> {
   data?: T
@@ -34,14 +39,15 @@ async function apiRequest<T>(
   path: string,
   body?: unknown,
 ): Promise<ApiResponse<T>> {
-  const url = `${API_BASE_URL}${path}`
+  const baseUrl = resolveApiUrl()
+  const url = `${baseUrl}${path}`
 
   try {
     const response = await fetch(url, {
       method,
       headers: {
         'Content-Type': 'application/json',
-        'X-MCP-API-Key': MCP_API_KEY || '',
+        'X-MCP-API-Key': resolveApiKey(),
       },
       body: body ? JSON.stringify(body) : undefined,
     })
