@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { ChatFAB, ChatPanel } from '@/components/chat'
 import { EmailVerificationBanner } from '@/components/common/email-verification-banner'
+import { RoleSimulationBanner } from '@/components/common/role-simulation-banner'
 import { Dialogs } from '@/components/dialogs'
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
 import { Footer, Header, MobileNav, MobileNotice, Sidebar } from '@/components/layout'
@@ -9,6 +10,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="relative h-full flex flex-col overflow-hidden">
       <EmailVerificationBanner />
+      <RoleSimulationBanner />
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />

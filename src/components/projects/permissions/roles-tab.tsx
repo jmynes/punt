@@ -19,6 +19,8 @@ import {
   ArrowRightLeft,
   CheckSquare,
   Copy,
+  Eye,
+  EyeOff,
   GitCompare,
   Loader2,
   Minus,
@@ -79,7 +81,7 @@ import {
   useUpdateRole,
 } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
-import { useHasPermission, useIsSystemAdmin } from '@/hooks/use-permissions'
+import { useHasPermission, useIsSystemAdmin, useMyRealPermissions } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { LABEL_COLORS } from '@/lib/constants'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -91,6 +93,7 @@ import {
   type MemberSnapshot,
   useAdminUndoStore,
 } from '@/stores/admin-undo-store'
+import { useRoleSimulationStore } from '@/stores/role-simulation-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { Permission, RoleWithPermissions } from '@/types'
 import { RoleCompareDialog } from './role-compare-dialog'
@@ -124,6 +127,46 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
   const canManageRoles = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
   const isSystemAdmin = useIsSystemAdmin()
   const currentUser = useCurrentUser()
+
+  // Role simulation
+  const { startSimulation, stopSimulation, isSimulating } = useRoleSimulationStore()
+  const isCurrentlySimulating = isSimulating(projectId)
+  // Get the user's real permissions (not affected by simulation) to determine
+  // which roles they can simulate
+  const { data: realPermissions } = useMyRealPermissions(projectId)
+
+  // Determine which roles the user can simulate (equal to or below their actual role)
+  const simulatableRoles = useMemo(() => {
+    if (!roles || !realPermissions) return []
+    const userPosition = realPermissions.role.position
+    const userIsAdmin = realPermissions.isSystemAdmin
+    // System admins can simulate any role; otherwise, only roles at or below current position
+    return roles.filter((role) => userIsAdmin || role.position >= userPosition)
+  }, [roles, realPermissions])
+
+  const handleStartSimulation = useCallback(
+    (role: RoleWithPermissions) => {
+      startSimulation(
+        projectId,
+        {
+          id: role.id,
+          name: role.name,
+          color: role.color,
+          description: role.description ?? null,
+          isDefault: role.isDefault,
+          position: role.position,
+        },
+        role.permissions,
+      )
+      showToast.success(`Now viewing as ${role.name}. Press Esc to exit.`)
+    },
+    [projectId, startSimulation],
+  )
+
+  const handleStopSimulation = useCallback(() => {
+    stopSimulation(projectId)
+    showToast.success('Exited role simulation')
+  }, [projectId, stopSimulation])
 
   // Drag-and-drop sensors
   const sensors = useSensors(
@@ -1027,6 +1070,49 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-zinc-400">Roles</h3>
           <div className="flex items-center gap-1">
+            {/* View as Role dropdown */}
+            {simulatableRoles.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title={isCurrentlySimulating ? 'Exit role simulation' : 'View as role'}
+                    className={cn(
+                      isCurrentlySimulating &&
+                        'text-violet-400 hover:text-violet-300 bg-violet-900/20',
+                    )}
+                  >
+                    {isCurrentlySimulating ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[180px]">
+                  {isCurrentlySimulating && (
+                    <DropdownMenuItem onClick={handleStopSimulation} className="gap-2">
+                      <EyeOff className="h-4 w-4 text-violet-400" />
+                      <span>Exit simulation</span>
+                    </DropdownMenuItem>
+                  )}
+                  {simulatableRoles.map((role) => (
+                    <DropdownMenuItem
+                      key={role.id}
+                      onClick={() => handleStartSimulation(role)}
+                      className="gap-2"
+                    >
+                      <div
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: role.color }}
+                      />
+                      <span>View as {role.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             {roles && roles.length >= 2 && (
               <Button
                 variant="ghost"
