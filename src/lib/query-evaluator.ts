@@ -98,8 +98,6 @@ function getFieldValue(
       return toDate(ticket.updatedAt)
     case 'resolution':
       return ticket.resolution ?? null
-    case 'parent':
-      return ticket.parentId ?? null
     case 'environment':
       return ticket.environment ?? null
     case 'affectedVersion':
@@ -201,6 +199,7 @@ function evaluateComparison(
 
   if (Array.isArray(fieldValue)) {
     if (node.operator === '!=') {
+      if (fieldValue.length === 0) return false // no labels means nothing is "not equal to X"
       return fieldValue.every((v) => !compareValues(v, '=', node.value, node.valueType))
     }
     return fieldValue.some((v) => compareValues(v, node.operator, node.value, node.valueType))

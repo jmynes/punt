@@ -368,6 +368,11 @@ describe('parse', () => {
       expect(() => parse('priority = high )')).toThrow(QueryParseError)
     })
 
+    it('throws on unterminated string', () => {
+      expect(() => parse('title = "unclosed')).toThrow(QueryParseError)
+      expect(() => parse("title = 'unclosed")).toThrow(QueryParseError)
+    })
+
     it('includes position in error', () => {
       try {
         parse('priority = ')

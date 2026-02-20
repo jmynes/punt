@@ -346,8 +346,8 @@ describe('evaluateQuery', () => {
 
     it('handles != for labels', () => {
       const result = query('labels != frontend')
-      // Tickets without the "frontend" label
-      expect(result.map((t) => t.id)).toEqual(['t3', 't4', 't5'])
+      // Tickets with labels that don't include "frontend" (empty labels excluded)
+      expect(result.map((t) => t.id)).toEqual(['t4'])
     })
 
     it('handles IN for labels', () => {
