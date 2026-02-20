@@ -53,6 +53,5 @@ next-env.d.ts
 /src/generated/prisma
 .playwright-mcp/
 .mcp.json
-.mcp-key
 tmp/
 .mcp.json~

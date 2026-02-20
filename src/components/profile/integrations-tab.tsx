@@ -502,12 +502,37 @@ export function IntegrationsTab({ isDemo }: IntegrationsTabProps) {
             )}
           </div>
 
-          <div className="bg-zinc-800/50 rounded-lg p-3 text-xs text-zinc-400 space-y-2">
+          <div className="bg-zinc-800/50 rounded-lg p-3 text-xs text-zinc-400 space-y-3">
             <p className="font-medium text-zinc-300">How to configure MCP</p>
-            <p>
-              Add the key to your <code className="text-amber-400">.mcp.json</code> file in the
-              project root.
-            </p>
+            <p>Save your credentials to a file in your user config directory:</p>
+            <ul className="space-y-1 list-disc list-inside text-zinc-500">
+              <li>
+                <span className="text-zinc-400">Linux:</span>{' '}
+                <code className="text-amber-400">~/.config/punt/credentials.json</code>
+              </li>
+              <li>
+                <span className="text-zinc-400">macOS:</span>{' '}
+                <code className="text-amber-400">
+                  ~/Library/Application Support/punt/credentials.json
+                </code>
+              </li>
+              <li>
+                <span className="text-zinc-400">Windows:</span>{' '}
+                <code className="text-amber-400">%APPDATA%\punt\credentials.json</code>
+              </li>
+            </ul>
+            <p className="text-zinc-500">Example file:</p>
+            <pre className="bg-zinc-900 rounded p-2 overflow-x-auto text-[11px] text-zinc-300">
+              {`{
+  "servers": {
+    "default": {
+      "url": "${typeof window !== 'undefined' ? window.location.origin : 'https://your-punt-server.com'}",
+      "apiKey": "YOUR_API_KEY_HERE"
+    }
+  },
+  "activeServer": "default"
+}`}
+            </pre>
           </div>
         </CardContent>
       </Card>
