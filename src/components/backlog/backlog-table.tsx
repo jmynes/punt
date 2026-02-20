@@ -91,6 +91,13 @@ export function BacklogTable({
   } = useBacklogStore()
   const persistTableSort = useSettingsStore((s) => s.persistTableSort)
 
+  // Debounce query text to prevent per-keystroke evaluation
+  const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQueryText(queryText), 150)
+    return () => clearTimeout(timer)
+  }, [queryText])
+
   // Reset backlog sort to default on mount when sort persistence is disabled
   const sortResetRef = useRef(false)
   useEffect(() => {
@@ -183,9 +190,9 @@ export function BacklogTable({
 
   // Parse query for error display
   const queryError = useMemo(() => {
-    if (!queryMode || !queryText.trim()) return null
+    if (!queryMode || !debouncedQueryText.trim()) return null
     try {
-      parse(queryText)
+      parse(debouncedQueryText)
       return null
     } catch (err) {
       if (err instanceof QueryParseError) {
@@ -193,16 +200,16 @@ export function BacklogTable({
       }
       return 'Invalid query'
     }
-  }, [queryMode, queryText])
+  }, [queryMode, debouncedQueryText])
 
   // Filter and sort tickets
   const filteredTickets = useMemo(() => {
     let result: TicketWithRelations[]
 
-    if (queryMode && queryText.trim()) {
+    if (queryMode && debouncedQueryText.trim()) {
       // Query mode: use the query parser/evaluator
       try {
-        const ast = parse(queryText)
+        const ast = parse(debouncedQueryText)
         result = evaluateQuery(ast, orderedTickets, statusColumns, projectKey)
         // Still filter subtasks if disabled
         if (!showSubtasks) {
@@ -355,7 +362,7 @@ export function BacklogTable({
     hasManualOrder,
     projectKey,
     queryMode,
-    queryText,
+    debouncedQueryText,
     statusColumns,
   ])
 

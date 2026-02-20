@@ -104,7 +104,6 @@ export const QUERY_FIELDS = [
   'created',
   'updated',
   'resolution',
-  'parent',
   'environment',
   'affectedVersion',
   'fixVersion',
@@ -248,9 +247,10 @@ export function tokenize(input: string): Token[] {
         }
         pos++
       }
-      if (pos < input.length) {
-        pos++ // skip closing quote
+      if (pos >= input.length) {
+        throw new QueryParseError(`Unterminated string starting at position ${start}`, start)
       }
+      pos++ // skip closing quote
       tokens.push({ type: 'STRING', value, start, end: pos })
       continue
     }
@@ -444,14 +444,14 @@ export function parse(input: string): ASTNode {
     ) {
       // Check if this VALUE could be a field name (followed by operator)
       if (current().type === 'VALUE') {
-        const lookAhead = pos + 1
-        while (lookAhead < tokens.length && tokens[lookAhead].type === 'EOF') break
+        const nextPos = pos + 1
         if (
-          lookAhead < tokens.length &&
-          (tokens[lookAhead].type === 'OPERATOR' ||
-            tokens[lookAhead].type === 'IN' ||
-            tokens[lookAhead].type === 'IS' ||
-            tokens[lookAhead].type === 'NOT')
+          nextPos < tokens.length &&
+          tokens[nextPos].type !== 'EOF' &&
+          (tokens[nextPos].type === 'OPERATOR' ||
+            tokens[nextPos].type === 'IN' ||
+            tokens[nextPos].type === 'IS' ||
+            tokens[nextPos].type === 'NOT')
         ) {
           // Re-classify this VALUE as a FIELD
           tokens[pos] = { ...tokens[pos], type: 'FIELD' }
