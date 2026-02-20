@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { attachmentKeys } from '@/hooks/queries/use-attachments'
 import {
   batchCreateTicketsAPI,
   batchDeleteTicketsAPI,
@@ -1877,10 +1878,346 @@ export function KeyboardShortcuts() {
             })
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
+          } else if (entry.action.type === 'attachmentAdd') {
+            const action = entry.action
+            // Undo attachment add: delete the added attachments
+            undoStore.pushRedo(entry)
+            undoStore.setProcessing(true)
+            ;(async () => {
+              try {
+                const tabId = getTabId()
+                for (const att of action.attachments) {
+                  await fetch(
+                    `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
+                    {
+                      method: 'DELETE',
+                      headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
+                    },
+                  )
+                  queryClient.invalidateQueries({
+                    queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  })
+                }
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
+                })
+              } catch (err) {
+                console.error('Failed to undo attachment add:', err)
+                showToast.error('Failed to undo attachment add')
+              } finally {
+                useUndoStore.getState().setProcessing(false)
+              }
+            })()
+
+            const fileNames =
+              action.attachments.length === 1
+                ? `"${action.attachments[0].attachment.originalName}"`
+                : `${action.attachments.length} files`
+            const attTicketKey = action.attachments[0]?.ticketKey ?? ''
+
+            let currentId = entry.toastId
+            const toastId = showUndoRedoToast('success', {
+              title:
+                action.attachments.length === 1
+                  ? 'Attachment removed'
+                  : `${action.attachments.length} attachments removed`,
+              description: `${fileNames} from ${attTicketKey}`,
+              duration: 3000,
+              showUndoButtons: showUndo,
+              undoLabel: 'Redo',
+              redoLabel: 'Undo',
+              onUndo: async (id) => {
+                // Redo: re-add the attachments
+                const redoEntry = useUndoStore.getState().redoByToastId(id)
+                if (!redoEntry) return
+                const store = useUndoStore.getState()
+                if (store.isProcessing) return
+                store.setProcessing(true)
+                try {
+                  const tabId = getTabId()
+                  const idMap = new Map<string, string>()
+                  for (const att of action.attachments) {
+                    const res = await fetch(
+                      `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...(tabId && { 'X-Tab-Id': tabId }),
+                        },
+                        body: JSON.stringify({
+                          attachments: [
+                            {
+                              filename: att.attachment.filename,
+                              originalName: att.attachment.originalName,
+                              mimeType: att.attachment.mimetype,
+                              size: att.attachment.size,
+                              url: att.attachment.url,
+                            },
+                          ],
+                        }),
+                      },
+                    )
+                    if (res.ok) {
+                      const created = await res.json()
+                      if (created?.[0]?.id) {
+                        idMap.set(att.attachment.id, created[0].id)
+                      }
+                    }
+                    queryClient.invalidateQueries({
+                      queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                    })
+                  }
+                  if (idMap.size > 0 && currentId != null) {
+                    useUndoStore.getState().updateAttachmentIds(currentId, idMap)
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: ticketKeys.byProject(entry.projectId),
+                  })
+                } catch (err) {
+                  console.error('Failed to redo attachment add:', err)
+                } finally {
+                  useUndoStore.getState().setProcessing(false)
+                }
+              },
+              onRedo: async (id) => {
+                // Undo again: delete the attachments
+                const undoEntry2 = useUndoStore.getState().undoByToastId(id)
+                if (!undoEntry2) return
+                const store = useUndoStore.getState()
+                if (store.isProcessing) return
+                store.setProcessing(true)
+                try {
+                  const tabId = getTabId()
+                  for (const att of action.attachments) {
+                    await fetch(
+                      `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
+                      {
+                        method: 'DELETE',
+                        headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
+                      },
+                    )
+                    queryClient.invalidateQueries({
+                      queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                    })
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: ticketKeys.byProject(entry.projectId),
+                  })
+                } catch (err) {
+                  console.error('Failed to undo attachment add:', err)
+                } finally {
+                  useUndoStore.getState().setProcessing(false)
+                }
+              },
+              onUndoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateUndoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              onRedoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateRedoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              undoneTitle:
+                action.attachments.length === 1
+                  ? 'Attachment re-added'
+                  : `${action.attachments.length} attachments re-added`,
+              undoneDescription: `${fileNames} to ${attTicketKey}`,
+              redoneTitle:
+                action.attachments.length === 1
+                  ? 'Attachment removed'
+                  : `${action.attachments.length} attachments removed`,
+              redoneDescription: `${fileNames} from ${attTicketKey}`,
+            })
+            undoStore.updateRedoToastId(currentId, toastId)
+            currentId = toastId
+          } else if (entry.action.type === 'attachmentDelete') {
+            const action = entry.action
+            // Undo attachment delete: re-add the deleted attachments
+            undoStore.pushRedo(entry)
+            undoStore.setProcessing(true)
+            ;(async () => {
+              try {
+                const tabId = getTabId()
+                const idMap = new Map<string, string>()
+                for (const att of action.attachments) {
+                  const res = await fetch(
+                    `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(tabId && { 'X-Tab-Id': tabId }),
+                      },
+                      body: JSON.stringify({
+                        attachments: [
+                          {
+                            filename: att.attachment.filename,
+                            originalName: att.attachment.originalName,
+                            mimeType: att.attachment.mimetype,
+                            size: att.attachment.size,
+                            url: att.attachment.url,
+                          },
+                        ],
+                      }),
+                    },
+                  )
+                  if (res.ok) {
+                    const created = await res.json()
+                    if (created?.[0]?.id) {
+                      idMap.set(att.attachment.id, created[0].id)
+                    }
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  })
+                }
+                // Update IDs in the redo entry so future redo deletes the correct attachment
+                if (idMap.size > 0) {
+                  useUndoStore.getState().updateAttachmentIds(entry.toastId, idMap)
+                }
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
+                })
+              } catch (err) {
+                console.error('Failed to undo attachment delete:', err)
+                showToast.error('Failed to restore attachments')
+              } finally {
+                useUndoStore.getState().setProcessing(false)
+              }
+            })()
+
+            const fileNames =
+              action.attachments.length === 1
+                ? `"${action.attachments[0].attachment.originalName}"`
+                : `${action.attachments.length} files`
+            const attTicketKey = action.attachments[0]?.ticketKey ?? ''
+
+            let currentId = entry.toastId
+            const toastId = showUndoRedoToast('success', {
+              title:
+                action.attachments.length === 1
+                  ? 'Attachment restored'
+                  : `${action.attachments.length} attachments restored`,
+              description: `${fileNames} to ${attTicketKey}`,
+              duration: 3000,
+              showUndoButtons: showUndo,
+              undoLabel: 'Redo',
+              redoLabel: 'Undo',
+              onUndo: async (id) => {
+                // Redo: re-delete the attachments
+                const redoEntry = useUndoStore.getState().redoByToastId(id)
+                if (!redoEntry) return
+                const store = useUndoStore.getState()
+                if (store.isProcessing) return
+                store.setProcessing(true)
+                try {
+                  const tabId = getTabId()
+                  for (const att of action.attachments) {
+                    await fetch(
+                      `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
+                      {
+                        method: 'DELETE',
+                        headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
+                      },
+                    )
+                    queryClient.invalidateQueries({
+                      queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                    })
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: ticketKeys.byProject(entry.projectId),
+                  })
+                } catch (err) {
+                  console.error('Failed to redo attachment delete:', err)
+                } finally {
+                  useUndoStore.getState().setProcessing(false)
+                }
+              },
+              onRedo: async (id) => {
+                // Undo again: re-add the attachments
+                const undoEntry2 = useUndoStore.getState().undoByToastId(id)
+                if (!undoEntry2) return
+                const store = useUndoStore.getState()
+                if (store.isProcessing) return
+                store.setProcessing(true)
+                try {
+                  const tabId = getTabId()
+                  const idMap = new Map<string, string>()
+                  for (const att of action.attachments) {
+                    const res = await fetch(
+                      `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...(tabId && { 'X-Tab-Id': tabId }),
+                        },
+                        body: JSON.stringify({
+                          attachments: [
+                            {
+                              filename: att.attachment.filename,
+                              originalName: att.attachment.originalName,
+                              mimeType: att.attachment.mimetype,
+                              size: att.attachment.size,
+                              url: att.attachment.url,
+                            },
+                          ],
+                        }),
+                      },
+                    )
+                    if (res.ok) {
+                      const created = await res.json()
+                      if (created?.[0]?.id) {
+                        idMap.set(att.attachment.id, created[0].id)
+                      }
+                    }
+                    queryClient.invalidateQueries({
+                      queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                    })
+                  }
+                  if (idMap.size > 0 && currentId != null) {
+                    useUndoStore.getState().updateAttachmentIds(currentId, idMap)
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: ticketKeys.byProject(entry.projectId),
+                  })
+                } catch (err) {
+                  console.error('Failed to undo attachment delete:', err)
+                } finally {
+                  useUndoStore.getState().setProcessing(false)
+                }
+              },
+              onUndoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateUndoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              onRedoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateRedoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              undoneTitle:
+                action.attachments.length === 1
+                  ? 'Attachment deleted'
+                  : `${action.attachments.length} attachments deleted`,
+              undoneDescription: `${fileNames} from ${attTicketKey}`,
+              redoneTitle:
+                action.attachments.length === 1
+                  ? 'Attachment restored'
+                  : `${action.attachments.length} attachments restored`,
+              redoneDescription: `${fileNames} to ${attTicketKey}`,
+            })
+            undoStore.updateRedoToastId(currentId, toastId)
+            currentId = toastId
           }
-          // Note: attachmentAdd/attachmentDelete are not handled via Ctrl+Z/Y because
-          // attachment IDs change when re-created on the server, causing duplicates.
-          // Attachment undo is handled via the toast undo button for single operations.
         }
       }
 
@@ -2708,10 +3045,343 @@ export function KeyboardShortcuts() {
               newToastId,
               true,
             )
+          } else if (entry.action.type === 'attachmentAdd') {
+            const action = entry.action
+            // Redo attachment add: re-add the attachments
+            redoStore.setProcessing(true)
+
+            const fileNames =
+              action.attachments.length === 1
+                ? `"${action.attachments[0].attachment.originalName}"`
+                : `${action.attachments.length} files`
+            const attTicketKey = action.attachments[0]?.ticketKey ?? ''
+
+            let currentId: string | number | undefined
+
+            const newToastId = showUndoRedoToast('success', {
+              title:
+                action.attachments.length === 1
+                  ? 'Attachment re-added'
+                  : `${action.attachments.length} attachments re-added`,
+              description: `${fileNames} to ${attTicketKey}`,
+              duration: 3000,
+              showUndoButtons: showUndo,
+              undoLabel: 'Undo',
+              onUndo: async (id) => {
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (!undoEntry) return
+                const store = useUndoStore.getState()
+                if (store.isProcessing) return
+                store.setProcessing(true)
+                try {
+                  const tabId = getTabId()
+                  for (const att of action.attachments) {
+                    await fetch(
+                      `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
+                      {
+                        method: 'DELETE',
+                        headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
+                      },
+                    )
+                    queryClient.invalidateQueries({
+                      queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                    })
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: ticketKeys.byProject(entry.projectId),
+                  })
+                } catch (err) {
+                  console.error('Failed to undo attachment add:', err)
+                } finally {
+                  useUndoStore.getState().setProcessing(false)
+                }
+              },
+              onUndoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateRedoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              onRedo: async (id) => {
+                const redoEntry2 = useUndoStore.getState().redoByToastId(id)
+                if (!redoEntry2) return
+                const store = useUndoStore.getState()
+                if (store.isProcessing) return
+                store.setProcessing(true)
+                try {
+                  const tabId = getTabId()
+                  const idMap = new Map<string, string>()
+                  for (const att of action.attachments) {
+                    const res = await fetch(
+                      `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...(tabId && { 'X-Tab-Id': tabId }),
+                        },
+                        body: JSON.stringify({
+                          attachments: [
+                            {
+                              filename: att.attachment.filename,
+                              originalName: att.attachment.originalName,
+                              mimeType: att.attachment.mimetype,
+                              size: att.attachment.size,
+                              url: att.attachment.url,
+                            },
+                          ],
+                        }),
+                      },
+                    )
+                    if (res.ok) {
+                      const created = await res.json()
+                      if (created?.[0]?.id) {
+                        idMap.set(att.attachment.id, created[0].id)
+                      }
+                    }
+                    queryClient.invalidateQueries({
+                      queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                    })
+                  }
+                  if (idMap.size > 0 && currentId != null) {
+                    useUndoStore.getState().updateAttachmentIds(currentId, idMap)
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: ticketKeys.byProject(entry.projectId),
+                  })
+                } catch (err) {
+                  console.error('Failed to redo attachment add:', err)
+                } finally {
+                  useUndoStore.getState().setProcessing(false)
+                }
+              },
+              onRedoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateUndoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              undoneTitle:
+                action.attachments.length === 1
+                  ? 'Attachment removed'
+                  : `${action.attachments.length} attachments removed`,
+              undoneDescription: `${fileNames} from ${attTicketKey}`,
+              redoneTitle:
+                action.attachments.length === 1
+                  ? 'Attachment re-added'
+                  : `${action.attachments.length} attachments re-added`,
+              redoneDescription: `${fileNames} to ${attTicketKey}`,
+            })
+
+            currentId = newToastId
+
+            // Re-add the attachments and update IDs
+            ;(async () => {
+              try {
+                const tabId = getTabId()
+                const idMap = new Map<string, string>()
+                for (const att of action.attachments) {
+                  const res = await fetch(
+                    `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(tabId && { 'X-Tab-Id': tabId }),
+                      },
+                      body: JSON.stringify({
+                        attachments: [
+                          {
+                            filename: att.attachment.filename,
+                            originalName: att.attachment.originalName,
+                            mimeType: att.attachment.mimetype,
+                            size: att.attachment.size,
+                            url: att.attachment.url,
+                          },
+                        ],
+                      }),
+                    },
+                  )
+                  if (res.ok) {
+                    const created = await res.json()
+                    if (created?.[0]?.id) {
+                      idMap.set(att.attachment.id, created[0].id)
+                    }
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  })
+                }
+                if (idMap.size > 0 && newToastId != null) {
+                  useUndoStore.getState().updateAttachmentIds(newToastId, idMap)
+                }
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
+                })
+              } catch (err) {
+                console.error('Failed to redo attachment add:', err)
+              } finally {
+                useUndoStore.getState().setProcessing(false)
+              }
+            })()
+
+            redoStore.pushAttachmentAdd(entry.projectId, action.attachments, newToastId, true)
+          } else if (entry.action.type === 'attachmentDelete') {
+            const action = entry.action
+            // Redo attachment delete: re-delete the attachments
+            redoStore.setProcessing(true)
+            ;(async () => {
+              try {
+                const tabId = getTabId()
+                for (const att of action.attachments) {
+                  await fetch(
+                    `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
+                    {
+                      method: 'DELETE',
+                      headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
+                    },
+                  )
+                  queryClient.invalidateQueries({
+                    queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  })
+                }
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
+                })
+              } catch (err) {
+                console.error('Failed to redo attachment delete:', err)
+              } finally {
+                useUndoStore.getState().setProcessing(false)
+              }
+            })()
+
+            const fileNames =
+              action.attachments.length === 1
+                ? `"${action.attachments[0].attachment.originalName}"`
+                : `${action.attachments.length} files`
+            const attTicketKey = action.attachments[0]?.ticketKey ?? ''
+
+            let currentId: string | number | undefined
+
+            const newToastId = showUndoRedoToast('error', {
+              title:
+                action.attachments.length === 1
+                  ? 'Attachment deleted'
+                  : `${action.attachments.length} attachments deleted`,
+              description: `${fileNames} from ${attTicketKey}`,
+              duration: 3000,
+              showUndoButtons: showUndo,
+              undoLabel: 'Undo',
+              onUndo: async (id) => {
+                const undoEntry = useUndoStore.getState().undoByToastId(id)
+                if (!undoEntry) return
+                const store = useUndoStore.getState()
+                if (store.isProcessing) return
+                store.setProcessing(true)
+                try {
+                  const tabId = getTabId()
+                  const idMap = new Map<string, string>()
+                  for (const att of action.attachments) {
+                    const res = await fetch(
+                      `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...(tabId && { 'X-Tab-Id': tabId }),
+                        },
+                        body: JSON.stringify({
+                          attachments: [
+                            {
+                              filename: att.attachment.filename,
+                              originalName: att.attachment.originalName,
+                              mimeType: att.attachment.mimetype,
+                              size: att.attachment.size,
+                              url: att.attachment.url,
+                            },
+                          ],
+                        }),
+                      },
+                    )
+                    if (res.ok) {
+                      const created = await res.json()
+                      if (created?.[0]?.id) {
+                        idMap.set(att.attachment.id, created[0].id)
+                      }
+                    }
+                    queryClient.invalidateQueries({
+                      queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                    })
+                  }
+                  if (idMap.size > 0 && currentId != null) {
+                    useUndoStore.getState().updateAttachmentIds(currentId, idMap)
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: ticketKeys.byProject(entry.projectId),
+                  })
+                } catch (err) {
+                  console.error('Failed to undo attachment delete:', err)
+                } finally {
+                  useUndoStore.getState().setProcessing(false)
+                }
+              },
+              onUndoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateRedoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              onRedo: async (id) => {
+                const redoEntry2 = useUndoStore.getState().redoByToastId(id)
+                if (!redoEntry2) return
+                const store = useUndoStore.getState()
+                if (store.isProcessing) return
+                store.setProcessing(true)
+                try {
+                  const tabId = getTabId()
+                  for (const att of action.attachments) {
+                    await fetch(
+                      `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
+                      {
+                        method: 'DELETE',
+                        headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
+                      },
+                    )
+                    queryClient.invalidateQueries({
+                      queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                    })
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: ticketKeys.byProject(entry.projectId),
+                  })
+                } catch (err) {
+                  console.error('Failed to redo attachment delete:', err)
+                } finally {
+                  useUndoStore.getState().setProcessing(false)
+                }
+              },
+              onRedoneToast: (newId) => {
+                if (currentId) {
+                  useUndoStore.getState().updateUndoToastId(currentId, newId)
+                  currentId = newId
+                }
+              },
+              undoneTitle:
+                action.attachments.length === 1
+                  ? 'Attachment restored'
+                  : `${action.attachments.length} attachments restored`,
+              undoneDescription: `${fileNames} to ${attTicketKey}`,
+              redoneTitle:
+                action.attachments.length === 1
+                  ? 'Attachment deleted'
+                  : `${action.attachments.length} attachments deleted`,
+              redoneDescription: `${fileNames} from ${attTicketKey}`,
+            })
+
+            currentId = newToastId
+
+            redoStore.pushAttachmentDelete(entry.projectId, action.attachments, newToastId, true)
           }
-          // Note: attachmentAdd/attachmentDelete are not handled via Ctrl+Y (redo) because
-          // attachment IDs change when re-created on the server, causing duplicates.
-          // Attachment undo is handled via the toast undo button for single operations.
         }
       }
     }
