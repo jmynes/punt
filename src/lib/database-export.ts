@@ -47,9 +47,10 @@ export interface FileManifest {
  * 12. TicketWatchers (depends on Tickets, Users)
  * 13. Comments (depends on Tickets, Users)
  * 14. TicketEdits (depends on Tickets, Users)
- * 15. Attachments (depends on Tickets, Users)
- * 16. TicketSprintHistory (depends on Tickets, Sprints)
- * 17. Invitations (depends on Projects, Users)
+ * 15. TicketActivities (depends on Tickets, Users)
+ * 16. Attachments (depends on Tickets, Users)
+ * 17. TicketSprintHistory (depends on Tickets, Sprints)
+ * 18. Invitations (depends on Projects, Users)
  */
 export async function exportDatabase(): Promise<ExportData> {
   // Fetch all data in parallel for efficiency
@@ -68,6 +69,7 @@ export async function exportDatabase(): Promise<ExportData> {
     ticketWatchers,
     comments,
     ticketEdits,
+    ticketActivities,
     attachments,
     ticketSprintHistory,
     invitations,
@@ -109,6 +111,9 @@ export async function exportDatabase(): Promise<ExportData> {
       orderBy: { createdAt: 'asc' },
     }),
     db.ticketEdit.findMany({
+      orderBy: { createdAt: 'asc' },
+    }),
+    db.ticketActivity.findMany({
       orderBy: { createdAt: 'asc' },
     }),
     db.attachment.findMany({
@@ -198,6 +203,10 @@ export async function exportDatabase(): Promise<ExportData> {
     ticketEdits: ticketEdits.map((te) => ({
       ...te,
       createdAt: te.createdAt.toISOString(),
+    })),
+    ticketActivities: ticketActivities.map((ta) => ({
+      ...ta,
+      createdAt: ta.createdAt.toISOString(),
     })),
     attachments: attachments.map((a) => ({
       ...a,

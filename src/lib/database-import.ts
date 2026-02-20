@@ -38,6 +38,7 @@ export interface ImportResult {
     ticketWatchers: number
     comments: number
     ticketEdits: number
+    ticketActivities: number
     attachments: number
     ticketSprintHistory: number
     invitations: number
@@ -352,6 +353,7 @@ async function wipeDatabase(tx: Parameters<Parameters<typeof db.$transaction>[0]
   // Delete in reverse FK order to avoid constraint violations
   await tx.ticketSprintHistory.deleteMany()
   await tx.attachment.deleteMany()
+  await tx.ticketActivity.deleteMany()
   await tx.ticketEdit.deleteMany()
   await tx.comment.deleteMany()
   await tx.ticketWatcher.deleteMany()
@@ -397,6 +399,7 @@ export async function importDatabase(
     ticketWatchers: 0,
     comments: 0,
     ticketEdits: 0,
+    ticketActivities: 0,
     attachments: 0,
     ticketSprintHistory: 0,
     invitations: 0,
@@ -629,6 +632,20 @@ export async function importDatabase(
           })
         }
         counts.ticketEdits = dataToImport.ticketEdits.length
+      }
+
+      // Step 15.5: Import TicketActivities
+      const ticketActivities = dataToImport.ticketActivities ?? []
+      if (ticketActivities.length > 0) {
+        for (const activity of ticketActivities) {
+          await tx.ticketActivity.create({
+            data: {
+              ...activity,
+              createdAt: new Date(activity.createdAt),
+            },
+          })
+        }
+        counts.ticketActivities = ticketActivities.length
       }
 
       // Step 16: Import Attachments (metadata)
