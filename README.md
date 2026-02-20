@@ -128,48 +128,60 @@ AI:  Created PUNT-42: Login page not loading
    cd mcp && pnpm install
    ```
 
-2. Generate your API key (requires PUNT to be running):
-   ```bash
-   # Log in to PUNT web UI, then:
-   curl -X POST http://localhost:3000/api/me/mcp-key \
-     -H "Cookie: authjs.session-token=YOUR_SESSION_COOKIE"
-   # Save the returned apiKey - it won't be shown again
+2. Generate your API key in the PUNT web UI:
+   - Go to **Profile → Integrations**
+   - Click **Generate Key** under MCP API Key
+   - Copy the key (it won't be shown again)
+
+3. Save your credentials to the config directory for your platform:
+
+   | Platform | Path |
+   |----------|------|
+   | Linux | `~/.config/punt/credentials.json` |
+   | macOS | `~/Library/Application Support/punt/credentials.json` |
+   | Windows | `%APPDATA%\punt\credentials.json` |
+
+   ```json
+   {
+     "servers": {
+       "default": {
+         "url": "http://localhost:3000",
+         "apiKey": "mcp_your-key-here"
+       }
+     },
+     "activeServer": "default"
+   }
    ```
 
-3. Add to your MCP client config (e.g., Claude Desktop `claude_desktop_config.json`):
+4. Add MCP server config to your client:
+
+   For **Claude Code**, add `.mcp.json` in the project root:
    ```json
    {
      "mcpServers": {
        "punt": {
          "type": "stdio",
          "command": "pnpm",
-         "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
-         "cwd": "/path/to/punt",
-         "env": {
-           "MCP_API_KEY": "your-api-key-here"
-         }
+         "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"]
        }
      }
    }
    ```
 
-   For **Claude Code**, add a `.mcp.json` in the project root (it's gitignored — do not commit API keys):
+   For **Claude Desktop**, add to `claude_desktop_config.json`:
    ```json
    {
      "mcpServers": {
        "punt": {
          "type": "stdio",
          "command": "pnpm",
-         "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
-         "env": {
-           "MCP_API_KEY": "your-api-key-here"
-         }
+         "args": ["--dir", "/path/to/punt/mcp", "exec", "tsx", "src/index.ts"]
        }
      }
    }
    ```
 
-   > **Note:** The MCP server requires the PUNT dev server (`pnpm dev`) to be running on port 3000.
+   > **Note:** Credentials are stored in your user config directory, not in the MCP config file.
 
 ### Available Operations
 
