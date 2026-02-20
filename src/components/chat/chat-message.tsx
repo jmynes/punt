@@ -167,19 +167,28 @@ function formatToolName(name: string): string {
 }
 
 /**
- * Simple markdown parser that renders bold, italic, and inline code
- * Uses React elements instead of dangerouslySetInnerHTML for safety
+ * Simple markdown parser that renders bold, underline, italic, inline code, and bullet lists.
+ * Uses React elements instead of dangerouslySetInnerHTML for safety.
+ *
+ * Supported syntax:
+ * - **bold** text
+ * - __underline__ text
+ * - *italic* or _italic_ text
+ * - `inline code`
+ * - Bullet lists: lines starting with `- ` or `* ` (at line start)
  */
 function FormattedText({ text }: { text: string }) {
   let key = 0
 
-  // Process patterns: **bold**, *italic*, `code`
-  const processText = (input: string): React.ReactNode[] => {
+  // Process inline patterns: **bold**, __underline__, *italic*, _italic_, `code`
+  // Order matters: ** before *, __ before _
+  const processInline = (input: string): React.ReactNode[] => {
     const result: React.ReactNode[] = []
     let lastIndex = 0
 
-    // Combined regex for all patterns - use matchAll instead of exec loop
-    const combinedRegex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g
+    // Combined regex for all inline patterns
+    // Order: **bold** | __underline__ | `code` | *italic* | _italic_
+    const combinedRegex = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*]+\*|_[^_]+_)/g
     const matches = Array.from(input.matchAll(combinedRegex))
 
     for (const match of matches) {
@@ -195,14 +204,22 @@ function FormattedText({ text }: { text: string }) {
             {matched.slice(2, -2)}
           </strong>,
         )
-      } else if (matched.startsWith('*') && matched.endsWith('*')) {
-        result.push(<em key={key++}>{matched.slice(1, -1)}</em>)
+      } else if (matched.startsWith('__') && matched.endsWith('__')) {
+        result.push(
+          <u key={key++} className="underline">
+            {matched.slice(2, -2)}
+          </u>,
+        )
       } else if (matched.startsWith('`') && matched.endsWith('`')) {
         result.push(
           <code key={key++} className="bg-zinc-900 px-1 rounded text-xs text-amber-400">
             {matched.slice(1, -1)}
           </code>,
         )
+      } else if (matched.startsWith('*') && matched.endsWith('*')) {
+        result.push(<em key={key++}>{matched.slice(1, -1)}</em>)
+      } else if (matched.startsWith('_') && matched.endsWith('_')) {
+        result.push(<em key={key++}>{matched.slice(1, -1)}</em>)
       }
 
       if (match.index !== undefined) {
@@ -218,5 +235,47 @@ function FormattedText({ text }: { text: string }) {
     return result.length > 0 ? result : [input]
   }
 
-  return <>{processText(text)}</>
+  // Split text into lines and group bullet points into lists
+  const renderWithBullets = (input: string): React.ReactNode[] => {
+    const lines = input.split('\n')
+    const result: React.ReactNode[] = []
+    let bulletItems: React.ReactNode[][] = []
+
+    const flushBullets = () => {
+      if (bulletItems.length > 0) {
+        result.push(
+          <ul key={key++} className="list-disc ml-4 space-y-0.5">
+            {bulletItems.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>,
+        )
+        bulletItems = []
+      }
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      // Match bullet points: lines starting with optional whitespace then "- " or "* "
+      const bulletMatch = line.match(/^(\s*)[-*]\s+(.*)/)
+
+      if (bulletMatch) {
+        bulletItems.push(processInline(bulletMatch[2]))
+      } else {
+        flushBullets()
+        // Add newline before non-first, non-bullet lines to preserve whitespace
+        if (result.length > 0) {
+          result.push('\n')
+        }
+        result.push(...processInline(line))
+      }
+    }
+
+    // Flush any remaining bullet items
+    flushBullets()
+
+    return result
+  }
+
+  return <>{renderWithBullets(text)}</>
 }
