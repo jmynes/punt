@@ -50,6 +50,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         id: true,
         name: true,
         status: true,
+        endDate: true,
         tickets: {
           select: {
             id: true,
@@ -98,6 +99,16 @@ export async function POST(request: Request, { params }: RouteParams) {
       carriedOver: [] as string[],
     }
 
+    // Fetch sprint settings for computing next sprint dates
+    const sprintSettings = await db.projectSprintSettings.findUnique({
+      where: { projectId },
+      select: {
+        defaultSprintDuration: true,
+        defaultStartTime: true,
+        defaultEndTime: true,
+      },
+    })
+
     // Handle incomplete tickets based on action
     const { updatedSprint, nextSprint } = await db.$transaction(async (tx) => {
       let createdNextSprint: { id: string; name: string; status: string } | null = null
@@ -105,14 +116,32 @@ export async function POST(request: Request, { params }: RouteParams) {
       if (action === 'close_to_next' && incompleteTickets.length > 0) {
         let targetId = targetSprintId
 
+        // Compute next sprint dates from completing sprint's end date + settings
+        const duration = sprintSettings?.defaultSprintDuration ?? 14
+        const startTime = sprintSettings?.defaultStartTime ?? '09:00'
+        const endTime = sprintSettings?.defaultEndTime ?? '17:00'
+
+        const [startH, startM] = startTime.split(':').map(Number)
+        const [endH, endM] = endTime.split(':').map(Number)
+
+        const newStartDate = sprint.endDate ? new Date(sprint.endDate) : new Date()
+        newStartDate.setHours(startH, startM, 0, 0)
+
+        const newEndDate = new Date(newStartDate)
+        newEndDate.setDate(newEndDate.getDate() + duration)
+        newEndDate.setHours(endH, endM, 0, 0)
+
         // Create next sprint if requested
         if (createNextSprint || !targetId) {
           const nextSprintName = generateNextSprintName(sprint.name)
+
           const created = await tx.sprint.create({
             data: {
               name: nextSprintName,
               status: 'planning',
               projectId,
+              startDate: newStartDate,
+              endDate: newEndDate,
             },
             select: SPRINT_SELECT_SUMMARY,
           })
@@ -127,6 +156,18 @@ export async function POST(request: Request, { params }: RouteParams) {
           if (!target) {
             throw new Error('Target sprint not found or not in planning status')
           }
+
+          // Backfill dates on existing sprint if missing
+          if (!target.startDate || !target.endDate) {
+            await tx.sprint.update({
+              where: { id: target.id },
+              data: {
+                ...(!target.startDate && { startDate: newStartDate }),
+                ...(!target.endDate && { endDate: newEndDate }),
+              },
+            })
+          }
+
           createdNextSprint = target
         }
 
