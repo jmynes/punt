@@ -292,6 +292,41 @@ export async function PATCH(
       }
     }
 
+    // Track sprint history when sprintId changes
+    const newSprintId = updateData.sprintId
+    if (newSprintId !== undefined && newSprintId !== existingTicket.sprintId) {
+      // Close existing history entry for old sprint
+      if (existingTicket.sprintId) {
+        await db.ticketSprintHistory.updateMany({
+          where: {
+            ticketId,
+            sprintId: existingTicket.sprintId,
+            exitStatus: null,
+          },
+          data: {
+            exitStatus: 'removed',
+            removedAt: new Date(),
+          },
+        })
+      }
+
+      // Create history entry for new sprint
+      if (newSprintId) {
+        const existing = await db.ticketSprintHistory.findUnique({
+          where: { ticketId_sprintId: { ticketId, sprintId: newSprintId } },
+        })
+        if (!existing) {
+          await db.ticketSprintHistory.create({
+            data: {
+              ticketId,
+              sprintId: newSprintId,
+              entryType: 'added',
+            },
+          })
+        }
+      }
+    }
+
     const ticket = await db.ticket
       .update({
         where: { id: ticketId },

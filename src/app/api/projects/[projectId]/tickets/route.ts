@@ -206,6 +206,17 @@ export async function POST(
         select: TICKET_SELECT_FULL,
       })
 
+      // Create sprint history entry if ticket is assigned to a sprint
+      if (newTicket.sprintId) {
+        await tx.ticketSprintHistory.create({
+          data: {
+            ticketId: newTicket.id,
+            sprintId: newTicket.sprintId,
+            entryType: 'added',
+          },
+        })
+      }
+
       return newTicket
     })
 

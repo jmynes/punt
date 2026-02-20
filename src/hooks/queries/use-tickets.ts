@@ -7,7 +7,13 @@ import type { CreateTicketInput, UpdateTicketInput } from '@/lib/data-provider'
 import { getDataProvider } from '@/lib/data-provider'
 import { showToast } from '@/lib/toast'
 import { useBoardStore } from '@/stores/board-store'
-import type { Column, ColumnWithTickets, TicketFormData, TicketWithRelations } from '@/types'
+import type {
+  Column,
+  ColumnWithTickets,
+  SprintHistoryEntry,
+  TicketFormData,
+  TicketWithRelations,
+} from '@/types'
 
 export const ticketKeys = {
   all: ['tickets'] as const,
@@ -15,6 +21,8 @@ export const ticketKeys = {
   detail: (projectId: string, ticketId: string) =>
     ['tickets', 'project', projectId, ticketId] as const,
   search: (projectId: string, query: string) => ['tickets', 'search', projectId, query] as const,
+  sprintHistory: (projectId: string, ticketId: string) =>
+    ['tickets', 'sprintHistory', projectId, ticketId] as const,
 }
 
 export const columnKeys = {
@@ -677,5 +685,28 @@ export function useTicketSearch(projectId: string, query: string) {
     enabled: !!projectId && query.trim().length > 0,
     staleTime: 1000 * 30, // 30 seconds
     placeholderData: (prev) => prev, // Keep previous results while loading
+  })
+}
+
+// ============================================================================
+// Sprint history
+// ============================================================================
+
+/**
+ * Fetch sprint history for a ticket (on-demand, for ticket drawer).
+ * Returns chronological list of sprint entries the ticket has been through.
+ */
+export function useTicketSprintHistory(projectId: string, ticketId: string | undefined) {
+  return useQuery<SprintHistoryEntry[]>({
+    queryKey: ticketKeys.sprintHistory(projectId, ticketId ?? ''),
+    queryFn: async () => {
+      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/sprint-history`)
+      if (!res.ok) {
+        throw new Error('Failed to fetch sprint history')
+      }
+      return res.json()
+    },
+    enabled: !!projectId && !!ticketId,
+    staleTime: 1000 * 60 * 5, // 5 minutes - history changes rarely
   })
 }

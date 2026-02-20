@@ -108,6 +108,7 @@ import { FileUpload } from './file-upload'
 import { LabelSelect } from './label-select'
 import { MarkdownViewer } from './markdown-viewer'
 import { ParentSelect } from './parent-select'
+import { SprintHistoryTimeline } from './sprint-history-timeline'
 import { TicketLinkSection } from './ticket-link-section'
 import { UserSelect } from './user-select'
 
@@ -1086,6 +1087,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                <SprintHistoryTimeline projectId={projectId} ticketId={ticket.id} />
 
                 {editingField === 'estimate' ? (
                   <div className="flex items-center gap-2">

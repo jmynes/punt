@@ -155,6 +155,17 @@ export interface SprintSummary {
   budget?: number | null
 }
 
+// Sprint history entry for timeline display
+export interface SprintHistoryEntry {
+  id: string
+  addedAt: string
+  removedAt: string | null
+  entryType: SprintEntryType
+  exitStatus: SprintExitStatus | null
+  carriedFromSprintId: string | null
+  sprint: SprintSummary
+}
+
 // Full sprint with completion metrics
 export interface SprintWithMetrics extends SprintSummary {
   budget: number | null
