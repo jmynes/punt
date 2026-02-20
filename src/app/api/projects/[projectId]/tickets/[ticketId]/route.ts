@@ -114,6 +114,8 @@ export async function PATCH(
         affectedVersion: true,
         fixVersion: true,
         column: { select: { name: true } },
+        assignee: { select: { name: true, username: true } },
+        sprint: { select: { name: true } },
         labels: { select: { id: true } },
       },
     })
@@ -395,7 +397,34 @@ export async function PATCH(
 
     const changes = computeTicketChanges(oldSnapshot, auditUpdateData)
     if (changes.length > 0) {
-      logBatchChanges(ticketId, user.id, changes)
+      // Resolve raw IDs to human-readable names before storing in the audit trail.
+      // The updated `ticket` has the new related records; the existing query has the old ones.
+      const resolvedChanges = changes.map((change) => {
+        if (change.field === 'columnId') {
+          return {
+            field: 'status',
+            oldValue: existingTicket.column?.name ?? change.oldValue,
+            newValue: ticket.column?.name ?? change.newValue,
+          }
+        }
+        if (change.field === 'assigneeId') {
+          return {
+            field: 'assignee',
+            oldValue:
+              existingTicket.assignee?.name ?? existingTicket.assignee?.username ?? change.oldValue,
+            newValue: ticket.assignee?.name ?? ticket.assignee?.username ?? change.newValue,
+          }
+        }
+        if (change.field === 'sprintId') {
+          return {
+            field: 'sprint',
+            oldValue: existingTicket.sprint?.name ?? change.oldValue,
+            newValue: ticket.sprint?.name ?? change.newValue,
+          }
+        }
+        return change
+      })
+      logBatchChanges(ticketId, user.id, resolvedChanges)
     }
 
     // Emit real-time event for other clients

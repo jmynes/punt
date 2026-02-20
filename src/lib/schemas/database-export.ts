@@ -335,4 +335,4 @@ export const AnyDatabaseExportSchema = z.union([
 export type AnyDatabaseExport = z.infer<typeof AnyDatabaseExportSchema>
 
 // Export version for compatibility checks
-export const EXPORT_VERSION = '1.0.0'
+export const EXPORT_VERSION = '1.1.0'

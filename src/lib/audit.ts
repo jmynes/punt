@@ -101,7 +101,11 @@ export async function logBatchChanges(
   // If there's only one change, no need for a group ID
   if (significantChanges.length === 1) {
     const change = significantChanges[0]
-    await logTicketFieldChange(ticketId, userId, change.field, change.oldValue, change.newValue)
+    try {
+      await logTicketFieldChange(ticketId, userId, change.field, change.oldValue, change.newValue)
+    } catch (error) {
+      console.error('Failed to log single ticket activity:', error)
+    }
     return
   }
 
@@ -137,10 +141,13 @@ export async function logTicketDeleted(ticketId: string, userId: string): Promis
 function getActionForField(field: string): string {
   switch (field) {
     case 'columnId':
+    case 'status':
       return 'moved'
     case 'assigneeId':
+    case 'assignee':
       return 'assigned'
     case 'sprintId':
+    case 'sprint':
       return 'sprint_changed'
     case 'labels':
       return 'labeled'
