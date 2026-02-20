@@ -29,6 +29,11 @@ model User {
   isSystemAdmin     Boolean   @default(false)
   isActive          Boolean   @default(true)
 
+  // Two-factor authentication (TOTP)
+  totpSecret        String?   // Encrypted TOTP secret key
+  totpEnabled       Boolean   @default(false) // Whether 2FA is active
+  totpRecoveryCodes String?   // JSON array of hashed recovery codes
+
   // MCP API access
   mcpApiKey          String? @unique // SHA-256 hash of API key for authentication
   mcpApiKeyEncrypted String?         // Encrypted raw API key for Claude CLI chat feature

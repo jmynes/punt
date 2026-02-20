@@ -3,6 +3,7 @@
 import { Eye, EyeOff, KeyRound, Mail, Trash2 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
+import { TwoFactorSection } from '@/components/profile/two-factor-section'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -343,6 +344,9 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
           </form>
         </CardContent>
       </Card>
+
+      {/* Two-Factor Authentication */}
+      <TwoFactorSection isDemo={isDemo} />
 
       {/* Danger Zone */}
       <Card className="border-red-900/50 bg-red-950/10">
