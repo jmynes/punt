@@ -39,10 +39,11 @@ export function RoleSimulationBanner() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !e.defaultPrevented) {
-        // Only exit if no modal/dialog is open
-        const hasOpenDialog = document.querySelector('[role="dialog"][data-state="open"]')
-        const hasOpenMenu = document.querySelector('[role="menu"]')
-        if (!hasOpenDialog && !hasOpenMenu) {
+        // Only exit if no modal/dialog/overlay is open
+        const hasOpenOverlay = document.querySelector(
+          '[role="dialog"][data-state="open"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]',
+        )
+        if (!hasOpenOverlay) {
           handleExit()
         }
       }

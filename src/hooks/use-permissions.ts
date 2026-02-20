@@ -11,6 +11,7 @@ import { useCurrentUser } from './use-current-user'
 // Query keys for permissions
 export const permissionKeys = {
   myPermissions: (projectId: string) => ['permissions', 'my', projectId] as const,
+  myRealPermissions: (projectId: string) => ['permissions', 'my-real', projectId] as const,
 }
 
 interface MyPermissionsResponse {
@@ -82,7 +83,7 @@ export function useMyRealPermissions(projectId: string) {
   const user = useCurrentUser()
 
   return useQuery<MyPermissionsResponse>({
-    queryKey: permissionKeys.myPermissions(projectId),
+    queryKey: permissionKeys.myRealPermissions(projectId),
     queryFn: async () => {
       if (isDemoMode()) {
         return {
