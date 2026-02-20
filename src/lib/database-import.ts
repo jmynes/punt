@@ -115,10 +115,11 @@ function parseBackupJson(
   const exportFile = result.data as AnyDatabaseExport
 
   // Check version compatibility
-  if (exportFile.version !== EXPORT_VERSION) {
+  const COMPATIBLE_VERSIONS = ['1.0.0', EXPORT_VERSION]
+  if (!COMPATIBLE_VERSIONS.includes(exportFile.version)) {
     return {
       success: false,
-      error: `Incompatible export version: ${exportFile.version}. Expected: ${EXPORT_VERSION}`,
+      error: `Incompatible export version: ${exportFile.version}. Expected one of: ${COMPATIBLE_VERSIONS.join(', ')}`,
     }
   }
 

@@ -51,6 +51,7 @@ export async function GET(
     const includeActivities = typeFilter === 'all' || typeFilter === 'activity'
     const includeComments = typeFilter === 'all' || typeFilter === 'comment'
 
+    const activityFetchLimit = limit + 20
     const [activities, comments] = await Promise.all([
       includeActivities
         ? db.ticketActivity.findMany({
@@ -70,7 +71,7 @@ export async function GET(
             },
             orderBy: { createdAt: 'desc' },
             // Fetch extra to allow grouping without losing entries
-            take: limit + 20,
+            take: activityFetchLimit,
           })
         : [],
       includeComments
@@ -93,6 +94,9 @@ export async function GET(
           })
         : [],
     ])
+
+    // Track whether the raw activity fetch hit its limit (grouping may collapse entries)
+    const activitiesHitLimit = activities.length >= activityFetchLimit
 
     // Group activities by groupId for batched changes
     const groupedActivities = groupActivitiesByGroupId(activities)
@@ -148,8 +152,10 @@ export async function GET(
     // Apply limit
     const trimmedTimeline = timeline.slice(0, limit)
 
-    // Determine if there are more entries
-    const hasMore = timeline.length > limit
+    // Determine if there are more entries.
+    // Also check activitiesHitLimit: grouping may collapse entries below the limit
+    // even though more raw activities exist in the database.
+    const hasMore = timeline.length > limit || activitiesHitLimit
 
     // Next cursor is the createdAt of the last entry
     const nextCursor =
