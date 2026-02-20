@@ -172,6 +172,18 @@ export function RoleEditorPanel({
             )}
           </div>
           {headerDescription && <CardDescription>{headerDescription}</CardDescription>}
+          {canEdit ? (
+            <Textarea
+              id="role-description"
+              value={description}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+              placeholder="Add a description..."
+              className="bg-zinc-800/50 resize-none border-zinc-700 hover:border-zinc-500 text-sm text-zinc-300 mt-2"
+              rows={2}
+            />
+          ) : (
+            description && <p className="text-sm text-zinc-400 mt-2">{description}</p>
+          )}
         </CardHeader>
 
         {/* Appearance Tab */}
@@ -190,18 +202,6 @@ export function RoleEditorPanel({
                   }}
                   isDisabled={!canEdit}
                   projectId={projectId}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role-description">Description</Label>
-                <Textarea
-                  id="role-description"
-                  value={description}
-                  onChange={(e) => onDescriptionChange(e.target.value)}
-                  placeholder="Describe what this role can do..."
-                  disabled={!canEdit}
-                  className="bg-zinc-800/50 resize-none border-zinc-700 hover:border-zinc-500"
-                  rows={3}
                 />
               </div>
             </CardContent>

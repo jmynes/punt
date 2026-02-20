@@ -584,6 +584,11 @@ export function RolePermissionsForm() {
       color: localSettings[role].color,
       description: localSettings[role].description,
       isDefault: true,
+      subtitle: localSettings[role].description
+        ? localSettings[role].description.length > 40
+          ? `${localSettings[role].description.slice(0, 40)}...`
+          : localSettings[role].description
+        : undefined,
     })),
     ...customRoles.map((r) => ({
       id: r.id,
@@ -591,6 +596,11 @@ export function RolePermissionsForm() {
       color: r.color,
       description: r.description,
       isDefault: false,
+      subtitle: r.description
+        ? r.description.length > 40
+          ? `${r.description.slice(0, 40)}...`
+          : r.description
+        : undefined,
     })),
   ]
 

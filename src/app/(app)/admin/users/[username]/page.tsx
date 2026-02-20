@@ -8,6 +8,7 @@ import {
   ChevronsUpDown,
   FolderKanban,
   Mail,
+  Settings,
   Shield,
   ShieldOff,
   User,
@@ -648,21 +649,36 @@ function AdminUserProfileContent() {
                         <p className="text-zinc-500 text-sm">{membership.project.key}</p>
                       </div>
                     </Link>
-                    {isSystemAdmin ? (
-                      <RoleSelector
-                        membership={membership}
-                        onRoleChange={(newRoleId, newRoleName) =>
-                          handleRoleChange(
-                            membership.id,
-                            membership.project.id,
-                            newRoleId,
-                            newRoleName,
-                          )
-                        }
-                      />
-                    ) : (
-                      <RoleBadge roleName={membership.role.name} />
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isSystemAdmin ? (
+                        <>
+                          <RoleSelector
+                            membership={membership}
+                            onRoleChange={(newRoleId, newRoleName) =>
+                              handleRoleChange(
+                                membership.id,
+                                membership.project.id,
+                                newRoleId,
+                                newRoleName,
+                              )
+                            }
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            asChild
+                            className="text-zinc-500 hover:text-zinc-200"
+                            title="Edit project roles"
+                          >
+                            <Link href={`/projects/${membership.project.key}/settings?tab=roles`}>
+                              <Settings className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </>
+                      ) : (
+                        <RoleBadge roleName={membership.role.name} />
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
