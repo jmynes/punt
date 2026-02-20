@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Columns3,
   Database,
+  Eye,
   GitBranch,
   Home,
   KeyRound,
@@ -35,13 +36,15 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
+import { showToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import type { ProjectSummary } from '@/stores/projects-store'
+import { useRoleSimulationStore } from '@/stores/role-simulation-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { UserSummary } from '@/types'
 
@@ -166,6 +169,52 @@ export function SidebarContent({
     [toggleSidebarSection],
   )
 
+  // Role simulation state for navigation interception + visual indicators
+  const simulatedRoles = useRoleSimulationStore((s) => s.simulatedRoles)
+  const setPendingNavigation = useRoleSimulationStore((s) => s.setPendingNavigation)
+  const stopSimulation = useRoleSimulationStore((s) => s.stopSimulation)
+  const warnOnSimulationLeave = useSettingsStore((s) => s.warnOnSimulationLeave)
+
+  // Find the project that has an active simulation and is currently being viewed
+  const currentProjectKey = pathname.match(/^\/projects\/([^/]+)/)?.[1]
+  const currentSimulatingProject = useMemo(() => {
+    if (!currentProjectKey) return null
+    const proj = projects.find((p) => p.key?.toLowerCase() === currentProjectKey.toLowerCase())
+    if (!proj) return null
+    if (!(proj.id in simulatedRoles)) return null
+    return proj
+  }, [currentProjectKey, projects, simulatedRoles])
+
+  const isSimulationActive = !!currentSimulatingProject
+
+  // Intercept sidebar link clicks that would navigate away from the simulating project.
+  // Uses capture phase so it fires before Next.js Link's navigation handler.
+  const handleSidebarClickCapture = useCallback(
+    (e: React.MouseEvent) => {
+      if (!currentSimulatingProject) return
+
+      const anchor = (e.target as HTMLElement).closest('a')
+      if (!anchor) return
+
+      const href = anchor.getAttribute('href')
+      if (!href) return
+
+      const projectPrefix = `/projects/${currentSimulatingProject.key}`
+      if (href.startsWith(`${projectPrefix}/`) || href === projectPrefix) return
+
+      // Navigating outside the simulating project's scope
+      if (warnOnSimulationLeave) {
+        e.preventDefault()
+        e.stopPropagation()
+        setPendingNavigation(href)
+      } else {
+        stopSimulation(currentSimulatingProject.id)
+        showToast.info('Role simulation ended')
+      }
+    },
+    [currentSimulatingProject, warnOnSimulationLeave, setPendingNavigation, stopSimulation],
+  )
+
   const handleLinkClick = () => {
     onLinkClick?.()
   }
@@ -175,9 +224,9 @@ export function SidebarContent({
   }
 
   return (
-    <div className="px-3 py-4">
+    <div className="px-3 py-4" onClickCapture={handleSidebarClickCapture}>
       {/* Main navigation */}
-      <div className="space-y-1">
+      <div className={cn('space-y-1 transition-opacity', isSimulationActive && 'opacity-40')}>
         {mainNavItems.map((item) => {
           const isActive = pathname === item.href
           return (
@@ -353,7 +402,7 @@ export function SidebarContent({
 
       {/* Admin section - only visible to system admins */}
       {currentUser.isSystemAdmin && (
-        <div className="mt-6">
+        <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
           <button
             type="button"
             className="flex items-center gap-1 px-3 mb-1 w-full text-left select-none"
@@ -615,8 +664,14 @@ export function SidebarContent({
                 const isActive = activeProjectId === project.id
                 const isExpanded = isProjectExpanded(project.id)
                 const isOnProjectPage = pathname.startsWith(`/projects/${project.key}`)
+                const isProjectSimulating = project.id in simulatedRoles
+                const isDimmedProject =
+                  isSimulationActive && project.id !== currentSimulatingProject?.id
                 return (
-                  <div key={project.id} className="pl-[9px]">
+                  <div
+                    key={project.id}
+                    className={cn('pl-[9px] transition-opacity', isDimmedProject && 'opacity-40')}
+                  >
                     <div className="relative flex items-center">
                       <button
                         type="button"
@@ -651,8 +706,9 @@ export function SidebarContent({
                           />
                           <span className="truncate">{project.name}</span>
                           {!editMode && (
-                            <span className="ml-auto text-xs text-zinc-600 shrink-0">
-                              {project.key}
+                            <span className="ml-auto flex items-center gap-1 shrink-0">
+                              {isProjectSimulating && <Eye className="h-3 w-3 text-violet-400" />}
+                              <span className="text-xs text-zinc-600">{project.key}</span>
                             </span>
                           )}
                         </Button>

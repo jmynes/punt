@@ -24,6 +24,10 @@ interface RoleSimulationState {
 
   // Check if currently simulating for a project
   isSimulating: (projectId: string) => boolean
+
+  // Pending navigation URL (for confirmation dialog when leaving simulation)
+  pendingNavigation: string | null
+  setPendingNavigation: (url: string | null) => void
 }
 
 export const useRoleSimulationStore = create<RoleSimulationState>((set, get) => ({
@@ -40,12 +44,15 @@ export const useRoleSimulationStore = create<RoleSimulationState>((set, get) => 
   stopSimulation: (projectId) =>
     set((state) => {
       const { [projectId]: _, ...rest } = state.simulatedRoles
-      return { simulatedRoles: rest }
+      return { simulatedRoles: rest, pendingNavigation: null }
     }),
 
-  stopAllSimulations: () => set({ simulatedRoles: {} }),
+  stopAllSimulations: () => set({ simulatedRoles: {}, pendingNavigation: null }),
 
   getSimulatedRole: (projectId) => get().simulatedRoles[projectId] ?? null,
 
   isSimulating: (projectId) => projectId in get().simulatedRoles,
+
+  pendingNavigation: null,
+  setPendingNavigation: (url) => set({ pendingNavigation: url }),
 }))
