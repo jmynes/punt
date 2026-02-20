@@ -4,10 +4,19 @@ import { z } from 'zod'
 import { authConfig } from '@/lib/auth.config'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
+import { checkRateLimit } from '@/lib/rate-limit'
+import {
+  decryptTotpSecret,
+  markRecoveryCodeUsed,
+  verifyRecoveryCode,
+  verifyTotpToken,
+} from '@/lib/totp'
 
 const loginSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
+  totpCode: z.string().optional(),
+  isRecoveryCode: z.string().optional(), // "true" or undefined (credentials are always strings)
 })
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -21,6 +30,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' },
+        totpCode: { label: 'TOTP Code', type: 'text' },
+        isRecoveryCode: { label: 'Is Recovery Code', type: 'text' },
       },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials)
@@ -29,7 +40,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
-        const { username, password } = parsed.data
+        const { username, password, totpCode, isRecoveryCode } = parsed.data
 
         // Normalize username to NFC form for consistent matching
         // Registration also normalizes to NFC, so this ensures login works
@@ -53,6 +64,51 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!isValidPassword) {
           return null
+        }
+
+        // Check if 2FA is enabled
+        if (user.totpEnabled && user.totpSecret) {
+          // If no TOTP code provided, signal that 2FA is required
+          if (!totpCode) {
+            // Throw a specific error that the client can detect
+            throw new Error('2FA_REQUIRED')
+          }
+
+          // Rate limit TOTP attempts by username to prevent brute-force
+          const totpRateLimit = await checkRateLimit(normalizedUsername, 'auth/2fa')
+          if (!totpRateLimit.allowed) {
+            throw new Error('RATE_LIMITED')
+          }
+
+          const useRecoveryCode = isRecoveryCode === 'true'
+
+          if (useRecoveryCode) {
+            // Verify recovery code
+            if (!user.totpRecoveryCodes) {
+              return null
+            }
+
+            const normalizedCode = totpCode.toUpperCase().trim()
+            const matchIndex = await verifyRecoveryCode(normalizedCode, user.totpRecoveryCodes)
+            if (matchIndex === -1) {
+              throw new Error('INVALID_2FA_CODE')
+            }
+
+            // Mark recovery code as used
+            const updatedCodes = markRecoveryCodeUsed(user.totpRecoveryCodes, matchIndex)
+            await db.user.update({
+              where: { id: user.id },
+              data: { totpRecoveryCodes: updatedCodes },
+            })
+          } else {
+            // Verify TOTP code
+            const secret = decryptTotpSecret(user.totpSecret)
+            const isValid = verifyTotpToken(totpCode, secret)
+
+            if (!isValid) {
+              throw new Error('INVALID_2FA_CODE')
+            }
+          }
         }
 
         // Update last login timestamp

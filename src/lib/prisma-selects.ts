@@ -279,6 +279,7 @@ export const USER_SELECT_ADMIN_LIST = {
   avatarColor: true,
   isSystemAdmin: true,
   isActive: true,
+  totpEnabled: true,
   createdAt: true,
   lastLoginAt: true,
   _count: {
