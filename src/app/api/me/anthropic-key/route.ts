@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod/v4'
 import { badRequestError, handleApiError, validationError } from '@/lib/api-utils'
 import { requireAuth } from '@/lib/auth-helpers'
+import { decryptSession, encryptSession } from '@/lib/chat/encryption'
 import { db } from '@/lib/db'
 
 const storeKeySchema = z.object({
@@ -13,7 +14,8 @@ const storeKeySchema = z.object({
 
 /**
  * GET /api/me/anthropic-key - Get Anthropic API key status
- * Returns whether user has a key and a hint (last 4 chars) for identification
+ * Returns whether user has a key and a hint (last 4 chars) for identification.
+ * The key is stored encrypted; we decrypt to extract the hint.
  */
 export async function GET() {
   try {
@@ -24,9 +26,23 @@ export async function GET() {
       select: { anthropicApiKey: true },
     })
 
+    if (!user?.anthropicApiKey) {
+      return NextResponse.json({ hasKey: false, keyHint: null })
+    }
+
+    // Decrypt to extract the hint (last 4 chars)
+    let keyHint: string | null = null
+    try {
+      const decrypted = decryptSession(user.anthropicApiKey)
+      keyHint = decrypted.slice(-4)
+    } catch {
+      // Decryption failed -- key may be stored in legacy plaintext format
+      // Still report that a key exists, but without a hint
+    }
+
     return NextResponse.json({
-      hasKey: !!user?.anthropicApiKey,
-      keyHint: user?.anthropicApiKey ? user.anthropicApiKey.slice(-4) : null,
+      hasKey: true,
+      keyHint,
     })
   } catch (error) {
     return handleApiError(error, 'get Anthropic key status')
@@ -35,7 +51,8 @@ export async function GET() {
 
 /**
  * POST /api/me/anthropic-key - Store user's Anthropic API key
- * User provides their own key (not generated)
+ * User provides their own key (not generated).
+ * The key is encrypted with AES-256-GCM before storage.
  */
 export async function POST(request: Request) {
   try {
@@ -54,9 +71,23 @@ export async function POST(request: Request) {
       return badRequestError('Invalid Anthropic API key format')
     }
 
+    // Check for encryption secret
+    if (!process.env.SESSION_ENCRYPTION_SECRET) {
+      return NextResponse.json(
+        {
+          error:
+            'Server is not configured for secure key storage. Contact your administrator to set SESSION_ENCRYPTION_SECRET.',
+        },
+        { status: 500 },
+      )
+    }
+
+    // Encrypt the API key before storing
+    const encrypted = encryptSession(apiKey)
+
     await db.user.update({
       where: { id: currentUser.id },
-      data: { anthropicApiKey: apiKey },
+      data: { anthropicApiKey: encrypted },
     })
 
     return NextResponse.json({

@@ -1,13 +1,12 @@
 'use client'
 
-import { Bot, KeyRound, Terminal, User } from 'lucide-react'
+import { KeyRound, Plug, User } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { PageHeader } from '@/components/common'
-import { ClaudeChatTab } from '@/components/profile/claude-chat-tab'
-import { MCPTab } from '@/components/profile/mcp-tab'
+import { IntegrationsTab } from '@/components/profile/integrations-tab'
 import { ProfileTab } from '@/components/profile/profile-tab'
 import { SecurityTab } from '@/components/profile/security-tab'
 import { DEMO_USER, isDemoMode } from '@/lib/demo'
@@ -23,9 +22,9 @@ interface UserData {
   isSystemAdmin: boolean
 }
 
-type ProfileTabType = 'profile' | 'security' | 'mcp' | 'claude-chat'
+type ProfileTabType = 'profile' | 'security' | 'integrations'
 
-const VALID_TABS: ProfileTabType[] = ['profile', 'security', 'mcp', 'claude-chat']
+const VALID_TABS: ProfileTabType[] = ['profile', 'security', 'integrations']
 
 function isValidTab(tab: string | null): tab is ProfileTabType {
   return tab !== null && VALID_TABS.includes(tab as ProfileTabType)
@@ -181,28 +180,16 @@ export function ProfileContent() {
             Security
           </Link>
           <Link
-            href="/profile?tab=mcp"
+            href="/profile?tab=integrations"
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-              activeTab === 'mcp'
+              activeTab === 'integrations'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
             )}
           >
-            <Terminal className="h-4 w-4" />
-            MCP
-          </Link>
-          <Link
-            href="/profile?tab=claude-chat"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-              activeTab === 'claude-chat'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Bot className="h-4 w-4" />
-            Claude Chat
+            <Plug className="h-4 w-4" />
+            Integrations
           </Link>
         </div>
 
@@ -224,8 +211,7 @@ export function ProfileContent() {
               onSessionUpdate={debouncedUpdateSession}
             />
           )}
-          {activeTab === 'mcp' && <MCPTab isDemo={isDemo} />}
-          {activeTab === 'claude-chat' && <ClaudeChatTab isDemo={isDemo} />}
+          {activeTab === 'integrations' && <IntegrationsTab isDemo={isDemo} />}
         </div>
       </div>
 

@@ -113,10 +113,33 @@ export interface OAuthCredentials {
   [key: string]: unknown
 }
 
+export interface McpOAuthEntry {
+  accessToken?: string
+  refreshToken?: string
+  expiresAt?: number
+  [key: string]: unknown
+}
+
 export interface ClaudeCredentials {
   claudeAiOauth?: OAuthCredentials
   accessToken?: string
   refreshToken?: string
   expiresAt?: number
+  mcpOAuth?: Record<string, McpOAuthEntry>
   [key: string]: unknown
+}
+
+/**
+ * Extract available MCP server names from credentials.
+ * Returns the names of MCP servers that have OAuth entries in the credentials file.
+ */
+export function extractMcpServerNames(credentials: ClaudeCredentials): string[] {
+  if (!credentials.mcpOAuth || typeof credentials.mcpOAuth !== 'object') {
+    return []
+  }
+
+  return Object.keys(credentials.mcpOAuth).filter((name) => {
+    const entry = credentials.mcpOAuth?.[name]
+    return entry && typeof entry === 'object'
+  })
 }

@@ -92,10 +92,10 @@ export class ClaudeCliProvider implements ChatProvider {
   async sendMessage(params: ChatProviderParams): Promise<void> {
     const { messages, userId, systemPrompt, onEvent } = params
 
-    // Get user's encrypted session and MCP key
+    // Get user's encrypted session, MCP key, and enabled MCP servers
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { claudeSessionEncrypted: true, mcpApiKeyEncrypted: true },
+      select: { claudeSessionEncrypted: true, mcpApiKeyEncrypted: true, enabledMcpServers: true },
     })
 
     if (!user?.claudeSessionEncrypted) {
@@ -138,6 +138,19 @@ export class ClaudeCliProvider implements ChatProvider {
       }
     }
 
+    // Parse enabled MCP servers
+    let enabledMcpServers: string[] = []
+    if (user.enabledMcpServers) {
+      try {
+        const parsed = JSON.parse(user.enabledMcpServers)
+        if (Array.isArray(parsed)) {
+          enabledMcpServers = parsed.filter((s: unknown) => typeof s === 'string')
+        }
+      } catch {
+        // Invalid JSON, proceed without extra MCPs
+      }
+    }
+
     // Create temporary directory for this session
     const sessionId = randomUUID()
     const tempDir = join(tmpdir(), `punt-chat-${sessionId}`)
@@ -149,6 +162,7 @@ export class ClaudeCliProvider implements ChatProvider {
         messages,
         systemPrompt,
         mcpApiKey,
+        enabledMcpServers,
         onEvent,
       })
     } finally {
@@ -167,9 +181,11 @@ export class ClaudeCliProvider implements ChatProvider {
     messages: Array<{ role: string; content: string }>
     systemPrompt: string
     mcpApiKey: string | null
+    enabledMcpServers: string[]
     onEvent: (event: StreamEvent) => void
   }): Promise<void> {
-    const { tempDir, credentials, messages, systemPrompt, mcpApiKey, onEvent } = params
+    const { tempDir, credentials, messages, systemPrompt, mcpApiKey, enabledMcpServers, onEvent } =
+      params
 
     // Set up temp directory with credentials (restrictive permissions for security)
     const claudeDir = join(tempDir, '.claude')
@@ -178,24 +194,30 @@ export class ClaudeCliProvider implements ChatProvider {
     // Write credentials file (note: Claude CLI uses .credentials.json with leading dot)
     // Use restrictive permissions (owner read/write only) since this contains auth tokens
     const credentialsPath = join(claudeDir, '.credentials.json')
-    await writeFile(credentialsPath, JSON.stringify(credentials), { mode: 0o600 })
 
-    // Write MCP config (PUNT server only)
-    const mcpConfig = {
-      mcpServers: mcpApiKey
-        ? {
-            punt: {
-              type: 'stdio',
-              command: 'pnpm',
-              args: ['--dir', join(process.cwd(), 'mcp'), 'exec', 'tsx', 'src/index.ts'],
-              env: {
-                MCP_API_KEY: mcpApiKey,
-                PUNT_API_URL: process.env.PUNT_API_URL || 'http://localhost:3000',
-              },
-            },
-          }
-        : {},
+    // Build credentials for the temp directory
+    // Include mcpOAuth entries only for enabled MCP servers
+    const filteredCredentials = this.buildFilteredCredentials(credentials, enabledMcpServers)
+
+    await writeFile(credentialsPath, JSON.stringify(filteredCredentials), { mode: 0o600 })
+
+    // Build MCP config with PUNT server and any enabled MCP servers
+    const mcpServers: Record<string, unknown> = {}
+
+    // Add PUNT MCP server if API key is available
+    if (mcpApiKey) {
+      mcpServers.punt = {
+        type: 'stdio',
+        command: 'pnpm',
+        args: ['--dir', join(process.cwd(), 'mcp'), 'exec', 'tsx', 'src/index.ts'],
+        env: {
+          PUNT_API_KEY: mcpApiKey,
+          PUNT_API_URL: process.env.PUNT_API_URL ?? 'http://localhost:3000',
+        },
+      }
     }
+
+    const mcpConfig = { mcpServers }
     // Write MCP config with restrictive permissions (contains API key)
     const mcpConfigPath = join(tempDir, '.mcp.json')
     await writeFile(mcpConfigPath, JSON.stringify(mcpConfig), { mode: 0o600 })
@@ -429,5 +451,45 @@ export class ClaudeCliProvider implements ChatProvider {
         // Will be sent by processOutput
         break
     }
+  }
+
+  /**
+   * Build a filtered copy of credentials that only includes mcpOAuth entries
+   * for user-enabled MCP servers. This ensures only explicitly enabled MCPs
+   * are available during the chat session.
+   */
+  private buildFilteredCredentials(
+    credentials: ClaudeCredentials,
+    enabledMcpServers: string[],
+  ): ClaudeCredentials {
+    const filtered = { ...credentials }
+
+    if (credentials.mcpOAuth && typeof credentials.mcpOAuth === 'object') {
+      if (enabledMcpServers.length === 0) {
+        // No MCPs enabled -- remove all mcpOAuth entries
+        // Use a new object without mcpOAuth
+        const { mcpOAuth: _, ...rest } = filtered
+        return rest as ClaudeCredentials
+      }
+
+      // Only include enabled MCP servers
+      const enabledSet = new Set(enabledMcpServers)
+      const filteredMcpOAuth: Record<string, unknown> = {}
+
+      for (const [name, entry] of Object.entries(credentials.mcpOAuth)) {
+        if (enabledSet.has(name)) {
+          filteredMcpOAuth[name] = entry
+        }
+      }
+
+      if (Object.keys(filteredMcpOAuth).length > 0) {
+        filtered.mcpOAuth = filteredMcpOAuth as ClaudeCredentials['mcpOAuth']
+      } else {
+        const { mcpOAuth: _, ...rest } = filtered
+        return rest as ClaudeCredentials
+      }
+    }
+
+    return filtered
   }
 }
