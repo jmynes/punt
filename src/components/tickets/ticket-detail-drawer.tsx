@@ -1628,6 +1628,51 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                             // Track server-assigned attachment IDs and data
                             let serverAttachments: UploadedFileInfo[] = []
 
+                            // Persist new files to database FIRST, then show undo toast.
+                            // This prevents a race condition where the user clicks undo
+                            // before the upload completes, causing serverAttachments to
+                            // be empty and the undo cleanup to silently fail.
+                            try {
+                              const createdAttachments = await addAttachmentsMutation.mutateAsync({
+                                projectId,
+                                ticketId: ticket.id,
+                                attachments: newFiles.map((f) => ({
+                                  filename: f.filename,
+                                  originalName: f.originalName,
+                                  mimeType: f.mimetype,
+                                  size: f.size,
+                                  url: f.url,
+                                })),
+                              })
+                              // Store server-assigned IDs for undo
+                              serverAttachments = createdAttachments.map((a, i) => ({
+                                id: a.id,
+                                filename: a.filename,
+                                originalName: newFiles[i]?.originalName ?? a.filename,
+                                mimetype: a.mimeType,
+                                size: a.size,
+                                url: a.url,
+                                category: getMimeTypeCategory(a.mimeType),
+                              }))
+                              // Update local state with correct server IDs
+                              setTempAttachments((prev) => {
+                                // Remove temp entries and add server entries
+                                const withoutTemp = prev.filter(
+                                  (a) => !newFiles.some((nf) => nf.id === a.id),
+                                )
+                                return [...withoutTemp, ...serverAttachments]
+                              })
+                            } catch (err) {
+                              console.error('Failed to persist attachments:', err)
+                              // Remove optimistic entries on failure
+                              setTempAttachments((prev) =>
+                                prev.filter((a) => !newFiles.some((nf) => nf.id === a.id)),
+                              )
+                              return
+                            }
+
+                            // Now that the upload succeeded and serverAttachments is populated,
+                            // show the toast with undo/redo support
                             const toastId = showUndoRedoToast('success', {
                               title:
                                 newFiles.length === 1 ? 'Attachment added' : 'Attachments added',
@@ -1710,7 +1755,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
                             pushAttachmentAdd(
                               projectId,
-                              newFiles.map((f) => ({
+                              serverAttachments.map((f) => ({
                                 projectId,
                                 ticketId: ticket.id,
                                 ticketKey,
@@ -1725,40 +1770,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                               })),
                               toastId,
                             )
-                            // Persist new files to database and capture server IDs
-                            try {
-                              const createdAttachments = await addAttachmentsMutation.mutateAsync({
-                                projectId,
-                                ticketId: ticket.id,
-                                attachments: newFiles.map((f) => ({
-                                  filename: f.filename,
-                                  originalName: f.originalName,
-                                  mimeType: f.mimetype,
-                                  size: f.size,
-                                  url: f.url,
-                                })),
-                              })
-                              // Store server-assigned IDs for undo
-                              serverAttachments = createdAttachments.map((a, i) => ({
-                                id: a.id,
-                                filename: a.filename,
-                                originalName: newFiles[i]?.originalName ?? a.filename,
-                                mimetype: a.mimeType,
-                                size: a.size,
-                                url: a.url,
-                                category: getMimeTypeCategory(a.mimeType),
-                              }))
-                              // Update local state with correct server IDs
-                              setTempAttachments((prev) => {
-                                // Remove temp entries and add server entries
-                                const withoutTemp = prev.filter(
-                                  (a) => !newFiles.some((nf) => nf.id === a.id),
-                                )
-                                return [...withoutTemp, ...serverAttachments]
-                              })
-                            } catch (err) {
-                              console.error('Failed to persist attachments:', err)
-                            }
                           }
                         }}
                         maxFiles={
