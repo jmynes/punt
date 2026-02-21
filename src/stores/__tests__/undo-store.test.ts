@@ -441,6 +441,156 @@ describe('Undo Store', () => {
     })
   })
 
+  describe('pushAttachmentAdd', () => {
+    const makeAttachmentAction = (id: string) => ({
+      projectId: PROJECT_ID,
+      ticketId: 'ticket-1',
+      ticketKey: 'TEST-1',
+      attachment: {
+        id,
+        filename: `${id}.png`,
+        originalName: `${id}.png`,
+        mimetype: 'image/png',
+        size: 1024,
+        url: `/uploads/${id}.png`,
+      },
+    })
+
+    it('should add an attachmentAdd entry to undo stack', () => {
+      const attachments = [makeAttachmentAction('att-1')]
+      useUndoStore.getState().pushAttachmentAdd(PROJECT_ID, attachments, 'toast-1')
+
+      const entry = useUndoStore.getState().undoStack[0]
+      expect(entry).toBeDefined()
+      expect(entry?.action.type).toBe('attachmentAdd')
+      if (entry?.action.type === 'attachmentAdd') {
+        expect(entry.action.attachments).toHaveLength(1)
+        expect(entry.action.attachments[0].attachment.id).toBe('att-1')
+      }
+      expect(entry?.toastId).toBe('toast-1')
+      expect(entry?.projectId).toBe(PROJECT_ID)
+    })
+
+    it('should clear redo stack when not a redo operation', () => {
+      const ticket = createMockTicket({ id: 'ticket-1' })
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      const entry = useUndoStore.getState().popUndo()
+      if (entry) useUndoStore.getState().pushRedo(entry)
+      expect(useUndoStore.getState().redoStack).toHaveLength(1)
+
+      useUndoStore
+        .getState()
+        .pushAttachmentAdd(PROJECT_ID, [makeAttachmentAction('att-1')], 'toast-2')
+      expect(useUndoStore.getState().redoStack).toHaveLength(0)
+    })
+
+    it('should preserve redo stack when isRedo is true', () => {
+      const ticket = createMockTicket({ id: 'ticket-1' })
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      const entry = useUndoStore.getState().popUndo()
+      if (entry) useUndoStore.getState().pushRedo(entry)
+      expect(useUndoStore.getState().redoStack).toHaveLength(1)
+
+      useUndoStore
+        .getState()
+        .pushAttachmentAdd(PROJECT_ID, [makeAttachmentAction('att-1')], 'toast-2', true)
+      expect(useUndoStore.getState().redoStack).toHaveLength(1)
+    })
+
+    it('should support undo and redo via undoByToastId/redoByToastId', () => {
+      const attachments = [makeAttachmentAction('att-1')]
+      useUndoStore.getState().pushAttachmentAdd(PROJECT_ID, attachments, 'toast-1')
+      expect(useUndoStore.getState().undoStack).toHaveLength(1)
+
+      // Undo
+      const undoneEntry = useUndoStore.getState().undoByToastId('toast-1')
+      expect(undoneEntry).toBeDefined()
+      expect(useUndoStore.getState().undoStack).toHaveLength(0)
+      expect(useUndoStore.getState().redoStack).toHaveLength(1)
+
+      // Redo
+      const redoneEntry = useUndoStore.getState().redoByToastId('toast-1')
+      expect(redoneEntry).toBeDefined()
+      expect(useUndoStore.getState().undoStack).toHaveLength(1)
+      expect(useUndoStore.getState().redoStack).toHaveLength(0)
+    })
+  })
+
+  describe('pushAttachmentDelete', () => {
+    const makeAttachmentAction = (id: string) => ({
+      projectId: PROJECT_ID,
+      ticketId: 'ticket-1',
+      ticketKey: 'TEST-1',
+      attachment: {
+        id,
+        filename: `${id}.pdf`,
+        originalName: `${id}.pdf`,
+        mimetype: 'application/pdf',
+        size: 2048,
+        url: `/uploads/${id}.pdf`,
+      },
+    })
+
+    it('should add an attachmentDelete entry to undo stack', () => {
+      const attachments = [makeAttachmentAction('att-1')]
+      useUndoStore.getState().pushAttachmentDelete(PROJECT_ID, attachments, 'toast-1')
+
+      const entry = useUndoStore.getState().undoStack[0]
+      expect(entry).toBeDefined()
+      expect(entry?.action.type).toBe('attachmentDelete')
+      if (entry?.action.type === 'attachmentDelete') {
+        expect(entry.action.attachments).toHaveLength(1)
+        expect(entry.action.attachments[0].attachment.id).toBe('att-1')
+      }
+      expect(entry?.toastId).toBe('toast-1')
+      expect(entry?.projectId).toBe(PROJECT_ID)
+    })
+
+    it('should clear redo stack when not a redo operation', () => {
+      const ticket = createMockTicket({ id: 'ticket-1' })
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      const entry = useUndoStore.getState().popUndo()
+      if (entry) useUndoStore.getState().pushRedo(entry)
+      expect(useUndoStore.getState().redoStack).toHaveLength(1)
+
+      useUndoStore
+        .getState()
+        .pushAttachmentDelete(PROJECT_ID, [makeAttachmentAction('att-1')], 'toast-2')
+      expect(useUndoStore.getState().redoStack).toHaveLength(0)
+    })
+
+    it('should preserve redo stack when isRedo is true', () => {
+      const ticket = createMockTicket({ id: 'ticket-1' })
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      const entry = useUndoStore.getState().popUndo()
+      if (entry) useUndoStore.getState().pushRedo(entry)
+      expect(useUndoStore.getState().redoStack).toHaveLength(1)
+
+      useUndoStore
+        .getState()
+        .pushAttachmentDelete(PROJECT_ID, [makeAttachmentAction('att-1')], 'toast-2', true)
+      expect(useUndoStore.getState().redoStack).toHaveLength(1)
+    })
+
+    it('should support undo and redo via undoByToastId/redoByToastId', () => {
+      const attachments = [makeAttachmentAction('att-1')]
+      useUndoStore.getState().pushAttachmentDelete(PROJECT_ID, attachments, 'toast-1')
+      expect(useUndoStore.getState().undoStack).toHaveLength(1)
+
+      // Undo
+      const undoneEntry = useUndoStore.getState().undoByToastId('toast-1')
+      expect(undoneEntry).toBeDefined()
+      expect(useUndoStore.getState().undoStack).toHaveLength(0)
+      expect(useUndoStore.getState().redoStack).toHaveLength(1)
+
+      // Redo
+      const redoneEntry = useUndoStore.getState().redoByToastId('toast-1')
+      expect(redoneEntry).toBeDefined()
+      expect(useUndoStore.getState().undoStack).toHaveLength(1)
+      expect(useUndoStore.getState().redoStack).toHaveLength(0)
+    })
+  })
+
   describe('isProcessing', () => {
     it('should default to false', () => {
       expect(useUndoStore.getState().isProcessing).toBe(false)
