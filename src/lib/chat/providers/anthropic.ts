@@ -4,6 +4,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { decryptSession } from '@/lib/chat/encryption'
 import { executeTool } from '@/lib/chat/executor'
 import { type ChatToolName, chatTools } from '@/lib/chat/tools'
 import { db } from '@/lib/db'
@@ -25,7 +26,7 @@ export class AnthropicProvider implements ChatProvider {
   async sendMessage(params: ChatProviderParams): Promise<void> {
     const { messages, userId, systemPrompt, onEvent } = params
 
-    // Get user's API key
+    // Get user's encrypted API key
     const user = await db.user.findUnique({
       where: { id: userId },
       select: { anthropicApiKey: true },
@@ -39,9 +40,22 @@ export class AnthropicProvider implements ChatProvider {
       return
     }
 
+    // Decrypt the API key
+    let apiKey: string
+    try {
+      apiKey = decryptSession(user.anthropicApiKey)
+    } catch {
+      onEvent({
+        type: 'error',
+        error:
+          'Failed to decrypt Anthropic API key. Please re-save your key in Profile > Integrations.',
+      })
+      return
+    }
+
     // Initialize Anthropic client
     const anthropic = new Anthropic({
-      apiKey: user.anthropicApiKey,
+      apiKey,
     })
 
     try {
