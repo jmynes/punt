@@ -1891,7 +1891,7 @@ export function KeyboardShortcuts() {
 
             // Create toast FIRST so we capture the correct toast ID for the async IIFE
             let currentId = entry.toastId
-            const toastId = showUndoRedoToast('success', {
+            const toastId = showUndoRedoToast('error', {
               title:
                 action.attachments.length === 1
                   ? 'Attachment removed'
