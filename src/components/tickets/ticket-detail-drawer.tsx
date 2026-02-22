@@ -1506,12 +1506,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                               description: `"${removed.originalName}" from ${ticketKey}`,
                               showUndoButtons: true,
                               onUndo: async (id) => {
-                                // Check isProcessing BEFORE any stack manipulation
+                                // Atomically acquire processing lock BEFORE any stack manipulation
                                 const store = useUndoStore.getState()
-                                if (store.isProcessing) return false
+                                if (!store.tryStartProcessing()) return false
                                 const entry = store.undoByToastId(id)
-                                if (!entry) return false
-                                store.setProcessing(true)
+                                if (!entry) {
+                                  store.setProcessing(false)
+                                  return false
+                                }
                                 try {
                                   // Re-add the attachment and capture new ID
                                   const newAttachments = await addAttachmentsMutation.mutateAsync({
@@ -1549,12 +1551,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                                 }
                               },
                               onRedo: async (id) => {
-                                // Check isProcessing BEFORE any stack manipulation
+                                // Atomically acquire processing lock BEFORE any stack manipulation
                                 const store = useUndoStore.getState()
-                                if (store.isProcessing) return false
+                                if (!store.tryStartProcessing()) return false
                                 const entry = store.redoByToastId(id)
-                                if (!entry) return false
-                                store.setProcessing(true)
+                                if (!entry) {
+                                  store.setProcessing(false)
+                                  return false
+                                }
                                 try {
                                   // Re-delete the attachment using tracked ID
                                   setTempAttachments((prev) =>
@@ -1695,12 +1699,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                               description: `${fileNames} to ${ticketKey}`,
                               showUndoButtons: true,
                               onUndo: async (id) => {
-                                // Check isProcessing BEFORE any stack manipulation
+                                // Atomically acquire processing lock BEFORE any stack manipulation
                                 const store = useUndoStore.getState()
-                                if (store.isProcessing) return false
+                                if (!store.tryStartProcessing()) return false
                                 const entry = store.undoByToastId(id)
-                                if (!entry) return false
-                                store.setProcessing(true)
+                                if (!entry) {
+                                  store.setProcessing(false)
+                                  return false
+                                }
                                 try {
                                   // Remove the added attachments using server IDs
                                   for (const attachment of serverAttachments) {
@@ -1720,12 +1726,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                                 }
                               },
                               onRedo: async (id) => {
-                                // Check isProcessing BEFORE any stack manipulation
+                                // Atomically acquire processing lock BEFORE any stack manipulation
                                 const store = useUndoStore.getState()
-                                if (store.isProcessing) return false
+                                if (!store.tryStartProcessing()) return false
                                 const entry = store.redoByToastId(id)
-                                if (!entry) return false
-                                store.setProcessing(true)
+                                if (!entry) {
+                                  store.setProcessing(false)
+                                  return false
+                                }
                                 try {
                                   // Re-add the attachments and capture new IDs
                                   const readdedAttachments =
@@ -1987,12 +1995,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   description: ticketKey,
                   showUndoButtons: true,
                   onUndo: async (id) => {
-                    // Check isProcessing BEFORE any stack manipulation
+                    // Atomically acquire processing lock BEFORE any stack manipulation
                     const store = useUndoStore.getState()
-                    if (store.isProcessing) return false
+                    if (!store.tryStartProcessing()) return false
                     const entry = store.undoByToastId(id)
-                    if (!entry) return false
-                    store.setProcessing(true)
+                    if (!entry) {
+                      store.setProcessing(false)
+                      return false
+                    }
                     try {
                       // Re-add all attachments and track new IDs
                       const restoredAttachments: UploadedFileInfo[] = []
@@ -2036,12 +2046,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     }
                   },
                   onRedo: async (id) => {
-                    // Check isProcessing BEFORE any stack manipulation
+                    // Atomically acquire processing lock BEFORE any stack manipulation
                     const store = useUndoStore.getState()
-                    if (store.isProcessing) return false
+                    if (!store.tryStartProcessing()) return false
                     const entry = store.redoByToastId(id)
-                    if (!entry) return false
-                    store.setProcessing(true)
+                    if (!entry) {
+                      store.setProcessing(false)
+                      return false
+                    }
                     try {
                       // Re-delete all attachments using tracked IDs
                       setTempAttachments([])

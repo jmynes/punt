@@ -112,6 +112,8 @@ interface UndoState {
   // Whether an async undo/redo operation (e.g. API call) is in flight
   isProcessing: boolean
   setProcessing: (v: boolean) => void
+  // Atomically check and set isProcessing - returns true if acquired, false if already processing
+  tryStartProcessing: () => boolean
 
   // Add a delete action to the undo stack
   pushDeleted: (
@@ -273,6 +275,12 @@ export const useUndoStore = create<UndoState>((set, get) => ({
   redoStack: [],
   isProcessing: false,
   setProcessing: (v) => set({ isProcessing: v }),
+  tryStartProcessing: () => {
+    const state = get()
+    if (state.isProcessing) return false
+    set({ isProcessing: true })
+    return true
+  },
 
   pushDeleted: (projectId, ticket, columnId, toastId, isRedo = false) => {
     console.debug(`[SessionLog] Action: Delete ${isRedo ? '(Redo)' : ''}`, {
