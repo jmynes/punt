@@ -7,8 +7,10 @@ interface UndoRedoToastOptions {
   description: React.ReactNode
   duration?: number
   showUndoButtons: boolean
-  onUndo: (id: string | number) => void
-  onRedo?: (id: string | number) => void
+  /** Return false to prevent showing the nested "undone" toast */
+  onUndo: (id: string | number) => void | boolean | Promise<void | boolean>
+  /** Return false to prevent showing the nested "redone" toast */
+  onRedo?: (id: string | number) => void | boolean | Promise<void | boolean>
   onUndoneToast?: (id: string | number) => void
   onRedoneToast?: (id: string | number) => void
   undoLabel?: string
@@ -17,6 +19,8 @@ interface UndoRedoToastOptions {
   undoneDescription?: React.ReactNode
   redoneTitle?: string
   redoneDescription?: React.ReactNode
+  /** Toast ID to dismiss before showing this toast (for replacing toasts) */
+  dismissPrevious?: string | number
 }
 
 export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
@@ -35,7 +39,13 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
     undoneDescription = description,
     redoneTitle = 'Action redone',
     redoneDescription = description,
+    dismissPrevious,
   } = opts
+
+  // Dismiss the previous toast if specified (for replacing toasts instead of stacking)
+  if (dismissPrevious !== undefined) {
+    toast.dismiss(dismissPrevious)
+  }
 
   const toastFn = kind === 'error' ? toast.error : toast.success
   const isError = kind === 'error'
@@ -51,24 +61,30 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
     action: showUndoButtons
       ? {
           label: undoLabel,
-          onClick: () => {
-            if (toastId) onUndo(toastId)
+          onClick: async () => {
+            if (!toastId) return
+            // Call onUndo and check if it returns false (blocked by isProcessing)
+            const result = await onUndo(toastId)
+            if (result === false) return // Blocked, don't show nested toast
+
             if (onRedo && showUndoButtons) {
               const undoneToastId = toastFn(undoneTitle, {
                 description: undoneDescription,
                 duration: confirmDuration,
                 action: {
                   label: redoLabel,
-                  onClick: () => {
-                    onRedo(undoneToastId)
+                  onClick: async () => {
+                    const redoResult = await onRedo(undoneToastId)
+                    if (redoResult === false) return // Blocked
+
                     let redoneToastId: string | number | undefined
                     redoneToastId = toastFn(redoneTitle, {
                       description: redoneDescription,
                       duration: confirmDuration,
                       action: {
                         label: undoLabel,
-                        onClick: () => {
-                          if (redoneToastId) onUndo(redoneToastId)
+                        onClick: async () => {
+                          if (redoneToastId) await onUndo(redoneToastId)
                           // We could continue chaining here, but 3 levels is usually enough
                           // Ideally this would recurse or use a better structure
                         },

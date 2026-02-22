@@ -64,6 +64,8 @@ export function KeyboardShortcuts() {
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [ticketsToDelete, setTicketsToDelete] = useState<TicketWithRelations[]>([])
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
+  // Track the current attachment toast to dismiss it when a new one is shown
+  const lastAttachmentToastRef = useRef<string | number | undefined>(undefined)
 
   // Focus delete button when dialog opens
   useEffect(() => {
@@ -1903,12 +1905,13 @@ export function KeyboardShortcuts() {
               showUndoButtons: showUndo,
               undoLabel: 'Redo',
               redoLabel: 'Undo',
+              dismissPrevious: lastAttachmentToastRef.current,
               onUndo: async (id) => {
                 // Redo: re-add the attachments
                 const redoEntry = useUndoStore.getState().redoByToastId(id)
-                if (!redoEntry) return
+                if (!redoEntry) return false
                 const store = useUndoStore.getState()
-                if (store.isProcessing) return
+                if (store.isProcessing) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -1960,9 +1963,9 @@ export function KeyboardShortcuts() {
               onRedo: async (id) => {
                 // Undo again: delete the attachments
                 const undoEntry2 = useUndoStore.getState().undoByToastId(id)
-                if (!undoEntry2) return
+                if (!undoEntry2) return false
                 const store = useUndoStore.getState()
-                if (store.isProcessing) return
+                if (store.isProcessing) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -1991,12 +1994,14 @@ export function KeyboardShortcuts() {
                 if (currentId) {
                   useUndoStore.getState().updateUndoToastId(currentId, newId)
                   currentId = newId
+                  lastAttachmentToastRef.current = newId
                 }
               },
               onRedoneToast: (newId) => {
                 if (currentId) {
                   useUndoStore.getState().updateRedoToastId(currentId, newId)
                   currentId = newId
+                  lastAttachmentToastRef.current = newId
                 }
               },
               undoneTitle:
@@ -2012,6 +2017,7 @@ export function KeyboardShortcuts() {
             })
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
+            lastAttachmentToastRef.current = toastId
 
             // Delete the attachments asynchronously
             ;(async () => {
@@ -2064,12 +2070,13 @@ export function KeyboardShortcuts() {
               showUndoButtons: showUndo,
               undoLabel: 'Redo',
               redoLabel: 'Undo',
+              dismissPrevious: lastAttachmentToastRef.current,
               onUndo: async (id) => {
                 // Redo: re-delete the attachments
                 const redoEntry = useUndoStore.getState().redoByToastId(id)
-                if (!redoEntry) return
+                if (!redoEntry) return false
                 const store = useUndoStore.getState()
-                if (store.isProcessing) return
+                if (store.isProcessing) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -2097,9 +2104,9 @@ export function KeyboardShortcuts() {
               onRedo: async (id) => {
                 // Undo again: re-add the attachments
                 const undoEntry2 = useUndoStore.getState().undoByToastId(id)
-                if (!undoEntry2) return
+                if (!undoEntry2) return false
                 const store = useUndoStore.getState()
-                if (store.isProcessing) return
+                if (store.isProcessing) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -2152,12 +2159,14 @@ export function KeyboardShortcuts() {
                 if (currentId) {
                   useUndoStore.getState().updateUndoToastId(currentId, newId)
                   currentId = newId
+                  lastAttachmentToastRef.current = newId
                 }
               },
               onRedoneToast: (newId) => {
                 if (currentId) {
                   useUndoStore.getState().updateRedoToastId(currentId, newId)
                   currentId = newId
+                  lastAttachmentToastRef.current = newId
                 }
               },
               undoneTitle:
@@ -2173,6 +2182,7 @@ export function KeyboardShortcuts() {
             })
             undoStore.updateRedoToastId(currentId, toastId)
             currentId = toastId
+            lastAttachmentToastRef.current = toastId
 
             // Re-add the attachments asynchronously (uses toastId captured above)
             ;(async () => {
@@ -3076,11 +3086,12 @@ export function KeyboardShortcuts() {
               duration: 3000,
               showUndoButtons: showUndo,
               undoLabel: 'Undo',
+              dismissPrevious: lastAttachmentToastRef.current,
               onUndo: async (id) => {
                 const undoEntry = useUndoStore.getState().undoByToastId(id)
-                if (!undoEntry) return
+                if (!undoEntry) return false
                 const store = useUndoStore.getState()
-                if (store.isProcessing) return
+                if (store.isProcessing) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -3109,13 +3120,14 @@ export function KeyboardShortcuts() {
                 if (currentId) {
                   useUndoStore.getState().updateRedoToastId(currentId, newId)
                   currentId = newId
+                  lastAttachmentToastRef.current = newId
                 }
               },
               onRedo: async (id) => {
                 const redoEntry2 = useUndoStore.getState().redoByToastId(id)
-                if (!redoEntry2) return
+                if (!redoEntry2) return false
                 const store = useUndoStore.getState()
-                if (store.isProcessing) return
+                if (store.isProcessing) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -3168,6 +3180,7 @@ export function KeyboardShortcuts() {
                 if (currentId) {
                   useUndoStore.getState().updateUndoToastId(currentId, newId)
                   currentId = newId
+                  lastAttachmentToastRef.current = newId
                 }
               },
               undoneTitle:
@@ -3183,6 +3196,7 @@ export function KeyboardShortcuts() {
             })
 
             currentId = newToastId
+            lastAttachmentToastRef.current = newToastId
 
             // Re-add the attachments and update IDs
             ;(async () => {
@@ -3282,11 +3296,12 @@ export function KeyboardShortcuts() {
               duration: 3000,
               showUndoButtons: showUndo,
               undoLabel: 'Undo',
+              dismissPrevious: lastAttachmentToastRef.current,
               onUndo: async (id) => {
                 const undoEntry = useUndoStore.getState().undoByToastId(id)
-                if (!undoEntry) return
+                if (!undoEntry) return false
                 const store = useUndoStore.getState()
-                if (store.isProcessing) return
+                if (store.isProcessing) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -3339,13 +3354,14 @@ export function KeyboardShortcuts() {
                 if (currentId) {
                   useUndoStore.getState().updateRedoToastId(currentId, newId)
                   currentId = newId
+                  lastAttachmentToastRef.current = newId
                 }
               },
               onRedo: async (id) => {
                 const redoEntry2 = useUndoStore.getState().redoByToastId(id)
-                if (!redoEntry2) return
+                if (!redoEntry2) return false
                 const store = useUndoStore.getState()
-                if (store.isProcessing) return
+                if (store.isProcessing) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -3374,6 +3390,7 @@ export function KeyboardShortcuts() {
                 if (currentId) {
                   useUndoStore.getState().updateUndoToastId(currentId, newId)
                   currentId = newId
+                  lastAttachmentToastRef.current = newId
                 }
               },
               undoneTitle:
@@ -3389,6 +3406,7 @@ export function KeyboardShortcuts() {
             })
 
             currentId = newToastId
+            lastAttachmentToastRef.current = newToastId
 
             redoStore.pushAttachmentDelete(entry.projectId, action.attachments, newToastId, true)
           }
