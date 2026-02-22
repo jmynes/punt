@@ -1881,6 +1881,8 @@ export function KeyboardShortcuts() {
           } else if (entry.action.type === 'attachmentAdd') {
             const action = entry.action
             // Undo attachment add: delete the added attachments
+            // Set processing to block subsequent Ctrl+Z/Y during async operation
+            undoStore.setProcessing(true)
             undoStore.pushRedo(entry)
 
             const fileNames =
@@ -2033,11 +2035,15 @@ export function KeyboardShortcuts() {
               } catch (err) {
                 console.error('Failed to undo attachment add:', err)
                 showToast.error('Failed to undo attachment add')
+              } finally {
+                useUndoStore.getState().setProcessing(false)
               }
             })()
           } else if (entry.action.type === 'attachmentDelete') {
             const action = entry.action
             // Undo attachment delete: re-add the deleted attachments
+            // Set processing to block subsequent Ctrl+Z/Y during async operation
+            undoStore.setProcessing(true)
             undoStore.pushRedo(entry)
 
             const fileNames =
@@ -2215,6 +2221,8 @@ export function KeyboardShortcuts() {
               } catch (err) {
                 console.error('Failed to undo attachment delete:', err)
                 showToast.error('Failed to restore attachments')
+              } finally {
+                useUndoStore.getState().setProcessing(false)
               }
             })()
           }
@@ -3048,6 +3056,8 @@ export function KeyboardShortcuts() {
           } else if (entry.action.type === 'attachmentAdd') {
             const action = entry.action
             // Redo attachment add: re-add the attachments
+            // Set processing to block subsequent Ctrl+Z/Y during async operation
+            redoStore.setProcessing(true)
 
             const fileNames =
               action.attachments.length === 1
@@ -3219,6 +3229,8 @@ export function KeyboardShortcuts() {
                 })
               } catch (err) {
                 console.error('Failed to redo attachment add:', err)
+              } finally {
+                useUndoStore.getState().setProcessing(false)
               }
             })()
 
@@ -3226,6 +3238,8 @@ export function KeyboardShortcuts() {
           } else if (entry.action.type === 'attachmentDelete') {
             const action = entry.action
             // Redo attachment delete: re-delete the attachments
+            // Set processing to block subsequent Ctrl+Z/Y during async operation
+            redoStore.setProcessing(true)
             ;(async () => {
               try {
                 const tabId = getTabId()
@@ -3246,6 +3260,8 @@ export function KeyboardShortcuts() {
                 })
               } catch (err) {
                 console.error('Failed to redo attachment delete:', err)
+              } finally {
+                useUndoStore.getState().setProcessing(false)
               }
             })()
 
