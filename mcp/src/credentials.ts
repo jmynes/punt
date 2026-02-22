@@ -15,7 +15,8 @@
  * - Windows: %APPDATA%\punt\credentials.json
  */
 
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
+import { platform } from 'node:os'
 import { getCredentialsPath } from './config.js'
 
 /** How often (in ms) to re-read the credentials file */
@@ -65,6 +66,26 @@ function getPath(): string {
 }
 
 /**
+ * Check if the credentials file has overly permissive permissions on Unix.
+ * Warns to stderr if group or other can read/write the file.
+ */
+function warnIfWorldReadable(filePath: string): void {
+  if (platform() === 'win32') return
+  try {
+    const stat = statSync(filePath)
+    const mode = stat.mode & 0o777
+    if (mode & 0o077) {
+      console.error(
+        `Warning: ${filePath} has permissions ${mode.toString(8)}. ` +
+          `Consider running: chmod 600 ${filePath}`,
+      )
+    }
+  } catch {
+    // Ignore stat errors
+  }
+}
+
+/**
  * Read and parse the credentials file.
  * Returns null if the file doesn't exist or is invalid.
  */
@@ -75,7 +96,9 @@ function readCredentialsFile(): CredentialsFile | null {
       return null
     }
     const content = readFileSync(path, 'utf-8')
-    return JSON.parse(content) as CredentialsFile
+    const parsed = JSON.parse(content) as CredentialsFile
+    warnIfWorldReadable(path)
+    return parsed
   } catch {
     // File doesn't exist, is empty, or has invalid JSON
     return null
