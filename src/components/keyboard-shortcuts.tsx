@@ -1917,7 +1917,9 @@ export function KeyboardShortcuts() {
               try {
                 const tabId = getTabId()
                 const idMap = new Map<string, string>()
-                for (const att of action.attachments) {
+                // Use entry's attachments (may have updated IDs from previous redo)
+                const entryAction = redoEntry.action as typeof action
+                for (const att of entryAction.attachments) {
                   const res = await fetch(
                     `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
                     {
@@ -1973,7 +1975,9 @@ export function KeyboardShortcuts() {
               }
               try {
                 const tabId = getTabId()
-                for (const att of action.attachments) {
+                // Use entry's attachments (may have updated IDs from previous redo)
+                const entryAction2 = undoEntry2.action as typeof action
+                for (const att of entryAction2.attachments) {
                   await fetch(
                     `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
                     {
@@ -2087,7 +2091,9 @@ export function KeyboardShortcuts() {
               }
               try {
                 const tabId = getTabId()
-                for (const att of action.attachments) {
+                // Use entry's attachments (may have updated IDs from previous redo)
+                const entryAction = redoEntry.action as typeof action
+                for (const att of entryAction.attachments) {
                   await fetch(
                     `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
                     {
@@ -2121,7 +2127,9 @@ export function KeyboardShortcuts() {
               try {
                 const tabId = getTabId()
                 const idMap = new Map<string, string>()
-                for (const att of action.attachments) {
+                // Use entry's attachments (may have updated IDs from previous redo)
+                const entryAction2 = undoEntry2.action as typeof action
+                for (const att of entryAction2.attachments) {
                   const res = await fetch(
                     `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
                     {
@@ -3121,7 +3129,9 @@ export function KeyboardShortcuts() {
               }
               try {
                 const tabId = getTabId()
-                for (const att of action.attachments) {
+                // Use entry's attachments (may have updated IDs from previous redo)
+                const entryAction = undoEntry.action as typeof action
+                for (const att of entryAction.attachments) {
                   await fetch(
                     `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
                     {
@@ -3161,7 +3171,9 @@ export function KeyboardShortcuts() {
               try {
                 const tabId = getTabId()
                 const idMap = new Map<string, string>()
-                for (const att of action.attachments) {
+                // Use entry's attachments (may have updated IDs from previous redo)
+                const entryAction2 = redoEntry2.action as typeof action
+                for (const att of entryAction2.attachments) {
                   const res = await fetch(
                     `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
                     {
@@ -3338,7 +3350,9 @@ export function KeyboardShortcuts() {
               try {
                 const tabId = getTabId()
                 const idMap = new Map<string, string>()
-                for (const att of action.attachments) {
+                // Read from entry, not closure - IDs may have been updated by updateAttachmentIds
+                const undoAction = undoEntry.action as typeof action
+                for (const att of undoAction.attachments) {
                   const res = await fetch(
                     `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
                     {
@@ -3400,7 +3414,9 @@ export function KeyboardShortcuts() {
               }
               try {
                 const tabId = getTabId()
-                for (const att of action.attachments) {
+                // Read from entry, not closure - IDs may have been updated by updateAttachmentIds
+                const redoAction = redoEntry2.action as typeof action
+                for (const att of redoAction.attachments) {
                   await fetch(
                     `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
                     {
