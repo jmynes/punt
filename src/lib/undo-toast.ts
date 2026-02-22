@@ -67,6 +67,9 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
             const result = await onUndo(toastId)
             if (result === false) return // Blocked, don't show nested toast
 
+            // Dismiss current toast before showing nested toast
+            toast.dismiss(toastId)
+
             if (onRedo && showUndoButtons) {
               const undoneToastId = toastFn(undoneTitle, {
                 description: undoneDescription,
@@ -77,6 +80,9 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
                     const redoResult = await onRedo(undoneToastId)
                     if (redoResult === false) return // Blocked
 
+                    // Dismiss undone toast before showing redone toast
+                    toast.dismiss(undoneToastId)
+
                     let redoneToastId: string | number | undefined
                     redoneToastId = toastFn(redoneTitle, {
                       description: redoneDescription,
@@ -84,9 +90,12 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
                       action: {
                         label: undoLabel,
                         onClick: async () => {
-                          if (redoneToastId) await onUndo(redoneToastId)
+                          if (!redoneToastId) return
+                          const undoAgainResult = await onUndo(redoneToastId)
+                          if (undoAgainResult === false) return // Blocked
+                          // Dismiss redone toast after action
+                          toast.dismiss(redoneToastId)
                           // We could continue chaining here, but 3 levels is usually enough
-                          // Ideally this would recurse or use a better structure
                         },
                       },
                     })
