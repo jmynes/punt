@@ -3,6 +3,7 @@
 import {
   Check,
   Copy,
+  Download,
   Eye,
   EyeOff,
   Loader2,
@@ -145,6 +146,27 @@ export function TwoFactorSection({ isDemo }: TwoFactorSectionProps) {
     } catch {
       showToast.error('Failed to copy codes')
     }
+  }
+
+  // Download recovery codes as text file
+  const handleDownloadCodes = (codes: string[]) => {
+    const content = `PUNT Recovery Codes
+Generated: ${new Date().toISOString()}
+
+Keep these codes in a safe place. Each code can only be used once.
+
+${codes.join('\n')}
+`
+    const blob = new Blob([content], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `punt-recovery-codes-${Date.now()}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    showToast.success('Recovery codes downloaded')
   }
 
   // Complete setup
@@ -369,6 +391,15 @@ export function TwoFactorSection({ isDemo }: TwoFactorSectionProps) {
                   Copy codes
                 </>
               )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-zinc-700 hover:bg-zinc-800"
+              onClick={() => handleDownloadCodes(recoveryCodes)}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download
             </Button>
           </div>
 
@@ -595,24 +626,35 @@ export function TwoFactorSection({ isDemo }: TwoFactorSectionProps) {
                 </div>
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full border-zinc-700 hover:bg-zinc-800"
-                onClick={() => handleCopyCodes(regeneratedCodes)}
-              >
-                {copiedCodes ? (
-                  <>
-                    <Check className="mr-2 h-4 w-4 text-emerald-500" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy codes
-                  </>
-                )}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 border-zinc-700 hover:bg-zinc-800"
+                  onClick={() => handleCopyCodes(regeneratedCodes)}
+                >
+                  {copiedCodes ? (
+                    <>
+                      <Check className="mr-2 h-4 w-4 text-emerald-500" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 border-zinc-700 hover:bg-zinc-800"
+                  onClick={() => handleDownloadCodes(regeneratedCodes)}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download
+                </Button>
+              </div>
 
               <div className="bg-amber-950/30 border border-amber-900/30 rounded-lg p-3">
                 <label className="flex items-start gap-2 cursor-pointer">
