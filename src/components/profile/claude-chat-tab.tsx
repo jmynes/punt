@@ -1,7 +1,17 @@
 'use client'
 
-import { AlertTriangle, Bot, Check, Eye, EyeOff, KeyRound, Trash2, Upload } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import {
+  AlertTriangle,
+  Bot,
+  Check,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Plug,
+  Trash2,
+  Upload,
+} from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +25,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -46,6 +57,11 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
   const [sessionInput, setSessionInput] = useState('')
   const [sessionLoading, setSessionLoading] = useState(false)
 
+  // MCP servers state
+  const [availableMcpServers, setAvailableMcpServers] = useState<string[]>([])
+  const [enabledMcpServers, setEnabledMcpServers] = useState<string[]>([])
+  const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set())
+
   useEffect(() => {
     if (isDemo || anthropicKeyFetched) return
     const fetchAnthropicKeyStatus = async () => {
@@ -64,7 +80,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     fetchAnthropicKeyStatus()
   }, [isDemo, anthropicKeyFetched])
 
-  // Fetch chat provider preference
+  // Fetch chat provider preference and MCP servers
   useEffect(() => {
     if (isDemo || providerFetched) return
     const fetchProvider = async () => {
@@ -74,6 +90,8 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
           const data = await res.json()
           setChatProvider(data.provider || 'anthropic')
           setHasClaudeSession(data.hasSession)
+          setAvailableMcpServers(data.availableMcpServers || [])
+          setEnabledMcpServers(data.enabledMcpServers || [])
           setProviderFetched(true)
         }
       } catch {
@@ -194,6 +212,8 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
       setHasClaudeSession(true)
       setChatProvider('claude-cli')
       setSessionInput('')
+      setAvailableMcpServers(data.availableMcpServers || [])
+      setEnabledMcpServers(data.enabledMcpServers || [])
       showToast.success('Claude session configured')
     } catch (error) {
       showToast.error(error instanceof Error ? error.message : 'Failed to upload session')
@@ -210,6 +230,8 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
       if (!res.ok) throw new Error(data.error || 'Failed to remove session')
       setHasClaudeSession(false)
       setChatProvider('anthropic')
+      setAvailableMcpServers([])
+      setEnabledMcpServers([])
       showToast.success('Claude session removed')
     } catch (error) {
       showToast.error(error instanceof Error ? error.message : 'Failed to remove session')
@@ -217,6 +239,37 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
       setSessionLoading(false)
     }
   }
+
+  const handleToggleMcpServer = useCallback(
+    async (serverName: string, enabled: boolean) => {
+      setPendingToggles((prev) => new Set(prev).add(serverName))
+      try {
+        const newEnabled = enabled
+          ? [...enabledMcpServers, serverName]
+          : enabledMcpServers.filter((s) => s !== serverName)
+
+        const res = await fetch('/api/me/claude-session', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabledMcpServers: newEnabled }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Failed to update MCP servers')
+
+        setEnabledMcpServers(newEnabled)
+        showToast.success(`${serverName} ${enabled ? 'enabled' : 'disabled'}`)
+      } catch (error) {
+        showToast.error(error instanceof Error ? error.message : 'Failed to update MCP servers')
+      } finally {
+        setPendingToggles((prev) => {
+          const next = new Set(prev)
+          next.delete(serverName)
+          return next
+        })
+      }
+    },
+    [enabledMcpServers],
+  )
 
   if (isDemo) {
     return (
@@ -435,6 +488,61 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
                     <Check className="h-4 w-4 text-emerald-500 shrink-0" />
                     <p className="text-sm text-zinc-300">Session credentials configured</p>
                   </div>
+
+                  {/* Enabled MCP Servers Section */}
+                  {availableMcpServers.length > 0 && (
+                    <div className="space-y-3 pt-3 border-t border-zinc-800">
+                      <div className="flex items-center gap-2">
+                        <Plug className="h-4 w-4 text-cyan-500" />
+                        <span className="text-sm font-medium text-zinc-300">
+                          External MCP Servers
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500">
+                        Your credentials include OAuth tokens for the following MCP servers. Enable
+                        the ones you want available during Claude Chat sessions.
+                      </p>
+                      <div className="space-y-2">
+                        {availableMcpServers.map((serverName) => {
+                          const isEnabled = enabledMcpServers.includes(serverName)
+                          return (
+                            <label
+                              key={serverName}
+                              htmlFor={`mcp-server-${serverName}`}
+                              className="flex items-center gap-3 px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-800/30 hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                            >
+                              <Checkbox
+                                id={`mcp-server-${serverName}`}
+                                checked={isEnabled}
+                                onCheckedChange={(checked) =>
+                                  handleToggleMcpServer(serverName, checked === true)
+                                }
+                                disabled={pendingToggles.has(serverName)}
+                                className="border-zinc-600 data-[state=checked]:bg-cyan-600 data-[state=checked]:border-cyan-600"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm text-zinc-200 font-mono">
+                                  {serverName}
+                                </span>
+                              </div>
+                              {isEnabled && (
+                                <span className="text-xs px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded shrink-0">
+                                  Enabled
+                                </span>
+                              )}
+                            </label>
+                          )
+                        })}
+                      </div>
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-zinc-700/50 bg-zinc-800/20">
+                        <Plug className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        <span className="text-xs text-zinc-400">
+                          <span className="font-mono text-amber-400">punt</span> — always enabled
+                          (built-in)
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>

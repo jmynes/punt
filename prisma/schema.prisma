@@ -37,6 +37,7 @@ model User {
   anthropicApiKey        String? // User's own Anthropic API key for embedded chat
   chatProvider           String? // Preferred chat provider: "anthropic" | "claude-cli"
   claudeSessionEncrypted String? // Encrypted Claude CLI session credentials (experimental)
+  enabledMcpServers      String? // JSON array of enabled MCP server names from Claude CLI credentials
 
   // Ticket relations
   assignedTickets  Ticket[]        @relation("Assignee")

@@ -118,5 +118,25 @@ export interface ClaudeCredentials {
   accessToken?: string
   refreshToken?: string
   expiresAt?: number
+  mcpOAuth?: Record<string, unknown>
   [key: string]: unknown
+}
+
+/**
+ * Extract available MCP server names from credentials
+ * MCP OAuth tokens are stored under the 'mcpOAuth' key (note capital O)
+ */
+export function extractMcpServerNames(credentials: ClaudeCredentials): string[] {
+  if (!credentials.mcpOAuth || typeof credentials.mcpOAuth !== 'object') {
+    return []
+  }
+  // Extract friendly server names, filtering out plugin variants and PUNT
+  return Object.keys(credentials.mcpOAuth)
+    .filter((key) => !key.startsWith('plugin:') && key !== 'punt')
+    .map((key) => {
+      // Keys are in format "serverName|id", extract just the server name
+      const serverName = key.split('|')[0]
+      return serverName
+    })
+    .filter((name, index, arr) => arr.indexOf(name) === index) // Dedupe
 }
