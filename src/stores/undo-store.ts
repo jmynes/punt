@@ -274,10 +274,18 @@ export const useUndoStore = create<UndoState>((set, get) => ({
   undoStack: [],
   redoStack: [],
   isProcessing: false,
-  setProcessing: (v) => set({ isProcessing: v }),
+  setProcessing: (v) => {
+    console.debug(`[UndoStore] setProcessing(${v})`, new Error().stack?.split('\n')[2])
+    set({ isProcessing: v })
+  },
   tryStartProcessing: () => {
     const state = get()
-    if (state.isProcessing) return false
+    const caller = new Error().stack?.split('\n')[2]
+    if (state.isProcessing) {
+      console.debug(`[UndoStore] tryStartProcessing BLOCKED (already processing)`, caller)
+      return false
+    }
+    console.debug(`[UndoStore] tryStartProcessing SUCCESS`, caller)
     set({ isProcessing: true })
     return true
   },
