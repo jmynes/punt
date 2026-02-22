@@ -112,6 +112,8 @@ interface UndoState {
   // Whether an async undo/redo operation (e.g. API call) is in flight
   isProcessing: boolean
   setProcessing: (v: boolean) => void
+  // Atomically check and set isProcessing - returns true if acquired, false if already processing
+  tryStartProcessing: () => boolean
 
   // Add a delete action to the undo stack
   pushDeleted: (
@@ -254,6 +256,9 @@ interface UndoState {
   // Update the ticket in a ticketCreate entry (used after redo re-creates with new server ID)
   updateTicketCreateEntry: (oldTicketId: string, newTicket: TicketWithRelations) => void
 
+  // Update attachment IDs in an entry (used after undo/redo re-creates attachments with new server IDs)
+  updateAttachmentIds: (toastId: string | number, idMap: Map<string, string>) => void
+
   // Remove a specific undo entry by toastId
   removeEntry: (toastId: string | number) => void
 
@@ -270,6 +275,12 @@ export const useUndoStore = create<UndoState>((set, get) => ({
   redoStack: [],
   isProcessing: false,
   setProcessing: (v) => set({ isProcessing: v }),
+  tryStartProcessing: () => {
+    const state = get()
+    if (state.isProcessing) return false
+    set({ isProcessing: true })
+    return true
+  },
 
   pushDeleted: (projectId, ticket, columnId, toastId, isRedo = false) => {
     console.debug(`[SessionLog] Action: Delete ${isRedo ? '(Redo)' : ''}`, {
@@ -729,6 +740,30 @@ export const useUndoStore = create<UndoState>((set, get) => ({
       }
     }),
 
+  updateAttachmentIds: (toastId, idMap) =>
+    set((state) => {
+      const updateStack = (stack: UndoEntry[]) =>
+        stack.map((e) => {
+          if (e.toastId !== toastId) return e
+          if (e.action.type !== 'attachmentAdd' && e.action.type !== 'attachmentDelete') return e
+          return {
+            ...e,
+            action: {
+              ...e.action,
+              attachments: e.action.attachments.map((a) => {
+                const newId = idMap.get(a.attachment.id)
+                if (!newId) return a
+                return { ...a, attachment: { ...a.attachment, id: newId } }
+              }),
+            },
+          }
+        })
+      return {
+        undoStack: updateStack(state.undoStack),
+        redoStack: updateStack(state.redoStack),
+      }
+    }),
+
   removeEntry: (toastId) =>
     set((state) => ({
       undoStack: state.undoStack.filter((d) => d.toastId !== toastId),
@@ -740,16 +775,6 @@ export const useUndoStore = create<UndoState>((set, get) => ({
   popDeleted: () => get().popUndo(),
   removeDeleted: (toastId) => get().removeEntry(toastId),
 }))
-
-// Log undo/redo stack changes to the console for debugging
-useUndoStore.subscribe((state, prevState) => {
-  if (state.undoStack !== prevState.undoStack || state.redoStack !== prevState.redoStack) {
-    console.debug('[UndoStore] Stack changed', {
-      undo: state.undoStack,
-      redo: state.redoStack,
-    })
-  }
-})
 
 // Expose the store to the window for debugging
 if (typeof window !== 'undefined') {
