@@ -5,7 +5,12 @@
 
 import { z } from 'zod/v4'
 import { requireAuth } from '@/lib/auth-helpers'
-import { encryptSession, validateSessionCredentials } from '@/lib/chat/encryption'
+import {
+  decryptSession,
+  encryptSession,
+  extractMcpServerNames,
+  validateSessionCredentials,
+} from '@/lib/chat/encryption'
 import { db } from '@/lib/db'
 
 const sessionUploadSchema = z.object({
@@ -14,7 +19,7 @@ const sessionUploadSchema = z.object({
 
 /**
  * GET /api/me/claude-session
- * Check if user has a session configured
+ * Check if user has a session configured and get available MCP servers
  */
 export async function GET() {
   try {
@@ -22,12 +27,40 @@ export async function GET() {
 
     const user = await db.user.findUnique({
       where: { id: currentUser.id },
-      select: { claudeSessionEncrypted: true, chatProvider: true },
+      select: {
+        claudeSessionEncrypted: true,
+        chatProvider: true,
+        enabledMcpServers: true,
+      },
     })
+
+    // Extract available MCP servers from credentials if present
+    let availableMcpServers: string[] = []
+    if (user?.claudeSessionEncrypted) {
+      try {
+        const decrypted = decryptSession(user.claudeSessionEncrypted)
+        const credentials = JSON.parse(decrypted)
+        availableMcpServers = extractMcpServerNames(credentials)
+      } catch {
+        // Ignore decryption errors - credentials may be corrupted
+      }
+    }
+
+    // Parse enabled servers from JSON string
+    let enabledMcpServers: string[] = []
+    if (user?.enabledMcpServers) {
+      try {
+        enabledMcpServers = JSON.parse(user.enabledMcpServers)
+      } catch {
+        // Ignore parse errors
+      }
+    }
 
     return Response.json({
       hasSession: !!user?.claudeSessionEncrypted,
       provider: user?.chatProvider || 'anthropic',
+      availableMcpServers,
+      enabledMcpServers,
     })
   } catch (error) {
     if (error instanceof Error && error.message === 'Not authenticated') {
@@ -90,17 +123,23 @@ export async function POST(request: Request) {
     // Encrypt and store
     const encrypted = encryptSession(result.data.credentials)
 
+    // Extract available MCP servers and enable all by default
+    const availableMcpServers = extractMcpServerNames(credentials as Record<string, unknown>)
+
     await db.user.update({
       where: { id: currentUser.id },
       data: {
         claudeSessionEncrypted: encrypted,
         chatProvider: 'claude-cli',
+        enabledMcpServers: JSON.stringify(availableMcpServers),
       },
     })
 
     return Response.json({
       success: true,
       message: 'Claude session configured successfully',
+      availableMcpServers,
+      enabledMcpServers: availableMcpServers,
     })
   } catch (error) {
     if (error instanceof Error && error.message === 'Not authenticated') {
@@ -125,6 +164,7 @@ export async function DELETE() {
       data: {
         claudeSessionEncrypted: null,
         chatProvider: 'anthropic', // Fall back to API
+        enabledMcpServers: null,
       },
     })
 
@@ -142,42 +182,62 @@ export async function DELETE() {
 
 /**
  * PATCH /api/me/claude-session
- * Update provider preference without changing credentials
+ * Update provider preference or enabled MCP servers
  */
 export async function PATCH(request: Request) {
   try {
     const currentUser = await requireAuth()
 
     const body = await request.json()
-    const provider = body.provider
+    const { provider, enabledMcpServers } = body
 
-    if (provider !== 'anthropic' && provider !== 'claude-cli') {
-      return Response.json({ error: 'Invalid provider' }, { status: 400 })
+    const updateData: { chatProvider?: string; enabledMcpServers?: string } = {}
+
+    // Handle provider update
+    if (provider !== undefined) {
+      if (provider !== 'anthropic' && provider !== 'claude-cli') {
+        return Response.json({ error: 'Invalid provider' }, { status: 400 })
+      }
+
+      // If switching to claude-cli, verify session exists
+      if (provider === 'claude-cli') {
+        const user = await db.user.findUnique({
+          where: { id: currentUser.id },
+          select: { claudeSessionEncrypted: true },
+        })
+
+        if (!user?.claudeSessionEncrypted) {
+          return Response.json(
+            { error: 'Cannot switch to Claude CLI without uploading session credentials first' },
+            { status: 400 },
+          )
+        }
+      }
+
+      updateData.chatProvider = provider
     }
 
-    // If switching to claude-cli, verify session exists
-    if (provider === 'claude-cli') {
-      const user = await db.user.findUnique({
-        where: { id: currentUser.id },
-        select: { claudeSessionEncrypted: true },
-      })
-
-      if (!user?.claudeSessionEncrypted) {
-        return Response.json(
-          { error: 'Cannot switch to Claude CLI without uploading session credentials first' },
-          { status: 400 },
-        )
+    // Handle enabled MCP servers update
+    if (enabledMcpServers !== undefined) {
+      if (!Array.isArray(enabledMcpServers)) {
+        return Response.json({ error: 'enabledMcpServers must be an array' }, { status: 400 })
       }
+      updateData.enabledMcpServers = JSON.stringify(enabledMcpServers)
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return Response.json({ error: 'No valid fields to update' }, { status: 400 })
     }
 
     await db.user.update({
       where: { id: currentUser.id },
-      data: { chatProvider: provider },
+      data: updateData,
     })
 
     return Response.json({
       success: true,
-      provider,
+      ...(provider !== undefined && { provider }),
+      ...(enabledMcpServers !== undefined && { enabledMcpServers }),
     })
   } catch (error) {
     if (error instanceof Error && error.message === 'Not authenticated') {
