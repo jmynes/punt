@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto'
-import { authenticator } from 'otplib'
+import { generateURI, generateSecret as otplibGenerateSecret, verifySync } from 'otplib'
 import QRCode from 'qrcode'
 import { hashPassword, verifyPassword } from '@/lib/password'
 
@@ -57,7 +57,7 @@ export function decryptTotpSecret(encryptedSecret: string): string {
  * Generate a new TOTP secret.
  */
 export function generateTotpSecret(): string {
-  return authenticator.generateSecret()
+  return otplibGenerateSecret()
 }
 
 /**
@@ -65,7 +65,7 @@ export function generateTotpSecret(): string {
  * Compatible with Google Authenticator, Authy, etc.
  */
 export function generateTotpKeyUri(secret: string, username: string, issuer: string): string {
-  return authenticator.keyuri(username, issuer, secret)
+  return generateURI({ secret, issuer, label: `${issuer}:${username}` })
 }
 
 /**
@@ -87,7 +87,8 @@ export async function generateQrCodeDataUrl(keyUri: string): Promise<string> {
  * Uses a window of 1 (allows 30 seconds before/after).
  */
 export function verifyTotpToken(token: string, secret: string): boolean {
-  return authenticator.verify({ token, secret })
+  const result = verifySync({ token, secret })
+  return result.valid
 }
 
 /**
