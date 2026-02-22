@@ -60,7 +60,9 @@ export function LoginForm() {
 
         if (!checkRes.ok) {
           if (checkRes.status === 429) {
-            setError('Too many login attempts. Please try again later.')
+            setError(
+              'Too many login attempts. For security, please wait 15 minutes before trying again.',
+            )
           } else {
             setError('Invalid username or password')
           }
@@ -119,12 +121,14 @@ export function LoginForm() {
 
         if (result?.error) {
           if (result.code === 'RATE_LIMITED' || result.error.includes('RATE_LIMITED')) {
-            setError('Too many verification attempts. Please try again later.')
+            setError(
+              'Too many verification attempts. For security, please wait 15 minutes before trying again.',
+            )
           } else {
             setError(
               useRecoveryCode
-                ? 'Invalid recovery code'
-                : 'Invalid verification code. Please try again.',
+                ? 'Invalid recovery code. Make sure you are using an unused code and entering it correctly (format: XXXXX-XXXXX).'
+                : 'Invalid verification code. Make sure the code matches what your authenticator app shows.',
             )
           }
           setIsLoading(false)
