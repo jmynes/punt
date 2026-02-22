@@ -1908,10 +1908,11 @@ export function KeyboardShortcuts() {
               dismissPrevious: lastAttachmentToastRef.current,
               onUndo: async (id) => {
                 // Redo: re-add the attachments
-                const redoEntry = useUndoStore.getState().redoByToastId(id)
-                if (!redoEntry) return false
+                // Check isProcessing BEFORE calling redoByToastId to avoid corrupting stack state
                 const store = useUndoStore.getState()
                 if (store.isProcessing) return false
+                const redoEntry = store.redoByToastId(id)
+                if (!redoEntry) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -1962,10 +1963,11 @@ export function KeyboardShortcuts() {
               },
               onRedo: async (id) => {
                 // Undo again: delete the attachments
-                const undoEntry2 = useUndoStore.getState().undoByToastId(id)
-                if (!undoEntry2) return false
+                // Check isProcessing BEFORE calling undoByToastId to avoid corrupting stack state
                 const store = useUndoStore.getState()
                 if (store.isProcessing) return false
+                const undoEntry2 = store.undoByToastId(id)
+                if (!undoEntry2) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -2073,10 +2075,11 @@ export function KeyboardShortcuts() {
               dismissPrevious: lastAttachmentToastRef.current,
               onUndo: async (id) => {
                 // Redo: re-delete the attachments
-                const redoEntry = useUndoStore.getState().redoByToastId(id)
-                if (!redoEntry) return false
+                // Check isProcessing BEFORE calling redoByToastId to avoid corrupting stack state
                 const store = useUndoStore.getState()
                 if (store.isProcessing) return false
+                const redoEntry = store.redoByToastId(id)
+                if (!redoEntry) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -2103,10 +2106,11 @@ export function KeyboardShortcuts() {
               },
               onRedo: async (id) => {
                 // Undo again: re-add the attachments
-                const undoEntry2 = useUndoStore.getState().undoByToastId(id)
-                if (!undoEntry2) return false
+                // Check isProcessing BEFORE calling undoByToastId to avoid corrupting stack state
                 const store = useUndoStore.getState()
                 if (store.isProcessing) return false
+                const undoEntry2 = store.undoByToastId(id)
+                if (!undoEntry2) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -3088,10 +3092,11 @@ export function KeyboardShortcuts() {
               undoLabel: 'Undo',
               dismissPrevious: lastAttachmentToastRef.current,
               onUndo: async (id) => {
-                const undoEntry = useUndoStore.getState().undoByToastId(id)
-                if (!undoEntry) return false
+                // Check isProcessing BEFORE calling undoByToastId to avoid corrupting stack state
                 const store = useUndoStore.getState()
                 if (store.isProcessing) return false
+                const undoEntry = store.undoByToastId(id)
+                if (!undoEntry) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -3124,10 +3129,11 @@ export function KeyboardShortcuts() {
                 }
               },
               onRedo: async (id) => {
-                const redoEntry2 = useUndoStore.getState().redoByToastId(id)
-                if (!redoEntry2) return false
+                // Check isProcessing BEFORE calling redoByToastId to avoid corrupting stack state
                 const store = useUndoStore.getState()
                 if (store.isProcessing) return false
+                const redoEntry2 = store.redoByToastId(id)
+                if (!redoEntry2) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -3298,10 +3304,10 @@ export function KeyboardShortcuts() {
               undoLabel: 'Undo',
               dismissPrevious: lastAttachmentToastRef.current,
               onUndo: async (id) => {
-                const undoEntry = useUndoStore.getState().undoByToastId(id)
-                if (!undoEntry) return false
                 const store = useUndoStore.getState()
                 if (store.isProcessing) return false
+                const undoEntry = store.undoByToastId(id)
+                if (!undoEntry) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
@@ -3358,10 +3364,10 @@ export function KeyboardShortcuts() {
                 }
               },
               onRedo: async (id) => {
-                const redoEntry2 = useUndoStore.getState().redoByToastId(id)
-                if (!redoEntry2) return false
                 const store = useUndoStore.getState()
                 if (store.isProcessing) return false
+                const redoEntry2 = store.redoByToastId(id)
+                if (!redoEntry2) return false
                 store.setProcessing(true)
                 try {
                   const tabId = getTabId()
