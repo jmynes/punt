@@ -325,6 +325,20 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
     updateAutocomplete()
   }, [value, updateAutocomplete])
 
+  // Check if cursor position is inside an IN list (between "IN (" and ")")
+  const isInsideInList = useCallback((text: string, position: number): boolean => {
+    const beforeCursor = text.slice(0, position).toUpperCase()
+    // Find the last occurrence of "IN (" or "NOT IN ("
+    const lastInParen = Math.max(beforeCursor.lastIndexOf('IN ('), beforeCursor.lastIndexOf('IN('))
+    if (lastInParen === -1) return false
+
+    // Check if there's a closing paren after the "IN ("
+    const afterInParen = text.slice(lastInParen)
+    const closingParen = afterInParen.indexOf(')')
+    // If no closing paren, or closing paren is after the cursor, we're inside the list
+    return closingParen === -1 || lastInParen + closingParen > position
+  }, [])
+
   // Apply autocomplete suggestion
   const applySuggestion = useCallback(
     (item: AutocompleteItem) => {
@@ -339,15 +353,21 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
         (item.value.includes(' ') || item.value.includes("'"))
       const insertValue = needsQuotes ? `"${item.value}"` : item.value
 
+      // Check if we're inside an IN list
+      const inInList = isInsideInList(value, autocompleteCtx.position)
+
       // Add appropriate suffix based on context type:
       // - Field names get " " (operator autocomplete will appear next)
       // - Operators: IN/NOT IN get " (" to start list, others get " "
-      // - Values and keywords get " "
+      // - Values inside IN list get ", " to prompt for next value
+      // - Other values and keywords get " "
       let suffix = ' '
       if (autocompleteCtx.type === 'operator') {
         if (item.value === 'IN' || item.value === 'NOT IN') {
           suffix = ' ('
         }
+      } else if (autocompleteCtx.type === 'value' && inInList) {
+        suffix = ', '
       }
 
       const newValue = before + insertValue + suffix + after
@@ -356,10 +376,12 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
       // Keep autocomplete open for:
       // - Field selections (operators come next)
       // - Operator selections (values come next), except IS EMPTY/IS NOT EMPTY which are complete
+      // - Value selections inside IN lists (more values can be added)
       const isCompleteOperator = item.value === 'IS EMPTY' || item.value === 'IS NOT EMPTY'
       const keepOpen =
         autocompleteCtx.type === 'field' ||
-        (autocompleteCtx.type === 'operator' && !isCompleteOperator)
+        (autocompleteCtx.type === 'operator' && !isCompleteOperator) ||
+        (autocompleteCtx.type === 'value' && inInList)
 
       if (!keepOpen) {
         setShowAutocomplete(false)
@@ -380,7 +402,7 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
         }
       })
     },
-    [autocompleteCtx, value, onChange],
+    [autocompleteCtx, value, onChange, isInsideInList],
   )
 
   // Handle keyboard navigation in autocomplete
