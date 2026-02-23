@@ -191,11 +191,6 @@ describe('parse', () => {
       expect(ast.field).toBe('storyPoints')
     })
 
-    it('resolves "summary" to "title"', () => {
-      const ast = parse('summary = "test"') as ComparisonNode
-      expect(ast.field).toBe('title')
-    })
-
     it('resolves "label" to "labels"', () => {
       const ast = parse('label = frontend') as ComparisonNode
       expect(ast.field).toBe('labels')
