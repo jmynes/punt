@@ -229,6 +229,7 @@ ${codes.join('\n')}
 
       setRegeneratedCodes(data.recoveryCodes)
       setRegeneratedCodesAcknowledged(false)
+      showToast.success('Recovery codes regenerated successfully')
     } catch (error) {
       showToast.error(error instanceof Error ? error.message : 'Failed to regenerate codes')
     } finally {
