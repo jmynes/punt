@@ -325,7 +325,13 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
 
       const newValue = before + insertValue + suffix + after
       onChange(newValue)
-      setShowAutocomplete(false)
+
+      // Keep autocomplete open for field selections (operators come next)
+      // Close for other types (value, keyword, operator)
+      const keepOpen = autocompleteCtx.type === 'field'
+      if (!keepOpen) {
+        setShowAutocomplete(false)
+      }
 
       // Focus input and place cursor after the inserted text
       requestAnimationFrame(() => {
@@ -333,6 +339,12 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
           const newPos = before.length + insertValue.length + suffix.length
           inputRef.current.focus()
           inputRef.current.setSelectionRange(newPos, newPos)
+          // Trigger autocomplete update for the new position
+          if (keepOpen) {
+            const ctx = getAutocompleteContext(newValue, newPos)
+            setAutocompleteCtx(ctx)
+            setSelectedIndex(0)
+          }
         }
       })
     },
