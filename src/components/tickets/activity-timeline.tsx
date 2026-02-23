@@ -472,7 +472,9 @@ function ColumnBadge({ column }: { column: ColumnMeta | null }) {
 function UserBadge({ user }: { user: UserMeta | null }) {
   if (!user) return <span className="text-zinc-500">none</span>
 
-  const bgColor = user.avatarColor || getAvatarColor(user.id || user.username)
+  // Use avatarColor if available, otherwise fall back to id-based color generation
+  // This matches how avatars are rendered throughout the app
+  const bgColor = user.avatarColor || getAvatarColor(user.id || user.username || user.name)
 
   return (
     <span className="inline-flex items-center gap-1 font-medium text-zinc-200 bg-zinc-800/50 px-1.5 py-0.5 rounded text-xs">
@@ -482,7 +484,7 @@ function UserBadge({ user }: { user: UserMeta | null }) {
           className="text-[8px] font-medium text-white"
           style={{ backgroundColor: bgColor }}
         >
-          {getInitials(user.name).charAt(0)}
+          {getInitials(user.name)}
         </AvatarFallback>
       </Avatar>
       {user.name}
