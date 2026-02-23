@@ -10,6 +10,7 @@ import { ClaudeChatTab } from '@/components/profile/claude-chat-tab'
 import { MCPTab } from '@/components/profile/mcp-tab'
 import { ProfileTab } from '@/components/profile/profile-tab'
 import { SecurityTab } from '@/components/profile/security-tab'
+import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { DEMO_USER, isDemoMode } from '@/lib/demo'
 import { cn } from '@/lib/utils'
 
@@ -38,6 +39,12 @@ export function ProfileContent() {
   // Tab management
   const tabParam = searchParams.get('tab')
   const activeTab: ProfileTabType = isValidTab(tabParam) ? tabParam : 'profile'
+
+  // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
+  useTabCycleShortcut({
+    tabs: VALID_TABS,
+    queryBasePath: '/profile',
+  })
 
   // In demo mode, we skip useSession entirely
   const {
