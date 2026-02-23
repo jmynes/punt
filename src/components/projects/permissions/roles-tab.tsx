@@ -84,6 +84,7 @@ import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission, useIsSystemAdmin, useMyRealPermissions } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { LABEL_COLORS } from '@/lib/constants'
+import { isEditableTarget } from '@/lib/keyboard-utils'
 import { PERMISSIONS } from '@/lib/permissions'
 import { type DefaultRoleName, ROLE_POSITIONS, ROLE_PRESETS } from '@/lib/permissions/presets'
 import { showToast } from '@/lib/toast'
@@ -756,9 +757,8 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle shortcuts when typing in inputs or when a modal/drawer is open
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      // Don't handle shortcuts when typing in inputs
+      if (isEditableTarget(e)) {
         return
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
