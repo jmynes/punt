@@ -11,9 +11,11 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { Plus, Target } from 'lucide-react'
+import { Code2, Plus, Target } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { QueryInput } from '@/components/backlog/query-input'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   useDeleteSprint,
   useProjectSprints,
@@ -21,6 +23,8 @@ import {
 } from '@/hooks/queries/use-sprints'
 import { updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { filterTickets } from '@/lib/filter-tickets'
+import { evaluateQuery } from '@/lib/query-evaluator'
+import { parse, QueryParseError } from '@/lib/query-parser'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
@@ -75,6 +79,10 @@ export function SprintBacklogView({
     filterByAttachments,
     searchQuery,
     showSubtasks,
+    queryMode,
+    setQueryMode,
+    queryText,
+    setQueryText,
   } = useBacklogStore()
   const visibleColumns = backlogColumns.filter((c) => c.visible)
   const persistTableSort = useSettingsStore((s) => s.persistTableSort)
@@ -91,8 +99,60 @@ export function SprintBacklogView({
     }
   }, [persistTableSort, clearAllSprintSorts])
 
-  // Apply filters from the shared backlog store
+  // Debounce query text to prevent per-keystroke evaluation
+  const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQueryText(queryText), 150)
+    return () => clearTimeout(timer)
+  }, [queryText])
+
+  // Extract dynamic values for query autocomplete
+  const dynamicValues = useMemo(() => {
+    const statusNames = statusColumns.map((c) => c.name)
+    const userSet = new Set<string>()
+    const labelSet = new Set<string>()
+
+    for (const ticket of tickets) {
+      if (ticket.assignee?.name) userSet.add(ticket.assignee.name)
+      if (ticket.creator?.name) userSet.add(ticket.creator.name)
+      for (const label of ticket.labels) {
+        labelSet.add(label.name)
+      }
+    }
+
+    const sprintNames = sprints?.map((s) => s.name).sort() ?? []
+
+    return {
+      statusNames,
+      assigneeNames: Array.from(userSet).sort(),
+      sprintNames,
+      labelNames: Array.from(labelSet).sort(),
+    }
+  }, [tickets, statusColumns, sprints])
+
+  // Query parse error for tooltip
+  const [queryError, setQueryError] = useState<string | null>(null)
+
+  // Apply filters from the shared backlog store (or PQL query)
   const filteredTickets = useMemo(() => {
+    // PQL query mode
+    if (queryMode && debouncedQueryText.trim()) {
+      try {
+        const ast = parse(debouncedQueryText)
+        setQueryError(null)
+        return evaluateQuery(ast, tickets, statusColumns, projectKey)
+      } catch (err) {
+        if (err instanceof QueryParseError) {
+          setQueryError(err.message)
+        } else {
+          setQueryError('Invalid query')
+        }
+        return tickets
+      }
+    }
+
+    // Standard filter mode
+    setQueryError(null)
     return filterTickets(tickets, {
       searchQuery,
       projectKey,
@@ -109,9 +169,12 @@ export function SprintBacklogView({
       showSubtasks,
     })
   }, [
+    queryMode,
+    debouncedQueryText,
     tickets,
-    searchQuery,
+    statusColumns,
     projectKey,
+    searchQuery,
     filterByType,
     filterByPriority,
     filterByStatus,
@@ -659,26 +722,63 @@ export function SprintBacklogView({
       <div className={cn('space-y-3', className)}>
         {/* Header */}
         {showHeader && (
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/20">
-                <Target className="h-5 w-5 text-blue-400" />
+          <div className="flex flex-col gap-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/20">
+                  <Target className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-zinc-100">Sprint Planning</h2>
+                  <p className="text-sm text-zinc-500">
+                    Drag tickets between sprints to plan your work
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-zinc-100">Sprint Planning</h2>
-                <p className="text-sm text-zinc-500">
-                  Drag tickets between sprints to plan your work
-                </p>
+              <div className="flex items-center gap-2">
+                {/* Query mode toggle */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setQueryMode(!queryMode)}
+                      className={cn(
+                        'h-8 w-8',
+                        queryMode
+                          ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                          : 'text-zinc-400 hover:text-zinc-300',
+                      )}
+                    >
+                      <Code2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {queryMode ? 'Switch to standard filters' : 'Switch to PQL query mode'}
+                  </TooltipContent>
+                </Tooltip>
+
+                {activeSprints.length === 0 && (
+                  <Button
+                    onClick={() => setSprintCreateOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Sprint
+                  </Button>
+                )}
               </div>
             </div>
-            {activeSprints.length === 0 && (
-              <Button
-                onClick={() => setSprintCreateOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Sprint
-              </Button>
+
+            {/* PQL Query Input */}
+            {queryMode && (
+              <QueryInput
+                value={queryText}
+                onChange={setQueryText}
+                onClear={() => setQueryText('')}
+                error={queryError}
+                dynamicValues={dynamicValues}
+              />
             )}
           </div>
         )}
