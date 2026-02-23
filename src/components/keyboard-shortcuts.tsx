@@ -158,7 +158,26 @@ export function KeyboardShortcuts() {
       }
 
       // Escape: clear selection or close delete dialog
+      // Precedence: modal/drawer close (handled by Radix) > delete dialog > ticket deselection > role preview exit
       if (e.key === 'Escape') {
+        // Skip if already handled by a Radix dialog/drawer
+        if (e.defaultPrevented) return
+
+        // Skip if a modal or drawer is open (they handle their own Escape)
+        const uiState = useUIStore.getState()
+        if (
+          uiState.activeTicketId ||
+          uiState.createTicketOpen ||
+          uiState.createProjectOpen ||
+          uiState.editProjectOpen ||
+          uiState.sprintCreateOpen ||
+          uiState.sprintEditOpen ||
+          uiState.sprintCompleteOpen ||
+          uiState.sprintStartOpen
+        ) {
+          return
+        }
+
         if (showDeleteConfirm) {
           setShowDeleteConfirm(false)
           return
