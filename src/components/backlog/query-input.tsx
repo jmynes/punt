@@ -293,7 +293,10 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
       const needsQuotes = item.value.includes(' ') || item.value.includes("'")
       const insertValue = needsQuotes ? `"${item.value}"` : item.value
 
-      const suffix = ' '
+      // Add appropriate suffix based on context type:
+      // - Field names get " = " to start a comparison
+      // - Values and keywords just get a space
+      const suffix = autocompleteCtx.type === 'field' ? ' = ' : ' '
 
       const newValue = before + insertValue + suffix + after
       onChange(newValue)
