@@ -22,6 +22,7 @@ import { RolePermissionsForm } from '@/components/admin/role-permissions-form'
 import { SettingsForm } from '@/components/admin/settings-form'
 import { SprintSettingsForm } from '@/components/admin/sprint-settings-form'
 import { PageHeader } from '@/components/common'
+import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { cn } from '@/lib/utils'
 
 type SettingsTab =
@@ -53,6 +54,12 @@ export default function AdminSettingsPage() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
   const activeTab: SettingsTab = isValidTab(tabParam) ? tabParam : 'email'
+
+  // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
+  useTabCycleShortcut({
+    tabs: VALID_TABS,
+    queryBasePath: '/admin/settings',
+  })
 
   return (
     <div className="h-full flex flex-col overflow-hidden">

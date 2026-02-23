@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import { useBurndownData } from '@/hooks/queries/use-burndown'
 import { useActiveSprint, useProjectSprints } from '@/hooks/queries/use-sprints'
+import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import type { BurndownUnit } from '@/lib/data-provider/types'
 import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -26,6 +27,16 @@ export default function ChartsPage() {
   const project = getProjectByKey(projectKey)
   const projectId = project?.id || projectKey
   const { setActiveProjectId } = useUIStore()
+
+  // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
+  useTabCycleShortcut({
+    tabs: [
+      `/projects/${projectKey}/board`,
+      `/projects/${projectKey}/backlog`,
+      `/projects/${projectKey}/sprints`,
+      `/projects/${projectKey}/burndown`,
+    ],
+  })
 
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null)
   const [unit, setUnit] = useState<BurndownUnit>('points')
