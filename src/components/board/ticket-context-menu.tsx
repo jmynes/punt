@@ -43,9 +43,14 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { sprintKeys, useProjectSprints } from '@/hooks/queries/use-sprints'
-import { ticketKeys as ticketQueryKeys, updateTicketAPI } from '@/hooks/queries/use-tickets'
+import {
+  ticketKeys as ticketQueryKeys,
+  updateTicketAPI,
+  updateTicketWithActivity,
+} from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { pasteTickets } from '@/lib/actions'
+import { extractActivityMeta } from '@/lib/actions/activity-utils'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
@@ -437,16 +442,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       updates.push({ ticketId: id, before: current, after })
       updateTicket(projectId, id, { priority })
     }
-    if (updates.length === 0) return // Persist to database
-    ;(async () => {
-      try {
-        for (const update of updates) {
-          await updateTicketAPI(projectId, update.ticketId, { priority })
-        }
-      } catch (err) {
-        console.error('Failed to persist priority update:', err)
-      }
-    })()
+    if (updates.length === 0) return
 
     const ticketKeys = formatTicketIds(
       columns,
@@ -462,6 +458,31 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     )
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushUpdate(projectId, updates, toastId)
+
+    // Persist to database and capture activity metadata for undo
+    ;(async () => {
+      try {
+        const allActivityIds: string[] = []
+        for (const update of updates) {
+          const result = await updateTicketWithActivity(projectId, update.ticketId, { priority })
+          if (result.activity) {
+            const meta = extractActivityMeta({ _activity: result.activity }, update.ticketId)
+            if (meta?.activityIds) {
+              allActivityIds.push(...meta.activityIds)
+            }
+          }
+        }
+        // Update undo entry with collected activity IDs
+        if (allActivityIds.length > 0) {
+          undoState.updateActivityMeta(toastId, {
+            activityIds: allActivityIds,
+            ticketId: updates.length === 1 ? updates[0].ticketId : undefined,
+          })
+        }
+      } catch (err) {
+        console.error('Failed to persist priority update:', err)
+      }
+    })()
 
     setOpen(false)
     setSubmenu(null)
@@ -498,16 +519,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         ...(needsMove && doneCol ? { columnId: doneCol.id } : {}),
       })
     }
-    if (updates.length === 0) return // Persist to database (API handles auto-coupling)
-    ;(async () => {
-      try {
-        for (const update of updates) {
-          await updateTicketAPI(projectId, update.ticketId, { resolution })
-        }
-      } catch (err) {
-        console.error('Failed to persist resolution update:', err)
-      }
-    })()
+    if (updates.length === 0) return
 
     const ticketKeys = formatTicketIds(
       columns,
@@ -529,6 +541,31 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     })
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushUpdate(projectId, updates, toastId)
+
+    // Persist to database and capture activity metadata for undo
+    ;(async () => {
+      try {
+        const allActivityIds: string[] = []
+        for (const update of updates) {
+          const result = await updateTicketWithActivity(projectId, update.ticketId, { resolution })
+          if (result.activity) {
+            const meta = extractActivityMeta({ _activity: result.activity }, update.ticketId)
+            if (meta?.activityIds) {
+              allActivityIds.push(...meta.activityIds)
+            }
+          }
+        }
+        // Update undo entry with collected activity IDs
+        if (allActivityIds.length > 0) {
+          undoState.updateActivityMeta(toastId, {
+            activityIds: allActivityIds,
+            ticketId: updates.length === 1 ? updates[0].ticketId : undefined,
+          })
+        }
+      } catch (err) {
+        console.error('Failed to persist resolution update:', err)
+      }
+    })()
 
     setOpen(false)
     setSubmenu(null)
@@ -554,16 +591,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       updates.push({ ticketId: id, before: current, after })
       updateTicket(projectId, id, { assignee: user ?? null, assigneeId: user?.id ?? null })
     }
-    if (updates.length === 0) return // Persist to database
-    ;(async () => {
-      try {
-        for (const update of updates) {
-          await updateTicketAPI(projectId, update.ticketId, { assigneeId: userId })
-        }
-      } catch (err) {
-        console.error('Failed to persist assignee update:', err)
-      }
-    })()
+    if (updates.length === 0) return
 
     const ticketKeys = formatTicketIds(
       columns,
@@ -585,6 +613,32 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     })
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushUpdate(projectId, updates, toastId)
+
+    // Persist to database and capture activity metadata for undo
+    ;(async () => {
+      try {
+        const allActivityIds: string[] = []
+        for (const update of updates) {
+          const result = await updateTicketWithActivity(projectId, update.ticketId, {
+            assigneeId: userId,
+          })
+          if (result.activity) {
+            const meta = extractActivityMeta({ _activity: result.activity }, update.ticketId)
+            if (meta?.activityIds) {
+              allActivityIds.push(...meta.activityIds)
+            }
+          }
+        }
+        if (allActivityIds.length > 0) {
+          undoState.updateActivityMeta(toastId, {
+            activityIds: allActivityIds,
+            ticketId: updates.length === 1 ? updates[0].ticketId : undefined,
+          })
+        }
+      } catch (err) {
+        console.error('Failed to persist assignee update:', err)
+      }
+    })()
 
     setOpen(false)
     setSubmenu(null)
@@ -608,16 +662,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       updates.push({ ticketId: id, before: current, after })
       updateTicket(projectId, id, { storyPoints: points })
     }
-    if (updates.length === 0) return // Persist to database
-    ;(async () => {
-      try {
-        for (const update of updates) {
-          await updateTicketAPI(projectId, update.ticketId, { storyPoints: points })
-        }
-      } catch (err) {
-        console.error('Failed to persist points update:', err)
-      }
-    })()
+    if (updates.length === 0) return
 
     const ticketKeys = formatTicketIds(
       columns,
@@ -639,6 +684,32 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     })
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushUpdate(projectId, updates, toastId)
+
+    // Persist to database and capture activity metadata for undo
+    ;(async () => {
+      try {
+        const allActivityIds: string[] = []
+        for (const update of updates) {
+          const result = await updateTicketWithActivity(projectId, update.ticketId, {
+            storyPoints: points,
+          })
+          if (result.activity) {
+            const meta = extractActivityMeta({ _activity: result.activity }, update.ticketId)
+            if (meta?.activityIds) {
+              allActivityIds.push(...meta.activityIds)
+            }
+          }
+        }
+        if (allActivityIds.length > 0) {
+          undoState.updateActivityMeta(toastId, {
+            activityIds: allActivityIds,
+            ticketId: updates.length === 1 ? updates[0].ticketId : undefined,
+          })
+        }
+      } catch (err) {
+        console.error('Failed to persist points update:', err)
+      }
+    })()
 
     setOpen(false)
     setSubmenu(null)
@@ -950,6 +1021,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     await deleteTickets({
       projectId,
       tickets,
+      queryClient,
       onComplete: () => {
         setPendingDelete([])
         setShowDeleteConfirm(false)

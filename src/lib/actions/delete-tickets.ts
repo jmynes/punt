@@ -3,6 +3,8 @@
  * This module consolidates the delete logic used by context menu and keyboard shortcuts.
  */
 
+import type { QueryClient } from '@tanstack/react-query'
+import { activityKeys } from '@/hooks/queries/use-activity'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -13,6 +15,7 @@ import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, LinkType } from '@/types'
 import type {
   ActionOptions,
+  ActivityForRestore,
   CommentForRestore,
   DeleteResult,
   LinkForRestore,
@@ -26,6 +29,8 @@ export interface DeleteTicketsParams {
   projectId: string
   /** Tickets to delete with their column IDs */
   tickets: TicketWithColumn[]
+  /** Optional: query client for cache invalidation */
+  queryClient?: QueryClient
   /** Optional: action options */
   options?: ActionOptions
   /** Optional: callback when delete completes (for UI cleanup like closing dialogs) */
@@ -90,7 +95,61 @@ async function fetchLinksForTicket(projectId: string, ticketId: string): Promise
 }
 
 /**
- * Fetch restore data (comments and links) for tickets before deletion.
+ * Fetch activities for a ticket to preserve them for undo.
+ * This preserves the full audit trail when a ticket is deleted and restored.
+ */
+async function fetchActivitiesForTicket(
+  projectId: string,
+  ticketId: string,
+): Promise<ActivityForRestore[]> {
+  try {
+    // Fetch all activities (no pagination limit for restore)
+    const res = await fetch(
+      `/api/projects/${projectId}/tickets/${ticketId}/activity?limit=1000&type=activity`,
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+
+    // Process both single activities and grouped activities
+    const activities: ActivityForRestore[] = []
+    for (const entry of data.entries) {
+      if (entry.type === 'activity') {
+        activities.push({
+          action: entry.action,
+          field: entry.field ?? null,
+          oldValue:
+            typeof entry.oldValue === 'object' ? (entry.oldValue?.id ?? null) : entry.oldValue,
+          newValue:
+            typeof entry.newValue === 'object' ? (entry.newValue?.id ?? null) : entry.newValue,
+          groupId: null,
+          userId: entry.user?.id ?? null,
+          createdAt: entry.createdAt,
+        })
+      } else if (entry.type === 'activity_group') {
+        // For grouped activities, expand each change
+        for (const change of entry.changes) {
+          activities.push({
+            action: change.action,
+            field: change.field ?? null,
+            oldValue:
+              typeof change.oldValue === 'object' ? (change.oldValue?.id ?? null) : change.oldValue,
+            newValue:
+              typeof change.newValue === 'object' ? (change.newValue?.id ?? null) : change.newValue,
+            groupId: entry.id, // The group ID
+            userId: entry.user?.id ?? null,
+            createdAt: entry.createdAt,
+          })
+        }
+      }
+    }
+    return activities
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Fetch restore data (comments, links, and activities) for tickets before deletion.
  */
 async function fetchRestoreData(
   projectId: string,
@@ -98,14 +157,15 @@ async function fetchRestoreData(
 ): Promise<Map<string, TicketRestoreData>> {
   const restoreDataMap = new Map<string, TicketRestoreData>()
 
-  // Fetch comments and links in parallel for all tickets
+  // Fetch comments, links, and activities in parallel for all tickets
   await Promise.all(
     tickets.map(async ({ ticket }) => {
-      const [comments, links] = await Promise.all([
+      const [comments, links, activities] = await Promise.all([
         fetchCommentsForTicket(projectId, ticket.id),
         fetchLinksForTicket(projectId, ticket.id),
+        fetchActivitiesForTicket(projectId, ticket.id),
       ])
-      restoreDataMap.set(ticket.id, { comments, links })
+      restoreDataMap.set(ticket.id, { comments, links, activities })
     }),
   )
 
@@ -145,19 +205,24 @@ export async function restoreAttachments(
 }
 
 /**
- * Restore comments and links for a ticket after it's been recreated.
+ * Restore comments, links, and activities for a ticket after it's been recreated.
  * Exported for use in keyboard shortcut undo handler.
+ *
+ * @param activityIdsToDelete - Activity IDs created by ticket recreation that should be
+ *                              deleted before restoring original activities (e.g., the
+ *                              auto-generated "created" entry)
  */
 export async function restoreCommentsAndLinks(
   projectId: string,
   serverTicketId: string,
   restoreData: TicketRestoreData | undefined,
+  activityIdsToDelete?: string[],
 ): Promise<void> {
   if (!restoreData) {
     return
   }
 
-  const { comments, links } = restoreData
+  const { comments, links, activities } = restoreData
 
   // Restore comments with original authors
   if (comments.length > 0) {
@@ -184,6 +249,46 @@ export async function restoreCommentsAndLinks(
       console.error('Failed to restore links:', err)
     }
   }
+
+  // Delete auto-generated activities from ticket recreation (e.g., the new "created" entry)
+  // before restoring original activities with their correct timestamps
+  if (activityIdsToDelete && activityIdsToDelete.length > 0) {
+    try {
+      const deleteRes = await fetch(
+        `/api/projects/${projectId}/tickets/${serverTicketId}/activity/batch-delete`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ activityIds: activityIdsToDelete }),
+        },
+      )
+      if (!deleteRes.ok) {
+        console.error('Failed to delete auto-generated activities:', await deleteRes.text())
+      }
+    } catch (err) {
+      console.error('Failed to delete auto-generated activities:', err)
+    }
+  }
+
+  // Restore all activities (audit trail) including the original "created" entry
+  const activitiesToRestore = activities ?? []
+  if (activitiesToRestore.length > 0) {
+    try {
+      const restoreRes = await fetch(
+        `/api/projects/${projectId}/tickets/${serverTicketId}/activity/restore`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ activities: activitiesToRestore }),
+        },
+      )
+      if (!restoreRes.ok) {
+        console.error('Failed to restore activities:', await restoreRes.text())
+      }
+    } catch (err) {
+      console.error('Failed to restore activities:', err)
+    }
+  }
 }
 
 /**
@@ -198,7 +303,7 @@ export async function restoreCommentsAndLinks(
  * - Preserves comments and links for restoration on undo
  */
 export async function deleteTickets(params: DeleteTicketsParams): Promise<DeleteResult> {
-  const { projectId, tickets, options = {}, onComplete } = params
+  const { projectId, tickets, queryClient, options = {}, onComplete } = params
   const { showUndoButtons = true, toastDuration = 5000 } = options
 
   if (tickets.length === 0) {
@@ -279,9 +384,12 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
                 columnId,
                 storyPoints: ticket.storyPoints,
                 estimate: ticket.estimate,
+                resolution: ticket.resolution,
+                resolvedAt: ticket.resolvedAt,
                 startDate: ticket.startDate,
                 dueDate: ticket.dueDate,
                 assigneeId: ticket.assigneeId,
+                reporterId: ticket.creatorId,
                 sprintId: ticket.sprintId,
                 labelIds: ticket.labels?.map((l) => l.id) ?? [],
                 watcherIds: ticket.watchers?.map((w) => w.id) ?? [],
@@ -301,9 +409,25 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
               currentBoardStore.removeTicket(projectId, ticket.id)
               currentBoardStore.addTicket(projectId, columnId, serverTicket)
 
-              // Restore attachments, comments, and links
+              // Get activity IDs from creation response to delete before restoring originals
+              // Get activity IDs from creation response to delete before restoring originals
+              const activityIdsToDelete = serverTicket._activity?.activityIds ?? []
+
+              // Restore attachments, comments, links, and activities
               await restoreAttachments(projectId, serverTicket.id, ticket.attachments)
-              await restoreCommentsAndLinks(projectId, serverTicket.id, restoreData)
+              await restoreCommentsAndLinks(
+                projectId,
+                serverTicket.id,
+                restoreData,
+                activityIdsToDelete,
+              )
+
+              // Invalidate activity cache to show restored activities
+              if (queryClient) {
+                queryClient.invalidateQueries({
+                  queryKey: activityKeys.forTicket(projectId, serverTicket.id),
+                })
+              }
             }),
           )
         } catch (err) {

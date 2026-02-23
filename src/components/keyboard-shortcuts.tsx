@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { activityKeys } from '@/hooks/queries/use-activity'
 import { attachmentKeys } from '@/hooks/queries/use-attachments'
 import {
   batchCreateTicketsAPI,
@@ -32,6 +33,7 @@ import {
 } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
 import { pasteTickets } from '@/lib/actions'
+import { deleteActivityEntries } from '@/lib/actions/activity-utils'
 import {
   deleteTickets,
   restoreAttachments,
@@ -123,6 +125,7 @@ export function KeyboardShortcuts() {
     }))
 
     await deleteTickets({
+      queryClient,
       projectId,
       tickets,
       onComplete: () => {
@@ -753,6 +756,8 @@ export function KeyboardShortcuts() {
                   priority: ticket.priority,
                   storyPoints: ticket.storyPoints,
                   estimate: ticket.estimate,
+                  resolution: ticket.resolution,
+                  resolvedAt: ticket.resolvedAt,
                   startDate: ticket.startDate,
                   dueDate: ticket.dueDate,
                   environment: ticket.environment,
@@ -775,9 +780,21 @@ export function KeyboardShortcuts() {
                 if (serverTicket) {
                   boardState.removeTicket(entry.projectId, tempTicket.id)
                   boardState.addTicket(entry.projectId, columnId, serverTicket)
-                  // Restore attachments, comments, and links
+                  // Extract activity IDs from server response to delete before restoring originals
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const activityIdsToDelete = (serverTicket as any)._activity?.activityIds ?? []
+                  // Restore attachments, comments, links, and activities
                   await restoreAttachments(entry.projectId, serverTicket.id, tempTicket.attachments)
-                  await restoreCommentsAndLinks(entry.projectId, serverTicket.id, restoreData)
+                  await restoreCommentsAndLinks(
+                    entry.projectId,
+                    serverTicket.id,
+                    restoreData,
+                    activityIdsToDelete,
+                  )
+                  // Invalidate activity cache to show restored activities
+                  queryClient.invalidateQueries({
+                    queryKey: activityKeys.forTicket(entry.projectId, serverTicket.id),
+                  })
                 }
               }
             } catch (err) {
@@ -852,6 +869,8 @@ export function KeyboardShortcuts() {
                       priority: ticket.priority,
                       storyPoints: ticket.storyPoints,
                       estimate: ticket.estimate,
+                      resolution: ticket.resolution,
+                      resolvedAt: ticket.resolvedAt,
                       startDate: ticket.startDate,
                       dueDate: ticket.dueDate,
                       environment: ticket.environment,
@@ -875,7 +894,10 @@ export function KeyboardShortcuts() {
                     if (serverTicket) {
                       boardState.removeTicket(undoEntry.projectId, tempTicket.id)
                       boardState.addTicket(undoEntry.projectId, columnId, serverTicket)
-                      // Restore attachments, comments, and links
+                      // Extract activity IDs from server response to delete before restoring originals
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      const activityIdsToDelete = (serverTicket as any)._activity?.activityIds ?? []
+                      // Restore attachments, comments, links, and activities
                       await restoreAttachments(
                         undoEntry.projectId,
                         serverTicket.id,
@@ -885,7 +907,12 @@ export function KeyboardShortcuts() {
                         undoEntry.projectId,
                         serverTicket.id,
                         restoreData,
+                        activityIdsToDelete,
                       )
+                      // Invalidate activity cache to show restored activities
+                      queryClient.invalidateQueries({
+                        queryKey: activityKeys.forTicket(undoEntry.projectId, serverTicket.id),
+                      })
                     }
                   }
                 } catch (err) {
@@ -924,6 +951,10 @@ export function KeyboardShortcuts() {
           // Persist undo to database
           ;(async () => {
             try {
+              // Delete activity entries from the original action
+              if (entry.activityMeta) {
+                await deleteActivityEntries(entry.projectId, entry.activityMeta)
+              }
               for (const item of action.tickets) {
                 await updateTicketAPI(entry.projectId, item.ticketId, item.before)
               }
@@ -1041,6 +1072,10 @@ export function KeyboardShortcuts() {
           // Persist move undo to database
           ;(async () => {
             try {
+              // Delete activity entries from the original action
+              if (entry.activityMeta) {
+                await deleteActivityEntries(entry.projectId, entry.activityMeta)
+              }
               // Update each moved ticket's columnId back to original
               for (const move of action.moves) {
                 await updateTicketAPI(entry.projectId, move.ticketId, {
@@ -1223,6 +1258,8 @@ export function KeyboardShortcuts() {
                       priority: ticket.priority,
                       storyPoints: ticket.storyPoints,
                       estimate: ticket.estimate,
+                      resolution: ticket.resolution,
+                      resolvedAt: ticket.resolvedAt,
                       startDate: ticket.startDate,
                       dueDate: ticket.dueDate,
                       environment: ticket.environment,
@@ -2344,6 +2381,8 @@ export function KeyboardShortcuts() {
                       priority: ticket.priority,
                       storyPoints: ticket.storyPoints,
                       estimate: ticket.estimate,
+                      resolution: ticket.resolution,
+                      resolvedAt: ticket.resolvedAt,
                       startDate: ticket.startDate,
                       dueDate: ticket.dueDate,
                       environment: ticket.environment,
@@ -2367,7 +2406,10 @@ export function KeyboardShortcuts() {
                     if (serverTicket) {
                       boardState.removeTicket(undoEntry.projectId, tempTicket.id)
                       boardState.addTicket(undoEntry.projectId, columnId, serverTicket)
-                      // Restore attachments, comments, and links
+                      // Extract activity IDs from server response to delete before restoring originals
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      const activityIdsToDelete = (serverTicket as any)._activity?.activityIds ?? []
+                      // Restore attachments, comments, links, and activities
                       await restoreAttachments(
                         undoEntry.projectId,
                         serverTicket.id,
@@ -2377,7 +2419,12 @@ export function KeyboardShortcuts() {
                         undoEntry.projectId,
                         serverTicket.id,
                         restoreData,
+                        activityIdsToDelete,
                       )
+                      // Invalidate activity cache to show restored activities
+                      queryClient.invalidateQueries({
+                        queryKey: activityKeys.forTicket(undoEntry.projectId, serverTicket.id),
+                      })
                     }
                   }
                 } catch (err) {
@@ -2648,6 +2695,8 @@ export function KeyboardShortcuts() {
                   priority: ticket.priority,
                   storyPoints: ticket.storyPoints,
                   estimate: ticket.estimate,
+                  resolution: ticket.resolution,
+                  resolvedAt: ticket.resolvedAt,
                   startDate: ticket.startDate,
                   dueDate: ticket.dueDate,
                   environment: ticket.environment,

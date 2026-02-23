@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
-import { computeTicketChanges, logBatchChanges } from '@/lib/audit'
+import { computeTicketChanges, createActivityGroupId, logBatchChanges } from '@/lib/audit'
 import {
   requireAuth,
   requireMembership,
@@ -113,8 +113,10 @@ export async function PATCH(
         environment: true,
         affectedVersion: true,
         fixVersion: true,
-        column: { select: { name: true } },
-        assignee: { select: { name: true, username: true } },
+        column: { select: { name: true, icon: true, color: true } },
+        assignee: {
+          select: { id: true, name: true, username: true, avatar: true, avatarColor: true },
+        },
         sprint: { select: { name: true } },
         labels: { select: { id: true } },
       },
@@ -396,23 +398,41 @@ export async function PATCH(
     }
 
     const changes = computeTicketChanges(oldSnapshot, auditUpdateData)
+    // Pre-generate groupId for activity tracking (used by undo system)
+    const activityGroupId = changes.length > 1 ? createActivityGroupId() : null
+    let activityIds: string[] = []
+
     if (changes.length > 0) {
-      // Resolve raw IDs to human-readable names before storing in the audit trail.
+      // Resolve raw IDs to human-readable names and metadata before storing in the audit trail.
       // The updated `ticket` has the new related records; the existing query has the old ones.
+      // Store JSON metadata for rich display (icons, avatars, etc.)
       const resolvedChanges = changes.map((change) => {
         if (change.field === 'columnId') {
+          // Store column metadata as JSON for rendering icons in activity timeline
           return {
             field: 'status',
-            oldValue: existingTicket.column?.name ?? change.oldValue,
-            newValue: ticket.column?.name ?? change.newValue,
+            oldValue: existingTicket.column
+              ? JSON.stringify({
+                  name: existingTicket.column.name,
+                  icon: existingTicket.column.icon,
+                  color: existingTicket.column.color,
+                })
+              : change.oldValue,
+            newValue: ticket.column
+              ? JSON.stringify({
+                  name: ticket.column.name,
+                  icon: ticket.column.icon,
+                  color: ticket.column.color,
+                })
+              : change.newValue,
           }
         }
         if (change.field === 'assigneeId') {
+          // Store just the user ID - will be resolved to full user data at query time
           return {
             field: 'assignee',
-            oldValue:
-              existingTicket.assignee?.name ?? existingTicket.assignee?.username ?? change.oldValue,
-            newValue: ticket.assignee?.name ?? ticket.assignee?.username ?? change.newValue,
+            oldValue: existingTicket.assigneeId ?? null,
+            newValue: ticket.assigneeId ?? null,
           }
         }
         if (change.field === 'sprintId') {
@@ -424,7 +444,14 @@ export async function PATCH(
         }
         return change
       })
-      logBatchChanges(ticketId, user.id, resolvedChanges)
+      // Await to get activity IDs for undo support
+      const result = await logBatchChanges(
+        ticketId,
+        user.id,
+        resolvedChanges,
+        activityGroupId ?? undefined,
+      )
+      activityIds = result.activityIds
     }
 
     // Emit real-time event for other clients
@@ -450,7 +477,13 @@ export async function PATCH(
       timestamp: Date.now(),
     })
 
-    return NextResponse.json(transformTicket(ticket))
+    return NextResponse.json({
+      ...transformTicket(ticket),
+      _activity: {
+        activityIds,
+        groupId: activityGroupId,
+      },
+    })
   } catch (error) {
     return handleApiError(error, 'update ticket')
   }

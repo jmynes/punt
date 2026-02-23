@@ -27,11 +27,26 @@ export interface LinkForRestore {
 }
 
 /**
- * Extended ticket data that includes comments and links for restoration.
+ * Activity data for storage during delete operations.
+ * Preserves the audit trail when a ticket is deleted and restored.
+ */
+export interface ActivityForRestore {
+  action: string
+  field: string | null
+  oldValue: string | null
+  newValue: string | null
+  groupId: string | null
+  userId: string | null
+  createdAt: string // ISO date string
+}
+
+/**
+ * Extended ticket data that includes comments, links, and activities for restoration.
  */
 export interface TicketRestoreData {
   comments: CommentForRestore[]
   links: LinkForRestore[]
+  activities: ActivityForRestore[]
 }
 
 /**

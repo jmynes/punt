@@ -47,6 +47,16 @@ interface AttachmentAction {
   attachment: AttachmentInfo
 }
 
+/** Metadata for tracking activity entries for undo/redo cleanup */
+export interface ActivityMeta {
+  /** Activity entry IDs created by the action */
+  activityIds?: string[]
+  /** Group ID for batch activity entries */
+  groupId?: string
+  /** Ticket ID for deletion endpoint */
+  ticketId?: string
+}
+
 // Different types of undoable actions
 // Note: projectCreate and projectDelete are not supported since projects are now server-backed
 type UndoAction =
@@ -102,6 +112,8 @@ interface UndoEntry {
   timestamp: number
   toastId: string | number
   projectId: string // Store which project this action belongs to
+  /** Activity entry metadata for undo/redo cleanup */
+  activityMeta?: ActivityMeta
 }
 
 interface UndoState {
@@ -258,6 +270,12 @@ interface UndoState {
 
   // Update attachment IDs in an entry (used after undo/redo re-creates attachments with new server IDs)
   updateAttachmentIds: (toastId: string | number, idMap: Map<string, string>) => void
+
+  // Update activity metadata for an entry (used after API returns with activity IDs)
+  updateActivityMeta: (toastId: string | number, activityMeta: ActivityMeta) => void
+
+  // Get entry by toastId without removing it (for reading activity meta)
+  getEntryByToastId: (toastId: string | number) => UndoEntry | undefined
 
   // Remove a specific undo entry by toastId
   removeEntry: (toastId: string | number) => void
@@ -763,6 +781,27 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         redoStack: updateStack(state.redoStack),
       }
     }),
+
+  updateActivityMeta: (toastId, activityMeta) =>
+    set((state) => {
+      const updateStack = (stack: UndoEntry[]) =>
+        stack.map((e) => {
+          if (e.toastId !== toastId) return e
+          return { ...e, activityMeta }
+        })
+      return {
+        undoStack: updateStack(state.undoStack),
+        redoStack: updateStack(state.redoStack),
+      }
+    }),
+
+  getEntryByToastId: (toastId) => {
+    const state = get()
+    return (
+      state.undoStack.find((e) => e.toastId === toastId) ||
+      state.redoStack.find((e) => e.toastId === toastId)
+    )
+  },
 
   removeEntry: (toastId) =>
     set((state) => ({
