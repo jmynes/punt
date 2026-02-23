@@ -57,8 +57,6 @@ export const LINK_TYPES = [
   'relates_to',
   'duplicates',
   'is_duplicated_by',
-  'clones',
-  'is_cloned_by',
 ] as const
 export type LinkType = (typeof LINK_TYPES)[number]
 
@@ -69,8 +67,6 @@ export const LINK_TYPE_LABELS: Record<LinkType, string> = {
   relates_to: 'Relates to',
   duplicates: 'Duplicates',
   is_duplicated_by: 'Is duplicated by',
-  clones: 'Clones',
-  is_cloned_by: 'Is cloned by',
 }
 
 // Inverse link types for bidirectional display
@@ -80,8 +76,6 @@ export const INVERSE_LINK_TYPES: Record<LinkType, LinkType> = {
   relates_to: 'relates_to',
   duplicates: 'is_duplicated_by',
   is_duplicated_by: 'duplicates',
-  clones: 'is_cloned_by',
-  is_cloned_by: 'clones',
 }
 
 // Resolution values for closed/done tickets
