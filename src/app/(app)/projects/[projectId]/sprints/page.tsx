@@ -133,43 +133,41 @@ export default function SprintPlanningPage() {
     }
   }, [allTickets, columns, projectSprints])
 
-  // Query parse error for tooltip
-  const [queryError, setQueryError] = useState<string | null>(null)
-
-  const filteredTickets = useMemo(() => {
+  // Compute filtered tickets and query error together
+  const { filteredTickets, queryError } = useMemo(() => {
     // PQL query mode
     if (queryMode && debouncedQueryText.trim()) {
       try {
         const ast = parse(debouncedQueryText)
-        setQueryError(null)
-        return evaluateQuery(ast, allTickets, columns, projectKey)
-      } catch (err) {
-        if (err instanceof QueryParseError) {
-          setQueryError(err.message)
-        } else {
-          setQueryError('Invalid query')
+        return {
+          filteredTickets: evaluateQuery(ast, allTickets, columns, projectKey),
+          queryError: null,
         }
-        return allTickets
+      } catch (err) {
+        const errorMessage = err instanceof QueryParseError ? err.message : 'Invalid query'
+        return { filteredTickets: allTickets, queryError: errorMessage }
       }
     }
 
     // Standard filter mode
-    setQueryError(null)
-    return filterTickets(allTickets, {
-      searchQuery,
-      projectKey,
-      filterByType,
-      filterByPriority,
-      filterByStatus,
-      filterByResolution,
-      filterByAssignee,
-      filterByLabels,
-      filterBySprint,
-      filterByPoints,
-      filterByDueDate,
-      filterByAttachments,
-      showSubtasks,
-    })
+    return {
+      filteredTickets: filterTickets(allTickets, {
+        searchQuery,
+        projectKey,
+        filterByType,
+        filterByPriority,
+        filterByStatus,
+        filterByResolution,
+        filterByAssignee,
+        filterByLabels,
+        filterBySprint,
+        filterByPoints,
+        filterByDueDate,
+        filterByAttachments,
+        showSubtasks,
+      }),
+      queryError: null,
+    }
   }, [
     queryMode,
     debouncedQueryText,
