@@ -424,4 +424,29 @@ describe('getAutocompleteContext', () => {
     const ctx = getAutocompleteContext('type = bug OR ', 14)
     expect(ctx).toMatchObject({ type: 'field', partial: '' })
   })
+
+  it('returns value context after IN (', () => {
+    const ctx = getAutocompleteContext('type IN (', 9)
+    expect(ctx).toMatchObject({ type: 'value', fieldName: 'type', partial: '' })
+  })
+
+  it('returns value context after NOT IN (', () => {
+    const ctx = getAutocompleteContext('priority NOT IN (', 17)
+    expect(ctx).toMatchObject({ type: 'value', fieldName: 'priority', partial: '' })
+  })
+
+  it('returns value context when typing in IN list', () => {
+    const ctx = getAutocompleteContext('type IN (bu', 11)
+    expect(ctx).toMatchObject({ type: 'value', fieldName: 'type', partial: 'bu' })
+  })
+
+  it('returns value context after comma in IN list', () => {
+    const ctx = getAutocompleteContext('type IN (bug, ', 14)
+    expect(ctx).toMatchObject({ type: 'value', fieldName: 'type', partial: '' })
+  })
+
+  it('returns value context when typing after comma in IN list', () => {
+    const ctx = getAutocompleteContext('type IN (bug, ta', 16)
+    expect(ctx).toMatchObject({ type: 'value', fieldName: 'type', partial: 'ta' })
+  })
 })

@@ -701,14 +701,66 @@ export function getAutocompleteContext(
     }
   }
 
-  // If the last token is AND/OR/NOT/LPAREN, suggest fields
-  if (last.type === 'AND' || last.type === 'OR' || last.type === 'NOT' || last.type === 'LPAREN') {
+  // If the last token is AND/OR/NOT, suggest fields
+  if (last.type === 'AND' || last.type === 'OR' || last.type === 'NOT') {
     return { type: 'field', partial: '', position: cursorPosition }
   }
 
-  // If the last token is IN, no autocomplete needed
+  // If the last token is LPAREN, check if we're in an IN expression
+  if (last.type === 'LPAREN') {
+    // Look for pattern: FIELD (NOT)? IN LPAREN
+    const prev = meaningful.length >= 2 ? meaningful[meaningful.length - 2] : null
+    if (prev?.type === 'IN') {
+      // Find the field name before IN (might have NOT between field and IN)
+      let fieldName: string | undefined
+      for (let i = meaningful.length - 3; i >= 0; i--) {
+        if (meaningful[i].type === 'FIELD' || meaningful[i].type === 'VALUE') {
+          fieldName = meaningful[i].value
+          break
+        }
+      }
+      return {
+        type: 'value',
+        fieldName,
+        partial: '',
+        position: cursorPosition,
+      }
+    }
+    // Regular LPAREN (grouping), suggest fields
+    return { type: 'field', partial: '', position: cursorPosition }
+  }
+
+  // If the last token is IN, no autocomplete needed (wait for LPAREN)
   if (last.type === 'IN') {
     return null
+  }
+
+  // If the last token is COMMA, we might be in an IN list
+  if (last.type === 'COMMA') {
+    // Find the field name by looking back for FIELD ... IN pattern
+    let fieldName: string | undefined
+    let foundIn = false
+    for (let i = meaningful.length - 2; i >= 0; i--) {
+      if (meaningful[i].type === 'IN') {
+        foundIn = true
+      }
+      if (foundIn && (meaningful[i].type === 'FIELD' || meaningful[i].type === 'VALUE')) {
+        // Check if this is before IN (not a value in the list)
+        const nextToken = i + 1 < meaningful.length ? meaningful[i + 1] : null
+        if (nextToken?.type === 'IN' || nextToken?.type === 'NOT') {
+          fieldName = meaningful[i].value
+          break
+        }
+      }
+    }
+    if (foundIn) {
+      return {
+        type: 'value',
+        fieldName,
+        partial: '',
+        position: cursorPosition,
+      }
+    }
   }
 
   // If the last token is a field/value and we're still typing, determine context
@@ -725,21 +777,32 @@ export function getAutocompleteContext(
         position: last.start,
       }
     }
-    if (prev?.type === 'COMMA') {
-      // We're typing a value in a list
+    if (prev?.type === 'COMMA' || prev?.type === 'LPAREN') {
+      // We're typing a value in a list (after comma or opening paren of IN)
+      // Look back for FIELD ... IN pattern
       let fieldName: string | undefined
+      let foundIn = false
       for (let i = meaningful.length - 3; i >= 0; i--) {
-        if (meaningful[i].type === 'FIELD') {
-          fieldName = meaningful[i].value
-          break
+        if (meaningful[i].type === 'IN') {
+          foundIn = true
+        }
+        if (foundIn && (meaningful[i].type === 'FIELD' || meaningful[i].type === 'VALUE')) {
+          const nextToken = i + 1 < meaningful.length ? meaningful[i + 1] : null
+          if (nextToken?.type === 'IN' || nextToken?.type === 'NOT') {
+            fieldName = meaningful[i].value
+            break
+          }
         }
       }
-      return {
-        type: 'value',
-        fieldName,
-        partial: last.value,
-        position: last.start,
+      if (foundIn) {
+        return {
+          type: 'value',
+          fieldName,
+          partial: last.value,
+          position: last.start,
+        }
       }
+      // Not in an IN list, fall through to field context
     }
     // We're typing a field name
     return { type: 'field', partial: last.value, position: last.start }
