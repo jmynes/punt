@@ -5,6 +5,7 @@ import { RoleSimulationBanner } from '@/components/common/role-simulation-banner
 import { Dialogs } from '@/components/dialogs'
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
 import { Footer, Header, MobileNav, MobileNotice, Sidebar } from '@/components/layout'
+import { SelectionIndicator } from '@/components/selection-indicator'
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
@@ -23,6 +24,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <MobileNotice />
       <Dialogs />
       <KeyboardShortcuts />
+      <SelectionIndicator />
       <ChatPanel />
       <ChatFAB />
     </div>
