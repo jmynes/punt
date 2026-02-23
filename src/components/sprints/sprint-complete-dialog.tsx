@@ -35,7 +35,7 @@ interface SprintCompleteDialogProps {
 
 export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
   const { sprintCompleteOpen, sprintCompleteId, closeSprintComplete } = useUIStore()
-  const { dismissSprintPrompt, clearDismissedPrompt } = useSprintStore()
+  const { clearDismissedPrompt } = useSprintStore()
   const { getColumns } = useBoardStore()
   const completeSprint = useCompleteSprint(projectId)
   const { data: sprints } = useProjectSprints(projectId)
@@ -46,7 +46,7 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
   const [targetSprintId, setTargetSprintId] = useState<string>('__new__')
   const [createNextSprint, setCreateNextSprint] = useState(true)
 
-  // Ref to prevent Radix onOpenChange from double-firing handleDismissLater.
+  // Ref to prevent Radix onOpenChange from double-firing handleCancel.
   // Radix calls onOpenChange on both user close and programmatic close (e.g. after submit).
   const isDismissingRef = useRef(false)
 
@@ -90,21 +90,18 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
     }, 200)
   }, [closeSprintComplete])
 
-  const handleDismissLater = useCallback(() => {
+  const handleCancel = useCallback(() => {
     // Guard against Radix onOpenChange double-firing
     if (isDismissingRef.current) return
     isDismissingRef.current = true
 
-    if (sprintCompleteId) {
-      dismissSprintPrompt(sprintCompleteId, 'later')
-    }
     handleClose()
 
     // Reset after the dialog close animation completes
     setTimeout(() => {
       isDismissingRef.current = false
     }, 300)
-  }, [sprintCompleteId, dismissSprintPrompt, handleClose])
+  }, [handleClose])
 
   const handleSubmit = useCallback(async () => {
     if (!sprintCompleteId) return
@@ -159,7 +156,7 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
       open={sprintCompleteOpen}
       onOpenChange={(open) => {
         if (!open && !isDismissingRef.current) {
-          handleDismissLater()
+          handleCancel()
         }
       }}
     >
@@ -304,7 +301,7 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={handleDismissLater}
+              onClick={handleCancel}
               disabled={completeSprint.isPending}
               className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
             >

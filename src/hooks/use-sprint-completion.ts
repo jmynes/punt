@@ -30,7 +30,7 @@ export function useSprintCompletion({
 }: UseSprintCompletionOptions) {
   const { data: activeSprint, isLoading } = useActiveSprint(projectId)
   const completeSprint = useCompleteSprint(projectId)
-  const { shouldShowPrompt, dismissSprintPrompt, clearDismissedPrompt } = useSprintStore()
+  const { shouldShowPrompt, clearDismissedPrompt } = useSprintStore()
   const { openSprintComplete } = useUIStore()
 
   // Check if sprint is expired
@@ -106,13 +106,6 @@ export function useSprintCompletion({
     })
   }
 
-  // Handle dismiss
-  const handleDismiss = (action: 'later' | 'extend') => {
-    if (activeSprint) {
-      dismissSprintPrompt(activeSprint.id, action)
-    }
-  }
-
   return {
     activeSprint,
     isExpired,
@@ -124,6 +117,5 @@ export function useSprintCompletion({
     isLoading,
     isCompleting: completeSprint.isPending,
     handleComplete,
-    handleDismiss,
   }
 }
