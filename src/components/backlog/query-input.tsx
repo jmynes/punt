@@ -148,10 +148,14 @@ interface AutocompleteItem {
 function getAutocompleteSuggestions(
   ctx: AutocompleteContext | null,
   dynamicValues?: DynamicValues,
+  excludeValues?: Set<string>,
 ): AutocompleteItem[] {
   if (!ctx) return []
 
   const partial = ctx.partial.toLowerCase()
+  const excludeLower = excludeValues
+    ? new Set(Array.from(excludeValues).map((v) => v.toLowerCase()))
+    : new Set<string>()
 
   if (ctx.type === 'field') {
     const fieldItems: AutocompleteItem[] = QUERY_FIELDS.map((field) => ({
@@ -175,10 +179,12 @@ function getAutocompleteSuggestions(
     }).find(([key]) => key === fieldName)?.[1]
 
     if (canonicalField && FIELD_VALUES[canonicalField]) {
-      const items = FIELD_VALUES[canonicalField].map((v) => ({
+      let items = FIELD_VALUES[canonicalField].map((v) => ({
         label: v,
         value: v,
       }))
+      // Filter out already-selected values
+      items = items.filter((item) => !excludeLower.has(item.value.toLowerCase()))
       if (!partial) return items
       return items.filter((item) => item.label.toLowerCase().startsWith(partial))
     }
@@ -199,10 +205,12 @@ function getAutocompleteSuggestions(
       }
 
       if (values.length > 0) {
-        const items = values.map((v) => ({
+        let items = values.map((v) => ({
           label: v,
           value: v,
         }))
+        // Filter out already-selected values
+        items = items.filter((item) => !excludeLower.has(item.value.toLowerCase()))
         if (!partial) return items
         return items.filter((item) => item.label.toLowerCase().startsWith(partial))
       }
@@ -298,6 +306,46 @@ function getFieldDescription(field: string): string {
 // Query Input Component
 // ============================================================================
 
+// Extract existing values from an IN list at the given position
+function getExistingInListValues(text: string, position: number): Set<string> {
+  const values = new Set<string>()
+  const upperText = text.toUpperCase()
+
+  // Find the start of the IN list (last "IN (" before cursor)
+  const beforeCursor = upperText.slice(0, position)
+  const lastInParen = Math.max(beforeCursor.lastIndexOf('IN ('), beforeCursor.lastIndexOf('IN('))
+  if (lastInParen === -1) return values
+
+  // Find position right after "IN ("
+  const parenPos = text.indexOf('(', lastInParen)
+  if (parenPos === -1) return values
+
+  // Extract the content between "(" and cursor (or ")" if present)
+  const afterParen = text.slice(parenPos + 1, position)
+
+  // Parse values - handle both quoted and unquoted
+  // Split by comma, then clean up each value
+  const parts = afterParen.split(',')
+  for (const part of parts) {
+    let val = part.trim()
+    if (!val) continue
+
+    // Remove quotes if present
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1)
+    } else if (val.startsWith('"') || val.startsWith("'")) {
+      // Partial quoted string (user is still typing) - skip
+      continue
+    }
+
+    if (val) {
+      values.add(val)
+    }
+  }
+
+  return values
+}
+
 export function QueryInput({ value, onChange, onClear, error, dynamicValues }: QueryInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -305,11 +353,23 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [autocompleteCtx, setAutocompleteCtx] = useState<AutocompleteContext | null>(null)
 
-  // Get suggestions
-  const suggestions = useMemo(
-    () => getAutocompleteSuggestions(autocompleteCtx, dynamicValues),
-    [autocompleteCtx, dynamicValues],
-  )
+  // Get suggestions, excluding values already in an IN list
+  const suggestions = useMemo(() => {
+    if (!autocompleteCtx) return []
+
+    // Check if we're inside an IN list and get existing values to exclude
+    const upperText = value.toUpperCase()
+    const beforeCursor = upperText.slice(0, autocompleteCtx.position)
+    const lastInParen = Math.max(beforeCursor.lastIndexOf('IN ('), beforeCursor.lastIndexOf('IN('))
+    const isInList = lastInParen !== -1
+
+    let excludeValues: Set<string> | undefined
+    if (isInList && autocompleteCtx.type === 'value') {
+      excludeValues = getExistingInListValues(value, autocompleteCtx.position)
+    }
+
+    return getAutocompleteSuggestions(autocompleteCtx, dynamicValues, excludeValues)
+  }, [autocompleteCtx, dynamicValues, value])
 
   // Update autocomplete context on cursor movement or input change
   const updateAutocomplete = useCallback(() => {
