@@ -3,12 +3,15 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import type { UserSummary } from '@/types'
 
+/** Activity value can be a string, user object (for assignee), or null */
+export type ActivityValue = string | UserSummary | null
+
 /** A single field change within an activity or group. */
 export interface ActivityChange {
   action: string
   field: string | null
-  oldValue: string | null
-  newValue: string | null
+  oldValue: ActivityValue
+  newValue: ActivityValue
 }
 
 /** A single activity entry in the timeline. */
@@ -18,8 +21,8 @@ export interface ActivityEntry {
   user: UserSummary | null
   action: string
   field: string | null
-  oldValue: string | null
-  newValue: string | null
+  oldValue: ActivityValue
+  newValue: ActivityValue
   createdAt: string
 }
 

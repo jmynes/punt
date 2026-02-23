@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import {
   type ActivityEntry,
   type ActivityGroupEntry,
+  type ActivityValue,
   type CommentEntry,
   type TimelineEntry,
   useTicketActivity,
@@ -63,8 +64,10 @@ function tryParseJson<T>(value: string | null): T | null {
 /**
  * Parse a column value that may be JSON metadata or a plain string name.
  */
-function parseColumnValue(value: string | null): ColumnMeta | null {
+function parseColumnValue(value: ActivityValue): ColumnMeta | null {
   if (!value || value === 'null') return null
+  // Column values are always strings (not user objects)
+  if (typeof value !== 'string') return null
   const parsed = tryParseJson<ColumnMeta>(value)
   if (parsed?.name) return parsed
   // Fallback: treat as plain column name
@@ -72,10 +75,21 @@ function parseColumnValue(value: string | null): ColumnMeta | null {
 }
 
 /**
- * Parse a user value that may be JSON metadata or a plain string name.
+ * Parse a user value that may be a user object, JSON metadata, or a plain string name.
  */
-function parseUserValue(value: string | null): UserMeta | null {
+function parseUserValue(value: ActivityValue): UserMeta | null {
   if (!value || value === 'null') return null
+  // If it's already a user object (from API resolution), use it directly
+  if (typeof value === 'object' && 'name' in value) {
+    return {
+      id: value.id,
+      name: value.name,
+      username: value.username,
+      avatar: value.avatar,
+      avatarColor: value.avatarColor,
+    }
+  }
+  // Try parsing as JSON (for backwards compatibility with old entries)
   const parsed = tryParseJson<UserMeta>(value)
   if (parsed?.name) return parsed
   // Fallback: treat as plain user name
@@ -310,8 +324,8 @@ function ActionDescription({
 }: {
   action: string
   field: string | null
-  oldValue: string | null
-  newValue: string | null
+  oldValue: ActivityValue
+  newValue: ActivityValue
 }) {
   switch (action) {
     case 'created':
@@ -433,12 +447,15 @@ function ActionDescription({
   }
 }
 
-function ValueBadge({ value }: { value: string | null }) {
+function ValueBadge({ value }: { value: ActivityValue }) {
   if (!value || value === 'null') return <span className="text-zinc-500">none</span>
+
+  // Extract string value - if it's a user object, use the name
+  const displayValue = typeof value === 'object' ? value.name : value
 
   return (
     <span className="font-medium text-zinc-200 bg-zinc-800/50 px-1 py-0.5 rounded text-xs">
-      {value}
+      {displayValue}
     </span>
   )
 }
@@ -495,8 +512,11 @@ function UserBadge({ user }: { user: UserMeta | null }) {
 /**
  * Badge for displaying priority with color coding
  */
-function PriorityBadge({ value }: { value: string | null }) {
+function PriorityBadge({ value }: { value: ActivityValue }) {
   if (!value || value === 'null') return <span className="text-zinc-500">none</span>
+
+  // Priority values are always strings
+  const strValue = typeof value === 'string' ? value : String(value)
 
   const colorMap: Record<string, string> = {
     critical: 'text-red-400 bg-red-500/10 border-red-500/20',
@@ -507,11 +527,11 @@ function PriorityBadge({ value }: { value: string | null }) {
     lowest: 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20',
   }
 
-  const colorClass = colorMap[value.toLowerCase()] ?? 'text-zinc-400 bg-zinc-800/50'
+  const colorClass = colorMap[strValue.toLowerCase()] ?? 'text-zinc-400 bg-zinc-800/50'
 
   return (
     <span className={cn('font-medium px-1.5 py-0.5 rounded text-xs border', colorClass)}>
-      {value}
+      {strValue}
     </span>
   )
 }
@@ -519,8 +539,11 @@ function PriorityBadge({ value }: { value: string | null }) {
 /**
  * Badge for displaying ticket type with color coding
  */
-function TypeBadge({ value }: { value: string | null }) {
+function TypeBadge({ value }: { value: ActivityValue }) {
   if (!value || value === 'null') return <span className="text-zinc-500">none</span>
+
+  // Type values are always strings
+  const strValue = typeof value === 'string' ? value : String(value)
 
   const colorMap: Record<string, string> = {
     epic: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
@@ -530,11 +553,11 @@ function TypeBadge({ value }: { value: string | null }) {
     subtask: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
   }
 
-  const colorClass = colorMap[value.toLowerCase()] ?? 'text-zinc-400 bg-zinc-800/50'
+  const colorClass = colorMap[strValue.toLowerCase()] ?? 'text-zinc-400 bg-zinc-800/50'
 
   return (
     <span className={cn('font-medium px-1.5 py-0.5 rounded text-xs border', colorClass)}>
-      {value}
+      {strValue}
     </span>
   )
 }

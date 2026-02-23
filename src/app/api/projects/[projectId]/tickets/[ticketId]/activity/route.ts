@@ -98,8 +98,45 @@ export async function GET(
     // Track whether the raw activity fetch hit its limit (grouping may collapse entries)
     const activitiesHitLimit = activities.length >= activityFetchLimit
 
+    // Collect all user IDs from assignee changes that need to be resolved
+    const userIdsToResolve = new Set<string>()
+    for (const activity of activities) {
+      if (activity.action === 'assigned' || activity.field === 'assignee') {
+        if (activity.oldValue && !activity.oldValue.startsWith('{')) {
+          userIdsToResolve.add(activity.oldValue)
+        }
+        if (activity.newValue && !activity.newValue.startsWith('{')) {
+          userIdsToResolve.add(activity.newValue)
+        }
+      }
+    }
+
+    // Fetch all referenced users in a single query
+    const resolvedUsers =
+      userIdsToResolve.size > 0
+        ? await db.user.findMany({
+            where: { id: { in: Array.from(userIdsToResolve) } },
+            select: USER_SELECT_SUMMARY,
+          })
+        : []
+    const userMap = new Map(resolvedUsers.map((u) => [u.id, u]))
+
     // Group activities by groupId for batched changes
     const groupedActivities = groupActivitiesByGroupId(activities)
+
+    // Helper to resolve user ID to user object for assignee changes
+    const resolveAssigneeValue = (
+      value: string | null,
+      action: string,
+      field: string | null,
+    ): string | UserInfo | null => {
+      if (!value) return null
+      // Only resolve for assignee changes, and only if value looks like an ID (not JSON)
+      if ((action === 'assigned' || field === 'assignee') && !value.startsWith('{')) {
+        return userMap.get(value) ?? value // Return user object or fallback to ID string
+      }
+      return value
+    }
 
     // Merge activities and comments into a unified timeline
     type TimelineEntry = Record<string, unknown>
@@ -107,24 +144,28 @@ export async function GET(
 
     for (const activity of groupedActivities) {
       if ('changes' in activity) {
-        // Grouped changes
+        // Grouped changes - resolve assignee values in each change
         timeline.push({
           type: 'activity_group',
           id: activity.groupId,
           user: activity.user,
-          changes: activity.changes,
+          changes: activity.changes.map((change) => ({
+            ...change,
+            oldValue: resolveAssigneeValue(change.oldValue, change.action, change.field),
+            newValue: resolveAssigneeValue(change.newValue, change.action, change.field),
+          })),
           createdAt: activity.createdAt,
         })
       } else {
-        // Single activity
+        // Single activity - resolve assignee values
         timeline.push({
           type: 'activity',
           id: activity.id,
           user: activity.user,
           action: activity.action,
           field: activity.field,
-          oldValue: activity.oldValue,
-          newValue: activity.newValue,
+          oldValue: resolveAssigneeValue(activity.oldValue, activity.action, activity.field),
+          newValue: resolveAssigneeValue(activity.newValue, activity.action, activity.field),
           createdAt: activity.createdAt,
         })
       }

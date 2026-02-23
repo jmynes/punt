@@ -428,27 +428,11 @@ export async function PATCH(
           }
         }
         if (change.field === 'assigneeId') {
-          // Store user metadata as JSON for rendering avatars in activity timeline
+          // Store just the user ID - will be resolved to full user data at query time
           return {
             field: 'assignee',
-            oldValue: existingTicket.assignee
-              ? JSON.stringify({
-                  id: existingTicket.assignee.id,
-                  name: existingTicket.assignee.name,
-                  username: existingTicket.assignee.username,
-                  avatar: existingTicket.assignee.avatar,
-                  avatarColor: existingTicket.assignee.avatarColor,
-                })
-              : null,
-            newValue: ticket.assignee
-              ? JSON.stringify({
-                  id: ticket.assignee.id,
-                  name: ticket.assignee.name,
-                  username: ticket.assignee.username,
-                  avatar: ticket.assignee.avatar,
-                  avatarColor: ticket.assignee.avatarColor,
-                })
-              : null,
+            oldValue: existingTicket.assigneeId ?? null,
+            newValue: ticket.assigneeId ?? null,
           }
         }
         if (change.field === 'sprintId') {
