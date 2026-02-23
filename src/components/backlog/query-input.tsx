@@ -326,9 +326,14 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
       const newValue = before + insertValue + suffix + after
       onChange(newValue)
 
-      // Keep autocomplete open for field selections (operators come next)
-      // Close for other types (value, keyword, operator)
-      const keepOpen = autocompleteCtx.type === 'field'
+      // Keep autocomplete open for:
+      // - Field selections (operators come next)
+      // - Operator selections (values come next), except IS EMPTY/IS NOT EMPTY which are complete
+      const isCompleteOperator = item.value === 'IS EMPTY' || item.value === 'IS NOT EMPTY'
+      const keepOpen =
+        autocompleteCtx.type === 'field' ||
+        (autocompleteCtx.type === 'operator' && !isCompleteOperator)
+
       if (!keepOpen) {
         setShowAutocomplete(false)
       }
