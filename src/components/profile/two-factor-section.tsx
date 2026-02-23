@@ -30,7 +30,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { showToast } from '@/lib/toast'
 
-type SetupStep = 'idle' | 'qr' | 'verify' | 'codes' | 'complete'
+type SetupStep = 'idle' | 'qr' | 'verify' | 'codes' | 'complete' | 'regenerating'
 
 interface TwoFactorSectionProps {
   isDemo: boolean
@@ -64,7 +64,6 @@ export function TwoFactorSection({ isDemo }: TwoFactorSectionProps) {
   const [regeneratePassword, setRegeneratePassword] = useState('')
   const [showRegeneratePassword, setShowRegeneratePassword] = useState(false)
   const [regenerateTotpCode, setRegenerateTotpCode] = useState('')
-  const [regenerateLoading, setRegenerateLoading] = useState(false)
 
   // Fetch 2FA status on mount
   const fetchStatus = useCallback(async () => {
@@ -211,12 +210,20 @@ ${codes.join('\n')}
 
   // Regenerate recovery codes
   const handleRegenerate = async () => {
-    setRegenerateLoading(true)
+    const password = regeneratePassword
+    const totpCode = regenerateTotpCode
+
+    // Close dialog and show loading spinner in the main card
+    setShowRegenerateDialog(false)
+    setRegeneratePassword('')
+    setRegenerateTotpCode('')
+    setSetupStep('regenerating')
+
     try {
       const res = await fetch('/api/me/2fa/recovery-codes/regenerate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: regeneratePassword, totpCode: regenerateTotpCode }),
+        body: JSON.stringify({ password, totpCode }),
       })
 
       const data = await res.json()
@@ -225,10 +232,6 @@ ${codes.join('\n')}
         throw new Error(data.error ?? 'Failed to regenerate codes')
       }
 
-      // Close dialog and show codes in the full-page card (same as enrollment)
-      setShowRegenerateDialog(false)
-      setRegeneratePassword('')
-      setRegenerateTotpCode('')
       setRecoveryCodes(data.recoveryCodes)
       setCodesAcknowledged(false)
       setCopiedCodes(false)
@@ -236,8 +239,7 @@ ${codes.join('\n')}
       showToast.success('Recovery codes regenerated successfully')
     } catch (error) {
       showToast.error(error instanceof Error ? error.message : 'Failed to regenerate codes')
-    } finally {
-      setRegenerateLoading(false)
+      setSetupStep('idle')
     }
   }
 
@@ -252,6 +254,32 @@ ${codes.join('\n')}
       <Card className="border-zinc-800 bg-zinc-900/50">
         <CardContent className="flex items-center justify-center py-8">
           <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Regenerating recovery codes - loading state
+  if (setupStep === 'regenerating') {
+    return (
+      <Card className="border-zinc-800 bg-zinc-900/50">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-amber-500" />
+            <CardTitle className="text-zinc-100">Two-Factor Authentication</CardTitle>
+            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+              Enabled
+            </Badge>
+          </div>
+          <CardDescription className="text-zinc-500">
+            Your account is protected with two-factor authentication.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="flex items-center gap-3 text-zinc-400">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm">Regenerating recovery codes...</span>
+          </div>
         </CardContent>
       </Card>
     )
@@ -682,10 +710,10 @@ ${codes.join('\n')}
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleRegenerate}
-                disabled={regenerateLoading || !regeneratePassword || !regenerateTotpCode}
+                disabled={!regeneratePassword || !regenerateTotpCode}
                 className="bg-amber-600 hover:bg-amber-700 text-white"
               >
-                {regenerateLoading ? 'Generating...' : 'Regenerate'}
+                Regenerate
               </AlertDialogAction>
             </AlertDialogFooter>
           </div>
