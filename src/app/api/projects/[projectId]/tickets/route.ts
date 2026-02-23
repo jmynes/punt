@@ -221,8 +221,8 @@ export async function POST(
       return newTicket
     })
 
-    // Log ticket creation in audit trail (fire-and-forget)
-    logTicketCreated(ticket.id, user.id)
+    // Log ticket creation in audit trail
+    const activityId = await logTicketCreated(ticket.id, user.id)
 
     // Emit real-time event for other clients
     // Include tabId from header so the originating tab can skip the event
@@ -236,7 +236,16 @@ export async function POST(
       timestamp: Date.now(),
     })
 
-    return NextResponse.json(transformTicket(ticket), { status: 201 })
+    return NextResponse.json(
+      {
+        ...transformTicket(ticket),
+        _activity: {
+          activityIds: activityId ? [activityId] : [],
+          groupId: null,
+        },
+      },
+      { status: 201 },
+    )
   } catch (error) {
     return handleApiError(error, 'create ticket')
   }

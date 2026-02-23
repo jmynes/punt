@@ -434,6 +434,84 @@ export async function updateTicketAPI(
 }
 
 /**
+ * Activity metadata returned from ticket update API
+ */
+export interface ActivityMetaResponse {
+  activityIds?: string[]
+  groupId?: string | null
+}
+
+/**
+ * Update ticket result including activity metadata for undo tracking
+ */
+export interface UpdateTicketWithActivityResult {
+  ticket: TicketWithRelations
+  activity?: ActivityMetaResponse
+}
+
+/**
+ * Update a ticket via API and return activity metadata for undo tracking.
+ * This version makes a direct fetch call to capture the _activity field.
+ */
+export async function updateTicketWithActivity(
+  projectId: string,
+  ticketId: string,
+  updates: Partial<TicketWithRelations>,
+): Promise<UpdateTicketWithActivityResult> {
+  // Skip API call for temp IDs (pasted tickets not yet synced)
+  if (ticketId.startsWith('ticket-')) {
+    console.warn('Skipping API update for temp ticket ID:', ticketId)
+    return { ticket: { id: ticketId, ...updates } as TicketWithRelations }
+  }
+
+  // Convert TicketWithRelations updates to UpdateTicketInput format
+  const apiUpdates: UpdateTicketInput = {}
+
+  if ('title' in updates) apiUpdates.title = updates.title
+  if ('description' in updates) apiUpdates.description = updates.description
+  if ('type' in updates) apiUpdates.type = updates.type
+  if ('priority' in updates) apiUpdates.priority = updates.priority
+  if ('columnId' in updates) apiUpdates.columnId = updates.columnId
+  if ('order' in updates) apiUpdates.order = updates.order
+  if ('storyPoints' in updates) apiUpdates.storyPoints = updates.storyPoints
+  if ('estimate' in updates) apiUpdates.estimate = updates.estimate
+  if ('assigneeId' in updates) apiUpdates.assigneeId = updates.assigneeId
+  if ('creatorId' in updates) apiUpdates.reporterId = updates.creatorId
+  if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
+  if ('parentId' in updates) apiUpdates.parentId = updates.parentId
+  if ('startDate' in updates) apiUpdates.startDate = updates.startDate
+  if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
+  if ('resolution' in updates) apiUpdates.resolution = updates.resolution
+
+  if ('labels' in updates && updates.labels) {
+    apiUpdates.labelIds = updates.labels.map((l) => l.id)
+  }
+
+  // Make direct fetch call to capture _activity from response
+  const response = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Tab-Id': getTabId(),
+    },
+    body: JSON.stringify(apiUpdates),
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Failed to update ticket' }))
+    throw new Error(error.message || 'Failed to update ticket')
+  }
+
+  const data = await response.json()
+  const { _activity, ...ticket } = data
+
+  return {
+    ticket: ticket as TicketWithRelations,
+    activity: _activity,
+  }
+}
+
+/**
  * Batch create tickets via API (for paste operations)
  * Creates tickets in parallel for performance
  * Returns map of temp ID -> server ticket for replacing optimistic tickets

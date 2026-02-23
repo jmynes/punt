@@ -13,6 +13,12 @@ export interface FieldChange {
   newValue: unknown
 }
 
+/** Result from logging activity entries. */
+export interface ActivityLogResult {
+  activityIds: string[]
+  groupId: string | null
+}
+
 /**
  * Stringify a value for storage in the audit trail.
  * Handles dates, arrays, objects, nulls, and primitives.
@@ -32,7 +38,16 @@ function generateGroupId(): string {
 }
 
 /**
+ * Create a group ID for pre-generation before logging.
+ * Useful when you need the groupId before the async logging completes.
+ */
+export function createActivityGroupId(): string {
+  return generateGroupId()
+}
+
+/**
  * Log a single ticket activity entry.
+ * @returns The created activity entry ID, or null if logging failed.
  */
 export async function logTicketActivity(
   ticketId: string,
@@ -44,9 +59,9 @@ export async function logTicketActivity(
     newValue?: unknown
     groupId?: string
   },
-): Promise<void> {
+): Promise<string | null> {
   try {
-    await db.ticketActivity.create({
+    const entry = await db.ticketActivity.create({
       data: {
         ticketId,
         userId,
@@ -56,22 +71,27 @@ export async function logTicketActivity(
         newValue: stringifyValue(options?.newValue),
         groupId: options?.groupId ?? null,
       },
+      select: { id: true },
     })
+    return entry.id
   } catch (error) {
     // Log but don't throw - audit logging should never block the main operation
     console.error('Failed to log ticket activity:', error)
+    return null
   }
 }
 
 /**
  * Log ticket creation.
+ * @returns The created activity entry ID, or null if logging failed.
  */
-export async function logTicketCreated(ticketId: string, userId: string): Promise<void> {
-  await logTicketActivity(ticketId, userId, 'created')
+export async function logTicketCreated(ticketId: string, userId: string): Promise<string | null> {
+  return logTicketActivity(ticketId, userId, 'created')
 }
 
 /**
  * Log a single field change on a ticket.
+ * @returns The created activity entry ID, or null if logging failed.
  */
 export async function logTicketFieldChange(
   ticketId: string,
@@ -79,39 +99,55 @@ export async function logTicketFieldChange(
   field: string,
   oldValue: unknown,
   newValue: unknown,
-): Promise<void> {
+): Promise<string | null> {
   const action = getActionForField(field)
-  await logTicketActivity(ticketId, userId, action, { field, oldValue, newValue })
+  return logTicketActivity(ticketId, userId, action, { field, oldValue, newValue })
 }
 
 /**
  * Log multiple field changes as a batch with a shared group ID.
  * Used when a single API call modifies multiple fields (e.g., drag-move changes column + order).
+ *
+ * @param ticketId - The ticket being modified
+ * @param userId - The user making the change
+ * @param changes - Array of field changes to log
+ * @param preGeneratedGroupId - Optional pre-generated group ID (useful when you need the ID before logging completes)
+ * @returns Activity log result with IDs for undo support
  */
 export async function logBatchChanges(
   ticketId: string,
   userId: string,
   changes: FieldChange[],
-): Promise<void> {
+  preGeneratedGroupId?: string,
+): Promise<ActivityLogResult> {
   // Filter out irrelevant changes (like order changes during moves)
   const significantChanges = changes.filter((c) => !isInternalField(c.field))
 
-  if (significantChanges.length === 0) return
+  if (significantChanges.length === 0) {
+    return { activityIds: [], groupId: null }
+  }
 
   // If there's only one change, no need for a group ID
   if (significantChanges.length === 1) {
     const change = significantChanges[0]
-    try {
-      await logTicketFieldChange(ticketId, userId, change.field, change.oldValue, change.newValue)
-    } catch (error) {
-      console.error('Failed to log single ticket activity:', error)
+    const activityId = await logTicketFieldChange(
+      ticketId,
+      userId,
+      change.field,
+      change.oldValue,
+      change.newValue,
+    )
+    return {
+      activityIds: activityId ? [activityId] : [],
+      groupId: null,
     }
-    return
   }
 
-  const groupId = generateGroupId()
+  // Use pre-generated groupId or create new one
+  const groupId = preGeneratedGroupId ?? generateGroupId()
 
   try {
+    // Use createMany for efficiency - deletion will use groupId
     await db.ticketActivity.createMany({
       data: significantChanges.map((change) => ({
         ticketId,
@@ -123,16 +159,20 @@ export async function logBatchChanges(
         groupId,
       })),
     })
+    // Note: createMany doesn't return IDs, but we can delete by groupId
+    return { activityIds: [], groupId }
   } catch (error) {
     console.error('Failed to log batch ticket activities:', error)
+    return { activityIds: [], groupId: null }
   }
 }
 
 /**
  * Log ticket deletion.
+ * @returns The created activity entry ID, or null if logging failed.
  */
-export async function logTicketDeleted(ticketId: string, userId: string): Promise<void> {
-  await logTicketActivity(ticketId, userId, 'deleted')
+export async function logTicketDeleted(ticketId: string, userId: string): Promise<string | null> {
+  return logTicketActivity(ticketId, userId, 'deleted')
 }
 
 /**

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
-import { computeTicketChanges, logBatchChanges } from '@/lib/audit'
+import { computeTicketChanges, createActivityGroupId, logBatchChanges } from '@/lib/audit'
 import {
   requireAuth,
   requireMembership,
@@ -396,6 +396,10 @@ export async function PATCH(
     }
 
     const changes = computeTicketChanges(oldSnapshot, auditUpdateData)
+    // Pre-generate groupId for activity tracking (used by undo system)
+    const activityGroupId = changes.length > 1 ? createActivityGroupId() : null
+    let activityIds: string[] = []
+
     if (changes.length > 0) {
       // Resolve raw IDs to human-readable names before storing in the audit trail.
       // The updated `ticket` has the new related records; the existing query has the old ones.
@@ -424,7 +428,14 @@ export async function PATCH(
         }
         return change
       })
-      logBatchChanges(ticketId, user.id, resolvedChanges)
+      // Await to get activity IDs for undo support
+      const result = await logBatchChanges(
+        ticketId,
+        user.id,
+        resolvedChanges,
+        activityGroupId ?? undefined,
+      )
+      activityIds = result.activityIds
     }
 
     // Emit real-time event for other clients
@@ -450,7 +461,13 @@ export async function PATCH(
       timestamp: Date.now(),
     })
 
-    return NextResponse.json(transformTicket(ticket))
+    return NextResponse.json({
+      ...transformTicket(ticket),
+      _activity: {
+        activityIds,
+        groupId: activityGroupId,
+      },
+    })
   } catch (error) {
     return handleApiError(error, 'update ticket')
   }

@@ -32,6 +32,7 @@ import {
 } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
 import { pasteTickets } from '@/lib/actions'
+import { deleteActivityEntries } from '@/lib/actions/activity-utils'
 import {
   deleteTickets,
   restoreAttachments,
@@ -924,6 +925,10 @@ export function KeyboardShortcuts() {
           // Persist undo to database
           ;(async () => {
             try {
+              // Delete activity entries from the original action
+              if (entry.activityMeta) {
+                await deleteActivityEntries(entry.projectId, entry.activityMeta)
+              }
               for (const item of action.tickets) {
                 await updateTicketAPI(entry.projectId, item.ticketId, item.before)
               }
@@ -1041,6 +1046,10 @@ export function KeyboardShortcuts() {
           // Persist move undo to database
           ;(async () => {
             try {
+              // Delete activity entries from the original action
+              if (entry.activityMeta) {
+                await deleteActivityEntries(entry.projectId, entry.activityMeta)
+              }
               // Update each moved ticket's columnId back to original
               for (const move of action.moves) {
                 await updateTicketAPI(entry.projectId, move.ticketId, {
