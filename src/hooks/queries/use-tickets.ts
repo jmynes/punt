@@ -622,7 +622,16 @@ export async function batchDeleteTicketsAPI(
 }
 
 /**
+ * Batch move activity response from API
+ */
+interface BatchMoveActivityResponse {
+  groups: Record<string, string> // ticketId -> groupId
+  batchGroupId: string | null
+}
+
+/**
  * Move multiple tickets to a different column (for multi-select drag-drop)
+ * Captures activity metadata and updates undo store if toastId is provided
  */
 export function useMoveTickets() {
   const queryClient = useQueryClient()
@@ -633,14 +642,59 @@ export function useMoveTickets() {
       ticketIds,
       toColumnId,
       newOrder,
-    }: MoveTicketsMutationInput) => {
-      const provider = getDataProvider(getTabId())
-      return provider.moveTickets(projectId, ticketIds, toColumnId, newOrder)
+    }: MoveTicketsMutationInput): Promise<{
+      tickets: TicketWithRelations[]
+      activity?: BatchMoveActivityResponse
+    }> => {
+      // Make direct fetch call to capture _activity from response
+      const response = await fetch(`/api/projects/${projectId}/tickets`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify({
+          ticketIds,
+          toColumnId,
+          newOrder,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to move tickets' }))
+        throw new Error(error.message || 'Failed to move tickets')
+      }
+
+      const data = await response.json()
+      const { tickets, _activity } = data
+
+      return {
+        tickets: tickets as TicketWithRelations[],
+        activity: _activity,
+      }
     },
     onMutate: async ({ projectId }) => {
       // Store update already happened in handleDragEnd
       // Just cancel refetches
       await queryClient.cancelQueries({ queryKey: ticketKeys.byProject(projectId) })
+    },
+    onSuccess: (data, { ticketIds, toastId }) => {
+      // Update undo store with activity metadata if toastId provided
+      if (toastId && data.activity) {
+        const { useUndoStore } = require('@/stores/undo-store')
+        // For batch moves, we use the first ticket's groupId as the activity meta
+        // All tickets in the batch share the batchGroupId
+        const firstTicketId = ticketIds[0]
+        const groupId = data.activity.groups[firstTicketId] ?? data.activity.batchGroupId
+        if (groupId) {
+          const activityMeta = {
+            ticketId: firstTicketId,
+            activityIds: [],
+            groupId,
+          }
+          useUndoStore.getState().updateActivityMeta(toastId, activityMeta)
+        }
+      }
     },
     onError: (err, { projectId, previousColumns }) => {
       // Rollback using stored snapshot

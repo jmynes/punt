@@ -22,8 +22,65 @@ import {
   type TimelineEntry,
   useTicketActivity,
 } from '@/hooks/queries/use-activity'
+import { getColumnIcon } from '@/lib/status-icons'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { MarkdownViewer } from './markdown-viewer'
+
+// ============================================================================
+// Type definitions for parsed metadata
+// ============================================================================
+
+interface ColumnMeta {
+  name: string
+  icon?: string | null
+  color?: string | null
+}
+
+interface UserMeta {
+  id: string
+  name: string
+  username: string
+  avatar?: string | null
+  avatarColor?: string | null
+}
+
+/**
+ * Try to parse a value as JSON metadata, returning the parsed object or null.
+ */
+function tryParseJson<T>(value: string | null): T | null {
+  if (!value || value === 'null') return null
+  try {
+    // Only attempt JSON parse if it looks like JSON
+    if (value.startsWith('{') || value.startsWith('[')) {
+      return JSON.parse(value) as T
+    }
+  } catch {
+    // Not valid JSON, return null
+  }
+  return null
+}
+
+/**
+ * Parse a column value that may be JSON metadata or a plain string name.
+ */
+function parseColumnValue(value: string | null): ColumnMeta | null {
+  if (!value || value === 'null') return null
+  const parsed = tryParseJson<ColumnMeta>(value)
+  if (parsed?.name) return parsed
+  // Fallback: treat as plain column name
+  return { name: value }
+}
+
+/**
+ * Parse a user value that may be JSON metadata or a plain string name.
+ */
+function parseUserValue(value: string | null): UserMeta | null {
+  if (!value || value === 'null') return null
+  const parsed = tryParseJson<UserMeta>(value)
+  if (parsed?.name) return parsed
+  // Fallback: treat as plain user name
+  return { id: '', name: value, username: value }
+}
 
 interface ActivityTimelineProps {
   projectId: string
@@ -260,26 +317,30 @@ function ActionDescription({
     case 'created':
       return <span>created this ticket</span>
 
-    case 'moved':
+    case 'moved': {
+      const oldColumn = parseColumnValue(oldValue)
+      const newColumn = parseColumnValue(newValue)
       return (
         <span>
-          moved to <ValueBadge value={newValue} />
-          {oldValue && (
+          moved to <ColumnBadge column={newColumn} />
+          {oldColumn && (
             <>
               {' '}
-              from <ValueBadge value={oldValue} />
+              from <ColumnBadge column={oldColumn} />
             </>
           )}
         </span>
       )
+    }
 
     case 'assigned': {
-      if (!newValue || newValue === 'null') {
+      const newUser = parseUserValue(newValue)
+      if (!newUser) {
         return <span>removed the assignee</span>
       }
       return (
-        <span>
-          assigned to <ValueBadge value={newValue} />
+        <span className="inline-flex items-center gap-1">
+          assigned to <UserBadge user={newUser} />
         </span>
       )
     }
@@ -312,14 +373,15 @@ function ActionDescription({
     case 'priority_changed':
       return (
         <span>
-          changed priority from <ValueBadge value={oldValue} /> to <ValueBadge value={newValue} />
+          changed priority from <PriorityBadge value={oldValue} /> to{' '}
+          <PriorityBadge value={newValue} />
         </span>
       )
 
     case 'type_changed':
       return (
         <span>
-          changed type from <ValueBadge value={oldValue} /> to <ValueBadge value={newValue} />
+          changed type from <TypeBadge value={oldValue} /> to <TypeBadge value={newValue} />
         </span>
       )
 
@@ -376,6 +438,100 @@ function ValueBadge({ value }: { value: string | null }) {
 
   return (
     <span className="font-medium text-zinc-200 bg-zinc-800/50 px-1 py-0.5 rounded text-xs">
+      {value}
+    </span>
+  )
+}
+
+/**
+ * Badge for displaying column/status with icon
+ */
+function ColumnBadge({ column }: { column: ColumnMeta | null }) {
+  if (!column) return <span className="text-zinc-500">none</span>
+
+  // Get icon and color from status-icons utility
+  const { icon: Icon, color } = getColumnIcon(column.icon, column.name, column.color)
+  const isHexColor = column.color?.startsWith('#')
+
+  return (
+    <span className="inline-flex items-center gap-1 font-medium text-zinc-200 bg-zinc-800/50 px-1.5 py-0.5 rounded text-xs">
+      <span
+        className={cn('shrink-0', !isHexColor && color)}
+        style={isHexColor ? { color: column.color ?? undefined } : undefined}
+      >
+        <Icon className="h-3 w-3" />
+      </span>
+      {column.name}
+    </span>
+  )
+}
+
+/**
+ * Badge for displaying user with mini avatar
+ */
+function UserBadge({ user }: { user: UserMeta | null }) {
+  if (!user) return <span className="text-zinc-500">none</span>
+
+  const bgColor = user.avatarColor || getAvatarColor(user.id || user.username)
+
+  return (
+    <span className="inline-flex items-center gap-1 font-medium text-zinc-200 bg-zinc-800/50 px-1.5 py-0.5 rounded text-xs">
+      <Avatar className="h-3.5 w-3.5">
+        {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}
+        <AvatarFallback
+          className="text-[8px] font-medium text-white"
+          style={{ backgroundColor: bgColor }}
+        >
+          {getInitials(user.name).charAt(0)}
+        </AvatarFallback>
+      </Avatar>
+      {user.name}
+    </span>
+  )
+}
+
+/**
+ * Badge for displaying priority with color coding
+ */
+function PriorityBadge({ value }: { value: string | null }) {
+  if (!value || value === 'null') return <span className="text-zinc-500">none</span>
+
+  const colorMap: Record<string, string> = {
+    critical: 'text-red-400 bg-red-500/10 border-red-500/20',
+    highest: 'text-orange-400 bg-orange-500/10 border-orange-500/20',
+    high: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+    medium: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
+    low: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+    lowest: 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20',
+  }
+
+  const colorClass = colorMap[value.toLowerCase()] ?? 'text-zinc-400 bg-zinc-800/50'
+
+  return (
+    <span className={cn('font-medium px-1.5 py-0.5 rounded text-xs border', colorClass)}>
+      {value}
+    </span>
+  )
+}
+
+/**
+ * Badge for displaying ticket type with color coding
+ */
+function TypeBadge({ value }: { value: string | null }) {
+  if (!value || value === 'null') return <span className="text-zinc-500">none</span>
+
+  const colorMap: Record<string, string> = {
+    epic: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+    story: 'text-green-400 bg-green-500/10 border-green-500/20',
+    task: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+    bug: 'text-red-400 bg-red-500/10 border-red-500/20',
+    subtask: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
+  }
+
+  const colorClass = colorMap[value.toLowerCase()] ?? 'text-zinc-400 bg-zinc-800/50'
+
+  return (
+    <span className={cn('font-medium px-1.5 py-0.5 rounded text-xs border', colorClass)}>
       {value}
     </span>
   )

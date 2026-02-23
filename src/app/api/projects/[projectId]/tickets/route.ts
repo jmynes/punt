@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, validationError } from '@/lib/api-utils'
-import { logTicketCreated } from '@/lib/audit'
+import { createActivityGroupId, logBatchChanges, logTicketCreated } from '@/lib/audit'
 import {
   requireAuth,
   requireMembership,
@@ -292,6 +292,7 @@ export async function PATCH(
     }
 
     // Verify all tickets exist and belong to project
+    // Include column metadata for activity logging
     const tickets = await db.ticket.findMany({
       where: { id: { in: ticketIds }, projectId },
       select: {
@@ -299,6 +300,7 @@ export async function PATCH(
         columnId: true,
         resolution: true,
         order: true,
+        column: { select: { name: true, icon: true, color: true } },
       },
       orderBy: { order: 'asc' },
     })
@@ -373,6 +375,44 @@ export async function PATCH(
       return results
     })
 
+    // Log activity for each moved ticket
+    // Create a groupId for all tickets moved together (for undo support)
+    const batchGroupId = ticketIds.length > 1 ? createActivityGroupId() : null
+    const activityGroups: Record<string, string> = {}
+
+    for (const ticket of updatedTickets) {
+      // Find the original ticket data to get the old column metadata
+      const originalTicket = tickets.find((t) => t.id === ticket.id)
+      if (!originalTicket || originalTicket.columnId === ticket.columnId) continue
+
+      // Store column metadata as JSON for rendering icons in activity timeline
+      const oldColumnMeta = originalTicket.column
+        ? JSON.stringify({
+            name: originalTicket.column.name,
+            icon: originalTicket.column.icon,
+            color: originalTicket.column.color,
+          })
+        : 'Unknown'
+      const newColumnMeta = ticket.column
+        ? JSON.stringify({
+            name: ticket.column.name,
+            icon: ticket.column.icon,
+            color: ticket.column.color,
+          })
+        : 'Unknown'
+
+      // Log the move activity for this ticket
+      const ticketGroupId = batchGroupId ?? createActivityGroupId()
+      await logBatchChanges(
+        ticket.id,
+        user.id,
+        [{ field: 'status', oldValue: oldColumnMeta, newValue: newColumnMeta }],
+        ticketGroupId,
+      )
+
+      activityGroups[ticket.id] = ticketGroupId
+    }
+
     // Emit real-time events for each moved ticket
     const tabId = request.headers.get('X-Tab-Id') || undefined
     for (const ticket of updatedTickets) {
@@ -386,7 +426,13 @@ export async function PATCH(
       })
     }
 
-    return NextResponse.json(updatedTickets.map(transformTicket))
+    return NextResponse.json({
+      tickets: updatedTickets.map(transformTicket),
+      _activity: {
+        groups: activityGroups,
+        batchGroupId,
+      },
+    })
   } catch (error) {
     return handleApiError(error, 'batch move tickets')
   }

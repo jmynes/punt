@@ -375,6 +375,7 @@ export function KanbanBoard({
           toColumnId: targetColumnId,
           newOrder: insertIndex,
           previousColumns: snapshot,
+          toastId: moveToastId,
         })
       }
 
