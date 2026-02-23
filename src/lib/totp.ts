@@ -84,10 +84,10 @@ export async function generateQrCodeDataUrl(keyUri: string): Promise<string> {
 
 /**
  * Verify a TOTP token against a secret.
- * Uses a tolerance of 1 (allows 30 seconds before/after current time window).
+ * Uses a window of 1 (allows 30 seconds before/after current time window).
  */
 export function verifyTotpToken(token: string, secret: string): boolean {
-  const result = verifySync({ token, secret, tolerance: 1 })
+  const result = verifySync({ token, secret, window: 1 })
   return result.valid
 }
 
