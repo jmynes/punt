@@ -39,6 +39,7 @@ import {
   restoreAttachments,
   restoreCommentsAndLinks,
 } from '@/lib/actions/delete-tickets'
+import { isEditableTarget } from '@/lib/keyboard-utils'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -138,8 +139,7 @@ export function KeyboardShortcuts() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle shortcuts when typing in inputs
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      if (isEditableTarget(e)) {
         return
       }
 
@@ -733,6 +733,27 @@ export function KeyboardShortcuts() {
         e.preventDefault()
         useUIStore.getState().toggleChatPanel()
         return
+      }
+
+      // Block undo/redo when a modal or drawer is open to prevent accidental
+      // board modifications while the user is interacting with overlay content.
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')
+      ) {
+        const uiState = useUIStore.getState()
+        if (
+          uiState.activeTicketId ||
+          uiState.createTicketOpen ||
+          uiState.createProjectOpen ||
+          uiState.editProjectOpen ||
+          uiState.sprintCreateOpen ||
+          uiState.sprintEditOpen ||
+          uiState.sprintCompleteOpen ||
+          uiState.sprintStartOpen
+        ) {
+          return
+        }
       }
 
       // Check for Ctrl/Cmd + Z (Undo) - must check before redo to avoid conflicts

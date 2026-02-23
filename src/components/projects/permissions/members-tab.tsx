@@ -48,6 +48,7 @@ import { useProjectRoles } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission, useIsSystemAdmin } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
+import { isEditableTarget } from '@/lib/keyboard-utils'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor } from '@/lib/utils'
@@ -494,6 +495,10 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle shortcuts when typing in inputs
+      if (isEditableTarget(e)) {
+        return
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
         if (canUndo()) handleUndo()
