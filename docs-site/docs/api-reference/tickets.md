@@ -339,8 +339,6 @@ Link related tickets to track dependencies and relationships.
 | `relates_to` | `relates_to` | General relationship |
 | `duplicates` | `is_duplicated_by` | This ticket duplicates another |
 | `is_duplicated_by` | `duplicates` | This ticket is duplicated by another |
-| `clones` | `is_cloned_by` | This ticket was cloned from another |
-| `is_cloned_by` | `clones` | This ticket was cloned to create another |
 
 ### Create Link
 
