@@ -83,6 +83,7 @@ interface User {
   avatarColor: string | null
   isSystemAdmin: boolean
   isActive: boolean
+  totpEnabled: boolean
   createdAt: string
   lastLoginAt: string | null
   _count: { projects: number }
@@ -868,6 +869,14 @@ export function UserList() {
                       Disabled
                     </Badge>
                   )}
+                  {user.totpEnabled && (
+                    <Badge
+                      variant="outline"
+                      className="border-emerald-500 text-emerald-500 text-xs"
+                    >
+                      2FA
+                    </Badge>
+                  )}
                 </div>
                 <span className="text-sm text-zinc-500">{user.email}</span>
               </div>
@@ -961,6 +970,35 @@ export function UserList() {
                     </>
                   )}
                 </DropdownMenuItem>
+                {user.totpEnabled && (
+                  <>
+                    <DropdownMenuSeparator className="bg-zinc-800" />
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`/api/admin/users/${user.username}/2fa`, {
+                            method: 'DELETE',
+                            headers: { 'x-tab-id': getTabId() },
+                          })
+                          if (!res.ok) {
+                            const data = await res.json()
+                            throw new Error(data.error ?? 'Failed to reset 2FA')
+                          }
+                          queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+                          showToast.success(`Two-factor authentication reset for ${user.name}`)
+                        } catch (error) {
+                          showToast.error(
+                            error instanceof Error ? error.message : 'Failed to reset 2FA',
+                          )
+                        }
+                      }}
+                      className="text-amber-400 focus:text-amber-300 focus:bg-zinc-800"
+                    >
+                      <ShieldOff className="h-4 w-4 mr-2" />
+                      Reset 2FA
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator className="bg-zinc-800" />
                 <DropdownMenuItem
                   onClick={() => setDeleteUsername(user.username)}
