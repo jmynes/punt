@@ -1878,7 +1878,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     onPendingCommentChange={setHasPendingComment}
                   />
                 ) : (
-                  <ActivityTimeline projectId={projectKey} ticketId={ticket.id} />
+                  <ActivityTimeline projectId={projectId} ticketId={ticket.id} />
                 )}
               </div>
             </div>

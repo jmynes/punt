@@ -2,6 +2,7 @@
 
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { activityKeys } from '@/hooks/queries/use-activity'
 import { roleKeys } from '@/hooks/queries/use-roles'
 import { sprintKeys } from '@/hooks/queries/use-sprints'
 import { labelKeys, ticketKeys } from '@/hooks/queries/use-tickets'
@@ -114,20 +115,34 @@ export function useRealtime(projectId: string, enabled = true): RealtimeStatus {
           return
         }
 
-        // Skip events from this tab (already handled optimistically)
-        // Use tabId instead of userId to allow same user to sync across tabs
-        if (data.tabId && data.tabId === tabId) return
+        // Check if this event is from the same tab (optimistically handled already)
+        const isSameTab = data.tabId && data.tabId === tabId
 
         // Invalidate React Query cache to trigger refetch based on event type
         if (data.type.startsWith('ticket.')) {
-          queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+          // Skip ticket data refetch for same-tab events (optimistically updated)
+          if (!isSameTab) {
+            queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+          }
+          // Always invalidate activity timeline - it's created server-side
+          if ('ticketId' in data && data.ticketId) {
+            queryClient.invalidateQueries({
+              queryKey: activityKeys.forTicket(projectId, data.ticketId),
+            })
+          }
         } else if (data.type.startsWith('label.')) {
-          queryClient.invalidateQueries({ queryKey: labelKeys.byProject(projectId) })
+          if (!isSameTab) {
+            queryClient.invalidateQueries({ queryKey: labelKeys.byProject(projectId) })
+          }
         } else if (data.type.startsWith('role.')) {
-          queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
+          if (!isSameTab) {
+            queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
+          }
         } else if (data.type.startsWith('sprint.')) {
-          queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
-          queryClient.invalidateQueries({ queryKey: sprintKeys.active(projectId) })
+          if (!isSameTab) {
+            queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
+            queryClient.invalidateQueries({ queryKey: sprintKeys.active(projectId) })
+          }
         }
       } catch {
         // Ignore parse errors (could be keepalive comments)
