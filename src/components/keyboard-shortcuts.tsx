@@ -3622,6 +3622,12 @@ export function KeyboardShortcuts() {
                     Ctrl / Cmd + K
                   </kbd>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span>Switch between view tabs</span>
+                  <kbd className="px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
+                    Ctrl / Cmd + Shift + Arrow Left / Right
+                  </kbd>
+                </div>
               </div>
             </div>
 

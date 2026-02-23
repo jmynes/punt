@@ -9,6 +9,7 @@ import { TicketDetailDrawer } from '@/components/tickets'
 import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
+import { getProjectViewTabs, useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
 import { filterTickets } from '@/lib/filter-tickets'
 import { evaluateQuery } from '@/lib/query-evaluator'
@@ -30,6 +31,9 @@ export default function SprintPlanningPage() {
   const { getColumns, _hasHydrated } = useBoardStore()
   const { setActiveProjectId, activeTicketId, setActiveTicketId } = useUIStore()
   const { clearSelection } = useSelectionStore()
+
+  // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
+  useTabCycleShortcut({ tabs: getProjectViewTabs(projectKey) })
 
   // Fetch columns from API
   const { isLoading: columnsLoading, isSuccess: columnsLoaded } = useColumnsByProject(projectId, {
