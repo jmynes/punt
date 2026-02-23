@@ -5,7 +5,12 @@ import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { isDemoMode } from '@/lib/demo/demo-config'
 import { verifyPassword } from '@/lib/password'
-import { decryptTotpSecret, verifyTotpToken } from '@/lib/totp'
+import {
+  decryptTotpSecret,
+  markRecoveryCodeUsed,
+  verifyRecoveryCode,
+  verifyTotpToken,
+} from '@/lib/totp'
 
 const disableSchema = z.object({
   password: z.string().min(1, 'Password is required'),
@@ -13,7 +18,7 @@ const disableSchema = z.object({
 })
 
 /**
- * POST /api/me/2fa/disable - Disable 2FA (requires password)
+ * POST /api/me/2fa/disable - Disable 2FA (requires password + TOTP or recovery code)
  */
 export async function POST(request: Request) {
   try {
@@ -35,7 +40,7 @@ export async function POST(request: Request) {
     // Verify the user's password
     const user = await db.user.findUnique({
       where: { id: currentUser.id },
-      select: { passwordHash: true, totpEnabled: true, totpSecret: true },
+      select: { passwordHash: true, totpEnabled: true, totpSecret: true, totpRecoveryCodes: true },
     })
 
     if (!user?.passwordHash) {
@@ -57,16 +62,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
     }
 
-    // Verify TOTP code
+    // Try TOTP code first, then fall back to recovery code
+    let isValid = false
+
     if (user.totpSecret) {
       const secret = decryptTotpSecret(user.totpSecret)
-      const isValidTotp = verifyTotpToken(totpCode, secret)
-      if (!isValidTotp) {
-        return NextResponse.json(
-          { error: 'Invalid two-factor authentication code' },
-          { status: 401 },
-        )
+      isValid = verifyTotpToken(totpCode, secret)
+    }
+
+    if (!isValid && user.totpRecoveryCodes) {
+      const recoveryIndex = await verifyRecoveryCode(totpCode, user.totpRecoveryCodes)
+      if (recoveryIndex >= 0) {
+        // Mark recovery code as used before disabling (in case disable fails)
+        const updatedCodes = markRecoveryCodeUsed(user.totpRecoveryCodes, recoveryIndex)
+        await db.user.update({
+          where: { id: currentUser.id },
+          data: { totpRecoveryCodes: updatedCodes },
+        })
+        isValid = true
       }
+    }
+
+    if (!isValid) {
+      return NextResponse.json({ error: 'Invalid two-factor authentication code' }, { status: 401 })
     }
 
     // Disable 2FA and clear all TOTP data

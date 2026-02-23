@@ -9,6 +9,8 @@ import {
   decryptTotpSecret,
   generateRecoveryCodes,
   hashRecoveryCodes,
+  markRecoveryCodeUsed,
+  verifyRecoveryCode,
   verifyTotpToken,
 } from '@/lib/totp'
 
@@ -19,7 +21,7 @@ const regenerateSchema = z.object({
 
 /**
  * POST /api/me/2fa/recovery-codes/regenerate - Generate new recovery codes
- * Invalidates all old recovery codes.
+ * Invalidates all old recovery codes. Accepts TOTP code or recovery code.
  */
 export async function POST(request: Request) {
   try {
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
     // Verify password
     const user = await db.user.findUnique({
       where: { id: currentUser.id },
-      select: { passwordHash: true, totpEnabled: true, totpSecret: true },
+      select: { passwordHash: true, totpEnabled: true, totpSecret: true, totpRecoveryCodes: true },
     })
 
     if (!user?.passwordHash) {
@@ -74,16 +76,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
     }
 
-    // Verify TOTP code
+    // Try TOTP code first, then fall back to recovery code
+    let isValid = false
+
     if (user.totpSecret) {
       const secret = decryptTotpSecret(user.totpSecret)
-      const isValidTotp = verifyTotpToken(totpCode, secret)
-      if (!isValidTotp) {
-        return NextResponse.json(
-          { error: 'Invalid two-factor authentication code' },
-          { status: 401 },
-        )
+      isValid = verifyTotpToken(totpCode, secret)
+    }
+
+    if (!isValid && user.totpRecoveryCodes) {
+      const recoveryIndex = await verifyRecoveryCode(totpCode, user.totpRecoveryCodes)
+      if (recoveryIndex >= 0) {
+        // Mark recovery code as used (old codes will be replaced anyway, but
+        // this prevents reuse if the regeneration somehow fails later)
+        const updatedCodes = markRecoveryCodeUsed(user.totpRecoveryCodes, recoveryIndex)
+        await db.user.update({
+          where: { id: currentUser.id },
+          data: { totpRecoveryCodes: updatedCodes },
+        })
+        isValid = true
       }
+    }
+
+    if (!isValid) {
+      return NextResponse.json({ error: 'Invalid two-factor authentication code' }, { status: 401 })
     }
 
     // Generate new recovery codes

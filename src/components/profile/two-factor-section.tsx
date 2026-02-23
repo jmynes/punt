@@ -578,16 +578,14 @@ ${codes.join('\n')}
             </div>
             <div className="space-y-2">
               <Label htmlFor="disableTotpCode" className="text-zinc-300">
-                Two-factor authentication code
+                2FA code or recovery code
               </Label>
               <Input
                 id="disableTotpCode"
                 type="text"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="000000"
+                placeholder="000000 or XXXXX-XXXXX"
                 value={disableTotpCode}
-                onChange={(e) => setDisableTotpCode(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setDisableTotpCode(e.target.value)}
                 className="bg-zinc-900 border-zinc-700 font-mono tracking-widest"
               />
             </div>
@@ -605,7 +603,7 @@ ${codes.join('\n')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDisable}
-              disabled={disableLoading || !disablePassword || disableTotpCode.length !== 6}
+              disabled={disableLoading || !disablePassword || !disableTotpCode}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               {disableLoading ? 'Disabling...' : 'Disable 2FA'}
@@ -660,16 +658,14 @@ ${codes.join('\n')}
             </div>
             <div className="space-y-2">
               <Label htmlFor="regenerateTotpCode" className="text-zinc-300">
-                Two-factor authentication code
+                2FA code or recovery code
               </Label>
               <Input
                 id="regenerateTotpCode"
                 type="text"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="000000"
+                placeholder="000000 or XXXXX-XXXXX"
                 value={regenerateTotpCode}
-                onChange={(e) => setRegenerateTotpCode(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setRegenerateTotpCode(e.target.value)}
                 className="bg-zinc-900 border-zinc-700 font-mono tracking-widest"
               />
             </div>
@@ -686,9 +682,7 @@ ${codes.join('\n')}
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleRegenerate}
-                disabled={
-                  regenerateLoading || !regeneratePassword || regenerateTotpCode.length !== 6
-                }
+                disabled={regenerateLoading || !regeneratePassword || !regenerateTotpCode}
                 className="bg-amber-600 hover:bg-amber-700 text-white"
               >
                 {regenerateLoading ? 'Generating...' : 'Regenerate'}
