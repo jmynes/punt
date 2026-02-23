@@ -303,6 +303,84 @@ SessionProvider (NextAuth)
 - **Upload security**: SVG files blocked (XSS risk via embedded scripts). Allowed types: JPEG, PNG, GIF, WebP, MP4, WebM, OGG, QuickTime, PDF, Word, Excel, TXT, CSV.
 - **Sprint carryover**: Incomplete tickets can be moved to next sprint, backlog, or kept in completed sprint. Carryover tracking via isCarriedOver, carriedFromSprintId, carriedOverCount fields.
 
+### PQL (Punt Query Language)
+
+PQL is a JQL-like query language for advanced ticket filtering, available in backlog, sprint planning, and board views.
+
+**Accessing PQL:**
+- Click the `</>` icon inside the search bar to switch to PQL mode
+- Click the search icon button to return to standard search
+- Press Escape to clear the query
+
+**Query Syntax:**
+```
+# Field comparisons
+priority = high
+assignee = "Jordan"
+storyPoints >= 5
+
+# Logical operators
+type = bug AND priority = high
+priority = critical OR type = epic
+NOT status = "Done"
+
+# Implicit AND (spaces between conditions)
+type = bug priority = high
+
+# List operators
+type IN (bug, task)
+assignee NOT IN ("Alex", "Jordan")
+
+# Emptiness checks
+assignee IS EMPTY
+sprint IS NOT EMPTY
+
+# Date comparisons (absolute and relative)
+dueDate < 2024-12-31
+created > -7d
+updated > -2w
+
+# Ordinal comparisons
+priority > medium
+sprint > "Sprint 1"
+
+# Parentheses for grouping
+(type = bug OR type = task) AND priority = high
+```
+
+**Supported Fields:**
+
+| Field | Aliases | Type | Operators |
+|-------|---------|------|-----------|
+| `type` | - | enum | =, !=, IN, NOT IN |
+| `priority` | - | ordinal | =, !=, >, <, >=, <=, IN, NOT IN |
+| `status` | - | string | =, !=, IN, NOT IN, IS EMPTY |
+| `assignee` | - | string | =, !=, IN, NOT IN, IS EMPTY |
+| `reporter` | - | string | =, !=, IN, NOT IN, IS EMPTY |
+| `sprint` | - | ordinal | =, !=, >, <, >=, <=, IN, NOT IN, IS EMPTY |
+| `labels` | `label` | array | =, !=, IN, NOT IN, IS EMPTY |
+| `storyPoints` | `points` | number | =, !=, >, <, >=, <= |
+| `dueDate` | - | date | =, !=, >, <, >=, <=, IS EMPTY |
+| `created` | - | date | =, !=, >, <, >=, <= |
+| `updated` | - | date | =, !=, >, <, >=, <= |
+| `resolution` | - | enum | =, !=, IN, NOT IN, IS EMPTY |
+
+**Ordinal Ordering:**
+- Priority: `lowest < low < medium < high < highest < critical`
+- Sprint: Natural sort (`Sprint 1 < Sprint 2 < Sprint 10`)
+
+**Relative Date Units:**
+- `-Nd` days (e.g., `-7d` = 7 days ago)
+- `-Nw` weeks
+- `-Nm` months
+- `-Ny` years
+
+**Key Files:**
+- `src/lib/query-parser.ts` - Tokenizer + recursive descent parser
+- `src/lib/query-evaluator.ts` - AST evaluator for client-side filtering
+- `src/components/backlog/query-input.tsx` - Input with syntax highlighting & autocomplete
+- `src/stores/backlog-store.ts` - `queryMode`, `queryText` state
+
 ### File Organization
 
 ```

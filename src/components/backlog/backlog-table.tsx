@@ -24,12 +24,16 @@ import { DropZone, type TableContext, TicketTable } from '@/components/table'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { filterTickets } from '@/lib/filter-tickets'
+import { evaluateQuery } from '@/lib/query-evaluator'
+import { parse, QueryParseError } from '@/lib/query-parser'
 import { type SortConfig, useBacklogStore } from '@/stores/backlog-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { BacklogFilters } from './backlog-filters'
+import { QueryInput } from './query-input'
 
 interface BacklogTableProps {
   tickets: TicketWithRelations[]
@@ -81,8 +85,47 @@ export function BacklogTable({
     backlogOrder,
     setBacklogOrder,
     clearBacklogOrder: _clearBacklogOrder,
+    queryMode,
+    setQueryMode,
+    queryText,
+    setQueryText,
   } = useBacklogStore()
   const persistTableSort = useSettingsStore((s) => s.persistTableSort)
+
+  // Fetch all sprints for the project (for autocomplete)
+  const { data: projectSprints } = useProjectSprints(projectId)
+
+  // Debounce query text to prevent per-keystroke evaluation
+  const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQueryText(queryText), 150)
+    return () => clearTimeout(timer)
+  }, [queryText])
+
+  // Extract dynamic values for query autocomplete
+  const dynamicValues = useMemo(() => {
+    const statusNames = statusColumns.map((c) => c.name)
+    const userSet = new Set<string>() // Both assignees and reporters
+    const labelSet = new Set<string>()
+
+    for (const ticket of tickets) {
+      if (ticket.assignee?.name) userSet.add(ticket.assignee.name)
+      if (ticket.creator?.name) userSet.add(ticket.creator.name)
+      for (const label of ticket.labels) {
+        labelSet.add(label.name)
+      }
+    }
+
+    // Use all project sprints, not just those assigned to visible tickets
+    const sprintNames = projectSprints?.map((s) => s.name).sort() ?? []
+
+    return {
+      statusNames,
+      assigneeNames: Array.from(userSet).sort(), // Used for both assignee and reporter
+      sprintNames,
+      labelNames: Array.from(labelSet).sort(),
+    }
+  }, [tickets, statusColumns, projectSprints])
 
   // Reset backlog sort to default on mount when sort persistence is disabled
   const sortResetRef = useRef(false)
@@ -174,23 +217,58 @@ export function BacklogTable({
     }),
   )
 
+  // Parse query for error display
+  const queryError = useMemo(() => {
+    if (!queryMode || !debouncedQueryText.trim()) return null
+    try {
+      parse(debouncedQueryText)
+      return null
+    } catch (err) {
+      if (err instanceof QueryParseError) {
+        return err.message
+      }
+      return 'Invalid query'
+    }
+  }, [queryMode, debouncedQueryText])
+
   // Filter and sort tickets
   const filteredTickets = useMemo(() => {
-    const result = filterTickets(orderedTickets, {
-      searchQuery,
-      projectKey,
-      filterByType,
-      filterByPriority,
-      filterByStatus,
-      filterByResolution,
-      filterByAssignee,
-      filterByLabels,
-      filterBySprint,
-      filterByPoints,
-      filterByDueDate,
-      filterByAttachments,
-      showSubtasks,
-    })
+    let result: TicketWithRelations[]
+
+    if (queryMode && debouncedQueryText.trim()) {
+      // Query mode: use the query parser/evaluator
+      try {
+        const ast = parse(debouncedQueryText)
+        result = evaluateQuery(ast, orderedTickets, statusColumns, projectKey)
+        // Still filter subtasks if disabled
+        if (!showSubtasks) {
+          result = result.filter((t) => t.type !== 'subtask')
+        }
+      } catch {
+        // If the query is invalid, show all tickets
+        result = [...orderedTickets]
+        if (!showSubtasks) {
+          result = result.filter((t) => t.type !== 'subtask')
+        }
+      }
+    } else {
+      // Standard filter mode
+      result = filterTickets(orderedTickets, {
+        searchQuery,
+        projectKey,
+        filterByType,
+        filterByPriority,
+        filterByStatus,
+        filterByResolution,
+        filterByAssignee,
+        filterByLabels,
+        filterBySprint,
+        filterByPoints,
+        filterByDueDate,
+        filterByAttachments,
+        showSubtasks,
+      })
+    }
 
     // Sort (skip if using manual order from drag & drop)
     if (sort && !hasManualOrder) {
@@ -312,6 +390,9 @@ export function BacklogTable({
     sort,
     hasManualOrder,
     projectKey,
+    queryMode,
+    debouncedQueryText,
+    statusColumns,
   ])
 
   const visibleColumns = columns.filter((c) => c.visible)
@@ -566,17 +647,24 @@ export function BacklogTable({
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4 border-b border-zinc-800 px-4 py-3">
-        <BacklogFilters projectId={projectId} statusColumns={statusColumns} />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setColumnConfigOpen(true)}
-          className="shrink-0"
-        >
-          <Settings2 className="mr-2 h-4 w-4" />
-          Columns
-        </Button>
+      <div className="flex flex-col border-b border-zinc-800">
+        <div className="flex items-center justify-between gap-4 px-4 py-3">
+          <BacklogFilters
+            projectId={projectId}
+            statusColumns={statusColumns}
+            dynamicValues={dynamicValues}
+            queryError={queryError}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setColumnConfigOpen(true)}
+            className="shrink-0"
+          >
+            <Settings2 className="mr-2 h-4 w-4" />
+            Columns
+          </Button>
+        </div>
       </div>
 
       {/* Summary header */}

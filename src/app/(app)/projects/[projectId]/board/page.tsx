@@ -2,7 +2,7 @@
 
 import { Columns3, Loader2, Plus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BacklogFilters } from '@/components/backlog'
 import { KanbanBoard } from '@/components/board'
 import { SprintHeader } from '@/components/sprints'
@@ -15,6 +15,8 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
 import { PERMISSIONS } from '@/lib/permissions'
+import { evaluateQuery } from '@/lib/query-evaluator'
+import { parse, QueryParseError } from '@/lib/query-parser'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -50,6 +52,8 @@ export default function BoardPage() {
     filterByDueDate,
     filterByResolution,
     searchQuery,
+    queryMode,
+    queryText,
   } = useBacklogStore()
 
   // Fetch columns from API (creates defaults if none exist)
@@ -80,6 +84,13 @@ export default function BoardPage() {
     return planning || null
   }, [sprints])
 
+  // Debounce query text to prevent per-keystroke evaluation
+  const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQueryText(queryText), 150)
+    return () => clearTimeout(timer)
+  }, [queryText])
+
   // Check permission to create tickets
   const canCreateTickets = useHasPermission(projectId, PERMISSIONS.TICKETS_CREATE)
 
@@ -88,6 +99,44 @@ export default function BoardPage() {
 
   // Get columns for this project
   const columns = getColumns(projectId)
+
+  // Get all tickets for dynamic values extraction
+  const allTicketsRaw = useMemo(() => columns.flatMap((col) => col.tickets), [columns])
+
+  // Extract dynamic values for query autocomplete
+  const dynamicValues = useMemo(() => {
+    const statusNames = columns.map((c) => c.name)
+    const userSet = new Set<string>()
+    const labelSet = new Set<string>()
+
+    for (const ticket of allTicketsRaw) {
+      if (ticket.assignee?.name) userSet.add(ticket.assignee.name)
+      if (ticket.creator?.name) userSet.add(ticket.creator.name)
+      for (const label of ticket.labels) {
+        labelSet.add(label.name)
+      }
+    }
+
+    const sprintNames = sprints?.map((s) => s.name).sort() ?? []
+
+    return {
+      statusNames,
+      assigneeNames: Array.from(userSet).sort(),
+      sprintNames,
+      labelNames: Array.from(labelSet).sort(),
+    }
+  }, [allTicketsRaw, columns, sprints])
+
+  // Compute query error
+  const queryError = useMemo(() => {
+    if (!queryMode || !debouncedQueryText.trim()) return null
+    try {
+      parse(debouncedQueryText)
+      return null
+    } catch (err) {
+      return err instanceof QueryParseError ? err.message : 'Invalid query'
+    }
+  }, [queryMode, debouncedQueryText])
 
   // URL ↔ drawer sync for shareable ticket links
   const { hasTicketParam } = useTicketUrlSync(projectKey)
@@ -104,19 +153,42 @@ export default function BoardPage() {
   // Apply filters to columns
   // Board view shows tickets in the current sprint (active or planning)
   const filteredColumns = useMemo((): ColumnWithTickets[] => {
-    return columns.map((col) => ({
+    // First, filter tickets to the active sprint (board requirement)
+    const sprintFilteredColumns = columns.map((col) => ({
       ...col,
       tickets: col.tickets.filter((ticket) => {
         // BOARD ONLY: Filter to current sprint (active or planning)
-        // If there's a sprint, only show tickets in that sprint
-        // If there's no sprint, show no tickets (board is sprint-focused)
         if (activeSprint) {
-          if (ticket.sprintId !== activeSprint.id) return false
-        } else {
-          // No sprint - board shows nothing
-          return false
+          return ticket.sprintId === activeSprint.id
         }
+        // No sprint - board shows nothing
+        return false
+      }),
+    }))
 
+    // If PQL mode is active, use the query evaluator
+    if (queryMode && debouncedQueryText.trim()) {
+      try {
+        const ast = parse(debouncedQueryText)
+        // Flatten, evaluate, then redistribute to columns
+        const allSprintTickets = sprintFilteredColumns.flatMap((col) => col.tickets)
+        const matchedTickets = evaluateQuery(ast, allSprintTickets, columns, projectKey)
+        const matchedIds = new Set(matchedTickets.map((t) => t.id))
+
+        return sprintFilteredColumns.map((col) => ({
+          ...col,
+          tickets: col.tickets.filter((t) => matchedIds.has(t.id)),
+        }))
+      } catch {
+        // Invalid query - show all sprint tickets
+        return sprintFilteredColumns
+      }
+    }
+
+    // Standard filter mode
+    return sprintFilteredColumns.map((col) => ({
+      ...col,
+      tickets: col.tickets.filter((ticket) => {
         // Search query
         if (searchQuery) {
           const query = searchQuery.toLowerCase()
@@ -205,6 +277,9 @@ export default function BoardPage() {
   }, [
     columns,
     activeSprint,
+    queryMode,
+    debouncedQueryText,
+    projectKey,
     searchQuery,
     filterByType,
     filterByPriority,
@@ -217,8 +292,8 @@ export default function BoardPage() {
     filterByDueDate,
   ])
 
-  // Get all tickets for finding the selected one (use unfiltered for drawer)
-  const allTickets = useMemo(() => columns.flatMap((col) => col.tickets), [columns])
+  // Use allTicketsRaw for finding the selected ticket (use unfiltered for drawer)
+  const allTickets = allTicketsRaw
 
   // Flattened filtered tickets for sprint progress overlay
   const filteredTicketsFlat = useMemo(
@@ -354,8 +429,13 @@ export default function BoardPage() {
         />
 
         {/* Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          <BacklogFilters statusColumns={columns} projectId={projectId} />
+        <div className="flex items-center gap-2">
+          <BacklogFilters
+            statusColumns={columns}
+            projectId={projectId}
+            dynamicValues={dynamicValues}
+            queryError={queryError}
+          />
         </div>
       </div>
 

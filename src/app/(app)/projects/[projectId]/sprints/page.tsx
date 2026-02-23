@@ -2,14 +2,17 @@
 
 import { Loader2, Target } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BacklogFilters } from '@/components/backlog'
 import { SprintBacklogView, SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
+import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
 import { filterTickets } from '@/lib/filter-tickets'
+import { evaluateQuery } from '@/lib/query-evaluator'
+import { parse, QueryParseError } from '@/lib/query-parser'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -87,11 +90,63 @@ export default function SprintPlanningPage() {
     filterByAttachments,
     searchQuery,
     showSubtasks,
+    queryMode,
+    queryText,
   } = useBacklogStore()
 
-  const filteredTickets = useMemo(
-    () =>
-      filterTickets(allTickets, {
+  // Fetch sprints for autocomplete
+  const { data: projectSprints } = useProjectSprints(projectId)
+
+  // Debounce query text to prevent per-keystroke evaluation
+  const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQueryText(queryText), 150)
+    return () => clearTimeout(timer)
+  }, [queryText])
+
+  // Extract dynamic values for query autocomplete
+  const dynamicValues = useMemo(() => {
+    const statusNames = columns.map((c) => c.name)
+    const userSet = new Set<string>()
+    const labelSet = new Set<string>()
+
+    for (const ticket of allTickets) {
+      if (ticket.assignee?.name) userSet.add(ticket.assignee.name)
+      if (ticket.creator?.name) userSet.add(ticket.creator.name)
+      for (const label of ticket.labels) {
+        labelSet.add(label.name)
+      }
+    }
+
+    const sprintNames = projectSprints?.map((s) => s.name).sort() ?? []
+
+    return {
+      statusNames,
+      assigneeNames: Array.from(userSet).sort(),
+      sprintNames,
+      labelNames: Array.from(labelSet).sort(),
+    }
+  }, [allTickets, columns, projectSprints])
+
+  // Compute filtered tickets and query error together
+  const { filteredTickets, queryError } = useMemo(() => {
+    // PQL query mode
+    if (queryMode && debouncedQueryText.trim()) {
+      try {
+        const ast = parse(debouncedQueryText)
+        return {
+          filteredTickets: evaluateQuery(ast, allTickets, columns, projectKey),
+          queryError: null,
+        }
+      } catch (err) {
+        const errorMessage = err instanceof QueryParseError ? err.message : 'Invalid query'
+        return { filteredTickets: allTickets, queryError: errorMessage }
+      }
+    }
+
+    // Standard filter mode
+    return {
+      filteredTickets: filterTickets(allTickets, {
         searchQuery,
         projectKey,
         filterByType,
@@ -106,23 +161,27 @@ export default function SprintPlanningPage() {
         filterByAttachments,
         showSubtasks,
       }),
-    [
-      allTickets,
-      searchQuery,
-      projectKey,
-      filterByType,
-      filterByPriority,
-      filterByStatus,
-      filterByResolution,
-      filterByAssignee,
-      filterByLabels,
-      filterBySprint,
-      filterByPoints,
-      filterByDueDate,
-      filterByAttachments,
-      showSubtasks,
-    ],
-  )
+      queryError: null,
+    }
+  }, [
+    queryMode,
+    debouncedQueryText,
+    allTickets,
+    columns,
+    projectKey,
+    searchQuery,
+    filterByType,
+    filterByPriority,
+    filterByStatus,
+    filterByResolution,
+    filterByAssignee,
+    filterByLabels,
+    filterBySprint,
+    filterByPoints,
+    filterByDueDate,
+    filterByAttachments,
+    showSubtasks,
+  ])
 
   // Find the selected ticket
   const selectedTicket = useMemo(
@@ -184,8 +243,13 @@ export default function SprintPlanningPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex-shrink-0 flex items-center gap-4 border-b border-zinc-800 px-4 py-3 lg:px-6">
-        <BacklogFilters projectId={projectId} statusColumns={columns} />
+      <div className="flex-shrink-0 border-b border-zinc-800 px-4 py-3 lg:px-6">
+        <BacklogFilters
+          projectId={projectId}
+          statusColumns={columns}
+          dynamicValues={dynamicValues}
+          queryError={queryError}
+        />
       </div>
 
       {/* Scrollable content area */}
