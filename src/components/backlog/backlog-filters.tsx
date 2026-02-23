@@ -1182,17 +1182,38 @@ export function BacklogFilters({
 
       {/* Search / Query input with integrated toggle */}
       {queryMode && dynamicValues ? (
-        <div className="flex-1 max-w-md">
-          <QueryInput
-            value={queryText}
-            onChange={setQueryText}
-            onClear={() => {
-              setQueryText('')
-              setQueryMode(false)
-            }}
-            error={queryError ?? null}
-            dynamicValues={dynamicValues}
-          />
+        <div className="flex flex-1 items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <QueryInput
+              value={queryText}
+              onChange={setQueryText}
+              onClear={() => {
+                setQueryText('')
+                setQueryMode(false)
+              }}
+              error={queryError ?? null}
+              dynamicValues={dynamicValues}
+            />
+          </div>
+          {/* Exit PQL mode button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setQueryText('')
+                  setQueryMode(false)
+                }}
+                className="shrink-0 h-9 px-2 text-purple-400 hover:text-zinc-200 hover:bg-zinc-800"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+              <p className="text-xs text-zinc-100">Switch to standard search</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       ) : (
         <div className="relative max-w-xs flex-1">
