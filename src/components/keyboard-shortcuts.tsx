@@ -735,6 +735,27 @@ export function KeyboardShortcuts() {
         return
       }
 
+      // Block undo/redo when a modal or drawer is open to prevent accidental
+      // board modifications while the user is interacting with overlay content.
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')
+      ) {
+        const uiState = useUIStore.getState()
+        if (
+          uiState.activeTicketId ||
+          uiState.createTicketOpen ||
+          uiState.createProjectOpen ||
+          uiState.editProjectOpen ||
+          uiState.sprintCreateOpen ||
+          uiState.sprintEditOpen ||
+          uiState.sprintCompleteOpen ||
+          uiState.sprintStartOpen
+        ) {
+          return
+        }
+      }
+
       // Check for Ctrl/Cmd + Z (Undo) - must check before redo to avoid conflicts
       if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
         e.preventDefault()
