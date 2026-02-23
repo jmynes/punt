@@ -9,6 +9,7 @@ import {
   EyeOff,
   Filter,
   Loader2,
+  Lock,
   Minus,
   MoreHorizontal,
   Search,
@@ -115,6 +116,14 @@ export function UserList() {
   const [deletePassword, setDeletePassword] = useState('')
   const [showDeletePassword, setShowDeletePassword] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+
+  // Reset 2FA confirmation state
+  const [reset2faUsername, setReset2faUsername] = useState<string | null>(null)
+  const [reset2faPassword, setReset2faPassword] = useState('')
+  const [showReset2faPassword, setShowReset2faPassword] = useState(false)
+  const [reset2faTotpCode, setReset2faTotpCode] = useState('')
+  const [reset2faError, setReset2faError] = useState('')
+  const [reset2faLoading, setReset2faLoading] = useState(false)
 
   // Undo store
   const {
@@ -585,6 +594,59 @@ export function UserList() {
     setBulkDeleteOpen(true)
   }
 
+  const closeReset2faDialog = () => {
+    setReset2faUsername(null)
+    setReset2faPassword('')
+    setShowReset2faPassword(false)
+    setReset2faTotpCode('')
+    setReset2faError('')
+    setReset2faLoading(false)
+  }
+
+  const handleReset2fa = async () => {
+    if (!reset2faUsername || !reset2faPassword) {
+      setReset2faError('Password is required')
+      return
+    }
+
+    setReset2faLoading(true)
+    setReset2faError('')
+
+    try {
+      const body: { password: string; totpCode?: string } = {
+        password: reset2faPassword,
+      }
+      if (reset2faTotpCode) {
+        body.totpCode = reset2faTotpCode
+      }
+
+      const res = await fetch(`/api/admin/users/${reset2faUsername}/2fa`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tab-id': getTabId(),
+        },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error ?? 'Failed to reset 2FA')
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      const targetUser = users?.find((u) => u.username === reset2faUsername)
+      showToast.success(
+        `Two-factor authentication reset for ${targetUser?.name ?? reset2faUsername}`,
+      )
+      closeReset2faDialog()
+    } catch (error) {
+      setReset2faError(error instanceof Error ? error.message : 'Failed to reset 2FA')
+    } finally {
+      setReset2faLoading(false)
+    }
+  }
+
   // Handle undo - reverse the last action
   const handleUndo = useCallback(async () => {
     const action = undo()
@@ -974,23 +1036,9 @@ export function UserList() {
                   <>
                     <DropdownMenuSeparator className="bg-zinc-800" />
                     <DropdownMenuItem
-                      onClick={async () => {
-                        try {
-                          const res = await fetch(`/api/admin/users/${user.username}/2fa`, {
-                            method: 'DELETE',
-                            headers: { 'x-tab-id': getTabId() },
-                          })
-                          if (!res.ok) {
-                            const data = await res.json()
-                            throw new Error(data.error ?? 'Failed to reset 2FA')
-                          }
-                          queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-                          showToast.success(`Two-factor authentication reset for ${user.name}`)
-                        } catch (error) {
-                          showToast.error(
-                            error instanceof Error ? error.message : 'Failed to reset 2FA',
-                          )
-                        }
+                      onClick={() => {
+                        setReset2faError('')
+                        setReset2faUsername(user.username)
                       }}
                       className="text-amber-400 focus:text-amber-300 focus:bg-zinc-800"
                     >
@@ -1608,6 +1656,150 @@ export function UserList() {
                   </>
                 ) : (
                   'Delete Permanently'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reset 2FA confirmation dialog */}
+        <Dialog open={!!reset2faUsername} onOpenChange={(open) => !open && closeReset2faDialog()}>
+          <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-zinc-100 flex items-center gap-2">
+                <ShieldOff className="h-5 w-5 text-amber-500" />
+                Reset Two-Factor Authentication
+              </DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                You are about to reset 2FA for{' '}
+                <strong className="text-zinc-200">
+                  {users?.find((u) => u.username === reset2faUsername)?.name ?? reset2faUsername}
+                </strong>
+                . This will disable their 2FA and clear all TOTP data.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="flex items-start gap-3 p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
+                <Shield className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-400">Identity Verification Required</p>
+                  <p className="text-amber-300/80 mt-1">
+                    Enter your password
+                    {currentUserData?.totpEnabled ? ' and 2FA code ' : ' '}
+                    to authorize this action.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reset-2fa-password" className="text-zinc-300">
+                  Your Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <Input
+                    id="reset-2fa-password"
+                    type="text"
+                    autoComplete="off"
+                    value={reset2faPassword}
+                    onChange={(e) => {
+                      setReset2faPassword(e.target.value)
+                      setReset2faError('')
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && reset2faPassword && !reset2faLoading) {
+                        if (currentUserData?.totpEnabled) {
+                          // Focus the TOTP code input instead
+                          document.getElementById('reset-2fa-totp-code')?.focus()
+                        } else {
+                          e.preventDefault()
+                          handleReset2fa()
+                        }
+                      }
+                    }}
+                    placeholder="Enter your password"
+                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10 ${!showReset2faPassword ? 'password-mask' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowReset2faPassword(!showReset2faPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  >
+                    {showReset2faPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {currentUserData?.totpEnabled && (
+                <div className="space-y-2">
+                  <Label htmlFor="reset-2fa-totp-code" className="text-zinc-300">
+                    Your 2FA Code
+                  </Label>
+                  <Input
+                    id="reset-2fa-totp-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    value={reset2faTotpCode}
+                    onChange={(e) => {
+                      setReset2faTotpCode(e.target.value.replace(/\D/g, ''))
+                      setReset2faError('')
+                    }}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === 'Enter' &&
+                        reset2faPassword &&
+                        reset2faTotpCode &&
+                        !reset2faLoading
+                      ) {
+                        e.preventDefault()
+                        handleReset2fa()
+                      }
+                    }}
+                    placeholder="Enter 6-digit code"
+                    className="bg-zinc-800 border-zinc-700 text-zinc-100"
+                  />
+                </div>
+              )}
+
+              {reset2faError && (
+                <p className="text-sm text-red-400 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  {reset2faError}
+                </p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={closeReset2faDialog}
+                className="text-zinc-300 hover:bg-zinc-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleReset2fa}
+                disabled={
+                  reset2faLoading ||
+                  !reset2faPassword ||
+                  (currentUserData?.totpEnabled ? !reset2faTotpCode : false)
+                }
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {reset2faLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Resetting...
+                  </>
+                ) : (
+                  'Reset 2FA'
                 )}
               </Button>
             </DialogFooter>
