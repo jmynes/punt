@@ -104,93 +104,17 @@ All data operations go through the `DataProvider` interface, which abstracts whe
 
 ### API Routes
 
-**Auth:**
-- `POST /api/auth/[...nextauth]` - NextAuth handlers
-- `POST /api/auth/register` - Public registration (rate limited: 5/hour)
-- `POST /api/auth/verify-credentials` - Credential validation helper
-- `POST /api/auth/forgot-password` - Request password reset (rate limited per email+IP, same response regardless of email existence)
-- `GET/POST /api/auth/reset-password` - Validate token (GET) / complete reset (POST), marks token used
-- `POST /api/auth/send-verification` - Send email verification link
-- `POST /api/auth/verify-email` - Complete email verification
+Routes follow RESTful conventions in `src/app/api/`. Key categories:
 
-**User profile (`/api/me`):**
-- `GET/PATCH /api/me` - Get/update profile (name)
-- `PATCH /api/me/email` - Update email (requires password)
-- `PATCH /api/me/password` - Change password (rate limited: 5/15min)
-- `POST/DELETE /api/me/avatar` - Upload/delete avatar (WebP conversion, metadata stripping)
-- `DELETE /api/me/account` - Hard delete account (requires password + confirmation string)
-- `GET/POST/DELETE /api/me/mcp-key` - Get status / generate / revoke MCP API key
-- `GET /api/me/verification-status` - Email verification status
+| Category | Path | Notes |
+|----------|------|-------|
+| Auth | `/api/auth/*` | NextAuth + register, password reset, email verification |
+| User | `/api/me/*` | Profile, password, avatar, MCP key |
+| Projects | `/api/projects/[projectId]/*` | CRUD + columns, members, roles, tickets, labels, sprints |
+| Admin | `/api/admin/*` | Users, settings, database ops (requires `isSystemAdmin`) |
+| SSE | `/api/*/events` | Real-time updates for multi-tab/multi-user sync |
 
-**Projects:**
-- `GET/POST /api/projects` - List/create projects
-- `GET/PATCH/DELETE /api/projects/[projectId]` - Manage project (member/admin/owner required)
-- `GET/POST /api/projects/[projectId]/columns` - List/create columns (auto-creates defaults if none)
-- `GET/PATCH/DELETE /api/projects/[projectId]/columns/[columnId]` - Manage column (rename, reorder, icon, color, delete with ticket migration)
-- `GET/POST /api/projects/[projectId]/members` - List/add project members
-- `PATCH/DELETE /api/projects/[projectId]/members/[memberId]` - Update role / remove member
-- `GET /api/projects/[projectId]/my-permissions` - Current user's permissions for project
-- `GET /api/projects/[projectId]/available-users` - Users not yet members of project
-- `GET/POST /api/projects/[projectId]/roles` - List/create custom roles
-- `GET/PATCH/DELETE /api/projects/[projectId]/roles/[roleId]` - Manage role
-- `POST /api/projects/[projectId]/roles/reorder` - Drag-and-drop role ordering
-
-**Tickets:**
-- `GET/POST /api/projects/[projectId]/tickets` - List/create tickets
-- `GET/PATCH/DELETE /api/projects/[projectId]/tickets/[ticketId]` - Manage ticket
-- `GET /api/projects/[projectId]/tickets/search` - Full-text search across tickets
-- Ticket fields: title, description, type, priority, columnId, assigneeId, sprintId, parentId, storyPoints, estimate, startDate, dueDate, environment, affectedVersion, fixVersion, resolution, labelIds, watcherIds
-
-**Ticket Links:**
-- `GET/POST /api/projects/[projectId]/tickets/[ticketId]/links` - List/create ticket links
-- `DELETE /api/projects/[projectId]/tickets/[ticketId]/links/[linkId]` - Remove link
-- Link types: blocks, is_blocked_by, relates_to, duplicates, is_duplicated_by, clones, is_cloned_by
-
-**Attachments:**
-- `GET/POST /api/projects/[projectId]/tickets/[ticketId]/attachments` - List/add attachments
-- `DELETE /api/projects/[projectId]/tickets/[ticketId]/attachments/[attachmentId]` - Remove attachment
-
-**Labels:**
-- `GET/POST /api/projects/[projectId]/labels` - List/create labels (auto-color assignment)
-- `DELETE /api/projects/[projectId]/labels/[labelId]` - Delete label
-
-**Sprints:**
-- `GET/POST /api/projects/[projectId]/sprints` - List/create sprints
-- `GET/PATCH/DELETE /api/projects/[projectId]/sprints/[sprintId]` - Manage sprint
-- `POST /api/projects/[projectId]/sprints/[sprintId]/start` - Start sprint (planning → active)
-- `POST /api/projects/[projectId]/sprints/[sprintId]/complete` - Complete sprint with carryover options
-- `POST /api/projects/[projectId]/sprints/[sprintId]/extend` - Extend active sprint
-- `GET /api/projects/[projectId]/sprints/active` - Get active sprint
-- `GET/PATCH /api/projects/[projectId]/sprints/settings` - Sprint settings (default duration, auto-carryover, done columns)
-
-**Admin (`/api/admin`) - requires `isSystemAdmin`:**
-- `GET/POST /api/admin/users` - List/create users (with filtering/sorting, requires password confirmation)
-- `GET/PATCH/DELETE /api/admin/users/[userId]` - Manage user (self-demotion prevented)
-- `GET/PATCH /api/admin/settings` - System settings (upload limits, allowed file types, branding, email config)
-- `GET/PATCH /api/admin/settings/roles` - Default role permissions for new projects
-- `POST /api/admin/settings/logo` - Upload custom logo (JPEG/PNG/GIF/WebP, max 2MB, WebP conversion)
-- `DELETE /api/admin/settings/logo` - Remove custom logo
-- `POST /api/admin/settings/email/test` - Test email configuration
-- `POST /api/admin/database/export` - Export database (requires password confirmation)
-- `POST /api/admin/database/import` - Import database backup (requires password confirmation, replaces all data)
-- `POST /api/admin/database/wipe` - Wipe entire database, create new admin (requires password confirmation)
-- `POST /api/admin/database/wipe-projects` - Wipe all projects, keep users (requires password confirmation)
-
-**Branding & Dashboard:**
-- `GET /api/branding` - Public endpoint (no auth required) for login page branding (app name, logo, colors)
-- `GET /api/dashboard/stats` - Aggregated ticket counts (open, in-progress, completed)
-
-**File Upload:**
-- `GET/POST /api/upload` - Get config/upload files (validates type/size against SystemSettings)
-
-**Real-time Events (SSE):**
-- `GET /api/projects/[projectId]/events` - Project events (ticket/label CRUD)
-- `GET /api/projects/events` - Project list events
-- `GET /api/users/events` - User profile events
-
-**Rate limiting** (`src/lib/rate-limit.ts`): Database-backed per client identifier. Limits: login 10/15min, register 5/hour, password change 5/15min.
-- Client identification: Uses `TRUST_PROXY=true` env var to trust `X-Forwarded-For` headers (only enable behind trusted reverse proxy)
-- Without `TRUST_PROXY`, uses browser fingerprint hash (user-agent + accept-language) to prevent header spoofing bypasses
+**Rate limiting** (`src/lib/rate-limit.ts`): Database-backed. Key limits: login 10/15min, register 5/hour, password change 5/15min.
 
 ### Real-time Events (SSE)
 
@@ -231,59 +155,19 @@ Stores use `_hasHydrated` flag to prevent render before localStorage loads.
 
 ### Database (Prisma + SQLite)
 
-Schema in `prisma/schema.prisma`. Key models:
-
-**Core:**
-- **User**: username (unique), email (unique, optional), name, avatar, avatarColor, passwordHash, passwordChangedAt, isSystemAdmin, isActive, mcpApiKey. Related: Session, Account, Invitation, PasswordResetToken, EmailVerificationToken.
-- **Session**: Server-side session storage with userAgent, ipAddress, lastActive.
-- **Account**: OAuth provider linkage (future-proofed for Google, GitHub).
-- **RateLimit**: Tracks rate limits per IP/endpoint.
-- **PasswordResetToken**: Forgot password flow with SHA-256 hashed tokens, expiration, usedAt tracking.
-- **EmailVerificationToken**: Email verification with hashed tokens, target email, expiration.
-
-**Projects:**
-- **Project**: name, key (unique), description, color, showAddColumnButton. Repository integration: repositoryUrl, repositoryProvider, localPath, defaultBranch, branchTemplate, agentGuidance, monorepoPath, environmentBranches (JSON). Relations: columns, tickets, members, labels, sprints, invitations, sprintSettings, roles.
-- **ProjectMember**: User-project relationship via roleId (references Role). Optional per-member permission overrides (JSON array of permission strings).
-- **Role**: Custom roles with name, color, description, permissions (JSON array), isDefault (built-in roles can't be deleted), position (display ordering). Unique constraint: `[projectId, name]`.
-- **Column**: Board columns with order, icon, color fields.
-
-**Tickets:**
-- **Ticket**: 25+ fields including type/priority/order/storyPoints/estimate/dates/versions/resolution/resolvedAt. Unique constraint on `[projectId, number]` for ticket keys (e.g., PUNT-1). Supports parentId for subtasks, isCarriedOver/carriedFromSprintId/carriedOverCount for sprint tracking.
-- **Label**: Project-scoped with name/color. Unique constraint: `[projectId, name]`.
-- **TicketWatcher**: Many-to-many user-ticket relationship.
-- **TicketLink**: Ticket relationships with linkType (blocks, is_blocked_by, relates_to, duplicates, is_duplicated_by, clones, is_cloned_by). Unique constraint: `[fromTicketId, toTicketId, linkType]`.
-- **Comment**: Ticket comments with author.
-- **Attachment**: File attachments with filename, mimeType, size, url, uploaderId (ownership tracking).
-- **TicketEdit**: Edit history tracking field changes.
-
-**Sprints:**
-- **Sprint**: name, goal, startDate, endDate, status (planning/active/completed), completion metrics (completedTicketCount, incompleteTicketCount, completedStoryPoints, incompleteStoryPoints).
-- **TicketSprintHistory**: Tracks ticket entry/exit from sprints with entryType (added/carried_over) and exitStatus (completed/carried_over/removed).
-- **ProjectSprintSettings**: Per-project settings (defaultSprintDuration, autoCarryOverIncomplete, doneColumnIds).
-
-**System:**
-- **Invitation**: Project invitations with token, role, status, expiration.
-- **SystemSettings**: Singleton for upload config (max sizes, allowed MIME types), branding (appName, logoUrl, logoLetter, logoGradientFrom/To), email configuration (provider: none/smtp/resend/console, SMTP settings, feature toggles for passwordReset/welcome/verification/invitations), board settings (showAddColumnButton), defaultRolePermissions for new projects, and repository defaults (defaultBranchTemplate, defaultAgentGuidance).
+Schema in `prisma/schema.prisma`. Key models: User, Project, Ticket, Sprint, Label, Role, Column.
 
 Types generated to `@/generated/prisma/client`, re-exported with relations from `@/types/index.ts`.
 
+See `src/lib/prisma-selects.ts` for shared select clauses and `transformTicket()` helper.
+
 ### Component Patterns
 
-- **Auth**: `LoginForm` uses `signIn('credentials')`, `RegisterForm` calls `/api/auth/register` then auto-signs in.
-- **Admin**: `UserList` with React Query, admin toggle (self-prevention), enable/disable users. `AdminSettingsForm` for upload config.
-- **Profile**: `AvatarUpload`, `ProfileForm`, `PasswordChange` components.
-- **Board**: `KanbanBoard` orchestrates dnd-kit with `KanbanColumn` and `KanbanCard`. Multi-select drag shows overlay. `ColumnMenu` with rename, icon/color picker, delete (with ticket migration), move left/right, collapse. `AddColumnButton` for creating new columns.
-- **Table**: Unified table components in `src/components/table/` shared by backlog and sprint views:
-  - `TicketTable` - Main table component with drag-and-drop support
-  - `TicketTableRow` - Row with selection (click/Ctrl/Shift), keyboard nav, drag state
-  - `TicketTableHeader` - Sortable column headers
-  - `TicketCell` - Cell renderer for all 15 column types
-  - `DropIndicator` - Visual drop target indicator
-- **Backlog**: `BacklogTable` wraps `TicketTable` with filtering, sorting, and column configuration. `FilterConfig` for independent filter button visibility and drag-and-drop ordering. `ColumnConfig` for column visibility/ordering.
-- **Sprints**: `SprintSection` wraps `TicketTable`. Also: `SprintList`, `SprintCard`, `SprintCreateDialog`, `SprintStartDialog`, `SprintCompleteDialog`, `CarryoverBadge`.
-- **Tickets**: `TicketForm` with comprehensive fields, `TypeSelect`, `PrioritySelect`, `CustomImageDialog`. `TicketLinkSection` displays linked tickets grouped by type. `LinkTicketDialog` for creating new ticket links with type selection.
-- **Permissions**: `RolesTab` with drag-and-drop role reordering, create/edit/delete custom roles. `RoleEditorPanel` with categorized permission grid. `RoleCompareDialog` for side-by-side comparison. `AddMemberDialog` with multi-select support.
-- **UI**: shadcn/ui components in `src/components/ui/`.
+- **Board**: dnd-kit Kanban with multi-select drag. See `src/components/board/`
+- **Table**: Unified `TicketTable` shared by backlog/sprints with selection, keyboard nav, drag-and-drop. See `src/components/table/`
+- **Tickets**: `TicketForm` with comprehensive fields, ticket links. See `src/components/tickets/`
+- **Permissions**: `RolesTab` with drag-and-drop ordering, `RoleEditorPanel`. See `src/components/projects/permissions/`
+- **UI**: shadcn/ui in `src/components/ui/`
 
 ### Provider Stack (`src/components/providers.tsx`)
 
@@ -305,146 +189,42 @@ SessionProvider (NextAuth)
 
 ### PQL (Punt Query Language)
 
-PQL is a JQL-like query language for advanced ticket filtering, available in backlog, sprint planning, and board views.
+JQL-like query language for advanced ticket filtering. Access via `</>` icon in search bar.
 
-**Accessing PQL:**
-- Click the `</>` icon inside the search bar to switch to PQL mode
-- Click the search icon button to return to standard search
-- Press Escape to clear the query
-
-**Query Syntax:**
+**Syntax examples:**
 ```
-# Field comparisons
-priority = high
-assignee = "Jordan"
-storyPoints >= 5
-
-# Logical operators
-type = bug AND priority = high
-priority = critical OR type = epic
-NOT status = "Done"
-
-# Implicit AND (spaces between conditions)
-type = bug priority = high
-
-# List operators
-type IN (bug, task)
-assignee NOT IN ("Alex", "Jordan")
-
-# Emptiness checks
+priority = high AND type = bug
 assignee IS EMPTY
-sprint IS NOT EMPTY
-
-# Date comparisons (absolute and relative)
-dueDate < 2024-12-31
+storyPoints >= 5
 created > -7d
-updated > -2w
-
-# Ordinal comparisons
-priority > medium
-sprint > "Sprint 1"
-
-# Parentheses for grouping
-(type = bug OR type = task) AND priority = high
+(type = bug OR type = task) AND sprint IS NOT EMPTY
 ```
 
-**Supported Fields:**
+**Fields:** type, priority, status, assignee, reporter, sprint, labels, storyPoints, dueDate, created, updated, resolution
 
-| Field | Aliases | Type | Operators |
-|-------|---------|------|-----------|
-| `type` | - | enum | =, !=, IN, NOT IN |
-| `priority` | - | ordinal | =, !=, >, <, >=, <=, IN, NOT IN |
-| `status` | - | string | =, !=, IN, NOT IN, IS EMPTY |
-| `assignee` | - | string | =, !=, IN, NOT IN, IS EMPTY |
-| `reporter` | - | string | =, !=, IN, NOT IN, IS EMPTY |
-| `sprint` | - | ordinal | =, !=, >, <, >=, <=, IN, NOT IN, IS EMPTY |
-| `labels` | `label` | array | =, !=, IN, NOT IN, IS EMPTY |
-| `storyPoints` | `points` | number | =, !=, >, <, >=, <= |
-| `dueDate` | - | date | =, !=, >, <, >=, <=, IS EMPTY |
-| `created` | - | date | =, !=, >, <, >=, <= |
-| `updated` | - | date | =, !=, >, <, >=, <= |
-| `resolution` | - | enum | =, !=, IN, NOT IN, IS EMPTY |
+**Operators:** `=`, `!=`, `>`, `<`, `>=`, `<=`, `IN`, `NOT IN`, `IS EMPTY`, `IS NOT EMPTY`, `AND`, `OR`, `NOT`
 
-**Ordinal Ordering:**
-- Priority: `lowest < low < medium < high < highest < critical`
-- Sprint: Natural sort (`Sprint 1 < Sprint 2 < Sprint 10`)
+**Relative dates:** `-7d` (days), `-2w` (weeks), `-1m` (months), `-1y` (years)
 
-**Relative Date Units:**
-- `-Nd` days (e.g., `-7d` = 7 days ago)
-- `-Nw` weeks
-- `-Nm` months
-- `-Ny` years
-
-**Key Files:**
-- `src/lib/query-parser.ts` - Tokenizer + recursive descent parser
-- `src/lib/query-evaluator.ts` - AST evaluator for client-side filtering
-- `src/components/backlog/query-input.tsx` - Input with syntax highlighting & autocomplete
-- `src/stores/backlog-store.ts` - `queryMode`, `queryText` state
+**Key files:** `src/lib/query-parser.ts`, `src/lib/query-evaluator.ts`
 
 ### File Organization
 
 ```
 src/
-├── app/                    # Next.js pages + API routes
-│   ├── (auth)/             # Login/register pages (route group)
-│   ├── admin/              # Admin pages (users/, settings/)
-│   ├── profile/            # User profile page
-│   ├── projects/[projectId]/
-│   │   ├── board/          # Kanban board view
-│   │   ├── backlog/        # Backlog table view
-│   │   ├── sprints/        # Sprint planning view
-│   │   └── settings/       # Project settings (general, members, roles)
-│   ├── settings/           # Settings page
-│   ├── api/auth/           # NextAuth + register + password reset + email verification
-│   ├── api/me/             # User profile endpoints + MCP key
-│   ├── api/admin/          # Admin endpoints (users/, settings/, database/)
-│   ├── api/branding/       # Public branding endpoint
-│   ├── api/dashboard/      # Dashboard stats
-│   ├── api/projects/       # Project CRUD + nested resources
-│   │   └── [projectId]/
-│   │       ├── columns/    # Column CRUD endpoints
-│   │       ├── members/    # Member endpoints
-│   │       ├── roles/      # Role CRUD + reorder
-│   │       ├── my-permissions/ # Current user permissions
-│   │       ├── tickets/    # Ticket CRUD + attachments + links + search
-│   │       ├── labels/     # Label endpoints
-│   │       ├── sprints/    # Sprint endpoints + actions
-│   │       └── events/     # SSE endpoint
-│   └── api/upload/         # File upload
-├── components/
-│   ├── admin/              # User management, settings
-│   ├── auth/               # Login/register forms
-│   ├── backlog/            # Backlog view (uses table/)
-│   ├── board/              # Kanban (dnd-kit)
-│   ├── common/             # Shared components (avatars, badges, etc.)
-│   ├── layout/             # Sidebar, header, navigation
-│   ├── profile/            # Profile editing
-│   ├── projects/           # Project cards, forms, settings
-│   │   └── permissions/    # Members tab, roles tab, role compare dialog
-│   ├── sprints/            # Sprint view (uses table/)
-│   ├── table/              # Unified table components (TicketTable, TicketTableRow, TicketCell)
-│   ├── tickets/            # Ticket dialogs, forms
-│   └── ui/                 # shadcn/ui
-├── generated/              # Prisma-generated client (auto-generated)
-├── stores/                 # Zustand stores
-├── hooks/                  # useCurrentUser, useMediaQuery, queries/
-├── lib/                    # auth.ts, password.ts, rate-limit.ts, db.ts, logger.ts, api-utils.ts, constants.ts
-│   ├── actions/            # Unified action modules (paste-tickets.ts, delete-tickets.ts)
-│   ├── data-provider/      # DataProvider abstraction (api-provider.ts, demo-provider.ts)
-│   ├── demo/               # Demo mode (demo-config.ts, demo-storage.ts, demo-data.ts)
-│   ├── email/              # Email system (providers, templates, token hashing)
-│   ├── permissions/        # Granular RBAC (constants, check, presets, create-default-roles)
-│   ├── events.ts           # SSE event emitter
-│   ├── sprint-utils.ts     # Sprint helpers (generateNextSprintName, isCompletedColumn)
-│   └── system-settings.ts  # Dynamic upload config + branding
-└── types/                  # Prisma re-exports + custom types
+├── app/           # Next.js pages + API routes
+├── components/    # React components by domain (admin, board, backlog, sprints, tickets, table, ui)
+├── stores/        # Zustand stores (board, backlog, undo, selection, ui, settings)
+├── hooks/         # Custom hooks + React Query wrappers (queries/)
+├── lib/           # Core utilities (auth, db, permissions, email, data-provider, actions)
+└── types/         # Prisma re-exports + custom types
 ```
 
 ### Testing
 
-Vitest + React Testing Library + MSW for API mocking. Tests colocated in `__tests__/` subdirectories. Use custom render from `@/__tests__/utils/test-utils`. `InMemoryStorage` for file upload tests. Coverage target: 80% minimum, 90% for stores/API/utils.
+Vitest + React Testing Library + MSW. Tests in `__tests__/` subdirectories. See `docs/TESTING.md` for detailed guide.
 
-**Database test isolation:** Tests that hit SQLite (`database-backup*.test.ts`) run in a separate vitest project (`db`) with `fileParallelism: false` to prevent shared-DB race conditions. All other tests run in the `unit` project with full parallelism. New database test files must be added to the `db` project's `include` pattern in `vitest.config.ts`.
+Coverage target: 80% minimum, 90% for stores/API/utils. Database tests run in separate vitest project to prevent race conditions.
 
 ### Security
 
@@ -474,253 +254,43 @@ Vitest + React Testing Library + MSW for API mocking. Tests colocated in `__test
 **Client-side:**
 - localStorage validation during hydration prevents crashes from corrupted data
 
-### API Utilities (`src/lib/api-utils.ts`)
+### Utility Modules
 
-Centralized API response helpers to reduce duplication across routes:
-- `handleApiError(error, action)` - Standardized error handling for catch blocks
-- `validationError(result)` - Zod validation failure response
-- `rateLimitExceeded(rateLimit)` - Rate limit response with headers
-- `notFoundError(resource)` - 404 response
-- `badRequestError(message)` - 400 response
-- `passwordValidationError(errors)` - Password validation failure
-
-### Prisma Selects (`src/lib/prisma-selects.ts`)
-
-Shared Prisma select clauses to avoid duplication:
-- `TICKET_SELECT_FULL` - Full ticket with all relations
-- `SPRINT_SELECT_FULL` - Full sprint with tickets and history
-- `USER_SELECT_SUMMARY` - User summary (id, name, email, avatar)
-- `USER_SELECT_ADMIN_LIST` - User for admin listing
-- `LABEL_SELECT` - Label full selection
-- `transformTicket(ticket)` - Flatten watchers relation, merge linkedFrom/linkedTo into unified `links` array with direction
-
-### Sprint Utilities (`src/lib/sprint-utils.ts`)
-
-- `generateNextSprintName(currentName)` - Generate incremented sprint name (Sprint 1 → Sprint 2)
-- `isCompletedColumn(columnName)` - Heuristic for identifying done columns
-
-### System Settings (`src/lib/system-settings.ts`)
-
-- `getSystemSettings()` - Fetch from DB with defaults
-- `getUploadConfig()` - Get upload limits and allowed types
-- `getFileCategoryForMimeType(mimeType, settings)` - Categorize file (image/video/document)
-- `getMaxSizeForMimeType(mimeType, settings)` - Get max size limit for file type
-
-### Permissions System (`src/lib/permissions/`)
-
-Granular role-based access control with 14 permissions across 7 categories:
-
-- **Project**: `project.settings`, `project.delete`
-- **Members**: `members.invite`, `members.manage`, `members.admin`
-- **Board**: `board.manage`
-- **Tickets**: `tickets.create`, `tickets.manage_own`, `tickets.manage_any`
-- **Sprints**: `sprints.manage`
-- **Labels**: `labels.manage`
-- **Moderation**: `comments.manage_any`, `attachments.manage_any`
-
-Key files:
-- `constants.ts` - Permission definitions, metadata, category groupings
-- `check.ts` - `isMember()`, `hasPermission()`, `hasAnyPermission()`
-- `presets.ts` - Default role definitions (Owner, Admin, Member, Viewer)
-- `create-default-roles.ts` - Auto-create default roles for new projects
-
-### Email System (`src/lib/email/`)
-
-Configurable email sending with multiple providers:
-
-- **Providers**: SMTP, Resend, Console (for development), None (disabled)
-- **Features**: Password reset, welcome emails, email verification, invitation emails (each independently toggleable)
-- **Security**: SHA-256 token hashing, rate limiting per email+IP, constant-time email existence responses
-
-Key files:
-- `index.ts` - Email sending interface
-- `providers/` - Provider implementations
-- `templates/` - Email templates
-- `token.ts` - Token generation and hashing
-- `settings.ts` - Feature toggle helpers (`isEmailFeatureEnabled()`)
-
-### Action Modules (`src/lib/actions/`)
-
-Unified action implementations for consistent behavior across UI triggers (context menu, keyboard shortcuts, drawer). Each action handles:
-- Optimistic updates for immediate UI feedback
-- API persistence with rollback on error
-- Undo/redo support with toast integration
-- Selection management
-
-Available actions:
-- `pasteTickets({ projectId, columns, options?, onComplete? })` - Paste copied tickets
-- `deleteTickets({ projectId, tickets, options?, onComplete? })` - Delete tickets with undo
+| Module | Purpose |
+|--------|---------|
+| `src/lib/api-utils.ts` | API response helpers (`handleApiError`, `validationError`, `notFoundError`) |
+| `src/lib/prisma-selects.ts` | Shared select clauses, `transformTicket()` |
+| `src/lib/sprint-utils.ts` | `generateNextSprintName()`, `isCompletedColumn()` |
+| `src/lib/system-settings.ts` | Upload config, branding settings |
+| `src/lib/permissions/` | RBAC with 14 permissions across 7 categories |
+| `src/lib/email/` | Multi-provider email (SMTP, Resend, Console) |
+| `src/lib/actions/` | Unified actions with optimistic updates and undo support |
 
 ### MCP Server
 
-PUNT includes an MCP (Model Context Protocol) server for conversational ticket management. Located in `mcp/`.
+PUNT includes an MCP server for conversational ticket management. See `mcp/README.md` for full documentation.
 
-**Architecture:** The MCP server calls PUNT's API endpoints (not direct Prisma), enabling:
-- **Real-time SSE updates**: Changes made via MCP appear instantly in the UI without refresh
-- **Per-user authentication**: Each user generates their own API key via `POST /api/me/mcp-key`
-- **Consistent permissions**: MCP requests use the same authorization as web UI
-
-**Authentication:**
-1. User generates API key: `POST /api/me/mcp-key` (requires web auth)
-2. Key stored in database (`User.mcpApiKey` field)
-3. MCP sends key via `X-MCP-API-Key` header
-4. API routes validate key via `getMcpUser()` in `auth-helpers.ts`
+**Key points:**
+- Calls API endpoints (not direct Prisma) for real-time SSE updates
+- Per-user API keys via **Profile > MCP API Key** in web UI
+- 44 tools across tickets, projects, sprints, members, labels, columns, repository
 
 **Querying conventions:**
-- **All tickets are in scope by default.** Do not assume only "To Do", backlog, or active sprint unless the user explicitly scopes the query (e.g. "in the current sprint", "in the backlog", "To Do tickets only").
-- When applying filters, state which filters were used so the user knows what was included/excluded.
-- When auditing or reviewing tickets (e.g. checking for missing fields, evaluating points), query all columns and statuses — not just To Do.
-- Use your best judgement to scope queries when context makes it obvious (e.g. "what's left to do" implies non-Done tickets), but be transparent about it.
+- All tickets in scope by default (not just To Do/backlog)
+- State which filters were used so user knows what was included/excluded
+- When auditing tickets, query all columns and statuses
 
-**Available tools (44 total):**
-| Category | Tools |
-|----------|-------|
-| Tickets | `get_ticket`, `list_tickets`, `create_ticket`, `update_ticket`, `move_ticket`, `delete_ticket`, `search_tickets` |
-| Comments | `list_comments`, `add_comment`, `update_comment`, `delete_comment` |
-| Ticket Links | `list_ticket_links`, `add_ticket_link`, `remove_ticket_link` |
-| Projects | `list_projects`, `get_project`, `create_project`, `update_project`, `delete_project` |
-| Sprints | `list_sprints`, `get_sprint`, `create_sprint`, `update_sprint`, `start_sprint`, `complete_sprint`, `delete_sprint` |
-| Members | `list_members`, `add_member`, `remove_member`, `change_member_role`, `list_users` |
-| Labels | `list_labels`, `create_label`, `update_label`, `delete_label`, `add_label_to_ticket`, `remove_label_from_ticket` |
-| Columns | `list_columns`, `create_column`, `rename_column`, `reorder_column`, `delete_column` |
-| Repository | `get_repo_context`, `get_branch_name` |
-
-**Key files:**
-- `mcp/src/index.ts` - Server entry point, tool registrations
-- `mcp/src/api-client.ts` - HTTP client for PUNT API calls
-- `mcp/src/config.ts` - Cross-platform config directory resolution
-- `mcp/src/credentials.ts` - Credential file reading and server resolution
-- `mcp/src/tools/tickets.ts` - Ticket CRUD tools
-- `mcp/src/tools/projects.ts` - Project/member/column tools
-- `mcp/src/tools/sprints.ts` - Sprint lifecycle tools
-- `mcp/src/tools/labels.ts` - Label management tools
-- `mcp/src/tools/repository.ts` - Repository context and branch name tools
-- `mcp/src/utils.ts` - Formatting helpers (markdown output)
-
-**Credentials Configuration:**
-
-Store MCP credentials in your user config directory (cross-platform):
-
-| Platform | Path |
-|----------|------|
-| Linux | `~/.config/punt/credentials.json` (or `$XDG_CONFIG_HOME/punt/`) |
-| macOS | `~/Library/Application Support/punt/credentials.json` |
-| Windows | `%APPDATA%\punt\credentials.json` |
-
-**Credentials file format:**
-```json
-{
-  "servers": {
-    "default": {
-      "url": "https://punt.example.com",
-      "apiKey": "mcp_xxxxx..."
-    },
-    "local": {
-      "url": "http://localhost:3000",
-      "apiKey": "mcp_yyyyy..."
-    }
-  },
-  "activeServer": "default"
-}
-```
-
-This supports:
-- **Multiple PUNT servers**: Work, personal, local dev environments
-- **Named server profiles**: Switch between servers via `PUNT_SERVER` env var
-- **Hot-reload**: Credentials are re-read every 5 seconds (no restart needed)
-
-**Resolution priority:**
-1. `PUNT_API_KEY` + `PUNT_API_URL` env vars (CI/automation)
-2. `PUNT_SERVER` env var → lookup named server in credentials.json
-3. `activeServer` from credentials.json
-4. Fallback to "default" server
-
-**Prerequisites for full workflow:**
-- PUNT server running (local `pnpm dev` or remote)
-- Credentials configured in user config directory
-- [GitHub CLI (`gh`)](https://cli.github.com/) authenticated — used for PR creation, merging, and issue management
-- Git configured for the repository
-
-**Running the MCP server:**
-```bash
-cd mcp && pnpm install  # First time only
-pnpm --dir mcp exec tsx src/index.ts
-```
-
-**Claude Code configuration** (`.mcp.json` — gitignored):
-
-The `.mcp.json` file tells Claude Code how to launch the MCP server. Credentials are read from the user config directory, not from this file.
-
-```json
-{
-  "mcpServers": {
-    "punt": {
-      "type": "stdio",
-      "command": "pnpm",
-      "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"]
-    }
-  }
-}
-```
-
-For CI/automation, override with environment variables:
-```json
-{
-  "mcpServers": {
-    "punt": {
-      "type": "stdio",
-      "command": "pnpm",
-      "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"],
-      "env": {
-        "PUNT_API_KEY": "$MCP_API_KEY",
-        "PUNT_API_URL": "https://punt.example.com"
-      }
-    }
-  }
-}
-```
-
-**Parallel subagents must use git worktrees:** When launching multiple Claude Code subagents in parallel, each must work in its own git worktree to avoid branch-switching conflicts. Without this, agents overwrite each other's file changes and cause linter/commit failures.
-```bash
-git worktree add /tmp/worktree-<branch-name> -b <branch-name> main
-cd /tmp/worktree-<branch-name>
-# Do all work here, then commit, push, and create PR from this directory
-```
-
-**Use `??` (nullish coalescing), not `||`:** For values where `0`, `false`, or empty string are valid, always use `??`. Example: `storyPoints ?? null` not `storyPoints || null` (the latter silently discards `0`).
+**Code conventions:**
+- Use `??` (nullish coalescing), not `||` for values where `0`/`false`/`""` are valid
+- Parallel subagents must use git worktrees (see `mcp/README.md`)
 
 ### Repository Integration
 
-PUNT supports per-project repository configuration for AI agent context. This allows agents to know which codebase a project manages.
+Per-project repository configuration for AI agent context. Configure in **Project Settings > Repository/Agents tabs**.
 
-**Project Settings UI:**
-- **Repository Tab** (`/projects/[key]/settings?tab=repository`): Configure repository URL, local path, default branch, monorepo path, branch template, and environment branches
-- **Agents Tab** (`/projects/[key]/settings?tab=agents`): Configure agent guidance markdown with context preview
+**Branch template variables:** `{type}`, `{key}`, `{number}`, `{slug}`, `{project}`
 
-**Configuration fields:**
-- `repositoryUrl` - HTTPS URL of the repository (GitHub, GitLab, etc.)
-- `localPath` - Absolute filesystem path where repo is cloned
-- `defaultBranch` - Primary branch name (e.g., main, master)
-- `monorepoPath` - Relative path within a monorepo (e.g., packages/frontend)
-- `branchTemplate` - Template for generating branch names from tickets (e.g., `{type}/{key}-{slug}`)
-- `agentGuidance` - Markdown instructions for AI agents
-- `environmentBranches` - JSON array mapping environments to branches (e.g., production → main)
-
-**Branch template variables:**
-- `{type}` - Ticket type mapped to conventional commit prefix (bug→fix, story→feat, task→chore)
-- `{key}` - Full ticket key (e.g., PUNT-42)
-- `{number}` - Ticket number only (e.g., 42)
-- `{slug}` - Slugified ticket title
-- `{project}` - Project key lowercase
-
-**MCP tools for repository context:**
-- `get_repo_context` - Get full repository context including URL, paths, branch template, environment branches, and agent guidance. Optionally pass a ticket number to get a suggested branch name.
-- `get_branch_name` - Generate a branch name for a specific ticket using the project's branch template.
-
-**API endpoint:**
-- `GET/PATCH /api/projects/[projectId]/repository` - Get/update repository configuration
-
-**Configuration hierarchy:** Project settings override system defaults (`SystemSettings.defaultBranchTemplate`, `SystemSettings.defaultAgentGuidance`).
+**MCP tools:** `get_repo_context`, `get_branch_name`
 
 ### Workflow Conventions
 
@@ -763,57 +333,16 @@ git checkout main && git pull && git branch -d <branch-name>
 
 ### Deployment
 
-**Railway:**
-- `railway.toml` configures Nixpacks builder with pnpm
-- `.node-version` specifies Node.js 20 (required by Next.js 16)
-- Required env vars for demo mode: `NEXT_PUBLIC_DEMO_MODE=true`, `AUTH_SECRET`, `AUTH_TRUST_HOST=true`, `DATABASE_URL` (dummy value for Prisma generation)
+Railway config in `railway.toml`. Node.js >= 20.9.0 required (enforced in `package.json`).
 
-**Node.js requirement:** Next.js 16 requires Node.js >= 20.9.0. The `engines` field in `package.json` enforces this.
+Demo mode env vars: `NEXT_PUBLIC_DEMO_MODE=true`, `AUTH_SECRET`, `AUTH_TRUST_HOST=true`
 
 ### Releasing
 
-Releases are automated via GitHub Actions when a version tag is pushed.
-
-**Quick release:**
 ```bash
 pnpm release patch   # 0.1.0 -> 0.1.1
 pnpm release minor   # 0.1.0 -> 0.2.0
 pnpm release major   # 0.1.0 -> 1.0.0
-pnpm release 1.2.3   # Explicit version
 ```
 
-The `pnpm release` script:
-1. Validates you are on the `main` branch with no uncommitted changes
-2. Updates `package.json` version
-3. Commits the version bump
-4. Creates and pushes a git tag (e.g., `v0.2.0`)
-5. The tag push triggers the GitHub Actions release workflow
-
-**Manual release process:**
-```bash
-# 1. Ensure you're on main with a clean working directory
-git checkout main && git pull
-
-# 2. Update package.json version
-npm version 0.2.0 --no-git-tag-version
-
-# 3. Commit the version bump
-git add package.json
-git commit -m "chore(release): bump version to 0.2.0"
-
-# 4. Create and push the tag
-git tag -a v0.2.0 -m "Release v0.2.0"
-git push origin main
-git push origin v0.2.0
-```
-
-**What the release workflow does:**
-- Runs lint and tests to ensure the release is stable
-- Builds the project
-- Verifies `package.json` version matches the tag
-- Creates a GitHub release with auto-generated release notes
-- Pre-release tags (containing `-alpha`, `-beta`, or `-rc`) are marked as pre-releases
-
-**Key files:**
-- `.github/workflows/release.yml` - Release automation workflow
-- `scripts/release.js` - Release helper script
+The script validates branch, updates `package.json`, commits, tags, and pushes. GitHub Actions then runs lint/tests, builds, and creates the release.
