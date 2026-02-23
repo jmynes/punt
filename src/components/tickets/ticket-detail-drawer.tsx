@@ -1,5 +1,6 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
   Bug,
@@ -145,6 +146,7 @@ function getMimeTypeCategory(mimeType: string): 'image' | 'video' | 'document' {
 }
 
 export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetailDrawerProps) {
+  const queryClient = useQueryClient()
   const { getColumns } = useBoardStore()
   const { activeProjectId, setActiveTicketId, drawerFocusField, clearDrawerFocusField } =
     useUIStore()
@@ -792,6 +794,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     await deleteTickets({
       projectId,
       tickets: [{ ticket, columnId: ticket.columnId }],
+      queryClient,
     })
   }
 

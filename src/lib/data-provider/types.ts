@@ -47,6 +47,8 @@ export interface CreateTicketInput {
   startDate?: Date | null
   dueDate?: Date | null
   resolution?: string | null
+  // For undo/restore operations - preserve original resolved timestamp
+  resolvedAt?: Date | string | null
   labelIds?: string[]
   parentId?: string | null
   // For undo/restore operations - preserve original creation timestamp

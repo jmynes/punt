@@ -28,6 +28,12 @@ const createTicketSchema = z.object({
   storyPoints: z.number().nullable().optional(),
   estimate: z.string().nullable().optional(),
   resolution: z.enum(RESOLUTIONS).nullable().optional(),
+  // For undo/restore operations - preserve original resolved timestamp
+  resolvedAt: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => (val ? new Date(val) : undefined)),
   startDate: z
     .string()
     .nullable()
@@ -194,8 +200,8 @@ export async function POST(
           creatorId,
           type: ticketData.type as IssueType,
           priority: ticketData.priority as Priority,
-          // Set resolvedAt if ticket is created with a resolution
-          resolvedAt: ticketData.resolution ? new Date() : undefined,
+          // Set resolvedAt: use provided value (for restore), or current time if resolution exists
+          resolvedAt: ticketData.resolvedAt ?? (ticketData.resolution ? new Date() : undefined),
           labels: labelIds.length > 0 ? { connect: labelIds.map((id) => ({ id })) } : undefined,
           watchers:
             watcherIds.length > 0

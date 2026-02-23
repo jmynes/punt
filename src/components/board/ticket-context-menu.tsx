@@ -1021,6 +1021,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     await deleteTickets({
       projectId,
       tickets,
+      queryClient,
       onComplete: () => {
         setPendingDelete([])
         setShowDeleteConfirm(false)
