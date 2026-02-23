@@ -56,12 +56,14 @@ export function TwoFactorSection({ isDemo }: TwoFactorSectionProps) {
   const [showDisableDialog, setShowDisableDialog] = useState(false)
   const [disablePassword, setDisablePassword] = useState('')
   const [showDisablePassword, setShowDisablePassword] = useState(false)
+  const [disableTotpCode, setDisableTotpCode] = useState('')
   const [disableLoading, setDisableLoading] = useState(false)
 
   // Regenerate state
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
   const [regeneratePassword, setRegeneratePassword] = useState('')
   const [showRegeneratePassword, setShowRegeneratePassword] = useState(false)
+  const [regenerateTotpCode, setRegenerateTotpCode] = useState('')
   const [regenerateLoading, setRegenerateLoading] = useState(false)
   const [regeneratedCodes, setRegeneratedCodes] = useState<string[]>([])
   const [regeneratedCodesAcknowledged, setRegeneratedCodesAcknowledged] = useState(false)
@@ -187,7 +189,7 @@ ${codes.join('\n')}
       const res = await fetch('/api/me/2fa/disable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: disablePassword }),
+        body: JSON.stringify({ password: disablePassword, totpCode: disableTotpCode }),
       })
 
       const data = await res.json()
@@ -200,6 +202,7 @@ ${codes.join('\n')}
       setRecoveryCodesRemaining(0)
       setShowDisableDialog(false)
       setDisablePassword('')
+      setDisableTotpCode('')
       showToast.success('Two-factor authentication has been disabled')
     } catch (error) {
       showToast.error(error instanceof Error ? error.message : 'Failed to disable 2FA')
@@ -215,7 +218,7 @@ ${codes.join('\n')}
       const res = await fetch('/api/me/2fa/recovery-codes/regenerate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: regeneratePassword }),
+        body: JSON.stringify({ password: regeneratePassword, totpCode: regenerateTotpCode }),
       })
 
       const data = await res.json()
@@ -236,6 +239,7 @@ ${codes.join('\n')}
   const handleCloseRegenerateDialog = () => {
     setShowRegenerateDialog(false)
     setRegeneratePassword('')
+    setRegenerateTotpCode('')
     setRegeneratedCodes([])
     setRegeneratedCodesAcknowledged(false)
     fetchStatus()
@@ -570,6 +574,21 @@ ${codes.join('\n')}
                 </Button>
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="disableTotpCode" className="text-zinc-300">
+                Two-factor authentication code
+              </Label>
+              <Input
+                id="disableTotpCode"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="000000"
+                value={disableTotpCode}
+                onChange={(e) => setDisableTotpCode(e.target.value.replace(/\D/g, ''))}
+                className="bg-zinc-900 border-zinc-700 font-mono tracking-widest"
+              />
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel
@@ -577,13 +596,14 @@ ${codes.join('\n')}
               onClick={() => {
                 setDisablePassword('')
                 setShowDisablePassword(false)
+                setDisableTotpCode('')
               }}
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDisable}
-              disabled={disableLoading || !disablePassword}
+              disabled={disableLoading || !disablePassword || disableTotpCode.length !== 6}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               {disableLoading ? 'Disabling...' : 'Disable 2FA'}
@@ -710,19 +730,37 @@ ${codes.join('\n')}
                   </Button>
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="regenerateTotpCode" className="text-zinc-300">
+                  Two-factor authentication code
+                </Label>
+                <Input
+                  id="regenerateTotpCode"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={regenerateTotpCode}
+                  onChange={(e) => setRegenerateTotpCode(e.target.value.replace(/\D/g, ''))}
+                  className="bg-zinc-900 border-zinc-700 font-mono tracking-widest"
+                />
+              </div>
               <AlertDialogFooter>
                 <AlertDialogCancel
                   className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
                   onClick={() => {
                     setRegeneratePassword('')
                     setShowRegeneratePassword(false)
+                    setRegenerateTotpCode('')
                   }}
                 >
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleRegenerate}
-                  disabled={regenerateLoading || !regeneratePassword}
+                  disabled={
+                    regenerateLoading || !regeneratePassword || regenerateTotpCode.length !== 6
+                  }
                   className="bg-amber-600 hover:bg-amber-700 text-white"
                 >
                   {regenerateLoading ? 'Generating...' : 'Regenerate'}

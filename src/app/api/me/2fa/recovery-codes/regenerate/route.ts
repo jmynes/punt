@@ -5,10 +5,16 @@ import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { isDemoMode } from '@/lib/demo/demo-config'
 import { verifyPassword } from '@/lib/password'
-import { generateRecoveryCodes, hashRecoveryCodes } from '@/lib/totp'
+import {
+  decryptTotpSecret,
+  generateRecoveryCodes,
+  hashRecoveryCodes,
+  verifyTotpToken,
+} from '@/lib/totp'
 
 const regenerateSchema = z.object({
   password: z.string().min(1, 'Password is required'),
+  totpCode: z.string().min(1, '2FA code is required'),
 })
 
 /**
@@ -41,12 +47,12 @@ export async function POST(request: Request) {
       return validationError(parsed)
     }
 
-    const { password } = parsed.data
+    const { password, totpCode } = parsed.data
 
     // Verify password
     const user = await db.user.findUnique({
       where: { id: currentUser.id },
-      select: { passwordHash: true, totpEnabled: true },
+      select: { passwordHash: true, totpEnabled: true, totpSecret: true },
     })
 
     if (!user?.passwordHash) {
@@ -65,7 +71,19 @@ export async function POST(request: Request) {
 
     const isValidPassword = await verifyPassword(password, user.passwordHash)
     if (!isValidPassword) {
-      return NextResponse.json({ error: 'Incorrect password' }, { status: 400 })
+      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
+    }
+
+    // Verify TOTP code
+    if (user.totpSecret) {
+      const secret = decryptTotpSecret(user.totpSecret)
+      const isValidTotp = verifyTotpToken(totpCode, secret)
+      if (!isValidTotp) {
+        return NextResponse.json(
+          { error: 'Invalid two-factor authentication code' },
+          { status: 401 },
+        )
+      }
     }
 
     // Generate new recovery codes
