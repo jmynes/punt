@@ -212,8 +212,8 @@ function getAutocompleteSuggestions(
     // Field types that support comparison operators (>, <, >=, <=)
     const numericFields = ['storyPoints', 'points', 'estimate']
     const dateFields = ['dueDate', 'startDate', 'created', 'updated']
-    // Ordinal fields have ordered values (low < medium < high < critical)
-    const ordinalFields = ['priority']
+    // Ordinal fields have ordered values (low < medium < high < critical, Sprint 1 < Sprint 2)
+    const ordinalFields = ['priority', 'sprint']
     // Fields that are enums (only =, !=, IN, NOT IN make sense)
     const enumFields = ['type', 'resolution']
 

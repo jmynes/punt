@@ -24,6 +24,7 @@ import { DropZone, type TableContext, TicketTable } from '@/components/table'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { filterTickets } from '@/lib/filter-tickets'
 import { evaluateQuery } from '@/lib/query-evaluator'
 import { parse, QueryParseError } from '@/lib/query-parser'
@@ -91,6 +92,9 @@ export function BacklogTable({
   } = useBacklogStore()
   const persistTableSort = useSettingsStore((s) => s.persistTableSort)
 
+  // Fetch all sprints for the project (for autocomplete)
+  const { data: projectSprints } = useProjectSprints(projectId)
+
   // Debounce query text to prevent per-keystroke evaluation
   const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)
   useEffect(() => {
@@ -102,24 +106,25 @@ export function BacklogTable({
   const dynamicValues = useMemo(() => {
     const statusNames = statusColumns.map((c) => c.name)
     const assigneeSet = new Set<string>()
-    const sprintSet = new Set<string>()
     const labelSet = new Set<string>()
 
     for (const ticket of tickets) {
       if (ticket.assignee?.name) assigneeSet.add(ticket.assignee.name)
-      if (ticket.sprint?.name) sprintSet.add(ticket.sprint.name)
       for (const label of ticket.labels) {
         labelSet.add(label.name)
       }
     }
 
+    // Use all project sprints, not just those assigned to visible tickets
+    const sprintNames = projectSprints?.map((s) => s.name).sort() ?? []
+
     return {
       statusNames,
       assigneeNames: Array.from(assigneeSet).sort(),
-      sprintNames: Array.from(sprintSet).sort(),
+      sprintNames,
       labelNames: Array.from(labelSet).sort(),
     }
-  }, [tickets, statusColumns])
+  }, [tickets, statusColumns, projectSprints])
 
   // Reset backlog sort to default on mount when sort persistence is disabled
   const sortResetRef = useRef(false)

@@ -133,6 +133,44 @@ function getPriorityValue(priority: string): number {
   return PRIORITY_ORDER[priority.toLowerCase()] ?? -1
 }
 
+/**
+ * Extract a sortable value from a sprint name for comparison.
+ * Uses natural sort: extracts trailing number if present (Sprint 1 < Sprint 2 < Sprint 10).
+ * Falls back to lexical comparison if no number found.
+ */
+function getSprintSortValue(sprintName: string): {
+  hasNumber: boolean
+  number: number
+  text: string
+} {
+  const match = sprintName.match(/^(.*)(\d+)$/)
+  if (match) {
+    return {
+      hasNumber: true,
+      number: Number.parseInt(match[2], 10),
+      text: match[1].trim().toLowerCase(),
+    }
+  }
+  return {
+    hasNumber: false,
+    number: 0,
+    text: sprintName.toLowerCase(),
+  }
+}
+
+function compareSprintNames(a: string, b: string): number {
+  const aSort = getSprintSortValue(a)
+  const bSort = getSprintSortValue(b)
+
+  // If both have numbers and same prefix, compare by number
+  if (aSort.hasNumber && bSort.hasNumber && aSort.text === bSort.text) {
+    return aSort.number - bSort.number
+  }
+
+  // Fall back to lexical comparison
+  return aSort.text.localeCompare(bSort.text) || aSort.number - bSort.number
+}
+
 function compareValues(
   fieldValue: string | number | Date | null,
   operator: ComparisonNode['operator'],
@@ -231,6 +269,25 @@ function evaluateComparison(
     // If either value is not a known priority, fall back to string comparison
     if (fieldPriority >= 0 && targetPriority >= 0) {
       return compareValues(fieldPriority, node.operator, targetPriority, 'number')
+    }
+  }
+
+  // Sprint has natural ordering: Sprint 1 < Sprint 2 < Sprint 10
+  if (node.field === 'sprint' && fieldValue !== null) {
+    const cmp = compareSprintNames(String(fieldValue), String(node.value))
+    switch (node.operator) {
+      case '=':
+        return cmp === 0
+      case '!=':
+        return cmp !== 0
+      case '>':
+        return cmp > 0
+      case '<':
+        return cmp < 0
+      case '>=':
+        return cmp >= 0
+      case '<=':
+        return cmp <= 0
     }
   }
 

@@ -157,6 +157,8 @@ const tickets: TicketWithRelations[] = [
       avatar: null,
     },
     assigneeId: 'u1',
+    sprint: { id: 's2', name: 'Sprint 2', status: 'planning', startDate: null, endDate: null },
+    sprintId: 's2',
     labels: [{ id: 'l3', name: 'urgent', color: '#ef4444' }],
     dueDate: new Date('2024-11-20'),
     createdAt: new Date('2024-11-15'),
@@ -228,6 +230,27 @@ describe('evaluateQuery', () => {
     it('filters by sprint name', () => {
       const result = query('sprint = "Sprint 1"')
       expect(result.map((t) => t.id)).toEqual(['t1', 't2'])
+    })
+
+    it('filters by sprint with greater than', () => {
+      // Sprint 1 < Sprint 2 (natural sort)
+      const result = query('sprint > "Sprint 1"')
+      expect(result.map((t) => t.id)).toEqual(['t4']) // Sprint 2
+    })
+
+    it('filters by sprint with less than', () => {
+      const result = query('sprint < "Sprint 2"')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't2']) // Sprint 1
+    })
+
+    it('filters by sprint with greater or equal', () => {
+      const result = query('sprint >= "Sprint 1"')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't2', 't4']) // Sprint 1, Sprint 2
+    })
+
+    it('filters by sprint with less or equal', () => {
+      const result = query('sprint <= "Sprint 1"')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't2']) // Sprint 1
     })
 
     it('filters by story points', () => {
@@ -345,7 +368,7 @@ describe('evaluateQuery', () => {
 
     it('finds tickets without sprint', () => {
       const result = query('sprint IS EMPTY')
-      expect(result.map((t) => t.id)).toEqual(['t3', 't4', 't5'])
+      expect(result.map((t) => t.id)).toEqual(['t3', 't5'])
     })
 
     it('finds tickets without labels', () => {
