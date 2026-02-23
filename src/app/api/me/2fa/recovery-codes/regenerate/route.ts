@@ -80,8 +80,12 @@ export async function POST(request: Request) {
     let isValid = false
 
     if (user.totpSecret) {
-      const secret = decryptTotpSecret(user.totpSecret)
-      isValid = verifyTotpToken(totpCode, secret)
+      try {
+        const secret = decryptTotpSecret(user.totpSecret)
+        isValid = verifyTotpToken(totpCode, secret)
+      } catch {
+        // Not a valid TOTP token (e.g. wrong length), will try recovery code
+      }
     }
 
     if (!isValid && user.totpRecoveryCodes) {
