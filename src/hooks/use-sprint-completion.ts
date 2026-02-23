@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useActiveSprint, useCompleteSprint } from '@/hooks/queries/use-sprints'
 import { isCompletedColumn, isSprintExpired } from '@/lib/sprint-utils'
 import { useSprintStore } from '@/stores/sprint-store'
@@ -31,7 +31,7 @@ export function useSprintCompletion({
   const { data: activeSprint, isLoading } = useActiveSprint(projectId)
   const completeSprint = useCompleteSprint(projectId)
   const { shouldShowPrompt, dismissSprintPrompt, clearDismissedPrompt } = useSprintStore()
-  const { openSprintComplete, sprintCompleteOpen } = useUIStore()
+  const { openSprintComplete } = useUIStore()
 
   // Check if sprint is expired
   const isExpired = useMemo(() => {
@@ -65,12 +65,26 @@ export function useSprintCompletion({
     return shouldShowPrompt(activeSprint.id)
   }, [activeSprint, isExpired, isLoading, shouldShowPrompt])
 
+  // Ref to prevent re-opening the dialog after the user dismisses it.
+  // Without this, closing the dialog toggles sprintCompleteOpen to false,
+  // which would re-trigger the useEffect and immediately re-open.
+  const hasOpenedRef = useRef(false)
+
+  // Reset the ref when the sprint changes or showPrompt transitions to false,
+  // so the dialog can auto-open again for a new sprint or after the 24h cooldown.
+  useEffect(() => {
+    if (!showPrompt || !activeSprint) {
+      hasOpenedRef.current = false
+    }
+  }, [showPrompt, activeSprint])
+
   // Auto-open completion dialog when sprint expires
   useEffect(() => {
-    if (showPrompt && activeSprint && !sprintCompleteOpen) {
+    if (showPrompt && activeSprint && !hasOpenedRef.current) {
+      hasOpenedRef.current = true
       openSprintComplete(activeSprint.id)
     }
-  }, [showPrompt, activeSprint, sprintCompleteOpen, openSprintComplete])
+  }, [showPrompt, activeSprint, openSprintComplete])
 
   // Handle complete sprint
   const handleComplete = async (options: SprintCompletionOptions) => {
