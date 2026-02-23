@@ -13,7 +13,7 @@ import {
   thematicBreakPlugin,
 } from '@mdxeditor/editor'
 import { useRouter } from 'next/navigation'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@mdxeditor/editor/style.css'
 import { oneDark } from '@codemirror/theme-one-dark'
 import type { ChecklistItem } from '@/lib/markdown-checklist'
@@ -161,32 +161,47 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
     return `${content.length}-${content.substring(0, 100)}`
   }, [processedMarkdown])
 
-  // Split markdown into segments when interactive checklists are enabled
-  const segments = useMemo(() => {
-    if (!onMarkdownChange || !hasChecklistItems(markdown)) return null
-    return splitMarkdownSegments(markdown)
+  // Optimistic local segments state for immediate UI updates on rapid interactions.
+  // The prop `markdown` is the source of truth from the server; local state tracks
+  // in-flight changes so consecutive toggles/reorders don't overwrite each other.
+  const [localSegments, setLocalSegments] = useState<ReturnType<
+    typeof splitMarkdownSegments
+  > | null>(null)
+  const localSegmentsRef = useRef(localSegments)
+  localSegmentsRef.current = localSegments
+
+  // Re-parse from prop when the server-confirmed markdown changes
+  useEffect(() => {
+    if (!onMarkdownChange || !hasChecklistItems(markdown)) {
+      setLocalSegments(null)
+      return
+    }
+    setLocalSegments(splitMarkdownSegments(markdown))
   }, [markdown, onMarkdownChange])
 
   // Handle checklist item reorder within a specific segment
   const handleChecklistReorder = useCallback(
     (segmentIndex: number, reorderedItems: ChecklistItem[]) => {
-      if (!segments || !onMarkdownChange) return
-      const updatedSegments = segments.map((seg) => {
+      const current = localSegmentsRef.current
+      if (!current || !onMarkdownChange) return
+      const updatedSegments = current.map((seg) => {
         if (seg.index === segmentIndex) {
           return { ...seg, items: reorderedItems }
         }
         return seg
       })
+      setLocalSegments(updatedSegments)
       onMarkdownChange(reconstructMarkdown(updatedSegments))
     },
-    [segments, onMarkdownChange],
+    [onMarkdownChange],
   )
 
   // Handle checkbox toggle within a specific segment
   const handleCheckboxToggle = useCallback(
     (segmentIndex: number, itemId: string, checked: boolean) => {
-      if (!segments || !onMarkdownChange) return
-      const updatedSegments = segments.map((seg) => {
+      const current = localSegmentsRef.current
+      if (!current || !onMarkdownChange) return
+      const updatedSegments = current.map((seg) => {
         if (seg.index === segmentIndex && seg.items) {
           return {
             ...seg,
@@ -195,9 +210,10 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
         }
         return seg
       })
+      setLocalSegments(updatedSegments)
       onMarkdownChange(reconstructMarkdown(updatedSegments))
     },
-    [segments, onMarkdownChange],
+    [onMarkdownChange],
   )
 
   // Show loading placeholder during SSR to prevent hydration mismatch
@@ -207,7 +223,7 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
 
   // When interactive checklists are enabled and the markdown contains checklist items,
   // render segments individually so checklist blocks get DnD support
-  if (segments) {
+  if (localSegments) {
     return (
       <div
         className={`markdown-viewer ${className}`}
@@ -221,7 +237,7 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
           }
         }}
       >
-        {segments.map((segment) => {
+        {localSegments.map((segment) => {
           if (segment.type === 'checklist' && segment.items) {
             return (
               <DraggableChecklist

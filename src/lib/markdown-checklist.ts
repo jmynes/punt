@@ -14,6 +14,8 @@ export interface ChecklistItem {
   text: string
   /** The original raw markdown line */
   raw: string
+  /** Leading whitespace (indentation) from the original line */
+  indent: string
 }
 
 export interface MarkdownSegment {
@@ -39,6 +41,7 @@ export function parseChecklistLine(line: string): ChecklistItem | null {
     checked: match[2].toLowerCase() === 'x',
     text: match[3],
     raw: line,
+    indent: match[1],
   }
 }
 
@@ -54,7 +57,7 @@ export function splitMarkdownSegments(markdown: string): MarkdownSegment[] {
   let currentMarkdownLines: string[] = []
   let currentChecklistItems: ChecklistItem[] = []
   let segmentIndex = 0
-  let itemCounter = 0
+  const idCounts = new Map<string, number>()
 
   const flushMarkdown = () => {
     if (currentMarkdownLines.length > 0) {
@@ -84,7 +87,11 @@ export function splitMarkdownSegments(markdown: string): MarkdownSegment[] {
     if (parsed) {
       // Flush any pending markdown lines before starting a checklist block
       flushMarkdown()
-      parsed.id = `checklist-item-${itemCounter++}`
+      // Content-based ID so items remain stable across re-parses after reorder
+      const baseId = `cl-${parsed.checked ? 'x' : 'o'}-${parsed.text}`
+      const count = idCounts.get(baseId) ?? 0
+      idCounts.set(baseId, count + 1)
+      parsed.id = count > 0 ? `${baseId}-${count}` : baseId
       currentChecklistItems.push(parsed)
     } else {
       // Flush any pending checklist items before adding a markdown line
@@ -104,7 +111,7 @@ export function splitMarkdownSegments(markdown: string): MarkdownSegment[] {
  * Reconstruct the full markdown from segments after reordering checklist items.
  */
 export function reconstructMarkdown(segments: MarkdownSegment[]): string {
-  return segments
+  return [...segments]
     .sort((a, b) => a.index - b.index)
     .map((segment) => {
       if (segment.type === 'checklist' && segment.items) {
@@ -119,7 +126,7 @@ export function reconstructMarkdown(segments: MarkdownSegment[]): string {
  * Convert a ChecklistItem back to its markdown representation.
  */
 export function itemToMarkdown(item: ChecklistItem): string {
-  return `- [${item.checked ? 'x' : ' '}] ${item.text}`
+  return `${item.indent}- [${item.checked ? 'x' : ' '}] ${item.text}`
 }
 
 /**

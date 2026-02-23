@@ -271,16 +271,19 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
                     <div className="mt-1 break-words">
                       <MarkdownViewer
                         markdown={comment.content}
-                        onMarkdownChange={(newContent) => {
-                          // Update comment content when checklist items are reordered/toggled
-                          updateComment.mutate({
-                            projectId,
-                            ticketId,
-                            ticketKey,
-                            commentId: comment.id,
-                            content: newContent,
-                          })
-                        }}
+                        onMarkdownChange={
+                          canEditComment(comment)
+                            ? (newContent) => {
+                                updateComment.mutate({
+                                  projectId,
+                                  ticketId,
+                                  ticketKey,
+                                  commentId: comment.id,
+                                  content: newContent,
+                                })
+                              }
+                            : undefined
+                        }
                       />
                     </div>
                   )}

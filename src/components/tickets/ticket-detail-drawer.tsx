@@ -1148,7 +1148,18 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
               {/* Description */}
               <div className="space-y-2">
-                <Label className="text-zinc-400">Description</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-zinc-400">Description</Label>
+                  {editingField !== 'description' && (
+                    <button
+                      type="button"
+                      className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                      onClick={() => startEditing('description')}
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
                 {editingField === 'description' ? (
                   <div className="space-y-2">
                     <DescriptionEditor
@@ -1180,11 +1191,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <div
                     className="w-full text-left rounded-md bg-zinc-900/50 px-3 py-2 cursor-pointer hover:bg-amber-500/15 min-h-[40px]"
                     onClick={() => startEditing('description')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') startEditing('description')
-                    }}
-                    role="button"
-                    tabIndex={0}
                   >
                     {ticket.description?.trim() ? (
                       <MarkdownViewer
