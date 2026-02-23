@@ -301,14 +301,6 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button
-            variant="ghost"
-            onClick={handleDismissLater}
-            disabled={completeSprint.isPending}
-            className="text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800"
-          >
-            Remind me later
-          </Button>
           <div className="flex gap-2">
             <Button
               variant="outline"
