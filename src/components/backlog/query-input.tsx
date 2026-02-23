@@ -212,14 +212,17 @@ function getAutocompleteSuggestions(
     // Field types that support comparison operators (>, <, >=, <=)
     const numericFields = ['storyPoints', 'points', 'estimate']
     const dateFields = ['dueDate', 'startDate', 'created', 'updated']
+    // Ordinal fields have ordered values (low < medium < high < critical)
+    const ordinalFields = ['priority']
     // Fields that are enums (only =, !=, IN, NOT IN make sense)
-    const enumFields = ['type', 'priority', 'resolution']
+    const enumFields = ['type', 'resolution']
 
     const fieldName = ctx.fieldName?.toLowerCase() ?? ''
     const isNumeric = numericFields.some((f) => f.toLowerCase() === fieldName)
     const isDate = dateFields.some((f) => f.toLowerCase() === fieldName)
+    const isOrdinal = ordinalFields.some((f) => f.toLowerCase() === fieldName)
     const isEnum = enumFields.some((f) => f.toLowerCase() === fieldName)
-    const supportsComparison = isNumeric || isDate
+    const supportsComparison = isNumeric || isDate || isOrdinal
 
     const allOperators = [
       { label: '=', value: '=', description: 'Equals' },
@@ -568,8 +571,13 @@ function QueryHelpButton() {
           <HelpCircle className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent side="bottom" align="end" className="w-96 border-zinc-700 bg-zinc-900 p-4">
-        <h4 className="mb-3 text-sm font-medium text-zinc-200">Query Language Reference</h4>
+      <PopoverContent
+        side="bottom"
+        align="end"
+        className="w-96 border-zinc-700 bg-zinc-900 p-4"
+        style={{ fontVariantLigatures: 'none' }}
+      >
+        <h4 className="mb-3 text-sm font-medium text-zinc-200">PQL Reference</h4>
 
         <div className="space-y-3 text-xs">
           <section>

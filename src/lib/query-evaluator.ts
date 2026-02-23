@@ -119,6 +119,20 @@ function getFieldValue(
 // Comparison Helpers
 // ============================================================================
 
+// Priority ordering: lowest = 0, highest = 5
+const PRIORITY_ORDER: Record<string, number> = {
+  lowest: 0,
+  low: 1,
+  medium: 2,
+  high: 3,
+  highest: 4,
+  critical: 5,
+}
+
+function getPriorityValue(priority: string): number {
+  return PRIORITY_ORDER[priority.toLowerCase()] ?? -1
+}
+
 function compareValues(
   fieldValue: string | number | Date | null,
   operator: ComparisonNode['operator'],
@@ -207,6 +221,17 @@ function evaluateComparison(
 
   if (node.field === 'key' && node.valueType === 'number') {
     return compareValues(ticket.number, node.operator, node.value, 'number')
+  }
+
+  // Priority has ordinal semantics: lowest < low < medium < high < highest < critical
+  if (node.field === 'priority') {
+    const fieldPriority = getPriorityValue(String(fieldValue ?? ''))
+    const targetPriority = getPriorityValue(String(node.value))
+
+    // If either value is not a known priority, fall back to string comparison
+    if (fieldPriority >= 0 && targetPriority >= 0) {
+      return compareValues(fieldPriority, node.operator, targetPriority, 'number')
+    }
   }
 
   return compareValues(

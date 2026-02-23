@@ -212,7 +212,7 @@ interface BacklogState {
   filterConfigOpen: boolean
   setFilterConfigOpen: (open: boolean) => void
 
-  // Query mode (JQL-like filtering)
+  // Query mode (PQL - Punt Query Language)
   queryMode: boolean
   setQueryMode: (enabled: boolean) => void
   queryText: string

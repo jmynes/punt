@@ -194,6 +194,27 @@ describe('evaluateQuery', () => {
       expect(result.map((t) => t.id)).toEqual(['t1'])
     })
 
+    it('filters by priority with greater than', () => {
+      // low < medium < high < critical
+      const result = query('priority > medium')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't4']) // high, critical
+    })
+
+    it('filters by priority with less than', () => {
+      const result = query('priority < high')
+      expect(result.map((t) => t.id)).toEqual(['t2', 't3', 't5']) // medium, low, medium
+    })
+
+    it('filters by priority with greater or equal', () => {
+      const result = query('priority >= high')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't4']) // high, critical
+    })
+
+    it('filters by priority with less or equal', () => {
+      const result = query('priority <= medium')
+      expect(result.map((t) => t.id)).toEqual(['t2', 't3', 't5']) // medium, low, medium
+    })
+
     it('filters by status (column name)', () => {
       const result = query('status = "To Do"')
       expect(result.map((t) => t.id)).toEqual(['t1', 't4'])

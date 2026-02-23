@@ -1,5 +1,5 @@
 /**
- * JQL-like Query Language Parser for PUNT ticket filtering.
+ * PQL (Punt Query Language) Parser for PUNT ticket filtering.
  *
  * Supports:
  * - Field comparisons: priority = high, type = bug
