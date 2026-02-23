@@ -29,9 +29,6 @@ interface SprintState {
   _hasHydrated: boolean
 }
 
-// Re-prompt after 24 hours if dismissed with "later"
-const LATER_DISMISS_DURATION = 24 * 60 * 60 * 1000 // 24 hours in ms
-
 export const useSprintStore = create<SprintState>()(
   persist(
     (set, get) => ({
@@ -54,11 +51,7 @@ export const useSprintStore = create<SprintState>()(
 
         // If dismissed with "extend", the sprint was extended and prompt shouldn't show
         // until the sprint becomes expired again (which will be detected by the caller)
-        if (dismissed.action === 'extend') return false
-
-        // If dismissed with "later", re-prompt after 24 hours
-        const timeSinceDismiss = Date.now() - dismissed.dismissedAt
-        return timeSinceDismiss >= LATER_DISMISS_DURATION
+        return dismissed.action !== 'extend'
       },
 
       clearDismissedPrompt: (sprintId) =>

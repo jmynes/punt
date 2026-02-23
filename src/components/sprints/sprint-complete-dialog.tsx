@@ -1,7 +1,7 @@
 'use client'
 
 import { AlertCircle, CheckCircle2, Loader2, MoveRight, RotateCcw } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -35,7 +35,7 @@ interface SprintCompleteDialogProps {
 
 export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
   const { sprintCompleteOpen, sprintCompleteId, closeSprintComplete } = useUIStore()
-  const { dismissSprintPrompt } = useSprintStore()
+  const { clearDismissedPrompt } = useSprintStore()
   const { getColumns } = useBoardStore()
   const completeSprint = useCompleteSprint(projectId)
   const { data: sprints } = useProjectSprints(projectId)
@@ -45,6 +45,10 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
   const [action, setAction] = useState<SprintCompletionAction>('close_to_next')
   const [targetSprintId, setTargetSprintId] = useState<string>('__new__')
   const [createNextSprint, setCreateNextSprint] = useState(true)
+
+  // Ref to prevent Radix onOpenChange from double-firing handleCancel.
+  // Radix calls onOpenChange on both user close and programmatic close (e.g. after submit).
+  const isDismissingRef = useRef(false)
 
   // Get planning sprints for target selection
   const planningSprints = useMemo(
@@ -86,12 +90,18 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
     }, 200)
   }, [closeSprintComplete])
 
-  const handleDismissLater = useCallback(() => {
-    if (sprintCompleteId) {
-      dismissSprintPrompt(sprintCompleteId, 'later')
-    }
+  const handleCancel = useCallback(() => {
+    // Guard against Radix onOpenChange double-firing
+    if (isDismissingRef.current) return
+    isDismissingRef.current = true
+
     handleClose()
-  }, [sprintCompleteId, dismissSprintPrompt, handleClose])
+
+    // Reset after the dialog close animation completes
+    setTimeout(() => {
+      isDismissingRef.current = false
+    }, 300)
+  }, [handleClose])
 
   const handleSubmit = useCallback(async () => {
     if (!sprintCompleteId) return
@@ -110,6 +120,10 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
       },
       {
         onSuccess: () => {
+          // Clear dismissed prompt state so it doesn't stale-match the completed sprint
+          if (sprintCompleteId) {
+            clearDismissedPrompt(sprintCompleteId)
+          }
           // Trigger celebration confetti
           triggerConfetti()
           handleClose()
@@ -122,6 +136,7 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
     targetSprintId,
     createNextSprint,
     completeSprint,
+    clearDismissedPrompt,
     handleClose,
     triggerConfetti,
   ])
@@ -137,7 +152,14 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
   const hasIncomplete = incompleteCount > 0
 
   return (
-    <Dialog open={sprintCompleteOpen} onOpenChange={(open) => !open && handleDismissLater()}>
+    <Dialog
+      open={sprintCompleteOpen}
+      onOpenChange={(open) => {
+        if (!open && !isDismissingRef.current) {
+          handleCancel()
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-lg bg-zinc-950 border-zinc-800">
         <DialogHeader>
           <DialogTitle className="text-xl text-zinc-100">
@@ -276,18 +298,10 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button
-            variant="ghost"
-            onClick={handleDismissLater}
-            disabled={completeSprint.isPending}
-            className="text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800"
-          >
-            Remind me later
-          </Button>
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={handleDismissLater}
+              onClick={handleCancel}
               disabled={completeSprint.isPending}
               className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
             >
