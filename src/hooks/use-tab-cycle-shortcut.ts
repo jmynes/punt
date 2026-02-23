@@ -46,6 +46,16 @@ interface UseTabCycleShortcutOptions {
  * })
  * ```
  */
+/** Returns the standard project view tab paths for a given project key. */
+export function getProjectViewTabs(projectKey: string) {
+  return [
+    `/projects/${projectKey}/board`,
+    `/projects/${projectKey}/backlog`,
+    `/projects/${projectKey}/sprints`,
+    `/projects/${projectKey}/burndown`,
+  ]
+}
+
 export function useTabCycleShortcut({ tabs, queryBasePath }: UseTabCycleShortcutOptions) {
   const router = useRouter()
   const pathname = usePathname()
