@@ -197,17 +197,25 @@ function ActivityAvatar({
   user,
   size = 'sm',
 }: {
-  user: { name: string; avatar: string | null; username: string; avatarColor?: string | null }
+  user: {
+    name: string
+    avatar: string | null
+    username: string
+    id?: string
+    avatarColor?: string | null
+  }
   size?: 'sm' | 'md'
 }) {
   const sizeClass = size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'
   const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs'
+  const bgColor = user.avatarColor || getAvatarColor(user.id || user.username)
 
   return (
     <Avatar className={sizeClass}>
       {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}
       <AvatarFallback
-        className={cn(textSize, 'font-medium text-white', getAvatarColor(user.username))}
+        className={cn(textSize, 'font-medium text-white')}
+        style={{ backgroundColor: bgColor }}
       >
         {getInitials(user.name)}
       </AvatarFallback>
