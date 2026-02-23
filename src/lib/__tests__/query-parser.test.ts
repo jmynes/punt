@@ -296,6 +296,54 @@ describe('parse', () => {
       const node = ast as InNode
       expect(node.values).toEqual([])
     })
+
+    // Lenient parsing tests for incomplete IN lists
+    it('parses IN without closing paren', () => {
+      const ast = parse('type IN (bug')
+      const node = ast as InNode
+      expect(node.type).toBe('in')
+      expect(node.values).toEqual(['bug'])
+      expect(node.negated).toBe(false)
+    })
+
+    it('parses IN with trailing comma', () => {
+      const ast = parse('type IN (bug,')
+      const node = ast as InNode
+      expect(node.values).toEqual(['bug'])
+    })
+
+    it('parses IN with trailing comma and space', () => {
+      const ast = parse('type IN (bug, ')
+      const node = ast as InNode
+      expect(node.values).toEqual(['bug'])
+    })
+
+    it('parses IN with trailing comma before closing paren', () => {
+      const ast = parse('type IN (bug, )')
+      const node = ast as InNode
+      expect(node.values).toEqual(['bug'])
+    })
+
+    it('parses IN with multiple values and trailing comma', () => {
+      const ast = parse('type IN (bug, task,')
+      const node = ast as InNode
+      expect(node.values).toEqual(['bug', 'task'])
+    })
+
+    it('parses NOT IN without closing paren', () => {
+      const ast = parse('type NOT IN (epic')
+      const node = ast as InNode
+      expect(node.type).toBe('in')
+      expect(node.values).toEqual(['epic'])
+      expect(node.negated).toBe(true)
+    })
+
+    it('parses NOT IN with trailing comma', () => {
+      const ast = parse('type NOT IN (epic, subtask,')
+      const node = ast as InNode
+      expect(node.values).toEqual(['epic', 'subtask'])
+      expect(node.negated).toBe(true)
+    })
   })
 
   describe('IS EMPTY / IS NOT EMPTY', () => {

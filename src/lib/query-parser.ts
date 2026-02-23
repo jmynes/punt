@@ -513,7 +513,10 @@ export function parse(input: string): ASTNode {
         expect('IN', 'Expected "IN" after "NOT"')
         expect('LPAREN', 'Expected "(" after "NOT IN"')
         const values = parseValueList()
-        expect('RPAREN', 'Expected closing parenthesis ")"')
+        // Allow missing closing paren at end of input (lenient parsing)
+        if (current().type === 'RPAREN') {
+          advance()
+        }
         return { type: 'in', field, values, negated: true }
       }
 
@@ -522,7 +525,10 @@ export function parse(input: string): ASTNode {
         advance()
         expect('LPAREN', 'Expected "(" after "IN"')
         const values = parseValueList()
-        expect('RPAREN', 'Expected closing parenthesis ")"')
+        // Allow missing closing paren at end of input (lenient parsing)
+        if (current().type === 'RPAREN') {
+          advance()
+        }
         return { type: 'in', field, values, negated: false }
       }
 
@@ -580,7 +586,7 @@ export function parse(input: string): ASTNode {
   function parseValueList(): (string | number)[] {
     const values: (string | number)[] = []
 
-    // Parse first value
+    // Parse first value (if present)
     const first = current()
     if (first.type === 'STRING') {
       values.push(first.value)
@@ -591,9 +597,11 @@ export function parse(input: string): ASTNode {
     } else if (first.type === 'VALUE' || first.type === 'FIELD') {
       values.push(first.value)
       advance()
-    } else if (first.type === 'RPAREN') {
-      // Empty list
+    } else if (first.type === 'RPAREN' || first.type === 'EOF') {
+      // Empty list or incomplete input
       return values
+    } else if (first.type === 'COMMA') {
+      // Leading comma, skip it (lenient)
     } else {
       throw new QueryParseError(
         `Expected value in list but got "${first.value}"`,
@@ -615,6 +623,9 @@ export function parse(input: string): ASTNode {
       } else if (valToken.type === 'VALUE' || valToken.type === 'FIELD') {
         values.push(valToken.value)
         advance()
+      } else if (valToken.type === 'RPAREN' || valToken.type === 'EOF') {
+        // Trailing comma before ) or end of input - that's ok (lenient)
+        break
       } else {
         throw new QueryParseError(
           `Expected value after "," but got "${valToken.value}"`,
