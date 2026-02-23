@@ -288,8 +288,6 @@ describe('Prisma Enum Validation Middleware', () => {
       'relates_to',
       'duplicates',
       'is_duplicated_by',
-      'clones',
-      'is_cloned_by',
     ]
 
     for (const linkType of validLinkTypes) {

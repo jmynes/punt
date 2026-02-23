@@ -43,6 +43,8 @@ interface QueryInputProps {
   error: string | null
   /** Dynamic values for context-aware autocomplete */
   dynamicValues?: DynamicValues
+  /** Auto-focus input and open autocomplete on mount */
+  autoFocus?: boolean
 }
 
 // ============================================================================
@@ -342,7 +344,14 @@ function getExistingInListValues(text: string, position: number): Set<string> {
   return values
 }
 
-export function QueryInput({ value, onChange, onClear, error, dynamicValues }: QueryInputProps) {
+export function QueryInput({
+  value,
+  onChange,
+  onClear,
+  error,
+  dynamicValues,
+  autoFocus,
+}: QueryInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [showAutocomplete, setShowAutocomplete] = useState(false)
@@ -380,6 +389,16 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
   useEffect(() => {
     updateAutocomplete()
   }, [value, updateAutocomplete])
+
+  // Auto-focus input and open autocomplete on mount when autoFocus is true
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only run on mount
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      inputRef.current.focus()
+      setShowAutocomplete(true)
+      updateAutocomplete()
+    }
+  }, [])
 
   // Check if cursor position is inside an IN list (between "IN (" and ")")
   const isInsideInList = useCallback((text: string, position: number): boolean => {

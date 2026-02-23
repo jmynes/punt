@@ -72,6 +72,7 @@ import { useCurrentUser } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
 import { demoStorage, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
+import { getAvatarColor, getInitials } from '@/lib/utils'
 import { useAdminUndoStore } from '@/stores/admin-undo-store'
 import { CreateUserDialog } from './create-user-dialog'
 
@@ -902,10 +903,12 @@ export function UserList() {
               <Avatar>
                 <AvatarImage src={user.avatar || undefined} />
                 <AvatarFallback
-                  className="text-white"
-                  style={user.avatarColor ? { backgroundColor: user.avatarColor } : undefined}
+                  className="text-xs text-white font-medium"
+                  style={{
+                    backgroundColor: user.avatarColor || getAvatarColor(user.id || user.name),
+                  }}
                 >
-                  {user.name.charAt(0).toUpperCase()}
+                  {getInitials(user.name)}
                 </AvatarFallback>
               </Avatar>
               <div>

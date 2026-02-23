@@ -13,6 +13,7 @@ import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-ti
 import { useHasPermission } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
+import { getProjectViewTabs, useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
 import { PERMISSIONS } from '@/lib/permissions'
 import { evaluateQuery } from '@/lib/query-evaluator'
@@ -55,6 +56,9 @@ export default function BoardPage() {
     queryMode,
     queryText,
   } = useBacklogStore()
+
+  // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
+  useTabCycleShortcut({ tabs: getProjectViewTabs(projectKey) })
 
   // Fetch columns from API (creates defaults if none exist)
   const {

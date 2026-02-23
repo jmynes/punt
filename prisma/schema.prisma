@@ -384,7 +384,7 @@ model TicketWatcher {
 // Linked tickets (blocks, is blocked by, relates to, duplicates, etc.)
 model TicketLink {
   id       String @id @default(cuid())
-  linkType String // blocks, is_blocked_by, relates_to, duplicates, is_duplicated_by, clones, is_cloned_by
+  linkType String // blocks, is_blocked_by, relates_to, duplicates, is_duplicated_by
 
   fromTicketId String
   fromTicket   Ticket @relation("LinkedFrom", fields: [fromTicketId], references: [id], onDelete: Cascade)

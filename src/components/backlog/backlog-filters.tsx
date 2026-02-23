@@ -1193,6 +1193,7 @@ export function BacklogFilters({
               }}
               error={queryError ?? null}
               dynamicValues={dynamicValues}
+              autoFocus
             />
           </div>
           {/* Exit PQL mode button */}

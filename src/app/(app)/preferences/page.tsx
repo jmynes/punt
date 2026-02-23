@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
+import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { showToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -78,6 +79,12 @@ function PreferencesContent() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
   const activeTab: PreferencesTab = isValidTab(tabParam) ? tabParam : 'general'
+
+  // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
+  useTabCycleShortcut({
+    tabs: VALID_TABS,
+    queryBasePath: '/preferences',
+  })
 
   const defaultMaxYear = new Date().getFullYear() + 5
   const _currentMaxYear = ticketDateMaxYearMode === 'default' ? defaultMaxYear : ticketDateMaxYear
