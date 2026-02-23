@@ -111,7 +111,7 @@ describe('Sprint Store Fuzz Tests', () => {
       )
     })
 
-    it('should return false for sprint recently dismissed with later', () => {
+    it('should return true for sprint dismissed with later (no cooldown)', () => {
       fc.assert(
         fc.property(fc.uuid(), (sprintId) => {
           resetStore()
@@ -119,53 +119,9 @@ describe('Sprint Store Fuzz Tests', () => {
           useSprintStore.getState().dismissSprintPrompt(sprintId, 'later')
           const shouldShow = useSprintStore.getState().shouldShowPrompt(sprintId)
 
-          expect(shouldShow).toBe(false)
-        }),
-        FUZZ_CONFIG.standard,
-      )
-    })
-
-    it('should return true for sprint dismissed with later more than 24h ago', () => {
-      fc.assert(
-        fc.property(fc.uuid(), (sprintId) => {
-          resetStore()
-
-          // Set dismissal time to 25 hours ago
-          const oldTimestamp = Date.now() - 25 * 60 * 60 * 1000
-          useSprintStore.setState({
-            dismissedPrompts: {
-              [sprintId]: { dismissedAt: oldTimestamp, action: 'later' },
-            },
-          })
-
-          const shouldShow = useSprintStore.getState().shouldShowPrompt(sprintId)
-
+          // 'later' does not suppress the prompt — only 'extend' does
           expect(shouldShow).toBe(true)
         }),
-        FUZZ_CONFIG.standard,
-      )
-    })
-
-    it('should return false for sprint dismissed with later within 24h', () => {
-      fc.assert(
-        fc.property(
-          fc.uuid(),
-          fc.nat({ max: 23 * 60 * 60 * 1000 }), // Up to 23 hours
-          (sprintId, hoursAgoMs) => {
-            resetStore()
-
-            const recentTimestamp = Date.now() - hoursAgoMs
-            useSprintStore.setState({
-              dismissedPrompts: {
-                [sprintId]: { dismissedAt: recentTimestamp, action: 'later' },
-              },
-            })
-
-            const shouldShow = useSprintStore.getState().shouldShowPrompt(sprintId)
-
-            expect(shouldShow).toBe(false)
-          },
-        ),
         FUZZ_CONFIG.standard,
       )
     })
@@ -319,9 +275,9 @@ describe('Sprint Store Fuzz Tests', () => {
         fc.property(fc.uniqueArray(fc.uuid(), { minLength: 2, maxLength: 10 }), (sprintIds) => {
           resetStore()
 
-          // Dismiss all with 'later'
+          // Dismiss all with 'extend'
           for (const id of sprintIds) {
-            useSprintStore.getState().dismissSprintPrompt(id, 'later')
+            useSprintStore.getState().dismissSprintPrompt(id, 'extend')
           }
 
           // All should not show
