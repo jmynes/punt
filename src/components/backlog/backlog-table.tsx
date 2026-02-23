@@ -98,6 +98,29 @@ export function BacklogTable({
     return () => clearTimeout(timer)
   }, [queryText])
 
+  // Extract dynamic values for query autocomplete
+  const dynamicValues = useMemo(() => {
+    const statusNames = statusColumns.map((c) => c.name)
+    const assigneeSet = new Set<string>()
+    const sprintSet = new Set<string>()
+    const labelSet = new Set<string>()
+
+    for (const ticket of tickets) {
+      if (ticket.assignee?.name) assigneeSet.add(ticket.assignee.name)
+      if (ticket.sprint?.name) sprintSet.add(ticket.sprint.name)
+      for (const label of ticket.labels) {
+        labelSet.add(label.name)
+      }
+    }
+
+    return {
+      statusNames,
+      assigneeNames: Array.from(assigneeSet).sort(),
+      sprintNames: Array.from(sprintSet).sort(),
+      labelNames: Array.from(labelSet).sort(),
+    }
+  }, [tickets, statusColumns])
+
   // Reset backlog sort to default on mount when sort persistence is disabled
   const sortResetRef = useRef(false)
   useEffect(() => {
@@ -630,6 +653,7 @@ export function BacklogTable({
                   setQueryMode(false)
                 }}
                 error={queryError}
+                dynamicValues={dynamicValues}
               />
             </div>
           ) : (

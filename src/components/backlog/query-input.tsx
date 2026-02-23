@@ -25,11 +25,24 @@ import {
 } from '@/lib/query-parser'
 import { cn } from '@/lib/utils'
 
+interface DynamicValues {
+  /** Column/status names from the project */
+  statusNames: string[]
+  /** Assignee names from tickets */
+  assigneeNames: string[]
+  /** Sprint names from tickets */
+  sprintNames: string[]
+  /** Label names from tickets */
+  labelNames: string[]
+}
+
 interface QueryInputProps {
   value: string
   onChange: (value: string) => void
   onClear: () => void
   error: string | null
+  /** Dynamic values for context-aware autocomplete */
+  dynamicValues?: DynamicValues
 }
 
 // ============================================================================
@@ -132,7 +145,10 @@ interface AutocompleteItem {
   description?: string
 }
 
-function getAutocompleteSuggestions(ctx: AutocompleteContext | null): AutocompleteItem[] {
+function getAutocompleteSuggestions(
+  ctx: AutocompleteContext | null,
+  dynamicValues?: DynamicValues,
+): AutocompleteItem[] {
   if (!ctx) return []
 
   const partial = ctx.partial.toLowerCase()
@@ -150,6 +166,8 @@ function getAutocompleteSuggestions(ctx: AutocompleteContext | null): Autocomple
 
   if (ctx.type === 'value' && ctx.fieldName) {
     const fieldName = ctx.fieldName.toLowerCase()
+
+    // Check for static field values first (type, priority, resolution)
     const canonicalField = Object.entries({
       type: 'type',
       priority: 'priority',
@@ -163,6 +181,30 @@ function getAutocompleteSuggestions(ctx: AutocompleteContext | null): Autocomple
       }))
       if (!partial) return items
       return items.filter((item) => item.label.toLowerCase().startsWith(partial))
+    }
+
+    // Check for dynamic field values
+    if (dynamicValues) {
+      let values: string[] = []
+
+      if (fieldName === 'status') {
+        values = dynamicValues.statusNames
+      } else if (fieldName === 'assignee') {
+        values = dynamicValues.assigneeNames
+      } else if (fieldName === 'sprint') {
+        values = dynamicValues.sprintNames
+      } else if (fieldName === 'labels' || fieldName === 'label') {
+        values = dynamicValues.labelNames
+      }
+
+      if (values.length > 0) {
+        const items = values.map((v) => ({
+          label: v,
+          value: v,
+        }))
+        if (!partial) return items
+        return items.filter((item) => item.label.toLowerCase().startsWith(partial))
+      }
     }
   }
 
@@ -212,7 +254,7 @@ function getFieldDescription(field: string): string {
 // Query Input Component
 // ============================================================================
 
-export function QueryInput({ value, onChange, onClear, error }: QueryInputProps) {
+export function QueryInput({ value, onChange, onClear, error, dynamicValues }: QueryInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [showAutocomplete, setShowAutocomplete] = useState(false)
@@ -220,7 +262,10 @@ export function QueryInput({ value, onChange, onClear, error }: QueryInputProps)
   const [autocompleteCtx, setAutocompleteCtx] = useState<AutocompleteContext | null>(null)
 
   // Get suggestions
-  const suggestions = useMemo(() => getAutocompleteSuggestions(autocompleteCtx), [autocompleteCtx])
+  const suggestions = useMemo(
+    () => getAutocompleteSuggestions(autocompleteCtx, dynamicValues),
+    [autocompleteCtx, dynamicValues],
+  )
 
   // Update autocomplete context on cursor movement or input change
   const updateAutocomplete = useCallback(() => {
