@@ -352,6 +352,10 @@ export function KanbanBoard({
       }
 
       // Persist to API (after optimistic update)
+      // Get the toastId from the undo entry we just pushed (it's the last entry)
+      const lastUndoEntry = useUndoStore.getState().undoStack.at(-1)
+      const moveToastId = lastUndoEntry?.toastId
+
       if (isSingleDrag) {
         // Single ticket move/reorder
         moveTicketMutation.mutate({
@@ -361,6 +365,7 @@ export function KanbanBoard({
           toColumnId: targetColumnId,
           newOrder: insertIndex,
           previousColumns: snapshot,
+          toastId: moveToastId,
         })
       } else {
         // Multiple tickets move

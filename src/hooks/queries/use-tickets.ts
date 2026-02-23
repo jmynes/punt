@@ -298,26 +298,70 @@ interface MoveTicketMutationInput {
   toColumnId: string
   newOrder: number
   previousColumns: ColumnWithTickets[]
+  toastId?: string | number
 }
 
 /**
  * Move a ticket to a different column (for drag-drop persistence)
+ * Captures activity metadata and updates undo store if toastId is provided
  */
 export function useMoveTicket() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ projectId, ticketId, toColumnId, newOrder }: MoveTicketMutationInput) => {
-      const provider = getDataProvider(getTabId())
-      return provider.moveTicket(projectId, ticketId, {
-        columnId: toColumnId,
-        order: newOrder,
+    mutationFn: async ({
+      projectId,
+      ticketId,
+      toColumnId,
+      newOrder,
+    }: MoveTicketMutationInput): Promise<{
+      ticket: TicketWithRelations
+      activity?: ActivityMetaResponse
+    }> => {
+      // Make direct fetch call to capture _activity from response
+      const response = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify({
+          columnId: toColumnId,
+          order: newOrder,
+        }),
       })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to move ticket' }))
+        throw new Error(error.message || 'Failed to move ticket')
+      }
+
+      const data = await response.json()
+      const { _activity, ...ticket } = data
+
+      return {
+        ticket: ticket as TicketWithRelations,
+        activity: _activity,
+      }
     },
     onMutate: async ({ projectId }) => {
       // Store update already happened in handleDragEnd
       // Just cancel refetches
       await queryClient.cancelQueries({ queryKey: ticketKeys.byProject(projectId) })
+    },
+    onSuccess: (data, { ticketId, toastId }) => {
+      // Update undo store with activity metadata if toastId provided
+      if (toastId && data.activity) {
+        const { useUndoStore } = require('@/stores/undo-store')
+        const activityMeta = {
+          ticketId,
+          activityIds: data.activity.activityIds ?? [],
+          groupId: data.activity.groupId ?? undefined,
+        }
+        if (activityMeta.activityIds.length > 0 || activityMeta.groupId) {
+          useUndoStore.getState().updateActivityMeta(toastId, activityMeta)
+        }
+      }
     },
     onError: (err, { projectId, previousColumns }) => {
       // Rollback using stored snapshot
@@ -338,6 +382,7 @@ interface MoveTicketsMutationInput {
   toColumnId: string
   newOrder: number
   previousColumns: ColumnWithTickets[]
+  toastId?: string | number
 }
 
 // ============================================================================
