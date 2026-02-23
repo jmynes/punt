@@ -778,6 +778,7 @@ export function SprintBacklogView({
                 onClear={() => setQueryText('')}
                 error={queryError}
                 dynamicValues={dynamicValues}
+                autoFocus
               />
             )}
           </div>
