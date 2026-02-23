@@ -745,13 +745,18 @@ export function getAutocompleteContext(
     return { type: 'field', partial: last.value, position: last.start }
   }
 
-  // If the last token is a field and we're not typing (space after field), suggest operators
-  if (last.type === 'FIELD' && !isTyping) {
-    return {
-      type: 'operator',
-      fieldName: last.value,
-      partial: '',
-      position: cursorPosition,
+  // If the last token is a field/value and we're not typing (space after field), suggest operators
+  // Note: tokenizer classifies as VALUE when no operator follows, but it could be a field name
+  if ((last.type === 'FIELD' || last.type === 'VALUE') && !isTyping) {
+    // Check if there's already an operator - if so, this VALUE is actually a value, not a field
+    const prev = meaningful.length >= 2 ? meaningful[meaningful.length - 2] : null
+    if (prev?.type !== 'OPERATOR' && prev?.type !== 'COMMA') {
+      return {
+        type: 'operator',
+        fieldName: last.value,
+        partial: '',
+        position: cursorPosition,
+      }
     }
   }
 
