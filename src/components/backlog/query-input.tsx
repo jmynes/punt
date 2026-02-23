@@ -209,7 +209,19 @@ function getAutocompleteSuggestions(
   }
 
   if (ctx.type === 'operator') {
-    const operators = [
+    // Field types that support comparison operators (>, <, >=, <=)
+    const numericFields = ['storyPoints', 'points', 'estimate']
+    const dateFields = ['dueDate', 'startDate', 'created', 'updated']
+    // Fields that are enums (only =, !=, IN, NOT IN make sense)
+    const enumFields = ['type', 'priority', 'resolution']
+
+    const fieldName = ctx.fieldName?.toLowerCase() ?? ''
+    const isNumeric = numericFields.some((f) => f.toLowerCase() === fieldName)
+    const isDate = dateFields.some((f) => f.toLowerCase() === fieldName)
+    const isEnum = enumFields.some((f) => f.toLowerCase() === fieldName)
+    const supportsComparison = isNumeric || isDate
+
+    const allOperators = [
       { label: '=', value: '=', description: 'Equals' },
       { label: '!=', value: '!=', description: 'Not equals' },
       { label: 'IN', value: 'IN', description: 'In list of values' },
@@ -221,6 +233,17 @@ function getAutocompleteSuggestions(
       { label: '>=', value: '>=', description: 'Greater or equal' },
       { label: '<=', value: '<=', description: 'Less or equal' },
     ]
+
+    // Filter operators based on field type
+    let operators = allOperators
+    if (isEnum) {
+      // Enum fields: only equality and list operators
+      operators = allOperators.filter((op) => ['=', '!=', 'IN', 'NOT IN'].includes(op.value))
+    } else if (!supportsComparison) {
+      // String fields: exclude comparison operators
+      operators = allOperators.filter((op) => !['>', '<', '>=', '<='].includes(op.value))
+    }
+
     if (!partial) return operators
     return operators.filter((item) => item.label.toLowerCase().startsWith(partial))
   }
