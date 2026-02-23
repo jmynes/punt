@@ -25,6 +25,7 @@ import { RepositoryTab } from '@/components/projects/settings/repository-tab'
 import { SprintsTab } from '@/components/projects/settings/sprints-tab'
 import { useHasPermission, useMyPermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
@@ -79,6 +80,12 @@ export default function ProjectSettingsPage() {
   const canManageMembers = useHasPermission(projectId, PERMISSIONS.MEMBERS_MANAGE)
   const canManageLabels = useHasPermission(projectId, PERMISSIONS.LABELS_MANAGE)
   const canManageRoles = useHasPermission(projectId, PERMISSIONS.MEMBERS_ADMIN)
+
+  // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
+  useTabCycleShortcut({
+    tabs: VALID_TABS,
+    queryBasePath: `/projects/${projectKey}/settings`,
+  })
 
   // Connect to real-time updates
   useRealtime(projectId, _hasHydrated)

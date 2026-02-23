@@ -30,7 +30,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { showToast } from '@/lib/toast'
 
-type SetupStep = 'idle' | 'qr' | 'verify' | 'codes' | 'complete'
+type SetupStep = 'idle' | 'qr' | 'verify' | 'codes' | 'complete' | 'regenerating'
 
 interface TwoFactorSectionProps {
   isDemo: boolean
@@ -56,15 +56,14 @@ export function TwoFactorSection({ isDemo }: TwoFactorSectionProps) {
   const [showDisableDialog, setShowDisableDialog] = useState(false)
   const [disablePassword, setDisablePassword] = useState('')
   const [showDisablePassword, setShowDisablePassword] = useState(false)
+  const [disableTotpCode, setDisableTotpCode] = useState('')
   const [disableLoading, setDisableLoading] = useState(false)
 
   // Regenerate state
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
   const [regeneratePassword, setRegeneratePassword] = useState('')
   const [showRegeneratePassword, setShowRegeneratePassword] = useState(false)
-  const [regenerateLoading, setRegenerateLoading] = useState(false)
-  const [regeneratedCodes, setRegeneratedCodes] = useState<string[]>([])
-  const [regeneratedCodesAcknowledged, setRegeneratedCodesAcknowledged] = useState(false)
+  const [regenerateTotpCode, setRegenerateTotpCode] = useState('')
 
   // Fetch 2FA status on mount
   const fetchStatus = useCallback(async () => {
@@ -187,7 +186,7 @@ ${codes.join('\n')}
       const res = await fetch('/api/me/2fa/disable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: disablePassword }),
+        body: JSON.stringify({ password: disablePassword, totpCode: disableTotpCode }),
       })
 
       const data = await res.json()
@@ -200,6 +199,7 @@ ${codes.join('\n')}
       setRecoveryCodesRemaining(0)
       setShowDisableDialog(false)
       setDisablePassword('')
+      setDisableTotpCode('')
       showToast.success('Two-factor authentication has been disabled')
     } catch (error) {
       showToast.error(error instanceof Error ? error.message : 'Failed to disable 2FA')
@@ -210,12 +210,20 @@ ${codes.join('\n')}
 
   // Regenerate recovery codes
   const handleRegenerate = async () => {
-    setRegenerateLoading(true)
+    const password = regeneratePassword
+    const totpCode = regenerateTotpCode
+
+    // Close dialog and show loading spinner in the main card
+    setShowRegenerateDialog(false)
+    setRegeneratePassword('')
+    setRegenerateTotpCode('')
+    setSetupStep('regenerating')
+
     try {
       const res = await fetch('/api/me/2fa/recovery-codes/regenerate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: regeneratePassword }),
+        body: JSON.stringify({ password, totpCode }),
       })
 
       const data = await res.json()
@@ -224,21 +232,21 @@ ${codes.join('\n')}
         throw new Error(data.error ?? 'Failed to regenerate codes')
       }
 
-      setRegeneratedCodes(data.recoveryCodes)
-      setRegeneratedCodesAcknowledged(false)
+      setRecoveryCodes(data.recoveryCodes)
+      setCodesAcknowledged(false)
+      setCopiedCodes(false)
+      setSetupStep('codes')
+      showToast.success('Recovery codes regenerated successfully')
     } catch (error) {
       showToast.error(error instanceof Error ? error.message : 'Failed to regenerate codes')
-    } finally {
-      setRegenerateLoading(false)
+      setSetupStep('idle')
     }
   }
 
   const handleCloseRegenerateDialog = () => {
     setShowRegenerateDialog(false)
     setRegeneratePassword('')
-    setRegeneratedCodes([])
-    setRegeneratedCodesAcknowledged(false)
-    fetchStatus()
+    setRegenerateTotpCode('')
   }
 
   if (statusLoading) {
@@ -246,6 +254,32 @@ ${codes.join('\n')}
       <Card className="border-zinc-800 bg-zinc-900/50">
         <CardContent className="flex items-center justify-center py-8">
           <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Regenerating recovery codes - loading state
+  if (setupStep === 'regenerating') {
+    return (
+      <Card className="border-zinc-800 bg-zinc-900/50">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-amber-500" />
+            <CardTitle className="text-zinc-100">Two-Factor Authentication</CardTitle>
+            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+              Enabled
+            </Badge>
+          </div>
+          <CardDescription className="text-zinc-500">
+            Your account is protected with two-factor authentication.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="flex items-center gap-3 text-zinc-400">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm">Regenerating recovery codes...</span>
+          </div>
         </CardContent>
       </Card>
     )
@@ -570,6 +604,19 @@ ${codes.join('\n')}
                 </Button>
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="disableTotpCode" className="text-zinc-300">
+                2FA code or recovery code
+              </Label>
+              <Input
+                id="disableTotpCode"
+                type="text"
+                placeholder="000000 or XXXXX-XXXXX"
+                value={disableTotpCode}
+                onChange={(e) => setDisableTotpCode(e.target.value)}
+                className="bg-zinc-900 border-zinc-700 font-mono tracking-widest"
+              />
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel
@@ -577,13 +624,14 @@ ${codes.join('\n')}
               onClick={() => {
                 setDisablePassword('')
                 setShowDisablePassword(false)
+                setDisableTotpCode('')
               }}
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDisable}
-              disabled={disableLoading || !disablePassword}
+              disabled={disableLoading || !disablePassword || !disableTotpCode}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               {disableLoading ? 'Disabling...' : 'Disable 2FA'}
@@ -601,135 +649,74 @@ ${codes.join('\n')}
       >
         <AlertDialogContent className="bg-zinc-900 border-zinc-800 max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">
-              {regeneratedCodes.length > 0 ? 'New Recovery Codes' : 'Regenerate Recovery Codes'}
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-zinc-100">Regenerate Recovery Codes</AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
-              {regeneratedCodes.length > 0
-                ? 'Save these codes in a safe place. Your old codes are now invalid.'
-                : 'This will invalidate all existing recovery codes and generate new ones.'}
+              This will invalidate all existing recovery codes and generate new ones.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          {regeneratedCodes.length > 0 ? (
-            <div className="space-y-4 py-4">
-              <div className="bg-zinc-800/50 rounded-lg p-4 border border-zinc-700">
-                <div className="grid grid-cols-2 gap-2">
-                  {regeneratedCodes.map((code) => (
-                    <code
-                      key={code}
-                      className="px-3 py-1.5 text-sm font-mono text-zinc-100 bg-zinc-900 rounded text-center"
-                    >
-                      {code}
-                    </code>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="regeneratePassword" className="text-zinc-300">
+                Confirm with your password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="regeneratePassword"
+                  type={showRegeneratePassword ? 'text' : 'password'}
+                  value={regeneratePassword}
+                  onChange={(e) => setRegeneratePassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="bg-zinc-900 border-zinc-700 pr-10"
+                />
                 <Button
                   type="button"
-                  variant="outline"
-                  className="flex-1 border-zinc-700 hover:bg-zinc-800"
-                  onClick={() => handleCopyCodes(regeneratedCodes)}
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
+                  onClick={() => setShowRegeneratePassword(!showRegeneratePassword)}
                 >
-                  {copiedCodes ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4 text-emerald-500" />
-                      Copied
-                    </>
+                  {showRegeneratePassword ? (
+                    <EyeOff className="h-4 w-4" />
                   ) : (
-                    <>
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy
-                    </>
+                    <Eye className="h-4 w-4" />
                   )}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 border-zinc-700 hover:bg-zinc-800"
-                  onClick={() => handleDownloadCodes(regeneratedCodes)}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
-                </Button>
               </div>
-
-              <div className="bg-amber-950/30 border border-amber-900/30 rounded-lg p-3">
-                <label className="flex items-start gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={regeneratedCodesAcknowledged}
-                    onChange={(e) => setRegeneratedCodesAcknowledged(e.target.checked)}
-                    className="mt-1 rounded border-zinc-600"
-                  />
-                  <span className="text-sm text-amber-200/80">
-                    I have saved these recovery codes in a secure location.
-                  </span>
-                </label>
-              </div>
-
-              <AlertDialogFooter>
-                <AlertDialogAction
-                  disabled={!regeneratedCodesAcknowledged}
-                  onClick={handleCloseRegenerateDialog}
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                >
-                  Done
-                </AlertDialogAction>
-              </AlertDialogFooter>
             </div>
-          ) : (
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="regeneratePassword" className="text-zinc-300">
-                  Confirm with your password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="regeneratePassword"
-                    type={showRegeneratePassword ? 'text' : 'password'}
-                    value={regeneratePassword}
-                    onChange={(e) => setRegeneratePassword(e.target.value)}
-                    placeholder="Enter your password"
-                    className="bg-zinc-900 border-zinc-700 pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
-                    onClick={() => setShowRegeneratePassword(!showRegeneratePassword)}
-                  >
-                    {showRegeneratePassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <AlertDialogFooter>
-                <AlertDialogCancel
-                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                  onClick={() => {
-                    setRegeneratePassword('')
-                    setShowRegeneratePassword(false)
-                  }}
-                >
-                  Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleRegenerate}
-                  disabled={regenerateLoading || !regeneratePassword}
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                >
-                  {regenerateLoading ? 'Generating...' : 'Regenerate'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
+            <div className="space-y-2">
+              <Label htmlFor="regenerateTotpCode" className="text-zinc-300">
+                2FA code or recovery code
+              </Label>
+              <Input
+                id="regenerateTotpCode"
+                type="text"
+                placeholder="000000 or XXXXX-XXXXX"
+                value={regenerateTotpCode}
+                onChange={(e) => setRegenerateTotpCode(e.target.value)}
+                className="bg-zinc-900 border-zinc-700 font-mono tracking-widest"
+              />
             </div>
-          )}
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                onClick={() => {
+                  setRegeneratePassword('')
+                  setShowRegeneratePassword(false)
+                  setRegenerateTotpCode('')
+                }}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleRegenerate}
+                disabled={!regeneratePassword || !regenerateTotpCode}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                Regenerate
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </>

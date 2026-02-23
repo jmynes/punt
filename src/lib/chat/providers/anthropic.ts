@@ -34,7 +34,7 @@ export class AnthropicProvider implements ChatProvider {
     if (!user?.anthropicApiKey) {
       onEvent({
         type: 'error',
-        error: 'No Anthropic API key configured. Add your key in Profile > Integrations.',
+        error: 'No Anthropic API key configured. Add your key in Profile > Claude Chat.',
       })
       return
     }
@@ -126,7 +126,7 @@ export class AnthropicProvider implements ChatProvider {
       // Map specific errors to user-friendly messages
       let userMessage = errorMessage
       if (errorMessage.includes('Invalid API Key')) {
-        userMessage = 'Invalid Anthropic API key. Please check your key in Profile > Integrations.'
+        userMessage = 'Invalid Anthropic API key. Please check your key in Profile > Claude Chat.'
       } else if (errorMessage.includes('rate_limit')) {
         userMessage = 'Rate limit exceeded. Please wait a moment and try again.'
       }

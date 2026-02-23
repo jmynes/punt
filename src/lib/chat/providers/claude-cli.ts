@@ -101,7 +101,7 @@ export class ClaudeCliProvider implements ChatProvider {
     if (!user?.claudeSessionEncrypted) {
       onEvent({
         type: 'error',
-        error: 'No Claude session configured. Upload your credentials in Profile > Integrations.',
+        error: 'No Claude session configured. Upload your credentials in Profile > Claude Chat.',
       })
       return
     }

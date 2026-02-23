@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       const providerName = provider.name
       return new Response(
         JSON.stringify({
-          error: `${providerName} is not configured. Set it up in Profile > Integrations.`,
+          error: `${providerName} is not configured. Set it up in Profile > Claude Chat.`,
         }),
         { status: 400, headers: { 'Content-Type': 'application/json' } },
       )
