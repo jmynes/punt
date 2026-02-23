@@ -1,15 +1,21 @@
 'use client'
 
-import { Loader2, Target } from 'lucide-react'
+import { Code2, Loader2, Target } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef } from 'react'
-import { BacklogFilters } from '@/components/backlog'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { BacklogFilters, QueryInput } from '@/components/backlog'
 import { SprintBacklogView, SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
 import { filterTickets } from '@/lib/filter-tickets'
+import { evaluateQuery } from '@/lib/query-evaluator'
+import { parse, QueryParseError } from '@/lib/query-parser'
+import { cn } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -87,27 +93,69 @@ export default function SprintPlanningPage() {
     filterByAttachments,
     searchQuery,
     showSubtasks,
+    queryMode,
+    setQueryMode,
+    queryText,
+    setQueryText,
   } = useBacklogStore()
 
-  const filteredTickets = useMemo(
-    () =>
-      filterTickets(allTickets, {
-        searchQuery,
-        projectKey,
-        filterByType,
-        filterByPriority,
-        filterByStatus,
-        filterByResolution,
-        filterByAssignee,
-        filterByLabels,
-        filterBySprint,
-        filterByPoints,
-        filterByDueDate,
-        filterByAttachments,
-        showSubtasks,
-      }),
-    [
-      allTickets,
+  // Fetch sprints for autocomplete
+  const { data: projectSprints } = useProjectSprints(projectId)
+
+  // Debounce query text to prevent per-keystroke evaluation
+  const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQueryText(queryText), 150)
+    return () => clearTimeout(timer)
+  }, [queryText])
+
+  // Extract dynamic values for query autocomplete
+  const dynamicValues = useMemo(() => {
+    const statusNames = columns.map((c) => c.name)
+    const userSet = new Set<string>()
+    const labelSet = new Set<string>()
+
+    for (const ticket of allTickets) {
+      if (ticket.assignee?.name) userSet.add(ticket.assignee.name)
+      if (ticket.creator?.name) userSet.add(ticket.creator.name)
+      for (const label of ticket.labels) {
+        labelSet.add(label.name)
+      }
+    }
+
+    const sprintNames = projectSprints?.map((s) => s.name).sort() ?? []
+
+    return {
+      statusNames,
+      assigneeNames: Array.from(userSet).sort(),
+      sprintNames,
+      labelNames: Array.from(labelSet).sort(),
+    }
+  }, [allTickets, columns, projectSprints])
+
+  // Query parse error for tooltip
+  const [queryError, setQueryError] = useState<string | null>(null)
+
+  const filteredTickets = useMemo(() => {
+    // PQL query mode
+    if (queryMode && debouncedQueryText.trim()) {
+      try {
+        const ast = parse(debouncedQueryText)
+        setQueryError(null)
+        return evaluateQuery(ast, allTickets, columns, projectKey)
+      } catch (err) {
+        if (err instanceof QueryParseError) {
+          setQueryError(err.message)
+        } else {
+          setQueryError('Invalid query')
+        }
+        return allTickets
+      }
+    }
+
+    // Standard filter mode
+    setQueryError(null)
+    return filterTickets(allTickets, {
       searchQuery,
       projectKey,
       filterByType,
@@ -121,8 +169,26 @@ export default function SprintPlanningPage() {
       filterByDueDate,
       filterByAttachments,
       showSubtasks,
-    ],
-  )
+    })
+  }, [
+    queryMode,
+    debouncedQueryText,
+    allTickets,
+    columns,
+    projectKey,
+    searchQuery,
+    filterByType,
+    filterByPriority,
+    filterByStatus,
+    filterByResolution,
+    filterByAssignee,
+    filterByLabels,
+    filterBySprint,
+    filterByPoints,
+    filterByDueDate,
+    filterByAttachments,
+    showSubtasks,
+  ])
 
   // Find the selected ticket
   const selectedTicket = useMemo(
@@ -184,8 +250,39 @@ export default function SprintPlanningPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex-shrink-0 flex items-center gap-4 border-b border-zinc-800 px-4 py-3 lg:px-6">
-        <BacklogFilters projectId={projectId} statusColumns={columns} />
+      <div className="flex-shrink-0 flex flex-col gap-3 border-b border-zinc-800 px-4 py-3 lg:px-6">
+        <div className="flex items-center gap-4">
+          <BacklogFilters projectId={projectId} statusColumns={columns} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setQueryMode(!queryMode)}
+                className={cn(
+                  'h-8 w-8 flex-shrink-0',
+                  queryMode
+                    ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                    : 'text-zinc-400 hover:text-zinc-300',
+                )}
+              >
+                <Code2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {queryMode ? 'Switch to standard filters' : 'Switch to PQL query mode'}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        {queryMode && (
+          <QueryInput
+            value={queryText}
+            onChange={setQueryText}
+            onClear={() => setQueryText('')}
+            error={queryError}
+            dynamicValues={dynamicValues}
+          />
+        )}
       </div>
 
       {/* Scrollable content area */}
