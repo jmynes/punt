@@ -415,6 +415,7 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
         {/* Syntax highlighting layer (behind the input) */}
         <div
           className="pointer-events-none absolute inset-0 flex items-center overflow-hidden px-3 py-1 font-mono text-sm"
+          style={{ fontVariantLigatures: 'none' }}
           aria-hidden="true"
         >
           <span className="whitespace-pre">{renderHighlightedTokens(value)}</span>
@@ -448,6 +449,7 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
               ? 'border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500/30'
               : 'border-zinc-800 hover:border-zinc-700 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30',
           )}
+          style={{ fontVariantLigatures: 'none' }}
           spellCheck={false}
           autoComplete="off"
           autoCapitalize="off"
@@ -473,7 +475,9 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
                 }}
                 onMouseEnter={() => setSelectedIndex(index)}
               >
-                <span className="font-mono text-xs">{item.label}</span>
+                <span className="font-mono text-xs" style={{ fontVariantLigatures: 'none' }}>
+                  {item.label}
+                </span>
                 {item.description && (
                   <span className="ml-2 truncate text-xs text-zinc-500">{item.description}</span>
                 )}
