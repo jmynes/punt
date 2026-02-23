@@ -429,7 +429,7 @@ export default function BoardPage() {
         />
 
         {/* Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="flex items-center gap-2">
           <BacklogFilters
             statusColumns={columns}
             projectId={projectId}
