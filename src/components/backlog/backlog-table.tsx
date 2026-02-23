@@ -105,11 +105,12 @@ export function BacklogTable({
   // Extract dynamic values for query autocomplete
   const dynamicValues = useMemo(() => {
     const statusNames = statusColumns.map((c) => c.name)
-    const assigneeSet = new Set<string>()
+    const userSet = new Set<string>() // Both assignees and reporters
     const labelSet = new Set<string>()
 
     for (const ticket of tickets) {
-      if (ticket.assignee?.name) assigneeSet.add(ticket.assignee.name)
+      if (ticket.assignee?.name) userSet.add(ticket.assignee.name)
+      if (ticket.creator?.name) userSet.add(ticket.creator.name)
       for (const label of ticket.labels) {
         labelSet.add(label.name)
       }
@@ -120,7 +121,7 @@ export function BacklogTable({
 
     return {
       statusNames,
-      assigneeNames: Array.from(assigneeSet).sort(),
+      assigneeNames: Array.from(userSet).sort(), // Used for both assignee and reporter
       sprintNames,
       labelNames: Array.from(labelSet).sort(),
     }

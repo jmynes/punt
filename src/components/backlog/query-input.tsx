@@ -189,7 +189,8 @@ function getAutocompleteSuggestions(
 
       if (fieldName === 'status') {
         values = dynamicValues.statusNames
-      } else if (fieldName === 'assignee') {
+      } else if (fieldName === 'assignee' || fieldName === 'reporter') {
+        // Reporter uses the same user pool as assignee
         values = dynamicValues.assigneeNames
       } else if (fieldName === 'sprint') {
         values = dynamicValues.sprintNames
