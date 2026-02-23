@@ -208,6 +208,23 @@ function getAutocompleteSuggestions(
     }
   }
 
+  if (ctx.type === 'operator') {
+    const operators = [
+      { label: '=', value: '=', description: 'Equals' },
+      { label: '!=', value: '!=', description: 'Not equals' },
+      { label: 'IN', value: 'IN', description: 'In list of values' },
+      { label: 'NOT IN', value: 'NOT IN', description: 'Not in list' },
+      { label: 'IS EMPTY', value: 'IS EMPTY', description: 'Has no value' },
+      { label: 'IS NOT EMPTY', value: 'IS NOT EMPTY', description: 'Has a value' },
+      { label: '>', value: '>', description: 'Greater than' },
+      { label: '<', value: '<', description: 'Less than' },
+      { label: '>=', value: '>=', description: 'Greater or equal' },
+      { label: '<=', value: '<=', description: 'Less or equal' },
+    ]
+    if (!partial) return operators
+    return operators.filter((item) => item.label.toLowerCase().startsWith(partial))
+  }
+
   if (ctx.type === 'keyword') {
     const keywords = [
       { label: 'AND', value: 'AND', description: 'Both conditions must match' },
@@ -289,14 +306,22 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
       const before = value.slice(0, autocompleteCtx.position)
       const after = value.slice(autocompleteCtx.position + autocompleteCtx.partial.length)
 
-      // If the value contains spaces, wrap in quotes
-      const needsQuotes = item.value.includes(' ') || item.value.includes("'")
+      // If the value contains spaces, wrap in quotes (but not for operators)
+      const needsQuotes =
+        autocompleteCtx.type !== 'operator' &&
+        (item.value.includes(' ') || item.value.includes("'"))
       const insertValue = needsQuotes ? `"${item.value}"` : item.value
 
       // Add appropriate suffix based on context type:
-      // - Field names get " = " to start a comparison
-      // - Values and keywords just get a space
-      const suffix = autocompleteCtx.type === 'field' ? ' = ' : ' '
+      // - Field names get " " (operator autocomplete will appear next)
+      // - Operators: IN/NOT IN get " (" to start list, others get " "
+      // - Values and keywords get " "
+      let suffix = ' '
+      if (autocompleteCtx.type === 'operator') {
+        if (item.value === 'IN' || item.value === 'NOT IN') {
+          suffix = ' ('
+        }
+      }
 
       const newValue = before + insertValue + suffix + after
       onChange(newValue)

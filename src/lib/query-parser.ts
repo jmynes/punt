@@ -745,6 +745,16 @@ export function getAutocompleteContext(
     return { type: 'field', partial: last.value, position: last.start }
   }
 
+  // If the last token is a field and we're not typing (space after field), suggest operators
+  if (last.type === 'FIELD' && !isTyping) {
+    return {
+      type: 'operator',
+      fieldName: last.value,
+      partial: '',
+      position: cursorPosition,
+    }
+  }
+
   // After a complete comparison, suggest AND/OR
   if (
     last.type === 'VALUE' ||
