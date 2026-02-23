@@ -320,6 +320,12 @@ function evaluateNot(node: NotNode, ticket: TicketWithRelations, ctx: Evaluation
 }
 
 function evaluateIn(node: InNode, ticket: TicketWithRelations, ctx: EvaluationContext): boolean {
+  // Empty IN list matches all tickets (lenient: don't filter until values specified)
+  // This enables query-as-you-type where `type IN (` shows all tickets
+  if (node.values.length === 0) {
+    return true
+  }
+
   const fieldValue = getFieldValue(ticket, node.field, ctx)
 
   if (Array.isArray(fieldValue)) {

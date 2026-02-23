@@ -353,6 +353,17 @@ describe('evaluateQuery', () => {
       const result = query('storyPoints IN (1, 3, 5)')
       expect(result.map((t) => t.id)).toEqual(['t1', 't3', 't4'])
     })
+
+    it('empty IN list matches all tickets (lenient parsing)', () => {
+      // When typing "type IN (" we want all tickets shown until a value is specified
+      const result = query('type IN ()')
+      expect(result).toHaveLength(tickets.length)
+    })
+
+    it('empty NOT IN list matches all tickets (lenient parsing)', () => {
+      const result = query('type NOT IN ()')
+      expect(result).toHaveLength(tickets.length)
+    })
   })
 
   describe('IS EMPTY / IS NOT EMPTY', () => {
