@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, validationError } from '@/lib/api-utils'
+import { logTicketCreated } from '@/lib/audit'
 import {
   requireAuth,
   requireMembership,
@@ -219,6 +220,9 @@ export async function POST(
 
       return newTicket
     })
+
+    // Log ticket creation in audit trail (fire-and-forget)
+    logTicketCreated(ticket.id, user.id)
 
     // Emit real-time event for other clients
     // Include tabId from header so the originating tab can skip the event

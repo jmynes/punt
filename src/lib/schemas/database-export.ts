@@ -212,6 +212,18 @@ export const TicketEditSchema = z.object({
   userId: z.string(),
 })
 
+export const TicketActivitySchema = z.object({
+  id: z.string(),
+  ticketId: z.string(),
+  userId: z.string().nullable(),
+  action: z.string(),
+  field: z.string().nullable(),
+  oldValue: z.string().nullable(),
+  newValue: z.string().nullable(),
+  groupId: z.string().nullable(),
+  createdAt: z.string().datetime(),
+})
+
 export const AttachmentSchema = z.object({
   id: z.string(),
   filename: z.string(),
@@ -265,6 +277,7 @@ export const ExportDataSchema = z.object({
   ticketWatchers: z.array(TicketWatcherSchema),
   comments: z.array(CommentSchema),
   ticketEdits: z.array(TicketEditSchema),
+  ticketActivities: z.array(TicketActivitySchema).optional().default([]),
   attachments: z.array(AttachmentSchema),
   ticketSprintHistory: z.array(TicketSprintHistorySchema),
   invitations: z.array(InvitationSchema),
@@ -322,4 +335,4 @@ export const AnyDatabaseExportSchema = z.union([
 export type AnyDatabaseExport = z.infer<typeof AnyDatabaseExportSchema>
 
 // Export version for compatibility checks
-export const EXPORT_VERSION = '1.0.0'
+export const EXPORT_VERSION = '1.1.0'

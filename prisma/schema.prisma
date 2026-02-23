@@ -55,6 +55,7 @@ model User {
   // Activity
   comments         Comment[]
   ticketEdits      TicketEdit[]
+  ticketActivities TicketActivity[]
 
   // Auth relations
   sessions                Session[]
@@ -354,6 +355,7 @@ model Ticket {
   comments    Comment[]
   editHistory TicketEdit[]
   attachments Attachment[]
+  activities  TicketActivity[]
 
   @@unique([projectId, number])
   @@index([projectId])
@@ -411,6 +413,25 @@ model TicketEdit {
 
   @@index([ticketId])
   @@index([createdAt])
+}
+
+// Comprehensive audit trail for ticket changes
+model TicketActivity {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String   // created, updated, moved, assigned, labeled, sprint_changed, commented, etc.
+  field     String?  // which field changed (for updates)
+  oldValue  String?  // previous value (stringified)
+  newValue  String?  // new value (stringified)
+  groupId   String?  // groups related changes (e.g., drag-move updates column + order)
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([userId])
+  @@index([groupId])
 }
 
 model Label {

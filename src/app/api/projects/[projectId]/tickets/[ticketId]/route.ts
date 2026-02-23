@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
+import { computeTicketChanges, logBatchChanges } from '@/lib/audit'
 import {
   requireAuth,
   requireMembership,
@@ -89,15 +90,33 @@ export async function PATCH(
     const projectId = await requireProjectByKey(projectKey)
 
     // Check if ticket exists and belongs to project, get creator for permission check
+    // Select all mutable fields for audit trail diffing
     const existingTicket = await db.ticket.findFirst({
       where: { id: ticketId, projectId },
       select: {
         id: true,
+        title: true,
+        description: true,
+        type: true,
+        priority: true,
         columnId: true,
-        sprintId: true,
+        assigneeId: true,
         creatorId: true,
+        sprintId: true,
+        parentId: true,
+        storyPoints: true,
+        estimate: true,
         resolution: true,
+        resolvedAt: true,
+        startDate: true,
+        dueDate: true,
+        environment: true,
+        affectedVersion: true,
+        fixVersion: true,
         column: { select: { name: true } },
+        assignee: { select: { name: true, username: true } },
+        sprint: { select: { name: true } },
+        labels: { select: { id: true } },
       },
     })
 
@@ -338,6 +357,75 @@ export async function PATCH(
         console.error('Update data was:', JSON.stringify(dbUpdateData, null, 2))
         throw dbError
       })
+
+    // Log changes to audit trail (fire-and-forget)
+    const oldSnapshot: Record<string, unknown> = {
+      title: existingTicket.title,
+      description: existingTicket.description,
+      type: existingTicket.type,
+      priority: existingTicket.priority,
+      columnId: existingTicket.columnId,
+      assigneeId: existingTicket.assigneeId,
+      creatorId: existingTicket.creatorId,
+      sprintId: existingTicket.sprintId,
+      parentId: existingTicket.parentId,
+      storyPoints: existingTicket.storyPoints,
+      estimate: existingTicket.estimate,
+      resolution: existingTicket.resolution,
+      startDate: existingTicket.startDate,
+      dueDate: existingTicket.dueDate,
+      environment: existingTicket.environment,
+      affectedVersion: existingTicket.affectedVersion,
+      fixVersion: existingTicket.fixVersion,
+    }
+
+    // Build audit update data, handling labels specially
+    const auditUpdateData: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(dbUpdateData)) {
+      if (value !== undefined && key !== 'labels') {
+        auditUpdateData[key] = value
+      }
+    }
+
+    // Track label changes separately
+    if (labelIds !== undefined) {
+      const oldLabelIds = existingTicket.labels.map((l) => l.id).sort()
+      const newLabelIds = [...labelIds].sort()
+      auditUpdateData.labels = newLabelIds
+      oldSnapshot.labels = oldLabelIds
+    }
+
+    const changes = computeTicketChanges(oldSnapshot, auditUpdateData)
+    if (changes.length > 0) {
+      // Resolve raw IDs to human-readable names before storing in the audit trail.
+      // The updated `ticket` has the new related records; the existing query has the old ones.
+      const resolvedChanges = changes.map((change) => {
+        if (change.field === 'columnId') {
+          return {
+            field: 'status',
+            oldValue: existingTicket.column?.name ?? change.oldValue,
+            newValue: ticket.column?.name ?? change.newValue,
+          }
+        }
+        if (change.field === 'assigneeId') {
+          return {
+            field: 'assignee',
+            oldValue:
+              existingTicket.assignee?.name ?? existingTicket.assignee?.username ?? change.oldValue,
+            newValue: ticket.assignee?.name ?? ticket.assignee?.username ?? change.newValue,
+          }
+        }
+        if (change.field === 'sprintId') {
+          return {
+            field: 'sprint',
+            oldValue: existingTicket.sprint?.name ?? change.oldValue,
+            newValue: ticket.sprint?.name ?? change.newValue,
+          }
+        }
+        return change
+      })
+      logBatchChanges(ticketId, user.id, resolvedChanges)
+    }
 
     // Emit real-time event for other clients
     // Use 'ticket.moved' if column changed, 'ticket.sprint_changed' if sprint changed, otherwise 'ticket.updated'
