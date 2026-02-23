@@ -294,10 +294,6 @@ function getFieldDescription(field: string): string {
     environment: 'Environment',
     affectedVersion: 'Affected version',
     fixVersion: 'Fix version',
-    key: 'Ticket key (e.g. PROJ-1)',
-    title: 'Ticket title',
-    summary: 'Alias for title',
-    description: 'Description text',
   }
   return descriptions[field] ?? ''
 }

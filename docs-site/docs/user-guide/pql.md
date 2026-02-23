@@ -126,8 +126,6 @@ NOT (status = "Done" OR status = "Cancelled")
 | `created` | - | date | `=`, `!=`, `>`, `<`, `>=`, `<=` |
 | `updated` | - | date | `=`, `!=`, `>`, `<`, `>=`, `<=` |
 | `resolution` | - | enum | `=`, `!=`, `IN`, `NOT IN`, `IS EMPTY` |
-| `key` | - | string/number | `=`, `!=`, `>`, `<`, `>=`, `<=` |
-| `title` | `summary` | string | `=`, `!=` |
 
 ## Ordinal Ordering
 

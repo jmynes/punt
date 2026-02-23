@@ -364,8 +364,6 @@ sprint > "Sprint 1"
 | `created` | - | date | =, !=, >, <, >=, <= |
 | `updated` | - | date | =, !=, >, <, >=, <= |
 | `resolution` | - | enum | =, !=, IN, NOT IN, IS EMPTY |
-| `key` | - | string/number | =, !=, >, <, >=, <= |
-| `title` | `summary` | string | =, != |
 
 **Ordinal Ordering:**
 - Priority: `lowest < low < medium < high < highest < critical`

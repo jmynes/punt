@@ -107,10 +107,6 @@ export const QUERY_FIELDS = [
   'environment',
   'affectedVersion',
   'fixVersion',
-  'key',
-  'title',
-  'summary',
-  'description',
 ] as const
 
 export type QueryField = (typeof QUERY_FIELDS)[number]
@@ -121,7 +117,6 @@ const FIELD_ALIASES: Record<string, string> = {
   storypoints: 'storyPoints',
   story_points: 'storyPoints',
   label: 'labels',
-  summary: 'title',
   duedate: 'dueDate',
   due_date: 'dueDate',
   startdate: 'startDate',
