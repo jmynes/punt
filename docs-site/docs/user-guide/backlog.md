@@ -60,6 +60,19 @@ Filters are combined with AND logic:
 - Multiple values within a filter use OR (e.g., "Bug OR Story")
 - Different filter types use AND (e.g., "Bug AND High Priority")
 
+### PQL (Advanced Query Language)
+
+For complex filtering, switch to PQL mode by clicking the **`</>`** icon in the search bar. PQL supports:
+
+- Field comparisons: `priority = high`, `storyPoints >= 5`
+- Logical operators: `AND`, `OR`, `NOT`, parentheses
+- List operators: `IN (bug, task)`, `NOT IN ("Alex")`
+- Emptiness checks: `IS EMPTY`, `IS NOT EMPTY`
+- Date ranges: `created > -7d`, `dueDate < 2024-12-31`
+- Ordinal comparisons: `priority > medium`
+
+See the [PQL documentation](/user-guide/pql) for full syntax reference.
+
 ## Sorting
 
 Click any column header to sort:

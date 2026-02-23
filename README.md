@@ -12,7 +12,7 @@ PUNT is a lightweight, local-first issue tracking system for teams who want the 
 
 **Key capabilities:**
 
-- Backlog with filtering, sorting, and bulk actions
+- Backlog with filtering, sorting, bulk actions, and **PQL query language**
 - Kanban board with drag-and-drop, column customization (icons, colors)
 - Sprint planning with carryover tracking
 - Ticket linking (blocks, relates to, duplicates, clones)
