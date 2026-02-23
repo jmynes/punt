@@ -196,7 +196,7 @@ export function MCPTab({ isDemo }: MCPTabProps) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg font-mono text-sm">
-                    <code className="flex-1 overflow-x-auto whitespace-nowrap text-zinc-200">
+                    <code className="flex-1 truncate text-zinc-200 select-all">
                       {mcpKeyVisible ? mcpNewKey : '•'.repeat(40)}
                     </code>
                     <Button
