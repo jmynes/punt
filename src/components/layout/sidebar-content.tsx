@@ -18,7 +18,6 @@ import {
   Mail,
   Palette,
   Pencil,
-  Plug,
   Plus,
   RefreshCw,
   Settings,
@@ -27,6 +26,7 @@ import {
   SlidersHorizontal,
   Tag,
   Target,
+  Terminal,
   Trash2,
   TrendingDown,
   Upload,
@@ -303,19 +303,34 @@ export function SidebarContent({
                   Security
                 </Button>
               </Link>
-              <Link href="/profile?tab=integrations" onClick={handleLinkClick}>
+              <Link href="/profile?tab=mcp" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
                     pathname === '/profile' &&
-                      searchParams.get('tab') === 'integrations' &&
+                      searchParams.get('tab') === 'mcp' &&
                       'bg-zinc-800/50 text-zinc-100',
                   )}
                 >
-                  <Plug className="h-3 w-3" />
-                  Integrations
+                  <Terminal className="h-3 w-3" />
+                  MCP
+                </Button>
+              </Link>
+              <Link href="/profile?tab=claude-chat" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/profile' &&
+                      searchParams.get('tab') === 'claude-chat' &&
+                      'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Bot className="h-3 w-3" />
+                  Claude Chat
                 </Button>
               </Link>
             </div>
