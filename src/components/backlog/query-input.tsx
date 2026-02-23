@@ -519,16 +519,14 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
 
   return (
     <div className="relative flex items-center gap-2" ref={containerRef}>
-      {/* Query mode icon */}
-      <div className="flex shrink-0 items-center gap-1.5">
-        <Code2 className="h-4 w-4 text-purple-400" />
-      </div>
-
       {/* Input wrapper with syntax highlighting overlay */}
       <div className="relative flex-1">
+        {/* Query mode icon (left decorator, like Search icon in standard mode) */}
+        <Code2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-400" />
+
         {/* Syntax highlighting layer (behind the input) */}
         <div
-          className="pointer-events-none absolute inset-0 flex items-center overflow-hidden px-3 py-1 font-mono text-sm"
+          className="pointer-events-none absolute inset-0 flex items-center overflow-hidden pl-9 pr-3 py-1 font-mono text-sm"
           style={{ fontVariantLigatures: 'none' }}
           aria-hidden="true"
         >
@@ -556,7 +554,7 @@ export function QueryInput({ value, onChange, onClear, error, dynamicValues }: Q
           onKeyDown={handleKeyDown}
           placeholder="e.g. priority = high AND type = bug"
           className={cn(
-            'h-9 w-full rounded-md border bg-zinc-900/50 px-3 py-1 font-mono text-sm caret-zinc-300 outline-none transition-colors',
+            'h-9 w-full rounded-md border bg-zinc-900/50 pl-9 pr-3 py-1 font-mono text-sm caret-zinc-300 outline-none transition-colors',
             'text-transparent',
             'placeholder:text-zinc-600 placeholder:font-sans',
             displayError
