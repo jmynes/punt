@@ -1,13 +1,11 @@
 'use client'
 
-import { Code2, Loader2, Target } from 'lucide-react'
+import { Loader2, Target } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BacklogFilters, QueryInput } from '@/components/backlog'
+import { BacklogFilters } from '@/components/backlog'
 import { SprintBacklogView, SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -15,7 +13,6 @@ import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
 import { filterTickets } from '@/lib/filter-tickets'
 import { evaluateQuery } from '@/lib/query-evaluator'
 import { parse, QueryParseError } from '@/lib/query-parser'
-import { cn } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -94,9 +91,7 @@ export default function SprintPlanningPage() {
     searchQuery,
     showSubtasks,
     queryMode,
-    setQueryMode,
     queryText,
-    setQueryText,
   } = useBacklogStore()
 
   // Fetch sprints for autocomplete
@@ -248,39 +243,13 @@ export default function SprintPlanningPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex-shrink-0 flex flex-col gap-3 border-b border-zinc-800 px-4 py-3 lg:px-6">
-        <div className="flex items-center gap-4">
-          <BacklogFilters projectId={projectId} statusColumns={columns} />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setQueryMode(!queryMode)}
-                className={cn(
-                  'h-8 w-8 flex-shrink-0',
-                  queryMode
-                    ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
-                    : 'text-zinc-400 hover:text-zinc-300',
-                )}
-              >
-                <Code2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {queryMode ? 'Switch to standard filters' : 'Switch to PQL query mode'}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        {queryMode && (
-          <QueryInput
-            value={queryText}
-            onChange={setQueryText}
-            onClear={() => setQueryText('')}
-            error={queryError}
-            dynamicValues={dynamicValues}
-          />
-        )}
+      <div className="flex-shrink-0 border-b border-zinc-800 px-4 py-3 lg:px-6">
+        <BacklogFilters
+          projectId={projectId}
+          statusColumns={columns}
+          dynamicValues={dynamicValues}
+          queryError={queryError}
+        />
       </div>
 
       {/* Scrollable content area */}

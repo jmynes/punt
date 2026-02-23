@@ -12,6 +12,7 @@ import {
   ChevronsUp,
   ChevronUp,
   Clock,
+  Code2,
   Filter,
   Flag,
   Flame,
@@ -42,12 +43,14 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useProjectMembers } from '@/hooks/use-current-user'
 import { getStatusIcon } from '@/lib/status-icons'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { type FilterButtonId, useBacklogStore } from '@/stores/backlog-store'
 import type { ColumnWithTickets, IssueType, Priority } from '@/types'
 import { ISSUE_TYPES, RESOLUTIONS } from '@/types'
+import { QueryInput } from './query-input'
 
 // Type icons
 const typeIcons: Record<IssueType, React.ComponentType<{ className?: string }>> = {
@@ -87,12 +90,28 @@ const priorityColors: Record<Priority, string> = {
 
 const PRIORITY_ORDER_DESC: Priority[] = ['critical', 'highest', 'high', 'medium', 'low', 'lowest']
 
+interface DynamicValues {
+  statusNames: string[]
+  assigneeNames: string[]
+  sprintNames: string[]
+  labelNames: string[]
+}
+
 interface BacklogFiltersProps {
   statusColumns: ColumnWithTickets[]
   projectId: string
+  /** Dynamic values for query autocomplete (optional - enables PQL toggle) */
+  dynamicValues?: DynamicValues
+  /** Query parsing error message */
+  queryError?: string | null
 }
 
-export function BacklogFilters({ statusColumns: _statusColumns, projectId }: BacklogFiltersProps) {
+export function BacklogFilters({
+  statusColumns: _statusColumns,
+  projectId,
+  dynamicValues,
+  queryError,
+}: BacklogFiltersProps) {
   const members = useProjectMembers(projectId)
   const {
     searchQuery,
@@ -120,6 +139,10 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
     clearFilters,
     filterButtons,
     setFilterConfigOpen,
+    queryMode,
+    setQueryMode,
+    queryText,
+    setQueryText,
   } = useBacklogStore()
 
   // Calculate the earliest year from all tickets' due dates
@@ -1157,16 +1180,51 @@ export function BacklogFilters({ statusColumns: _statusColumns, projectId }: Bac
       {/* Render filter buttons in configured order */}
       {visibleFilterButtons.map((btn) => renderFilterButton(btn.id))}
 
-      {/* Search (aligned with filters) */}
-      <div className="relative max-w-xs flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-        <Input
-          placeholder="Search tickets..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"
-        />
-      </div>
+      {/* Search / Query input with integrated toggle */}
+      {queryMode && dynamicValues ? (
+        <div className="flex-1 max-w-md">
+          <QueryInput
+            value={queryText}
+            onChange={setQueryText}
+            onClear={() => {
+              setQueryText('')
+              setQueryMode(false)
+            }}
+            error={queryError ?? null}
+            dynamicValues={dynamicValues}
+          />
+        </div>
+      ) : (
+        <div className="relative max-w-xs flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          <Input
+            placeholder="Search tickets..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"
+          />
+          {/* PQL toggle inside search input */}
+          {dynamicValues && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setQueryMode(true)}
+                  className={cn(
+                    'absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors',
+                    'text-zinc-500 hover:text-purple-400 hover:bg-purple-500/10',
+                  )}
+                >
+                  <Code2 className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+                <p className="text-xs text-zinc-100">Switch to PQL query mode</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      )}
 
       {/* Clear filters */}
       {hasActiveFilters && (

@@ -18,7 +18,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
-import { Code2, Settings2, TrendingUp } from 'lucide-react'
+import { Settings2, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DropZone, type TableContext, TicketTable } from '@/components/table'
 import { Button } from '@/components/ui/button'
@@ -649,51 +649,21 @@ export function BacklogTable({
       {/* Toolbar */}
       <div className="flex flex-col border-b border-zinc-800">
         <div className="flex items-center justify-between gap-4 px-4 py-3">
-          {queryMode ? (
-            <div className="flex-1">
-              <QueryInput
-                value={queryText}
-                onChange={setQueryText}
-                onClear={() => {
-                  setQueryText('')
-                  setQueryMode(false)
-                }}
-                error={queryError}
-                dynamicValues={dynamicValues}
-              />
-            </div>
-          ) : (
-            <BacklogFilters projectId={projectId} statusColumns={statusColumns} />
-          )}
-          <div className="flex shrink-0 items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={queryMode ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setQueryMode(!queryMode)}
-                  className={queryMode ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}
-                >
-                  <Code2 className="mr-2 h-4 w-4" />
-                  Query
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
-                <p className="text-xs text-zinc-100">
-                  {queryMode ? 'Switch to standard filters' : 'Switch to query language mode'}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setColumnConfigOpen(true)}
-              className="shrink-0"
-            >
-              <Settings2 className="mr-2 h-4 w-4" />
-              Columns
-            </Button>
-          </div>
+          <BacklogFilters
+            projectId={projectId}
+            statusColumns={statusColumns}
+            dynamicValues={dynamicValues}
+            queryError={queryError}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setColumnConfigOpen(true)}
+            className="shrink-0"
+          >
+            <Settings2 className="mr-2 h-4 w-4" />
+            Columns
+          </Button>
         </div>
       </div>
 
