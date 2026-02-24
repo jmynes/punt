@@ -2,22 +2,12 @@
 
 import { Check, Copy, Eye, EyeOff, FileText, KeyRound, Terminal, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CodeBlock } from '@/components/ui/code-block'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { showToast } from '@/lib/toast'
+import { ReauthDialog } from './reauth-dialog'
 
 interface MCPTabProps {
   isDemo: boolean
@@ -74,6 +64,11 @@ export function MCPTab({ isDemo }: MCPTabProps) {
   const [mcpKeyCopied, setMcpKeyCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Reauth dialog state
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false)
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false)
+
   useEffect(() => {
     return () => {
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
@@ -98,37 +93,61 @@ export function MCPTab({ isDemo }: MCPTabProps) {
     fetchMcpKeyStatus()
   }, [isDemo, mcpKeyFetched])
 
-  const handleGenerateMcpKey = async () => {
+  const handleGenerateMcpKey = async (
+    password?: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
     setMcpKeyLoading(true)
     try {
-      const res = await fetch('/api/me/mcp-key', { method: 'POST' })
+      const res = await fetch('/api/me/mcp-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, totpCode, isRecoveryCode }),
+      })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to generate API key')
+      if (!res.ok) {
+        // Check if 2FA is required
+        if (data.requires2fa) {
+          throw new Error('2FA code required')
+        }
+        throw new Error(data.error || 'Failed to generate API key')
+      }
       setMcpNewKey(data.apiKey)
       setMcpKeyVisible(true)
       setMcpHasKey(true)
       setMcpKeyHint(data.apiKey.slice(-4))
       showToast.success('MCP API key generated')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to generate API key')
     } finally {
       setMcpKeyLoading(false)
     }
   }
 
-  const handleRevokeMcpKey = async () => {
+  const handleRevokeMcpKey = async (
+    password: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
     setMcpKeyLoading(true)
     try {
-      const res = await fetch('/api/me/mcp-key', { method: 'DELETE' })
+      const res = await fetch('/api/me/mcp-key', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, totpCode, isRecoveryCode }),
+      })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to revoke API key')
+      if (!res.ok) {
+        // Check if 2FA is required
+        if (data.requires2fa) {
+          throw new Error('2FA code required')
+        }
+        throw new Error(data.error || 'Failed to revoke API key')
+      }
       setMcpHasKey(false)
       setMcpKeyHint(null)
       setMcpNewKey(null)
       setMcpKeyVisible(false)
       showToast.success('MCP API key revoked')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to revoke API key')
     } finally {
       setMcpKeyLoading(false)
     }
@@ -235,48 +254,40 @@ export function MCPTab({ isDemo }: MCPTabProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleGenerateMcpKey}
                   disabled={mcpKeyLoading}
                   className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                  onClick={() => setShowRegenerateDialog(true)}
                 >
                   <KeyRound className="h-4 w-4 mr-2" />
                   Regenerate Key
                 </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-zinc-400 hover:text-red-400"
-                      disabled={mcpKeyLoading}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Revoke Key
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="bg-zinc-900 border-zinc-800">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="text-zinc-100">
-                        Revoke MCP API Key?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription className="text-zinc-400">
-                        This will immediately invalidate the current API key. Any MCP clients using
-                        this key will stop working.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-                        Cancel
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleRevokeMcpKey}
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        Revoke Key
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <ReauthDialog
+                  open={showRegenerateDialog}
+                  onOpenChange={setShowRegenerateDialog}
+                  title="Regenerate MCP API Key?"
+                  description="This will immediately invalidate the current API key. Any MCP clients using this key will stop working. You will need to update your credentials file with the new key."
+                  actionLabel="Regenerate Key"
+                  onConfirm={handleGenerateMcpKey}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-zinc-400 hover:text-red-400"
+                  disabled={mcpKeyLoading}
+                  onClick={() => setShowRevokeDialog(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Revoke Key
+                </Button>
+                <ReauthDialog
+                  open={showRevokeDialog}
+                  onOpenChange={setShowRevokeDialog}
+                  title="Revoke MCP API Key?"
+                  description="This will immediately invalidate the current API key. Any MCP clients using this key will stop working."
+                  actionLabel="Revoke Key"
+                  actionVariant="destructive"
+                  onConfirm={handleRevokeMcpKey}
+                />
               </div>
             </>
           ) : (
@@ -285,13 +296,21 @@ export function MCPTab({ isDemo }: MCPTabProps) {
                 Generate an API key to authenticate MCP requests from Claude Code.
               </p>
               <Button
-                onClick={handleGenerateMcpKey}
+                onClick={() => setShowGenerateDialog(true)}
                 disabled={mcpKeyLoading}
                 className="bg-amber-600 hover:bg-amber-700 text-white"
               >
                 <KeyRound className="h-4 w-4 mr-2" />
                 Generate API Key
               </Button>
+              <ReauthDialog
+                open={showGenerateDialog}
+                onOpenChange={setShowGenerateDialog}
+                title="Generate MCP API Key"
+                description="Enter your password to generate a new API key for MCP access."
+                actionLabel="Generate Key"
+                onConfirm={handleGenerateMcpKey}
+              />
             </div>
           )}
         </CardContent>
