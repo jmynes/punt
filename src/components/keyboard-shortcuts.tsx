@@ -3643,7 +3643,7 @@ export function KeyboardShortcuts() {
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Ctrl / Cmd
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">K</kbd>
                   </div>
                 </div>
@@ -3653,16 +3653,16 @@ export function KeyboardShortcuts() {
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Ctrl / Cmd
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Shift
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="p-1 bg-zinc-800 border border-zinc-700 rounded inline-flex items-center justify-center">
                       <ArrowLeft className="w-4 h-4" aria-hidden="true" />
                       <span className="sr-only">Left</span>
                     </kbd>
-                    <span className="text-zinc-500">/</span>
+                    <span className="text-zinc-400">/</span>
                     <kbd className="p-1 bg-zinc-800 border border-zinc-700 rounded inline-flex items-center justify-center">
                       <ArrowRight className="w-4 h-4" aria-hidden="true" />
                       <span className="sr-only">Right</span>
@@ -3682,7 +3682,7 @@ export function KeyboardShortcuts() {
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Ctrl / Cmd
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Click
                     </kbd>
@@ -3694,7 +3694,7 @@ export function KeyboardShortcuts() {
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Shift
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Click
                     </kbd>
@@ -3719,7 +3719,7 @@ export function KeyboardShortcuts() {
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Ctrl / Cmd
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">C</kbd>
                   </div>
                 </div>
@@ -3729,7 +3729,7 @@ export function KeyboardShortcuts() {
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Ctrl / Cmd
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">V</kbd>
                   </div>
                 </div>
@@ -3739,7 +3739,7 @@ export function KeyboardShortcuts() {
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Ctrl / Cmd
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">I</kbd>
                   </div>
                 </div>
@@ -3763,7 +3763,7 @@ export function KeyboardShortcuts() {
                       <ArrowUp className="w-4 h-4" aria-hidden="true" />
                       <span className="sr-only">Up</span>
                     </kbd>
-                    <span className="text-zinc-500">/</span>
+                    <span className="text-zinc-400">/</span>
                     <kbd className="p-1 bg-zinc-800 border border-zinc-700 rounded inline-flex items-center justify-center">
                       <ArrowDown className="w-4 h-4" aria-hidden="true" />
                       <span className="sr-only">Down</span>
@@ -3777,7 +3777,7 @@ export function KeyboardShortcuts() {
                       <ArrowLeft className="w-4 h-4" aria-hidden="true" />
                       <span className="sr-only">Left</span>
                     </kbd>
-                    <span className="text-zinc-500">/</span>
+                    <span className="text-zinc-400">/</span>
                     <kbd className="p-1 bg-zinc-800 border border-zinc-700 rounded inline-flex items-center justify-center">
                       <ArrowRight className="w-4 h-4" aria-hidden="true" />
                       <span className="sr-only">Right</span>
@@ -3797,7 +3797,7 @@ export function KeyboardShortcuts() {
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Ctrl / Cmd
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">S</kbd>
                   </div>
                 </div>
@@ -3807,7 +3807,7 @@ export function KeyboardShortcuts() {
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Ctrl / Cmd
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">Z</kbd>
                   </div>
                 </div>
@@ -3817,7 +3817,7 @@ export function KeyboardShortcuts() {
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Ctrl / Cmd
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">Y</kbd>
                   </div>
                 </div>
@@ -3827,11 +3827,11 @@ export function KeyboardShortcuts() {
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Ctrl / Cmd
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
                       Shift
                     </kbd>
-                    <span className="text-zinc-500">+</span>
+                    <span className="text-sm text-zinc-400">+</span>
                     <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">Z</kbd>
                   </div>
                 </div>
