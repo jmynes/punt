@@ -78,6 +78,7 @@ import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
+import { hasChecklistItems } from '@/lib/markdown-checklist'
 import { PERMISSIONS } from '@/lib/permissions'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
@@ -645,6 +646,25 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     enabled: hasUnsavedChanges,
   })
 
+  // Handle direct markdown changes from interactive checklists (reorder/toggle)
+  // in the description viewer without opening the full editor
+  const handleDescriptionMarkdownChange = useCallback(
+    (newMarkdown: string) => {
+      if (!ticket) return
+      const oldTicket = { ...ticket }
+      updateTicketMutation.mutate({
+        projectId,
+        ticketId: ticket.id,
+        updates: {
+          description: newMarkdown.trim() || null,
+          updatedAt: new Date(),
+        },
+        previousTicket: oldTicket,
+      })
+    },
+    [ticket, projectId, updateTicketMutation],
+  )
+
   if (!ticket) return null
 
   const ticketKey = formatTicketId(ticket)
@@ -1129,7 +1149,18 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
               {/* Description */}
               <div className="space-y-2">
-                <Label className="text-zinc-400">Description</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-zinc-400">Description</Label>
+                  {editingField !== 'description' && (
+                    <button
+                      type="button"
+                      className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                      onClick={() => startEditing('description')}
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
                 {editingField === 'description' ? (
                   <div className="space-y-2">
                     <DescriptionEditor
@@ -1158,17 +1189,30 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     </div>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    className="w-full text-left rounded-md bg-zinc-900/50 px-3 py-2 cursor-pointer hover:bg-amber-500/15 min-h-[40px]"
-                    onClick={() => startEditing('description')}
+                  <div
+                    className={cn(
+                      'w-full text-left rounded-md bg-zinc-900/50 px-3 py-2 min-h-[40px]',
+                      ticket.description?.trim() && hasChecklistItems(ticket.description)
+                        ? '[&_.markdown-viewer]:cursor-default'
+                        : 'cursor-pointer hover:bg-amber-500/15',
+                    )}
+                    onClick={(e) => {
+                      // Don't open editor if click was inside a checklist (stopPropagation handles it,
+                      // but this is a safety check for any missed paths)
+                      const target = e.target as HTMLElement
+                      if (target.closest('.draggable-checklist')) return
+                      startEditing('description')
+                    }}
                   >
                     {ticket.description?.trim() ? (
-                      <MarkdownViewer markdown={ticket.description} />
+                      <MarkdownViewer
+                        markdown={ticket.description}
+                        onMarkdownChange={handleDescriptionMarkdownChange}
+                      />
                     ) : (
                       <span className="text-zinc-500 italic text-sm">No description provided</span>
                     )}
-                  </button>
+                  </div>
                 )}
               </div>
 
