@@ -161,28 +161,37 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
     return `${content.length}-${content.substring(0, 100)}`
   }, [processedMarkdown])
 
-  // Optimistic local segments state for immediate UI updates on rapid interactions.
-  // The prop `markdown` is the source of truth from the server; local state tracks
-  // in-flight changes so consecutive toggles/reorders don't overwrite each other.
-  const [localSegments, setLocalSegments] = useState<ReturnType<
+  // Parse segments synchronously so DraggableChecklist renders on the first frame
+  // (avoids a flash of static MDXEditor checkboxes that aren't interactive).
+  const parsedSegments = useMemo(() => {
+    if (!onMarkdownChange || !hasChecklistItems(markdown)) return null
+    return splitMarkdownSegments(markdown)
+  }, [markdown, onMarkdownChange])
+
+  // Optimistic overlay for rapid interactions. When the user toggles/reorders
+  // faster than the API round-trip, this tracks the in-flight state so
+  // consecutive changes build on each other instead of overwriting.
+  const [optimisticSegments, setOptimisticSegments] = useState<ReturnType<
     typeof splitMarkdownSegments
   > | null>(null)
-  const localSegmentsRef = useRef(localSegments)
-  localSegmentsRef.current = localSegments
 
-  // Re-parse from prop when the server-confirmed markdown changes
+  // Active segments: optimistic if in-flight, otherwise parsed from prop
+  const activeSegments = optimisticSegments ?? parsedSegments
+  const activeSegmentsRef = useRef(activeSegments)
+  activeSegmentsRef.current = activeSegments
+
+  // Clear optimistic state when the server-confirmed markdown changes.
+  // parsedSegments is intentionally in the dep array — we want to reset
+  // optimistic state whenever the prop-derived segments change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional dep on parsedSegments
   useEffect(() => {
-    if (!onMarkdownChange || !hasChecklistItems(markdown)) {
-      setLocalSegments(null)
-      return
-    }
-    setLocalSegments(splitMarkdownSegments(markdown))
-  }, [markdown, onMarkdownChange])
+    setOptimisticSegments(null)
+  }, [parsedSegments])
 
   // Handle checklist item reorder within a specific segment
   const handleChecklistReorder = useCallback(
     (segmentIndex: number, reorderedItems: ChecklistItem[]) => {
-      const current = localSegmentsRef.current
+      const current = activeSegmentsRef.current
       if (!current || !onMarkdownChange) return
       const updatedSegments = current.map((seg) => {
         if (seg.index === segmentIndex) {
@@ -190,7 +199,7 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
         }
         return seg
       })
-      setLocalSegments(updatedSegments)
+      setOptimisticSegments(updatedSegments)
       onMarkdownChange(reconstructMarkdown(updatedSegments))
     },
     [onMarkdownChange],
@@ -199,7 +208,7 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
   // Handle checkbox toggle within a specific segment
   const handleCheckboxToggle = useCallback(
     (segmentIndex: number, itemId: string, checked: boolean) => {
-      const current = localSegmentsRef.current
+      const current = activeSegmentsRef.current
       if (!current || !onMarkdownChange) return
       const updatedSegments = current.map((seg) => {
         if (seg.index === segmentIndex && seg.items) {
@@ -210,7 +219,7 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
         }
         return seg
       })
-      setLocalSegments(updatedSegments)
+      setOptimisticSegments(updatedSegments)
       onMarkdownChange(reconstructMarkdown(updatedSegments))
     },
     [onMarkdownChange],
@@ -223,7 +232,7 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
 
   // When interactive checklists are enabled and the markdown contains checklist items,
   // render segments individually so checklist blocks get DnD support
-  if (localSegments) {
+  if (activeSegments) {
     return (
       <div
         className={`markdown-viewer ${className}`}
@@ -237,7 +246,7 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
           }
         }}
       >
-        {localSegments.map((segment) => {
+        {activeSegments.map((segment) => {
           if (segment.type === 'checklist' && segment.items) {
             return (
               <DraggableChecklist

@@ -78,6 +78,7 @@ import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
+import { hasChecklistItems } from '@/lib/markdown-checklist'
 import { PERMISSIONS } from '@/lib/permissions'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
@@ -1189,8 +1190,19 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   </div>
                 ) : (
                   <div
-                    className="w-full text-left rounded-md bg-zinc-900/50 px-3 py-2 cursor-pointer hover:bg-amber-500/15 min-h-[40px]"
-                    onClick={() => startEditing('description')}
+                    className={cn(
+                      'w-full text-left rounded-md bg-zinc-900/50 px-3 py-2 min-h-[40px]',
+                      ticket.description?.trim() && hasChecklistItems(ticket.description)
+                        ? '[&_.markdown-viewer]:cursor-default'
+                        : 'cursor-pointer hover:bg-amber-500/15',
+                    )}
+                    onClick={(e) => {
+                      // Don't open editor if click was inside a checklist (stopPropagation handles it,
+                      // but this is a safety check for any missed paths)
+                      const target = e.target as HTMLElement
+                      if (target.closest('.draggable-checklist')) return
+                      startEditing('description')
+                    }}
                   >
                     {ticket.description?.trim() ? (
                       <MarkdownViewer

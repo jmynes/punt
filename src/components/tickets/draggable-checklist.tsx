@@ -175,7 +175,7 @@ export function DraggableChecklist({ items, onReorder, onToggle }: DraggableChec
       <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
         {/* Stop propagation to prevent parent elements (e.g., description edit trigger) from activating */}
         <ul
-          className="ml-0 space-y-0 list-none pl-0"
+          className="draggable-checklist ml-0 space-y-0 list-none pl-0"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => {
             // Only stop propagation for Enter/Space to prevent parent button activation
