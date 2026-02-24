@@ -254,7 +254,7 @@ function CommentRow({ entry }: { entry: CommentEntry }) {
           )}
         </div>
         <div className="mt-1 text-sm text-zinc-400 break-words border-l-2 border-zinc-700 pl-3">
-          <MarkdownViewer markdown={entry.content} />
+          <MarkdownViewer markdown={entry.content} readonlyCheckboxes />
         </div>
         <Timestamp date={entry.createdAt} />
       </div>
