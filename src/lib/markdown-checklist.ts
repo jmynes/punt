@@ -16,6 +16,8 @@ export interface ChecklistItem {
   raw: string
   /** Leading whitespace (indentation) from the original line */
   indent: string
+  /** List marker character (-, *, or +) */
+  marker: string
 }
 
 export interface MarkdownSegment {
@@ -27,8 +29,8 @@ export interface MarkdownSegment {
   index: number
 }
 
-/** Regex matching a GFM task list item: `- [ ] text` or `- [x] text` (case-insensitive x) */
-const CHECKLIST_REGEX = /^(\s*)- \[([ xX])\] (.*)$/
+/** Regex matching a GFM task list item: `- [ ] text`, `* [ ] text`, or `+ [ ] text` (case-insensitive x) */
+const CHECKLIST_REGEX = /^(\s*)([-*+]) \[([ xX])\] (.*)$/
 
 /**
  * Parse a single markdown line into a ChecklistItem if it matches the task-list pattern.
@@ -38,10 +40,11 @@ export function parseChecklistLine(line: string): ChecklistItem | null {
   if (!match) return null
   return {
     id: '', // assigned later
-    checked: match[2].toLowerCase() === 'x',
-    text: match[3],
+    checked: match[3].toLowerCase() === 'x',
+    text: match[4],
     raw: line,
     indent: match[1],
+    marker: match[2],
   }
 }
 
@@ -126,7 +129,7 @@ export function reconstructMarkdown(segments: MarkdownSegment[]): string {
  * Convert a ChecklistItem back to its markdown representation.
  */
 export function itemToMarkdown(item: ChecklistItem): string {
-  return `${item.indent}- [${item.checked ? 'x' : ' '}] ${item.text}`
+  return `${item.indent}${item.marker} [${item.checked ? 'x' : ' '}] ${item.text}`
 }
 
 /**
