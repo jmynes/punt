@@ -232,16 +232,42 @@ export function MCPTab({ isDemo }: MCPTabProps) {
               )}
 
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerateMcpKey}
-                  disabled={mcpKeyLoading}
-                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                >
-                  <KeyRound className="h-4 w-4 mr-2" />
-                  Regenerate Key
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={mcpKeyLoading}
+                      className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                    >
+                      <KeyRound className="h-4 w-4 mr-2" />
+                      Regenerate Key
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-zinc-100">
+                        Regenerate MCP API Key?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-zinc-400">
+                        This will immediately invalidate the current API key. Any MCP clients using
+                        this key will stop working. You will need to update your credentials file
+                        with the new key.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleGenerateMcpKey}
+                        className="bg-amber-600 hover:bg-amber-700 text-white"
+                      >
+                        Regenerate Key
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
