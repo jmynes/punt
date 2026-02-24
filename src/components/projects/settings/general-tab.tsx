@@ -479,9 +479,9 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
                   <Input
                     type="text"
                     value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
                     placeholder={`Type ${project.key} to confirm`}
-                    className="bg-zinc-900 border-zinc-700 text-zinc-100 font-mono uppercase"
+                    className="bg-zinc-900 border-zinc-700 text-zinc-100 font-mono"
                     autoComplete="off"
                     disabled={deleteProject.isPending}
                   />
