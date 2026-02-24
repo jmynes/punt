@@ -71,6 +71,7 @@ import {
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
 import { demoStorage, isDemoMode } from '@/lib/demo'
+import { isEditableTarget } from '@/lib/keyboard-utils'
 import { showToast } from '@/lib/toast'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 import { useAdminUndoStore } from '@/stores/admin-undo-store'
@@ -765,6 +766,10 @@ export function UserList() {
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle shortcuts when typing in inputs
+      if (isEditableTarget(e)) {
+        return
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
         if (canUndo()) handleUndo()

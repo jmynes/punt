@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect } from 'react'
+import { isEditableTarget } from '@/lib/keyboard-utils'
 
 interface UseTabCycleShortcutOptions {
   /**
@@ -68,8 +69,7 @@ export function useTabCycleShortcut({ tabs, queryBasePath }: UseTabCycleShortcut
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
 
       // Don't handle when typing in inputs
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      if (isEditableTarget(e)) {
         return
       }
 
