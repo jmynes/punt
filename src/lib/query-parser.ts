@@ -107,6 +107,10 @@ export const QUERY_FIELDS = [
   'environment',
   'affectedVersion',
   'fixVersion',
+  'key',
+  'title',
+  'summary',
+  'description',
 ] as const
 
 export type QueryField = (typeof QUERY_FIELDS)[number]
@@ -129,6 +133,7 @@ const FIELD_ALIASES: Record<string, string> = {
   created_at: 'created',
   updatedat: 'updated',
   updated_at: 'updated',
+  summary: 'title',
 }
 
 function resolveFieldName(name: string): string {

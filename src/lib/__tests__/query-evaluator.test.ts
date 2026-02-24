@@ -87,6 +87,7 @@ const tickets: TicketWithRelations[] = [
     id: 't1',
     number: 1,
     title: 'Fix login bug',
+    description: 'Users cannot log in with valid credentials',
     type: 'bug',
     priority: 'high',
     columnId: 'col-1',
@@ -109,6 +110,7 @@ const tickets: TicketWithRelations[] = [
     id: 't2',
     number: 2,
     title: 'Add dashboard feature',
+    description: 'Build a new dashboard with analytics widgets',
     type: 'story',
     priority: 'medium',
     columnId: 'col-2',
@@ -263,12 +265,12 @@ describe('evaluateQuery', () => {
       expect(result.map((t) => t.id)).toEqual(['t3'])
     })
 
-    it('filters by title', () => {
+    it('filters by title (exact quoted match)', () => {
       const result = query('title = "Fix login bug"')
       expect(result.map((t) => t.id)).toEqual(['t1'])
     })
 
-    it('filters by key', () => {
+    it('filters by key with quoted string', () => {
       const result = query('key = "TEST-1"')
       expect(result.map((t) => t.id)).toEqual(['t1'])
     })
@@ -433,6 +435,144 @@ describe('evaluateQuery', () => {
     it('matches IN values case-insensitively', () => {
       const result = query('priority IN (HIGH, CRITICAL)')
       expect(result.map((t) => t.id)).toEqual(['t1', 't4'])
+    })
+  })
+
+  describe('key field', () => {
+    it('matches by exact key string (case-insensitive)', () => {
+      const result = query('key = "TEST-1"')
+      expect(result.map((t) => t.id)).toEqual(['t1'])
+    })
+
+    it('matches by key case-insensitively', () => {
+      const result = query('key = "test-1"')
+      expect(result.map((t) => t.id)).toEqual(['t1'])
+    })
+
+    it('filters by key != (excludes matching key)', () => {
+      const result = query('key != "TEST-1"')
+      expect(result.map((t) => t.id)).toEqual(['t2', 't3', 't4', 't5'])
+    })
+
+    it('filters by key with numeric value', () => {
+      const result = query('key = 3')
+      expect(result.map((t) => t.id)).toEqual(['t3'])
+    })
+
+    it('filters by key > with numeric value', () => {
+      const result = query('key > 3')
+      expect(result.map((t) => t.id)).toEqual(['t4', 't5'])
+    })
+
+    it('filters by key >= with numeric value', () => {
+      const result = query('key >= 3')
+      expect(result.map((t) => t.id)).toEqual(['t3', 't4', 't5'])
+    })
+
+    it('filters by key < with numeric value', () => {
+      const result = query('key < 3')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't2'])
+    })
+
+    it('filters by key <= with numeric value', () => {
+      const result = query('key <= 3')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't2', 't3'])
+    })
+
+    it('filters by key > with string key (numeric portion)', () => {
+      const result = query('key > "TEST-3"')
+      expect(result.map((t) => t.id)).toEqual(['t4', 't5'])
+    })
+
+    it('filters by key < with string key (numeric portion)', () => {
+      const result = query('key < "TEST-3"')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't2'])
+    })
+
+    it('filters by key >= with string key', () => {
+      const result = query('key >= "TEST-3"')
+      expect(result.map((t) => t.id)).toEqual(['t3', 't4', 't5'])
+    })
+
+    it('filters by key <= with string key', () => {
+      const result = query('key <= "TEST-3"')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't2', 't3'])
+    })
+  })
+
+  describe('title and summary fields', () => {
+    it('filters by title with case-insensitive contains', () => {
+      const result = query('title = "login"')
+      expect(result.map((t) => t.id)).toEqual(['t1'])
+    })
+
+    it('filters by title with case-insensitive contains (uppercase query)', () => {
+      const result = query('title = "LOGIN"')
+      expect(result.map((t) => t.id)).toEqual(['t1'])
+    })
+
+    it('filters by title with partial match', () => {
+      const result = query('title = "bug"')
+      expect(result.map((t) => t.id)).toEqual(['t1'])
+    })
+
+    it('filters by title != (not contains)', () => {
+      const result = query('title != "bug"')
+      expect(result.map((t) => t.id)).toEqual(['t2', 't3', 't4', 't5'])
+    })
+
+    it('summary is an alias for title', () => {
+      const result = query('summary = "login"')
+      expect(result.map((t) => t.id)).toEqual(['t1'])
+    })
+
+    it('summary != works as alias for title', () => {
+      const result = query('summary != "dashboard"')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't3', 't4', 't5'])
+    })
+
+    it('filters by title IS EMPTY (no tickets have empty titles)', () => {
+      const result = query('title IS EMPTY')
+      expect(result).toEqual([])
+    })
+
+    it('filters by title IS NOT EMPTY', () => {
+      const result = query('title IS NOT EMPTY')
+      expect(result).toHaveLength(5)
+    })
+  })
+
+  describe('description field', () => {
+    it('filters by description with case-insensitive contains', () => {
+      const result = query('description = "credentials"')
+      expect(result.map((t) => t.id)).toEqual(['t1'])
+    })
+
+    it('filters by description with partial match', () => {
+      const result = query('description = "dashboard"')
+      expect(result.map((t) => t.id)).toEqual(['t2'])
+    })
+
+    it('filters by description != (not contains)', () => {
+      // t1 contains "credentials" so excluded; t2 does not contain it; t3,t4,t5 have null (!=null returns true)
+      const result = query('description != "credentials"')
+      expect(result.map((t) => t.id)).toEqual(['t2', 't3', 't4', 't5'])
+    })
+
+    it('description != with non-matching text returns all tickets', () => {
+      // "anything" is not contained in any description, and null descriptions return true for !=
+      const result = query('description != "anything"')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't2', 't3', 't4', 't5'])
+    })
+
+    it('filters by description IS EMPTY', () => {
+      const result = query('description IS EMPTY')
+      expect(result.map((t) => t.id)).toEqual(['t3', 't4', 't5'])
+    })
+
+    it('filters by description IS NOT EMPTY', () => {
+      const result = query('description IS NOT EMPTY')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't2'])
     })
   })
 

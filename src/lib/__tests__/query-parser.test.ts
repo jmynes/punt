@@ -195,6 +195,11 @@ describe('parse', () => {
       const ast = parse('label = frontend') as ComparisonNode
       expect(ast.field).toBe('labels')
     })
+
+    it('resolves "summary" to "title"', () => {
+      const ast = parse('summary = "some text"') as ComparisonNode
+      expect(ast.field).toBe('title')
+    })
   })
 
   describe('logical operators', () => {
@@ -363,6 +368,88 @@ describe('parse', () => {
       const node = ast as IsEmptyNode
       expect(node.type).toBe('is_empty')
       expect(node.negated).toBe(false)
+    })
+  })
+
+  describe('key, title, and description fields', () => {
+    it('parses key with quoted string value', () => {
+      const ast = parse('key = "TEST-42"') as ComparisonNode
+      expect(ast).toMatchObject({
+        type: 'comparison',
+        field: 'key',
+        operator: '=',
+        value: 'TEST-42',
+        valueType: 'string',
+      })
+    })
+
+    it('parses key with numeric value', () => {
+      const ast = parse('key = 42') as ComparisonNode
+      expect(ast).toMatchObject({
+        type: 'comparison',
+        field: 'key',
+        operator: '=',
+        value: 42,
+        valueType: 'number',
+      })
+    })
+
+    it('parses key with ordering operator', () => {
+      const ast = parse('key > "TEST-10"') as ComparisonNode
+      expect(ast).toMatchObject({
+        type: 'comparison',
+        field: 'key',
+        operator: '>',
+        value: 'TEST-10',
+      })
+    })
+
+    it('parses title with quoted string', () => {
+      const ast = parse('title = "login bug"') as ComparisonNode
+      expect(ast).toMatchObject({
+        type: 'comparison',
+        field: 'title',
+        operator: '=',
+        value: 'login bug',
+        valueType: 'string',
+      })
+    })
+
+    it('parses title IS EMPTY', () => {
+      const ast = parse('title IS EMPTY') as IsEmptyNode
+      expect(ast).toMatchObject({
+        type: 'is_empty',
+        field: 'title',
+        negated: false,
+      })
+    })
+
+    it('parses description with comparison', () => {
+      const ast = parse('description = "some text"') as ComparisonNode
+      expect(ast).toMatchObject({
+        type: 'comparison',
+        field: 'description',
+        operator: '=',
+        value: 'some text',
+      })
+    })
+
+    it('parses description IS EMPTY', () => {
+      const ast = parse('description IS EMPTY') as IsEmptyNode
+      expect(ast).toMatchObject({
+        type: 'is_empty',
+        field: 'description',
+        negated: false,
+      })
+    })
+
+    it('parses description IS NOT EMPTY', () => {
+      const ast = parse('description IS NOT EMPTY') as IsEmptyNode
+      expect(ast).toMatchObject({
+        type: 'is_empty',
+        field: 'description',
+        negated: true,
+      })
     })
   })
 
