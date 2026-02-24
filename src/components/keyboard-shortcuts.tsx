@@ -1,7 +1,7 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertDialog,
@@ -3639,15 +3639,35 @@ export function KeyboardShortcuts() {
               <div className="space-y-2 text-sm text-zinc-400">
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Search tickets</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    Ctrl / Cmd + K
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Ctrl / Cmd
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">K</kbd>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Switch between view tabs</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    Ctrl / Cmd + Shift + ← / →
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Ctrl / Cmd
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Shift
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="p-1 bg-zinc-800 border border-zinc-700 rounded inline-flex items-center justify-center">
+                      <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+                      <span className="sr-only">Left</span>
+                    </kbd>
+                    <span className="text-zinc-500">/</span>
+                    <kbd className="p-1 bg-zinc-800 border border-zinc-700 rounded inline-flex items-center justify-center">
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                      <span className="sr-only">Right</span>
+                    </kbd>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3658,19 +3678,31 @@ export function KeyboardShortcuts() {
               <div className="space-y-2 text-sm text-zinc-400">
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Select multiple tickets</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    Ctrl / Cmd + Click
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Ctrl / Cmd
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Click
+                    </kbd>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Select range</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    Shift + Click
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Shift
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Click
+                    </kbd>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Clear selection</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
+                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
                     Esc
                   </kbd>
                 </div>
@@ -3683,25 +3715,37 @@ export function KeyboardShortcuts() {
               <div className="space-y-2 text-sm text-zinc-400">
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Copy selected tickets</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    Ctrl / Cmd + C
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Ctrl / Cmd
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">C</kbd>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Paste copied tickets</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    Ctrl / Cmd + V
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Ctrl / Cmd
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">V</kbd>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Open Claude Chat</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    Ctrl / Cmd + I
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Ctrl / Cmd
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">I</kbd>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Delete selected tickets</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
+                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
                     Delete
                   </kbd>
                 </div>
@@ -3714,15 +3758,31 @@ export function KeyboardShortcuts() {
               <div className="space-y-2 text-sm text-zinc-400">
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Reorder selected tickets up/down</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    ↑ / ↓
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="p-1 bg-zinc-800 border border-zinc-700 rounded inline-flex items-center justify-center">
+                      <ArrowUp className="w-4 h-4" aria-hidden="true" />
+                      <span className="sr-only">Up</span>
+                    </kbd>
+                    <span className="text-zinc-500">/</span>
+                    <kbd className="p-1 bg-zinc-800 border border-zinc-700 rounded inline-flex items-center justify-center">
+                      <ArrowDown className="w-4 h-4" aria-hidden="true" />
+                      <span className="sr-only">Down</span>
+                    </kbd>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Move selected tickets between columns</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    ← / →
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="p-1 bg-zinc-800 border border-zinc-700 rounded inline-flex items-center justify-center">
+                      <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+                      <span className="sr-only">Left</span>
+                    </kbd>
+                    <span className="text-zinc-500">/</span>
+                    <kbd className="p-1 bg-zinc-800 border border-zinc-700 rounded inline-flex items-center justify-center">
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                      <span className="sr-only">Right</span>
+                    </kbd>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3733,27 +3793,47 @@ export function KeyboardShortcuts() {
               <div className="space-y-2 text-sm text-zinc-400">
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Save changes (in forms/drawers)</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    Ctrl / Cmd + S
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Ctrl / Cmd
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">S</kbd>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Undo last action</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    Ctrl / Cmd + Z
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Ctrl / Cmd
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">Z</kbd>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Redo</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    Ctrl / Cmd + Y
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Ctrl / Cmd
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">Y</kbd>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Redo (alternative)</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
-                    Ctrl / Cmd + Shift + Z
-                  </kbd>
+                  <div className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Ctrl / Cmd
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">
+                      Shift
+                    </kbd>
+                    <span className="text-zinc-500">+</span>
+                    <kbd className="px-2 py-1 bg-zinc-800 border border-zinc-700 rounded">Z</kbd>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3764,7 +3844,7 @@ export function KeyboardShortcuts() {
               <div className="space-y-2 text-sm text-zinc-400">
                 <div className="flex items-center gap-4">
                   <span className="flex-1">Show keyboard shortcuts</span>
-                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded text-right">
+                  <kbd className="shrink-0 px-2 py-1 text-xs font-semibold text-zinc-300 bg-zinc-800 border border-zinc-700 rounded">
                     ?
                   </kbd>
                 </div>
