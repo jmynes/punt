@@ -61,7 +61,6 @@ import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
-import { useSettingsStore } from '@/stores/settings-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets } from '@/types'
 
@@ -248,7 +247,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       // Invalidate column queries to refresh data
       queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
 
-      const showUndo = useSettingsStore.getState().showUndoButtons
+      const showUndo = true
       const description = nameChanged
         ? `"${oldName}" renamed to "${newName}"`
         : 'Column appearance updated'
@@ -427,7 +426,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
 
       const targetColumn = otherColumns.find((c) => c.id === moveToColumnId)
-      const showUndo = useSettingsStore.getState().showUndoButtons
+      const showUndo = true
       const description =
         ticketsToMove.length > 0
           ? `"${column.name}" deleted. ${ticketsToMove.length} ticket${ticketsToMove.length === 1 ? '' : 's'} moved to "${targetColumn?.name}".`

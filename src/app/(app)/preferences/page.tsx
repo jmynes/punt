@@ -50,8 +50,6 @@ function PreferencesContent() {
     setKeepSelectionAfterAction,
     collapseAttachmentsByDefault,
     setCollapseAttachmentsByDefault,
-    showUndoButtons,
-    setShowUndoButtons,
     toastAutoDismiss,
     setToastAutoDismiss,
     toastDismissDelay,
@@ -361,26 +359,6 @@ function PreferencesContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-start justify-between space-x-4">
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor="show-undo-buttons" className="text-zinc-300">
-                      Show undo/redo buttons on toasts
-                    </Label>
-                    <p className="text-sm text-zinc-500">
-                      Display undo and redo action buttons on toast notifications after ticket
-                      operations
-                    </p>
-                  </div>
-                  <Switch
-                    id="show-undo-buttons"
-                    checked={showUndoButtons}
-                    onCheckedChange={(checked) => setShowUndoButtons(checked === true)}
-                    className="data-[state=checked]:bg-amber-600"
-                  />
-                </div>
-
-                <Separator className="bg-zinc-800" />
-
                 <div className="flex items-start justify-between space-x-4">
                   <div className="flex-1 space-y-1">
                     <Label htmlFor="toast-auto-dismiss" className="text-zinc-300">

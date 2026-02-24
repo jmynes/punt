@@ -239,7 +239,7 @@ export function KanbanBoard({
         ...col,
         tickets: col.tickets.map((t) => ({ ...t })),
       }))
-      const showUndo = useSettingsStore.getState().showUndoButtons
+      const showUndo = true
 
       // Check for cross-column moves for undo/notification
       if (!isSameColumn) {

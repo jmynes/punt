@@ -61,7 +61,6 @@ import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
-import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, Resolution, SprintSummary, TicketWithRelations } from '@/types'
@@ -362,7 +361,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       )
 
     const _uiState = useUIStore.getState ? useUIStore.getState() : uiStore
-    const showUndo = useSettingsStore.getState().showUndoButtons ?? true
+    const showUndo = true
     const boardStateMove = useBoardStore.getState ? useBoardStore.getState() : board
     const toastId = showUndoRedoToast('success', {
       title: toastTitle,
@@ -762,7 +761,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }))
 
     const _uiState = useUIStore.getState ? useUIStore.getState() : uiStore
-    const showUndo = useSettingsStore.getState().showUndoButtons ?? true
+    const showUndo = true
 
     const toastId = showUndoRedoToast('success', {
       title: count === 1 ? 'Removed from sprint' : `${count} tickets removed from sprint`,
@@ -907,7 +906,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }))
 
     const _uiState = useUIStore.getState ? useUIStore.getState() : uiStore
-    const showUndo = useSettingsStore.getState().showUndoButtons ?? true
+    const showUndo = true
 
     const toastId = showUndoRedoToast('success', {
       title:

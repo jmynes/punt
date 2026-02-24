@@ -110,7 +110,7 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
       // Invalidate column queries to refresh
       queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
 
-      const showUndo = useSettingsStore.getState().showUndoButtons
+      const showUndo = true
 
       const toastId = showUndoRedoToast('success', {
         title: 'Column created',

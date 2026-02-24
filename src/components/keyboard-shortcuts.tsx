@@ -321,7 +321,7 @@ export function KeyboardShortcuts() {
                 ? `${ticketKeys[0]} moved ${direction}`
                 : `${ticketKeys.join(', ')} moved ${direction}`,
             duration: getEffectiveDuration(5000),
-            showUndoButtons: useSettingsStore.getState().showUndoButtons,
+            showUndoButtons: true,
             onUndo: async (id) => {
               const undoEntry = useUndoStore.getState().undoByToastId(id)
               if (undoEntry) {
@@ -619,7 +619,7 @@ export function KeyboardShortcuts() {
                 ? `${ticketKeys[0]} moved to ${toName}`
                 : `${ticketKeys.join(', ')} moved to ${toName}`,
             duration: getEffectiveDuration(5000),
-            showUndoButtons: useSettingsStore.getState().showUndoButtons,
+            showUndoButtons: true,
             onUndo: async (id) => {
               const undoEntry = useUndoStore.getState().undoByToastId(id)
               if (undoEntry) {
@@ -770,7 +770,7 @@ export function KeyboardShortcuts() {
 
         rawToast.dismiss(entry.toastId)
 
-        const showUndo = useSettingsStore.getState().showUndoButtons
+        const showUndo = true
 
         if (entry.action.type === 'delete') {
           const action = entry.action
@@ -2363,7 +2363,7 @@ export function KeyboardShortcuts() {
           return
         }
 
-        const showUndo = useSettingsStore.getState().showUndoButtons
+        const showUndo = true
 
         if (entry.action.type === 'delete') {
           const action = entry.action
