@@ -269,22 +269,7 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
                     </div>
                   ) : (
                     <div className="mt-1 break-words">
-                      <MarkdownViewer
-                        markdown={comment.content}
-                        onMarkdownChange={
-                          canEditComment(comment)
-                            ? (newContent) => {
-                                updateComment.mutate({
-                                  projectId,
-                                  ticketId,
-                                  ticketKey,
-                                  commentId: comment.id,
-                                  content: newContent,
-                                })
-                              }
-                            : undefined
-                        }
-                      />
+                      <MarkdownViewer markdown={comment.content} />
                     </div>
                   )}
                 </div>
