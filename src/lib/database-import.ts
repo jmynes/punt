@@ -550,13 +550,17 @@ export async function importDatabase(
         counts.projectSprintSettings = dataToImport.projectSprintSettings.length
       }
 
-      // Step 11: Import Tickets (without labels first)
+      // Step 11: Import Tickets (without labels or parentId first, then link parents)
+      // Two-pass approach: parentId is a self-referencing FK, so child tickets
+      // must be inserted after their parents. We insert all tickets without
+      // parentId first, then update the parent references in a second pass.
       if (dataToImport.tickets.length > 0) {
         for (const ticket of dataToImport.tickets) {
-          const { labelIds, ...ticketData } = ticket
+          const { labelIds, parentId, ...ticketData } = ticket
           await tx.ticket.create({
             data: {
               ...ticketData,
+              parentId: null,
               startDate: ticketData.startDate ? new Date(ticketData.startDate) : null,
               dueDate: ticketData.dueDate ? new Date(ticketData.dueDate) : null,
               resolvedAt: ticketData.resolvedAt ? new Date(ticketData.resolvedAt) : null,
@@ -566,6 +570,16 @@ export async function importDatabase(
           })
         }
         counts.tickets = dataToImport.tickets.length
+
+        // Connect parent tickets (second pass for self-referencing FK)
+        for (const ticket of dataToImport.tickets) {
+          if (ticket.parentId) {
+            await tx.ticket.update({
+              where: { id: ticket.id },
+              data: { parentId: ticket.parentId },
+            })
+          }
+        }
 
         // Connect ticket labels
         for (const ticket of dataToImport.tickets) {
