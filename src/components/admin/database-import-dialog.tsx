@@ -34,6 +34,7 @@ import {
   useImportDatabase,
   usePreviewDatabase,
 } from '@/hooks/queries/use-database-backup'
+import { suppressDatabaseWipeSignOut } from '@/hooks/use-realtime-projects'
 import type { ImportResult } from '@/lib/database-import'
 
 interface DatabaseImportDialogProps {
@@ -196,10 +197,13 @@ export function DatabaseImportDialog({
         confirmText,
       }
 
+      // Suppress SSE-triggered sign-out so the success modal stays visible
+      suppressDatabaseWipeSignOut(true)
       const importResult = await importMutation.mutateAsync(params)
       setResult(importResult)
       setStep('success')
     } catch (err) {
+      suppressDatabaseWipeSignOut(false)
       const errorMessage = err instanceof Error ? err.message : 'Import failed'
       // Check if it's an encryption error
       if (errorMessage.includes('encrypted') || errorMessage.includes('password')) {
@@ -216,15 +220,16 @@ export function DatabaseImportDialog({
   const handleClose = () => {
     if (step === 'importing' || step === 'loading') return // Don't allow closing during import/loading
 
-    onOpenChange(false)
-
     if (step === 'success') {
+      onOpenChange(false)
       onComplete()
       // Sign out to clear the session cookie and redirect to login
       // The imported database has different users, so current session is invalid
       signOut({ callbackUrl: '/login' })
       return
     }
+
+    onOpenChange(false)
 
     // Reset state
     setStep('loading')
@@ -252,7 +257,7 @@ export function DatabaseImportDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         className="sm:max-w-md"
-        showCloseButton={step !== 'importing' && step !== 'loading'}
+        showCloseButton={step !== 'importing' && step !== 'loading' && step !== 'success'}
       >
         {/* Step 0: Loading Preview */}
         {step === 'loading' && (
@@ -757,7 +762,9 @@ export function DatabaseImportDialog({
                 </div>
               )}
 
-              <p className="text-sm text-amber-500">You will be redirected to log in again.</p>
+              <p className="text-sm text-amber-500">
+                You will be signed out when you close this dialog.
+              </p>
             </div>
 
             <DialogFooter>
