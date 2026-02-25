@@ -12,11 +12,13 @@ import { useSelectionStore } from '@/stores/selection-store'
  */
 export function useClearSelectionOnBlur() {
   const clearSelection = useSelectionStore((state) => state.clearSelection)
+  const clearClipboard = useSelectionStore((state) => state.clearClipboard)
 
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         clearSelection()
+        clearClipboard()
       }
     }
 
@@ -24,5 +26,5 @@ export function useClearSelectionOnBlur() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [clearSelection])
+  }, [clearSelection, clearClipboard])
 }

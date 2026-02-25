@@ -106,6 +106,24 @@ describe('useClearSelectionOnBlur', () => {
     expect(useSelectionStore.getState().selectedTicketIds.size).toBe(2)
   })
 
+  it('should clear clipboard when document becomes hidden', () => {
+    useSelectionStore.getState().selectTicket('ticket-1')
+    useSelectionStore.getState().addToSelection(['ticket-2'])
+    useSelectionStore.getState().copySelected()
+    expect(useSelectionStore.getState().copiedTicketIds).toEqual(['ticket-1', 'ticket-2'])
+
+    renderHook(() => useClearSelectionOnBlur())
+
+    act(() => {
+      visibilityState = 'hidden'
+      for (const listener of visibilityListeners) {
+        listener()
+      }
+    })
+
+    expect(useSelectionStore.getState().copiedTicketIds).toEqual([])
+  })
+
   it('should handle multiple visibility changes', () => {
     renderHook(() => useClearSelectionOnBlur())
 
