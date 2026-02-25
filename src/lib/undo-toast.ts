@@ -20,9 +20,21 @@ export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
   const isError = kind === 'error'
   const effectiveDuration = getEffectiveDuration(duration, isError)
 
+  const persistent = isError && !Number.isFinite(effectiveDuration)
+
   return toastFn(title, {
     description,
     duration: effectiveDuration,
-    closeButton: isError && !Number.isFinite(effectiveDuration),
+    closeButton: persistent,
+    cancel: persistent
+      ? {
+          label: 'Copy',
+          onClick: () => {
+            const desc = typeof description === 'string' ? description : ''
+            const text = desc ? `${title}: ${desc}` : title
+            void navigator.clipboard.writeText(text)
+          },
+        }
+      : undefined,
   })
 }
