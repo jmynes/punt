@@ -800,95 +800,18 @@ export default function BacklogPage() {
       updateTickets(projectId, allUpdates)
 
       // When moving TO backlog, also update backlogOrder to preserve visual position
-      // Capture original order for undo
-      const originalBacklogOrder = backlogOrder[projectId] || []
       if (targetSectionKey === 'backlog') {
         const newBacklogOrder = reorderedTarget.map((t) => t.id)
         setBacklogOrder(projectId, newBacklogOrder)
       }
 
-      // Show undo/redo toast
-      const toastId = showUndoRedoToast('success', {
+      // Show toast
+      showUndoRedoToast('success', {
         title:
           count === 1
             ? `Ticket moved to ${targetSprintName}`
             : `${count} tickets moved to ${targetSprintName}`,
         description: `From ${fromLabel}`,
-        showUndoButtons: true,
-        onUndo: (id) => {
-          // Move entry from undo to redo stack
-          useUndoStore.getState().undoByToastId(id)
-          // Revert all tickets in a single state change
-          const undoUpdates = [
-            ...originalSprintIds.map(({ ticketId, sprintId, order }) => ({
-              ticketId,
-              updates: { sprintId, order },
-            })),
-            ...existingTicketsToReorder.map(({ id: ticketId, oldOrder }) => ({
-              ticketId,
-              updates: { order: oldOrder },
-            })),
-          ]
-          useBoardStore.getState().updateTickets(projectId, undoUpdates)
-          // Restore original backlog order if we moved to backlog
-          if (targetSectionKey === 'backlog') {
-            setBacklogOrder(projectId, originalBacklogOrder)
-          }
-          // Persist undo to database
-          Promise.all([
-            ...originalSprintIds.map(({ ticketId, sprintId, order }) =>
-              updateTicketSprintMutation.mutateAsync({ ticketId, sprintId, order }),
-            ),
-            ...existingTicketsToReorder.map(({ id: ticketId, oldOrder }) =>
-              updateTicketAPI(projectId, ticketId, { order: oldOrder }),
-            ),
-          ]).catch(() => {
-            // Refetch will handle sync
-          })
-        },
-        onRedo: (id) => {
-          // Move entry from redo to undo stack
-          useUndoStore.getState().redoByToastId(id)
-          // Re-apply all updates in a single state change
-          const redoUpdates = [
-            ...originalSprintIds.map(({ ticketId, newOrder }) => ({
-              ticketId,
-              updates: { sprintId: targetSprintId, order: newOrder },
-            })),
-            ...existingTicketsToReorder.map(({ id: ticketId, newOrder }) => ({
-              ticketId,
-              updates: { order: newOrder },
-            })),
-          ]
-          useBoardStore.getState().updateTickets(projectId, redoUpdates)
-          // Re-apply new backlog order if we moved to backlog
-          if (targetSectionKey === 'backlog') {
-            const newBacklogOrder = reorderedTarget.map((t) => t.id)
-            setBacklogOrder(projectId, newBacklogOrder)
-          }
-          // Persist redo to database
-          Promise.all([
-            ...originalSprintIds.map(({ ticketId, newOrder }) =>
-              updateTicketSprintMutation.mutateAsync({
-                ticketId,
-                sprintId: targetSprintId,
-                order: newOrder,
-              }),
-            ),
-            ...existingTicketsToReorder.map(({ id: ticketId, newOrder }) =>
-              updateTicketAPI(projectId, ticketId, { order: newOrder }),
-            ),
-          ]).catch(() => {
-            // Refetch will handle sync
-          })
-        },
-        undoneTitle: 'Move undone',
-        undoneDescription: `${count === 1 ? 'Ticket' : `${count} tickets`} returned to ${fromLabel}`,
-        redoneTitle:
-          count === 1
-            ? `Ticket moved to ${targetSprintName}`
-            : `${count} tickets moved to ${targetSprintName}`,
-        redoneDescription: `From ${fromLabel}`,
       })
 
       // Register in undo store for keyboard shortcuts (Ctrl+Z/Y)
@@ -901,7 +824,6 @@ export default function BacklogPage() {
         })),
         fromLabel,
         targetSprintName,
-        toastId,
       )
 
       // Persist to database (moved tickets + reordered existing tickets)
@@ -932,8 +854,6 @@ export default function BacklogPage() {
         showUndoRedoToast('error', {
           title: 'Failed to move tickets',
           description: error.message,
-          showUndoButtons: false,
-          onUndo: () => {},
         })
       })
     },

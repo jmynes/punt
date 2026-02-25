@@ -15,7 +15,6 @@ function resetStore() {
     autoSaveOnDrawerClose: false,
     autoSaveOnRoleEditorClose: false,
     customColors: [],
-    showUndoButtons: true,
     sidebarExpandedSections: {},
     hideColorRemovalWarning: false,
     persistTableSort: true,
@@ -42,23 +41,6 @@ describe('Settings Store', () => {
       useSettingsStore.getState().setAutoSaveOnRoleEditorClose(true)
       useSettingsStore.getState().setAutoSaveOnRoleEditorClose(false)
       expect(useSettingsStore.getState().autoSaveOnRoleEditorClose).toBe(false)
-    })
-  })
-
-  describe('showUndoButtons', () => {
-    it('should default to true', () => {
-      expect(useSettingsStore.getState().showUndoButtons).toBe(true)
-    })
-
-    it('should set showUndoButtons to false', () => {
-      useSettingsStore.getState().setShowUndoButtons(false)
-      expect(useSettingsStore.getState().showUndoButtons).toBe(false)
-    })
-
-    it('should set showUndoButtons back to true', () => {
-      useSettingsStore.getState().setShowUndoButtons(false)
-      useSettingsStore.getState().setShowUndoButtons(true)
-      expect(useSettingsStore.getState().showUndoButtons).toBe(true)
     })
   })
 
