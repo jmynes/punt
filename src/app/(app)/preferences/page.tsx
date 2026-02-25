@@ -480,20 +480,6 @@ function PreferencesContent() {
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      showToast.withUndo('Item deleted', {
-                        description: 'TEST-1',
-                        onUndo: () => {
-                          showToast.success('Undo successful')
-                        },
-                      })
-                    }
-                  >
-                    With Undo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
                       showToast.loading(new Promise((resolve) => setTimeout(resolve, 2000)), {
                         loadingMessage: 'Saving changes...',
                         successMessage: 'Changes saved',
