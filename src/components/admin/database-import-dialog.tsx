@@ -3,10 +3,12 @@
 import {
   AlertTriangle,
   Archive,
+  Check,
   ChevronRight,
   Eye,
   EyeOff,
   FileImage,
+  FileWarning,
   Loader2,
   Lock,
   Paperclip,
@@ -32,6 +34,8 @@ import {
   useImportDatabase,
   usePreviewDatabase,
 } from '@/hooks/queries/use-database-backup'
+import { suppressDatabaseWipeSignOut } from '@/hooks/use-realtime-projects'
+import type { ImportResult } from '@/lib/database-import'
 
 interface DatabaseImportDialogProps {
   open: boolean
@@ -44,7 +48,15 @@ interface DatabaseImportDialogProps {
   onComplete: () => void
 }
 
-type Step = 'loading' | 'preview' | 'warning' | 'credentials' | 'confirm' | 'importing' | 'error'
+type Step =
+  | 'loading'
+  | 'preview'
+  | 'warning'
+  | 'credentials'
+  | 'confirm'
+  | 'importing'
+  | 'success'
+  | 'error'
 
 const REQUIRED_CONFIRMATION = 'DELETE ALL DATA'
 
@@ -64,6 +76,7 @@ export function DatabaseImportDialog({
   const [showPassword, setShowPassword] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const [preview, setPreview] = useState<ImportPreview | null>(null)
+  const [result, setResult] = useState<ImportResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const previewMutation = usePreviewDatabase()
@@ -184,10 +197,11 @@ export function DatabaseImportDialog({
         confirmText,
       }
 
-      await importMutation.mutateAsync(params)
-      onOpenChange(false)
-      onComplete()
-      signOut({ callbackUrl: '/login?imported=true' })
+      // Suppress SSE-triggered sign-out so the success modal stays visible
+      suppressDatabaseWipeSignOut(true)
+      const importResult = await importMutation.mutateAsync(params)
+      setResult(importResult)
+      setStep('success')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Import failed'
       // Check if it's an encryption error
@@ -205,6 +219,15 @@ export function DatabaseImportDialog({
   const handleClose = () => {
     if (step === 'importing' || step === 'loading') return // Don't allow closing during import/loading
 
+    if (step === 'success') {
+      onOpenChange(false)
+      onComplete()
+      // Sign out to clear the session cookie and redirect to login
+      // The imported database has different users, so current session is invalid
+      signOut({ callbackUrl: '/login' })
+      return
+    }
+
     onOpenChange(false)
 
     // Reset state
@@ -214,6 +237,7 @@ export function DatabaseImportDialog({
     setPassword('')
     setConfirmText('')
     setPreview(null)
+    setResult(null)
     setError(null)
     setCredentialError(null)
     setNeedsPassword(initialIsEncrypted)
@@ -221,11 +245,18 @@ export function DatabaseImportDialog({
 
   const isConfirmValid = confirmText === REQUIRED_CONFIRMATION
 
+  const totalFilesRestored = result
+    ? result.files.attachmentsRestored + result.files.avatarsRestored
+    : 0
+  const totalFilesMissing = result
+    ? result.files.attachmentsMissing + result.files.avatarsMissing
+    : 0
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         className="sm:max-w-md"
-        showCloseButton={step !== 'importing' && step !== 'loading'}
+        showCloseButton={step !== 'importing' && step !== 'loading' && step !== 'success'}
       >
         {/* Step 0: Loading Preview */}
         {step === 'loading' && (
@@ -613,7 +644,138 @@ export function DatabaseImportDialog({
           </>
         )}
 
-        {/* Step 6: Error */}
+        {/* Step 6: Success */}
+        {step === 'success' && result && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-green-400">
+                <Check className="h-5 w-5" />
+                Import Complete
+              </DialogTitle>
+              <DialogDescription>
+                The database has been successfully restored from the backup.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4 space-y-4">
+              <div className="bg-zinc-800 rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium text-zinc-300">Records imported:</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  {result.counts.users > 0 && (
+                    <>
+                      <span className="text-zinc-400">Users:</span>
+                      <span className="text-zinc-200">{result.counts.users}</span>
+                    </>
+                  )}
+                  {result.counts.projects > 0 && (
+                    <>
+                      <span className="text-zinc-400">Projects:</span>
+                      <span className="text-zinc-200">{result.counts.projects}</span>
+                    </>
+                  )}
+                  {result.counts.tickets > 0 && (
+                    <>
+                      <span className="text-zinc-400">Tickets:</span>
+                      <span className="text-zinc-200">{result.counts.tickets}</span>
+                    </>
+                  )}
+                  {result.counts.sprints > 0 && (
+                    <>
+                      <span className="text-zinc-400">Sprints:</span>
+                      <span className="text-zinc-200">{result.counts.sprints}</span>
+                    </>
+                  )}
+                  {result.counts.labels > 0 && (
+                    <>
+                      <span className="text-zinc-400">Labels:</span>
+                      <span className="text-zinc-200">{result.counts.labels}</span>
+                    </>
+                  )}
+                  {result.counts.comments > 0 && (
+                    <>
+                      <span className="text-zinc-400">Comments:</span>
+                      <span className="text-zinc-200">{result.counts.comments}</span>
+                    </>
+                  )}
+                  {result.counts.attachments > 0 && (
+                    <>
+                      <span className="text-zinc-400">Attachments:</span>
+                      <span className="text-zinc-200">{result.counts.attachments}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Files Summary */}
+              {(totalFilesRestored > 0 || totalFilesMissing > 0) && (
+                <div className="bg-zinc-800 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-medium text-zinc-300">Files:</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    {result.files.attachmentsRestored > 0 && (
+                      <>
+                        <span className="text-zinc-400">Attachments restored:</span>
+                        <span className="text-green-400">{result.files.attachmentsRestored}</span>
+                      </>
+                    )}
+                    {result.files.avatarsRestored > 0 && (
+                      <>
+                        <span className="text-zinc-400">Avatars restored:</span>
+                        <span className="text-green-400">{result.files.avatarsRestored}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Missing Files Warning */}
+              {totalFilesMissing > 0 && (
+                <div className="p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <FileWarning className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium text-amber-400">
+                        {totalFilesMissing} file{totalFilesMissing > 1 ? 's' : ''} missing from
+                        backup
+                      </p>
+                      <p className="text-amber-300/70 mt-1">
+                        Some files referenced in the backup were not included. Affected attachments
+                        or profile pictures will show as broken.
+                      </p>
+                      {result.files.missingFiles.length > 0 &&
+                        result.files.missingFiles.length <= 5 && (
+                          <ul className="mt-2 text-xs text-amber-300/60 space-y-0.5">
+                            {result.files.missingFiles.map((file) => (
+                              <li key={file} className="truncate">
+                                {file}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      {result.files.missingFiles.length > 5 && (
+                        <p className="mt-2 text-xs text-amber-300/60">
+                          And {result.files.missingFiles.length - 5} more...
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-sm text-amber-500">
+                You will be signed out when you close this dialog.
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button variant="primary" onClick={handleClose}>
+                <Check className="h-4 w-4" />
+                Done
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {/* Step 7: Error */}
         {step === 'error' && (
           <>
             <DialogHeader>

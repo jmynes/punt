@@ -3,12 +3,11 @@
 import { ArrowLeft, Eye, EyeOff, Loader2, Shield } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { showToast } from '@/lib/toast'
 import { getSafeRedirectUrl } from '@/lib/url-validation'
 
 type LoginStep = 'credentials' | '2fa'
@@ -17,13 +16,6 @@ export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = getSafeRedirectUrl(searchParams.get('callbackUrl'))
-
-  useEffect(() => {
-    if (searchParams.get('imported') === 'true') {
-      showToast.success('Database imported successfully. Please log in.')
-      window.history.replaceState({}, '', '/login')
-    }
-  }, [searchParams])
 
   // Use refs to capture autofilled values that don't trigger onChange
   const usernameRef = useRef<HTMLInputElement>(null)
