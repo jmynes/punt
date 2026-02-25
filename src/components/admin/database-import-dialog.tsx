@@ -203,6 +203,7 @@ export function DatabaseImportDialog({
       setResult(importResult)
       setStep('success')
     } catch (err) {
+      suppressDatabaseWipeSignOut(false)
       const errorMessage = err instanceof Error ? err.message : 'Import failed'
       // Check if it's an encryption error
       if (errorMessage.includes('encrypted') || errorMessage.includes('password')) {
