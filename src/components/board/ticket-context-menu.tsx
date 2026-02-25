@@ -50,7 +50,6 @@ import {
 } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { pasteTickets } from '@/lib/actions'
-import { extractActivityMeta } from '@/lib/actions/activity-utils'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
@@ -360,55 +359,14 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         </div>
       )
 
-    const _uiState = useUIStore.getState ? useUIStore.getState() : uiStore
-    const showUndo = true
-    const boardStateMove = useBoardStore.getState ? useBoardStore.getState() : board
-    const toastId = showUndoRedoToast('success', {
+    showUndoRedoToast('success', {
       title: toastTitle,
       description: toastDescription,
       duration: getEffectiveDuration(3000),
-      showUndoButtons: showUndo,
-      onUndo: async () => {
-        boardStateMove.setColumns(projectId, beforeColumns)
-        // Persist undo to database
-        try {
-          for (const move of moves) {
-            await updateTicketAPI(projectId, move.ticketId, {
-              columnId: move.fromColumnId,
-            })
-          }
-        } catch (err) {
-          console.error('Failed to persist move undo:', err)
-        }
-      },
-      onRedo: async () => {
-        boardStateMove.setColumns(projectId, afterColumns)
-        // Persist redo to database
-        try {
-          for (const move of moves) {
-            await updateTicketAPI(projectId, move.ticketId, {
-              columnId: move.toColumnId,
-            })
-          }
-        } catch (err) {
-          console.error('Failed to persist move redo:', err)
-        }
-      },
-      undoneTitle: 'Move undone',
-      redoneTitle: toastTitle,
-      redoneDescription: toastDescription,
     })
 
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushMove(
-      projectId,
-      moves,
-      fromColumnName,
-      toColumnName,
-      toastId,
-      beforeColumns,
-      afterColumns,
-    )
+    undoState.pushMove(projectId, moves, fromColumnName, toColumnName, beforeColumns, afterColumns)
 
     setOpen(false)
     setSubmenu(null)
@@ -448,7 +406,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       updates.map((u) => u.ticketId),
     )
 
-    const toastId = rawToast.success(
+    rawToast.success(
       updates.length === 1 ? 'Priority updated' : `${updates.length} priorities updated`,
       {
         description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
@@ -456,27 +414,13 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       },
     )
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(projectId, updates, toastId)
+    undoState.pushUpdate(projectId, updates)
 
-    // Persist to database and capture activity metadata for undo
+    // Persist to database
     ;(async () => {
       try {
-        const allActivityIds: string[] = []
         for (const update of updates) {
-          const result = await updateTicketWithActivity(projectId, update.ticketId, { priority })
-          if (result.activity) {
-            const meta = extractActivityMeta({ _activity: result.activity }, update.ticketId)
-            if (meta?.activityIds) {
-              allActivityIds.push(...meta.activityIds)
-            }
-          }
-        }
-        // Update undo entry with collected activity IDs
-        if (allActivityIds.length > 0) {
-          undoState.updateActivityMeta(toastId, {
-            activityIds: allActivityIds,
-            ticketId: updates.length === 1 ? updates[0].ticketId : undefined,
-          })
+          await updateTicketWithActivity(projectId, update.ticketId, { priority })
         }
       } catch (err) {
         console.error('Failed to persist priority update:', err)
@@ -534,32 +478,18 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           ? `${updates.length} tickets set to ${resolution}`
           : `Resolution cleared from ${updates.length} tickets`
 
-    const toastId = rawToast.success(msg, {
+    rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: getEffectiveDuration(3000),
     })
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(projectId, updates, toastId)
+    undoState.pushUpdate(projectId, updates)
 
-    // Persist to database and capture activity metadata for undo
+    // Persist to database
     ;(async () => {
       try {
-        const allActivityIds: string[] = []
         for (const update of updates) {
-          const result = await updateTicketWithActivity(projectId, update.ticketId, { resolution })
-          if (result.activity) {
-            const meta = extractActivityMeta({ _activity: result.activity }, update.ticketId)
-            if (meta?.activityIds) {
-              allActivityIds.push(...meta.activityIds)
-            }
-          }
-        }
-        // Update undo entry with collected activity IDs
-        if (allActivityIds.length > 0) {
-          undoState.updateActivityMeta(toastId, {
-            activityIds: allActivityIds,
-            ticketId: updates.length === 1 ? updates[0].ticketId : undefined,
-          })
+          await updateTicketWithActivity(projectId, update.ticketId, { resolution })
         }
       } catch (err) {
         console.error('Failed to persist resolution update:', err)
@@ -606,32 +536,19 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           ? `Assigned ${updates.length} tickets to ${user.name}`
           : `Unassigned ${updates.length} tickets`
 
-    const toastId = rawToast.success(msg, {
+    rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: getEffectiveDuration(3000),
     })
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(projectId, updates, toastId)
+    undoState.pushUpdate(projectId, updates)
 
-    // Persist to database and capture activity metadata for undo
+    // Persist to database
     ;(async () => {
       try {
-        const allActivityIds: string[] = []
         for (const update of updates) {
-          const result = await updateTicketWithActivity(projectId, update.ticketId, {
+          await updateTicketWithActivity(projectId, update.ticketId, {
             assigneeId: userId,
-          })
-          if (result.activity) {
-            const meta = extractActivityMeta({ _activity: result.activity }, update.ticketId)
-            if (meta?.activityIds) {
-              allActivityIds.push(...meta.activityIds)
-            }
-          }
-        }
-        if (allActivityIds.length > 0) {
-          undoState.updateActivityMeta(toastId, {
-            activityIds: allActivityIds,
-            ticketId: updates.length === 1 ? updates[0].ticketId : undefined,
           })
         }
       } catch (err) {
@@ -677,32 +594,19 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           ? `Set ${updates.length} tickets to ${points} point${points === 1 ? '' : 's'}`
           : `Cleared points from ${updates.length} tickets`
 
-    const toastId = rawToast.success(msg, {
+    rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: getEffectiveDuration(3000),
     })
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(projectId, updates, toastId)
+    undoState.pushUpdate(projectId, updates)
 
-    // Persist to database and capture activity metadata for undo
+    // Persist to database
     ;(async () => {
       try {
-        const allActivityIds: string[] = []
         for (const update of updates) {
-          const result = await updateTicketWithActivity(projectId, update.ticketId, {
+          await updateTicketWithActivity(projectId, update.ticketId, {
             storyPoints: points,
-          })
-          if (result.activity) {
-            const meta = extractActivityMeta({ _activity: result.activity }, update.ticketId)
-            if (meta?.activityIds) {
-              allActivityIds.push(...meta.activityIds)
-            }
-          }
-        }
-        if (allActivityIds.length > 0) {
-          undoState.updateActivityMeta(toastId, {
-            activityIds: allActivityIds,
-            ticketId: updates.length === 1 ? updates[0].ticketId : undefined,
           })
         }
       } catch (err) {
@@ -760,65 +664,15 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       toSprintId: null,
     }))
 
-    const _uiState = useUIStore.getState ? useUIStore.getState() : uiStore
-    const showUndo = true
-
-    const toastId = showUndoRedoToast('success', {
+    showUndoRedoToast('success', {
       title: count === 1 ? 'Removed from sprint' : `${count} tickets removed from sprint`,
       description: count === 1 ? `${ticketKeys[0]} sent to Backlog` : `Sent to Backlog`,
       duration: getEffectiveDuration(5000),
-      showUndoButtons: showUndo,
-      onUndo: async (id) => {
-        // Move to redo stack
-        useUndoStore.getState().undoByToastId(id)
-        // Restore original sprint IDs
-        for (const { ticketId, sprintId, sprintName } of originalSprintIds) {
-          const originalTicket = ticketsInSprint.find(({ ticket }) => ticket.id === ticketId)
-          updateTicket(projectId, ticketId, {
-            sprintId,
-            sprint: originalTicket?.ticket.sprint ?? {
-              id: sprintId,
-              name: sprintName,
-              status: 'planning',
-              startDate: null,
-              endDate: null,
-            },
-          })
-        }
-        // Persist to API
-        try {
-          for (const { ticketId, sprintId } of originalSprintIds) {
-            await updateTicketAPI(projectId, ticketId, { sprintId })
-          }
-        } catch (err) {
-          console.error('Failed to persist sprint restore:', err)
-        }
-      },
-      onRedo: async (id) => {
-        useUndoStore.getState().redoByToastId(id)
-        // Remove from sprint again
-        for (const { ticket } of ticketsInSprint) {
-          updateTicket(projectId, ticket.id, { sprintId: null, sprint: null })
-        }
-        // Persist to API
-        try {
-          for (const { ticket } of ticketsInSprint) {
-            await updateTicketAPI(projectId, ticket.id, { sprintId: null })
-          }
-        } catch (err) {
-          console.error('Failed to persist sprint removal:', err)
-        }
-      },
-      undoneTitle: 'Restored to sprint',
-      undoneDescription:
-        count === 1 ? `${ticketKeys[0]} returned to ${fromLabel}` : `${count} tickets returned`,
-      redoneTitle: count === 1 ? 'Removed from sprint' : `${count} tickets removed from sprint`,
-      redoneDescription: count === 1 ? `${ticketKeys[0]} sent to Backlog` : 'Sent to Backlog',
     })
 
     // Register in undo store
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushSprintMove(projectId, moves, fromLabel, 'Backlog', toastId)
+    undoState.pushSprintMove(projectId, moves, fromLabel, 'Backlog')
 
     // Persist to API
     ;(async () => {
@@ -905,86 +759,18 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       toSprintId: targetSprint.id,
     }))
 
-    const _uiState = useUIStore.getState ? useUIStore.getState() : uiStore
-    const showUndo = true
-
-    const toastId = showUndoRedoToast('success', {
+    showUndoRedoToast('success', {
       title:
         count === 1
           ? `Added to ${targetSprint.name}`
           : `${count} tickets added to ${targetSprint.name}`,
       description: count === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: getEffectiveDuration(5000),
-      showUndoButtons: showUndo,
-      onUndo: async (id) => {
-        // Move to redo stack
-        useUndoStore.getState().undoByToastId(id)
-        // Restore original sprint IDs
-        for (const { ticketId, fromSprintId, fromSprintName } of originalSprintIds) {
-          const originalTicket = ticketsToAdd.find(({ ticket }) => ticket.id === ticketId)
-          if (fromSprintId && fromSprintName) {
-            updateTicket(projectId, ticketId, {
-              sprintId: fromSprintId,
-              sprint: originalTicket?.ticket.sprint ?? {
-                id: fromSprintId,
-                name: fromSprintName,
-                status: 'planning',
-                startDate: null,
-                endDate: null,
-              },
-            })
-          } else {
-            updateTicket(projectId, ticketId, { sprintId: null, sprint: null })
-          }
-        }
-        // Persist to API
-        try {
-          for (const { ticketId, fromSprintId } of originalSprintIds) {
-            await updateTicketAPI(projectId, ticketId, { sprintId: fromSprintId })
-          }
-        } catch (err) {
-          console.error('Failed to persist sprint restore:', err)
-        }
-      },
-      onRedo: async (id) => {
-        useUndoStore.getState().redoByToastId(id)
-        // Add to sprint again
-        for (const { ticket } of ticketsToAdd) {
-          updateTicket(projectId, ticket.id, {
-            sprintId: targetSprint.id,
-            sprint: {
-              id: targetSprint.id,
-              name: targetSprint.name,
-              status: targetSprint.status,
-              startDate: targetSprint.startDate,
-              endDate: targetSprint.endDate,
-            },
-          })
-        }
-        // Persist to API
-        try {
-          for (const { ticket } of ticketsToAdd) {
-            await updateTicketAPI(projectId, ticket.id, { sprintId: targetSprint.id })
-          }
-        } catch (err) {
-          console.error('Failed to persist sprint addition:', err)
-        }
-      },
-      undoneTitle: `Restored to ${fromLabel}`,
-      undoneDescription:
-        count === 1
-          ? `${ticketKeys[0]} removed from ${targetSprint.name}`
-          : `${count} tickets removed`,
-      redoneTitle:
-        count === 1
-          ? `Added to ${targetSprint.name}`
-          : `${count} tickets added to ${targetSprint.name}`,
-      redoneDescription: count === 1 ? ticketKeys[0] : ticketKeys.join(', '),
     })
 
     // Register in undo store
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushSprintMove(projectId, moves, fromLabel, targetSprint.name, toastId)
+    undoState.pushSprintMove(projectId, moves, fromLabel, targetSprint.name)
 
     // Persist to API
     ;(async () => {

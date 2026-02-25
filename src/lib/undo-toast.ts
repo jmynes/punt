@@ -6,20 +6,6 @@ interface UndoRedoToastOptions {
   title: string
   description: React.ReactNode
   duration?: number
-  // Legacy properties - accepted but ignored for backward compatibility
-  // Undo/redo is now exclusively via Ctrl+Z / Ctrl+Y keyboard shortcuts
-  showUndoButtons?: boolean
-  onUndo?: (id: string | number) => void | boolean | Promise<void | boolean>
-  onRedo?: (id: string | number) => void | boolean | Promise<void | boolean>
-  onUndoneToast?: (id: string | number) => void
-  onRedoneToast?: (id: string | number) => void
-  undoLabel?: string
-  redoLabel?: string
-  undoneTitle?: string
-  undoneDescription?: React.ReactNode
-  redoneTitle?: string
-  redoneDescription?: React.ReactNode
-  dismissPrevious?: string | number
 }
 
 /**

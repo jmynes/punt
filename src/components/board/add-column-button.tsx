@@ -110,78 +110,13 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
       // Invalidate column queries to refresh
       queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
 
-      const showUndo = true
-
-      const toastId = showUndoRedoToast('success', {
+      showUndoRedoToast('success', {
         title: 'Column created',
         description: `"${trimmedName}" added to board`,
         duration: 5000,
-        showUndoButtons: showUndo,
-        onUndo: async (id) => {
-          // Undo: delete the column
-          const undoEntry = useUndoStore.getState().undoByToastId(id)
-          if (!undoEntry) return
-          const undoStore = useUndoStore.getState()
-          undoStore.setProcessing(true)
-          try {
-            await fetch(`/api/projects/${projectKey}/columns/${newColumn.id}`, {
-              method: 'DELETE',
-              headers: { 'X-Tab-Id': getTabId() },
-            })
-            const bs = useBoardStore.getState()
-            const cols = bs.getColumns(projectId)
-            bs.setColumns(
-              projectId,
-              cols.filter((c) => c.id !== newColumn.id),
-            )
-            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
-          } catch (err) {
-            console.error('Failed to undo column create:', err)
-            showToast.error('Failed to undo column creation')
-          } finally {
-            useUndoStore.getState().setProcessing(false)
-          }
-        },
-        onRedo: async (id) => {
-          // Redo: recreate the column
-          const undoEntry = useUndoStore.getState().redoByToastId(id)
-          if (!undoEntry) return
-          const undoStore = useUndoStore.getState()
-          undoStore.setProcessing(true)
-          try {
-            const createRes = await fetch(`/api/projects/${projectKey}/columns`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Tab-Id': getTabId(),
-              },
-              body: JSON.stringify({ name: trimmedName }),
-            })
-            if (!createRes.ok) throw new Error('Failed to recreate column')
-            const recreatedColumn = await createRes.json()
-            const bs = useBoardStore.getState()
-            const cols = bs.getColumns(projectId)
-            bs.setColumns(projectId, [
-              ...cols,
-              { ...recreatedColumn, tickets: [] } as ColumnWithTickets,
-            ])
-            // Update the column ID for future undo/redo
-            newColumn.id = recreatedColumn.id
-            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
-          } catch (err) {
-            console.error('Failed to redo column create:', err)
-            showToast.error('Failed to redo column creation')
-          } finally {
-            useUndoStore.getState().setProcessing(false)
-          }
-        },
-        undoneTitle: 'Column deleted',
-        undoneDescription: `"${trimmedName}" removed from board`,
-        redoneTitle: 'Column created',
-        redoneDescription: `"${trimmedName}" added to board`,
       })
 
-      useUndoStore.getState().pushColumnCreate(projectId, newColumn.id, trimmedName, toastId)
+      useUndoStore.getState().pushColumnCreate(projectId, newColumn.id, trimmedName)
 
       setDialogOpen(false)
       setColumnName('')

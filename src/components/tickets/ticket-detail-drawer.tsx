@@ -1546,122 +1546,26 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                             // Remove from local state immediately
                             setTempAttachments(tempAttachments.filter((a) => a.id !== fileId))
 
-                            // Track current toast ID for undo/redo chain
-                            let currentToastId: string | number | undefined
-                            // Track current attachment ID - this changes when undo re-creates the attachment
-                            let currentAttachmentId = removed.id
-
-                            const toastId = showUndoRedoToast('error', {
+                            showUndoRedoToast('error', {
                               title: 'Attachment deleted',
                               description: `"${removed.originalName}" from ${ticketKey}`,
-                              showUndoButtons: true,
-                              onUndo: async (id) => {
-                                // Atomically acquire processing lock BEFORE any stack manipulation
-                                const store = useUndoStore.getState()
-                                if (!store.tryStartProcessing()) return false
-                                const entry = store.undoByToastId(id)
-                                if (!entry) {
-                                  store.setProcessing(false)
-                                  return false
-                                }
-                                try {
-                                  // Re-add the attachment and capture new ID
-                                  const newAttachments = await addAttachmentsMutation.mutateAsync({
-                                    projectId,
-                                    ticketId: ticket.id,
-                                    attachments: [
-                                      {
-                                        filename: removed.filename,
-                                        originalName: removed.originalName,
-                                        mimeType: removed.mimetype,
-                                        size: removed.size,
-                                        url: removed.url,
-                                      },
-                                    ],
-                                  })
-                                  // Update the tracked ID to the new server-assigned ID
-                                  if (newAttachments?.[0]?.id) {
-                                    currentAttachmentId = newAttachments[0].id
-                                    // Convert AttachmentInfo to UploadedFileInfo format
-                                    const restoredAttachment: UploadedFileInfo = {
-                                      id: newAttachments[0].id,
-                                      filename: newAttachments[0].filename,
-                                      originalName: removed.originalName, // Preserve original name
-                                      mimetype: newAttachments[0].mimeType,
-                                      size: newAttachments[0].size,
-                                      url: newAttachments[0].url,
-                                      category: getMimeTypeCategory(newAttachments[0].mimeType),
-                                    }
-                                    setTempAttachments((prev) => [...prev, restoredAttachment])
-                                  } else {
-                                    setTempAttachments((prev) => [...prev, removed])
-                                  }
-                                } finally {
-                                  useUndoStore.getState().setProcessing(false)
-                                }
-                              },
-                              onRedo: async (id) => {
-                                // Atomically acquire processing lock BEFORE any stack manipulation
-                                const store = useUndoStore.getState()
-                                if (!store.tryStartProcessing()) return false
-                                const entry = store.redoByToastId(id)
-                                if (!entry) {
-                                  store.setProcessing(false)
-                                  return false
-                                }
-                                try {
-                                  // Re-delete the attachment using tracked ID
-                                  setTempAttachments((prev) =>
-                                    prev.filter((a) => a.id !== currentAttachmentId),
-                                  )
-                                  await removeAttachmentMutation.mutateAsync({
-                                    projectId,
-                                    ticketId: ticket.id,
-                                    attachmentId: currentAttachmentId,
-                                  })
-                                } finally {
-                                  useUndoStore.getState().setProcessing(false)
-                                }
-                              },
-                              onUndoneToast: (newId) => {
-                                if (currentToastId) {
-                                  useUndoStore.getState().updateRedoToastId(currentToastId, newId)
-                                  currentToastId = newId
-                                }
-                              },
-                              onRedoneToast: (newId) => {
-                                if (currentToastId) {
-                                  useUndoStore.getState().updateUndoToastId(currentToastId, newId)
-                                  currentToastId = newId
-                                }
-                              },
-                              undoneTitle: 'Attachment restored',
-                              undoneDescription: `"${removed.originalName}" to ${ticketKey}`,
-                              redoneTitle: 'Delete redone',
-                              redoneDescription: `"${removed.originalName}" from ${ticketKey}`,
                             })
 
-                            currentToastId = toastId
-
-                            pushAttachmentDelete(
-                              projectId,
-                              [
-                                {
-                                  projectId,
-                                  ticketId: ticket.id,
-                                  ticketKey,
-                                  attachment: {
-                                    id: removed.id,
-                                    filename: removed.filename,
-                                    originalName: removed.originalName,
-                                    mimetype: removed.mimetype,
-                                    size: removed.size,
-                                    url: removed.url,
-                                  },
+                            pushAttachmentDelete(projectId, [
+                              {
+                                projectId,
+                                ticketId: ticket.id,
+                                ticketKey,
+                                attachment: {
+                                  id: removed.id,
+                                  filename: removed.filename,
+                                  originalName: removed.originalName,
+                                  mimetype: removed.mimetype,
+                                  size: removed.size,
+                                  url: removed.url,
                                 },
-                              ],
-                              toastId,
-                            )
+                              },
+                            ])
                             removeAttachmentMutation.mutate({
                               projectId,
                               ticketId: ticket.id,
@@ -1693,8 +1597,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                             // Add to local state immediately (with temp IDs)
                             setTempAttachments([...tempAttachments, ...newFiles])
 
-                            // Track current toast ID for undo/redo chain
-                            let currentToastId: string | number | undefined
                             // Track server-assigned attachment IDs and data
                             let serverAttachments: UploadedFileInfo[] = []
 
@@ -1742,104 +1644,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                             }
 
                             // Now that the upload succeeded and serverAttachments is populated,
-                            // show the toast with undo/redo support
-                            const toastId = showUndoRedoToast('success', {
+                            // show the toast
+                            showUndoRedoToast('success', {
                               title:
                                 newFiles.length === 1 ? 'Attachment added' : 'Attachments added',
                               description: `${fileNames} to ${ticketKey}`,
-                              showUndoButtons: true,
-                              onUndo: async (id) => {
-                                // Atomically acquire processing lock BEFORE any stack manipulation
-                                const store = useUndoStore.getState()
-                                if (!store.tryStartProcessing()) return false
-                                const entry = store.undoByToastId(id)
-                                if (!entry) {
-                                  store.setProcessing(false)
-                                  return false
-                                }
-                                try {
-                                  // Remove the added attachments using server IDs
-                                  for (const attachment of serverAttachments) {
-                                    await removeAttachmentMutation.mutateAsync({
-                                      projectId,
-                                      ticketId: ticket.id,
-                                      attachmentId: attachment.id,
-                                    })
-                                  }
-                                  setTempAttachments((prev) =>
-                                    prev.filter(
-                                      (a) => !serverAttachments.some((sa) => sa.id === a.id),
-                                    ),
-                                  )
-                                } finally {
-                                  useUndoStore.getState().setProcessing(false)
-                                }
-                              },
-                              onRedo: async (id) => {
-                                // Atomically acquire processing lock BEFORE any stack manipulation
-                                const store = useUndoStore.getState()
-                                if (!store.tryStartProcessing()) return false
-                                const entry = store.redoByToastId(id)
-                                if (!entry) {
-                                  store.setProcessing(false)
-                                  return false
-                                }
-                                try {
-                                  // Re-add the attachments and capture new IDs
-                                  const readdedAttachments =
-                                    await addAttachmentsMutation.mutateAsync({
-                                      projectId,
-                                      ticketId: ticket.id,
-                                      attachments: newFiles.map((f) => ({
-                                        filename: f.filename,
-                                        originalName: f.originalName,
-                                        mimeType: f.mimetype,
-                                        size: f.size,
-                                        url: f.url,
-                                      })),
-                                    })
-                                  // Update tracked attachments with new server IDs
-                                  serverAttachments = readdedAttachments.map((a, i) => ({
-                                    id: a.id,
-                                    filename: a.filename,
-                                    originalName: newFiles[i]?.originalName ?? a.filename,
-                                    mimetype: a.mimeType,
-                                    size: a.size,
-                                    url: a.url,
-                                    category: getMimeTypeCategory(a.mimeType),
-                                  }))
-                                  setTempAttachments((prev) => [...prev, ...serverAttachments])
-                                } catch (err) {
-                                  console.error('Failed to re-add attachments:', err)
-                                } finally {
-                                  useUndoStore.getState().setProcessing(false)
-                                }
-                              },
-                              onUndoneToast: (newId) => {
-                                if (currentToastId) {
-                                  useUndoStore.getState().updateRedoToastId(currentToastId, newId)
-                                  currentToastId = newId
-                                }
-                              },
-                              onRedoneToast: (newId) => {
-                                if (currentToastId) {
-                                  useUndoStore.getState().updateUndoToastId(currentToastId, newId)
-                                  currentToastId = newId
-                                }
-                              },
-                              undoneTitle:
-                                newFiles.length === 1
-                                  ? 'Attachment removed'
-                                  : 'Attachments removed',
-                              undoneDescription: `${fileNames} from ${ticketKey}`,
-                              redoneTitle:
-                                newFiles.length === 1
-                                  ? 'Attachment re-added'
-                                  : 'Attachments re-added',
-                              redoneDescription: `${fileNames} to ${ticketKey}`,
                             })
-
-                            currentToastId = toastId
 
                             pushAttachmentAdd(
                               projectId,
@@ -1856,7 +1666,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                                   url: f.url,
                                 },
                               })),
-                              toastId,
                             )
                           }
                         }}
@@ -2061,108 +1870,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 // Clear local state immediately
                 setTempAttachments([])
 
-                // Track current toast ID for undo/redo chain
-                let currentToastId: string | number | undefined
-                // Track current attachment IDs - these change when undo re-creates them
-                let currentAttachmentIds = attachmentsToRemove.map((a) => a.id)
-
-                const toastId = showUndoRedoToast('error', {
+                showUndoRedoToast('error', {
                   title: `${count} attachment${count === 1 ? '' : 's'} removed`,
                   description: ticketKey,
-                  showUndoButtons: true,
-                  onUndo: async (id) => {
-                    // Atomically acquire processing lock BEFORE any stack manipulation
-                    const store = useUndoStore.getState()
-                    if (!store.tryStartProcessing()) return false
-                    const entry = store.undoByToastId(id)
-                    if (!entry) {
-                      store.setProcessing(false)
-                      return false
-                    }
-                    try {
-                      // Re-add all attachments and track new IDs
-                      const restoredAttachments: UploadedFileInfo[] = []
-                      const newIds: string[] = []
-                      for (const attachment of attachmentsToRemove) {
-                        try {
-                          const newAttachments = await addAttachmentsMutation.mutateAsync({
-                            projectId,
-                            ticketId: ticket.id,
-                            attachments: [
-                              {
-                                filename: attachment.filename,
-                                originalName: attachment.originalName,
-                                mimeType: attachment.mimetype,
-                                size: attachment.size,
-                                url: attachment.url,
-                              },
-                            ],
-                          })
-                          if (newAttachments?.[0]) {
-                            newIds.push(newAttachments[0].id)
-                            restoredAttachments.push({
-                              id: newAttachments[0].id,
-                              filename: newAttachments[0].filename,
-                              originalName: attachment.originalName,
-                              mimetype: newAttachments[0].mimeType,
-                              size: newAttachments[0].size,
-                              url: newAttachments[0].url,
-                              category: getMimeTypeCategory(newAttachments[0].mimeType),
-                            })
-                          }
-                        } catch (err) {
-                          console.error('Failed to restore attachment:', err)
-                        }
-                      }
-                      // Update tracked IDs to new server-assigned IDs
-                      currentAttachmentIds = newIds
-                      setTempAttachments(restoredAttachments)
-                    } finally {
-                      useUndoStore.getState().setProcessing(false)
-                    }
-                  },
-                  onRedo: async (id) => {
-                    // Atomically acquire processing lock BEFORE any stack manipulation
-                    const store = useUndoStore.getState()
-                    if (!store.tryStartProcessing()) return false
-                    const entry = store.redoByToastId(id)
-                    if (!entry) {
-                      store.setProcessing(false)
-                      return false
-                    }
-                    try {
-                      // Re-delete all attachments using tracked IDs
-                      setTempAttachments([])
-                      for (const attachmentId of currentAttachmentIds) {
-                        await removeAttachmentMutation.mutateAsync({
-                          projectId,
-                          ticketId: ticket.id,
-                          attachmentId,
-                        })
-                      }
-                    } finally {
-                      useUndoStore.getState().setProcessing(false)
-                    }
-                  },
-                  onUndoneToast: (newId) => {
-                    if (currentToastId) {
-                      useUndoStore.getState().updateRedoToastId(currentToastId, newId)
-                      currentToastId = newId
-                    }
-                  },
-                  onRedoneToast: (newId) => {
-                    if (currentToastId) {
-                      useUndoStore.getState().updateUndoToastId(currentToastId, newId)
-                      currentToastId = newId
-                    }
-                  },
-                  undoneTitle: `${count} attachment${count === 1 ? '' : 's'} restored`,
-                  undoneDescription: ticketKey,
-                  redoneTitle: 'Remove redone',
-                  redoneDescription: ticketKey,
                 })
-
-                currentToastId = toastId
 
                 // Push to undo store
                 pushAttachmentDelete(
@@ -2180,7 +1891,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       url: a.url,
                     },
                   })),
-                  toastId,
                 )
 
                 // Delete all attachments from server
