@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect } from 'react'
 import { isEditableTarget } from '@/lib/keyboard-utils'
+import { useSelectionStore } from '@/stores/selection-store'
 
 interface UseTabCycleShortcutOptions {
   /**
@@ -97,6 +98,10 @@ export function useTabCycleShortcut({ tabs, queryBasePath }: UseTabCycleShortcut
       // Wrap-around navigation
       const nextIndex = (currentIndex + direction + tabs.length) % tabs.length
       const nextTab = tabs[nextIndex]
+
+      // Clear ticket selection before navigating to prevent stale highlights
+      useSelectionStore.getState().clearSelection()
+      useSelectionStore.getState().clearClipboard()
 
       if (queryBasePath) {
         router.push(`${queryBasePath}?tab=${nextTab}`)
