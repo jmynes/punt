@@ -1,6 +1,14 @@
 'use client'
 
-import { Archive, ChevronRight, FileImage, Loader2, Lock, Paperclip } from 'lucide-react'
+import {
+  Archive,
+  ChevronRight,
+  FileImage,
+  Loader2,
+  Lock,
+  Paperclip,
+  ShieldCheck,
+} from 'lucide-react'
 import { useState } from 'react'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { Button } from '@/components/ui/button'
@@ -23,6 +31,7 @@ interface DatabaseExportDialogProps {
   onOpenChange: (open: boolean) => void
   exportOptions: Omit<ExportOptions, 'confirmPassword' | 'totpCode' | 'isRecoveryCode'>
   onComplete: () => void
+  usersWithTotp?: number
 }
 
 type Step = 'summary' | 'exporting'
@@ -32,6 +41,7 @@ export function DatabaseExportDialog({
   onOpenChange,
   exportOptions,
   onComplete,
+  usersWithTotp = 0,
 }: DatabaseExportDialogProps) {
   const [step, setStep] = useState<Step>('summary')
   const [showReauthDialog, setShowReauthDialog] = useState(false)
@@ -202,6 +212,14 @@ export function DatabaseExportDialog({
                       </>
                     )}
                   </div>
+                  {exportOptions.password && usersWithTotp > 0 && (
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <ShieldCheck className="h-4 w-4 text-green-400" />
+                      <span className="text-zinc-200">
+                        2FA secrets protected (server key included)
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
