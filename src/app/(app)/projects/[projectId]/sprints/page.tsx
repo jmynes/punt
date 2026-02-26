@@ -93,10 +93,24 @@ export default function SprintPlanningPage() {
     filterByDueDate,
     filterByAttachments,
     searchQuery,
+    setSearchQuery,
     showSubtasks,
     queryMode,
     queryText,
+    setQueryText,
+    setQueryMode,
   } = useBacklogStore()
+
+  // Clear search state when switching projects (not on initial mount or same-project page nav)
+  const prevProjectIdRef = useRef(projectId)
+  useEffect(() => {
+    if (prevProjectIdRef.current !== projectId) {
+      prevProjectIdRef.current = projectId
+      setSearchQuery('')
+      setQueryText('')
+      setQueryMode(false)
+    }
+  }, [projectId, setSearchQuery, setQueryText, setQueryMode])
 
   // Fetch sprints for autocomplete
   const { data: projectSprints } = useProjectSprints(projectId)

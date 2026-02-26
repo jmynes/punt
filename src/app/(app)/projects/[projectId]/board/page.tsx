@@ -157,12 +157,15 @@ export default function BoardPage() {
     }
   }, [clearSelection, setActiveTicketId, hasTicketParam])
 
-  // Clear search state when switching projects to prevent stale results
-  // biome-ignore lint/correctness/useExhaustiveDependencies: projectId is the intentional trigger
+  // Clear search state when switching projects (not on initial mount or same-project page nav)
+  const prevProjectIdRef = useRef(projectId)
   useEffect(() => {
-    setSearchQuery('')
-    setQueryText('')
-    setQueryMode(false)
+    if (prevProjectIdRef.current !== projectId) {
+      prevProjectIdRef.current = projectId
+      setSearchQuery('')
+      setQueryText('')
+      setQueryMode(false)
+    }
   }, [projectId, setSearchQuery, setQueryText, setQueryMode])
 
   // Apply filters to columns
