@@ -206,9 +206,11 @@ function getActionForField(field: string): string {
 
 /**
  * Fields that are internal/uninteresting and should not generate activity entries.
+ * `resolvedAt` is excluded because it is always auto-coupled with `resolution`
+ * and showing both is redundant.
  */
 function isInternalField(field: string): boolean {
-  return field === 'order' || field === 'updatedAt'
+  return field === 'order' || field === 'updatedAt' || field === 'resolvedAt'
 }
 
 /**
