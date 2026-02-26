@@ -30,6 +30,13 @@ vi.mock('@/lib/demo/demo-config', () => ({
   isDemoMode: vi.fn().mockReturnValue(false),
 }))
 
+vi.mock('@/lib/totp', () => ({
+  decryptTotpSecret: vi.fn(),
+  verifyTotpToken: vi.fn(),
+  verifyRecoveryCode: vi.fn(),
+  markRecoveryCodeUsed: vi.fn(),
+}))
+
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { isDemoMode } from '@/lib/demo/demo-config'
@@ -97,7 +104,7 @@ describe('Password Change API - Current Password Verification', () => {
   })
 
   it('should verify current password', async () => {
-    mockVerifyPassword.mockResolvedValue(true)
+    mockVerifyPassword.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
     mockDb.user.update.mockResolvedValue({})
 
     const response = await PATCH(
@@ -111,6 +118,22 @@ describe('Password Change API - Current Password Verification', () => {
     expect(mockVerifyPassword).toHaveBeenCalledWith('CorrectPassword123!', 'current_hash')
   })
 
+  it('should reject new password that matches current password', async () => {
+    mockVerifyPassword.mockResolvedValue(true)
+    mockDb.user.findUnique.mockResolvedValue({ passwordHash: 'current_hash' })
+
+    const response = await PATCH(
+      createRequest({
+        currentPassword: 'SamePassword123!',
+        newPassword: 'SamePassword123!',
+      }),
+    )
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toBe('New password must be different from your current password')
+  })
+
   it('should reject incorrect current password', async () => {
     mockVerifyPassword.mockResolvedValue(false)
 
@@ -122,8 +145,8 @@ describe('Password Change API - Current Password Verification', () => {
     )
     const data = await response.json()
 
-    expect(response.status).toBe(400)
-    expect(data.error).toBe('Current password is incorrect')
+    expect(response.status).toBe(401)
+    expect(data.error).toBe('Invalid password')
   })
 
   it('should reject if user has no password hash', async () => {
@@ -137,8 +160,8 @@ describe('Password Change API - Current Password Verification', () => {
     )
     const data = await response.json()
 
-    expect(response.status).toBe(400)
-    expect(data.error).toBe('Cannot change password for this account type')
+    expect(response.status).toBe(401)
+    expect(data.error).toBe('Invalid credentials')
   })
 })
 
@@ -149,7 +172,8 @@ describe('Password Change API - Password Strength Validation', () => {
     mockRequireAuth.mockResolvedValue({ id: 'user-1', isActive: true })
     mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 10, resetAt: new Date() })
     mockDb.user.findUnique.mockResolvedValue({ passwordHash: 'current_hash' })
-    mockVerifyPassword.mockResolvedValue(true)
+    // First call: auth (true), second call: same-password check (false = different password)
+    mockVerifyPassword.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
   })
 
   it('should reject weak password', async () => {
@@ -255,7 +279,8 @@ describe('Password Change API - Session Invalidation', () => {
     mockRequireAuth.mockResolvedValue({ id: 'user-1', isActive: true })
     mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 10, resetAt: new Date() })
     mockDb.user.findUnique.mockResolvedValue({ passwordHash: 'current_hash' })
-    mockVerifyPassword.mockResolvedValue(true)
+    // First call: auth (true), second call: same-password check (false = different password)
+    mockVerifyPassword.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
     mockValidatePassword.mockReturnValue({ valid: true, errors: [] })
   })
 

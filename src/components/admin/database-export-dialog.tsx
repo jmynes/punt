@@ -1,18 +1,8 @@
 'use client'
 
-import {
-  Archive,
-  ChevronRight,
-  Download,
-  Eye,
-  EyeOff,
-  FileImage,
-  Loader2,
-  Lock,
-  Paperclip,
-  Shield,
-} from 'lucide-react'
+import { Archive, ChevronRight, FileImage, Loader2, Lock, Paperclip } from 'lucide-react'
 import { useState } from 'react'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,8 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   type ExportOptions,
   useDatabaseStats,
@@ -33,11 +21,11 @@ import {
 interface DatabaseExportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  exportOptions: Omit<ExportOptions, 'confirmPassword'>
+  exportOptions: Omit<ExportOptions, 'confirmPassword' | 'totpCode' | 'isRecoveryCode'>
   onComplete: () => void
 }
 
-type Step = 'summary' | 'credentials' | 'exporting'
+type Step = 'summary' | 'exporting'
 
 export function DatabaseExportDialog({
   open,
@@ -46,8 +34,7 @@ export function DatabaseExportDialog({
   onComplete,
 }: DatabaseExportDialogProps) {
   const [step, setStep] = useState<Step>('summary')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+  const [showReauthDialog, setShowReauthDialog] = useState(false)
 
   const { data: stats, isLoading: statsLoading } = useDatabaseStats()
   const exportMutation = useExportDatabase()
@@ -55,22 +42,28 @@ export function DatabaseExportDialog({
   const handleClose = () => {
     if (exportMutation.isPending) return
     setStep('summary')
-    setConfirmPassword('')
-    setShowPassword(false)
+    setShowReauthDialog(false)
     onOpenChange(false)
   }
 
-  const handleExport = async () => {
+  const handleReauthConfirm = async (
+    password: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
     setStep('exporting')
     try {
       await exportMutation.mutateAsync({
         ...exportOptions,
-        confirmPassword,
+        confirmPassword: password,
+        totpCode,
+        isRecoveryCode,
       })
       handleClose()
       onComplete()
-    } catch {
-      setStep('credentials')
+    } catch (err) {
+      setStep('summary')
+      throw err
     }
   }
 
@@ -217,7 +210,7 @@ export function DatabaseExportDialog({
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button variant="primary" onClick={() => setStep('credentials')}>
+              <Button variant="primary" onClick={() => setShowReauthDialog(true)}>
                 Continue
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -225,65 +218,7 @@ export function DatabaseExportDialog({
           </>
         )}
 
-        {/* Step 2: Credentials */}
-        {step === 'credentials' && (
-          <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-amber-500" />
-                Verify Your Identity
-              </DialogTitle>
-              <DialogDescription>
-                Enter your password to authorize the database export.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-zinc-300">
-                  Your Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    name="admin-confirm-password"
-                    type="text"
-                    autoComplete="off"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && confirmPassword) {
-                        e.preventDefault()
-                        handleExport()
-                      }
-                    }}
-                    placeholder="Enter your password"
-                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pr-10 ${!showPassword ? 'password-mask' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setStep('summary')}>
-                Back
-              </Button>
-              <Button variant="primary" onClick={handleExport} disabled={!confirmPassword}>
-                <Download className="h-4 w-4" />
-                Export Database
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-
-        {/* Step 3: Exporting */}
+        {/* Step 2: Exporting */}
         {step === 'exporting' && (
           <>
             <DialogHeader>
@@ -303,6 +238,15 @@ export function DatabaseExportDialog({
           </>
         )}
       </DialogContent>
+
+      <ReauthDialog
+        open={showReauthDialog}
+        onOpenChange={setShowReauthDialog}
+        title="Confirm Database Export"
+        description="Enter your password to authorize the database export."
+        actionLabel="Export Database"
+        onConfirm={handleReauthConfirm}
+      />
     </Dialog>
   )
 }

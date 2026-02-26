@@ -239,8 +239,6 @@ export function KanbanBoard({
         ...col,
         tickets: col.tickets.map((t) => ({ ...t })),
       }))
-      const showUndo = useSettingsStore.getState().showUndoButtons
-
       // Check for cross-column moves for undo/notification
       if (!isSameColumn) {
         const fromName = sourceColumn.name
@@ -286,21 +284,15 @@ export function KanbanBoard({
             </div>
           )
 
-        const toastId = showUndoRedoToast('success', {
+        showUndoRedoToast('success', {
           title: toastTitle,
           description: toastDescription,
           duration: 5000,
-          showUndoButtons: showUndo,
-          onUndo: () => useBoardStore.getState().setColumns(projectId, snapshot),
-          onRedo: () => useBoardStore.getState().setColumns(projectId, afterSnapshot),
-          undoneTitle: 'Move undone',
-          redoneTitle: toastTitle,
-          redoneDescription: toastDescription,
         })
 
         useUndoStore
           .getState()
-          .pushMove(projectId, moves, fromName, toName, toastId, snapshot, afterSnapshot)
+          .pushMove(projectId, moves, fromName, toName, snapshot, afterSnapshot)
       } else {
         // Same-column reorder - also register undo
         const allTickets = afterColumns.flatMap((col) => col.tickets)
@@ -319,16 +311,10 @@ export function KanbanBoard({
             ? `${ticketKeys[0]} moved within ${sourceColumn.name}`
             : `${ticketKeys.join(', ')} moved within ${sourceColumn.name}`
 
-        const toastId = showUndoRedoToast('success', {
+        showUndoRedoToast('success', {
           title: toastTitle,
           description: toastDescription,
           duration: 5000,
-          showUndoButtons: showUndo,
-          onUndo: () => useBoardStore.getState().setColumns(projectId, snapshot),
-          onRedo: () => useBoardStore.getState().setColumns(projectId, afterSnapshot),
-          undoneTitle: 'Reorder undone',
-          redoneTitle: toastTitle,
-          redoneDescription: toastDescription,
         })
 
         // Use fake moves since it's a reorder within the same column
@@ -345,17 +331,12 @@ export function KanbanBoard({
             fakeMoves,
             sourceColumn.name,
             sourceColumn.name,
-            toastId,
             snapshot,
             afterSnapshot,
           )
       }
 
       // Persist to API (after optimistic update)
-      // Get the toastId from the undo entry we just pushed (it's the last entry)
-      const lastUndoEntry = useUndoStore.getState().undoStack.at(-1)
-      const moveToastId = lastUndoEntry?.toastId
-
       if (isSingleDrag) {
         // Single ticket move/reorder
         moveTicketMutation.mutate({
@@ -365,7 +346,6 @@ export function KanbanBoard({
           toColumnId: targetColumnId,
           newOrder: insertIndex,
           previousColumns: snapshot,
-          toastId: moveToastId,
         })
       } else {
         // Multiple tickets move
@@ -375,7 +355,6 @@ export function KanbanBoard({
           toColumnId: targetColumnId,
           newOrder: insertIndex,
           previousColumns: snapshot,
-          toastId: moveToastId,
         })
       }
 

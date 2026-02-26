@@ -12,11 +12,11 @@ import {
   Loader2,
   Lock,
   Paperclip,
-  Shield,
   Trash2,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -34,6 +34,7 @@ import {
   useImportDatabase,
   usePreviewDatabase,
 } from '@/hooks/queries/use-database-backup'
+import { suppressDatabaseWipeSignOut } from '@/hooks/use-realtime-projects'
 import type { ImportResult } from '@/lib/database-import'
 
 interface DatabaseImportDialogProps {
@@ -47,15 +48,7 @@ interface DatabaseImportDialogProps {
   onComplete: () => void
 }
 
-type Step =
-  | 'loading'
-  | 'preview'
-  | 'warning'
-  | 'credentials'
-  | 'confirm'
-  | 'importing'
-  | 'success'
-  | 'error'
+type Step = 'loading' | 'preview' | 'warning' | 'confirm' | 'importing' | 'success' | 'error'
 
 const REQUIRED_CONFIRMATION = 'DELETE ALL DATA'
 
@@ -70,18 +63,14 @@ export function DatabaseImportDialog({
   const [decryptionPassword, setDecryptionPassword] = useState('')
   const [showDecryptionPassword, setShowDecryptionPassword] = useState(false)
   const [needsPassword, setNeedsPassword] = useState(initialIsEncrypted)
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showReauthDialog, setShowReauthDialog] = useState(false)
 
   const previewMutation = usePreviewDatabase()
   const importMutation = useImportDatabase()
-  const [verifying, setVerifying] = useState(false)
-  const [credentialError, setCredentialError] = useState<string | null>(null)
 
   // Use refs to prevent infinite re-renders from mutation state changes
   const isLoadingRef = useRef(false)
@@ -143,45 +132,27 @@ export function DatabaseImportDialog({
     setStep('loading') // useEffect will trigger loadPreview when step is 'loading'
   }
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (step === 'preview') {
       setStep('warning')
     } else if (step === 'warning') {
-      setStep('credentials')
-    } else if (step === 'credentials') {
-      setVerifying(true)
-      setCredentialError(null)
-      try {
-        const res = await fetch('/api/auth/verify-credentials', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password }),
-        })
-        if (!res.ok) {
-          const data = await res.json()
-          setCredentialError(data.error || 'Invalid credentials')
-          return
-        }
-        setStep('confirm')
-      } catch {
-        setCredentialError('Failed to verify credentials')
-      } finally {
-        setVerifying(false)
-      }
+      setStep('confirm')
     }
   }
 
   const handleBack = () => {
     if (step === 'warning') {
       setStep('preview')
-    } else if (step === 'credentials') {
-      setStep('warning')
     } else if (step === 'confirm') {
-      setStep('credentials')
+      setStep('warning')
     }
   }
 
-  const handleImport = async () => {
+  const handleReauthConfirm = async (
+    reauthPassword: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
     if (confirmText !== REQUIRED_CONFIRMATION) return
 
     setStep('importing')
@@ -191,15 +162,19 @@ export function DatabaseImportDialog({
       const params: ImportDatabaseParams = {
         content: fileContent,
         decryptionPassword: needsPassword ? decryptionPassword : undefined,
-        username,
-        password,
+        confirmPassword: reauthPassword,
         confirmText,
+        totpCode,
+        isRecoveryCode,
       }
 
+      // Suppress SSE-triggered sign-out so the success modal stays visible
+      suppressDatabaseWipeSignOut(true)
       const importResult = await importMutation.mutateAsync(params)
       setResult(importResult)
       setStep('success')
     } catch (err) {
+      suppressDatabaseWipeSignOut(false)
       const errorMessage = err instanceof Error ? err.message : 'Import failed'
       // Check if it's an encryption error
       if (errorMessage.includes('encrypted') || errorMessage.includes('password')) {
@@ -210,15 +185,15 @@ export function DatabaseImportDialog({
         setError(errorMessage)
         setStep('error')
       }
+      throw err
     }
   }
 
   const handleClose = () => {
     if (step === 'importing' || step === 'loading') return // Don't allow closing during import/loading
 
-    onOpenChange(false)
-
     if (step === 'success') {
+      onOpenChange(false)
       onComplete()
       // Sign out to clear the session cookie and redirect to login
       // The imported database has different users, so current session is invalid
@@ -226,16 +201,16 @@ export function DatabaseImportDialog({
       return
     }
 
+    onOpenChange(false)
+
     // Reset state
     setStep('loading')
     setDecryptionPassword('')
-    setUsername('')
-    setPassword('')
     setConfirmText('')
     setPreview(null)
     setResult(null)
     setError(null)
-    setCredentialError(null)
+    setShowReauthDialog(false)
     setNeedsPassword(initialIsEncrypted)
   }
 
@@ -252,7 +227,7 @@ export function DatabaseImportDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         className="sm:max-w-md"
-        showCloseButton={step !== 'importing' && step !== 'loading'}
+        showCloseButton={step !== 'importing' && step !== 'loading' && step !== 'success'}
       >
         {/* Step 0: Loading Preview */}
         {step === 'loading' && (
@@ -482,98 +457,7 @@ export function DatabaseImportDialog({
           </>
         )}
 
-        {/* Step 3: Credential Verification */}
-        {step === 'credentials' && (
-          <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-amber-500" />
-                Verify Your Identity
-              </DialogTitle>
-              <DialogDescription>
-                Re-enter your admin credentials to confirm this action.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="username" className="text-zinc-300">
-                  Username
-                </Label>
-                <Input
-                  id="username"
-                  name="admin-verify-username"
-                  type="text"
-                  autoComplete="off"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && username && password && !verifying) {
-                      e.preventDefault()
-                      handleNext()
-                    }
-                  }}
-                  placeholder="Your username"
-                  className="bg-zinc-800 border-zinc-700 text-zinc-100"
-                />
-              </div>
-
-              {credentialError && (
-                <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg">
-                  <p className="text-sm text-red-300">{credentialError}</p>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-zinc-300">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="admin-verify-password"
-                    type="text"
-                    autoComplete="off"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && username && password && !verifying) {
-                        e.preventDefault()
-                        handleNext()
-                      }
-                    }}
-                    placeholder="Your password"
-                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pr-10 ${!showPassword ? 'password-mask' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={handleBack}>
-                Back
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleNext}
-                disabled={!username || !password || verifying}
-              >
-                {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Continue
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-
-        {/* Step 4: Type Confirmation */}
+        {/* Step 3: Type Confirmation */}
         {step === 'confirm' && (
           <>
             <DialogHeader>
@@ -611,7 +495,11 @@ export function DatabaseImportDialog({
               <Button variant="outline" onClick={handleBack}>
                 Back
               </Button>
-              <Button variant="destructive" onClick={handleImport} disabled={!isConfirmValid}>
+              <Button
+                variant="destructive"
+                onClick={() => setShowReauthDialog(true)}
+                disabled={!isConfirmValid}
+              >
                 <Trash2 className="h-4 w-4" />
                 Import and Replace All Data
               </Button>
@@ -757,7 +645,9 @@ export function DatabaseImportDialog({
                 </div>
               )}
 
-              <p className="text-sm text-amber-500">You will be redirected to log in again.</p>
+              <p className="text-sm text-amber-500">
+                You will be signed out when you close this dialog.
+              </p>
             </div>
 
             <DialogFooter>
@@ -804,6 +694,16 @@ export function DatabaseImportDialog({
           </>
         )}
       </DialogContent>
+
+      <ReauthDialog
+        open={showReauthDialog}
+        onOpenChange={setShowReauthDialog}
+        title="Confirm Database Import"
+        description="Enter your password to authorize replacing all data with the backup. This action cannot be undone."
+        actionLabel="Import and Replace All Data"
+        actionVariant="destructive"
+        onConfirm={handleReauthConfirm}
+      />
     </Dialog>
   )
 }

@@ -12,17 +12,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -55,7 +45,11 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
   // Claude CLI session state
   const [hasClaudeSession, setHasClaudeSession] = useState(false)
   const [sessionInput, setSessionInput] = useState('')
-  const [sessionLoading, setSessionLoading] = useState(false)
+  // ReauthDialog state
+  const [showSaveKeyReauth, setShowSaveKeyReauth] = useState(false)
+  const [showRemoveKeyReauth, setShowRemoveKeyReauth] = useState(false)
+  const [showUploadSessionReauth, setShowUploadSessionReauth] = useState(false)
+  const [showRemoveSessionReauth, setShowRemoveSessionReauth] = useState(false)
 
   // MCP servers state
   const [availableMcpServers, setAvailableMcpServers] = useState<string[]>([])
@@ -101,50 +95,40 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     fetchProvider()
   }, [isDemo, providerFetched])
 
-  const handleSaveAnthropicKey = async () => {
-    if (!anthropicKeyInput.trim()) {
-      showToast.error('Please enter an API key')
-      return
-    }
-    if (!anthropicKeyInput.startsWith('sk-ant-')) {
-      showToast.error('Invalid key format (should start with sk-ant-)')
-      return
-    }
-    setAnthropicKeyLoading(true)
-    try {
-      const res = await fetch('/api/me/anthropic-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: anthropicKeyInput }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to save API key')
-      setAnthropicHasKey(true)
-      setAnthropicKeyHint(data.keyHint)
-      setAnthropicKeyInput('')
-      setAnthropicKeyVisible(false)
-      showToast.success('Anthropic API key saved')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to save API key')
-    } finally {
-      setAnthropicKeyLoading(false)
-    }
+  const handleSaveAnthropicKey = async (
+    password: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
+    const res = await fetch('/api/me/anthropic-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: anthropicKeyInput, password, totpCode, isRecoveryCode }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Failed to save API key')
+    setAnthropicHasKey(true)
+    setAnthropicKeyHint(data.keyHint)
+    setAnthropicKeyInput('')
+    setAnthropicKeyVisible(false)
+    showToast.success('Anthropic API key saved')
   }
 
-  const handleRemoveAnthropicKey = async () => {
-    setAnthropicKeyLoading(true)
-    try {
-      const res = await fetch('/api/me/anthropic-key', { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to remove API key')
-      setAnthropicHasKey(false)
-      setAnthropicKeyHint(null)
-      showToast.success('Anthropic API key removed')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to remove API key')
-    } finally {
-      setAnthropicKeyLoading(false)
-    }
+  const handleRemoveAnthropicKey = async (
+    password: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
+    const res = await fetch('/api/me/anthropic-key', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, totpCode, isRecoveryCode }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Failed to remove API key')
+    setAnthropicHasKey(false)
+    setAnthropicKeyHint(null)
+    showToast.success('Anthropic API key removed')
   }
 
   const handleProviderChange = async (value: ChatProvider) => {
@@ -195,49 +179,43 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     }
   }
 
-  const handleUploadSession = async () => {
-    if (!sessionInput.trim()) {
-      showToast.error('Please paste your credentials')
-      return
-    }
-    setSessionLoading(true)
-    try {
-      const res = await fetch('/api/me/claude-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credentials: sessionInput }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to upload session')
-      setHasClaudeSession(true)
-      setChatProvider('claude-cli')
-      setSessionInput('')
-      setAvailableMcpServers(data.availableMcpServers || [])
-      setEnabledMcpServers(data.enabledMcpServers || [])
-      showToast.success('Claude session configured')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to upload session')
-    } finally {
-      setSessionLoading(false)
-    }
+  const handleUploadSession = async (
+    password: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
+    const res = await fetch('/api/me/claude-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credentials: sessionInput, password, totpCode, isRecoveryCode }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Failed to upload session')
+    setHasClaudeSession(true)
+    setChatProvider('claude-cli')
+    setSessionInput('')
+    setAvailableMcpServers(data.availableMcpServers || [])
+    setEnabledMcpServers(data.enabledMcpServers || [])
+    showToast.success('Claude session configured')
   }
 
-  const handleRemoveSession = async () => {
-    setSessionLoading(true)
-    try {
-      const res = await fetch('/api/me/claude-session', { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to remove session')
-      setHasClaudeSession(false)
-      setChatProvider('anthropic')
-      setAvailableMcpServers([])
-      setEnabledMcpServers([])
-      showToast.success('Claude session removed')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to remove session')
-    } finally {
-      setSessionLoading(false)
-    }
+  const handleRemoveSession = async (
+    password: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
+    const res = await fetch('/api/me/claude-session', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, totpCode, isRecoveryCode }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Failed to remove session')
+    setHasClaudeSession(false)
+    setChatProvider('anthropic')
+    setAvailableMcpServers([])
+    setEnabledMcpServers([])
+    showToast.success('Claude session removed')
   }
 
   const handleToggleMcpServer = useCallback(
@@ -377,40 +355,16 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
                     </p>
                   </div>
 
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-zinc-400 hover:text-red-400"
-                        disabled={anthropicKeyLoading}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remove Key
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-zinc-900 border-zinc-800">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-zinc-100">
-                          Remove Anthropic API Key?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="text-zinc-400">
-                          This will disable Claude Chat until you add a new key.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-                          Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleRemoveAnthropicKey}
-                          className="bg-red-600 hover:bg-red-700 text-white"
-                        >
-                          Remove Key
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-zinc-400 hover:text-red-400"
+                    disabled={anthropicKeyLoading}
+                    onClick={() => setShowRemoveKeyReauth(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove Key
+                  </Button>
                 </>
               ) : (
                 <div className="space-y-3">
@@ -437,7 +391,17 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
                       </Button>
                     </div>
                     <Button
-                      onClick={handleSaveAnthropicKey}
+                      onClick={() => {
+                        if (!anthropicKeyInput.trim()) {
+                          showToast.error('Please enter an API key')
+                          return
+                        }
+                        if (!anthropicKeyInput.startsWith('sk-ant-')) {
+                          showToast.error('Invalid key format (should start with sk-ant-)')
+                          return
+                        }
+                        setShowSaveKeyReauth(true)
+                      }}
                       disabled={anthropicKeyLoading || !anthropicKeyInput.trim()}
                       className="bg-violet-600 hover:bg-violet-700 text-white"
                     >
@@ -544,40 +508,15 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
                     </div>
                   )}
 
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-zinc-400 hover:text-red-400"
-                        disabled={sessionLoading}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remove Session
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-zinc-900 border-zinc-800">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-zinc-100">
-                          Remove Claude Session?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="text-zinc-400">
-                          This will switch back to Anthropic API and remove your stored credentials.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-                          Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleRemoveSession}
-                          className="bg-red-600 hover:bg-red-700 text-white"
-                        >
-                          Remove Session
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-zinc-400 hover:text-red-400"
+                    onClick={() => setShowRemoveSessionReauth(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove Session
+                  </Button>
                 </>
               ) : (
                 <div className="space-y-3">
@@ -589,8 +528,14 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
                   />
                   <div className="flex items-center gap-2">
                     <Button
-                      onClick={handleUploadSession}
-                      disabled={sessionLoading || !sessionInput.trim()}
+                      onClick={() => {
+                        if (!sessionInput.trim()) {
+                          showToast.error('Please paste your credentials')
+                          return
+                        }
+                        setShowUploadSessionReauth(true)
+                      }}
+                      disabled={!sessionInput.trim()}
                       className="bg-amber-600 hover:bg-amber-700 text-white"
                     >
                       <Upload className="h-4 w-4 mr-2" />
@@ -616,6 +561,44 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
           </div>
         </CardContent>
       </Card>
+
+      <ReauthDialog
+        open={showSaveKeyReauth}
+        onOpenChange={setShowSaveKeyReauth}
+        title="Save Anthropic API Key"
+        description="Enter your credentials to save your API key."
+        actionLabel="Save Key"
+        onConfirm={handleSaveAnthropicKey}
+      />
+
+      <ReauthDialog
+        open={showRemoveKeyReauth}
+        onOpenChange={setShowRemoveKeyReauth}
+        title="Remove Anthropic API Key?"
+        description="This will disable Claude Chat until you add a new key."
+        actionLabel="Remove Key"
+        actionVariant="destructive"
+        onConfirm={handleRemoveAnthropicKey}
+      />
+
+      <ReauthDialog
+        open={showUploadSessionReauth}
+        onOpenChange={setShowUploadSessionReauth}
+        title="Upload Claude Session"
+        description="Enter your credentials to upload your session."
+        actionLabel="Upload Session"
+        onConfirm={handleUploadSession}
+      />
+
+      <ReauthDialog
+        open={showRemoveSessionReauth}
+        onOpenChange={setShowRemoveSessionReauth}
+        title="Remove Claude Session?"
+        description="This will switch back to Anthropic API and remove your stored credentials."
+        actionLabel="Remove Session"
+        actionVariant="destructive"
+        onConfirm={handleRemoveSession}
+      />
     </div>
   )
 }

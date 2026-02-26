@@ -4,8 +4,6 @@ import {
   Check,
   Copy,
   Download,
-  Eye,
-  EyeOff,
   Loader2,
   RefreshCw,
   Shield,
@@ -13,16 +11,7 @@ import {
   ShieldOff,
 } from 'lucide-react'
 import { useCallback, useState } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,7 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { showToast } from '@/lib/toast'
 
-type SetupStep = 'idle' | 'qr' | 'verify' | 'codes' | 'complete' | 'regenerating'
+type SetupStep = 'idle' | 'qr' | 'verify' | 'codes' | 'complete'
 
 interface TwoFactorSectionProps {
   isDemo: boolean
@@ -52,18 +41,9 @@ export function TwoFactorSection({ isDemo }: TwoFactorSectionProps) {
   const [copiedCodes, setCopiedCodes] = useState(false)
   const [setupLoading, setSetupLoading] = useState(false)
 
-  // Disable state
-  const [showDisableDialog, setShowDisableDialog] = useState(false)
-  const [disablePassword, setDisablePassword] = useState('')
-  const [showDisablePassword, setShowDisablePassword] = useState(false)
-  const [disableTotpCode, setDisableTotpCode] = useState('')
-  const [disableLoading, setDisableLoading] = useState(false)
-
-  // Regenerate state
-  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
-  const [regeneratePassword, setRegeneratePassword] = useState('')
-  const [showRegeneratePassword, setShowRegeneratePassword] = useState(false)
-  const [regenerateTotpCode, setRegenerateTotpCode] = useState('')
+  // ReauthDialog state
+  const [showDisableReauthDialog, setShowDisableReauthDialog] = useState(false)
+  const [showRegenerateReauthDialog, setShowRegenerateReauthDialog] = useState(false)
 
   // Fetch 2FA status on mount
   const fetchStatus = useCallback(async () => {
@@ -180,73 +160,47 @@ ${codes.join('\n')}
   }
 
   // Disable 2FA
-  const handleDisable = async () => {
-    setDisableLoading(true)
-    try {
-      const res = await fetch('/api/me/2fa/disable', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: disablePassword, totpCode: disableTotpCode }),
-      })
+  const handleDisable = async (password: string, totpCode?: string, _isRecoveryCode?: boolean) => {
+    const res = await fetch('/api/me/2fa/disable', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, totpCode: totpCode || '' }),
+    })
 
-      const data = await res.json()
+    const data = await res.json()
 
-      if (!res.ok) {
-        throw new Error(data.error ?? 'Failed to disable 2FA')
-      }
-
-      setEnabled(false)
-      setRecoveryCodesRemaining(0)
-      setShowDisableDialog(false)
-      setDisablePassword('')
-      setDisableTotpCode('')
-      showToast.success('Two-factor authentication has been disabled')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to disable 2FA')
-    } finally {
-      setDisableLoading(false)
+    if (!res.ok) {
+      throw new Error(data.error ?? 'Failed to disable 2FA')
     }
+
+    setEnabled(false)
+    setRecoveryCodesRemaining(0)
+    showToast.success('Two-factor authentication has been disabled')
   }
 
   // Regenerate recovery codes
-  const handleRegenerate = async () => {
-    const password = regeneratePassword
-    const totpCode = regenerateTotpCode
+  const handleRegenerate = async (
+    password: string,
+    totpCode?: string,
+    _isRecoveryCode?: boolean,
+  ) => {
+    const res = await fetch('/api/me/2fa/recovery-codes/regenerate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, totpCode: totpCode || '' }),
+    })
 
-    // Close dialog and show loading spinner in the main card
-    setShowRegenerateDialog(false)
-    setRegeneratePassword('')
-    setRegenerateTotpCode('')
-    setSetupStep('regenerating')
+    const data = await res.json()
 
-    try {
-      const res = await fetch('/api/me/2fa/recovery-codes/regenerate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, totpCode }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error ?? 'Failed to regenerate codes')
-      }
-
-      setRecoveryCodes(data.recoveryCodes)
-      setCodesAcknowledged(false)
-      setCopiedCodes(false)
-      setSetupStep('codes')
-      showToast.success('Recovery codes regenerated successfully')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to regenerate codes')
-      setSetupStep('idle')
+    if (!res.ok) {
+      throw new Error(data.error ?? 'Failed to regenerate codes')
     }
-  }
 
-  const handleCloseRegenerateDialog = () => {
-    setShowRegenerateDialog(false)
-    setRegeneratePassword('')
-    setRegenerateTotpCode('')
+    setRecoveryCodes(data.recoveryCodes)
+    setCodesAcknowledged(false)
+    setCopiedCodes(false)
+    setSetupStep('codes')
+    showToast.success('Recovery codes regenerated successfully')
   }
 
   if (statusLoading) {
@@ -254,32 +208,6 @@ ${codes.join('\n')}
       <Card className="border-zinc-800 bg-zinc-900/50">
         <CardContent className="flex items-center justify-center py-8">
           <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
-        </CardContent>
-      </Card>
-    )
-  }
-
-  // Regenerating recovery codes - loading state
-  if (setupStep === 'regenerating') {
-    return (
-      <Card className="border-zinc-800 bg-zinc-900/50">
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-amber-500" />
-            <CardTitle className="text-zinc-100">Two-Factor Authentication</CardTitle>
-            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-              Enabled
-            </Badge>
-          </div>
-          <CardDescription className="text-zinc-500">
-            Your account is protected with two-factor authentication.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <div className="flex items-center gap-3 text-zinc-400">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span className="text-sm">Regenerating recovery codes...</span>
-          </div>
         </CardContent>
       </Card>
     )
@@ -524,7 +452,7 @@ ${codes.join('\n')}
                   type="button"
                   variant="outline"
                   className="border-zinc-700 hover:bg-zinc-800"
-                  onClick={() => setShowRegenerateDialog(true)}
+                  onClick={() => setShowRegenerateReauthDialog(true)}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Regenerate codes
@@ -533,7 +461,7 @@ ${codes.join('\n')}
                   type="button"
                   variant="outline"
                   className="border-red-900/50 text-red-400 hover:bg-red-950/20 hover:text-red-300"
-                  onClick={() => setShowDisableDialog(true)}
+                  onClick={() => setShowDisableReauthDialog(true)}
                 >
                   <ShieldOff className="mr-2 h-4 w-4" />
                   Disable 2FA
@@ -563,162 +491,24 @@ ${codes.join('\n')}
         </CardContent>
       </Card>
 
-      {/* Disable 2FA Dialog */}
-      <AlertDialog open={showDisableDialog} onOpenChange={setShowDisableDialog}>
-        <AlertDialogContent className="bg-zinc-900 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">
-              Disable Two-Factor Authentication?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              This will remove the extra security from your account. You can re-enable it at any
-              time.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="disablePassword" className="text-zinc-300">
-                Confirm with your password
-              </Label>
-              <div className="relative">
-                <Input
-                  id="disablePassword"
-                  type={showDisablePassword ? 'text' : 'password'}
-                  value={disablePassword}
-                  onChange={(e) => setDisablePassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="bg-zinc-900 border-zinc-700 pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
-                  onClick={() => setShowDisablePassword(!showDisablePassword)}
-                >
-                  {showDisablePassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="disableTotpCode" className="text-zinc-300">
-                2FA code or recovery code
-              </Label>
-              <Input
-                id="disableTotpCode"
-                type="text"
-                placeholder="000000 or XXXXX-XXXXX"
-                value={disableTotpCode}
-                onChange={(e) => setDisableTotpCode(e.target.value)}
-                className="bg-zinc-900 border-zinc-700 font-mono tracking-widest"
-              />
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-              onClick={() => {
-                setDisablePassword('')
-                setShowDisablePassword(false)
-                setDisableTotpCode('')
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDisable}
-              disabled={disableLoading || !disablePassword || !disableTotpCode}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {disableLoading ? 'Disabling...' : 'Disable 2FA'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ReauthDialog
+        open={showDisableReauthDialog}
+        onOpenChange={setShowDisableReauthDialog}
+        title="Disable Two-Factor Authentication?"
+        description="This will remove the extra security from your account. You can re-enable it at any time."
+        actionLabel="Disable 2FA"
+        actionVariant="destructive"
+        onConfirm={handleDisable}
+      />
 
-      {/* Regenerate Recovery Codes Dialog */}
-      <AlertDialog
-        open={showRegenerateDialog}
-        onOpenChange={(open) => {
-          if (!open) handleCloseRegenerateDialog()
-        }}
-      >
-        <AlertDialogContent className="bg-zinc-900 border-zinc-800 max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Regenerate Recovery Codes</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              This will invalidate all existing recovery codes and generate new ones.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="regeneratePassword" className="text-zinc-300">
-                Confirm with your password
-              </Label>
-              <div className="relative">
-                <Input
-                  id="regeneratePassword"
-                  type={showRegeneratePassword ? 'text' : 'password'}
-                  value={regeneratePassword}
-                  onChange={(e) => setRegeneratePassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="bg-zinc-900 border-zinc-700 pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
-                  onClick={() => setShowRegeneratePassword(!showRegeneratePassword)}
-                >
-                  {showRegeneratePassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="regenerateTotpCode" className="text-zinc-300">
-                2FA code or recovery code
-              </Label>
-              <Input
-                id="regenerateTotpCode"
-                type="text"
-                placeholder="000000 or XXXXX-XXXXX"
-                value={regenerateTotpCode}
-                onChange={(e) => setRegenerateTotpCode(e.target.value)}
-                className="bg-zinc-900 border-zinc-700 font-mono tracking-widest"
-              />
-            </div>
-            <AlertDialogFooter>
-              <AlertDialogCancel
-                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                onClick={() => {
-                  setRegeneratePassword('')
-                  setShowRegeneratePassword(false)
-                  setRegenerateTotpCode('')
-                }}
-              >
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleRegenerate}
-                disabled={!regeneratePassword || !regenerateTotpCode}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                Regenerate
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ReauthDialog
+        open={showRegenerateReauthDialog}
+        onOpenChange={setShowRegenerateReauthDialog}
+        title="Regenerate Recovery Codes"
+        description="This will invalidate all existing recovery codes and generate new ones."
+        actionLabel="Regenerate"
+        onConfirm={handleRegenerate}
+      />
     </>
   )
 }

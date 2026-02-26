@@ -15,7 +15,7 @@ describe('Undo Store', () => {
   describe('pushDeleted', () => {
     it('should add a delete entry to undo stack', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry).toBeDefined()
@@ -24,21 +24,20 @@ describe('Undo Store', () => {
         expect(entry.action.tickets).toHaveLength(1)
         expect(entry.action.tickets[0].ticket.id).toBe('ticket-1')
       }
-      expect(entry?.toastId).toBe('toast-1')
       expect(entry?.projectId).toBe(PROJECT_ID)
     })
 
     it('should clear redo stack when pushing new action', () => {
       const ticket1 = createMockTicket({ id: 'ticket-1' })
       const ticket2 = createMockTicket({ id: 'ticket-2' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket1, 'col-1', 'toast-1')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket1, 'col-1')
       const entry = useUndoStore.getState().popUndo()
       if (entry) {
         useUndoStore.getState().pushRedo(entry)
       }
       expect(useUndoStore.getState().redoStack).toHaveLength(1)
 
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket2, 'col-1', 'toast-2')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket2, 'col-1')
       expect(useUndoStore.getState().redoStack).toHaveLength(0)
     })
   })
@@ -47,14 +46,10 @@ describe('Undo Store', () => {
     it('should add multiple deleted tickets to undo stack', () => {
       const ticket1 = createMockTicket({ id: 'ticket-1' })
       const ticket2 = createMockTicket({ id: 'ticket-2' })
-      useUndoStore.getState().pushDeletedBatch(
-        PROJECT_ID,
-        [
-          { ticket: ticket1, columnId: 'col-1' },
-          { ticket: ticket2, columnId: 'col-2' },
-        ],
-        'toast-1',
-      )
+      useUndoStore.getState().pushDeletedBatch(PROJECT_ID, [
+        { ticket: ticket1, columnId: 'col-1' },
+        { ticket: ticket2, columnId: 'col-2' },
+      ])
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry?.action.type).toBe('delete')
@@ -73,7 +68,6 @@ describe('Undo Store', () => {
           [{ ticketId: 'ticket-1', fromColumnId: 'col-1', toColumnId: 'col-2' }],
           'To Do',
           'Done',
-          'toast-1',
         )
 
       const entry = useUndoStore.getState().undoStack[0]
@@ -90,12 +84,12 @@ describe('Undo Store', () => {
   describe('popUndo', () => {
     it('should return and remove the last undo entry', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
       expect(useUndoStore.getState().undoStack).toHaveLength(1)
 
       const entry = useUndoStore.getState().popUndo()
       expect(entry).toBeDefined()
-      expect(entry?.toastId).toBe('toast-1')
+      expect(entry?.action.type).toBe('delete')
       expect(useUndoStore.getState().undoStack).toHaveLength(0)
     })
 
@@ -108,7 +102,7 @@ describe('Undo Store', () => {
   describe('pushRedo and popRedo', () => {
     it('should push and pop redo entries', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
       const entry = useUndoStore.getState().popUndo()
       expect(entry).toBeDefined()
 
@@ -123,24 +117,10 @@ describe('Undo Store', () => {
     })
   })
 
-  describe('removeEntry', () => {
-    it('should remove entry by toastId', () => {
-      const ticket1 = createMockTicket({ id: 'ticket-1' })
-      const ticket2 = createMockTicket({ id: 'ticket-2' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket1, 'col-1', 'toast-1')
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket2, 'col-1', 'toast-2')
-      expect(useUndoStore.getState().undoStack).toHaveLength(2)
-
-      useUndoStore.getState().removeEntry('toast-1')
-      expect(useUndoStore.getState().undoStack).toHaveLength(1)
-      expect(useUndoStore.getState().undoStack[0]?.toastId).toBe('toast-2')
-    })
-  })
-
   describe('clearRedo', () => {
     it('should clear redo stack', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
       const entry = useUndoStore.getState().popUndo()
       if (entry) {
         useUndoStore.getState().pushRedo(entry)
@@ -152,26 +132,10 @@ describe('Undo Store', () => {
     })
   })
 
-  describe('legacy aliases', () => {
-    it('should support popDeleted alias', () => {
-      const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
-      const entry = useUndoStore.getState().popDeleted()
-      expect(entry).toBeDefined()
-    })
-
-    it('should support removeDeleted alias', () => {
-      const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
-      useUndoStore.getState().removeDeleted('toast-1')
-      expect(useUndoStore.getState().undoStack).toHaveLength(0)
-    })
-  })
-
   describe('pushPaste', () => {
     it('should add paste action to undo stack', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushPaste(PROJECT_ID, [{ ticket, columnId: 'col-1' }], 'toast-1')
+      useUndoStore.getState().pushPaste(PROJECT_ID, [{ ticket, columnId: 'col-1' }])
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry?.action.type).toBe('paste')
@@ -184,27 +148,25 @@ describe('Undo Store', () => {
     it('should clear redo stack when not a redo operation', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
       // First add something to redo stack
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
       const entry = useUndoStore.getState().popUndo()
       if (entry) useUndoStore.getState().pushRedo(entry)
       expect(useUndoStore.getState().redoStack).toHaveLength(1)
 
       // Now push paste, should clear redo
-      useUndoStore.getState().pushPaste(PROJECT_ID, [{ ticket, columnId: 'col-1' }], 'toast-2')
+      useUndoStore.getState().pushPaste(PROJECT_ID, [{ ticket, columnId: 'col-1' }])
       expect(useUndoStore.getState().redoStack).toHaveLength(0)
     })
 
     it('should preserve redo stack when isRedo is true', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
       // First add something to redo stack
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
       const entry = useUndoStore.getState().popUndo()
       if (entry) useUndoStore.getState().pushRedo(entry)
 
       // Push paste with isRedo=true
-      useUndoStore
-        .getState()
-        .pushPaste(PROJECT_ID, [{ ticket, columnId: 'col-1' }], 'toast-2', true)
+      useUndoStore.getState().pushPaste(PROJECT_ID, [{ ticket, columnId: 'col-1' }], true)
       expect(useUndoStore.getState().redoStack).toHaveLength(1)
     })
   })
@@ -212,9 +174,7 @@ describe('Undo Store', () => {
   describe('updatePastedTicketId', () => {
     it('should update ticket id in paste entry on undo stack', () => {
       const tempTicket = createMockTicket({ id: 'temp-1', title: 'Test' })
-      useUndoStore
-        .getState()
-        .pushPaste(PROJECT_ID, [{ ticket: tempTicket, columnId: 'col-1' }], 'toast-1')
+      useUndoStore.getState().pushPaste(PROJECT_ID, [{ ticket: tempTicket, columnId: 'col-1' }])
 
       const serverTicket = createMockTicket({ id: 'server-1', title: 'Test' })
       useUndoStore.getState().updatePastedTicketId(PROJECT_ID, 'temp-1', serverTicket)
@@ -227,7 +187,7 @@ describe('Undo Store', () => {
 
     it('should not update entries from other projects', () => {
       const ticket = createMockTicket({ id: 'temp-1' })
-      useUndoStore.getState().pushPaste('other-project', [{ ticket, columnId: 'col-1' }], 'toast-1')
+      useUndoStore.getState().pushPaste('other-project', [{ ticket, columnId: 'col-1' }])
 
       const serverTicket = createMockTicket({ id: 'server-1' })
       useUndoStore.getState().updatePastedTicketId(PROJECT_ID, 'temp-1', serverTicket)
@@ -243,9 +203,7 @@ describe('Undo Store', () => {
     it('should add update action to undo stack', () => {
       const before = createMockTicket({ id: 'ticket-1', title: 'Before' })
       const after = createMockTicket({ id: 'ticket-1', title: 'After' })
-      useUndoStore
-        .getState()
-        .pushUpdate(PROJECT_ID, [{ ticketId: 'ticket-1', before, after }], 'toast-1')
+      useUndoStore.getState().pushUpdate(PROJECT_ID, [{ ticketId: 'ticket-1', before, after }])
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry?.action.type).toBe('update')
@@ -265,7 +223,6 @@ describe('Undo Store', () => {
           [{ ticketId: 'ticket-1', fromSprintId: 'sprint-1', toSprintId: 'sprint-2' }],
           'Sprint 1',
           'Sprint 2',
-          'toast-1',
         )
 
       const entry = useUndoStore.getState().undoStack[0]
@@ -281,7 +238,7 @@ describe('Undo Store', () => {
   describe('pushTicketCreate', () => {
     it('should add ticket create action to undo stack', () => {
       const ticket = createMockTicket({ id: 'ticket-1', title: 'New Ticket' })
-      useUndoStore.getState().pushTicketCreate(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushTicketCreate(PROJECT_ID, ticket, 'col-1')
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry?.action.type).toBe('ticketCreate')
@@ -296,17 +253,7 @@ describe('Undo Store', () => {
     it('should add column rename action to undo stack', () => {
       useUndoStore
         .getState()
-        .pushColumnRename(
-          PROJECT_ID,
-          'col-1',
-          'To Do',
-          'Todo',
-          null,
-          null,
-          null,
-          '#ff0000',
-          'toast-1',
-        )
+        .pushColumnRename(PROJECT_ID, 'col-1', 'To Do', 'Todo', null, null, null, '#ff0000')
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry?.action.type).toBe('columnRename')
@@ -329,7 +276,7 @@ describe('Undo Store', () => {
         color: null,
         tickets: [createMockTicket({ id: 'ticket-1' })],
       }
-      useUndoStore.getState().pushColumnDelete(PROJECT_ID, column, 'col-2', 'toast-1')
+      useUndoStore.getState().pushColumnDelete(PROJECT_ID, column, 'col-2')
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry?.action.type).toBe('columnDelete')
@@ -342,7 +289,7 @@ describe('Undo Store', () => {
 
   describe('pushColumnCreate', () => {
     it('should add column create action to undo stack', () => {
-      useUndoStore.getState().pushColumnCreate(PROJECT_ID, 'col-1', 'New Column', 'toast-1')
+      useUndoStore.getState().pushColumnCreate(PROJECT_ID, 'col-1', 'New Column')
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry?.action.type).toBe('columnCreate')
@@ -353,68 +300,10 @@ describe('Undo Store', () => {
     })
   })
 
-  describe('undoByToastId', () => {
-    it('should move entry from undo to redo stack', () => {
-      const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
-      expect(useUndoStore.getState().undoStack).toHaveLength(1)
-
-      const entry = useUndoStore.getState().undoByToastId('toast-1')
-      expect(entry).toBeDefined()
-      expect(useUndoStore.getState().undoStack).toHaveLength(0)
-      expect(useUndoStore.getState().redoStack).toHaveLength(1)
-    })
-
-    it('should return undefined for non-existent toastId', () => {
-      const entry = useUndoStore.getState().undoByToastId('non-existent')
-      expect(entry).toBeUndefined()
-    })
-  })
-
-  describe('redoByToastId', () => {
-    it('should move entry from redo to undo stack', () => {
-      const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
-      useUndoStore.getState().undoByToastId('toast-1')
-      expect(useUndoStore.getState().redoStack).toHaveLength(1)
-
-      const entry = useUndoStore.getState().redoByToastId('toast-1')
-      expect(entry).toBeDefined()
-      expect(useUndoStore.getState().redoStack).toHaveLength(0)
-      expect(useUndoStore.getState().undoStack).toHaveLength(1)
-    })
-
-    it('should return undefined for non-existent toastId', () => {
-      const entry = useUndoStore.getState().redoByToastId('non-existent')
-      expect(entry).toBeUndefined()
-    })
-  })
-
-  describe('updateRedoToastId', () => {
-    it('should update toastId in redo stack', () => {
-      const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'old-toast')
-      useUndoStore.getState().undoByToastId('old-toast')
-
-      useUndoStore.getState().updateRedoToastId('old-toast', 'new-toast')
-      expect(useUndoStore.getState().redoStack[0]?.toastId).toBe('new-toast')
-    })
-  })
-
-  describe('updateUndoToastId', () => {
-    it('should update toastId in undo stack', () => {
-      const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'old-toast')
-
-      useUndoStore.getState().updateUndoToastId('old-toast', 'new-toast')
-      expect(useUndoStore.getState().undoStack[0]?.toastId).toBe('new-toast')
-    })
-  })
-
   describe('updateTicketCreateEntry', () => {
     it('should update ticket in ticketCreate entry', () => {
       const oldTicket = createMockTicket({ id: 'temp-1', title: 'Old' })
-      useUndoStore.getState().pushTicketCreate(PROJECT_ID, oldTicket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushTicketCreate(PROJECT_ID, oldTicket, 'col-1')
 
       const newTicket = createMockTicket({ id: 'server-1', title: 'New' })
       useUndoStore.getState().updateTicketCreateEntry('temp-1', newTicket)
@@ -428,15 +317,16 @@ describe('Undo Store', () => {
 
     it('should update ticket in redo stack as well', () => {
       const oldTicket = createMockTicket({ id: 'temp-1', title: 'Old' })
-      useUndoStore.getState().pushTicketCreate(PROJECT_ID, oldTicket, 'col-1', 'toast-1')
-      useUndoStore.getState().undoByToastId('toast-1')
+      useUndoStore.getState().pushTicketCreate(PROJECT_ID, oldTicket, 'col-1')
+      const entry = useUndoStore.getState().popUndo()
+      if (entry) useUndoStore.getState().pushRedo(entry)
 
       const newTicket = createMockTicket({ id: 'server-1', title: 'New' })
       useUndoStore.getState().updateTicketCreateEntry('temp-1', newTicket)
 
-      const entry = useUndoStore.getState().redoStack[0]
-      if (entry?.action.type === 'ticketCreate') {
-        expect(entry.action.ticket.id).toBe('server-1')
+      const redoEntry = useUndoStore.getState().redoStack[0]
+      if (redoEntry?.action.type === 'ticketCreate') {
+        expect(redoEntry.action.ticket.id).toBe('server-1')
       }
     })
   })
@@ -458,7 +348,7 @@ describe('Undo Store', () => {
 
     it('should add an attachmentAdd entry to undo stack', () => {
       const attachments = [makeAttachmentAction('att-1')]
-      useUndoStore.getState().pushAttachmentAdd(PROJECT_ID, attachments, 'toast-1')
+      useUndoStore.getState().pushAttachmentAdd(PROJECT_ID, attachments)
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry).toBeDefined()
@@ -467,52 +357,29 @@ describe('Undo Store', () => {
         expect(entry.action.attachments).toHaveLength(1)
         expect(entry.action.attachments[0].attachment.id).toBe('att-1')
       }
-      expect(entry?.toastId).toBe('toast-1')
       expect(entry?.projectId).toBe(PROJECT_ID)
     })
 
     it('should clear redo stack when not a redo operation', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
       const entry = useUndoStore.getState().popUndo()
       if (entry) useUndoStore.getState().pushRedo(entry)
       expect(useUndoStore.getState().redoStack).toHaveLength(1)
 
-      useUndoStore
-        .getState()
-        .pushAttachmentAdd(PROJECT_ID, [makeAttachmentAction('att-1')], 'toast-2')
+      useUndoStore.getState().pushAttachmentAdd(PROJECT_ID, [makeAttachmentAction('att-1')])
       expect(useUndoStore.getState().redoStack).toHaveLength(0)
     })
 
     it('should preserve redo stack when isRedo is true', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
       const entry = useUndoStore.getState().popUndo()
       if (entry) useUndoStore.getState().pushRedo(entry)
       expect(useUndoStore.getState().redoStack).toHaveLength(1)
 
-      useUndoStore
-        .getState()
-        .pushAttachmentAdd(PROJECT_ID, [makeAttachmentAction('att-1')], 'toast-2', true)
+      useUndoStore.getState().pushAttachmentAdd(PROJECT_ID, [makeAttachmentAction('att-1')], true)
       expect(useUndoStore.getState().redoStack).toHaveLength(1)
-    })
-
-    it('should support undo and redo via undoByToastId/redoByToastId', () => {
-      const attachments = [makeAttachmentAction('att-1')]
-      useUndoStore.getState().pushAttachmentAdd(PROJECT_ID, attachments, 'toast-1')
-      expect(useUndoStore.getState().undoStack).toHaveLength(1)
-
-      // Undo
-      const undoneEntry = useUndoStore.getState().undoByToastId('toast-1')
-      expect(undoneEntry).toBeDefined()
-      expect(useUndoStore.getState().undoStack).toHaveLength(0)
-      expect(useUndoStore.getState().redoStack).toHaveLength(1)
-
-      // Redo
-      const redoneEntry = useUndoStore.getState().redoByToastId('toast-1')
-      expect(redoneEntry).toBeDefined()
-      expect(useUndoStore.getState().undoStack).toHaveLength(1)
-      expect(useUndoStore.getState().redoStack).toHaveLength(0)
     })
   })
 
@@ -533,7 +400,7 @@ describe('Undo Store', () => {
 
     it('should add an attachmentDelete entry to undo stack', () => {
       const attachments = [makeAttachmentAction('att-1')]
-      useUndoStore.getState().pushAttachmentDelete(PROJECT_ID, attachments, 'toast-1')
+      useUndoStore.getState().pushAttachmentDelete(PROJECT_ID, attachments)
 
       const entry = useUndoStore.getState().undoStack[0]
       expect(entry).toBeDefined()
@@ -542,52 +409,31 @@ describe('Undo Store', () => {
         expect(entry.action.attachments).toHaveLength(1)
         expect(entry.action.attachments[0].attachment.id).toBe('att-1')
       }
-      expect(entry?.toastId).toBe('toast-1')
       expect(entry?.projectId).toBe(PROJECT_ID)
     })
 
     it('should clear redo stack when not a redo operation', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
       const entry = useUndoStore.getState().popUndo()
       if (entry) useUndoStore.getState().pushRedo(entry)
       expect(useUndoStore.getState().redoStack).toHaveLength(1)
 
-      useUndoStore
-        .getState()
-        .pushAttachmentDelete(PROJECT_ID, [makeAttachmentAction('att-1')], 'toast-2')
+      useUndoStore.getState().pushAttachmentDelete(PROJECT_ID, [makeAttachmentAction('att-1')])
       expect(useUndoStore.getState().redoStack).toHaveLength(0)
     })
 
     it('should preserve redo stack when isRedo is true', () => {
       const ticket = createMockTicket({ id: 'ticket-1' })
-      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1', 'toast-1')
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
       const entry = useUndoStore.getState().popUndo()
       if (entry) useUndoStore.getState().pushRedo(entry)
       expect(useUndoStore.getState().redoStack).toHaveLength(1)
 
       useUndoStore
         .getState()
-        .pushAttachmentDelete(PROJECT_ID, [makeAttachmentAction('att-1')], 'toast-2', true)
+        .pushAttachmentDelete(PROJECT_ID, [makeAttachmentAction('att-1')], true)
       expect(useUndoStore.getState().redoStack).toHaveLength(1)
-    })
-
-    it('should support undo and redo via undoByToastId/redoByToastId', () => {
-      const attachments = [makeAttachmentAction('att-1')]
-      useUndoStore.getState().pushAttachmentDelete(PROJECT_ID, attachments, 'toast-1')
-      expect(useUndoStore.getState().undoStack).toHaveLength(1)
-
-      // Undo
-      const undoneEntry = useUndoStore.getState().undoByToastId('toast-1')
-      expect(undoneEntry).toBeDefined()
-      expect(useUndoStore.getState().undoStack).toHaveLength(0)
-      expect(useUndoStore.getState().redoStack).toHaveLength(1)
-
-      // Redo
-      const redoneEntry = useUndoStore.getState().redoByToastId('toast-1')
-      expect(redoneEntry).toBeDefined()
-      expect(useUndoStore.getState().undoStack).toHaveLength(1)
-      expect(useUndoStore.getState().redoStack).toHaveLength(0)
     })
   })
 
@@ -605,10 +451,46 @@ describe('Undo Store', () => {
     })
   })
 
+  describe('tryStartProcessing', () => {
+    it('should acquire lock when not processing', () => {
+      expect(useUndoStore.getState().tryStartProcessing()).toBe(true)
+      expect(useUndoStore.getState().isProcessing).toBe(true)
+    })
+
+    it('should fail to acquire lock when already processing', () => {
+      useUndoStore.getState().setProcessing(true)
+      expect(useUndoStore.getState().tryStartProcessing()).toBe(false)
+    })
+  })
+
   describe('popRedo', () => {
     it('should return undefined if redo stack is empty', () => {
       const entry = useUndoStore.getState().popRedo()
       expect(entry).toBeUndefined()
+    })
+  })
+
+  describe('canUndo and canRedo', () => {
+    it('should return false when stacks are empty', () => {
+      expect(useUndoStore.getState().canUndo()).toBe(false)
+      expect(useUndoStore.getState().canRedo()).toBe(false)
+    })
+
+    it('should return true when undo stack has entries', () => {
+      const ticket = createMockTicket({ id: 'ticket-1' })
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
+      expect(useUndoStore.getState().canUndo()).toBe(true)
+      expect(useUndoStore.getState().canRedo()).toBe(false)
+    })
+
+    it('should return true when redo stack has entries', () => {
+      const ticket = createMockTicket({ id: 'ticket-1' })
+      useUndoStore.getState().pushDeleted(PROJECT_ID, ticket, 'col-1')
+      const entry = useUndoStore.getState().popUndo()
+      if (entry) useUndoStore.getState().pushRedo(entry)
+
+      expect(useUndoStore.getState().canUndo()).toBe(false)
+      expect(useUndoStore.getState().canRedo()).toBe(true)
     })
   })
 })

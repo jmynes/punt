@@ -1,7 +1,8 @@
 'use client'
 
-import { AlertTriangle, Eye, EyeOff, FolderX, Loader2, Lock, Shield } from 'lucide-react'
+import { AlertTriangle, FolderX, Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,7 +12,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { useWipeProjects } from '@/hooks/queries/use-database-backup'
 import { showToast } from '@/lib/toast'
 
@@ -20,7 +20,7 @@ interface DatabaseWipeProjectsDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-type Step = 'warning' | 'verify' | 'confirm' | 'wiping' | 'success'
+type Step = 'warning' | 'confirm' | 'wiping' | 'success'
 
 const REQUIRED_CONFIRMATION = 'DELETE ALL PROJECTS'
 
@@ -29,22 +29,17 @@ export function DatabaseWipeProjectsDialog({
   onOpenChange,
 }: DatabaseWipeProjectsDialogProps) {
   const [step, setStep] = useState<Step>('warning')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const [result, setResult] = useState<{ projects: number; tickets: number } | null>(null)
-  const [verifying, setVerifying] = useState(false)
-  const [verifyError, setVerifyError] = useState<string | null>(null)
+  const [showReauthDialog, setShowReauthDialog] = useState(false)
 
   const wipeMutation = useWipeProjects()
 
   const resetState = () => {
     setStep('warning')
-    setConfirmPassword('')
-    setShowPassword(false)
     setConfirmText('')
     setResult(null)
-    setVerifyError(null)
+    setShowReauthDialog(false)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -54,18 +49,19 @@ export function DatabaseWipeProjectsDialog({
     onOpenChange(newOpen)
   }
 
-  const handleWipe = async () => {
+  const handleWipe = async (password: string, totpCode?: string, isRecoveryCode?: boolean) => {
     setStep('wiping')
     try {
       const res = await wipeMutation.mutateAsync({
-        confirmPassword,
+        confirmPassword: password,
         confirmText,
+        totpCode,
+        isRecoveryCode,
       })
       setResult({ projects: res.counts.projects, tickets: res.counts.tickets })
       setStep('success')
       showToast.success('All projects wiped successfully')
     } catch {
-      // Error shown via toast, return to confirm step
       setStep('confirm')
     }
   }
@@ -75,28 +71,6 @@ export function DatabaseWipeProjectsDialog({
     onOpenChange(false)
     // Reload to reflect changes
     window.location.href = '/admin/settings?tab=database'
-  }
-
-  const handleVerify = async () => {
-    setVerifying(true)
-    setVerifyError(null)
-    try {
-      const res = await fetch('/api/auth/verify-credentials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: confirmPassword }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        setVerifyError(data.error || 'Invalid password')
-        return
-      }
-      setStep('confirm')
-    } catch {
-      setVerifyError('Failed to verify credentials')
-    } finally {
-      setVerifying(false)
-    }
   }
 
   return (
@@ -109,7 +83,6 @@ export function DatabaseWipeProjectsDialog({
           </DialogTitle>
           <DialogDescription className="text-zinc-400">
             {step === 'warning' && 'This will delete all projects and their data.'}
-            {step === 'verify' && 'Verify your identity to continue.'}
             {step === 'confirm' && 'Confirm the wipe operation.'}
             {step === 'wiping' && 'Wiping projects...'}
             {step === 'success' && 'Projects wiped successfully.'}
@@ -142,74 +115,8 @@ export function DatabaseWipeProjectsDialog({
                 <Button variant="outline" onClick={() => handleOpenChange(false)}>
                   Cancel
                 </Button>
-                <Button variant="destructive" onClick={() => setStep('verify')}>
+                <Button variant="destructive" onClick={() => setStep('confirm')}>
                   I Understand, Continue
-                </Button>
-              </div>
-            </>
-          )}
-
-          {step === 'verify' && (
-            <>
-              <div className="flex items-start gap-3 p-4 bg-amber-900/20 border border-amber-800 rounded-lg">
-                <Shield className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-amber-400">Identity Verification Required</p>
-                  <p className="text-amber-300/80 mt-1">
-                    Enter your password to authorize this action.
-                  </p>
-                </div>
-              </div>
-
-              {verifyError && (
-                <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg">
-                  <p className="text-sm text-red-300">{verifyError}</p>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="wipe-projects-password" className="text-zinc-300">
-                  Your Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                  <Input
-                    id="wipe-projects-password"
-                    name="admin-confirm-password"
-                    type="text"
-                    autoComplete="off"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && confirmPassword && !verifying) {
-                        e.preventDefault()
-                        handleVerify()
-                      }
-                    }}
-                    placeholder="Enter your password"
-                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10 ${!showPassword ? 'password-mask' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setStep('warning')}>
-                  Back
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleVerify}
-                  disabled={!confirmPassword || verifying}
-                >
-                  {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Continue
                 </Button>
               </div>
             </>
@@ -233,12 +140,12 @@ export function DatabaseWipeProjectsDialog({
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setStep('verify')}>
+                <Button variant="outline" onClick={() => setStep('warning')}>
                   Back
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={handleWipe}
+                  onClick={() => setShowReauthDialog(true)}
                   disabled={confirmText !== REQUIRED_CONFIRMATION}
                 >
                   <FolderX className="h-4 w-4" />
@@ -278,6 +185,16 @@ export function DatabaseWipeProjectsDialog({
             </>
           )}
         </div>
+
+        <ReauthDialog
+          open={showReauthDialog}
+          onOpenChange={setShowReauthDialog}
+          title="Confirm Wipe All Projects"
+          description="Enter your credentials to authorize wiping all projects."
+          actionLabel="Wipe All Projects"
+          actionVariant="destructive"
+          onConfirm={handleWipe}
+        />
       </DialogContent>
     </Dialog>
   )
