@@ -78,6 +78,16 @@ export const TextareaWithAutocomplete = forwardRef<
   })
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isMounted, setIsMounted] = useState(false)
+  const pendingTimers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
+  // Clean up pending timers on unmount
+  useEffect(() => {
+    const timers = pendingTimers.current
+    return () => {
+      for (const id of timers) clearTimeout(id)
+      timers.clear()
+    }
+  }, [])
 
   useEffect(() => {
     setIsMounted(true)
@@ -124,8 +134,8 @@ export const TextareaWithAutocomplete = forwardRef<
       // Filter members by name or username
       return members
         .filter((member) => {
-          const name = member.name.toLowerCase()
-          const username = (member.username || '').toLowerCase()
+          const name = (member.name ?? '').toLowerCase()
+          const username = (member.username ?? '').toLowerCase()
           return name.includes(searchLower) || username.includes(searchLower)
         })
         .slice(0, 10)
@@ -291,10 +301,12 @@ export const TextareaWithAutocomplete = forwardRef<
 
       // Move cursor after the inserted text
       const newCursorPosition = beforeTrigger.length + replacement.length + 1
-      setTimeout(() => {
+      const id = setTimeout(() => {
+        pendingTimers.current.delete(id)
         textarea.focus()
         textarea.setSelectionRange(newCursorPosition, newCursorPosition)
       }, 0)
+      pendingTimers.current.add(id)
     },
     [value, state.triggerIndex, onChange],
   )
@@ -320,7 +332,18 @@ export const TextareaWithAutocomplete = forwardRef<
           break
 
         case 'Tab':
+          if (suggestions.length > 0) {
+            e.preventDefault()
+            handleSelect(suggestions[selectedIndex])
+          }
+          break
+
         case 'Enter':
+          // Ctrl+Enter should pass through to parent (e.g., submit comment)
+          if (e.ctrlKey || e.metaKey) {
+            externalOnKeyDown?.(e)
+            break
+          }
           if (suggestions.length > 0) {
             e.preventDefault()
             handleSelect(suggestions[selectedIndex])
@@ -362,7 +385,11 @@ export const TextareaWithAutocomplete = forwardRef<
   // Handle click and selection changes
   const handleSelectionChange = useCallback(() => {
     // Delay slightly to ensure selection state is updated
-    setTimeout(checkForTrigger, 0)
+    const id = setTimeout(() => {
+      pendingTimers.current.delete(id)
+      checkForTrigger()
+    }, 0)
+    pendingTimers.current.add(id)
   }, [checkForTrigger])
 
   return (
