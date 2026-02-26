@@ -45,6 +45,7 @@ import { showToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import type { ProjectSummary } from '@/stores/projects-store'
 import { useRoleSimulationStore } from '@/stores/role-simulation-store'
+import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { UserSummary } from '@/types'
 
@@ -216,6 +217,10 @@ export function SidebarContent({
   )
 
   const handleLinkClick = () => {
+    // Clear ticket selection before navigating to prevent a flash of
+    // stale highlights when the destination view renders shared tickets.
+    useSelectionStore.getState().clearSelection()
+    useSelectionStore.getState().clearClipboard()
     onLinkClick?.()
   }
 

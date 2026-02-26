@@ -2,6 +2,7 @@
 
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useClearSelectionOnBlur } from '@/hooks/use-clear-selection-on-blur'
 import { useSelectionStore } from '@/stores/selection-store'
 
 /**
@@ -12,6 +13,9 @@ import { useSelectionStore } from '@/stores/selection-store'
 export function SelectionIndicator() {
   const selectedTicketIds = useSelectionStore((state) => state.selectedTicketIds)
   const clearSelection = useSelectionStore((state) => state.clearSelection)
+
+  // Clear selection when switching to another browser tab
+  useClearSelectionOnBlur()
 
   const count = selectedTicketIds.size
   if (count === 0) return null

@@ -10,7 +10,6 @@ import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
-import { useSettingsStore } from '@/stores/settings-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, LinkType } from '@/types'
 import type {
@@ -298,13 +297,13 @@ export async function restoreCommentsAndLinks(
  * Features:
  * - Optimistic updates for immediate UI feedback
  * - API persistence for real projects with rollback on error
- * - Undo/redo support with proper toast integration
+ * - Undo/redo support via Ctrl+Z/Ctrl+Y keyboard shortcuts
  * - Selection clearing after delete
  * - Preserves comments and links for restoration on undo
  */
 export async function deleteTickets(params: DeleteTicketsParams): Promise<DeleteResult> {
-  const { projectId, tickets, queryClient, options = {}, onComplete } = params
-  const { showUndoButtons = true, toastDuration = 5000 } = options
+  const { projectId, tickets, options = {}, onComplete } = params
+  const { toastDuration = 5000 } = options
 
   if (tickets.length === 0) {
     return { success: false, deletedTickets: [], error: 'No tickets to delete' }
@@ -353,130 +352,16 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
 
   // Format ticket IDs for notification
   const ticketKeys = tickets.map(({ ticket }) => formatTicketId(ticket))
-  const showUndo = useSettingsStore.getState().showUndoButtons ?? showUndoButtons
 
-  let currentId: string | number | undefined
-
-  const toastId = showUndoRedoToast('error', {
+  // Show informational toast (undo via Ctrl+Z)
+  showUndoRedoToast('error', {
     title: tickets.length === 1 ? 'Ticket deleted' : `${tickets.length} tickets deleted`,
     description: ticketKeys.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
     duration: toastDuration,
-    showUndoButtons: showUndo,
-    onUndo: async (id) => {
-      // Move to redo stack
-      const entry = useUndoStore.getState().undoByToastId(id)
-      if (entry) {
-        // Restore tickets
-        const currentBoardStore = useBoardStore.getState()
-        for (const { ticket, columnId } of ticketsWithRestoreData) {
-          currentBoardStore.addTicket(projectId, columnId, ticket)
-        }
-
-        // Recreate via API
-        try {
-          await Promise.all(
-            ticketsWithRestoreData.map(async ({ ticket, columnId, restoreData }) => {
-              const createPayload = {
-                title: ticket.title,
-                description: ticket.description,
-                type: ticket.type,
-                priority: ticket.priority,
-                columnId,
-                storyPoints: ticket.storyPoints,
-                estimate: ticket.estimate,
-                resolution: ticket.resolution,
-                resolvedAt: ticket.resolvedAt,
-                startDate: ticket.startDate,
-                dueDate: ticket.dueDate,
-                assigneeId: ticket.assigneeId,
-                reporterId: ticket.creatorId,
-                sprintId: ticket.sprintId,
-                labelIds: ticket.labels?.map((l) => l.id) ?? [],
-                watcherIds: ticket.watchers?.map((w) => w.id) ?? [],
-                // Preserve original creation timestamp on restore
-                createdAt: ticket.createdAt,
-              }
-              const res = await fetch(`/api/projects/${projectId}/tickets`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(createPayload),
-              })
-
-              if (!res.ok) throw new Error('Failed to restore ticket')
-              const serverTicket = await res.json()
-
-              // Replace temp ticket with server ticket
-              currentBoardStore.removeTicket(projectId, ticket.id)
-              currentBoardStore.addTicket(projectId, columnId, serverTicket)
-
-              // Get activity IDs from creation response to delete before restoring originals
-              // Get activity IDs from creation response to delete before restoring originals
-              const activityIdsToDelete = serverTicket._activity?.activityIds ?? []
-
-              // Restore attachments, comments, links, and activities
-              await restoreAttachments(projectId, serverTicket.id, ticket.attachments)
-              await restoreCommentsAndLinks(
-                projectId,
-                serverTicket.id,
-                restoreData,
-                activityIdsToDelete,
-              )
-
-              // Invalidate activity cache to show restored activities
-              if (queryClient) {
-                queryClient.invalidateQueries({
-                  queryKey: activityKeys.forTicket(projectId, serverTicket.id),
-                })
-              }
-            }),
-          )
-        } catch (err) {
-          console.error('Failed to restore deleted tickets via API:', err)
-          showToast.error('Failed to restore tickets')
-        }
-      }
-    },
-    onRedo: (id) => {
-      // Move to undo stack
-      useUndoStore.getState().redoByToastId(id)
-
-      // Re-delete tickets
-      const currentBoardStore = useBoardStore.getState()
-      for (const { ticket } of tickets) {
-        currentBoardStore.removeTicket(projectId, ticket.id)
-      }
-
-      // Delete via API
-      Promise.all(
-        tickets.map(({ ticket }) =>
-          fetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
-            method: 'DELETE',
-          }),
-        ),
-      ).catch((err) => {
-        console.error('Failed to re-delete tickets via API:', err)
-      })
-    },
-    onUndoneToast: (newId) => {
-      if (currentId) {
-        useUndoStore.getState().updateRedoToastId(currentId, newId)
-        currentId = newId
-      }
-    },
-    onRedoneToast: (newId) => {
-      if (currentId) {
-        useUndoStore.getState().updateUndoToastId(currentId, newId)
-        currentId = newId
-      }
-    },
-    undoneTitle: tickets.length === 1 ? 'Ticket restored' : `${tickets.length} tickets restored`,
-    redoneTitle: tickets.length === 1 ? 'Delete redone' : `${tickets.length} deletes redone`,
   })
 
-  currentId = toastId
-
   // Push to undo stack with restore data
-  useUndoStore.getState().pushDeletedBatch(projectId, ticketsWithRestoreData, toastId)
+  useUndoStore.getState().pushDeletedBatch(projectId, ticketsWithRestoreData)
 
   // Call completion callback (e.g., to close dialog)
   onComplete?.()

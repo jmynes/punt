@@ -9,7 +9,6 @@ import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
-import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
@@ -87,12 +86,12 @@ export interface PasteTicketsParams {
  * Features:
  * - Optimistic updates for immediate UI feedback
  * - API persistence for real projects
- * - Undo/redo support with proper toast integration
+ * - Undo/redo support via Ctrl+Z/Ctrl+Y keyboard shortcuts
  * - Selection update to select newly pasted tickets
  */
 export function pasteTickets(params: PasteTicketsParams): PasteResult {
   const { projectId, columns, options = {}, onComplete, openSinglePastedTicket = true } = params
-  const { showUndoButtons = true, toastDuration = 5000 } = options
+  const { toastDuration = 5000 } = options
 
   // Get copied IDs from selection store if not provided
   const copiedIds = params.copiedIds ?? useSelectionStore.getState().getCopiedIds()
@@ -170,81 +169,17 @@ export function pasteTickets(params: PasteTicketsParams): PasteResult {
     }
   })()
 
-  // Show undo/redo toast
+  // Show informational toast (undo via Ctrl+Z)
   const ticketKeys = newTickets.map(({ ticket }) => formatTicketId(ticket))
-  const showUndo = useSettingsStore.getState().showUndoButtons ?? showUndoButtons
 
-  const toastId = showUndoRedoToast('success', {
+  showUndoRedoToast('success', {
     title: newTickets.length === 1 ? 'Ticket pasted' : `${newTickets.length} tickets pasted`,
     description: ticketKeys.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
     duration: toastDuration,
-    showUndoButtons: showUndo,
-    onUndo: async () => {
-      // Remove pasted tickets
-      const currentBoardState = useBoardStore.getState()
-      const ticketIdsToDelete: string[] = []
-
-      for (const { ticket } of newTickets) {
-        // Find the ticket in the store (may have been replaced with server ticket)
-        const cols = currentBoardState.getColumns(projectId)
-        const foundTicket = cols
-          .flatMap((c) => c.tickets)
-          .find((t) => t.id === ticket.id || t.title === ticket.title)
-        if (foundTicket) {
-          currentBoardState.removeTicket(projectId, foundTicket.id)
-          ticketIdsToDelete.push(foundTicket.id)
-        }
-      }
-
-      // Delete from database
-      if (ticketIdsToDelete.length > 0) {
-        batchDeleteTicketsAPI(projectId, ticketIdsToDelete).catch((err) => {
-          console.error('Failed to delete pasted tickets on undo:', err)
-        })
-      }
-    },
-    onRedo: async () => {
-      // Re-add the tickets
-      const currentBoardState = useBoardStore.getState()
-      const redoTickets: TicketWithColumn[] = []
-
-      for (const { ticket, columnId } of newTickets) {
-        const redoTicket: TicketWithRelations = {
-          ...ticket,
-          id: generateTempId(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }
-        currentBoardState.addTicket(projectId, columnId, redoTicket)
-        redoTickets.push({ ticket: redoTicket, columnId })
-      }
-
-      // Persist to database
-      try {
-        const ticketsToCreate = redoTickets.map(({ ticket, columnId }) => ({
-          tempId: ticket.id,
-          columnId,
-          ticketData: createTicketData(ticket),
-        }))
-        const serverTickets = await batchCreateTicketsAPI(projectId, ticketsToCreate)
-
-        for (const { ticket: tempTicket, columnId } of redoTickets) {
-          const serverTicket = serverTickets.get(tempTicket.id)
-          if (serverTicket) {
-            currentBoardState.removeTicket(projectId, tempTicket.id)
-            currentBoardState.addTicket(projectId, columnId, serverTicket)
-          }
-        }
-      } catch (err) {
-        console.error('Failed to recreate tickets on redo:', err)
-      }
-    },
-    undoneTitle: 'Paste undone',
-    redoneTitle: 'Paste redone',
   })
 
   // Register with undo store
-  useUndoStore.getState().pushPaste(projectId, newTickets, toastId)
+  useUndoStore.getState().pushPaste(projectId, newTickets)
 
   // Update selection to select newly pasted tickets
   const selectionStore = useSelectionStore.getState()

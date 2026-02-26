@@ -61,7 +61,6 @@ import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
-import { useSettingsStore } from '@/stores/settings-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets } from '@/types'
 
@@ -248,82 +247,14 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       // Invalidate column queries to refresh data
       queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
 
-      const showUndo = useSettingsStore.getState().showUndoButtons
       const description = nameChanged
         ? `"${oldName}" renamed to "${newName}"`
         : 'Column appearance updated'
 
-      const toastId = showUndoRedoToast('success', {
+      showUndoRedoToast('success', {
         title: 'Column updated',
         description,
         duration: 5000,
-        showUndoButtons: showUndo,
-        onUndo: async (id) => {
-          // Undo: revert to old name/icon
-          const undoEntry = useUndoStore.getState().undoByToastId(id)
-          if (!undoEntry) return
-          const undoStore = useUndoStore.getState()
-          undoStore.setProcessing(true)
-          try {
-            await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Tab-Id': getTabId(),
-              },
-              body: JSON.stringify({ name: oldName, icon: oldIcon, color: oldColor }),
-            })
-            const bs = useBoardStore.getState()
-            const cols = bs.getColumns(projectId)
-            bs.setColumns(
-              projectId,
-              cols.map((c) =>
-                c.id === column.id ? { ...c, name: oldName, icon: oldIcon, color: oldColor } : c,
-              ),
-            )
-            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
-          } catch (err) {
-            console.error('Failed to undo column rename:', err)
-            showToast.error('Failed to undo column update')
-          } finally {
-            useUndoStore.getState().setProcessing(false)
-          }
-        },
-        onRedo: async (id) => {
-          // Redo: re-apply new name/icon
-          const undoEntry = useUndoStore.getState().redoByToastId(id)
-          if (!undoEntry) return
-          const undoStore = useUndoStore.getState()
-          undoStore.setProcessing(true)
-          try {
-            await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Tab-Id': getTabId(),
-              },
-              body: JSON.stringify({ name: newName, icon: newIcon, color: newColor }),
-            })
-            const bs = useBoardStore.getState()
-            const cols = bs.getColumns(projectId)
-            bs.setColumns(
-              projectId,
-              cols.map((c) =>
-                c.id === column.id ? { ...c, name: newName, icon: newIcon, color: newColor } : c,
-              ),
-            )
-            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
-          } catch (err) {
-            console.error('Failed to redo column rename:', err)
-            showToast.error('Failed to redo column update')
-          } finally {
-            useUndoStore.getState().setProcessing(false)
-          }
-        },
-        undoneTitle: 'Column update undone',
-        undoneDescription: description,
-        redoneTitle: 'Column updated',
-        redoneDescription: description,
       })
 
       useUndoStore
@@ -337,7 +268,6 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
           newIcon,
           oldColor,
           newColor,
-          toastId,
         )
 
       setRenameOpen(false)
@@ -427,164 +357,18 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
 
       const targetColumn = otherColumns.find((c) => c.id === moveToColumnId)
-      const showUndo = useSettingsStore.getState().showUndoButtons
       const description =
         ticketsToMove.length > 0
           ? `"${column.name}" deleted. ${ticketsToMove.length} ticket${ticketsToMove.length === 1 ? '' : 's'} moved to "${targetColumn?.name}".`
           : `"${column.name}" deleted.`
 
-      const toastId = showUndoRedoToast('error', {
+      showUndoRedoToast('error', {
         title: 'Column deleted',
         description,
         duration: 5000,
-        showUndoButtons: showUndo,
-        onUndo: async (id) => {
-          // Undo: recreate column and move tickets back
-          const undoEntry = useUndoStore.getState().undoByToastId(id)
-          if (!undoEntry) return
-          const undoStore = useUndoStore.getState()
-          undoStore.setProcessing(true)
-          try {
-            // Recreate column via POST
-            const createRes = await fetch(`/api/projects/${projectKey}/columns`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Tab-Id': getTabId(),
-              },
-              body: JSON.stringify({ name: snapshotColumn.name }),
-            })
-            if (!createRes.ok) throw new Error('Failed to recreate column')
-            const newCol = await createRes.json()
-
-            // Set icon/color if they were set
-            if (snapshotColumn.icon || snapshotColumn.color) {
-              await fetch(`/api/projects/${projectKey}/columns/${newCol.id}`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-Tab-Id': getTabId(),
-                },
-                body: JSON.stringify({
-                  icon: snapshotColumn.icon,
-                  color: snapshotColumn.color,
-                  order: snapshotColumn.order,
-                }),
-              })
-            } else if (newCol.order !== snapshotColumn.order) {
-              await fetch(`/api/projects/${projectKey}/columns/${newCol.id}`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-Tab-Id': getTabId(),
-                },
-                body: JSON.stringify({ order: snapshotColumn.order }),
-              })
-            }
-
-            // Move tickets back to restored column
-            if (snapshotColumn.tickets.length > 0) {
-              for (const ticket of snapshotColumn.tickets) {
-                await fetch(`/api/projects/${projectKey}/tickets/${ticket.id}`, {
-                  method: 'PATCH',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'X-Tab-Id': getTabId(),
-                  },
-                  body: JSON.stringify({ columnId: newCol.id }),
-                })
-              }
-            }
-
-            // Update board store
-            const bs = useBoardStore.getState()
-            const restoredColumn: ColumnWithTickets = {
-              ...snapshotColumn,
-              id: newCol.id,
-              tickets: snapshotColumn.tickets.map((t) => ({ ...t, columnId: newCol.id })),
-            }
-            const currentCols = bs.getColumns(projectId)
-            // Remove moved tickets from target column and add restored column
-            const restoredCols = currentCols.map((c) => {
-              if (c.id === moveToColumnId) {
-                const movedTicketIds = new Set(snapshotColumn.tickets.map((t) => t.id))
-                return { ...c, tickets: c.tickets.filter((t) => !movedTicketIds.has(t.id)) }
-              }
-              return c
-            })
-            // Insert at original position
-            restoredCols.splice(snapshotColumn.order, 0, restoredColumn)
-            bs.setColumns(projectId, restoredCols)
-
-            // Update snapshot column id for future redo
-            snapshotColumn.id = newCol.id
-
-            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
-            queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
-          } catch (err) {
-            console.error('Failed to undo column delete:', err)
-            showToast.error('Failed to undo column deletion')
-          } finally {
-            useUndoStore.getState().setProcessing(false)
-          }
-        },
-        onRedo: async (id) => {
-          // Redo: delete the column again
-          const undoEntry = useUndoStore.getState().redoByToastId(id)
-          if (!undoEntry) return
-          const undoStore = useUndoStore.getState()
-          undoStore.setProcessing(true)
-          try {
-            const deleteUrl = new URL(
-              `/api/projects/${projectKey}/columns/${snapshotColumn.id}`,
-              window.location.origin,
-            )
-            if (snapshotColumn.tickets.length > 0) {
-              deleteUrl.searchParams.set('moveTicketsTo', moveToColumnId)
-            }
-            const delRes = await fetch(deleteUrl.toString(), {
-              method: 'DELETE',
-              headers: { 'X-Tab-Id': getTabId() },
-            })
-            if (!delRes.ok) throw new Error('Failed to redo column delete')
-
-            const bs = useBoardStore.getState()
-            const cols = bs.getColumns(projectId)
-            const deletedCol = cols.find((c) => c.id === snapshotColumn.id)
-            const movedTickets = deletedCol?.tickets || []
-            bs.setColumns(
-              projectId,
-              cols
-                .filter((c) => c.id !== snapshotColumn.id)
-                .map((c) => {
-                  if (c.id === moveToColumnId && movedTickets.length > 0) {
-                    return {
-                      ...c,
-                      tickets: [
-                        ...c.tickets,
-                        ...movedTickets.map((t) => ({ ...t, columnId: moveToColumnId })),
-                      ],
-                    }
-                  }
-                  return c
-                }),
-            )
-            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
-            queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
-          } catch (err) {
-            console.error('Failed to redo column delete:', err)
-            showToast.error('Failed to redo column deletion')
-          } finally {
-            useUndoStore.getState().setProcessing(false)
-          }
-        },
-        undoneTitle: 'Column restored',
-        undoneDescription: `"${column.name}" restored`,
-        redoneTitle: 'Column deleted',
-        redoneDescription: description,
       })
 
-      useUndoStore.getState().pushColumnDelete(projectId, snapshotColumn, moveToColumnId, toastId)
+      useUndoStore.getState().pushColumnDelete(projectId, snapshotColumn, moveToColumnId)
 
       setDeleteOpen(false)
     } catch (error) {
