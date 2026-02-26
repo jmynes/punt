@@ -298,7 +298,6 @@ interface MoveTicketMutationInput {
   toColumnId: string
   newOrder: number
   previousColumns: ColumnWithTickets[]
-  toastId?: string | number
 }
 
 /**
@@ -349,20 +348,6 @@ export function useMoveTicket() {
       // Just cancel refetches
       await queryClient.cancelQueries({ queryKey: ticketKeys.byProject(projectId) })
     },
-    onSuccess: (data, { ticketId, toastId }) => {
-      // Update undo store with activity metadata if toastId provided
-      if (toastId && data.activity) {
-        const { useUndoStore } = require('@/stores/undo-store')
-        const activityMeta = {
-          ticketId,
-          activityIds: data.activity.activityIds ?? [],
-          groupId: data.activity.groupId ?? undefined,
-        }
-        if (activityMeta.activityIds.length > 0 || activityMeta.groupId) {
-          useUndoStore.getState().updateActivityMeta(toastId, activityMeta)
-        }
-      }
-    },
     onError: (err, { projectId, previousColumns }) => {
       // Rollback using stored snapshot
       if (previousColumns) {
@@ -382,7 +367,6 @@ interface MoveTicketsMutationInput {
   toColumnId: string
   newOrder: number
   previousColumns: ColumnWithTickets[]
-  toastId?: string | number
 }
 
 // ============================================================================
@@ -680,24 +664,6 @@ export function useMoveTickets() {
       // Store update already happened in handleDragEnd
       // Just cancel refetches
       await queryClient.cancelQueries({ queryKey: ticketKeys.byProject(projectId) })
-    },
-    onSuccess: (data, { ticketIds, toastId }) => {
-      // Update undo store with activity metadata if toastId provided
-      if (toastId && data.activity) {
-        const { useUndoStore } = require('@/stores/undo-store')
-        // For batch moves, we use the first ticket's groupId as the activity meta
-        // All tickets in the batch share the batchGroupId
-        const firstTicketId = ticketIds[0]
-        const groupId = data.activity.groups[firstTicketId] ?? data.activity.batchGroupId
-        if (groupId) {
-          const activityMeta = {
-            ticketId: firstTicketId,
-            activityIds: [],
-            groupId,
-          }
-          useUndoStore.getState().updateActivityMeta(toastId, activityMeta)
-        }
-      }
     },
     onError: (err, { projectId, previousColumns }) => {
       // Rollback using stored snapshot

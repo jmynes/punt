@@ -10,13 +10,78 @@ import {
 } from '@/lib/database-export'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
+import {
+  decryptTotpSecret,
+  markRecoveryCodeUsed,
+  verifyRecoveryCode,
+  verifyTotpToken,
+} from '@/lib/totp'
 
 const ExportRequestSchema = z.object({
   password: z.string().optional(),
   includeAttachments: z.boolean().optional(),
   includeAvatars: z.boolean().optional(),
   confirmPassword: z.string().min(1, 'Your password is required to confirm this action'),
+  totpCode: z.string().optional(),
+  isRecoveryCode: z.boolean().optional(),
 })
+
+async function verifyReauth(
+  userId: string,
+  password: string,
+  totpCode?: string,
+  isRecoveryCode?: boolean,
+): Promise<NextResponse | null> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      passwordHash: true,
+      totpEnabled: true,
+      totpSecret: true,
+      totpRecoveryCodes: true,
+    },
+  })
+
+  if (!user?.passwordHash) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+  }
+
+  const isValidPassword = await verifyPassword(password, user.passwordHash)
+  if (!isValidPassword) {
+    return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
+  }
+
+  if (user.totpEnabled && user.totpSecret) {
+    if (!totpCode) {
+      return NextResponse.json({ error: '2FA code required', requires2fa: true }, { status: 401 })
+    }
+
+    if (isRecoveryCode) {
+      if (!user.totpRecoveryCodes) {
+        return NextResponse.json({ error: 'No recovery codes available' }, { status: 401 })
+      }
+
+      const codeIndex = await verifyRecoveryCode(totpCode, user.totpRecoveryCodes)
+      if (codeIndex === -1) {
+        return NextResponse.json({ error: 'Invalid recovery code' }, { status: 401 })
+      }
+
+      const updatedCodes = markRecoveryCodeUsed(user.totpRecoveryCodes, codeIndex)
+      await db.user.update({
+        where: { id: userId },
+        data: { totpRecoveryCodes: updatedCodes },
+      })
+    } else {
+      const secret = decryptTotpSecret(user.totpSecret)
+      const isValidTotp = verifyTotpToken(totpCode, secret)
+      if (!isValidTotp) {
+        return NextResponse.json({ error: 'Invalid 2FA code' }, { status: 401 })
+      }
+    }
+  }
+
+  return null
+}
 
 /**
  * POST /api/admin/database/export
@@ -48,22 +113,17 @@ export async function POST(request: Request) {
       return validationError(result)
     }
 
-    const { password, includeAttachments, includeAvatars, confirmPassword } = result.data
+    const {
+      password,
+      includeAttachments,
+      includeAvatars,
+      confirmPassword,
+      totpCode,
+      isRecoveryCode,
+    } = result.data
 
-    // Verify the admin's password
-    const adminUser = await db.user.findUnique({
-      where: { id: user.id },
-      select: { passwordHash: true },
-    })
-
-    if (!adminUser?.passwordHash) {
-      return badRequestError('Unable to verify your identity')
-    }
-
-    const isValidPassword = await verifyPassword(confirmPassword, adminUser.passwordHash)
-    if (!isValidPassword) {
-      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
-    }
+    const authError = await verifyReauth(user.id, confirmPassword, totpCode, isRecoveryCode)
+    if (authError) return authError
 
     const includeFiles = includeAttachments || includeAvatars
 

@@ -3,17 +3,16 @@
 import { Eye, EyeOff, KeyRound, Mail, Trash2 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { TwoFactorSection } from '@/components/profile/two-factor-section'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,126 +40,110 @@ interface SecurityTabProps {
 export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: SecurityTabProps) {
   // Email change state
   const [newEmail, setNewEmail] = useState('')
-  const [emailPassword, setEmailPassword] = useState('')
-  const [showEmailPassword, setShowEmailPassword] = useState(false)
-  const [emailLoading, setEmailLoading] = useState(false)
+  const [showEmailReauthDialog, setShowEmailReauthDialog] = useState(false)
 
   // Password form state
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [showPasswordReauthDialog, setShowPasswordReauthDialog] = useState(false)
 
   // Delete account state
-  const [deletePassword, setDeletePassword] = useState('')
-  const [showDeletePassword, setShowDeletePassword] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
-  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [showDeleteAlertDialog, setShowDeleteAlertDialog] = useState(false)
+  const [showDeleteReauthDialog, setShowDeleteReauthDialog] = useState(false)
 
-  const handleEmailChange = async (e: React.FormEvent) => {
+  const handleEmailChange = (e: React.FormEvent) => {
     e.preventDefault()
-    setEmailLoading(true)
-
-    try {
-      const res = await fetch('/api/me/email', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tab-id': getTabId(),
-        },
-        body: JSON.stringify({ email: newEmail, password: emailPassword }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to change email')
-      }
-
-      onUserUpdate({ email: newEmail })
-      await onSessionUpdate()
-      setNewEmail('')
-      setEmailPassword('')
-      showToast.success('Email address updated')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to change email')
-    } finally {
-      setEmailLoading(false)
-    }
+    setShowEmailReauthDialog(true)
   }
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleEmailReauthConfirm = async (
+    password: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
+    const res = await fetch('/api/me/email', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tab-id': getTabId(),
+      },
+      body: JSON.stringify({ email: newEmail, password, totpCode, isRecoveryCode }),
+    })
 
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to change email')
+    }
+
+    onUserUpdate({ email: newEmail })
+    await onSessionUpdate()
+    setNewEmail('')
+    showToast.success('Email address updated')
+  }
+
+  const handlePasswordChange = (e: React.FormEvent) => {
+    e.preventDefault()
     if (newPassword !== confirmPassword) {
       showToast.error('New passwords do not match')
       return
     }
-
-    setPasswordLoading(true)
-
-    try {
-      const res = await fetch('/api/me/password', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to change password')
-      }
-
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-      showToast.success('Password changed successfully')
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to change password')
-    } finally {
-      setPasswordLoading(false)
-    }
+    setShowPasswordReauthDialog(true)
   }
 
-  const handleDeleteAccount = async () => {
+  const handlePasswordReauthConfirm = async (
+    password: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
+    const res = await fetch('/api/me/password', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword: password, newPassword, totpCode, isRecoveryCode }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to change password')
+    }
+
+    setNewPassword('')
+    setConfirmPassword('')
+    showToast.success('Password changed successfully')
+  }
+
+  const handleDeleteReauthConfirm = async (
+    password: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
     if (isDemo) {
-      showToast.error('Account deletion is not available in demo mode')
-      return
+      throw new Error('Account deletion is not available in demo mode')
     }
 
-    if (deleteConfirmation !== 'DELETE MY ACCOUNT') {
-      showToast.error('Please type "DELETE MY ACCOUNT" to confirm')
-      return
+    const res = await fetch('/api/me/account', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password,
+        confirmation: deleteConfirmation,
+        totpCode,
+        isRecoveryCode,
+      }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete account')
     }
 
-    setDeleteLoading(true)
-
-    try {
-      const res = await fetch('/api/me/account', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          password: deletePassword,
-          confirmation: deleteConfirmation,
-        }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to delete account')
-      }
-
-      showToast.success('Account deleted. Signing out...')
-      await signOut({ callbackUrl: '/login' })
-    } catch (error) {
-      showToast.error(error instanceof Error ? error.message : 'Failed to delete account')
-      setDeleteLoading(false)
-    }
+    showToast.success('Account deleted. Signing out...')
+    await signOut({ callbackUrl: '/login' })
   }
 
   return (
@@ -191,40 +174,21 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
                 className="bg-zinc-900 border-zinc-700 focus:border-amber-500 max-w-md"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="emailPassword" className="text-zinc-300">
-                Confirm with Password
-              </Label>
-              <div className="relative max-w-md">
-                <Input
-                  id="emailPassword"
-                  type={showEmailPassword ? 'text' : 'password'}
-                  value={emailPassword}
-                  onChange={(e) => setEmailPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="bg-zinc-900 border-zinc-700 focus:border-amber-500 pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
-                  onClick={() => setShowEmailPassword(!showEmailPassword)}
-                >
-                  {showEmailPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
             <div className="flex justify-end max-w-md">
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={emailLoading || !newEmail.trim() || !emailPassword}
-              >
-                {emailLoading ? 'Updating...' : 'Change Email'}
+              <Button type="submit" variant="primary" disabled={!newEmail.trim()}>
+                Change Email
               </Button>
             </div>
           </form>
+
+          <ReauthDialog
+            open={showEmailReauthDialog}
+            onOpenChange={setShowEmailReauthDialog}
+            title="Confirm Email Change"
+            description="Enter your credentials to change your email address."
+            actionLabel="Change Email"
+            onConfirm={handleEmailReauthConfirm}
+          />
         </CardContent>
       </Card>
 
@@ -241,34 +205,6 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="currentPassword" className="text-zinc-300">
-                Current Password
-              </Label>
-              <div className="relative">
-                <Input
-                  id="currentPassword"
-                  type={showCurrentPassword ? 'text' : 'password'}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Enter current password"
-                  className="bg-zinc-900 border-zinc-700 focus:border-amber-500 pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                >
-                  {showCurrentPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="newPassword" className="text-zinc-300">
@@ -333,15 +269,20 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
               </ul>
             </div>
             <div className="flex justify-end">
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
-              >
-                {passwordLoading ? 'Updating...' : 'Update Password'}
+              <Button type="submit" variant="primary" disabled={!newPassword || !confirmPassword}>
+                Update Password
               </Button>
             </div>
           </form>
+
+          <ReauthDialog
+            open={showPasswordReauthDialog}
+            onOpenChange={setShowPasswordReauthDialog}
+            title="Confirm Password Change"
+            description="Enter your current credentials to change your password."
+            actionLabel="Update Password"
+            onConfirm={handlePasswordReauthConfirm}
+          />
         </CardContent>
       </Card>
 
@@ -367,13 +308,16 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
                 Permanently delete your account and all associated data
               </p>
             </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="bg-red-600 hover:bg-red-700">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Account
-                </Button>
-              </AlertDialogTrigger>
+            <Button
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => setShowDeleteAlertDialog(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Account
+            </Button>
+
+            <AlertDialog open={showDeleteAlertDialog} onOpenChange={setShowDeleteAlertDialog}>
               <AlertDialogContent className="bg-zinc-900 border-zinc-800">
                 <AlertDialogHeader>
                   <AlertDialogTitle className="text-zinc-100">
@@ -385,34 +329,6 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="deletePassword" className="text-zinc-300">
-                      Enter your password
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="deletePassword"
-                        type={showDeletePassword ? 'text' : 'password'}
-                        value={deletePassword}
-                        onChange={(e) => setDeletePassword(e.target.value)}
-                        placeholder="Your password"
-                        className="bg-zinc-900 border-zinc-700 pr-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-full w-10 text-zinc-500 hover:text-zinc-300 hover:bg-transparent"
-                        onClick={() => setShowDeletePassword(!showDeletePassword)}
-                      >
-                        {showDeletePassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="deleteConfirmation" className="text-zinc-300">
                       Type <span className="font-mono text-red-400">DELETE MY ACCOUNT</span> to
@@ -431,18 +347,29 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
                   <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
                     Cancel
                   </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDeleteAccount}
-                    disabled={
-                      deleteLoading || !deletePassword || deleteConfirmation !== 'DELETE MY ACCOUNT'
-                    }
+                  <Button
+                    onClick={() => {
+                      setShowDeleteAlertDialog(false)
+                      setShowDeleteReauthDialog(true)
+                    }}
+                    disabled={deleteConfirmation !== 'DELETE MY ACCOUNT'}
                     className="bg-red-600 hover:bg-red-700 text-white"
                   >
-                    {deleteLoading ? 'Deleting...' : 'Delete Account'}
-                  </AlertDialogAction>
+                    Delete Account
+                  </Button>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
+            <ReauthDialog
+              open={showDeleteReauthDialog}
+              onOpenChange={setShowDeleteReauthDialog}
+              title="Confirm Account Deletion"
+              description="Enter your credentials to permanently delete your account."
+              actionLabel="Delete Account"
+              actionVariant="destructive"
+              onConfirm={handleDeleteReauthConfirm}
+            />
           </div>
         </CardContent>
       </Card>

@@ -8,6 +8,13 @@ import { isDemoMode } from '@/lib/demo'
 import type { DatabaseEvent, ProjectEvent } from '@/lib/events'
 import { getTabId } from './use-realtime'
 
+// When true, the SSE handler skips the automatic sign-out on database.wiped.
+// The import dialog sets this so the success modal can stay visible.
+let _suppressWipeSignOut = false
+export function suppressDatabaseWipeSignOut(value: boolean) {
+  _suppressWipeSignOut = value
+}
+
 // Reconnection config
 const INITIAL_RECONNECT_DELAY = 1000
 const MAX_RECONNECT_DELAY = 30000
@@ -98,7 +105,10 @@ export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
         if (data.type === 'database.wiped') {
           // Full database was wiped - force sign out
           // Skip tab check since all tabs need to sign out
-          signOut({ callbackUrl: '/login' })
+          // If suppressed, the import dialog will handle sign-out after showing results
+          if (!_suppressWipeSignOut) {
+            signOut({ callbackUrl: '/login' })
+          }
           return
         }
 

@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import {
   type CommentInfo,
   useAddComment,
@@ -23,17 +22,27 @@ import {
   useTicketComments,
   useUpdateComment,
 } from '@/hooks/queries/use-comments'
-import { useCurrentUser } from '@/hooks/use-current-user'
+import { useTicketsByProject } from '@/hooks/queries/use-tickets'
+import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import type { TicketWithRelations, UserSummary } from '@/types'
 import { MarkdownViewer } from './markdown-viewer'
+import {
+  TextareaWithAutocomplete,
+  type TextareaWithAutocompleteRef,
+} from './textarea-with-autocomplete'
 
 interface CommentsSectionProps {
   projectId: string
   ticketId: string
   ticketKey: string
   onPendingCommentChange?: (hasPending: boolean) => void
+  /** Tickets for #reference autocomplete (optional, will fetch from store if not provided) */
+  tickets?: TicketWithRelations[]
+  /** Members for @mention autocomplete (optional, will fetch if not provided) */
+  members?: UserSummary[]
 }
 
 export interface CommentsSectionRef {
@@ -43,7 +52,10 @@ export interface CommentsSectionRef {
 }
 
 export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionProps>(
-  function CommentsSection({ projectId, ticketId, ticketKey, onPendingCommentChange }, ref) {
+  function CommentsSection(
+    { projectId, ticketId, ticketKey, onPendingCommentChange, tickets, members },
+    ref,
+  ) {
     const { data: comments = [], isLoading } = useTicketComments(projectId, ticketId)
     const addComment = useAddComment()
     const updateComment = useUpdateComment()
@@ -51,12 +63,23 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
     const currentUser = useCurrentUser()
     const canManageAny = useHasPermission(projectId, PERMISSIONS.COMMENTS_MANAGE_ANY)
 
+    // Get tickets and members for autocomplete if not provided via props
+    const { data: fetchedTickets = [] } = useTicketsByProject(projectId)
+    const fetchedMembers = useProjectMembers(projectId)
+
+    // Extract project key from ticketKey (e.g., "PUNT-123" -> "PUNT")
+    const projectKey = ticketKey.split('-')[0] || ''
+
+    // Use provided data or fetch from hook
+    const allTickets = tickets ?? fetchedTickets
+    const allMembers = members ?? fetchedMembers
+
     const [newComment, setNewComment] = useState('')
     const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
     const [editContent, setEditContent] = useState('')
     const [commentToDelete, setCommentToDelete] = useState<CommentInfo | null>(null)
-    const textareaRef = useRef<HTMLTextAreaElement>(null)
-    const editTextareaRef = useRef<HTMLTextAreaElement>(null)
+    const textareaRef = useRef<TextareaWithAutocompleteRef>(null)
+    const editTextareaRef = useRef<TextareaWithAutocompleteRef>(null)
     const deleteButtonRef = useRef<HTMLButtonElement>(null)
 
     // Notify parent when pending comment state changes
@@ -68,12 +91,10 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
     useEffect(() => {
       if (editingCommentId && editTextareaRef.current) {
         editTextareaRef.current.focus()
-        editTextareaRef.current.setSelectionRange(
-          editTextareaRef.current.value.length,
-          editTextareaRef.current.value.length,
-        )
+        const len = editContent.length
+        editTextareaRef.current.setSelectionRange(len, len)
       }
-    }, [editingCommentId])
+    }, [editingCommentId, editContent.length])
 
     const handleAddComment = async () => {
       const content = newComment.trim()
@@ -242,13 +263,16 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
 
                   {editingCommentId === comment.id ? (
                     <div className="mt-2 space-y-2">
-                      <Textarea
+                      <TextareaWithAutocomplete
                         ref={editTextareaRef}
                         value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
+                        onChange={setEditContent}
                         onKeyDown={(e) => handleKeyDown(e, true)}
                         className="resize-none bg-zinc-900 border-zinc-700 focus:border-amber-500"
                         rows={3}
+                        tickets={allTickets}
+                        members={allMembers}
+                        projectKey={projectKey}
                       />
                       <div className="flex items-center gap-2">
                         <Button
@@ -280,17 +304,22 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
 
         {/* Add new comment */}
         <div className="space-y-2">
-          <Textarea
+          <TextareaWithAutocomplete
             ref={textareaRef}
             placeholder="Add a comment..."
             value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
+            onChange={setNewComment}
             onKeyDown={handleKeyDown}
             rows={3}
             className="resize-none bg-zinc-900 border-zinc-700 focus:border-amber-500"
+            tickets={allTickets}
+            members={allMembers}
+            projectKey={projectKey}
           />
           <div className="flex items-center justify-between">
-            <span className="text-xs text-zinc-500">Ctrl+Enter to submit</span>
+            <span className="text-xs text-zinc-500">
+              Ctrl+Enter to submit | Type @ to mention, # to link ticket
+            </span>
             <div className="flex items-center gap-2">
               {newComment.trim() && (
                 <Button

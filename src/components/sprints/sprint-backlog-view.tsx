@@ -555,71 +555,13 @@ export function SprintBacklogView({
         updateTicket(projectId, ticketId, { order: newOrder })
       }
 
-      // Show undo/redo toast
-      const toastId = showUndoRedoToast('success', {
+      // Show toast
+      showUndoRedoToast('success', {
         title:
           count === 1
             ? `Ticket moved to ${targetSprintName}`
             : `${count} tickets moved to ${targetSprintName}`,
         description: `From ${fromLabel}`,
-        showUndoButtons: true,
-        onUndo: (id) => {
-          // Move entry from undo to redo stack
-          useUndoStore.getState().undoByToastId(id)
-          // Revert to original sprint IDs and orders
-          for (const { ticketId, sprintId, order } of originalSprintIds) {
-            updateTicket(projectId, ticketId, { sprintId, order })
-          }
-          // Revert existing ticket orders
-          for (const { ticketId, originalOrder } of existingTicketOrderUpdates) {
-            updateTicket(projectId, ticketId, { order: originalOrder })
-          }
-          // Persist undo to database
-          Promise.all([
-            ...originalSprintIds.map(({ ticketId, sprintId, order }) =>
-              updateTicketSprintMutation.mutateAsync({ ticketId, sprintId, order }),
-            ),
-            ...existingTicketOrderUpdates.map(({ ticketId, originalOrder }) =>
-              updateTicketAPI(projectId, ticketId, { order: originalOrder }),
-            ),
-          ]).catch(() => {
-            // Refetch will handle sync
-          })
-        },
-        onRedo: (id) => {
-          // Move entry from redo to undo stack
-          useUndoStore.getState().redoByToastId(id)
-          // Re-apply move to target sprint with new orders
-          for (const { ticketId, newOrder } of originalSprintIds) {
-            updateTicket(projectId, ticketId, { sprintId: targetSprintId, order: newOrder })
-          }
-          // Re-apply existing ticket order changes
-          for (const { ticketId, newOrder } of existingTicketOrderUpdates) {
-            updateTicket(projectId, ticketId, { order: newOrder })
-          }
-          // Persist redo to database
-          Promise.all([
-            ...originalSprintIds.map(({ ticketId, newOrder }) =>
-              updateTicketSprintMutation.mutateAsync({
-                ticketId,
-                sprintId: targetSprintId,
-                order: newOrder,
-              }),
-            ),
-            ...existingTicketOrderUpdates.map(({ ticketId, newOrder }) =>
-              updateTicketAPI(projectId, ticketId, { order: newOrder }),
-            ),
-          ]).catch(() => {
-            // Refetch will handle sync
-          })
-        },
-        undoneTitle: 'Move undone',
-        undoneDescription: `${count === 1 ? 'Ticket' : `${count} tickets`} returned to ${fromLabel}`,
-        redoneTitle:
-          count === 1
-            ? `Ticket moved to ${targetSprintName}`
-            : `${count} tickets moved to ${targetSprintName}`,
-        redoneDescription: `From ${fromLabel}`,
       })
 
       // Register in undo store for keyboard shortcuts (Ctrl+Z/Y)
@@ -632,7 +574,6 @@ export function SprintBacklogView({
         })),
         fromLabel,
         targetSprintName,
-        toastId,
       )
 
       // Persist to database
@@ -658,8 +599,6 @@ export function SprintBacklogView({
         showUndoRedoToast('error', {
           title: 'Failed to move tickets',
           description: error.message,
-          showUndoButtons: false,
-          onUndo: () => {},
         })
       })
     },

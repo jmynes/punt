@@ -101,8 +101,6 @@ export interface MoveResult {
  * Options for action operations.
  */
 export interface ActionOptions {
-  /** Whether to show undo buttons in toast notifications */
-  showUndoButtons?: boolean
   /** Custom toast duration in milliseconds */
   toastDuration?: number
 }

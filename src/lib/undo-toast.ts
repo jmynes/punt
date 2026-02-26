@@ -6,110 +6,35 @@ interface UndoRedoToastOptions {
   title: string
   description: React.ReactNode
   duration?: number
-  showUndoButtons: boolean
-  /** Return false to prevent showing the nested "undone" toast */
-  onUndo: (id: string | number) => void | boolean | Promise<void | boolean>
-  /** Return false to prevent showing the nested "redone" toast */
-  onRedo?: (id: string | number) => void | boolean | Promise<void | boolean>
-  onUndoneToast?: (id: string | number) => void
-  onRedoneToast?: (id: string | number) => void
-  undoLabel?: string
-  redoLabel?: string
-  undoneTitle?: string
-  undoneDescription?: React.ReactNode
-  redoneTitle?: string
-  redoneDescription?: React.ReactNode
-  /** Toast ID to dismiss before showing this toast (for replacing toasts) */
-  dismissPrevious?: string | number
 }
 
+/**
+ * Show an informational toast notification.
+ * Note: Undo/redo buttons have been removed from toasts.
+ * Use Ctrl+Z / Ctrl+Y keyboard shortcuts for undo/redo operations.
+ */
 export function showUndoRedoToast(kind: ToastKind, opts: UndoRedoToastOptions) {
-  const {
-    title,
-    description,
-    duration = 5000,
-    showUndoButtons,
-    onUndo,
-    onRedo,
-    onUndoneToast,
-    onRedoneToast,
-    undoLabel = 'Undo',
-    redoLabel = 'Redo',
-    undoneTitle = 'Action undone',
-    undoneDescription = description,
-    redoneTitle = 'Action redone',
-    redoneDescription = description,
-    dismissPrevious,
-  } = opts
-
-  // Dismiss the previous toast if specified (for replacing toasts instead of stacking)
-  if (dismissPrevious !== undefined) {
-    toast.dismiss(dismissPrevious)
-  }
+  const { title, description, duration = 5000 } = opts
 
   const toastFn = kind === 'error' ? toast.error : toast.success
   const isError = kind === 'error'
   const effectiveDuration = getEffectiveDuration(duration, isError)
-  const confirmDuration = getEffectiveDuration(2000, isError)
 
-  let toastId: string | number | undefined
+  const persistent = isError && !Number.isFinite(effectiveDuration)
 
-  toastId = toastFn(title, {
+  return toastFn(title, {
     description,
     duration: effectiveDuration,
-    closeButton: isError && !Number.isFinite(effectiveDuration),
-    action: showUndoButtons
+    closeButton: persistent,
+    cancel: persistent
       ? {
-          label: undoLabel,
-          onClick: async () => {
-            if (!toastId) return
-            // Call onUndo and check if it returns false (blocked by isProcessing)
-            const result = await onUndo(toastId)
-            if (result === false) return // Blocked, don't show nested toast
-
-            // Dismiss current toast before showing nested toast
-            toast.dismiss(toastId)
-
-            if (onRedo && showUndoButtons) {
-              const undoneToastId = toastFn(undoneTitle, {
-                description: undoneDescription,
-                duration: confirmDuration,
-                action: {
-                  label: redoLabel,
-                  onClick: async () => {
-                    const redoResult = await onRedo(undoneToastId)
-                    if (redoResult === false) return // Blocked
-
-                    // Dismiss undone toast before showing redone toast
-                    toast.dismiss(undoneToastId)
-
-                    let redoneToastId: string | number | undefined
-                    redoneToastId = toastFn(redoneTitle, {
-                      description: redoneDescription,
-                      duration: confirmDuration,
-                      action: {
-                        label: undoLabel,
-                        onClick: async () => {
-                          if (!redoneToastId) return
-                          const undoAgainResult = await onUndo(redoneToastId)
-                          if (undoAgainResult === false) return // Blocked
-                          // Dismiss redone toast after action
-                          toast.dismiss(redoneToastId)
-                          // We could continue chaining here, but 3 levels is usually enough
-                        },
-                      },
-                    })
-                    if (redoneToastId) onRedoneToast?.(redoneToastId)
-                  },
-                },
-              })
-              onUndoneToast?.(undoneToastId)
-            }
+          label: 'Copy',
+          onClick: () => {
+            const desc = typeof description === 'string' ? description : ''
+            const text = desc ? `${title}: ${desc}` : title
+            void navigator.clipboard.writeText(text)
           },
         }
       : undefined,
   })
-
-  // In case synchronous execution happened (unlikely for toast), ensure we return a value
-  return toastId as string | number
 }

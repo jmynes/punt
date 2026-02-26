@@ -11,7 +11,7 @@ import { FUZZ_CONFIG } from '../setup'
 
 // Helper to reset store state
 function resetStore() {
-  useUndoStore.setState({ undoStack: [], redoStack: [] })
+  useUndoStore.setState({ undoStack: [], redoStack: [], isProcessing: false })
 }
 
 // Reset store before each test suite
@@ -59,18 +59,17 @@ describe('Undo Store Fuzz Tests', () => {
   describe('Push and pop operations', () => {
     it('should return same entry after push then pop', () => {
       fc.assert(
-        fc.property(fc.uuid(), fc.uuid(), fc.string(), (projectId, columnId, toastId) => {
+        fc.property(fc.uuid(), fc.uuid(), (projectId, columnId) => {
           resetStore()
           const store = useUndoStore.getState()
           const ticket = createTestTicket({ projectId, columnId })
 
-          store.pushDeleted(projectId, ticket, columnId, toastId)
+          store.pushDeleted(projectId, ticket, columnId)
 
           const popped = useUndoStore.getState().popUndo()
 
           expect(popped).toBeDefined()
           expect(popped?.projectId).toBe(projectId)
-          expect(popped?.toastId).toBe(toastId)
           expect(popped?.action.type).toBe('delete')
         }),
         FUZZ_CONFIG.standard,
@@ -79,15 +78,16 @@ describe('Undo Store Fuzz Tests', () => {
 
     it('should grow stack with each push', () => {
       fc.assert(
-        fc.property(fc.array(fc.uuid(), { minLength: 1, maxLength: 20 }), (toastIds) => {
+        fc.property(fc.nat({ max: 20 }), (count) => {
+          fc.pre(count >= 1)
           resetStore()
           const store = useUndoStore.getState()
           const projectId = 'test-project'
           const columnId = 'col-1'
 
-          for (let i = 0; i < toastIds.length; i++) {
+          for (let i = 0; i < count; i++) {
             const ticket = createTestTicket({ number: i + 1 })
-            store.pushDeleted(projectId, ticket, columnId, toastIds[i])
+            store.pushDeleted(projectId, ticket, columnId)
 
             const currentStack = useUndoStore.getState().undoStack
             expect(currentStack.length).toBe(i + 1)
@@ -99,27 +99,31 @@ describe('Undo Store Fuzz Tests', () => {
 
     it('should pop in LIFO order', () => {
       fc.assert(
-        fc.property(fc.array(fc.uuid(), { minLength: 2, maxLength: 10 }), (toastIds) => {
+        fc.property(fc.nat({ min: 2, max: 10 }), (count) => {
           resetStore()
           const store = useUndoStore.getState()
           const projectId = 'test-project'
           const columnId = 'col-1'
 
-          // Push all
-          for (const toastId of toastIds) {
-            const ticket = createTestTicket()
-            store.pushDeleted(projectId, ticket, columnId, toastId)
+          // Push all tickets with unique numbers
+          const ticketNumbers: number[] = []
+          for (let i = 0; i < count; i++) {
+            const ticket = createTestTicket({ number: i + 1 })
+            ticketNumbers.push(i + 1)
+            store.pushDeleted(projectId, ticket, columnId)
           }
 
           // Pop all and verify reverse order
-          const poppedIds: string[] = []
+          const poppedNumbers: number[] = []
           let entry = useUndoStore.getState().popUndo()
           while (entry) {
-            poppedIds.push(entry.toastId as string)
+            if (entry.action.type === 'delete' && entry.action.tickets[0]) {
+              poppedNumbers.push(entry.action.tickets[0].ticket.number)
+            }
             entry = useUndoStore.getState().popUndo()
           }
 
-          expect(poppedIds).toEqual([...toastIds].reverse())
+          expect(poppedNumbers).toEqual([...ticketNumbers].reverse())
         }),
         FUZZ_CONFIG.standard,
       )
@@ -129,15 +133,14 @@ describe('Undo Store Fuzz Tests', () => {
   describe('Redo stack behavior', () => {
     it('should clear redo stack on new non-redo action', () => {
       fc.assert(
-        fc.property(fc.uuid(), fc.uuid(), (toastId1, toastId2) => {
+        fc.property(fc.uuid(), fc.uuid(), (projectId1, projectId2) => {
           resetStore()
           const store = useUndoStore.getState()
-          const projectId = 'test-project'
           const columnId = 'col-1'
 
           // Push and undo to populate redo stack
           const ticket1 = createTestTicket()
-          store.pushDeleted(projectId, ticket1, columnId, toastId1)
+          store.pushDeleted(projectId1, ticket1, columnId)
           const entry = useUndoStore.getState().popUndo()
           if (entry) {
             useUndoStore.getState().pushRedo(entry)
@@ -148,7 +151,7 @@ describe('Undo Store Fuzz Tests', () => {
 
           // Push new action (isRedo=false, the default)
           const ticket2 = createTestTicket()
-          useUndoStore.getState().pushDeleted(projectId, ticket2, columnId, toastId2)
+          useUndoStore.getState().pushDeleted(projectId2, ticket2, columnId)
 
           // Redo stack should be cleared
           expect(useUndoStore.getState().redoStack.length).toBe(0)
@@ -159,15 +162,14 @@ describe('Undo Store Fuzz Tests', () => {
 
     it('should preserve redo stack on redo action', () => {
       fc.assert(
-        fc.property(fc.uuid(), fc.uuid(), (toastId1, toastId2) => {
+        fc.property(fc.uuid(), fc.uuid(), (projectId1, projectId2) => {
           resetStore()
           const store = useUndoStore.getState()
-          const projectId = 'test-project'
           const columnId = 'col-1'
 
           // Push, undo, then push with isRedo=true
           const ticket1 = createTestTicket()
-          store.pushDeleted(projectId, ticket1, columnId, toastId1)
+          store.pushDeleted(projectId1, ticket1, columnId)
           const entry = useUndoStore.getState().popUndo()
           if (entry) {
             useUndoStore.getState().pushRedo(entry)
@@ -177,148 +179,12 @@ describe('Undo Store Fuzz Tests', () => {
 
           // Push with isRedo=true
           const ticket2 = createTestTicket()
-          useUndoStore.getState().pushDeleted(projectId, ticket2, columnId, toastId2, true)
+          useUndoStore.getState().pushDeleted(projectId2, ticket2, columnId, true)
 
           // Redo stack should be preserved
           expect(useUndoStore.getState().redoStack.length).toBe(redoLengthBefore)
         }),
         FUZZ_CONFIG.standard,
-      )
-    })
-  })
-
-  describe('removeEntry', () => {
-    it('should only remove matching toastId', () => {
-      fc.assert(
-        fc.property(
-          fc.array(fc.uuid(), { minLength: 3, maxLength: 10 }),
-          fc.nat(),
-          (toastIds, removeIdx) => {
-            resetStore()
-            const store = useUndoStore.getState()
-            const projectId = 'test-project'
-            const columnId = 'col-1'
-            const uniqueIds = [...new Set(toastIds)] // Ensure unique
-
-            if (uniqueIds.length < 2) return
-
-            // Push all
-            for (const toastId of uniqueIds) {
-              const ticket = createTestTicket()
-              store.pushDeleted(projectId, ticket, columnId, toastId)
-            }
-
-            const targetIdx = removeIdx % uniqueIds.length
-            const targetId = uniqueIds[targetIdx]
-
-            useUndoStore.getState().removeEntry(targetId)
-
-            const remaining = useUndoStore.getState().undoStack
-            const remainingIds = remaining.map((e) => e.toastId)
-
-            // Target should be removed
-            expect(remainingIds).not.toContain(targetId)
-
-            // Others should remain
-            for (let i = 0; i < uniqueIds.length; i++) {
-              if (i !== targetIdx) {
-                expect(remainingIds).toContain(uniqueIds[i])
-              }
-            }
-          },
-        ),
-        FUZZ_CONFIG.standard,
-      )
-    })
-
-    it('should handle removing non-existent entry gracefully', () => {
-      fc.assert(
-        fc.property(fc.uuid(), fc.uuid(), (existingId, nonExistentId) => {
-          fc.pre(existingId !== nonExistentId)
-
-          resetStore()
-          const store = useUndoStore.getState()
-          const projectId = 'test-project'
-          const columnId = 'col-1'
-
-          const ticket = createTestTicket()
-          store.pushDeleted(projectId, ticket, columnId, existingId)
-
-          const lengthBefore = useUndoStore.getState().undoStack.length
-
-          // Remove non-existent
-          useUndoStore.getState().removeEntry(nonExistentId)
-
-          // Length should be unchanged
-          expect(useUndoStore.getState().undoStack.length).toBe(lengthBefore)
-        }),
-        FUZZ_CONFIG.standard,
-      )
-    })
-  })
-
-  describe('undoByToastId and redoByToastId', () => {
-    it('should move entry from undo to redo stack', () => {
-      fc.assert(
-        fc.property(fc.uuid(), (toastId) => {
-          resetStore()
-          const store = useUndoStore.getState()
-          const projectId = 'test-project'
-          const columnId = 'col-1'
-
-          const ticket = createTestTicket()
-          store.pushDeleted(projectId, ticket, columnId, toastId)
-
-          const entry = useUndoStore.getState().undoByToastId(toastId)
-
-          expect(entry).toBeDefined()
-          expect(useUndoStore.getState().undoStack.length).toBe(0)
-          expect(useUndoStore.getState().redoStack.length).toBe(1)
-          expect(useUndoStore.getState().redoStack[0].toastId).toBe(toastId)
-        }),
-        FUZZ_CONFIG.standard,
-      )
-    })
-
-    it('should move entry from redo to undo stack', () => {
-      fc.assert(
-        fc.property(fc.uuid(), (toastId) => {
-          resetStore()
-          const store = useUndoStore.getState()
-          const projectId = 'test-project'
-          const columnId = 'col-1'
-
-          const ticket = createTestTicket()
-          store.pushDeleted(projectId, ticket, columnId, toastId)
-
-          // Undo first
-          useUndoStore.getState().undoByToastId(toastId)
-
-          // Then redo
-          const entry = useUndoStore.getState().redoByToastId(toastId)
-
-          expect(entry).toBeDefined()
-          expect(useUndoStore.getState().redoStack.length).toBe(0)
-          expect(useUndoStore.getState().undoStack.length).toBe(1)
-          expect(useUndoStore.getState().undoStack[0].toastId).toBe(toastId)
-        }),
-        FUZZ_CONFIG.standard,
-      )
-    })
-
-    it('should return undefined for non-existent toastId', () => {
-      fc.assert(
-        fc.property(fc.uuid(), (nonExistentId) => {
-          resetStore()
-          const store = useUndoStore.getState()
-
-          const undoResult = store.undoByToastId(nonExistentId)
-          const redoResult = useUndoStore.getState().redoByToastId(nonExistentId)
-
-          expect(undoResult).toBeUndefined()
-          expect(redoResult).toBeUndefined()
-        }),
-        FUZZ_CONFIG.quick,
       )
     })
   })
@@ -333,14 +199,13 @@ describe('Undo Store Fuzz Tests', () => {
             resetStore()
             const store = useUndoStore.getState()
             const columnId = 'col-1'
-            const toastId = crypto.randomUUID()
 
             const tickets = ticketIds.map((id) => ({
               ticket: createTestTicket({ id, projectId }),
               columnId,
             }))
 
-            store.pushDeletedBatch(projectId, tickets, toastId)
+            store.pushDeletedBatch(projectId, tickets)
 
             const entry = useUndoStore.getState().popUndo()
 
@@ -363,14 +228,13 @@ describe('Undo Store Fuzz Tests', () => {
             resetStore()
             const store = useUndoStore.getState()
             const columnId = 'col-1'
-            const toastId = crypto.randomUUID()
 
             const tickets = ticketIds.map((id) => ({
               ticket: createTestTicket({ id, projectId }),
               columnId,
             }))
 
-            store.pushPaste(projectId, tickets, toastId)
+            store.pushPaste(projectId, tickets)
 
             const entry = useUndoStore.getState().popUndo()
 
@@ -395,11 +259,10 @@ describe('Undo Store Fuzz Tests', () => {
           (projectId, fromColumnId, toColumnId, fromName, toName) => {
             resetStore()
             const store = useUndoStore.getState()
-            const toastId = crypto.randomUUID()
 
             const moves = [{ ticketId: crypto.randomUUID(), fromColumnId, toColumnId }]
 
-            store.pushMove(projectId, moves, fromName, toName, toastId)
+            store.pushMove(projectId, moves, fromName, toName)
 
             const entry = useUndoStore.getState().popUndo()
 
@@ -420,12 +283,11 @@ describe('Undo Store Fuzz Tests', () => {
         fc.property(fc.uuid(), fc.uuid(), (projectId, ticketId) => {
           resetStore()
           const store = useUndoStore.getState()
-          const toastId = crypto.randomUUID()
 
           const before = createTestTicket({ id: ticketId, title: 'Before' })
           const after = createTestTicket({ id: ticketId, title: 'After' })
 
-          store.pushUpdate(projectId, [{ ticketId, before, after }], toastId)
+          store.pushUpdate(projectId, [{ ticketId, before, after }])
 
           const entry = useUndoStore.getState().popUndo()
 
@@ -445,10 +307,9 @@ describe('Undo Store Fuzz Tests', () => {
         fc.property(fc.uuid(), fc.uuid(), (projectId, columnId) => {
           resetStore()
           const store = useUndoStore.getState()
-          const toastId = crypto.randomUUID()
           const ticket = createTestTicket({ projectId })
 
-          store.pushTicketCreate(projectId, ticket, columnId, toastId)
+          store.pushTicketCreate(projectId, ticket, columnId)
 
           const entry = useUndoStore.getState().popUndo()
 
@@ -466,30 +327,24 @@ describe('Undo Store Fuzz Tests', () => {
   describe('clearRedo', () => {
     it('should empty redo stack', () => {
       fc.assert(
-        fc.property(fc.array(fc.uuid(), { minLength: 1, maxLength: 5 }), (toastIds) => {
-          // Ensure unique toastIds to avoid potential issues
-          const uniqueToastIds = [...new Set(toastIds)]
-          if (uniqueToastIds.length === 0) return
-
+        fc.property(fc.nat({ min: 1, max: 5 }), (count) => {
           resetStore()
           const store = useUndoStore.getState()
           const projectId = 'test-project'
           const columnId = 'col-1'
 
           // Build up redo stack by pushing entries directly
-          // We use pushRedo to avoid the clear-redo-on-push behavior
-          for (const toastId of uniqueToastIds) {
+          for (let i = 0; i < count; i++) {
             const ticket = createTestTicket()
             const entry = {
               action: { type: 'delete' as const, tickets: [{ ticket, columnId }] },
               timestamp: Date.now(),
-              toastId,
               projectId,
             }
             store.pushRedo(entry)
           }
 
-          expect(useUndoStore.getState().redoStack.length).toBe(uniqueToastIds.length)
+          expect(useUndoStore.getState().redoStack.length).toBe(count)
 
           useUndoStore.getState().clearRedo()
 
@@ -500,49 +355,37 @@ describe('Undo Store Fuzz Tests', () => {
     })
   })
 
-  describe('updateToastId', () => {
-    it('should update toast ID in undo stack', () => {
+  describe('canUndo and canRedo', () => {
+    it('should report correct undo/redo availability', () => {
       fc.assert(
-        fc.property(fc.uuid(), fc.uuid(), (oldId, newId) => {
-          fc.pre(oldId !== newId)
-
+        fc.property(fc.nat({ max: 5 }), (count) => {
           resetStore()
           const store = useUndoStore.getState()
           const projectId = 'test-project'
           const columnId = 'col-1'
-          const ticket = createTestTicket()
 
-          store.pushDeleted(projectId, ticket, columnId, oldId)
-          useUndoStore.getState().updateUndoToastId(oldId, newId)
+          // Initially both should be false
+          expect(useUndoStore.getState().canUndo()).toBe(false)
+          expect(useUndoStore.getState().canRedo()).toBe(false)
 
-          const entry = useUndoStore.getState().undoStack[0]
-          expect(entry.toastId).toBe(newId)
-        }),
-        FUZZ_CONFIG.standard,
-      )
-    })
-
-    it('should update toast ID in redo stack', () => {
-      fc.assert(
-        fc.property(fc.uuid(), fc.uuid(), (oldId, newId) => {
-          fc.pre(oldId !== newId)
-
-          resetStore()
-          const store = useUndoStore.getState()
-          const projectId = 'test-project'
-          const columnId = 'col-1'
-          const ticket = createTestTicket()
-
-          store.pushDeleted(projectId, ticket, columnId, oldId)
-          const entry = useUndoStore.getState().popUndo()
-          if (entry) {
-            useUndoStore.getState().pushRedo(entry)
+          // Push entries
+          for (let i = 0; i < count; i++) {
+            const ticket = createTestTicket()
+            store.pushDeleted(projectId, ticket, columnId)
           }
 
-          useUndoStore.getState().updateRedoToastId(oldId, newId)
+          // Can undo should reflect count
+          expect(useUndoStore.getState().canUndo()).toBe(count > 0)
+          expect(useUndoStore.getState().canRedo()).toBe(false)
 
-          const redoEntry = useUndoStore.getState().redoStack[0]
-          expect(redoEntry.toastId).toBe(newId)
+          // Pop and push to redo
+          if (count > 0) {
+            const entry = useUndoStore.getState().popUndo()
+            if (entry) {
+              useUndoStore.getState().pushRedo(entry)
+            }
+            expect(useUndoStore.getState().canRedo()).toBe(true)
+          }
         }),
         FUZZ_CONFIG.standard,
       )
