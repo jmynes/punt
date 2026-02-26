@@ -200,7 +200,7 @@ created > -7d
 (type = bug OR type = task) AND sprint IS NOT EMPTY
 ```
 
-**Fields:** type, priority, status, assignee, reporter, sprint, labels, storyPoints, dueDate, created, updated, resolution
+**Fields:** type, priority, status, assignee, reporter, sprint, labels, storyPoints, dueDate, created, updated, resolution, key, summary (alias: title), description
 
 **Operators:** `=`, `!=`, `>`, `<`, `>=`, `<=`, `IN`, `NOT IN`, `IS EMPTY`, `IS NOT EMPTY`, `AND`, `OR`, `NOT`
 

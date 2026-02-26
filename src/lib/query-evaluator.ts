@@ -171,6 +171,11 @@ function compareSprintNames(a: string, b: string): number {
   return aSort.text.localeCompare(bSort.text) || aSort.number - bSort.number
 }
 
+function extractKeyNumber(key: string): number | null {
+  const match = key.match(/-(\d+)$/)
+  return match ? Number.parseInt(match[1], 10) : null
+}
+
 function compareValues(
   fieldValue: string | number | Date | null,
   operator: ComparisonNode['operator'],
@@ -257,8 +262,47 @@ function evaluateComparison(
     return fieldValue.some((v) => compareValues(v, node.operator, node.value, node.valueType))
   }
 
-  if (node.field === 'key' && node.valueType === 'number') {
-    return compareValues(ticket.number, node.operator, node.value, 'number')
+  if (node.field === 'key') {
+    if (node.valueType === 'number') {
+      return compareValues(ticket.number, node.operator, node.value, 'number')
+    }
+    const targetStr = String(node.value)
+    const targetNum = extractKeyNumber(targetStr)
+    if (
+      targetNum !== null &&
+      (node.operator === '>' ||
+        node.operator === '<' ||
+        node.operator === '>=' ||
+        node.operator === '<=')
+    ) {
+      return compareValues(ticket.number, node.operator, targetNum, 'number')
+    }
+    return compareValues(
+      fieldValue as string | number | Date | null,
+      node.operator,
+      node.value,
+      node.valueType,
+    )
+  }
+
+  if (node.field === 'title' || node.field === 'description') {
+    if (fieldValue === null) {
+      return node.operator === '!='
+    }
+    const fieldStr = String(fieldValue).toLowerCase()
+    const targetStr = String(node.value).toLowerCase()
+    if (node.operator === '=') {
+      return fieldStr.includes(targetStr)
+    }
+    if (node.operator === '!=') {
+      return !fieldStr.includes(targetStr)
+    }
+    return compareValues(
+      fieldValue as string | number | Date | null,
+      node.operator,
+      node.value,
+      node.valueType,
+    )
   }
 
   // Priority has ordinal semantics: lowest < low < medium < high < highest < critical
@@ -339,6 +383,30 @@ function evaluateIn(node: InNode, ticket: TicketWithRelations, ctx: EvaluationCo
 
   if (fieldValue === null) {
     return node.negated
+  }
+
+  // Key field: match by ticket number (numeric values) or full key string
+  if (node.field === 'key') {
+    const ticketNumber = (ticket as TicketWithRelations).number
+    const fullKey = String(fieldValue).toLowerCase()
+    const isIn = node.values.some((v) => {
+      if (typeof v === 'number') {
+        return ticketNumber === v
+      }
+      const valStr = String(v).toLowerCase()
+      // Match full key ("PUNT-1") or extract number from key string
+      if (fullKey === valStr) return true
+      const num = extractKeyNumber(valStr)
+      return num !== null && ticketNumber === num
+    })
+    return node.negated ? !isIn : isIn
+  }
+
+  // Title/description: IN uses contains matching (consistent with = operator)
+  if (node.field === 'title' || node.field === 'description') {
+    const fieldStr = String(fieldValue).toLowerCase()
+    const isIn = node.values.some((v) => fieldStr.includes(String(v).toLowerCase()))
+    return node.negated ? !isIn : isIn
   }
 
   const lowerValues = node.values.map((v) => (typeof v === 'string' ? v.toLowerCase() : v))
