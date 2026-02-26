@@ -249,6 +249,8 @@ export function isZipContent(base64Content: string): boolean {
 export interface WipeProjectsParams {
   confirmPassword: string
   confirmText: string
+  totpCode?: string
+  isRecoveryCode?: boolean
 }
 
 export interface WipeProjectsResult {
