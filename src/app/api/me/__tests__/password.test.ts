@@ -30,6 +30,13 @@ vi.mock('@/lib/demo/demo-config', () => ({
   isDemoMode: vi.fn().mockReturnValue(false),
 }))
 
+vi.mock('@/lib/totp', () => ({
+  decryptTotpSecret: vi.fn(),
+  verifyTotpToken: vi.fn(),
+  verifyRecoveryCode: vi.fn(),
+  markRecoveryCodeUsed: vi.fn(),
+}))
+
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { isDemoMode } from '@/lib/demo/demo-config'
@@ -122,8 +129,8 @@ describe('Password Change API - Current Password Verification', () => {
     )
     const data = await response.json()
 
-    expect(response.status).toBe(400)
-    expect(data.error).toBe('Current password is incorrect')
+    expect(response.status).toBe(401)
+    expect(data.error).toBe('Invalid password')
   })
 
   it('should reject if user has no password hash', async () => {
@@ -137,8 +144,8 @@ describe('Password Change API - Current Password Verification', () => {
     )
     const data = await response.json()
 
-    expect(response.status).toBe(400)
-    expect(data.error).toBe('Cannot change password for this account type')
+    expect(response.status).toBe(401)
+    expect(data.error).toBe('Invalid credentials')
   })
 })
 
