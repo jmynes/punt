@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { ChatFAB, ChatPanel } from '@/components/chat'
 import { EmailVerificationBanner } from '@/components/common/email-verification-banner'
 import { RoleSimulationBanner } from '@/components/common/role-simulation-banner'
+import { SearchClearOnLeave } from '@/components/common/search-clear-on-leave'
 import { Dialogs } from '@/components/dialogs'
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
 import { Footer, Header, MobileNav, MobileNotice, Sidebar } from '@/components/layout'
@@ -27,6 +28,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <SelectionIndicator />
       <ChatPanel />
       <ChatFAB />
+      <SearchClearOnLeave />
     </div>
   )
 }

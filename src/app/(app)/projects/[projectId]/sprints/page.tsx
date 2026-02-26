@@ -18,6 +18,7 @@ import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 
 export default function SprintPlanningPage() {
@@ -93,10 +94,33 @@ export default function SprintPlanningPage() {
     filterByDueDate,
     filterByAttachments,
     searchQuery,
+    setSearchQuery,
     showSubtasks,
     queryMode,
     queryText,
+    setQueryText,
+    setQueryMode,
   } = useBacklogStore()
+
+  // Clear search state based on searchPersistence preference
+  const searchPersistence = useSettingsStore((s) => s.searchPersistence)
+  useEffect(() => {
+    const { searchProjectId } = useBacklogStore.getState()
+    const projectChanged = searchProjectId !== null && searchProjectId !== projectId
+
+    if (searchPersistence === 'never') {
+      setSearchQuery('')
+      setQueryText('')
+      setQueryMode(false)
+    } else if (searchPersistence === 'within-project' && projectChanged) {
+      setSearchQuery('')
+      setQueryText('')
+      setQueryMode(false)
+    }
+    // 'always': never clear
+
+    useBacklogStore.getState().setSearchProjectId(projectId)
+  }, [projectId, searchPersistence, setSearchQuery, setQueryText, setQueryMode])
 
   // Fetch sprints for autocomplete
   const { data: projectSprints } = useProjectSprints(projectId)

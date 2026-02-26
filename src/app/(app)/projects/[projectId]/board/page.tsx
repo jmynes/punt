@@ -22,6 +22,7 @@ import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import type { ColumnWithTickets } from '@/types'
 
@@ -55,6 +56,9 @@ export default function BoardPage() {
     searchQuery,
     queryMode,
     queryText,
+    setSearchQuery,
+    setQueryText,
+    setQueryMode,
   } = useBacklogStore()
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
@@ -153,6 +157,26 @@ export default function BoardPage() {
       setActiveTicketId(null)
     }
   }, [clearSelection, setActiveTicketId, hasTicketParam])
+
+  // Clear search state based on searchPersistence preference
+  const searchPersistence = useSettingsStore((s) => s.searchPersistence)
+  useEffect(() => {
+    const { searchProjectId } = useBacklogStore.getState()
+    const projectChanged = searchProjectId !== null && searchProjectId !== projectId
+
+    if (searchPersistence === 'never') {
+      setSearchQuery('')
+      setQueryText('')
+      setQueryMode(false)
+    } else if (searchPersistence === 'within-project' && projectChanged) {
+      setSearchQuery('')
+      setQueryText('')
+      setQueryMode(false)
+    }
+    // 'always': never clear
+
+    useBacklogStore.getState().setSearchProjectId(projectId)
+  }, [projectId, searchPersistence, setSearchQuery, setQueryText, setQueryMode])
 
   // Apply filters to columns
   // Board view shows tickets in the current sprint (active or planning)

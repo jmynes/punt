@@ -58,6 +58,8 @@ function PreferencesContent() {
     setErrorToastAutoDismiss,
     persistTableSort,
     setPersistTableSort,
+    searchPersistence,
+    setSearchPersistence,
     sidebarExpandedSections,
     setSidebarSectionExpanded,
     hideColorRemovalWarning,
@@ -313,6 +315,79 @@ function PreferencesContent() {
                     onCheckedChange={(checked) => setPersistTableSort(checked === true)}
                     className="data-[state=checked]:bg-amber-600"
                   />
+                </div>
+
+                <Separator className="bg-zinc-800" />
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-zinc-300">Search persistence</Label>
+                    <p className="text-sm text-zinc-500">
+                      Control when PQL queries and search text are kept or cleared as you navigate
+                    </p>
+                  </div>
+                  <RadioGroup
+                    value={searchPersistence}
+                    onValueChange={(value) =>
+                      setSearchPersistence(value as 'never' | 'within-project' | 'always')
+                    }
+                    className="space-y-3"
+                  >
+                    <div className="flex items-start space-x-2">
+                      <RadioGroupItem
+                        value="never"
+                        id="search-persist-never"
+                        className="mt-0.5 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                      />
+                      <div className="space-y-0.5">
+                        <Label
+                          htmlFor="search-persist-never"
+                          className="text-sm text-zinc-300 cursor-pointer font-normal"
+                        >
+                          Never
+                        </Label>
+                        <p className="text-xs text-zinc-500">
+                          Clear search when navigating between backlog, board, and sprints
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <RadioGroupItem
+                        value="within-project"
+                        id="search-persist-within-project"
+                        className="mt-0.5 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                      />
+                      <div className="space-y-0.5">
+                        <Label
+                          htmlFor="search-persist-within-project"
+                          className="text-sm text-zinc-300 cursor-pointer font-normal"
+                        >
+                          Within project
+                        </Label>
+                        <p className="text-xs text-zinc-500">
+                          Keep search within the same project, clear when switching projects
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <RadioGroupItem
+                        value="always"
+                        id="search-persist-always"
+                        className="mt-0.5 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                      />
+                      <div className="space-y-0.5">
+                        <Label
+                          htmlFor="search-persist-always"
+                          className="text-sm text-zinc-300 cursor-pointer font-normal"
+                        >
+                          Always
+                        </Label>
+                        <p className="text-xs text-zinc-500">
+                          Keep search even when switching between projects
+                        </p>
+                      </div>
+                    </div>
+                  </RadioGroup>
                 </div>
               </CardContent>
             </Card>

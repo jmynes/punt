@@ -295,6 +295,9 @@ export default function BacklogPage() {
     setBacklogOrder,
     reorderColumns,
     backlogOrder,
+    setSearchQuery,
+    setQueryText,
+    setQueryMode,
   } = useBacklogStore()
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
@@ -376,6 +379,26 @@ export default function BacklogPage() {
       setActiveTicketId(null)
     }
   }, [clearSelection, setActiveTicketId, hasTicketParam])
+
+  // Clear search state based on searchPersistence preference
+  const searchPersistence = useSettingsStore((s) => s.searchPersistence)
+  useEffect(() => {
+    const { searchProjectId } = useBacklogStore.getState()
+    const projectChanged = searchProjectId !== null && searchProjectId !== projectId
+
+    if (searchPersistence === 'never') {
+      setSearchQuery('')
+      setQueryText('')
+      setQueryMode(false)
+    } else if (searchPersistence === 'within-project' && projectChanged) {
+      setSearchQuery('')
+      setQueryText('')
+      setQueryMode(false)
+    }
+    // 'always': never clear
+
+    useBacklogStore.getState().setSearchProjectId(projectId)
+  }, [projectId, searchPersistence, setSearchQuery, setQueryText, setQueryMode])
 
   // Set active project after hydration
   useEffect(() => {
