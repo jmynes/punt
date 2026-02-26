@@ -267,6 +267,7 @@ export const InvitationSchema = z.object({
 // ============================================================================
 
 export const ExportDataSchema = z.object({
+  serverSecrets: z.object({ authSecret: z.string() }).optional(),
   systemSettings: SystemSettingsSchema.nullable(),
   users: z.array(UserSchema),
   projects: z.array(ProjectSchema),

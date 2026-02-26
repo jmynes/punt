@@ -3,13 +3,18 @@ import { generateURI, generateSecret as otplibGenerateSecret, verifySync } from 
 import QRCode from 'qrcode'
 import { hashPassword, verifyPassword } from '@/lib/password'
 
+// Derive an encryption key from a given secret using HKDF for proper domain separation
+function getEncryptionKeyFromSecret(authSecret: string): Buffer {
+  return Buffer.from(hkdfSync('sha256', authSecret, 'punt-totp-secret-encryption', '', 32))
+}
+
 // Encryption key derived from AUTH_SECRET using HKDF for proper domain separation
 function getEncryptionKey(): Buffer {
   const secret = process.env.AUTH_SECRET
   if (!secret) {
     throw new Error('AUTH_SECRET environment variable is required for TOTP encryption')
   }
-  return Buffer.from(hkdfSync('sha256', secret, 'punt-totp-secret-encryption', '', 32))
+  return getEncryptionKeyFromSecret(secret)
 }
 
 /**
@@ -51,6 +56,32 @@ export function decryptTotpSecret(encryptedSecret: string): string {
   decrypted += decipher.final('utf8')
 
   return decrypted
+}
+
+/**
+ * Re-encrypt a TOTP secret from an old AUTH_SECRET to the current server's AUTH_SECRET.
+ * Used during database import to make 2FA portable across servers.
+ */
+export function reencryptTotpSecret(encryptedSecret: string, oldAuthSecret: string): string {
+  const oldKey = getEncryptionKeyFromSecret(oldAuthSecret)
+  const parts = encryptedSecret.split(':')
+
+  if (parts.length !== 3) {
+    throw new Error('Invalid encrypted TOTP secret format')
+  }
+
+  const iv = Buffer.from(parts[0], 'hex')
+  const authTag = Buffer.from(parts[1], 'hex')
+  const encrypted = parts[2]
+
+  // Decrypt with old key
+  const decipher = createDecipheriv('aes-256-gcm', oldKey, iv)
+  decipher.setAuthTag(authTag)
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+  decrypted += decipher.final('utf8')
+
+  // Re-encrypt with current server's key
+  return encryptTotpSecret(decrypted)
 }
 
 /**

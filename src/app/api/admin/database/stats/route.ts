@@ -12,6 +12,7 @@ export interface DatabaseStats {
   comments: number
   attachments: number
   roles: number
+  usersWithTotp: number
 }
 
 /**
@@ -22,18 +23,29 @@ export async function GET() {
   const authResult = await requireSystemAdmin()
   if (authResult instanceof NextResponse) return authResult
 
-  const [users, projects, tickets, sprints, labels, columns, comments, attachments, roles] =
-    await Promise.all([
-      db.user.count(),
-      db.project.count(),
-      db.ticket.count(),
-      db.sprint.count(),
-      db.label.count(),
-      db.column.count(),
-      db.comment.count(),
-      db.attachment.count(),
-      db.role.count(),
-    ])
+  const [
+    users,
+    projects,
+    tickets,
+    sprints,
+    labels,
+    columns,
+    comments,
+    attachments,
+    roles,
+    usersWithTotp,
+  ] = await Promise.all([
+    db.user.count(),
+    db.project.count(),
+    db.ticket.count(),
+    db.sprint.count(),
+    db.label.count(),
+    db.column.count(),
+    db.comment.count(),
+    db.attachment.count(),
+    db.role.count(),
+    db.user.count({ where: { totpEnabled: true } }),
+  ])
 
   const stats: DatabaseStats = {
     users,
@@ -45,6 +57,7 @@ export async function GET() {
     comments,
     attachments,
     roles,
+    usersWithTotp,
   }
 
   return NextResponse.json(stats)

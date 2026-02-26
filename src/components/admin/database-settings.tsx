@@ -8,6 +8,7 @@ import {
   EyeOff,
   FileImage,
   FolderX,
+  Info,
   Lock,
   Paperclip,
   Trash2,
@@ -23,6 +24,7 @@ import {
   checkIfExportEncrypted,
   fileToBase64,
   isZipContent,
+  useDatabaseStats,
 } from '@/hooks/queries/use-database-backup'
 import { DatabaseExportDialog } from './database-export-dialog'
 import { DatabaseImportDialog } from './database-import-dialog'
@@ -68,6 +70,10 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
 }
 
 export function DatabaseSettings() {
+  const { data: stats } = useDatabaseStats()
+  const usersWithTotp = stats?.usersWithTotp ?? 0
+  const totpRequiresPassword = usersWithTotp > 0
+
   const [exportPassword, setExportPassword] = useState('')
   const [showExportPassword, setShowExportPassword] = useState(false)
   const [includeAttachments, setIncludeAttachments] = useState(false)
@@ -209,7 +215,7 @@ export function DatabaseSettings() {
           {/* Password */}
           <div className="space-y-2">
             <Label htmlFor="exportPassword" className="text-zinc-300">
-              Encryption Password (Optional)
+              Encryption Password {totpRequiresPassword ? '(Required)' : '(Optional)'}
             </Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
@@ -218,7 +224,11 @@ export function DatabaseSettings() {
                 type="text"
                 value={exportPassword}
                 onChange={(e) => setExportPassword(e.target.value)}
-                placeholder="Leave empty for unencrypted backup"
+                placeholder={
+                  totpRequiresPassword
+                    ? 'Required to protect 2FA secrets'
+                    : 'Leave empty for unencrypted backup'
+                }
                 className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10 ${!showExportPassword ? 'password-mask' : ''}`}
               />
               <button
@@ -230,6 +240,16 @@ export function DatabaseSettings() {
               </button>
             </div>
             <PasswordStrengthIndicator password={exportPassword} />
+            {totpRequiresPassword && !exportPassword && (
+              <div className="flex items-start gap-2 p-3 bg-amber-900/20 border border-amber-800/50 rounded-lg">
+                <Info className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-400">
+                  {usersWithTotp} user{usersWithTotp !== 1 ? 's' : ''} ha
+                  {usersWithTotp !== 1 ? 've' : 's'} 2FA enabled. Password encryption is required to
+                  preserve 2FA across servers.
+                </p>
+              </div>
+            )}
             {exportPassword && (
               <p className="text-xs text-amber-500">
                 Remember this password. You will need it to restore the backup.
@@ -237,7 +257,12 @@ export function DatabaseSettings() {
             )}
           </div>
 
-          <Button onClick={handleExportClick} variant="primary" className="w-full sm:w-auto">
+          <Button
+            onClick={handleExportClick}
+            disabled={totpRequiresPassword && !exportPassword}
+            variant="primary"
+            className="w-full sm:w-auto"
+          >
             <Download className="h-4 w-4" />
             Export Database
           </Button>
@@ -399,6 +424,7 @@ export function DatabaseSettings() {
           includeAvatars,
         }}
         onComplete={handleExportComplete}
+        usersWithTotp={usersWithTotp}
       />
 
       {/* Import Dialog */}

@@ -28,6 +28,7 @@ export function useDatabaseStats() {
           comments: 0,
           attachments: 0,
           roles: 8,
+          usersWithTotp: 0,
         }
       }
 

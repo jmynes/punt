@@ -125,6 +125,16 @@ export async function POST(request: Request) {
     const authError = await verifyReauth(user.id, confirmPassword, totpCode, isRecoveryCode)
     if (authError) return authError
 
+    // Require encryption when users have 2FA enabled (secrets need password protection)
+    if (!password) {
+      const totpUserCount = await db.user.count({ where: { totpEnabled: true } })
+      if (totpUserCount > 0) {
+        return badRequestError(
+          'Encryption password is required when users have 2FA enabled. 2FA secrets must be protected with a password to be portable across servers.',
+        )
+      }
+    }
+
     const includeFiles = includeAttachments || includeAvatars
 
     if (includeFiles) {

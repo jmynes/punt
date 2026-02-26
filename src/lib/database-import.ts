@@ -21,7 +21,7 @@ import {
   ExportDataSchema,
   type ExportOptionsType,
 } from '@/lib/schemas/database-export'
-import { decryptTotpSecret } from '@/lib/totp'
+import { decryptTotpSecret, reencryptTotpSecret } from '@/lib/totp'
 
 export interface ImportResult {
   success: boolean
@@ -416,11 +416,27 @@ export async function importDatabase(
     missingFiles: [] as string[],
   }
 
-  // Validate TOTP secrets — if AUTH_SECRET changed, decryption will fail
-  // and we need to reset 2FA for those users
+  // Re-encrypt or validate TOTP secrets for portability across servers
   const twoFactorResets: string[] = []
+  const bundledAuthSecret = data.serverSecrets?.authSecret
   const usersWithValidatedTotp = data.users.map((user) => {
     if (user.totpEnabled && user.totpSecret) {
+      if (bundledAuthSecret) {
+        // Export includes the original AUTH_SECRET — re-encrypt with current server's key
+        try {
+          const reencrypted = reencryptTotpSecret(user.totpSecret, bundledAuthSecret)
+          return { ...user, totpSecret: reencrypted }
+        } catch {
+          twoFactorResets.push(user.username)
+          return {
+            ...user,
+            totpSecret: null,
+            totpEnabled: false,
+            totpRecoveryCodes: null,
+          }
+        }
+      }
+      // No bundled secret — try decrypting with current AUTH_SECRET (legacy behavior)
       try {
         decryptTotpSecret(user.totpSecret)
         return user
@@ -437,10 +453,13 @@ export async function importDatabase(
     return user
   })
 
+  // Strip serverSecrets from data before DB operations
+  const { serverSecrets: _, ...dataWithoutSecrets } = data
+
   // Handle missing files: clear avatar field if file won't be present
   const shouldClearMissingAvatars = options?.exportOptions?.includeAvatars && !options?.zipBuffer
   const dataToImport = {
-    ...data,
+    ...dataWithoutSecrets,
     users: shouldClearMissingAvatars
       ? usersWithValidatedTotp.map((u) => ({ ...u, avatar: null }))
       : usersWithValidatedTotp,
