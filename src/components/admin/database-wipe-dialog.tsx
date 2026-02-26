@@ -83,7 +83,6 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
           </DialogTitle>
           <DialogDescription className="text-zinc-400">
             {step === 'warning' && 'This will permanently delete all data.'}
-            {step === 'verify' && 'Verify your identity to continue.'}
             {step === 'credentials' && 'Set up the new admin account.'}
             {step === 'confirm' && 'Confirm the wipe operation.'}
             {step === 'wiping' && 'Wiping database...'}
