@@ -295,6 +295,9 @@ export default function BacklogPage() {
     setBacklogOrder,
     reorderColumns,
     backlogOrder,
+    setSearchQuery,
+    setQueryText,
+    setQueryMode,
   } = useBacklogStore()
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
@@ -376,6 +379,14 @@ export default function BacklogPage() {
       setActiveTicketId(null)
     }
   }, [clearSelection, setActiveTicketId, hasTicketParam])
+
+  // Clear search state when switching projects to prevent stale results
+  // biome-ignore lint/correctness/useExhaustiveDependencies: projectId is the intentional trigger
+  useEffect(() => {
+    setSearchQuery('')
+    setQueryText('')
+    setQueryMode(false)
+  }, [projectId, setSearchQuery, setQueryText, setQueryMode])
 
   // Set active project after hydration
   useEffect(() => {

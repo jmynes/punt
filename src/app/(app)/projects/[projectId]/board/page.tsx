@@ -55,6 +55,9 @@ export default function BoardPage() {
     searchQuery,
     queryMode,
     queryText,
+    setSearchQuery,
+    setQueryText,
+    setQueryMode,
   } = useBacklogStore()
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
@@ -153,6 +156,14 @@ export default function BoardPage() {
       setActiveTicketId(null)
     }
   }, [clearSelection, setActiveTicketId, hasTicketParam])
+
+  // Clear search state when switching projects to prevent stale results
+  // biome-ignore lint/correctness/useExhaustiveDependencies: projectId is the intentional trigger
+  useEffect(() => {
+    setSearchQuery('')
+    setQueryText('')
+    setQueryMode(false)
+  }, [projectId, setSearchQuery, setQueryText, setQueryMode])
 
   // Apply filters to columns
   // Board view shows tickets in the current sprint (active or planning)
