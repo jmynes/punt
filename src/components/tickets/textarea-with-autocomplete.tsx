@@ -208,7 +208,7 @@ export const TextareaWithAutocomplete = forwardRef<
 
     // Position dropdown just below the current line
     return {
-      top: textareaRect.top + relativeTop - scrollTop + window.scrollY + lineHeight + 2,
+      top: textareaRect.top + relativeTop - scrollTop + window.scrollY + lineHeight,
       left: textareaRect.left + relativeLeft + window.scrollX,
     }
   }, [value])
