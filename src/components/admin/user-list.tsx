@@ -1485,9 +1485,9 @@ export function UserList() {
               </AlertDialogTitle>
               <AlertDialogDescription className="text-zinc-400">
                 Are you sure you want to permanently delete{' '}
-                <strong className="text-zinc-200">{userToDelete?.name}</strong> (
-                {userToDelete?.email}
-                )? This action cannot be undone and will remove all their data.
+                <strong className="text-zinc-200">{userToDelete?.name}</strong>
+                {userToDelete?.email && <> ({userToDelete.email})</>}? This action cannot be undone
+                and will remove all their data.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
