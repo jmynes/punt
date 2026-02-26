@@ -154,28 +154,22 @@ export const TextareaWithAutocomplete = forwardRef<
     setSelectedIndex(0)
   }, [suggestions])
 
-  // Get caret position relative to the textarea for dropdown placement.
-  // Uses line counting instead of a mirror element for reliability.
+  // Get position for the autocomplete dropdown relative to the textarea.
+  // Returns the textarea's top edge as an anchor — the dropdown renders
+  // above or below depending on available viewport space.
   const getCaretPosition = useCallback((): { top: number; left: number } | null => {
     const textarea = textareaRef.current
     if (!textarea) return null
 
     const rect = textarea.getBoundingClientRect()
     const computed = window.getComputedStyle(textarea)
-    const lineHeight = Number.parseInt(computed.lineHeight, 10) || 20
-    const paddingTop = Number.parseInt(computed.paddingTop, 10) || 0
     const paddingLeft = Number.parseInt(computed.paddingLeft, 10) || 0
 
-    // Count newlines before cursor to estimate which line the cursor is on
-    const textBeforeCursor = value.substring(0, textarea.selectionStart)
-    const currentLine = textBeforeCursor.split('\n').length - 1
-
-    // Position uses viewport coordinates (dropdown is position: fixed)
     return {
-      top: rect.top + paddingTop + (currentLine + 1) * lineHeight - textarea.scrollTop,
+      top: rect.top,
       left: rect.left + paddingLeft,
     }
-  }, [value])
+  }, [])
 
   // Check for trigger characters when text changes or cursor moves
   const checkForTrigger = useCallback(() => {
@@ -383,6 +377,7 @@ export const TextareaWithAutocomplete = forwardRef<
             position={state.position}
             isVisible={state.isOpen}
             searchText={state.searchText}
+            placement="above"
           />,
           document.body,
         )}
