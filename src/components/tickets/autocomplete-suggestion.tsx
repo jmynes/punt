@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import type { TicketWithRelations, UserSummary } from '@/types'
@@ -64,7 +64,32 @@ export function AutocompleteSuggestion({
     }
   }, [activeIndex])
 
-  if (!isVisible || !position || suggestions.length === 0) {
+  // Clamp position to stay within viewport
+  const clampedPosition = useMemo(() => {
+    if (!position) return null
+    const dropdownWidth = 288 // w-72
+    const dropdownMaxHeight = 240 // max-h-60
+    const padding = 8
+
+    let { top, left } = position
+
+    // Clamp horizontally
+    if (left + dropdownWidth + padding > window.innerWidth) {
+      left = window.innerWidth - dropdownWidth - padding
+    }
+    if (left < padding) {
+      left = padding
+    }
+
+    // Flip above cursor if it would overflow bottom
+    if (top + dropdownMaxHeight + padding > window.innerHeight + window.scrollY) {
+      top = position.top - dropdownMaxHeight - 24 // 24 = 20 (offset below caret) + 4 (gap above)
+    }
+
+    return { top, left }
+  }, [position])
+
+  if (!isVisible || !clampedPosition || suggestions.length === 0) {
     return null
   }
 
@@ -73,8 +98,8 @@ export function AutocompleteSuggestion({
       ref={listRef}
       className="fixed z-[9999] w-72 max-h-60 overflow-y-auto rounded-md border border-zinc-700 bg-zinc-900 shadow-lg pointer-events-auto"
       style={{
-        top: position.top,
-        left: position.left,
+        top: clampedPosition.top,
+        left: clampedPosition.left,
       }}
       // Prevent editor from losing focus when interacting with the dropdown
       onMouseDown={(e) => {
