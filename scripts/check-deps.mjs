@@ -38,13 +38,17 @@ try {
     run('pnpm install')
     acted = true
   } else if (mtime(lockfile) > mtime(pnpmMarker)) {
-    console.log(yellow('[check-deps] pnpm-lock.yaml is newer than node_modules. Installing dependencies...'))
+    console.log(
+      yellow('[check-deps] pnpm-lock.yaml is newer than node_modules. Installing dependencies...'),
+    )
     run('pnpm install')
     acted = true
   }
 
   if (mtime(prismaSchema) > mtime(prismaGenerated)) {
-    console.log(yellow('[check-deps] Prisma schema is newer than generated client. Regenerating...'))
+    console.log(
+      yellow('[check-deps] Prisma schema is newer than generated client. Regenerating...'),
+    )
     run('pnpm db:generate')
     acted = true
   }
