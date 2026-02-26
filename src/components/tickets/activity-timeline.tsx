@@ -230,7 +230,15 @@ function ActivityGroupRow({ entry }: { entry: ActivityGroupEntry }) {
   if (doneTransition) {
     const isMarked = doneTransition === 'marked_done'
     const moveChange = entry.changes.find((c) => c.action === 'moved')
+    const resolutionChange = entry.changes.find((c) => c.action === 'resolution_changed')
     const destinationColumn = moveChange ? parseColumnValue(moveChange.newValue) : null
+    // Show the specific resolution if it's not just "Done"
+    const resolutionValue =
+      isMarked && resolutionChange?.newValue && typeof resolutionChange.newValue === 'string'
+        ? resolutionChange.newValue
+        : null
+    const showResolution =
+      resolutionValue && resolutionValue !== 'null' && resolutionValue !== 'Done'
     // Collect any remaining changes that are not part of the done transition
     const otherChanges = entry.changes.filter(
       (c) => c.action !== 'moved' && c.action !== 'resolution_changed',
@@ -252,7 +260,13 @@ function ActivityGroupRow({ entry }: { entry: ActivityGroupEntry }) {
             <UserName user={entry.user} />{' '}
             {isMarked ? (
               <span>
-                marked as done
+                {showResolution ? (
+                  <>
+                    resolved as <ValueBadge value={resolutionValue} />
+                  </>
+                ) : (
+                  'marked as done'
+                )}
                 {destinationColumn && (
                   <>
                     {' '}
