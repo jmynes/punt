@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import type { TicketWithRelations, UserSummary } from '@/types'
@@ -28,6 +28,8 @@ interface AutocompleteSuggestionProps {
   position: { top: number; left: number } | null
   isVisible: boolean
   searchText: string
+  /** 'below' (default): dropdown below cursor using top. 'above': dropdown anchored above position using bottom. */
+  placement?: 'below' | 'above'
   /** Called when mouse enters/leaves the dropdown to prevent premature closing */
   onInteractionChange?: (isInteracting: boolean) => void
 }
@@ -42,6 +44,7 @@ export function AutocompleteSuggestion({
   position,
   isVisible,
   searchText,
+  placement = 'below',
   onInteractionChange,
 }: AutocompleteSuggestionProps) {
   const listRef = useRef<HTMLDivElement>(null)
@@ -64,17 +67,52 @@ export function AutocompleteSuggestion({
     }
   }, [activeIndex])
 
-  if (!isVisible || !position || suggestions.length === 0) {
+  // Clamp position to stay within viewport
+  const clampedStyle = useMemo(() => {
+    if (!position) return null
+    const dropdownWidth = 288 // w-72
+    const dropdownMaxHeight = 240 // max-h-60
+    const padding = 8
+
+    let { left } = position
+
+    // Clamp horizontally
+    if (left + dropdownWidth + padding > window.innerWidth) {
+      left = window.innerWidth - dropdownWidth - padding
+    }
+    if (left < padding) {
+      left = padding
+    }
+
+    if (placement === 'above') {
+      // Anchor dropdown's bottom edge to position.top, growing upward
+      const bottom = window.innerHeight - position.top
+      const availableAbove = position.top - padding
+      const maxHeight = Math.min(dropdownMaxHeight, availableAbove)
+      return { bottom, left, maxHeight, top: undefined as number | undefined }
+    }
+
+    // Default: position below cursor
+    let top = position.top
+    if (top + dropdownMaxHeight + padding > window.innerHeight) {
+      top = Math.max(padding, window.innerHeight - dropdownMaxHeight - padding)
+    }
+    return { top, left, maxHeight: dropdownMaxHeight, bottom: undefined as number | undefined }
+  }, [position, placement])
+
+  if (!isVisible || !clampedStyle || suggestions.length === 0) {
     return null
   }
 
   return (
     <div
       ref={listRef}
-      className="fixed z-[9999] w-72 max-h-60 overflow-y-auto rounded-md border border-zinc-700 bg-zinc-900 shadow-lg pointer-events-auto"
+      className="fixed z-[9999] w-72 overflow-y-auto rounded-md border border-zinc-700 bg-zinc-900 shadow-lg pointer-events-auto"
       style={{
-        top: position.top,
-        left: position.left,
+        top: clampedStyle.top,
+        bottom: clampedStyle.bottom,
+        left: clampedStyle.left,
+        maxHeight: clampedStyle.maxHeight,
       }}
       // Prevent editor from losing focus when interacting with the dropdown
       onMouseDown={(e) => {
