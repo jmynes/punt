@@ -1747,14 +1747,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 Created{' '}
                 {format(
                   ticket.createdAt,
-                  use24HourTime ? "MMM d, yyyy 'at' HH:mm" : "MMM d, yyyy 'at' h:mm a",
+                  use24HourTime ? "MMM d, yyyy 'at' HH:mm:ss" : "MMM d, yyyy 'at' h:mm:ss a",
                 )}
               </p>
               <p>
                 Updated{' '}
                 {format(
                   ticket.updatedAt,
-                  use24HourTime ? "MMM d, yyyy 'at' HH:mm" : "MMM d, yyyy 'at' h:mm a",
+                  use24HourTime ? "MMM d, yyyy 'at' HH:mm:ss" : "MMM d, yyyy 'at' h:mm:ss a",
                 )}
               </p>
               {ticket.resolvedAt && (
@@ -1762,7 +1762,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   Resolved{' '}
                   {format(
                     new Date(ticket.resolvedAt),
-                    use24HourTime ? "MMM d, yyyy 'at' HH:mm" : "MMM d, yyyy 'at' h:mm a",
+                    use24HourTime ? "MMM d, yyyy 'at' HH:mm:ss" : "MMM d, yyyy 'at' h:mm:ss a",
                   )}
                 </p>
               )}
