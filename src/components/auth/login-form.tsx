@@ -3,7 +3,7 @@
 import { ArrowLeft, Eye, EyeOff, Loader2, Shield } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +36,20 @@ export function LoginForm() {
   // Store credentials for 2FA step
   const [savedUsername, setSavedUsername] = useState('')
   const [savedPassword, setSavedPassword] = useState('')
+
+  // Redirect to /setup if no users exist (fresh install)
+  useEffect(() => {
+    fetch('/api/auth/setup')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.hasUsers === false) {
+          router.replace('/setup')
+        }
+      })
+      .catch(() => {
+        // Ignore errors - just stay on login page
+      })
+  }, [router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

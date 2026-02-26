@@ -35,7 +35,8 @@ export const authConfig: NextAuthConfig = {
         nextUrl.pathname === '/register' ||
         nextUrl.pathname === '/forgot-password' ||
         nextUrl.pathname === '/reset-password' ||
-        nextUrl.pathname === '/verify-email'
+        nextUrl.pathname === '/verify-email' ||
+        nextUrl.pathname === '/setup'
       const isOnAuthApi = nextUrl.pathname.startsWith('/api/auth')
       const isOnInvite = nextUrl.pathname.startsWith('/invite')
       const isOnBrandingApi = nextUrl.pathname === '/api/branding'

@@ -26,6 +26,12 @@ const ImportRequestSchema = z.object({
   isRecoveryCode: z.boolean().optional(),
 })
 
+// Simplified schema for first-run setup (no auth/confirmation needed)
+const SetupImportSchema = z.object({
+  content: z.string().min(1),
+  decryptionPassword: z.string().optional(),
+})
+
 async function verifyReauth(
   userId: string,
   password: string,
@@ -91,17 +97,47 @@ const REQUIRED_CONFIRMATION = 'DELETE ALL DATA'
  * Imports a database backup, replacing all existing data.
  * Supports both ZIP (with files) and JSON (data only) formats.
  *
- * Requires:
+ * Requires (when users exist):
  * - System admin
  * - Re-authentication with admin credentials
  * - Typing "DELETE ALL DATA" confirmation
+ *
+ * When no users exist (first-run setup):
+ * - No auth required, only file content + optional decryption password
  */
 export async function POST(request: Request) {
   try {
+    const body = await request.json()
+
+    // Check if this is a first-run setup (no users in DB)
+    const userCount = await db.user.count()
+
+    if (userCount === 0) {
+      // First-run setup: simplified import without auth
+      const result = SetupImportSchema.safeParse(body)
+      if (!result.success) {
+        return validationError(result)
+      }
+
+      const { content, decryptionPassword } = result.data
+      const buffer = Buffer.from(content, 'base64')
+
+      const parseResult = await parseExportFile(buffer, decryptionPassword)
+      if (!parseResult.success) {
+        return badRequestError(parseResult.error)
+      }
+
+      const importResult = await importDatabase(parseResult.data, {
+        zipBuffer: parseResult.isZip ? parseResult.zipBuffer : undefined,
+        exportOptions: parseResult.options,
+      })
+
+      return NextResponse.json(importResult)
+    }
+
+    // Existing install: require full authentication
     const currentUser = await requireSystemAdmin()
 
-    // Parse request body
-    const body = await request.json()
     const result = ImportRequestSchema.safeParse(body)
     if (!result.success) {
       return validationError(result)
