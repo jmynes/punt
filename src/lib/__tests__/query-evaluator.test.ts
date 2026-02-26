@@ -560,6 +560,22 @@ describe('evaluateQuery', () => {
       const result = query('title IS NOT EMPTY')
       expect(result).toHaveLength(5)
     })
+
+    it('filters by title IN with contains matching', () => {
+      // "login" is in t1 "Fix login bug", "dashboard" is in t2 "Add dashboard feature"
+      const result = query('title IN ("login", "dashboard")')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't2'])
+    })
+
+    it('filters by summary IN (alias for title)', () => {
+      const result = query('summary IN ("login")')
+      expect(result.map((t) => t.id)).toEqual(['t1'])
+    })
+
+    it('filters by title NOT IN with contains matching', () => {
+      const result = query('title NOT IN ("login", "dashboard")')
+      expect(result.map((t) => t.id)).toEqual(['t3', 't4', 't5'])
+    })
   })
 
   describe('description field', () => {
@@ -593,6 +609,18 @@ describe('evaluateQuery', () => {
     it('filters by description IS NOT EMPTY', () => {
       const result = query('description IS NOT EMPTY')
       expect(result.map((t) => t.id)).toEqual(['t1', 't2'])
+    })
+
+    it('filters by description IN with contains matching', () => {
+      // t1 has "credentials", t2 has "analytics"
+      const result = query('description IN ("credentials", "analytics")')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't2'])
+    })
+
+    it('filters by description NOT IN with contains matching', () => {
+      // t1 has "credentials" → excluded, t2 has "analytics" → excluded, t3-t5 null → null handled by null check above IN
+      const result = query('description NOT IN ("credentials", "analytics")')
+      expect(result.map((t) => t.id)).toEqual(['t3', 't4', 't5'])
     })
   })
 

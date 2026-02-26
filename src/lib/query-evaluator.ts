@@ -402,6 +402,13 @@ function evaluateIn(node: InNode, ticket: TicketWithRelations, ctx: EvaluationCo
     return node.negated ? !isIn : isIn
   }
 
+  // Title/description: IN uses contains matching (consistent with = operator)
+  if (node.field === 'title' || node.field === 'description') {
+    const fieldStr = String(fieldValue).toLowerCase()
+    const isIn = node.values.some((v) => fieldStr.includes(String(v).toLowerCase()))
+    return node.negated ? !isIn : isIn
+  }
+
   const lowerValues = node.values.map((v) => (typeof v === 'string' ? v.toLowerCase() : v))
   const normalizedField = typeof fieldValue === 'string' ? fieldValue.toLowerCase() : fieldValue
   const isIn = lowerValues.includes(normalizedField as string | number)

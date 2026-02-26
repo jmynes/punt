@@ -296,6 +296,10 @@ function getFieldDescription(field: string): string {
     environment: 'Environment',
     affectedVersion: 'Affected version',
     fixVersion: 'Fix version',
+    key: 'Ticket key (e.g. PUNT-1)',
+    summary: 'Ticket summary (contains match)',
+    title: 'Alias for summary',
+    description: 'Ticket description (contains match)',
   }
   return descriptions[field] ?? ''
 }
