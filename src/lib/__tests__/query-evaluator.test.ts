@@ -498,6 +498,26 @@ describe('evaluateQuery', () => {
       const result = query('key <= "TEST-3"')
       expect(result.map((t) => t.id)).toEqual(['t1', 't2', 't3'])
     })
+
+    it('filters by key IN with numeric values', () => {
+      const result = query('key IN (1, 3)')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't3'])
+    })
+
+    it('filters by key IN with string values', () => {
+      const result = query('key IN ("TEST-1", "TEST-4")')
+      expect(result.map((t) => t.id)).toEqual(['t1', 't4'])
+    })
+
+    it('filters by key IN case-insensitively', () => {
+      const result = query('key IN ("test-2", "test-5")')
+      expect(result.map((t) => t.id)).toEqual(['t2', 't5'])
+    })
+
+    it('filters by key NOT IN', () => {
+      const result = query('key NOT IN (1, 2)')
+      expect(result.map((t) => t.id)).toEqual(['t3', 't4', 't5'])
+    })
   })
 
   describe('title and summary fields', () => {

@@ -385,6 +385,23 @@ function evaluateIn(node: InNode, ticket: TicketWithRelations, ctx: EvaluationCo
     return node.negated
   }
 
+  // Key field: match by ticket number (numeric values) or full key string
+  if (node.field === 'key') {
+    const ticketNumber = (ticket as TicketWithRelations).number
+    const fullKey = String(fieldValue).toLowerCase()
+    const isIn = node.values.some((v) => {
+      if (typeof v === 'number') {
+        return ticketNumber === v
+      }
+      const valStr = String(v).toLowerCase()
+      // Match full key ("PUNT-1") or extract number from key string
+      if (fullKey === valStr) return true
+      const num = extractKeyNumber(valStr)
+      return num !== null && ticketNumber === num
+    })
+    return node.negated ? !isIn : isIn
+  }
+
   const lowerValues = node.values.map((v) => (typeof v === 'string' ? v.toLowerCase() : v))
   const normalizedField = typeof fieldValue === 'string' ? fieldValue.toLowerCase() : fieldValue
   const isIn = lowerValues.includes(normalizedField as string | number)
