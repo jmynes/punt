@@ -207,10 +207,12 @@ export const TextareaWithAutocomplete = forwardRef<
 
     document.body.removeChild(mirror)
 
-    // Position dropdown just below the current line
+    // Position dropdown just below the current line.
+    // Use viewport coordinates only (no window.scrollY/X) since the
+    // dropdown renders with position: fixed.
     return {
-      top: textareaRect.top + relativeTop - scrollTop + window.scrollY + lineHeight,
-      left: textareaRect.left + relativeLeft + window.scrollX,
+      top: textareaRect.top + relativeTop - scrollTop + lineHeight,
+      left: textareaRect.left + relativeLeft,
     }
   }, [value])
 
