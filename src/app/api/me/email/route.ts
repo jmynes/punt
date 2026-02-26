@@ -15,11 +15,80 @@ import {
 import { projectEvents } from '@/lib/events'
 import { verifyPassword } from '@/lib/password'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import {
+  decryptTotpSecret,
+  markRecoveryCodeUsed,
+  verifyRecoveryCode,
+  verifyTotpToken,
+} from '@/lib/totp'
 
 const updateEmailSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
+  totpCode: z.string().optional(),
+  isRecoveryCode: z.boolean().optional(),
 })
+
+async function verifyReauth(
+  userId: string,
+  password: string,
+  totpCode?: string,
+  isRecoveryCode?: boolean,
+): Promise<NextResponse | null> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      passwordHash: true,
+      totpEnabled: true,
+      totpSecret: true,
+      totpRecoveryCodes: true,
+    },
+  })
+
+  if (!user?.passwordHash) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+  }
+
+  const isValidPassword = await verifyPassword(password, user.passwordHash)
+  if (!isValidPassword) {
+    return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
+  }
+
+  // If 2FA is enabled, require TOTP code or recovery code
+  if (user.totpEnabled && user.totpSecret) {
+    if (!totpCode) {
+      return NextResponse.json({ error: '2FA code required', requires2fa: true }, { status: 401 })
+    }
+
+    if (isRecoveryCode) {
+      // Verify recovery code
+      if (!user.totpRecoveryCodes) {
+        return NextResponse.json({ error: 'No recovery codes available' }, { status: 401 })
+      }
+
+      const codeIndex = await verifyRecoveryCode(totpCode, user.totpRecoveryCodes)
+      if (codeIndex === -1) {
+        return NextResponse.json({ error: 'Invalid recovery code' }, { status: 401 })
+      }
+
+      // Mark recovery code as used
+      const updatedCodes = markRecoveryCodeUsed(user.totpRecoveryCodes, codeIndex)
+      await db.user.update({
+        where: { id: userId },
+        data: { totpRecoveryCodes: updatedCodes },
+      })
+    } else {
+      // Verify TOTP code
+      const secret = decryptTotpSecret(user.totpSecret)
+      const isValidTotp = verifyTotpToken(totpCode, secret)
+      if (!isValidTotp) {
+        return NextResponse.json({ error: 'Invalid 2FA code' }, { status: 401 })
+      }
+    }
+  }
+
+  return null // Success
+}
 
 // PATCH /api/me/email - Update email address (requires password confirmation)
 export async function PATCH(request: Request) {
@@ -71,26 +140,19 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
 
-    const { email, password } = parsed.data
+    const { email, password, totpCode, isRecoveryCode } = parsed.data
 
-    // Get current user with password hash
-    const user = await db.user.findUnique({
-      where: { id: currentUser.id },
-      select: { passwordHash: true, email: true },
-    })
-
-    if (!user || !user.passwordHash) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    // Verify password
-    const isValid = await verifyPassword(password, user.passwordHash)
-    if (!isValid) {
-      return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
-    }
+    // Verify password and 2FA
+    const authError = await verifyReauth(currentUser.id, password, totpCode, isRecoveryCode)
+    if (authError) return authError
 
     // Check if email is the same
-    if (email === user.email) {
+    const currentUserData = await db.user.findUnique({
+      where: { id: currentUser.id },
+      select: { email: true },
+    })
+
+    if (email === currentUserData?.email) {
       return NextResponse.json({ error: 'Email is the same as current email' }, { status: 400 })
     }
 
