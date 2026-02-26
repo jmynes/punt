@@ -66,6 +66,10 @@ export const UserSchema = z.object({
   isSystemAdmin: z.boolean(),
   isActive: z.boolean(),
   mcpApiKey: z.string().nullable(),
+  // 2FA fields (optional for backward compatibility with pre-1.2.0 exports)
+  totpSecret: z.string().nullable().optional(),
+  totpEnabled: z.boolean().optional(),
+  totpRecoveryCodes: z.string().nullable().optional(),
 })
 
 export const ProjectSchema = z.object({
@@ -335,4 +339,4 @@ export const AnyDatabaseExportSchema = z.union([
 export type AnyDatabaseExport = z.infer<typeof AnyDatabaseExportSchema>
 
 // Export version for compatibility checks
-export const EXPORT_VERSION = '1.1.0'
+export const EXPORT_VERSION = '1.2.0'

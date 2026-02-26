@@ -12,6 +12,7 @@ import {
   Loader2,
   Lock,
   Paperclip,
+  ShieldOff,
   Trash2,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
@@ -639,6 +640,44 @@ export function DatabaseImportDialog({
                         <p className="mt-2 text-xs text-amber-300/60">
                           And {result.files.missingFiles.length - 5} more...
                         </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 2FA Reset Warning */}
+              {result.twoFactorResets.length > 0 && (
+                <div className="p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <ShieldOff className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium text-amber-400">
+                        {result.twoFactorResets.length} user
+                        {result.twoFactorResets.length > 1 ? 's' : ''} had 2FA reset
+                      </p>
+                      <p className="text-amber-300/70 mt-1">
+                        These users&apos; 2FA could not be restored (likely due to a different
+                        server secret). They will need to re-enable 2FA.
+                      </p>
+                      {result.twoFactorResets.length <= 5 && (
+                        <ul className="mt-2 text-xs text-amber-300/60 space-y-0.5">
+                          {result.twoFactorResets.map((username) => (
+                            <li key={username}>{username}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {result.twoFactorResets.length > 5 && (
+                        <>
+                          <ul className="mt-2 text-xs text-amber-300/60 space-y-0.5">
+                            {result.twoFactorResets.slice(0, 5).map((username) => (
+                              <li key={username}>{username}</li>
+                            ))}
+                          </ul>
+                          <p className="mt-1 text-xs text-amber-300/60">
+                            And {result.twoFactorResets.length - 5} more...
+                          </p>
+                        </>
                       )}
                     </div>
                   </div>

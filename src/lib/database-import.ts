@@ -21,6 +21,7 @@ import {
   ExportDataSchema,
   type ExportOptionsType,
 } from '@/lib/schemas/database-export'
+import { decryptTotpSecret } from '@/lib/totp'
 
 export interface ImportResult {
   success: boolean
@@ -50,6 +51,7 @@ export interface ImportResult {
     avatarsMissing: number
     missingFiles: string[]
   }
+  twoFactorResets: string[]
 }
 
 export interface ImportError {
@@ -115,7 +117,7 @@ function parseBackupJson(
   const exportFile = result.data as AnyDatabaseExport
 
   // Check version compatibility
-  const COMPATIBLE_VERSIONS = ['1.0.0', EXPORT_VERSION]
+  const COMPATIBLE_VERSIONS = ['1.0.0', '1.1.0', EXPORT_VERSION]
   if (!COMPATIBLE_VERSIONS.includes(exportFile.version)) {
     return {
       success: false,
@@ -414,14 +416,35 @@ export async function importDatabase(
     missingFiles: [] as string[],
   }
 
+  // Validate TOTP secrets — if AUTH_SECRET changed, decryption will fail
+  // and we need to reset 2FA for those users
+  const twoFactorResets: string[] = []
+  const usersWithValidatedTotp = data.users.map((user) => {
+    if (user.totpEnabled && user.totpSecret) {
+      try {
+        decryptTotpSecret(user.totpSecret)
+        return user
+      } catch {
+        twoFactorResets.push(user.username)
+        return {
+          ...user,
+          totpSecret: null,
+          totpEnabled: false,
+          totpRecoveryCodes: null,
+        }
+      }
+    }
+    return user
+  })
+
   // Handle missing files: clear avatar field if file won't be present
   const shouldClearMissingAvatars = options?.exportOptions?.includeAvatars && !options?.zipBuffer
-  const dataToImport = shouldClearMissingAvatars
-    ? {
-        ...data,
-        users: data.users.map((u) => ({ ...u, avatar: null })),
-      }
-    : data
+  const dataToImport = {
+    ...data,
+    users: shouldClearMissingAvatars
+      ? usersWithValidatedTotp.map((u) => ({ ...u, avatar: null }))
+      : usersWithValidatedTotp,
+  }
 
   // Use a transaction with a long timeout (2 minutes) for large imports
   await db.$transaction(
@@ -715,5 +738,5 @@ export async function importDatabase(
     files = await restoreFilesFromZip(options.zipBuffer, data, options.exportOptions)
   }
 
-  return { success: true, counts, files }
+  return { success: true, counts, files, twoFactorResets }
 }
