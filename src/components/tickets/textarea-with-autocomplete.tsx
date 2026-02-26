@@ -202,12 +202,13 @@ export const TextareaWithAutocomplete = forwardRef<
     const scrollTop = textarea.scrollTop
     const relativeTop = markerRect.top - mirrorRect.top
     const relativeLeft = markerRect.left - mirrorRect.left
+    const lineHeight = Number.parseInt(computed.lineHeight, 10) || 20
 
     document.body.removeChild(mirror)
 
-    // Position dropdown below the caret
+    // Position dropdown just below the current line
     return {
-      top: textareaRect.top + relativeTop - scrollTop + window.scrollY + 20,
+      top: textareaRect.top + relativeTop - scrollTop + window.scrollY + lineHeight + 2,
       left: textareaRect.left + relativeLeft + window.scrollX,
     }
   }, [value])

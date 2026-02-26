@@ -83,7 +83,7 @@ export function AutocompleteSuggestion({
 
     // Flip above cursor if it would overflow bottom
     if (top + dropdownMaxHeight + padding > window.innerHeight + window.scrollY) {
-      top = position.top - dropdownMaxHeight - 24 // 24 = 20 (offset below caret) + 4 (gap above)
+      top = position.top - dropdownMaxHeight - 4
     }
 
     return { top, left }
