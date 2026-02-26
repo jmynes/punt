@@ -154,65 +154,26 @@ export const TextareaWithAutocomplete = forwardRef<
     setSelectedIndex(0)
   }, [suggestions])
 
-  // Get caret position in the textarea using a mirror element
+  // Get caret position relative to the textarea for dropdown placement.
+  // Uses line counting instead of a mirror element for reliability.
   const getCaretPosition = useCallback((): { top: number; left: number } | null => {
     const textarea = textareaRef.current
     if (!textarea) return null
 
-    // Create a mirror div to measure text position
-    const mirror = document.createElement('div')
+    const rect = textarea.getBoundingClientRect()
     const computed = window.getComputedStyle(textarea)
-
-    // Copy textarea styles to mirror
-    mirror.style.cssText = `
-      position: absolute;
-      visibility: hidden;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      overflow: hidden;
-      width: ${computed.width};
-      height: ${computed.height};
-      font-family: ${computed.fontFamily};
-      font-size: ${computed.fontSize};
-      font-weight: ${computed.fontWeight};
-      line-height: ${computed.lineHeight};
-      letter-spacing: ${computed.letterSpacing};
-      padding: ${computed.padding};
-      border: ${computed.border};
-      box-sizing: ${computed.boxSizing};
-    `
-
-    // Get text up to cursor position as a proper text node so the
-    // marker span flows inline and wraps correctly with the text
-    const textBeforeCursor = value.substring(0, textarea.selectionStart)
-    mirror.appendChild(document.createTextNode(textBeforeCursor))
-
-    // Add a span to mark the cursor position
-    const marker = document.createElement('span')
-    marker.textContent = '|'
-    mirror.appendChild(marker)
-
-    document.body.appendChild(mirror)
-
-    // Get marker position relative to the mirror
-    const markerRect = marker.getBoundingClientRect()
-    const mirrorRect = mirror.getBoundingClientRect()
-    const textareaRect = textarea.getBoundingClientRect()
-
-    // Calculate position relative to textarea, accounting for scroll
-    const scrollTop = textarea.scrollTop
-    const relativeTop = markerRect.top - mirrorRect.top
-    const relativeLeft = markerRect.left - mirrorRect.left
     const lineHeight = Number.parseInt(computed.lineHeight, 10) || 20
+    const paddingTop = Number.parseInt(computed.paddingTop, 10) || 0
+    const paddingLeft = Number.parseInt(computed.paddingLeft, 10) || 0
 
-    document.body.removeChild(mirror)
+    // Count newlines before cursor to estimate which line the cursor is on
+    const textBeforeCursor = value.substring(0, textarea.selectionStart)
+    const currentLine = textBeforeCursor.split('\n').length - 1
 
-    // Position dropdown just below the current line.
-    // Use viewport coordinates only (no window.scrollY/X) since the
-    // dropdown renders with position: fixed.
+    // Position uses viewport coordinates (dropdown is position: fixed)
     return {
-      top: textareaRect.top + relativeTop - scrollTop + lineHeight,
-      left: textareaRect.left + relativeLeft,
+      top: rect.top + paddingTop + (currentLine + 1) * lineHeight - textarea.scrollTop,
+      left: rect.left + paddingLeft,
     }
   }, [value])
 
