@@ -104,7 +104,7 @@ describe('Password Change API - Current Password Verification', () => {
   })
 
   it('should verify current password', async () => {
-    mockVerifyPassword.mockResolvedValue(true)
+    mockVerifyPassword.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
     mockDb.user.update.mockResolvedValue({})
 
     const response = await PATCH(
@@ -116,6 +116,22 @@ describe('Password Change API - Current Password Verification', () => {
 
     expect(response.status).toBe(200)
     expect(mockVerifyPassword).toHaveBeenCalledWith('CorrectPassword123!', 'current_hash')
+  })
+
+  it('should reject new password that matches current password', async () => {
+    mockVerifyPassword.mockResolvedValue(true)
+    mockDb.user.findUnique.mockResolvedValue({ passwordHash: 'current_hash' })
+
+    const response = await PATCH(
+      createRequest({
+        currentPassword: 'SamePassword123!',
+        newPassword: 'SamePassword123!',
+      }),
+    )
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error).toBe('New password must be different from your current password')
   })
 
   it('should reject incorrect current password', async () => {
@@ -156,7 +172,8 @@ describe('Password Change API - Password Strength Validation', () => {
     mockRequireAuth.mockResolvedValue({ id: 'user-1', isActive: true })
     mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 10, resetAt: new Date() })
     mockDb.user.findUnique.mockResolvedValue({ passwordHash: 'current_hash' })
-    mockVerifyPassword.mockResolvedValue(true)
+    // First call: auth (true), second call: same-password check (false = different password)
+    mockVerifyPassword.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
   })
 
   it('should reject weak password', async () => {
@@ -262,7 +279,8 @@ describe('Password Change API - Session Invalidation', () => {
     mockRequireAuth.mockResolvedValue({ id: 'user-1', isActive: true })
     mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 10, resetAt: new Date() })
     mockDb.user.findUnique.mockResolvedValue({ passwordHash: 'current_hash' })
-    mockVerifyPassword.mockResolvedValue(true)
+    // First call: auth (true), second call: same-password check (false = different password)
+    mockVerifyPassword.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
     mockValidatePassword.mockReturnValue({ valid: true, errors: [] })
   })
 

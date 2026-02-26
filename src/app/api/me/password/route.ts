@@ -139,6 +139,21 @@ export async function PATCH(request: Request) {
     const authError = await verifyReauth(currentUser.id, currentPassword, totpCode, isRecoveryCode)
     if (authError) return authError
 
+    // Reject if new password is the same as current
+    const user = await db.user.findUnique({
+      where: { id: currentUser.id },
+      select: { passwordHash: true },
+    })
+    if (user?.passwordHash) {
+      const isSamePassword = await verifyPassword(newPassword, user.passwordHash)
+      if (isSamePassword) {
+        return NextResponse.json(
+          { error: 'New password must be different from your current password' },
+          { status: 400 },
+        )
+      }
+    }
+
     // Validate new password strength
     const passwordValidation = validatePasswordStrength(newPassword)
     if (!passwordValidation.valid) {
