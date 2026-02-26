@@ -14,6 +14,7 @@ import {
   Undo2,
   User,
 } from 'lucide-react'
+import { ResolutionBadge } from '@/components/common/resolution-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -28,6 +29,7 @@ import {
 } from '@/hooks/queries/use-activity'
 import { getColumnIcon } from '@/lib/status-icons'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import type { Resolution } from '@/types'
 import { MarkdownViewer } from './markdown-viewer'
 
 // ============================================================================
@@ -262,7 +264,8 @@ function ActivityGroupRow({ entry }: { entry: ActivityGroupEntry }) {
               <span>
                 {showResolution ? (
                   <>
-                    resolved as <ValueBadge value={resolutionValue} />
+                    resolved as{' '}
+                    <ResolutionBadge resolution={resolutionValue as Resolution} size="sm" />
                   </>
                 ) : (
                   'marked as done'
