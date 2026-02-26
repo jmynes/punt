@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Eye, EyeOff, Loader2, UserPlus } from 'lucide-react'
 import { useState } from 'react'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -27,12 +28,19 @@ export function CreateUserDialog() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isSystemAdmin, setIsSystemAdmin] = useState(false)
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showReauthDialog, setShowReauthDialog] = useState(false)
   const queryClient = useQueryClient()
 
   const createUser = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({
+      confirmPassword,
+      totpCode,
+      isRecoveryCode,
+    }: {
+      confirmPassword: string
+      totpCode?: string
+      isRecoveryCode?: boolean
+    }) => {
       // Demo mode: show info toast and don't submit
       if (isDemoMode()) {
         showToast.info('User creation is disabled in demo mode')
@@ -49,6 +57,8 @@ export function CreateUserDialog() {
           password,
           isSystemAdmin,
           confirmPassword,
+          totpCode,
+          isRecoveryCode,
         }),
       })
       if (!res.ok) {
@@ -71,6 +81,18 @@ export function CreateUserDialog() {
     },
   })
 
+  const handleReauthConfirm = async (
+    reauthPassword: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
+    await createUser.mutateAsync({
+      confirmPassword: reauthPassword,
+      totpCode,
+      isRecoveryCode,
+    })
+  }
+
   function handleClose() {
     setOpen(false)
     setUsername('')
@@ -79,9 +101,10 @@ export function CreateUserDialog() {
     setPassword('')
     setShowPassword(false)
     setIsSystemAdmin(false)
-    setConfirmPassword('')
-    setShowConfirmPassword(false)
+    setShowReauthDialog(false)
   }
+
+  const canCreate = username.length > 0 && name.length > 0 && password.length > 0
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -202,35 +225,6 @@ export function CreateUserDialog() {
             )}
           </div>
 
-          <div className="border-t border-zinc-800 pt-4 space-y-2">
-            <Label htmlFor="create-user-confirm" className="text-zinc-300">
-              Your Password<span className="text-amber-500 ml-1">*</span>
-            </Label>
-            <div className="relative">
-              <Input
-                id="create-user-confirm"
-                type="text"
-                autoComplete="off"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Enter your password to confirm"
-                className={`border-zinc-700 bg-zinc-800 text-zinc-100 pr-10 ${!showConfirmPassword ? 'password-mask' : ''}`}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full px-3 text-zinc-500 hover:text-zinc-300"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-            <p className="text-xs text-zinc-500">
-              Enter your password to authorize creating this user.
-            </p>
-          </div>
-
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={handleClose}>
               Cancel
@@ -238,21 +232,23 @@ export function CreateUserDialog() {
             <Button
               type="button"
               variant="primary"
-              disabled={createUser.isPending || !username || !name || !password || !confirmPassword}
-              onClick={() => createUser.mutate()}
+              disabled={!canCreate}
+              onClick={() => setShowReauthDialog(true)}
             >
-              {createUser.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create User'
-              )}
+              Create User
             </Button>
           </DialogFooter>
         </div>
       </DialogContent>
+
+      <ReauthDialog
+        open={showReauthDialog}
+        onOpenChange={setShowReauthDialog}
+        title="Confirm User Creation"
+        description="Enter your password to authorize creating this user."
+        actionLabel="Create User"
+        onConfirm={handleReauthConfirm}
+      />
     </Dialog>
   )
 }
