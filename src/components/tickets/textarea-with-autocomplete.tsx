@@ -193,20 +193,22 @@ export const TextareaWithAutocomplete = forwardRef<
 
     document.body.appendChild(mirror)
 
-    // Get marker position
+    // Get marker position relative to the mirror
     const markerRect = marker.getBoundingClientRect()
+    const mirrorRect = mirror.getBoundingClientRect()
     const textareaRect = textarea.getBoundingClientRect()
 
     // Calculate position relative to textarea, accounting for scroll
     const scrollTop = textarea.scrollTop
-    const relativeTop = markerRect.top - mirror.getBoundingClientRect().top
+    const relativeTop = markerRect.top - mirrorRect.top
+    const relativeLeft = markerRect.left - mirrorRect.left
 
     document.body.removeChild(mirror)
 
     // Position dropdown below the caret
     return {
       top: textareaRect.top + relativeTop - scrollTop + window.scrollY + 20,
-      left: markerRect.left + window.scrollX,
+      left: textareaRect.left + relativeLeft + window.scrollX,
     }
   }, [value])
 

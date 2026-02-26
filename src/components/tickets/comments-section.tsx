@@ -22,11 +22,11 @@ import {
   useTicketComments,
   useUpdateComment,
 } from '@/hooks/queries/use-comments'
+import { useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
-import { useBoardStore } from '@/stores/board-store'
 import type { TicketWithRelations, UserSummary } from '@/types'
 import { MarkdownViewer } from './markdown-viewer'
 import {
@@ -64,14 +64,14 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
     const canManageAny = useHasPermission(projectId, PERMISSIONS.COMMENTS_MANAGE_ANY)
 
     // Get tickets and members for autocomplete if not provided via props
-    const { getColumns } = useBoardStore()
+    const { data: fetchedTickets = [] } = useTicketsByProject(projectId)
     const fetchedMembers = useProjectMembers(projectId)
 
     // Extract project key from ticketKey (e.g., "PUNT-123" -> "PUNT")
     const projectKey = ticketKey.split('-')[0] || ''
 
-    // Use provided data or fetch from store/hook
-    const allTickets = tickets ?? getColumns(projectId).flatMap((col) => col.tickets)
+    // Use provided data or fetch from hook
+    const allTickets = tickets ?? fetchedTickets
     const allMembers = members ?? fetchedMembers
 
     const [newComment, setNewComment] = useState('')
