@@ -1,7 +1,8 @@
 'use client'
 
-import { AlertTriangle, Eye, EyeOff, Loader2, Lock, Shield, Trash2, User } from 'lucide-react'
+import { AlertTriangle, Eye, EyeOff, Loader2, Lock, Trash2, User } from 'lucide-react'
 import { useState } from 'react'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,30 +20,25 @@ interface DatabaseWipeDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-type Step = 'warning' | 'verify' | 'credentials' | 'confirm' | 'wiping'
+type Step = 'warning' | 'credentials' | 'confirm' | 'wiping'
 
 export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogProps) {
   const [step, setStep] = useState<Step>('warning')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [confirmText, setConfirmText] = useState('')
-  const [verifying, setVerifying] = useState(false)
-  const [verifyError, setVerifyError] = useState<string | null>(null)
+  const [showReauthDialog, setShowReauthDialog] = useState(false)
 
   const wipeMutation = useWipeDatabase()
 
   const resetState = () => {
     setStep('warning')
-    setCurrentPassword('')
-    setShowCurrentPassword(false)
     setUsername('')
     setPassword('')
     setShowPassword(false)
     setConfirmText('')
-    setVerifyError(null)
+    setShowReauthDialog(false)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -52,41 +48,26 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
     onOpenChange(newOpen)
   }
 
-  const handleWipe = async () => {
+  const handleReauthConfirm = async (
+    reauthPassword: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
     setStep('wiping')
     try {
       await wipeMutation.mutateAsync({
-        currentPassword,
+        currentPassword: reauthPassword,
         username,
         password,
         confirmText,
+        totpCode,
+        isRecoveryCode,
       })
       // Success will redirect to login via the mutation's onSuccess
-    } catch {
+    } catch (err) {
       // Error shown via toast, return to confirm step
       setStep('confirm')
-    }
-  }
-
-  const handleVerify = async () => {
-    setVerifying(true)
-    setVerifyError(null)
-    try {
-      const res = await fetch('/api/auth/verify-credentials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: currentPassword }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        setVerifyError(data.error || 'Invalid password')
-        return
-      }
-      setStep('credentials')
-    } catch {
-      setVerifyError('Failed to verify credentials')
-    } finally {
-      setVerifying(false)
+      throw err
     }
   }
 
@@ -132,78 +113,8 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
                 <Button variant="outline" onClick={() => handleOpenChange(false)}>
                   Cancel
                 </Button>
-                <Button variant="destructive" onClick={() => setStep('verify')}>
+                <Button variant="destructive" onClick={() => setStep('credentials')}>
                   I Understand, Continue
-                </Button>
-              </div>
-            </>
-          )}
-
-          {step === 'verify' && (
-            <>
-              <div className="flex items-start gap-3 p-4 bg-amber-900/20 border border-amber-800 rounded-lg">
-                <Shield className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-amber-400">Identity Verification Required</p>
-                  <p className="text-amber-300/80 mt-1">
-                    Enter your current password to authorize this destructive action.
-                  </p>
-                </div>
-              </div>
-
-              {verifyError && (
-                <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg">
-                  <p className="text-sm text-red-300">{verifyError}</p>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="current-password" className="text-zinc-300">
-                  Your Current Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                  <Input
-                    id="current-password"
-                    name="admin-confirm-password"
-                    type="text"
-                    autoComplete="off"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && currentPassword && !verifying) {
-                        e.preventDefault()
-                        handleVerify()
-                      }
-                    }}
-                    placeholder="Enter your password"
-                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10 ${!showCurrentPassword ? 'password-mask' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                  >
-                    {showCurrentPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setStep('warning')}>
-                  Back
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleVerify}
-                  disabled={!currentPassword || verifying}
-                >
-                  {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Continue
                 </Button>
               </div>
             </>
@@ -269,7 +180,7 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setStep('verify')}>
+                <Button variant="outline" onClick={() => setStep('warning')}>
                   Back
                 </Button>
                 <Button
@@ -306,7 +217,7 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={handleWipe}
+                  onClick={() => setShowReauthDialog(true)}
                   disabled={confirmText !== 'WIPE ALL DATA'}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -325,6 +236,16 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
           )}
         </div>
       </DialogContent>
+
+      <ReauthDialog
+        open={showReauthDialog}
+        onOpenChange={setShowReauthDialog}
+        title="Confirm Database Wipe"
+        description="Enter your password to authorize wiping the entire database. This action cannot be undone."
+        actionLabel="Wipe Database"
+        actionVariant="destructive"
+        onConfirm={handleReauthConfirm}
+      />
     </Dialog>
   )
 }

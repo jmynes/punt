@@ -46,6 +46,8 @@ export interface ExportOptions {
   includeAttachments?: boolean
   includeAvatars?: boolean
   confirmPassword: string
+  totpCode?: string
+  isRecoveryCode?: boolean
 }
 
 /**
@@ -162,9 +164,10 @@ export function usePreviewDatabase() {
 export interface ImportDatabaseParams {
   content: string // Base64 encoded
   decryptionPassword?: string
-  username: string
-  password: string
+  confirmPassword: string
   confirmText: string
+  totpCode?: string
+  isRecoveryCode?: boolean
 }
 
 /**
@@ -305,6 +308,8 @@ export interface WipeDatabaseParams {
   username: string
   password: string
   confirmText: string
+  totpCode?: string
+  isRecoveryCode?: boolean
 }
 
 /**

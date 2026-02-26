@@ -3,6 +3,7 @@
  * Allows users to upload/manage their Claude CLI session credentials
  */
 
+import { NextResponse } from 'next/server'
 import { z } from 'zod/v4'
 import { requireAuth } from '@/lib/auth-helpers'
 import {
@@ -12,10 +13,83 @@ import {
   validateSessionCredentials,
 } from '@/lib/chat/encryption'
 import { db } from '@/lib/db'
+import { verifyPassword } from '@/lib/password'
+import {
+  decryptTotpSecret,
+  markRecoveryCodeUsed,
+  verifyRecoveryCode,
+  verifyTotpToken,
+} from '@/lib/totp'
 
 const sessionUploadSchema = z.object({
   credentials: z.string().min(1, 'Credentials are required'),
+  password: z.string().min(1, 'Password is required'),
+  totpCode: z.string().optional(),
+  isRecoveryCode: z.boolean().optional(),
 })
+
+const deleteSessionSchema = z.object({
+  password: z.string().min(1, 'Password is required'),
+  totpCode: z.string().optional(),
+  isRecoveryCode: z.boolean().optional(),
+})
+
+async function verifyReauth(
+  userId: string,
+  password: string,
+  totpCode?: string,
+  isRecoveryCode?: boolean,
+): Promise<NextResponse | null> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      passwordHash: true,
+      totpEnabled: true,
+      totpSecret: true,
+      totpRecoveryCodes: true,
+    },
+  })
+
+  if (!user?.passwordHash) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+  }
+
+  const isValidPassword = await verifyPassword(password, user.passwordHash)
+  if (!isValidPassword) {
+    return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
+  }
+
+  if (user.totpEnabled && user.totpSecret) {
+    if (!totpCode) {
+      return NextResponse.json({ error: '2FA code required', requires2fa: true }, { status: 401 })
+    }
+
+    if (isRecoveryCode) {
+      if (!user.totpRecoveryCodes) {
+        return NextResponse.json({ error: 'No recovery codes available' }, { status: 401 })
+      }
+
+      const codeIndex = await verifyRecoveryCode(totpCode, user.totpRecoveryCodes)
+      if (codeIndex === -1) {
+        return NextResponse.json({ error: 'Invalid recovery code' }, { status: 401 })
+      }
+
+      const updatedCodes = markRecoveryCodeUsed(user.totpRecoveryCodes, codeIndex)
+      await db.user.update({
+        where: { id: userId },
+        data: { totpRecoveryCodes: updatedCodes },
+      })
+    } else {
+      const secret = decryptTotpSecret(user.totpSecret)
+      const isValidTotp = verifyTotpToken(totpCode, secret)
+      if (!isValidTotp) {
+        return NextResponse.json({ error: 'Invalid 2FA code' }, { status: 401 })
+      }
+    }
+  }
+
+  return null
+}
 
 /**
  * GET /api/me/claude-session
@@ -88,6 +162,11 @@ export async function POST(request: Request) {
       )
     }
 
+    const { password, totpCode, isRecoveryCode } = result.data
+
+    const authError = await verifyReauth(currentUser.id, password, totpCode, isRecoveryCode)
+    if (authError) return authError
+
     // Parse and validate credentials
     let credentials: unknown
     try {
@@ -155,9 +234,23 @@ export async function POST(request: Request) {
  * DELETE /api/me/claude-session
  * Remove Claude session credentials
  */
-export async function DELETE() {
+export async function DELETE(request: Request) {
   try {
     const currentUser = await requireAuth()
+
+    const body = await request.json()
+    const result = deleteSessionSchema.safeParse(body)
+    if (!result.success) {
+      return Response.json(
+        { error: 'Invalid request', details: result.error.flatten() },
+        { status: 400 },
+      )
+    }
+
+    const { password, totpCode, isRecoveryCode } = result.data
+
+    const authError = await verifyReauth(currentUser.id, password, totpCode, isRecoveryCode)
+    if (authError) return authError
 
     await db.user.update({
       where: { id: currentUser.id },
