@@ -26,6 +26,7 @@ import {
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { PageHeader } from '@/components/common'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -108,6 +109,7 @@ export function UserList() {
   const currentUser = useCurrentUser()
   const tabId = getTabId()
   const [deleteUsername, setDeleteUsername] = useState<string | null>(null)
+  const [showDeleteReauthDialog, setShowDeleteReauthDialog] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [lastSelectedId, setLastSelectedId] = useState<string | null>(null)
   const [bulkAction, setBulkAction] = useState<BulkAction>(null)
@@ -275,7 +277,19 @@ export function UserList() {
   })
 
   const deleteUser = useMutation({
-    mutationFn: async ({ username, permanent }: { username: string; permanent: boolean }) => {
+    mutationFn: async ({
+      username,
+      permanent,
+      confirmPassword,
+      totpCode,
+      isRecoveryCode,
+    }: {
+      username: string
+      permanent: boolean
+      confirmPassword: string
+      totpCode?: string
+      isRecoveryCode?: boolean
+    }) => {
       if (isDemoMode()) {
         showToast.info('User management is read-only in demo mode')
         return { action: 'demo' }
@@ -283,7 +297,11 @@ export function UserList() {
       const url = permanent
         ? `/api/admin/users/${username}?permanent=true`
         : `/api/admin/users/${username}`
-      const res = await fetch(url, { method: 'DELETE' })
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmPassword, totpCode, isRecoveryCode }),
+      })
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to delete user')
@@ -295,6 +313,7 @@ export function UserList() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
       showToast.success(data.action === 'deleted' ? 'User permanently deleted' : 'User disabled')
       setDeleteUsername(null)
+      setShowDeleteReauthDialog(false)
     },
     onError: (error) => {
       showToast.error(error.message)
@@ -1495,9 +1514,10 @@ export function UserList() {
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
-                onClick={() =>
-                  deleteUsername && deleteUser.mutate({ username: deleteUsername, permanent: true })
-                }
+                onClick={(e) => {
+                  e.preventDefault()
+                  setShowDeleteReauthDialog(true)
+                }}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete Permanently
@@ -1505,6 +1525,28 @@ export function UserList() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <ReauthDialog
+          open={showDeleteReauthDialog}
+          onOpenChange={(open) => {
+            setShowDeleteReauthDialog(open)
+            if (!open) setDeleteUsername(null)
+          }}
+          title="Confirm User Deletion"
+          description={`Enter your password to permanently delete ${userToDelete?.name ?? 'this user'}.`}
+          actionLabel="Delete Permanently"
+          actionVariant="destructive"
+          onConfirm={async (password, totpCode, isRecoveryCode) => {
+            if (!deleteUsername) return
+            await deleteUser.mutateAsync({
+              username: deleteUsername,
+              permanent: true,
+              confirmPassword: password,
+              totpCode,
+              isRecoveryCode,
+            })
+          }}
+        />
 
         {/* Bulk action confirmation dialog */}
         <AlertDialog open={!!bulkAction} onOpenChange={(open) => !open && setBulkAction(null)}>
