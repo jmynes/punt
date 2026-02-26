@@ -18,6 +18,7 @@ import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 
 export default function SprintPlanningPage() {
@@ -101,16 +102,25 @@ export default function SprintPlanningPage() {
     setQueryMode,
   } = useBacklogStore()
 
-  // Clear search state when switching projects (not on initial mount or same-project page nav)
-  const prevProjectIdRef = useRef(projectId)
+  // Clear search state based on searchPersistence preference
+  const searchPersistence = useSettingsStore((s) => s.searchPersistence)
   useEffect(() => {
-    if (prevProjectIdRef.current !== projectId) {
-      prevProjectIdRef.current = projectId
+    const { searchProjectId } = useBacklogStore.getState()
+    const projectChanged = searchProjectId !== null && searchProjectId !== projectId
+
+    if (searchPersistence === 'never') {
+      setSearchQuery('')
+      setQueryText('')
+      setQueryMode(false)
+    } else if (searchPersistence === 'within-project' && projectChanged) {
       setSearchQuery('')
       setQueryText('')
       setQueryMode(false)
     }
-  }, [projectId, setSearchQuery, setQueryText, setQueryMode])
+    // 'always': never clear
+
+    useBacklogStore.getState().setSearchProjectId(projectId)
+  }, [projectId, searchPersistence, setSearchQuery, setQueryText, setQueryMode])
 
   // Fetch sprints for autocomplete
   const { data: projectSprints } = useProjectSprints(projectId)

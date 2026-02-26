@@ -218,6 +218,10 @@ interface BacklogState {
   queryText: string
   setQueryText: (query: string) => void
 
+  // Tracks which project the current search/PQL was set on (for cross-project clearing)
+  searchProjectId: string | null
+  setSearchProjectId: (id: string | null) => void
+
   // Manual backlog ordering (per project)
   backlogOrder: Record<string, string[]>
   setBacklogOrder: (projectId: string, orderedIds: string[]) => void
@@ -391,6 +395,9 @@ export const useBacklogStore = create<BacklogState>()(
         })),
       queryText: '',
       setQueryText: (query) => set({ queryText: query }),
+
+      searchProjectId: null,
+      setSearchProjectId: (id) => set({ searchProjectId: id }),
 
       backlogOrder: {},
       setBacklogOrder: (projectId, orderedIds) =>

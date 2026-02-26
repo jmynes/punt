@@ -74,6 +74,10 @@ interface SettingsState {
   // Warn before navigating away from role simulation
   warnOnSimulationLeave: boolean
   setWarnOnSimulationLeave: (value: boolean) => void
+
+  // Persist PQL/search across page navigation
+  searchPersistence: 'never' | 'within-project' | 'always'
+  setSearchPersistence: (value: 'never' | 'within-project' | 'always') => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -177,6 +181,10 @@ export const useSettingsStore = create<SettingsState>()(
       // Warn before navigating away from role simulation (on by default)
       warnOnSimulationLeave: true,
       setWarnOnSimulationLeave: (value) => set({ warnOnSimulationLeave: value }),
+
+      // Persist PQL/search across pages (never by default - clears on page navigation)
+      searchPersistence: 'never',
+      setSearchPersistence: (value) => set({ searchPersistence: value }),
     }),
     {
       name: 'punt-settings',
