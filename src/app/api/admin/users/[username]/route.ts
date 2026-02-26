@@ -5,7 +5,70 @@ import { db } from '@/lib/db'
 import { DEMO_TEAM_MEMBERS, DEMO_USER, isDemoMode } from '@/lib/demo/demo-config'
 import { DEMO_PROJECTS, DEMO_ROLES, getDemoMembersForProject } from '@/lib/demo/demo-data'
 import { projectEvents } from '@/lib/events'
-import { hashPassword, validatePasswordStrength } from '@/lib/password'
+import { hashPassword, validatePasswordStrength, verifyPassword } from '@/lib/password'
+import {
+  decryptTotpSecret,
+  markRecoveryCodeUsed,
+  verifyRecoveryCode,
+  verifyTotpToken,
+} from '@/lib/totp'
+
+async function verifyReauth(
+  userId: string,
+  password: string,
+  totpCode?: string,
+  isRecoveryCode?: boolean,
+): Promise<NextResponse | null> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      passwordHash: true,
+      totpEnabled: true,
+      totpSecret: true,
+      totpRecoveryCodes: true,
+    },
+  })
+
+  if (!user?.passwordHash) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+  }
+
+  const isValidPassword = await verifyPassword(password, user.passwordHash)
+  if (!isValidPassword) {
+    return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
+  }
+
+  if (user.totpEnabled && user.totpSecret) {
+    if (!totpCode) {
+      return NextResponse.json({ error: '2FA code required', requires2fa: true }, { status: 401 })
+    }
+
+    if (isRecoveryCode) {
+      if (!user.totpRecoveryCodes) {
+        return NextResponse.json({ error: 'No recovery codes available' }, { status: 401 })
+      }
+
+      const codeIndex = await verifyRecoveryCode(totpCode, user.totpRecoveryCodes)
+      if (codeIndex === -1) {
+        return NextResponse.json({ error: 'Invalid recovery code' }, { status: 401 })
+      }
+
+      const updatedCodes = markRecoveryCodeUsed(user.totpRecoveryCodes, codeIndex)
+      await db.user.update({
+        where: { id: userId },
+        data: { totpRecoveryCodes: updatedCodes },
+      })
+    } else {
+      const secret = decryptTotpSecret(user.totpSecret)
+      const isValidTotp = verifyTotpToken(totpCode, secret)
+      if (!isValidTotp) {
+        return NextResponse.json({ error: 'Invalid 2FA code' }, { status: 401 })
+      }
+    }
+  }
+
+  return null
+}
 
 const updateUserSchema = z.object({
   name: z.string().min(1).optional(),
@@ -356,6 +419,30 @@ export async function DELETE(
     const { username } = await params
     const { searchParams } = new URL(request.url)
     const permanent = searchParams.get('permanent') === 'true'
+
+    // Verify the admin's identity
+    let body: { confirmPassword?: string; totpCode?: string; isRecoveryCode?: boolean } = {}
+    try {
+      body = await request.json()
+    } catch {
+      // No body is OK for demo mode
+    }
+
+    if (!isDemoMode()) {
+      if (!body.confirmPassword) {
+        return NextResponse.json(
+          { error: 'Password is required to confirm this action' },
+          { status: 400 },
+        )
+      }
+      const authError = await verifyReauth(
+        currentUser.id,
+        body.confirmPassword,
+        body.totpCode,
+        body.isRecoveryCode,
+      )
+      if (authError) return authError
+    }
 
     // Handle demo mode - return success without persisting
     if (isDemoMode()) {

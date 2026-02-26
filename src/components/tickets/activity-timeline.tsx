@@ -4,18 +4,22 @@ import { formatDistanceToNow } from 'date-fns'
 import {
   ArrowRight,
   Bot,
+  CheckCircle2,
   CircleDot,
   GitBranch,
   MessageSquare,
   Pencil,
   Plus,
   Tag,
+  Undo2,
   User,
 } from 'lucide-react'
+import { ResolutionBadge } from '@/components/common/resolution-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
+  type ActivityChange,
   type ActivityEntry,
   type ActivityGroupEntry,
   type ActivityValue,
@@ -25,6 +29,7 @@ import {
 } from '@/hooks/queries/use-activity'
 import { getColumnIcon } from '@/lib/status-icons'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import type { Resolution } from '@/types'
 import { MarkdownViewer } from './markdown-viewer'
 
 // ============================================================================
@@ -192,7 +197,121 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
   )
 }
 
+/**
+ * Detect whether a group of changes represents a "marked as done" or "unmarked as done" action.
+ * This happens when a column move to/from a done column is auto-coupled with resolution set/cleared.
+ *
+ * Returns:
+ * - 'marked_done' if moved to done column + resolution was set
+ * - 'unmarked_done' if moved from done column + resolution was cleared
+ * - null if neither pattern matches
+ */
+function detectDoneTransition(changes: ActivityChange[]): 'marked_done' | 'unmarked_done' | null {
+  const moveChange = changes.find((c) => c.action === 'moved')
+  const resolutionChange = changes.find((c) => c.action === 'resolution_changed')
+
+  if (!moveChange || !resolutionChange) return null
+
+  // Marked as done: resolution was set (non-null new value)
+  if (resolutionChange.newValue && resolutionChange.newValue !== 'null') {
+    return 'marked_done'
+  }
+
+  // Unmarked as done: resolution was cleared (null/empty new value)
+  if (!resolutionChange.newValue || resolutionChange.newValue === 'null') {
+    return 'unmarked_done'
+  }
+
+  return null
+}
+
 function ActivityGroupRow({ entry }: { entry: ActivityGroupEntry }) {
+  const doneTransition = detectDoneTransition(entry.changes)
+
+  // Render combined "marked as done" / "unmarked as done" entry
+  if (doneTransition) {
+    const isMarked = doneTransition === 'marked_done'
+    const moveChange = entry.changes.find((c) => c.action === 'moved')
+    const resolutionChange = entry.changes.find((c) => c.action === 'resolution_changed')
+    const destinationColumn = moveChange ? parseColumnValue(moveChange.newValue) : null
+    // Show the specific resolution if it's not just "Done"
+    const resolutionValue =
+      isMarked && resolutionChange?.newValue && typeof resolutionChange.newValue === 'string'
+        ? resolutionChange.newValue
+        : null
+    const showResolution =
+      resolutionValue && resolutionValue !== 'null' && resolutionValue !== 'Done'
+    // Collect any remaining changes that are not part of the done transition
+    const otherChanges = entry.changes.filter(
+      (c) => c.action !== 'moved' && c.action !== 'resolution_changed',
+    )
+
+    return (
+      <div className="flex gap-2.5 py-1.5 group">
+        <div className={cn('mt-0.5 shrink-0', isMarked ? 'text-green-500' : 'text-zinc-400')}>
+          {entry.user ? (
+            <ActivityAvatar user={entry.user} size="sm" />
+          ) : (
+            <div className="h-6 w-6 rounded-full bg-zinc-800 flex items-center justify-center">
+              {isMarked ? <CheckCircle2 className="h-3 w-3" /> : <Undo2 className="h-3 w-3" />}
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-zinc-300 leading-snug">
+            <UserName user={entry.user} />{' '}
+            {isMarked ? (
+              <span>
+                {showResolution ? (
+                  <>
+                    resolved as{' '}
+                    <ResolutionBadge resolution={resolutionValue as Resolution} size="sm" />
+                  </>
+                ) : (
+                  'marked as done'
+                )}
+                {destinationColumn && (
+                  <>
+                    {' '}
+                    — moved to <ColumnBadge column={destinationColumn} />
+                  </>
+                )}
+              </span>
+            ) : (
+              <span>
+                unmarked as done
+                {destinationColumn && (
+                  <>
+                    {' '}
+                    — moved to <ColumnBadge column={destinationColumn} />
+                  </>
+                )}
+              </span>
+            )}
+          </p>
+          {otherChanges.length > 0 && (
+            <div className="mt-1 space-y-0.5">
+              {otherChanges.map((change, i) => (
+                <div key={i} className="text-xs text-zinc-500 flex items-start gap-1">
+                  <ArrowRight className="h-3 w-3 mt-0.5 shrink-0 text-zinc-600" />
+                  <span>
+                    <ActionDescription
+                      action={change.action}
+                      field={change.field}
+                      oldValue={change.oldValue}
+                      newValue={change.newValue}
+                    />
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          <Timestamp date={entry.createdAt} />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex gap-2.5 py-1.5 group">
       <div className="mt-0.5 shrink-0">
@@ -377,9 +496,15 @@ function ActionDescription({
       if (!newValue || newValue === 'null') {
         return <span>cleared resolution</span>
       }
+      const resolutionStr = typeof newValue === 'string' ? newValue : null
       return (
         <span>
-          set resolution to <ValueBadge value={newValue} />
+          set resolution to{' '}
+          {resolutionStr && resolutionStr !== 'null' ? (
+            <ResolutionBadge resolution={resolutionStr as Resolution} size="sm" />
+          ) : (
+            <ValueBadge value={newValue} />
+          )}
         </span>
       )
     }
