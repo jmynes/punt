@@ -182,9 +182,10 @@ export const TextareaWithAutocomplete = forwardRef<
       box-sizing: ${computed.boxSizing};
     `
 
-    // Get text up to cursor position
+    // Get text up to cursor position as a proper text node so the
+    // marker span flows inline and wraps correctly with the text
     const textBeforeCursor = value.substring(0, textarea.selectionStart)
-    mirror.textContent = textBeforeCursor
+    mirror.appendChild(document.createTextNode(textBeforeCursor))
 
     // Add a span to mark the cursor position
     const marker = document.createElement('span')
