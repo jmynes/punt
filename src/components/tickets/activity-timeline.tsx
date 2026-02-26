@@ -496,9 +496,15 @@ function ActionDescription({
       if (!newValue || newValue === 'null') {
         return <span>cleared resolution</span>
       }
+      const resolutionStr = typeof newValue === 'string' ? newValue : null
       return (
         <span>
-          set resolution to <ValueBadge value={newValue} />
+          set resolution to{' '}
+          {resolutionStr && resolutionStr !== 'null' ? (
+            <ResolutionBadge resolution={resolutionStr as Resolution} size="sm" />
+          ) : (
+            <ValueBadge value={newValue} />
+          )}
         </span>
       )
     }
