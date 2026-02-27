@@ -36,7 +36,12 @@ import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { formatDaysRemaining, isCompletedColumn, isSprintExpired } from '@/lib/sprint-utils'
 import { cn } from '@/lib/utils'
-import { type BacklogColumnId, type SortDirection, useBacklogStore } from '@/stores/backlog-store'
+import {
+  type BacklogColumnId,
+  type SortConfig,
+  type SortDirection,
+  useBacklogStore,
+} from '@/stores/backlog-store'
 import { useSprintStore } from '@/stores/sprint-store'
 import { useUIStore } from '@/stores/ui-store'
 import type {
@@ -127,6 +132,13 @@ export function SprintSection({
       }
     },
     [columns, sectionId, getSprintSort, setSprintSort],
+  )
+
+  const handleSetSort = useCallback(
+    (newSort: SortConfig | null) => {
+      setSprintSort(sectionId, newSort)
+    },
+    [sectionId, setSprintSort],
   )
 
   // Get status name helper
@@ -676,6 +688,7 @@ export function SprintSection({
                 showHeader={true}
                 sort={sort}
                 onToggleSort={handleToggleSort}
+                onSetSort={handleSetSort}
               />
               {/* Invisible droppable zone after the last ticket for "drop at end" */}
               <div ref={setEndDropRef} className="h-2" />

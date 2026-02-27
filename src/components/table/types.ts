@@ -44,8 +44,12 @@ export interface TicketTableProps {
   sort?: SortConfig | null
   /** Callback when a sortable column header is clicked */
   onToggleSort?: (columnId: string) => void
+  /** Callback to explicitly set sort column and direction, or null to clear */
+  onSetSort?: (sort: SortConfig | null) => void
   /** Whether columns can be reordered via drag-and-drop */
   enableColumnReorder?: boolean
+  /** Callback to hide a column */
+  onHideColumn?: (columnId: string) => void
 
   // Overlay mode (for DragOverlay)
   /** If provided, renders a single ticket as overlay */
@@ -98,8 +102,12 @@ export interface TicketTableHeaderProps {
   sort?: SortConfig | null
   /** Callback when a sortable column header is clicked */
   onToggleSort?: (columnId: string) => void
+  /** Callback to explicitly set sort column and direction, or null to clear */
+  onSetSort?: (sort: SortConfig | null) => void
   /** Whether columns can be reordered */
   enableColumnReorder?: boolean
+  /** Callback to hide a column */
+  onHideColumn?: (columnId: string) => void
 }
 
 /**
@@ -109,6 +117,8 @@ export interface SortableHeaderCellProps {
   column: BacklogColumn
   sort?: SortConfig | null
   onToggleSort?: (columnId: string) => void
+  onSetSort?: (sort: SortConfig | null) => void
+  onHideColumn?: (columnId: string) => void
 }
 
 export type { BacklogColumn, SortConfig, SortDirection }

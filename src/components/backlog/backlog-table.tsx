@@ -81,6 +81,7 @@ export function BacklogTable({
     searchQuery,
     showSubtasks,
     setColumnConfigOpen,
+    toggleColumnVisibility,
     backlogOrder,
     setBacklogOrder,
     clearBacklogOrder: _clearBacklogOrder,
@@ -631,7 +632,11 @@ export function BacklogTable({
         showHeader={true}
         sort={sort}
         onToggleSort={handleToggleSort}
+        onSetSort={setSort}
         enableColumnReorder={true}
+        onHideColumn={(id) =>
+          toggleColumnVisibility(id as Parameters<typeof toggleColumnVisibility>[0])
+        }
       />
     </SortableContext>
   )
