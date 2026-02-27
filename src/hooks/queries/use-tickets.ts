@@ -212,6 +212,9 @@ export function useUpdateTicket() {
       if ('startDate' in updates) apiUpdates.startDate = updates.startDate
       if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
       if ('resolution' in updates) apiUpdates.resolution = updates.resolution
+      if ('environment' in updates) apiUpdates.environment = updates.environment
+      if ('affectedVersion' in updates) apiUpdates.affectedVersion = updates.affectedVersion
+      if ('fixVersion' in updates) apiUpdates.fixVersion = updates.fixVersion
 
       // Convert labels to labelIds
       if ('labels' in updates && updates.labels) {
