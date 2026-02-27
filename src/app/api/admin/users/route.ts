@@ -162,7 +162,16 @@ export async function GET(request: Request) {
       }
     }
 
-    return NextResponse.json(filteredUsers)
+    // Map raw key fields to boolean flags (never expose actual keys)
+    const safeUsers = filteredUsers.map(
+      ({ mcpApiKey, anthropicApiKey, claudeSessionEncrypted, ...user }) => ({
+        ...user,
+        hasMcpApiKey: Boolean(mcpApiKey),
+        hasClaudeChat: Boolean(anthropicApiKey || claudeSessionEncrypted),
+      }),
+    )
+
+    return NextResponse.json(safeUsers)
   } catch (error) {
     return handleApiError(error, 'list users')
   }
