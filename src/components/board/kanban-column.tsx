@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getColumnIcon } from '@/lib/status-icons'
 import { cn } from '@/lib/utils'
@@ -212,7 +213,7 @@ export function KanbanColumn({
       </div>
 
       {/* Column content - scrollable area */}
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+      <ScrollArea className="flex-1 min-h-0">
         <div ref={setNodeRef} className="flex flex-col gap-2 min-h-[100px] p-2">
           <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
             {sortedTickets.map((ticket, _index) => {
@@ -280,7 +281,7 @@ export function KanbanColumn({
             )}
           </div>
         </div>
-      </div>
+      </ScrollArea>
 
       {/* Add ticket button at bottom */}
       <div className="p-2 border-t border-zinc-800">
