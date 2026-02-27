@@ -13,8 +13,9 @@ datasource db {
 
 model User {
   id          String    @id @default(cuid())
-  username    String    @unique
-  email       String?   @unique
+  username      String  @unique
+  usernameLower String? @unique
+  email         String? @unique
   name        String
   avatar      String?
   avatarColor String?   // Custom background color for fallback avatar

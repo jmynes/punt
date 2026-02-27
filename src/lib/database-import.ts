@@ -492,6 +492,7 @@ export async function importDatabase(
           await tx.user.create({
             data: {
               ...user,
+              usernameLower: user.usernameLower ?? user.username.toLowerCase(),
               createdAt: new Date(user.createdAt),
               updatedAt: new Date(user.updatedAt),
               lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt) : null,

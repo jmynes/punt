@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     }
 
     // If username is provided, verify it matches the current user
-    if (username && username !== user.username) {
+    if (username && username.toLowerCase() !== user.username.toLowerCase()) {
       return NextResponse.json({ error: 'Username does not match your account' }, { status: 401 })
     }
 

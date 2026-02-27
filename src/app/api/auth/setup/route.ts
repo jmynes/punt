@@ -79,6 +79,7 @@ export async function POST(request: Request) {
     const user = await db.user.create({
       data: {
         username,
+        usernameLower: username.toLowerCase(),
         name,
         email: email || null,
         passwordHash,

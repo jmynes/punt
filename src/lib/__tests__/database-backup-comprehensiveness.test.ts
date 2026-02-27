@@ -19,24 +19,29 @@ import { ExportDataSchema } from '@/lib/schemas/database-export'
 // Test Data Factory
 // ============================================================================
 
-const createTestUser = (overrides: Record<string, unknown> = {}) => ({
-  id: `test-user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-  username: `testuser_${Date.now()}`,
-  email: `test${Date.now()}@example.com`,
-  name: 'Test User',
-  avatar: '/uploads/avatars/test.webp',
-  avatarColor: '#ff5733',
-  passwordHash: '$2a$12$testhashedpassword',
-  passwordChangedAt: new Date(),
-  emailVerified: new Date(),
-  isSystemAdmin: true,
-  isActive: true,
-  lastLoginAt: new Date(),
-  mcpApiKey: `mcp_key_${Date.now()}`,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  ...overrides,
-})
+const createTestUser = (overrides: Record<string, unknown> = {}) => {
+  const ts = Date.now()
+  const uname = (overrides.username as string) ?? `testuser_${ts}`
+  return {
+    id: `test-user-${ts}-${Math.random().toString(36).slice(2)}`,
+    username: uname,
+    usernameLower: uname.toLowerCase(),
+    email: `test${Date.now()}@example.com`,
+    name: 'Test User',
+    avatar: '/uploads/avatars/test.webp',
+    avatarColor: '#ff5733',
+    passwordHash: '$2a$12$testhashedpassword',
+    passwordChangedAt: new Date(),
+    emailVerified: new Date(),
+    isSystemAdmin: true,
+    isActive: true,
+    lastLoginAt: new Date(),
+    mcpApiKey: `mcp_key_${Date.now()}`,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  }
+}
 
 const createTestProject = (overrides: Record<string, unknown> = {}) => ({
   id: `test-project-${Date.now()}-${Math.random().toString(36).slice(2)}`,

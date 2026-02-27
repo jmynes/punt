@@ -88,7 +88,7 @@ export async function DELETE(
 
     // Find the target user
     const targetUser = await db.user.findUnique({
-      where: { username },
+      where: { usernameLower: username.toLowerCase() },
       select: { id: true, totpEnabled: true },
     })
 
