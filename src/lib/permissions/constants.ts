@@ -256,7 +256,7 @@ export function parsePermissions(value: unknown): Permission[] {
     return value.filter(isValidPermission)
   }
 
-  // Legacy string format (from SQLite or import)
+  // Legacy string format (from older exports)
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value)

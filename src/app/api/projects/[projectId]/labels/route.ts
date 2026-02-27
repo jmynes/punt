@@ -92,13 +92,10 @@ export async function POST(
     const { name, color } = result.data
 
     // Check if label with same name already exists (case-insensitive)
-    // SQLite doesn't support case-insensitive mode, so we fetch all and compare in JS
-    const allLabels = await db.label.findMany({
-      where: { projectId },
+    const existingLabel = await db.label.findFirst({
+      where: { projectId, name: { equals: name, mode: 'insensitive' } },
       select: LABEL_SELECT,
     })
-    const normalizedName = name.toLowerCase()
-    const existingLabel = allLabels.find((l) => l.name.toLowerCase() === normalizedName)
 
     if (existingLabel) {
       // Return existing label instead of creating duplicate

@@ -14,7 +14,7 @@ const nullableDate = z.union([z.string().datetime(), z.null()])
 // Model schemas (matching Prisma schema)
 // ============================================================================
 
-// Helper for JSON fields that may be stored as strings (SQLite legacy) or native JSON (PostgreSQL)
+// Helper for JSON fields that may be stored as strings (legacy exports) or native JSON
 const jsonOrString = z.union([z.string(), z.array(z.unknown()), z.record(z.string(), z.unknown())])
 
 export const SystemSettingsSchema = z
