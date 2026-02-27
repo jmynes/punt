@@ -4,7 +4,6 @@
  */
 
 import type { QueryClient } from '@tanstack/react-query'
-import { activityKeys } from '@/hooks/queries/use-activity'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'

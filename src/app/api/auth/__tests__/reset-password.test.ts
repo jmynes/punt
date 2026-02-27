@@ -141,7 +141,7 @@ describe('Reset Password API - Token Validation (GET)', () => {
 
   it('should reject missing token', async () => {
     const response = await GET(createGetRequest(null))
-    const data = await response.json()
+    await response.json()
 
     expect(response.status).toBe(400)
   })

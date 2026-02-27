@@ -675,7 +675,7 @@ export function KeyboardShortcuts() {
                   boardState.removeTicket(entry.projectId, tempTicket.id)
                   boardState.addTicket(entry.projectId, columnId, serverTicket)
                   // Extract activity IDs from server response to delete before restoring originals
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  // biome-ignore lint/suspicious/noExplicitAny: accessing internal server response field
                   const activityIdsToDelete = (serverTicket as any)._activity?.activityIds ?? []
                   // Restore attachments, comments, links, and activities
                   await restoreAttachments(entry.projectId, serverTicket.id, tempTicket.attachments)

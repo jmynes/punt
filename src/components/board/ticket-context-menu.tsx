@@ -848,7 +848,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     portalContent = createPortal(
       // Stop click propagation so React's synthetic event bubbling through the portal
       // doesn't reach parent click handlers (e.g. backlog table's click-to-deselect)
-      // biome-ignore lint/a11y/useKeyWithClickEvents: portal wrapper, not interactive
       <div onClick={(e) => e.stopPropagation()}>
         {/* Invisible backdrop to block clicks on elements behind the menu */}
         <div

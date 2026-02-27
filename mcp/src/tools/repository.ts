@@ -4,7 +4,6 @@ import {
   getRepositoryConfig,
   getTicket,
   type RepositoryConfigData,
-  type TicketData,
   unwrapData,
 } from '../api-client.js'
 import { errorResponse, escapeMarkdown, textResponse } from '../utils.js'

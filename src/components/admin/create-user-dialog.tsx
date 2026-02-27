@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Check, Eye, EyeOff, Loader2, UserPlus, X } from 'lucide-react'
+import { AlertTriangle, Check, Eye, EyeOff, UserPlus, X } from 'lucide-react'
 import { useState } from 'react'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { Button } from '@/components/ui/button'

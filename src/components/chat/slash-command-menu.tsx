@@ -17,7 +17,7 @@ export function SlashCommandMenu({
   open,
   filter,
   onSelect,
-  onClose,
+  onClose: _onClose,
   selectedIndex,
   onSelectedIndexChange,
 }: SlashCommandMenuProps) {

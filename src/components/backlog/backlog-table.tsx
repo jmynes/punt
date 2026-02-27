@@ -33,7 +33,6 @@ import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { BacklogFilters } from './backlog-filters'
-import { QueryInput } from './query-input'
 
 interface BacklogTableProps {
   tickets: TicketWithRelations[]
@@ -86,9 +85,7 @@ export function BacklogTable({
     setBacklogOrder,
     clearBacklogOrder: _clearBacklogOrder,
     queryMode,
-    setQueryMode,
     queryText,
-    setQueryText,
   } = useBacklogStore()
   const persistTableSort = useSettingsStore((s) => s.persistTableSort)
 

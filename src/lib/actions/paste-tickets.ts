@@ -3,7 +3,7 @@
  * This module consolidates the paste logic used by context menu and keyboard shortcuts.
  */
 
-import { batchCreateTicketsAPI, batchDeleteTicketsAPI } from '@/hooks/queries/use-tickets'
+import { batchCreateTicketsAPI } from '@/hooks/queries/use-tickets'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'

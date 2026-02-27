@@ -30,7 +30,7 @@ type ChatProvider = 'anthropic' | 'claude-cli'
 
 export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
   // Anthropic API key state
-  const [anthropicKeyLoading, setAnthropicKeyLoading] = useState(false)
+  const [anthropicKeyLoading] = useState(false)
   const [anthropicHasKey, setAnthropicHasKey] = useState(false)
   const [anthropicKeyHint, setAnthropicKeyHint] = useState<string | null>(null)
   const [anthropicKeyInput, setAnthropicKeyInput] = useState('')

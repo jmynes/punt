@@ -45,7 +45,7 @@ const validUsername = fc
 /**
  * User summary arbitrary (for assignee, reporter, creator, watchers)
  */
-const userSummary = fc.record({
+const _userSummary = fc.record({
   id: fc.uuid(),
   username: validUsername,
   name: fc.string({ minLength: 1, maxLength: 100 }),
@@ -56,7 +56,7 @@ const userSummary = fc.record({
 /**
  * Sprint summary arbitrary (for sprint, carriedFromSprint)
  */
-const sprintSummary = fc.record({
+const _sprintSummary = fc.record({
   id: fc.uuid(),
   name: fc.string({ minLength: 1, maxLength: 100 }),
   status: fc.constantFrom<SprintStatus>('planning', 'active', 'completed'),
