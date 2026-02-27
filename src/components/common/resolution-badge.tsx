@@ -1,4 +1,4 @@
-import { Ban, CheckCircle2, Copy, HelpCircle, MinusCircle, XCircle } from 'lucide-react'
+import { Ban, CheckCheck, CheckCircle2, Copy, HelpCircle, MinusCircle, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Resolution } from '@/types'
@@ -16,6 +16,11 @@ export const resolutionConfig: Record<
     color: string
   }
 > = {
+  'Already Implemented': {
+    icon: CheckCheck,
+    className: 'border-blue-600 bg-blue-900/30 text-blue-400',
+    color: '#60a5fa',
+  },
   Done: {
     icon: CheckCircle2,
     className: 'border-green-600 bg-green-900/30 text-green-400',
