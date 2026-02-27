@@ -426,7 +426,15 @@ export function registerTicketTools(server: McpServer) {
       labels: z.array(z.string()).optional().describe('Label names to assign'),
       sprint: z.string().optional().describe('Sprint name to assign to'),
       resolution: z
-        .enum(['Done', "Won't Fix", 'Duplicate', 'Cannot Reproduce', 'Incomplete', "Won't Do"])
+        .enum([
+          'Already Implemented',
+          'Done',
+          "Won't Fix",
+          'Duplicate',
+          'Cannot Reproduce',
+          'Incomplete',
+          "Won't Do",
+        ])
         .nullable()
         .optional()
         .describe('Resolution (e.g., "Done", "Won\'t Fix", "Duplicate")'),
@@ -644,7 +652,15 @@ export function registerTicketTools(server: McpServer) {
       column: z.string().optional().describe('Move to column'),
       sprint: z.string().nullable().optional().describe('Sprint name (null for backlog)'),
       resolution: z
-        .enum(['Done', "Won't Fix", 'Duplicate', 'Cannot Reproduce', 'Incomplete', "Won't Do"])
+        .enum([
+          'Already Implemented',
+          'Done',
+          "Won't Fix",
+          'Duplicate',
+          'Cannot Reproduce',
+          'Incomplete',
+          "Won't Do",
+        ])
         .nullable()
         .optional()
         .describe('Resolution'),

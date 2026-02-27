@@ -148,7 +148,15 @@ function resolveFieldName(name: string): string {
 export const FIELD_VALUES: Record<string, string[]> = {
   type: ['epic', 'story', 'task', 'bug', 'subtask'],
   priority: ['lowest', 'low', 'medium', 'high', 'highest', 'critical'],
-  resolution: ['Done', 'Cannot Reproduce', 'Duplicate', 'Incomplete', "Won't Do", "Won't Fix"],
+  resolution: [
+    'Already Implemented',
+    'Done',
+    'Cannot Reproduce',
+    'Duplicate',
+    'Incomplete',
+    "Won't Do",
+    "Won't Fix",
+  ],
 }
 
 // ============================================================================

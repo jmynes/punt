@@ -168,7 +168,15 @@ export const chatTools: AnthropicTool[] = [
         },
         resolution: {
           type: 'string',
-          enum: ['Done', "Won't Fix", 'Duplicate', 'Cannot Reproduce', 'Incomplete', "Won't Do"],
+          enum: [
+            'Already Implemented',
+            'Done',
+            "Won't Fix",
+            'Duplicate',
+            'Cannot Reproduce',
+            'Incomplete',
+            "Won't Do",
+          ],
           description: 'Resolution status',
         },
         labels: {
