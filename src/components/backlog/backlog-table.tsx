@@ -631,6 +631,7 @@ export function BacklogTable({
         showHeader={true}
         sort={sort}
         onToggleSort={handleToggleSort}
+        onSetSort={setSort}
         enableColumnReorder={true}
       />
     </SortableContext>

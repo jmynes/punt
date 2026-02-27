@@ -24,6 +24,7 @@ export function TicketTable({
   showHeader = true,
   sort,
   onToggleSort,
+  onSetSort,
   enableColumnReorder = false,
   overlayTicket,
 }: TicketTableProps) {
@@ -50,6 +51,7 @@ export function TicketTable({
           columns={visibleColumns}
           sort={sort}
           onToggleSort={onToggleSort}
+          onSetSort={onSetSort}
           enableColumnReorder={enableColumnReorder}
         />
       )}
