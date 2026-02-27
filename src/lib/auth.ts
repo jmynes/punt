@@ -48,7 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const normalizedUsername = username.normalize('NFC')
 
         const user = await db.user.findUnique({
-          where: { username: normalizedUsername },
+          where: { usernameLower: normalizedUsername.toLowerCase() },
         })
 
         if (!user || !user.passwordHash) {

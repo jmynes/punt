@@ -37,6 +37,7 @@ import {
 const TEST_USER = {
   id: 'test-user-1',
   username: 'testuser',
+  usernameLower: 'testuser',
   email: 'test@example.com',
   name: 'Test User',
   avatar: null,

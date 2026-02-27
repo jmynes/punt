@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
     // Re-verify credentials (defense in depth)
     const user = await db.user.findUnique({
-      where: { username: normalizedUsername },
+      where: { usernameLower: normalizedUsername.toLowerCase() },
       select: {
         id: true,
         passwordHash: true,

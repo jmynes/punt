@@ -93,7 +93,7 @@ export async function GET(
     // Handle demo mode - return demo user data
     if (isDemoMode()) {
       const allDemoUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
-      const demoUser = allDemoUsers.find((u) => u.username === username)
+      const demoUser = allDemoUsers.find((u) => u.username.toLowerCase() === username.toLowerCase())
 
       if (!demoUser) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -143,7 +143,7 @@ export async function GET(
     }
 
     const user = await db.user.findUnique({
-      where: { username },
+      where: { usernameLower: username.toLowerCase() },
       select: {
         id: true,
         username: true,
@@ -225,7 +225,7 @@ export async function PATCH(
     // Handle demo mode - return success without persisting
     if (isDemoMode()) {
       const allDemoUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
-      const demoUser = allDemoUsers.find((u) => u.username === username)
+      const demoUser = allDemoUsers.find((u) => u.username.toLowerCase() === username.toLowerCase())
       if (!demoUser) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 })
       }
@@ -243,9 +243,9 @@ export async function PATCH(
       })
     }
 
-    // Look up the target user by username
+    // Look up the target user by username (case-insensitive)
     const existingUser = await db.user.findUnique({
-      where: { username },
+      where: { usernameLower: username.toLowerCase() },
     })
 
     if (!existingUser) {
@@ -324,7 +324,7 @@ export async function PATCH(
 
     // Update user
     const user = await db.user.update({
-      where: { username },
+      where: { id: existingUser.id },
       data: {
         ...(updates.name && { name: updates.name }),
         ...(updates.email && { email: updates.email }),
@@ -454,7 +454,7 @@ export async function DELETE(
     // Handle demo mode - return success without persisting
     if (isDemoMode()) {
       const allDemoUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
-      const demoUser = allDemoUsers.find((u) => u.username === username)
+      const demoUser = allDemoUsers.find((u) => u.username.toLowerCase() === username.toLowerCase())
       if (!demoUser) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 })
       }
@@ -473,9 +473,9 @@ export async function DELETE(
       return NextResponse.json({ success: true, action: permanent ? 'deleted' : 'disabled' })
     }
 
-    // Look up the target user by username
+    // Look up the target user by username (case-insensitive)
     const existingUser = await db.user.findUnique({
-      where: { username },
+      where: { usernameLower: username.toLowerCase() },
     })
 
     if (!existingUser) {
@@ -503,13 +503,13 @@ export async function DELETE(
         where: { userId: existingUser.id },
       })
       await db.user.delete({
-        where: { username },
+        where: { id: existingUser.id },
       })
       return NextResponse.json({ success: true, action: 'deleted' })
     } else {
       // Soft delete: deactivate the user
       await db.user.update({
-        where: { username },
+        where: { id: existingUser.id },
         data: { isActive: false },
       })
       return NextResponse.json({ success: true, action: 'disabled' })

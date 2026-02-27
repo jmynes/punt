@@ -159,6 +159,7 @@ export async function POST(request: Request) {
         await tx.user.create({
           data: {
             username: username.normalize('NFC'),
+            usernameLower: username.normalize('NFC').toLowerCase(),
             name: username,
             passwordHash,
             isSystemAdmin: true,

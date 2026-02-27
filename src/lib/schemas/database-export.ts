@@ -53,6 +53,7 @@ export const SystemSettingsSchema = z.object({
 export const UserSchema = z.object({
   id: z.string(),
   username: z.string(),
+  usernameLower: z.string().nullable().optional(),
   email: z.string().nullable(),
   name: z.string(),
   avatar: z.string().nullable(),
