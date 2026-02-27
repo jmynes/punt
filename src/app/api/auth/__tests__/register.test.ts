@@ -6,6 +6,7 @@ vi.mock('@/lib/db', () => ({
   db: {
     user: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       create: vi.fn(),
     },
   },
@@ -33,6 +34,7 @@ describe('Registration API - Username Validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDb.user.findUnique.mockResolvedValue(null)
+    mockDb.user.findFirst.mockResolvedValue(null)
     // biome-ignore lint/suspicious/noExplicitAny: partial mock for testing
     mockDb.user.create.mockImplementation(({ data }: any) =>
       Promise.resolve({
@@ -179,6 +181,7 @@ describe('Registration API - Password Validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDb.user.findUnique.mockResolvedValue(null)
+    mockDb.user.findFirst.mockResolvedValue(null)
     // biome-ignore lint/suspicious/noExplicitAny: partial mock for testing
     mockDb.user.create.mockImplementation(({ data }: any) =>
       Promise.resolve({
@@ -337,6 +340,7 @@ describe('Registration API - Input Sanitization', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockDb.user.findUnique.mockResolvedValue(null)
+    mockDb.user.findFirst.mockResolvedValue(null)
     // biome-ignore lint/suspicious/noExplicitAny: partial mock for testing
     mockDb.user.create.mockImplementation(({ data }: any) =>
       Promise.resolve({
