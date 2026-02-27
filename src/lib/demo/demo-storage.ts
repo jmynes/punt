@@ -570,8 +570,12 @@ class DemoStorage {
       name: user.name,
       email: user.email,
       avatar: user.avatar,
+      avatarColor: null,
       isSystemAdmin: user.isSystemAdmin,
       isActive: user.isActive,
+      totpEnabled: false,
+      hasMcpApiKey: false,
+      hasClaudeChat: false,
       createdAt: user.createdAt.toISOString(),
       lastLoginAt: user.id === DEMO_USER.id ? new Date().toISOString() : null,
       _count: { projects: 2 },
@@ -588,8 +592,12 @@ class DemoStorage {
       name: user.name,
       email: user.email,
       avatar: user.avatar,
+      avatarColor: null,
       isSystemAdmin: user.isSystemAdmin,
       isActive: user.isActive,
+      totpEnabled: false,
+      hasMcpApiKey: false,
+      hasClaudeChat: false,
       createdAt: user.createdAt.toISOString(),
       lastLoginAt: user.id === DEMO_USER.id ? new Date().toISOString() : null,
       _count: { projects: 2 },
@@ -604,8 +612,12 @@ export interface DemoAdminUser {
   name: string
   email: string
   avatar: string | null
+  avatarColor: string | null
   isSystemAdmin: boolean
   isActive: boolean
+  totpEnabled: boolean
+  hasMcpApiKey: boolean
+  hasClaudeChat: boolean
   createdAt: string
   lastLoginAt: string | null
   _count: { projects: number }
