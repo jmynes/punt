@@ -40,6 +40,16 @@ export const useProjectsStore = create<ProjectsState>()((set, get) => ({
   error: null,
 
   setProjects: (projects) => {
+    const { projects: current, isLoading, error } = get()
+    // Skip update if state is already correct and data unchanged
+    if (
+      !isLoading &&
+      error === null &&
+      (current === projects ||
+        (current.length === projects.length && current.every((p, i) => p.id === projects[i].id)))
+    ) {
+      return
+    }
     logger.debug('Setting projects from server', { count: projects.length })
     set({ projects, isLoading: false, error: null })
   },
