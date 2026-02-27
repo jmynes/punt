@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '@/generated/prisma'
 import { handleApiError, notFoundError } from '@/lib/api-utils'
 import { requireAuth, requirePermission, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
@@ -209,7 +210,7 @@ export async function PATCH(
     const updateData: Record<string, unknown> = {}
     if (roleId !== undefined) updateData.roleId = roleId
     if (overrides !== undefined) {
-      updateData.overrides = overrides === null ? null : JSON.stringify(overrides)
+      updateData.overrides = overrides === null ? Prisma.DbNull : overrides
     }
 
     // Update the member

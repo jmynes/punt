@@ -129,7 +129,7 @@ export async function POST(
         name,
         color,
         description,
-        permissions: JSON.stringify(validPermissions),
+        permissions: validPermissions,
         isDefault: false, // Custom roles are never default
         position,
         projectId,

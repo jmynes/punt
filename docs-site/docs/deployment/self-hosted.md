@@ -35,7 +35,7 @@ Create a `.env` file:
 ```env
 # Required
 AUTH_SECRET=your-secret-key-here
-DATABASE_URL=file:/var/data/punt/punt.db
+DATABASE_URL=postgresql://user:password@localhost:5432/punt
 
 # If behind reverse proxy
 AUTH_TRUST_HOST=true
@@ -50,14 +50,15 @@ openssl rand -base64 32
 
 ### Set Up Database
 
-Create the database directory:
+Install PostgreSQL 16+ and create a database and user:
 
 ```bash
-sudo mkdir -p /var/data/punt
-sudo chown $USER:$USER /var/data/punt
+sudo apt install postgresql
+sudo -u postgres psql -c "CREATE USER punt WITH PASSWORD 'yourpassword';"
+sudo -u postgres psql -c "CREATE DATABASE punt OWNER punt;"
 ```
 
-Initialize the database:
+Update `DATABASE_URL` in your `.env` file to match your credentials, then initialize the schema:
 
 ```bash
 pnpm db:push
@@ -283,13 +284,13 @@ DATE=$(date +%Y%m%d_%H%M%S)
 mkdir -p $BACKUP_DIR
 
 # Backup database
-sqlite3 /var/data/punt/punt.db ".backup $BACKUP_DIR/punt_$DATE.db"
+pg_dump $DATABASE_URL > $BACKUP_DIR/punt_$DATE.sql
 
 # Backup uploads
 tar -czf $BACKUP_DIR/uploads_$DATE.tar.gz /var/data/punt/uploads/
 
 # Keep last 7 days of backups
-find $BACKUP_DIR -name "punt_*.db" -mtime +7 -delete
+find $BACKUP_DIR -name "punt_*.sql" -mtime +7 -delete
 find $BACKUP_DIR -name "uploads_*.tar.gz" -mtime +7 -delete
 ```
 
@@ -308,7 +309,7 @@ crontab -e
 sudo systemctl stop punt
 
 # Restore database
-cp /backup/punt/punt_YYYYMMDD.db /var/data/punt/punt.db
+psql $DATABASE_URL < /backup/punt/punt_YYYYMMDD.sql
 
 # Restore uploads
 tar -xzf /backup/punt/uploads_YYYYMMDD.tar.gz -C /
@@ -362,7 +363,7 @@ chown punt:punt /opt/punt/.env
 sudo systemctl stop punt
 
 # Backup database
-sqlite3 /var/data/punt/punt.db ".backup /var/data/punt/punt_before_update.db"
+pg_dump $DATABASE_URL > /var/data/punt/punt_before_update.sql
 
 # Pull updates
 cd /opt/punt
@@ -483,8 +484,7 @@ Build and run:
 docker build -t punt .
 docker run -d \
   -p 3000:3000 \
-  -v /var/data/punt:/app/data \
   -e AUTH_SECRET=your-secret \
-  -e DATABASE_URL=file:/app/data/punt.db \
+  -e DATABASE_URL=postgresql://user:password@your-db-host:5432/punt \
   punt
 ```

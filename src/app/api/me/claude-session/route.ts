@@ -5,6 +5,7 @@
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod/v4'
+import { Prisma } from '@/generated/prisma'
 import { requireAuth } from '@/lib/auth-helpers'
 import {
   decryptSession,
@@ -120,15 +121,10 @@ export async function GET() {
       }
     }
 
-    // Parse enabled servers from JSON string
-    let enabledMcpServers: string[] = []
-    if (user?.enabledMcpServers) {
-      try {
-        enabledMcpServers = JSON.parse(user.enabledMcpServers)
-      } catch {
-        // Ignore parse errors
-      }
-    }
+    // Enabled servers stored as native JSON array
+    const enabledMcpServers: string[] = Array.isArray(user?.enabledMcpServers)
+      ? (user.enabledMcpServers as string[])
+      : []
 
     return Response.json({
       hasSession: !!user?.claudeSessionEncrypted,
@@ -210,7 +206,7 @@ export async function POST(request: Request) {
       data: {
         claudeSessionEncrypted: encrypted,
         chatProvider: 'claude-cli',
-        enabledMcpServers: JSON.stringify(availableMcpServers),
+        enabledMcpServers: availableMcpServers,
       },
     })
 
@@ -257,7 +253,7 @@ export async function DELETE(request: Request) {
       data: {
         claudeSessionEncrypted: null,
         chatProvider: 'anthropic', // Fall back to API
-        enabledMcpServers: null,
+        enabledMcpServers: Prisma.DbNull,
       },
     })
 
@@ -284,7 +280,7 @@ export async function PATCH(request: Request) {
     const body = await request.json()
     const { provider, enabledMcpServers } = body
 
-    const updateData: { chatProvider?: string; enabledMcpServers?: string } = {}
+    const updateData: { chatProvider?: string; enabledMcpServers?: string[] } = {}
 
     // Handle provider update
     if (provider !== undefined) {
@@ -315,7 +311,7 @@ export async function PATCH(request: Request) {
       if (!Array.isArray(enabledMcpServers)) {
         return Response.json({ error: 'enabledMcpServers must be an array' }, { status: 400 })
       }
-      updateData.enabledMcpServers = JSON.stringify(enabledMcpServers)
+      updateData.enabledMcpServers = enabledMcpServers
     }
 
     if (Object.keys(updateData).length === 0) {

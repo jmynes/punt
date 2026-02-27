@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '@/generated/prisma'
 import { handleApiError, validationError } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
@@ -87,8 +88,8 @@ export async function DELETE(
     }
 
     // Find the target user
-    const targetUser = await db.user.findUnique({
-      where: { usernameLower: username.toLowerCase() },
+    const targetUser = await db.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
       select: { id: true, totpEnabled: true },
     })
 
@@ -109,7 +110,7 @@ export async function DELETE(
       data: {
         totpEnabled: false,
         totpSecret: null,
-        totpRecoveryCodes: null,
+        totpRecoveryCodes: Prisma.DbNull,
       },
     })
 

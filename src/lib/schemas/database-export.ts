@@ -14,81 +14,93 @@ const nullableDate = z.union([z.string().datetime(), z.null()])
 // Model schemas (matching Prisma schema)
 // ============================================================================
 
-export const SystemSettingsSchema = z.object({
-  id: z.string(),
-  updatedAt: z.string().datetime(),
-  updatedBy: z.string().nullable(),
-  // Branding
-  appName: z.string(),
-  logoUrl: z.string().nullable(),
-  logoLetter: z.string(),
-  logoGradientFrom: z.string(),
-  logoGradientTo: z.string(),
-  // Upload limits
-  maxImageSizeMB: z.number(),
-  maxVideoSizeMB: z.number(),
-  maxDocumentSizeMB: z.number(),
-  maxAttachmentsPerTicket: z.number(),
-  // Allowed MIME types
-  allowedImageTypes: z.string(),
-  allowedVideoTypes: z.string(),
-  allowedDocumentTypes: z.string(),
-  // Email settings
-  emailEnabled: z.boolean(),
-  emailProvider: z.string(),
-  emailFromAddress: z.string(),
-  emailFromName: z.string(),
-  smtpHost: z.string(),
-  smtpPort: z.number(),
-  smtpUsername: z.string(),
-  smtpSecure: z.boolean(),
-  emailPasswordReset: z.boolean(),
-  emailWelcome: z.boolean(),
-  emailVerification: z.boolean(),
-  emailInvitations: z.boolean(),
-  // Default role permissions
-  defaultRolePermissions: z.string().nullable(),
-})
+// Helper for JSON fields that may be stored as strings (legacy exports) or native JSON
+const jsonOrString = z.union([z.string(), z.array(z.unknown()), z.record(z.string(), z.unknown())])
 
-export const UserSchema = z.object({
-  id: z.string(),
-  username: z.string(),
-  usernameLower: z.string().nullable().optional(),
-  email: z.string().nullable(),
-  name: z.string(),
-  avatar: z.string().nullable(),
-  avatarColor: z.string().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  lastLoginAt: nullableDate,
-  passwordHash: z.string().nullable(),
-  passwordChangedAt: nullableDate,
-  emailVerified: nullableDate,
-  isSystemAdmin: z.boolean(),
-  isActive: z.boolean(),
-  mcpApiKey: z.string().nullable(),
-  // 2FA fields (optional for backward compatibility with pre-1.2.0 exports)
-  totpSecret: z.string().nullable().optional(),
-  totpEnabled: z.boolean().optional(),
-  totpRecoveryCodes: z.string().nullable().optional(),
-})
+export const SystemSettingsSchema = z
+  .object({
+    id: z.string(),
+    updatedAt: z.string().datetime(),
+    updatedBy: z.string().nullable(),
+    // Branding
+    appName: z.string(),
+    logoUrl: z.string().nullable(),
+    logoLetter: z.string(),
+    logoGradientFrom: z.string(),
+    logoGradientTo: z.string(),
+    // Upload limits
+    maxImageSizeMB: z.number(),
+    maxVideoSizeMB: z.number(),
+    maxDocumentSizeMB: z.number(),
+    maxAttachmentsPerTicket: z.number(),
+    // Allowed MIME types (native JSON arrays or legacy strings)
+    allowedImageTypes: z.union([z.string(), z.array(z.string())]),
+    allowedVideoTypes: z.union([z.string(), z.array(z.string())]),
+    allowedDocumentTypes: z.union([z.string(), z.array(z.string())]),
+    // Email settings
+    emailEnabled: z.boolean(),
+    emailProvider: z.string(),
+    emailFromAddress: z.string(),
+    emailFromName: z.string(),
+    smtpHost: z.string(),
+    smtpPort: z.number(),
+    smtpUsername: z.string(),
+    smtpSecure: z.boolean(),
+    emailPasswordReset: z.boolean(),
+    emailWelcome: z.boolean(),
+    emailVerification: z.boolean(),
+    emailInvitations: z.boolean(),
+    // Default role permissions (native JSON or legacy string)
+    defaultRolePermissions: z.union([z.string(), z.record(z.string(), z.unknown())]).nullable(),
+  })
+  .passthrough()
 
-export const ProjectSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  key: z.string(),
-  description: z.string().nullable(),
-  color: z.string(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-})
+export const UserSchema = z
+  .object({
+    id: z.string(),
+    username: z.string(),
+    usernameLower: z.string().nullable().optional(), // Legacy field, ignored on import
+    email: z.string().nullable(),
+    name: z.string(),
+    avatar: z.string().nullable(),
+    avatarColor: z.string().nullable(),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+    lastLoginAt: nullableDate,
+    passwordHash: z.string().nullable(),
+    passwordChangedAt: nullableDate,
+    emailVerified: nullableDate,
+    isSystemAdmin: z.boolean(),
+    isActive: z.boolean(),
+    mcpApiKey: z.string().nullable(),
+    // 2FA fields (optional for backward compatibility with pre-1.2.0 exports)
+    totpSecret: z.string().nullable().optional(),
+    totpEnabled: z.boolean().optional(),
+    totpRecoveryCodes: z
+      .union([z.string(), z.array(z.string())])
+      .nullable()
+      .optional(),
+  })
+  .passthrough()
+
+export const ProjectSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    key: z.string(),
+    description: z.string().nullable(),
+    color: z.string(),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+  })
+  .passthrough()
 
 export const RoleSchema = z.object({
   id: z.string(),
   name: z.string(),
   color: z.string(),
   description: z.string().nullable(),
-  permissions: z.string(),
+  permissions: jsonOrString,
   isDefault: z.boolean(),
   position: z.number(),
   projectId: z.string(),
@@ -134,22 +146,24 @@ export const SprintSchema = z.object({
 export const ProjectMemberSchema = z.object({
   id: z.string(),
   roleId: z.string(),
-  overrides: z.string().nullable(),
+  overrides: jsonOrString.nullable(),
   userId: z.string(),
   projectId: z.string(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })
 
-export const ProjectSprintSettingsSchema = z.object({
-  id: z.string(),
-  projectId: z.string(),
-  defaultSprintDuration: z.number(),
-  autoCarryOverIncomplete: z.boolean(),
-  doneColumnIds: z.string(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-})
+export const ProjectSprintSettingsSchema = z
+  .object({
+    id: z.string(),
+    projectId: z.string(),
+    defaultSprintDuration: z.number(),
+    autoCarryOverIncomplete: z.boolean(),
+    doneColumnIds: jsonOrString,
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+  })
+  .passthrough()
 
 export const TicketSchema = z.object({
   id: z.string(),
@@ -341,4 +355,4 @@ export const AnyDatabaseExportSchema = z.union([
 export type AnyDatabaseExport = z.infer<typeof AnyDatabaseExportSchema>
 
 // Export version for compatibility checks
-export const EXPORT_VERSION = '1.2.0'
+export const EXPORT_VERSION = '1.3.0'

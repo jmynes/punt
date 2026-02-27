@@ -47,8 +47,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // regardless of which Unicode form the client sends
         const normalizedUsername = username.normalize('NFC')
 
-        const user = await db.user.findUnique({
-          where: { usernameLower: normalizedUsername.toLowerCase() },
+        const user = await db.user.findFirst({
+          where: { username: { equals: normalizedUsername, mode: 'insensitive' } },
         })
 
         if (!user || !user.passwordHash) {

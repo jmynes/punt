@@ -48,7 +48,10 @@ async function getCustomRoleSettings(): Promise<ParsedRoleSettings | null> {
     })
 
     if (settings?.defaultRolePermissions) {
-      const parsed = JSON.parse(settings.defaultRolePermissions)
+      const parsed =
+        typeof settings.defaultRolePermissions === 'string'
+          ? JSON.parse(settings.defaultRolePermissions)
+          : settings.defaultRolePermissions
       const defaults: CustomRoleSettings = {}
 
       for (const role of ['Owner', 'Admin', 'Member'] as DefaultRoleName[]) {
@@ -126,7 +129,7 @@ export async function createDefaultRolesForProject(
         name: custom?.name ?? config.name,
         color: custom?.color ?? config.color,
         description: custom?.description ?? config.description,
-        permissions: JSON.stringify(custom?.permissions ?? config.permissions),
+        permissions: custom?.permissions ?? config.permissions,
         isDefault: config.isDefault,
         position: custom?.position ?? config.position,
         projectId,
@@ -143,7 +146,7 @@ export async function createDefaultRolesForProject(
           name: customRole.name,
           color: customRole.color,
           description: customRole.description,
-          permissions: JSON.stringify(customRole.permissions),
+          permissions: customRole.permissions,
           isDefault: false,
           position: customRole.position,
           projectId,

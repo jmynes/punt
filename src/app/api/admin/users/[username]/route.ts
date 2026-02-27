@@ -142,8 +142,8 @@ export async function GET(
       })
     }
 
-    const user = await db.user.findUnique({
-      where: { usernameLower: username.toLowerCase() },
+    const user = await db.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
       select: {
         id: true,
         username: true,
@@ -244,8 +244,8 @@ export async function PATCH(
     }
 
     // Look up the target user by username (case-insensitive)
-    const existingUser = await db.user.findUnique({
-      where: { usernameLower: username.toLowerCase() },
+    const existingUser = await db.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
     })
 
     if (!existingUser) {
@@ -474,8 +474,8 @@ export async function DELETE(
     }
 
     // Look up the target user by username (case-insensitive)
-    const existingUser = await db.user.findUnique({
-      where: { usernameLower: username.toLowerCase() },
+    const existingUser = await db.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
     })
 
     if (!existingUser) {

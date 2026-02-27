@@ -141,6 +141,8 @@ export async function exportDatabase(): Promise<ExportData> {
   // Remove the labels relation from the ticket objects
   const ticketsForExport = ticketsWithLabelIds.map(({ labels: _, ...ticket }) => ticket)
 
+  // Cast to ExportData - Prisma returns JsonValue for Json fields, but the
+  // export schema accepts both native JSON and legacy string formats via passthrough
   return {
     systemSettings: systemSettings
       ? {
@@ -222,7 +224,7 @@ export async function exportDatabase(): Promise<ExportData> {
       expiresAt: inv.expiresAt.toISOString(),
       createdAt: inv.createdAt.toISOString(),
     })),
-  }
+  } as ExportData
 }
 
 /**

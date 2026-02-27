@@ -33,8 +33,8 @@ export async function POST(request: Request) {
     const { username, password } = parsed.data
     const normalizedUsername = username.normalize('NFC')
 
-    const user = await db.user.findUnique({
-      where: { usernameLower: normalizedUsername.toLowerCase() },
+    const user = await db.user.findFirst({
+      where: { username: { equals: normalizedUsername, mode: 'insensitive' } },
       select: {
         passwordHash: true,
         isActive: true,

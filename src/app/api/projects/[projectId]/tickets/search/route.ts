@@ -55,17 +55,17 @@ export async function GET(
     // Escape LIKE wildcards (% and _) so they're treated as literal characters
     const escapedQuery = query.replace(/%/g, '\\%').replace(/_/g, '\\_')
 
-    // Search using Prisma contains (maps to SQLite LIKE, case-insensitive by default)
+    // Search using Prisma contains with case-insensitive mode for PostgreSQL
     const tickets = await db.ticket.findMany({
       where: {
         projectId,
         OR: [
           // Match by ticket number (exact)
           ...(ticketNumber !== null ? [{ number: ticketNumber }] : []),
-          // Match by title (LIKE)
-          { title: { contains: escapedQuery } },
-          // Match by description (LIKE)
-          { description: { contains: escapedQuery } },
+          // Match by title
+          { title: { contains: escapedQuery, mode: 'insensitive' } },
+          // Match by description
+          { description: { contains: escapedQuery, mode: 'insensitive' } },
         ],
       },
       select: TICKET_SELECT_FULL,

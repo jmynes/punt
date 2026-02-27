@@ -10,8 +10,8 @@ PUNT can be deployed in several ways depending on your needs.
 
 | Option | Best For | Database | Complexity |
 |--------|----------|----------|------------|
-| [Railway](/deployment/railway) | Quick cloud deployment | SQLite (persistent) | Low |
-| [Self-Hosted](/deployment/self-hosted) | Full control | SQLite or external | Medium |
+| [Railway](/deployment/railway) | Quick cloud deployment | PostgreSQL | Low |
+| [Self-Hosted](/deployment/self-hosted) | Full control | PostgreSQL | Medium |
 | Demo Mode | Evaluation | localStorage | Minimal |
 
 ## Requirements
@@ -42,7 +42,7 @@ All deployments need certain environment variables:
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `AUTH_SECRET` | NextAuth.js secret key | `openssl rand -base64 32` |
-| `DATABASE_URL` | SQLite database path | `file:./data/punt.db` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:password@localhost:5432/punt` |
 
 #### Optional
 
@@ -90,26 +90,20 @@ The server starts on port 3000 by default.
 
 ## Database Setup
 
-### SQLite (Recommended)
+### PostgreSQL (Required)
 
-PUNT uses SQLite by default, which requires no external database server.
-
-```bash
-# Create database and tables
-pnpm db:push
-```
-
-The database is stored at the path specified in `DATABASE_URL`.
-
-### Database Location
-
-For production, store the database outside the application directory:
+PUNT requires PostgreSQL 16 or later. Set the `DATABASE_URL` environment variable to your PostgreSQL connection string:
 
 ```env
-DATABASE_URL=file:/var/data/punt/punt.db
+DATABASE_URL=postgresql://user:password@localhost:5432/punt
 ```
 
-Ensure the directory exists and is writable.
+Once configured, initialize the schema:
+
+```bash
+# Create database tables
+pnpm db:push
+```
 
 ## File Storage
 
@@ -210,10 +204,7 @@ Application logs are written to stdout. Use your platform's log aggregation:
 
 ### Horizontal Scaling
 
-PUNT uses SQLite which doesn't support multiple concurrent writers. For horizontal scaling:
-
-1. Use a single writer instance
-2. Or migrate to PostgreSQL (future feature)
+PUNT uses PostgreSQL, which supports concurrent connections natively. You can run multiple PUNT instances pointed at the same database for horizontal scaling.
 
 ### Vertical Scaling
 
@@ -226,11 +217,10 @@ For more capacity:
 
 ### Database Backup
 
-Regular SQLite backups:
+Regular PostgreSQL backups:
 
 ```bash
-# Stop writes (optional for consistency)
-sqlite3 /path/to/punt.db ".backup /path/to/backup.db"
+pg_dump $DATABASE_URL > backup.sql
 ```
 
 Or use PUNT's built-in export:

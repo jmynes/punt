@@ -138,15 +138,15 @@ export async function PATCH(request: Request) {
       updateData.maxAttachmentsPerTicket = updates.maxAttachmentsPerTicket
     }
 
-    // Stringify array fields for storage
+    // Array fields stored as native JSON in PostgreSQL
     if (updates.allowedImageTypes !== undefined) {
-      updateData.allowedImageTypes = JSON.stringify(updates.allowedImageTypes)
+      updateData.allowedImageTypes = updates.allowedImageTypes
     }
     if (updates.allowedVideoTypes !== undefined) {
-      updateData.allowedVideoTypes = JSON.stringify(updates.allowedVideoTypes)
+      updateData.allowedVideoTypes = updates.allowedVideoTypes
     }
     if (updates.allowedDocumentTypes !== undefined) {
-      updateData.allowedDocumentTypes = JSON.stringify(updates.allowedDocumentTypes)
+      updateData.allowedDocumentTypes = updates.allowedDocumentTypes
     }
 
     // Board settings

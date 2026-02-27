@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '@/generated/prisma'
 import { handleApiError, notFoundError, validationError } from '@/lib/api-utils'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
@@ -66,7 +67,7 @@ export async function POST(
       data: {
         role,
         content,
-        metadata: metadata ? JSON.stringify(metadata) : null,
+        metadata: metadata ? (metadata as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
         sessionId,
       },
     })

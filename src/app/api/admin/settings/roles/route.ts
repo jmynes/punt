@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import type { InputJsonValue } from '@/generated/prisma/runtime/library'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
@@ -60,15 +61,15 @@ function getDefaultSettings(): DefaultRoleSettings {
   }
 }
 
-/** Parse stored JSON, handling both old format (arrays) and new format (objects) */
-function parseStoredSettings(json: string): {
+/** Parse stored settings, handling both native JSON (PostgreSQL) and legacy string formats */
+function parseStoredSettings(value: unknown): {
   defaults: DefaultRoleSettings
   customRoles: CustomRoleConfig[]
 } {
   const defaults = getDefaultSettings()
   let customRoles: CustomRoleConfig[] = []
   try {
-    const parsed = JSON.parse(json)
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value
 
     for (const role of Object.values(DEFAULT_ROLE_NAMES)) {
       const value = parsed[role]
@@ -253,10 +254,10 @@ export async function PATCH(request: Request) {
       where: { id: 'system-settings' },
       create: {
         id: 'system-settings',
-        defaultRolePermissions: JSON.stringify(storageObj),
+        defaultRolePermissions: storageObj as InputJsonValue,
       },
       update: {
-        defaultRolePermissions: JSON.stringify(storageObj),
+        defaultRolePermissions: storageObj as InputJsonValue,
       },
     })
 
@@ -301,10 +302,10 @@ export async function POST(request: Request) {
       where: { id: 'system-settings' },
       create: {
         id: 'system-settings',
-        defaultRolePermissions: JSON.stringify(defaults),
+        defaultRolePermissions: defaults as unknown as InputJsonValue,
       },
       update: {
-        defaultRolePermissions: JSON.stringify(defaults),
+        defaultRolePermissions: defaults as unknown as InputJsonValue,
       },
     })
 

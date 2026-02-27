@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, ChevronsUpDown, Lightbulb, X, Zap } from 'lucide-react'
+import { Check, CheckSquare, ChevronsUpDown, Lightbulb, X, Zap } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,6 +31,7 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
   // Group by type
   const epics = parentTickets.filter((t) => t.type === 'epic')
   const stories = parentTickets.filter((t) => t.type === 'story')
+  const tasks = parentTickets.filter((t) => t.type !== 'epic' && t.type !== 'story')
 
   useEffect(() => {
     if (triggerRef.current) {
@@ -54,8 +55,10 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
               <div className="flex items-center gap-2 truncate min-w-0 flex-1">
                 {selectedParent.type === 'epic' ? (
                   <Zap className="h-4 w-4 text-purple-400 shrink-0" />
-                ) : (
+                ) : selectedParent.type === 'story' ? (
                   <Lightbulb className="h-4 w-4 text-green-400 shrink-0" />
+                ) : (
+                  <CheckSquare className="h-4 w-4 text-blue-400 shrink-0" />
                 )}
                 <span className="font-mono text-zinc-500 shrink-0">
                   {selectedParent.projectKey}-{selectedParent.number}
@@ -74,7 +77,7 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
           style={popoverWidth ? { width: `${popoverWidth}px` } : undefined}
         >
           <Command className="bg-transparent">
-            <CommandInput placeholder="Search epics and stories..." className="border-zinc-700" />
+            <CommandInput placeholder="Search parent tickets..." className="border-zinc-700" />
             <CommandList>
               <CommandEmpty>No epics or stories found.</CommandEmpty>
 
@@ -138,6 +141,35 @@ export function ParentSelect({ value, onChange, parentTickets, disabled }: Paren
                       className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
                     >
                       <Lightbulb className="mr-2 h-4 w-4 text-green-400" />
+                      <span className="font-mono text-zinc-500 mr-2">
+                        {ticket.projectKey}-{ticket.number}
+                      </span>
+                      <span className="truncate">{ticket.title}</span>
+                      <Check
+                        className={cn(
+                          'ml-auto h-4 w-4',
+                          value === ticket.id ? 'opacity-100' : 'opacity-0',
+                        )}
+                      />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
+              {/* Tasks */}
+              {tasks.length > 0 && (
+                <CommandGroup heading="Tasks">
+                  {tasks.map((ticket) => (
+                    <CommandItem
+                      key={ticket.id}
+                      value={`${ticket.projectKey}-${ticket.number} ${ticket.title}`}
+                      onSelect={() => {
+                        onChange(ticket.id)
+                        setOpen(false)
+                      }}
+                      className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
+                    >
+                      <CheckSquare className="mr-2 h-4 w-4 text-blue-400" />
                       <span className="font-mono text-zinc-500 mr-2">
                         {ticket.projectKey}-{ticket.number}
                       </span>

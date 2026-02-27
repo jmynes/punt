@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '@/generated/prisma'
 import { handleApiError, validationError } from '@/lib/api-utils'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
       data: {
         totpEnabled: false,
         totpSecret: null,
-        totpRecoveryCodes: null,
+        totpRecoveryCodes: Prisma.DbNull,
       },
     })
 

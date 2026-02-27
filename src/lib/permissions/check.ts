@@ -12,13 +12,13 @@ import { ALL_PERMISSIONS, type Permission, parsePermissions } from './constants'
 export interface MembershipWithRole {
   id: string
   roleId: string
-  overrides: string | null
+  overrides: unknown
   userId: string
   projectId: string
   role: {
     id: string
     name: string
-    permissions: string
+    permissions: unknown
     isDefault: boolean
   }
 }

@@ -131,7 +131,7 @@ export function TicketForm({
       {/* Parent Epic/Story */}
       {parentTickets.length > 0 && (
         <div className="space-y-2">
-          <Label className="text-zinc-300">Parent Epic / Story</Label>
+          <Label className="text-zinc-300">Parent Ticket</Label>
           <ParentSelect
             value={data.parentId}
             onChange={handleParentChange}
@@ -139,7 +139,7 @@ export function TicketForm({
             disabled={disabled}
           />
           <p className="text-xs text-zinc-500">
-            Link this ticket to an Epic or Story for better organization
+            Link this ticket to a parent for better organization
           </p>
         </div>
       )}

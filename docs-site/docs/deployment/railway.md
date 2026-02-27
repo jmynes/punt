@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Deploy to Railway
 
-[Railway](https://railway.app) provides easy deployment with persistent storage for SQLite.
+[Railway](https://railway.app) provides easy deployment with easy PostgreSQL hosting.
 
 ## Quick Deploy
 
@@ -26,17 +26,16 @@ Add the following environment variables in Railway:
 | Variable | Value |
 |----------|-------|
 | `AUTH_SECRET` | Generate with `openssl rand -base64 32` |
-| `DATABASE_URL` | `file:/app/data/punt.db` |
+| `DATABASE_URL` | PostgreSQL connection string (provided by Railway PostgreSQL plugin) |
 | `AUTH_TRUST_HOST` | `true` |
 
-### 4. Configure Persistent Storage
+### 4. Add PostgreSQL Plugin
 
-PUNT needs persistent storage for the SQLite database:
+PUNT requires a PostgreSQL database:
 
 1. In your Railway project, click **+ New**
-2. Select **Volume**
-3. Configure mount path: `/app/data`
-4. Set volume size (1GB is plenty for most use cases)
+2. Select **Database** → **PostgreSQL**
+3. Railway will provision a PostgreSQL instance and automatically set `DATABASE_URL` in your service environment
 
 ### 5. Deploy
 
@@ -73,7 +72,7 @@ Specifies Node.js 20 (required by Next.js 16).
 | Variable | Description |
 |----------|-------------|
 | `AUTH_SECRET` | JWT signing secret |
-| `DATABASE_URL` | SQLite database path |
+| `DATABASE_URL` | PostgreSQL connection string |
 | `AUTH_TRUST_HOST` | Trust Railway's proxy |
 
 ### Optional
@@ -91,8 +90,9 @@ For a demo/preview deployment without persistence:
 NEXT_PUBLIC_DEMO_MODE=true
 AUTH_SECRET=any-secret-value
 AUTH_TRUST_HOST=true
-DATABASE_URL=file:./demo.db
 ```
+
+Demo mode runs entirely client-side with localStorage, so no database is required.
 
 This runs entirely client-side with localStorage.
 
@@ -180,7 +180,7 @@ Use PUNT's built-in export:
 SSH into Railway (requires Pro plan) or use Railway CLI:
 
 ```bash
-railway run cat /app/data/punt.db > backup.db
+railway run pg_dump $DATABASE_URL > backup.sql
 ```
 
 ## Updates

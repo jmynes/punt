@@ -59,7 +59,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({
       defaultSprintDuration: settings.defaultSprintDuration,
       autoCarryOverIncomplete: settings.autoCarryOverIncomplete,
-      doneColumnIds: JSON.parse(settings.doneColumnIds),
+      doneColumnIds: settings.doneColumnIds,
       defaultStartTime: settings.defaultStartTime,
       defaultEndTime: settings.defaultEndTime,
     })
@@ -101,14 +101,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         projectId,
         ...(defaultSprintDuration !== undefined && { defaultSprintDuration }),
         ...(autoCarryOverIncomplete !== undefined && { autoCarryOverIncomplete }),
-        ...(doneColumnIds !== undefined && { doneColumnIds: JSON.stringify(doneColumnIds) }),
+        ...(doneColumnIds !== undefined && { doneColumnIds: doneColumnIds }),
         ...(defaultStartTime !== undefined && { defaultStartTime }),
         ...(defaultEndTime !== undefined && { defaultEndTime }),
       },
       update: {
         ...(defaultSprintDuration !== undefined && { defaultSprintDuration }),
         ...(autoCarryOverIncomplete !== undefined && { autoCarryOverIncomplete }),
-        ...(doneColumnIds !== undefined && { doneColumnIds: JSON.stringify(doneColumnIds) }),
+        ...(doneColumnIds !== undefined && { doneColumnIds: doneColumnIds }),
         ...(defaultStartTime !== undefined && { defaultStartTime }),
         ...(defaultEndTime !== undefined && { defaultEndTime }),
       },
@@ -117,7 +117,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({
       defaultSprintDuration: settings.defaultSprintDuration,
       autoCarryOverIncomplete: settings.autoCarryOverIncomplete,
-      doneColumnIds: JSON.parse(settings.doneColumnIds),
+      doneColumnIds: settings.doneColumnIds,
       defaultStartTime: settings.defaultStartTime,
       defaultEndTime: settings.defaultEndTime,
     })

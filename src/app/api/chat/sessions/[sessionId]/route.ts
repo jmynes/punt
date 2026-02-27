@@ -45,7 +45,7 @@ export async function GET(
       id: msg.id,
       role: msg.role as 'user' | 'assistant',
       content: msg.content,
-      metadata: msg.metadata ? (JSON.parse(msg.metadata) as ChatMessageMetadata) : null,
+      metadata: (msg.metadata as ChatMessageMetadata) ?? null,
       createdAt: msg.createdAt,
     }))
 

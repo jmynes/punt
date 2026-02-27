@@ -270,16 +270,22 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   // Get all tickets for parent selection (exclude current ticket)
   const parentTickets: ParentTicketOption[] = useMemo(() => {
     const allTickets = columns.flatMap((col) => col.tickets)
+    const parentTypes = new Set(['epic', 'story', 'task'])
     return allTickets
-      .filter((t) => t.id !== ticket?.id && (t.type === 'epic' || t.type === 'story'))
+      .filter(
+        (t) =>
+          t.id !== ticket?.id &&
+          // Include epic/story/task types, plus always include the current parent
+          (parentTypes.has(t.type) || t.id === ticket?.parentId),
+      )
       .map((t) => ({
         id: t.id,
         number: t.number,
         title: t.title,
-        type: t.type as 'epic' | 'story',
+        type: t.type,
         projectKey,
       }))
-  }, [columns, ticket?.id, projectKey])
+  }, [columns, ticket?.id, ticket?.parentId, projectKey])
 
   // Find parent ticket if this ticket has a parent
   const parentTicket = useMemo(() => {
@@ -1317,7 +1323,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
 
                 {/* Parent Epic/Story */}
                 <div className="space-y-2 min-w-0">
-                  <Label className="text-zinc-400">Parent Epic / Story</Label>
+                  <Label className="text-zinc-400">Parent Ticket</Label>
                   <ParentSelect
                     value={tempParentId}
                     onChange={(value) => handleChange('parent', value)}

@@ -118,13 +118,19 @@ export async function GET(request: Request) {
 
     // Build where clause
     type WhereClause = {
-      OR?: Array<{ name: { contains: string } } | { email: { contains: string } }>
+      OR?: Array<
+        | { name: { contains: string; mode: 'insensitive' } }
+        | { email: { contains: string; mode: 'insensitive' } }
+      >
       isSystemAdmin?: boolean
     }
     const where: WhereClause = {}
 
     if (search) {
-      where.OR = [{ name: { contains: search } }, { email: { contains: search } }]
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ]
     }
 
     if (role === 'admin') {
@@ -220,8 +226,8 @@ export async function POST(request: Request) {
     }
 
     // Check if username already exists (case-insensitive)
-    const existingUsername = await db.user.findUnique({
-      where: { usernameLower: username.toLowerCase() },
+    const existingUsername = await db.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
     })
 
     if (existingUsername) {
@@ -245,7 +251,6 @@ export async function POST(request: Request) {
     const user = await db.user.create({
       data: {
         username,
-        usernameLower: username.toLowerCase(),
         email: email || null,
         name,
         passwordHash,

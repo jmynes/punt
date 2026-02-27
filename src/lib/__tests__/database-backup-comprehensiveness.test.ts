@@ -10,6 +10,16 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import type {
+  InvitationRole,
+  InvitationStatus,
+  LinkType,
+  SprintEntryType,
+  SprintExitStatus,
+  SprintStatus,
+  TicketPriority,
+  TicketType,
+} from '@/generated/prisma'
 import { exportDatabase } from '@/lib/database-export'
 import { importDatabase } from '@/lib/database-import'
 import { db } from '@/lib/db'
@@ -25,7 +35,6 @@ const createTestUser = (overrides: Record<string, unknown> = {}) => {
   return {
     id: `test-user-${ts}-${Math.random().toString(36).slice(2)}`,
     username: uname,
-    usernameLower: uname.toLowerCase(),
     email: `test${Date.now()}@example.com`,
     name: 'Test User',
     avatar: '/uploads/avatars/test.webp',
@@ -77,7 +86,7 @@ const createTestRole = (projectId: string, overrides: Record<string, unknown> = 
   name: `Role_${Date.now()}`,
   color: '#3b82f6',
   description: 'Project owner with all permissions',
-  permissions: JSON.stringify(['all']),
+  permissions: ['all'],
   isDefault: false,
   position: 0,
   projectId,
@@ -93,7 +102,7 @@ const createTestSprint = (projectId: string, overrides: Record<string, unknown> 
   startDate: new Date(),
   endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
   budget: 20,
-  status: 'active',
+  status: 'active' as SprintStatus,
   completedAt: null,
   completedById: null,
   completedTicketCount: null,
@@ -115,8 +124,8 @@ const createTestTicket = (
   number: Math.floor(Math.random() * 10000),
   title: 'Test Ticket',
   description: 'Test description with **markdown**',
-  type: 'task',
-  priority: 'high',
+  type: 'task' as TicketType,
+  priority: 'high' as TicketPriority,
   order: 0,
   storyPoints: 5,
   estimate: '2d',
@@ -467,7 +476,7 @@ describe('Database Backup Comprehensiveness', () => {
         data: {
           fromTicketId: ticket1.id,
           toTicketId: ticket2.id,
-          linkType: 'blocks',
+          linkType: 'blocks' as LinkType,
         },
       })
 
@@ -494,7 +503,7 @@ describe('Database Backup Comprehensiveness', () => {
           userId: user.id,
           projectId: project.id,
           roleId: role.id,
-          overrides: JSON.stringify(['extra.permission']),
+          overrides: ['extra.permission'],
         },
       })
 
@@ -927,8 +936,8 @@ describe('Database Backup Comprehensiveness', () => {
         data: {
           ticketId: ticket.id,
           sprintId: sprint1.id,
-          entryType: 'added',
-          exitStatus: 'carried_over',
+          entryType: 'added' as SprintEntryType,
+          exitStatus: 'carried_over' as SprintExitStatus,
           removedAt: new Date(),
         },
       })
@@ -1033,10 +1042,10 @@ describe('Database Backup Comprehensiveness', () => {
       await db.invitation.create({
         data: {
           email: 'invited@example.com',
-          role: 'admin',
+          role: 'admin' as InvitationRole,
           token: 'test_invitation_token',
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          status: 'pending',
+          status: 'pending' as InvitationStatus,
           senderId: user.id,
           projectId: project.id,
         },
@@ -1067,7 +1076,7 @@ describe('Database Backup Comprehensiveness', () => {
           projectId: project.id,
           defaultSprintDuration: 21,
           autoCarryOverIncomplete: false,
-          doneColumnIds: JSON.stringify([column.id]),
+          doneColumnIds: [column.id],
         },
       })
 
@@ -1085,7 +1094,7 @@ describe('Database Backup Comprehensiveness', () => {
       expect(settings).not.toBeNull()
       expect(settings?.defaultSprintDuration).toBe(21)
       expect(settings?.autoCarryOverIncomplete).toBe(false)
-      expect(JSON.parse(settings?.doneColumnIds ?? '[]')).toContain(column.id)
+      expect(settings?.doneColumnIds as string[]).toContain(column.id)
     })
   })
 })

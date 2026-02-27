@@ -1,7 +1,7 @@
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 // Load test environment variables BEFORE any other imports
-// This ensures DATABASE_URL points to test.db, not production
+// This ensures DATABASE_URL points to punt_test, not production
 import { config } from 'dotenv'
 import { defineConfig } from 'vitest/config'
 
@@ -19,7 +19,7 @@ export default defineConfig({
     // File selection is handled by projects below
     projects: [
       {
-        // Database tests share SQLite and must run sequentially to avoid races
+        // Database tests share a test database and must run sequentially to avoid races
         extends: true,
         test: {
           name: 'db',

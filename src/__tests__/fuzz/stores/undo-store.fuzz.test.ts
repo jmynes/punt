@@ -99,7 +99,7 @@ describe('Undo Store Fuzz Tests', () => {
 
     it('should pop in LIFO order', () => {
       fc.assert(
-        fc.property(fc.nat({ min: 2, max: 10 }), (count) => {
+        fc.property(fc.integer({ min: 2, max: 10 }), (count) => {
           resetStore()
           const store = useUndoStore.getState()
           const projectId = 'test-project'
@@ -327,7 +327,7 @@ describe('Undo Store Fuzz Tests', () => {
   describe('clearRedo', () => {
     it('should empty redo stack', () => {
       fc.assert(
-        fc.property(fc.nat({ min: 1, max: 5 }), (count) => {
+        fc.property(fc.integer({ min: 1, max: 5 }), (count) => {
           resetStore()
           const store = useUndoStore.getState()
           const projectId = 'test-project'

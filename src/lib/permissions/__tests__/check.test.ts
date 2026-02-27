@@ -60,13 +60,13 @@ function createMockMembership(
   return {
     id: 'member-1',
     roleId: TEST_ROLE_ID,
-    overrides: overrides ? JSON.stringify(overrides) : null,
+    overrides: overrides ?? null,
     userId: TEST_USER_ID,
     projectId: TEST_PROJECT_ID,
     role: {
       id: TEST_ROLE_ID,
       name: 'Member',
-      permissions: JSON.stringify(rolePermissions),
+      permissions: rolePermissions,
       isDefault: true,
       position: rolePosition,
     },
@@ -155,7 +155,7 @@ describe('Permission Checking Utilities', () => {
       mockUserFindUnique.mockResolvedValue({ isSystemAdmin: false })
       mockProjectMemberFindUnique.mockResolvedValue({
         ...createMockMembership(rolePermissions),
-        overrides: JSON.stringify(['invalid.permission', PERMISSIONS.LABELS_MANAGE]),
+        overrides: ['invalid.permission', PERMISSIONS.LABELS_MANAGE],
       })
 
       const result = await getEffectivePermissions(TEST_USER_ID, TEST_PROJECT_ID)
@@ -373,7 +373,7 @@ describe('Permission Checking Utilities', () => {
   describe('getRolePermissions', () => {
     it('should return parsed permissions for valid role', async () => {
       mockRoleFindUnique.mockResolvedValue({
-        permissions: JSON.stringify([PERMISSIONS.TICKETS_CREATE, PERMISSIONS.LABELS_MANAGE]),
+        permissions: [PERMISSIONS.TICKETS_CREATE, PERMISSIONS.LABELS_MANAGE],
       })
 
       const result = await getRolePermissions(TEST_ROLE_ID)
@@ -393,7 +393,7 @@ describe('Permission Checking Utilities', () => {
 
     it('should filter invalid permissions', async () => {
       mockRoleFindUnique.mockResolvedValue({
-        permissions: JSON.stringify(['invalid.perm', PERMISSIONS.TICKETS_CREATE]),
+        permissions: ['invalid.perm', PERMISSIONS.TICKETS_CREATE],
       })
 
       const result = await getRolePermissions(TEST_ROLE_ID)

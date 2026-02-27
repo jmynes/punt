@@ -139,25 +139,41 @@ export function generateRecoveryCodes(count = 8): string[] {
 
 /**
  * Hash recovery codes for storage using bcrypt.
- * Returns JSON-stringified array of hashed codes.
+ * Returns array of hashed codes (stored as native JSON in PostgreSQL).
  */
-export async function hashRecoveryCodes(codes: string[]): Promise<string> {
-  const hashed = await Promise.all(codes.map((code) => hashPassword(code)))
-  return JSON.stringify(hashed)
+export async function hashRecoveryCodes(codes: string[]): Promise<string[]> {
+  return Promise.all(codes.map((code) => hashPassword(code)))
+}
+
+/**
+ * Coerce a recovery codes value to a string array.
+ * Handles both native JSON arrays (PostgreSQL) and legacy JSON strings.
+ */
+function coerceRecoveryCodes(value: unknown): string[] {
+  if (Array.isArray(value)) return value as string[]
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) return parsed
+    } catch {
+      // fall through to fallback
+    }
+  }
+  return []
 }
 
 /**
  * Verify a recovery code against stored hashes.
  * Returns the index of the matching code, or -1 if not found.
  */
-export async function verifyRecoveryCode(code: string, hashedCodesJson: string): Promise<number> {
-  const hashedCodes: string[] = JSON.parse(hashedCodesJson)
+export async function verifyRecoveryCode(code: string, hashedCodes: unknown): Promise<number> {
+  const codes = coerceRecoveryCodes(hashedCodes)
 
-  for (let i = 0; i < hashedCodes.length; i++) {
+  for (let i = 0; i < codes.length; i++) {
     // Skip already-used codes (stored as empty string)
-    if (!hashedCodes[i]) continue
+    if (!codes[i]) continue
 
-    const isMatch = await verifyPassword(code, hashedCodes[i])
+    const isMatch = await verifyPassword(code, codes[i])
     if (isMatch) {
       return i
     }
@@ -168,18 +184,18 @@ export async function verifyRecoveryCode(code: string, hashedCodesJson: string):
 
 /**
  * Mark a recovery code as used by clearing it from the array.
- * Returns the updated JSON string.
+ * Returns the updated array (stored as native JSON in PostgreSQL).
  */
-export function markRecoveryCodeUsed(hashedCodesJson: string, index: number): string {
-  const hashedCodes: string[] = JSON.parse(hashedCodesJson)
-  hashedCodes[index] = '' // Mark as used
-  return JSON.stringify(hashedCodes)
+export function markRecoveryCodeUsed(hashedCodes: unknown, index: number): string[] {
+  const codes = coerceRecoveryCodes(hashedCodes)
+  codes[index] = '' // Mark as used
+  return codes
 }
 
 /**
  * Count remaining (unused) recovery codes.
  */
-export function countRemainingRecoveryCodes(hashedCodesJson: string): number {
-  const hashedCodes: string[] = JSON.parse(hashedCodesJson)
-  return hashedCodes.filter((code) => code !== '').length
+export function countRemainingRecoveryCodes(hashedCodes: unknown): number {
+  const codes = coerceRecoveryCodes(hashedCodes)
+  return codes.filter((code) => code !== '').length
 }

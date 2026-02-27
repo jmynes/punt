@@ -129,7 +129,20 @@ describe('Permission Constants', () => {
       expect(parsePermissions('')).toEqual([])
     })
 
-    it('should parse valid JSON array of permissions', () => {
+    it('should accept native arrays (PostgreSQL format)', () => {
+      const result = parsePermissions(['tickets.create', 'labels.manage'])
+      expect(result).toHaveLength(2)
+      expect(result).toContain('tickets.create')
+      expect(result).toContain('labels.manage')
+    })
+
+    it('should filter invalid entries from native arrays', () => {
+      const result = parsePermissions(['tickets.create', 'invalid.perm', 'labels.manage'])
+      expect(result).toHaveLength(2)
+      expect(result).not.toContain('invalid.perm')
+    })
+
+    it('should parse legacy JSON string arrays', () => {
       const json = JSON.stringify(['tickets.create', 'labels.manage'])
       const result = parsePermissions(json)
       expect(result).toHaveLength(2)
@@ -137,7 +150,7 @@ describe('Permission Constants', () => {
       expect(result).toContain('labels.manage')
     })
 
-    it('should filter out invalid permissions', () => {
+    it('should filter invalid entries from legacy JSON strings', () => {
       const json = JSON.stringify(['tickets.create', 'invalid.perm', 'labels.manage'])
       const result = parsePermissions(json)
       expect(result).toHaveLength(2)
@@ -157,12 +170,13 @@ describe('Permission Constants', () => {
     })
 
     it('should handle empty array', () => {
+      expect(parsePermissions([])).toEqual([])
       expect(parsePermissions('[]')).toEqual([])
     })
 
     it('should handle array with only invalid permissions', () => {
-      const json = JSON.stringify(['invalid1', 'invalid2'])
-      expect(parsePermissions(json)).toEqual([])
+      expect(parsePermissions(['invalid1', 'invalid2'])).toEqual([])
+      expect(parsePermissions(JSON.stringify(['invalid1', 'invalid2']))).toEqual([])
     })
   })
 

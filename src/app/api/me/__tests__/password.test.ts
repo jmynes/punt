@@ -97,7 +97,14 @@ describe('Password Change API - Current Password Verification', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsDemoMode.mockReturnValue(false)
-    mockRequireAuth.mockResolvedValue({ id: 'user-1', isActive: true })
+    mockRequireAuth.mockResolvedValue({
+      id: 'user-1',
+      email: null,
+      name: 'Test User',
+      avatar: null,
+      isSystemAdmin: false,
+      isActive: true,
+    })
     mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 10, resetAt: new Date() })
     mockDb.user.findUnique.mockResolvedValue({ passwordHash: 'current_hash' })
     mockValidatePassword.mockReturnValue({ valid: true, errors: [] })
@@ -169,7 +176,14 @@ describe('Password Change API - Password Strength Validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsDemoMode.mockReturnValue(false)
-    mockRequireAuth.mockResolvedValue({ id: 'user-1', isActive: true })
+    mockRequireAuth.mockResolvedValue({
+      id: 'user-1',
+      email: null,
+      name: 'Test User',
+      avatar: null,
+      isSystemAdmin: false,
+      isActive: true,
+    })
     mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 10, resetAt: new Date() })
     mockDb.user.findUnique.mockResolvedValue({ passwordHash: 'current_hash' })
     // First call: auth (true), second call: same-password check (false = different password)
@@ -230,7 +244,14 @@ describe('Password Change API - Rate Limiting', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsDemoMode.mockReturnValue(false)
-    mockRequireAuth.mockResolvedValue({ id: 'user-1', isActive: true })
+    mockRequireAuth.mockResolvedValue({
+      id: 'user-1',
+      email: null,
+      name: 'Test User',
+      avatar: null,
+      isSystemAdmin: false,
+      isActive: true,
+    })
   })
 
   it('should rate limit password change attempts', async () => {
@@ -276,7 +297,14 @@ describe('Password Change API - Session Invalidation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsDemoMode.mockReturnValue(false)
-    mockRequireAuth.mockResolvedValue({ id: 'user-1', isActive: true })
+    mockRequireAuth.mockResolvedValue({
+      id: 'user-1',
+      email: null,
+      name: 'Test User',
+      avatar: null,
+      isSystemAdmin: false,
+      isActive: true,
+    })
     mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 10, resetAt: new Date() })
     mockDb.user.findUnique.mockResolvedValue({ passwordHash: 'current_hash' })
     // First call: auth (true), second call: same-password check (false = different password)
@@ -307,7 +335,14 @@ describe('Password Change API - Input Validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsDemoMode.mockReturnValue(false)
-    mockRequireAuth.mockResolvedValue({ id: 'user-1', isActive: true })
+    mockRequireAuth.mockResolvedValue({
+      id: 'user-1',
+      email: null,
+      name: 'Test User',
+      avatar: null,
+      isSystemAdmin: false,
+      isActive: true,
+    })
     mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 10, resetAt: new Date() })
   })
 
