@@ -67,7 +67,7 @@ Open [http://localhost:3000](http://localhost:3000) and log in.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DATABASE_URL` | SQLite database path (relative to `prisma/`) | `file:./punt.db` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/punt` |
 | `AUTH_SECRET` | Secret for JWT signing | Required |
 | `TRUST_PROXY` | Trust `X-Forwarded-For` for rate limiting | `false` |
 | `NEXT_PUBLIC_DEBUG` | Enable debug logging | `false` |
@@ -95,7 +95,7 @@ railway link
 railway variables --set "NEXT_PUBLIC_DEMO_MODE=true"
 railway variables --set "AUTH_SECRET=$(openssl rand -base64 32)"
 railway variables --set "AUTH_TRUST_HOST=true"
-railway variables --set "DATABASE_URL=file:./dummy.db"  # Required for build
+railway variables --set "DATABASE_URL=<your-postgresql-url>"  # PostgreSQL connection string
 railway up
 railway domain
 ```

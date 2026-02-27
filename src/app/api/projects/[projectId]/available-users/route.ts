@@ -40,9 +40,9 @@ export async function GET(
       isActive: true
       id?: { notIn: string[] }
       OR?: Array<
-        | { name: { contains: string } }
-        | { email: { contains: string } }
-        | { username: { contains: string } }
+        | { name: { contains: string; mode: 'insensitive' } }
+        | { email: { contains: string; mode: 'insensitive' } }
+        | { username: { contains: string; mode: 'insensitive' } }
       >
     }
 
@@ -54,9 +54,9 @@ export async function GET(
 
     if (search) {
       where.OR = [
-        { name: { contains: search } },
-        { email: { contains: search } },
-        { username: { contains: search } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { username: { contains: search, mode: 'insensitive' } },
       ]
     }
 

@@ -5,7 +5,7 @@
  * `clones` and `is_cloned_by` link types to their equivalent
  * `duplicates` and `is_duplicated_by` types.
  *
- * Run with: DATABASE_URL="file:./prisma/dev.db" npx tsx prisma/migrate-clone-links.ts
+ * Run with: npx tsx prisma/migrate-clone-links.ts
  */
 import { PrismaClient } from '../src/generated/prisma'
 

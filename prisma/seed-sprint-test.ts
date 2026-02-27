@@ -317,8 +317,8 @@ async function main() {
     prisma.ticket.create({
       data: {
         number: 2,
-        title: 'Configure Prisma with SQLite',
-        description: 'Set up Prisma ORM with SQLite database',
+        title: 'Configure Prisma with PostgreSQL',
+        description: 'Set up Prisma ORM with PostgreSQL database',
         type: 'task',
         priority: 'high',
         storyPoints: 2,

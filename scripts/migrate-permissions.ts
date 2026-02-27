@@ -47,7 +47,7 @@ async function main() {
             name: config.name,
             color: config.color,
             description: config.description,
-            permissions: JSON.stringify(config.permissions),
+            permissions: config.permissions,
             isDefault: config.isDefault,
             position: config.position,
             projectId: project.id,
@@ -76,7 +76,7 @@ async function main() {
         userId: string
       }>
     >`
-      SELECT id, role, roleId, userId FROM ProjectMember WHERE projectId = ${project.id}
+      SELECT "id", "role", "roleId", "userId" FROM "ProjectMember" WHERE "projectId" = ${project.id}
     `
 
     console.log(`  - Found ${members.length} member(s)`)
@@ -106,7 +106,7 @@ async function main() {
 
       // Update member with new roleId
       await prisma.$executeRaw`
-        UPDATE ProjectMember SET roleId = ${targetRoleId} WHERE id = ${member.id}
+        UPDATE "ProjectMember" SET "roleId" = ${targetRoleId} WHERE "id" = ${member.id}
       `
       console.log(`    - Migrated member ${member.id}: "${legacyRole}" -> "${targetRoleName}"`)
     }

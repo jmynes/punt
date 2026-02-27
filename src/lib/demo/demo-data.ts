@@ -517,8 +517,8 @@ export const DEMO_TICKETS: TicketWithRelations[] = [
   createTicket({
     id: 'demo-ticket-1-11',
     number: 11,
-    title: 'Implement local SQLite database',
-    description: 'Set up SQLite for local data persistence. Define schema mirroring server models.',
+    title: 'Implement local database layer',
+    description: 'Set up PostgreSQL for data persistence. Define schema mirroring server models.',
     type: 'story',
     priority: 'high',
     order: 1,

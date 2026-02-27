@@ -505,13 +505,14 @@ export async function importDatabase(
           // Strip legacy/extra fields from passthrough
           const {
             usernameLower: _ul,
-            enabledMcpServers: _ems,
+            enabledMcpServers,
             totpRecoveryCodes,
             ...userData
           } = user as typeof user & { usernameLower?: string; enabledMcpServers?: unknown }
           await tx.user.create({
             data: {
               ...userData,
+              enabledMcpServers: enabledMcpServers ?? Prisma.DbNull,
               totpRecoveryCodes: totpRecoveryCodes ?? Prisma.DbNull,
               createdAt: new Date(user.createdAt),
               updatedAt: new Date(user.updatedAt),
