@@ -219,7 +219,7 @@ export async function PATCH(
   { params }: { params: Promise<{ username: string }> },
 ) {
   try {
-    await requireSystemAdmin()
+    const currentUser = await requireSystemAdmin()
     const { username } = await params
 
     // Handle demo mode - return success without persisting
@@ -253,6 +253,23 @@ export async function PATCH(
     }
 
     const body = await request.json()
+
+    // Require reauth for admin privilege or active status changes (skip for undo/redo)
+    if (('isSystemAdmin' in body || 'isActive' in body) && !isDemoMode() && !body.skipReauth) {
+      if (!body.confirmPassword) {
+        return NextResponse.json(
+          { error: 'Password is required to confirm this action' },
+          { status: 400 },
+        )
+      }
+      const authError = await verifyReauth(
+        currentUser.id,
+        body.confirmPassword,
+        body.totpCode,
+        body.isRecoveryCode,
+      )
+      if (authError) return authError
+    }
 
     // Prevent removing or disabling the last system admin (including self)
     const isRemovingAdmin = body.isSystemAdmin === false && existingUser.isSystemAdmin
