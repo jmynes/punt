@@ -13,7 +13,7 @@ slug: /
 - **Backlog Management**: Prioritize and organize work items
 - **Sprint Planning**: Plan and track sprints with carryover support
 - **Real-time Updates**: Multi-tab and multi-user synchronization via SSE
-- **Self-hosted**: Full control over your data with SQLite database
+- **Self-hosted**: Full control over your data with PostgreSQL database
 - **Modern Stack**: Built with Next.js 16, React 19, and TypeScript
 
 ## Quick Start
@@ -68,7 +68,7 @@ PUNT follows a modern full-stack architecture:
 | Frontend | Next.js 16 (App Router), React 19 |
 | State Management | Zustand with localStorage persistence |
 | Backend | Next.js API Routes |
-| Database | SQLite with Prisma ORM |
+| Database | PostgreSQL with Prisma ORM |
 | Authentication | NextAuth.js v5 with credentials provider |
 | Real-time | Server-Sent Events (SSE) |
 

@@ -45,7 +45,7 @@ PUNT uses a DataProvider abstraction that automatically switches between:
 
 | Mode | Provider | Storage |
 |------|----------|---------|
-| Production | `APIDataProvider` | SQLite via API |
+| Production | `APIDataProvider` | PostgreSQL via API |
 | Demo | `DemoDataProvider` | localStorage |
 
 Components use React Query hooks that internally call the appropriate provider.
