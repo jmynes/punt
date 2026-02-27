@@ -6,7 +6,7 @@
 import { db } from '@/lib/db'
 import type { ChatToolName } from './tools'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: dynamic AI model input
 type ToolInput = Record<string, any>
 
 interface ToolResult {
@@ -77,7 +77,7 @@ async function listTickets(input: ToolInput, userId: string): Promise<ToolResult
   }
 
   // Build where clause
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic Prisma where clause
   const where: any = { projectId: project.id }
 
   if (type) where.type = type
@@ -234,7 +234,7 @@ async function createTicket(input: ToolInput, userId: string): Promise<ToolResul
   const nextNumber = (maxTicket?.number ?? 0) + 1
 
   // Build create data
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic Prisma create data
   const data: any = {
     title,
     description,
@@ -335,7 +335,7 @@ async function updateTicket(input: ToolInput, userId: string): Promise<ToolResul
     return { success: false, result: `Ticket ${key} not found or access denied` }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic Prisma update data
   const data: any = {}
   const changes: string[] = []
 
@@ -511,7 +511,7 @@ async function listSprints(input: ToolInput, userId: string): Promise<ToolResult
     return { success: false, result: `Project ${projectKey} not found or access denied` }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic Prisma where clause
   const where: any = { projectId: project.id }
   if (status) where.status = status
 

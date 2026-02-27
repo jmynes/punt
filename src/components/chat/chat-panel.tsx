@@ -61,7 +61,7 @@ export function ChatPanel() {
   const queryClient = useQueryClient()
 
   // React Query hooks for session operations
-  const { data: sessionData, isLoading: isLoadingSession } = useChatSession(currentSessionId)
+  const { data: sessionData } = useChatSession(currentSessionId)
   const renameSession = useRenameChatSession()
   const deleteSession = useDeleteChatSession()
 

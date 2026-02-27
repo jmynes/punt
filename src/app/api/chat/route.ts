@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     // Handle session creation/validation
-    let sessionId = providedSessionId
+    let sessionId: string = providedSessionId ?? ''
     if (sessionId) {
       // Verify ownership of existing session
       const session = await db.chatSession.findUnique({
@@ -176,13 +176,13 @@ export async function POST(request: Request) {
                 role: 'assistant',
                 content: assistantContent,
                 metadata: toolCalls.length > 0 ? JSON.stringify({ toolCalls }) : null,
-                sessionId: sessionId!,
+                sessionId: sessionId,
               },
             })
 
             // Update session timestamp
             await db.chatSession.update({
-              where: { id: sessionId! },
+              where: { id: sessionId },
               data: { updatedAt: new Date() },
             })
           }

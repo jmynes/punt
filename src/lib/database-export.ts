@@ -258,7 +258,7 @@ function createBackupJson(
     // so 2FA secrets can be re-encrypted on import to a different server
     const hasTotpUsers = data.users.some((u) => u.totpEnabled && u.totpSecret)
     const dataToEncrypt = hasTotpUsers
-      ? { serverSecrets: { authSecret: process.env.AUTH_SECRET! }, ...data }
+      ? { serverSecrets: { authSecret: process.env.AUTH_SECRET ?? '' }, ...data }
       : data
     const dataJson = JSON.stringify(dataToEncrypt)
     const encrypted = encrypt(dataJson, options.password)
@@ -366,7 +366,7 @@ export async function createEncryptedDatabaseExport(
   // Bundle AUTH_SECRET inside encrypted payload when TOTP users exist
   const hasTotpUsers = data.users.some((u) => u.totpEnabled && u.totpSecret)
   const dataToEncrypt = hasTotpUsers
-    ? { serverSecrets: { authSecret: process.env.AUTH_SECRET! }, ...data }
+    ? { serverSecrets: { authSecret: process.env.AUTH_SECRET ?? '' }, ...data }
     : data
   const dataJson = JSON.stringify(dataToEncrypt)
   const encrypted = encrypt(dataJson, password)

@@ -57,7 +57,6 @@ export function RoleSimulationBanner() {
   const pendingNavigation = useRoleSimulationStore((s) => s.pendingNavigation)
   const setPendingNavigation = useRoleSimulationStore((s) => s.setPendingNavigation)
 
-  const warnOnSimulationLeave = useSettingsStore((s) => s.warnOnSimulationLeave)
   const setWarnOnSimulationLeave = useSettingsStore((s) => s.setWarnOnSimulationLeave)
 
   // Find the active simulation for the current project
