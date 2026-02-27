@@ -219,7 +219,7 @@ export async function PATCH(
   { params }: { params: Promise<{ username: string }> },
 ) {
   try {
-    const currentUser = await requireSystemAdmin()
+    await requireSystemAdmin()
     const { username } = await params
 
     // Handle demo mode - return success without persisting
@@ -254,17 +254,7 @@ export async function PATCH(
 
     const body = await request.json()
 
-    // Prevent self-demotion
-    if (existingUser.id === currentUser.id) {
-      if (body.isSystemAdmin === false || body.isActive === false) {
-        return NextResponse.json(
-          { error: 'Cannot remove your own admin privileges or disable your own account' },
-          { status: 400 },
-        )
-      }
-    }
-
-    // Prevent removing or disabling the last system admin
+    // Prevent removing or disabling the last system admin (including self)
     const isRemovingAdmin = body.isSystemAdmin === false && existingUser.isSystemAdmin
     const isDisablingAdmin =
       body.isActive === false && existingUser.isSystemAdmin && existingUser.isActive
@@ -451,8 +441,17 @@ export async function DELETE(
       if (!demoUser) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 })
       }
-      if (demoUser.id === currentUser.id) {
-        return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
+      if (demoUser.id === currentUser.id && demoUser.isSystemAdmin) {
+        // In demo mode, the demo user is always the sole admin
+        const demoAdminCount = [DEMO_USER, ...DEMO_TEAM_MEMBERS].filter(
+          (u) => u.isSystemAdmin && u.isActive,
+        ).length
+        if (demoAdminCount <= 1) {
+          return NextResponse.json(
+            { error: 'Cannot delete the only system administrator account' },
+            { status: 400 },
+          )
+        }
       }
       return NextResponse.json({ success: true, action: permanent ? 'deleted' : 'disabled' })
     }
@@ -466,9 +465,19 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Prevent self-deletion
+    // Prevent self-deletion only when the user is the sole system admin
     if (existingUser.id === currentUser.id) {
-      return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
+      if (existingUser.isSystemAdmin) {
+        const adminCount = await db.user.count({
+          where: { isSystemAdmin: true, isActive: true },
+        })
+        if (adminCount <= 1) {
+          return NextResponse.json(
+            { error: 'Cannot delete the only system administrator account' },
+            { status: 400 },
+          )
+        }
+      }
     }
 
     if (permanent) {
