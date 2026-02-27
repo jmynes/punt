@@ -280,6 +280,9 @@ export const USER_SELECT_ADMIN_LIST = {
   isSystemAdmin: true,
   isActive: true,
   totpEnabled: true,
+  mcpApiKey: true,
+  anthropicApiKey: true,
+  claudeSessionEncrypted: true,
   createdAt: true,
   lastLoginAt: true,
   _count: {

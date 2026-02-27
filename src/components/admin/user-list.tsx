@@ -89,6 +89,8 @@ interface User {
   isSystemAdmin: boolean
   isActive: boolean
   totpEnabled: boolean
+  hasMcpApiKey: boolean
+  hasClaudeChat: boolean
   createdAt: string
   lastLoginAt: string | null
   _count: { projects: number }
@@ -1016,6 +1018,16 @@ export function UserList() {
                       className="border-emerald-500 text-emerald-500 text-xs"
                     >
                       2FA
+                    </Badge>
+                  )}
+                  {user.hasMcpApiKey && (
+                    <Badge variant="outline" className="border-purple-500 text-purple-500 text-xs">
+                      MCP
+                    </Badge>
+                  )}
+                  {user.hasClaudeChat && (
+                    <Badge variant="outline" className="border-orange-500 text-orange-500 text-xs">
+                      Claude
                     </Badge>
                   )}
                 </div>
