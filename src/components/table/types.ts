@@ -48,6 +48,8 @@ export interface TicketTableProps {
   onSetSort?: (sort: SortConfig | null) => void
   /** Whether columns can be reordered via drag-and-drop */
   enableColumnReorder?: boolean
+  /** Callback to hide a column */
+  onHideColumn?: (columnId: string) => void
 
   // Overlay mode (for DragOverlay)
   /** If provided, renders a single ticket as overlay */
@@ -104,6 +106,8 @@ export interface TicketTableHeaderProps {
   onSetSort?: (sort: SortConfig | null) => void
   /** Whether columns can be reordered */
   enableColumnReorder?: boolean
+  /** Callback to hide a column */
+  onHideColumn?: (columnId: string) => void
 }
 
 /**
@@ -114,6 +118,7 @@ export interface SortableHeaderCellProps {
   sort?: SortConfig | null
   onToggleSort?: (columnId: string) => void
   onSetSort?: (sort: SortConfig | null) => void
+  onHideColumn?: (columnId: string) => void
 }
 
 export type { BacklogColumn, SortConfig, SortDirection }

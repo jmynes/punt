@@ -2,11 +2,12 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ArrowDown, ArrowUp, GripVertical, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, EyeOff, GripVertical, X } from 'lucide-react'
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
@@ -26,10 +27,12 @@ function SortContextMenuContent({
   column,
   sort,
   onSetSort,
+  onHideColumn,
 }: {
   column: BacklogColumn
   sort?: SortConfig | null
   onSetSort?: (sort: SortConfig | null) => void
+  onHideColumn?: (columnId: string) => void
 }) {
   if (!column.sortable || !onSetSort) return null
 
@@ -53,12 +56,17 @@ function SortContextMenuContent({
         <ArrowDown className="h-4 w-4" />
         Sort Descending
       </ContextMenuItem>
-      {isSorted && (
+      <ContextMenuSeparator />
+      <ContextMenuItem onClick={() => onSetSort(null)} disabled={!isSorted}>
+        <X className="h-4 w-4" />
+        Clear Sort
+      </ContextMenuItem>
+      {onHideColumn && (
         <>
           <ContextMenuSeparator />
-          <ContextMenuItem onClick={() => onSetSort(null)}>
-            <X className="h-4 w-4" />
-            Clear Sort
+          <ContextMenuItem onClick={() => onHideColumn(column.id)}>
+            <EyeOff className="h-4 w-4" />
+            Hide Column
           </ContextMenuItem>
         </>
       )}
@@ -71,7 +79,13 @@ function SortContextMenuContent({
  * Supports column reordering via drag-and-drop, sort toggling via click,
  * and a right-click context menu for sort controls.
  */
-function SortableHeaderCell({ column, sort, onToggleSort, onSetSort }: SortableHeaderCellProps) {
+function SortableHeaderCell({
+  column,
+  sort,
+  onToggleSort,
+  onSetSort,
+  onHideColumn,
+}: SortableHeaderCellProps) {
   const isSorted = sort?.column === column.id
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -143,32 +157,53 @@ function SortableHeaderCell({ column, sort, onToggleSort, onSetSort }: SortableH
             {headerContent}
           </th>
         </ContextMenuTrigger>
-        <SortContextMenuContent column={column} sort={sort} onSetSort={onSetSort} />
+        <SortContextMenuContent
+          column={column}
+          sort={sort}
+          onSetSort={onSetSort}
+          onHideColumn={onHideColumn}
+        />
       </ContextMenu>
     )
   }
 
   return (
-    <th
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        'relative select-none whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-zinc-400',
-        isDragging && 'z-50 bg-zinc-800 opacity-80',
-        column.sortable && 'cursor-pointer hover:text-zinc-200',
-      )}
-      onClick={handleSortClick}
-      role={column.sortable ? 'button' : undefined}
-      aria-sort={
-        column.sortable && isSorted
-          ? sort.direction === 'asc'
-            ? 'ascending'
-            : 'descending'
-          : undefined
-      }
-    >
-      {headerContent}
-    </th>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <th
+          ref={setNodeRef}
+          style={style}
+          className={cn(
+            'relative select-none whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-zinc-400',
+            isDragging && 'z-50 bg-zinc-800 opacity-80',
+            column.sortable && 'cursor-pointer hover:text-zinc-200',
+          )}
+          onClick={handleSortClick}
+          role={column.sortable ? 'button' : undefined}
+          aria-sort={
+            column.sortable && isSorted
+              ? sort.direction === 'asc'
+                ? 'ascending'
+                : 'descending'
+              : undefined
+          }
+        >
+          {headerContent}
+        </th>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuLabel className="text-zinc-500">Not sortable</ContextMenuLabel>
+        {onHideColumn && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem onClick={() => onHideColumn(column.id)}>
+              <EyeOff className="h-4 w-4" />
+              Hide Column
+            </ContextMenuItem>
+          </>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
 
@@ -176,7 +211,13 @@ function SortableHeaderCell({ column, sort, onToggleSort, onSetSort }: SortableH
  * A non-sortable header cell (no drag reordering).
  * Supports a right-click context menu for sort controls.
  */
-function StaticHeaderCell({ column, sort, onToggleSort, onSetSort }: SortableHeaderCellProps) {
+function StaticHeaderCell({
+  column,
+  sort,
+  onToggleSort,
+  onSetSort,
+  onHideColumn,
+}: SortableHeaderCellProps) {
   const isSorted = sort?.column === column.id
   const handleSortClick =
     column.sortable && onToggleSort ? () => onToggleSort(column.id) : undefined
@@ -223,33 +264,54 @@ function StaticHeaderCell({ column, sort, onToggleSort, onSetSort }: SortableHea
             {headerContent}
           </th>
         </ContextMenuTrigger>
-        <SortContextMenuContent column={column} sort={sort} onSetSort={onSetSort} />
+        <SortContextMenuContent
+          column={column}
+          sort={sort}
+          onSetSort={onSetSort}
+          onHideColumn={onHideColumn}
+        />
       </ContextMenu>
     )
   }
 
   return (
-    <th
-      style={{
-        width: column.width || undefined,
-        minWidth: column.minWidth,
-      }}
-      className={cn(
-        'select-none whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-zinc-400',
-        column.sortable && 'cursor-pointer hover:text-zinc-200',
-      )}
-      onClick={handleSortClick}
-      role={column.sortable ? 'button' : undefined}
-      aria-sort={
-        column.sortable && isSorted
-          ? sort.direction === 'asc'
-            ? 'ascending'
-            : 'descending'
-          : undefined
-      }
-    >
-      {headerContent}
-    </th>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <th
+          style={{
+            width: column.width || undefined,
+            minWidth: column.minWidth,
+          }}
+          className={cn(
+            'select-none whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-zinc-400',
+            column.sortable && 'cursor-pointer hover:text-zinc-200',
+          )}
+          onClick={handleSortClick}
+          role={column.sortable ? 'button' : undefined}
+          aria-sort={
+            column.sortable && isSorted
+              ? sort.direction === 'asc'
+                ? 'ascending'
+                : 'descending'
+              : undefined
+          }
+        >
+          {headerContent}
+        </th>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuLabel className="text-zinc-500">Not sortable</ContextMenuLabel>
+        {onHideColumn && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem onClick={() => onHideColumn(column.id)}>
+              <EyeOff className="h-4 w-4" />
+              Hide Column
+            </ContextMenuItem>
+          </>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
 
@@ -264,6 +326,7 @@ export function TicketTableHeader({
   onToggleSort,
   onSetSort,
   enableColumnReorder = false,
+  onHideColumn,
 }: TicketTableHeaderProps) {
   const HeaderCell = enableColumnReorder ? SortableHeaderCell : StaticHeaderCell
 
@@ -279,6 +342,7 @@ export function TicketTableHeader({
             sort={sort}
             onToggleSort={onToggleSort}
             onSetSort={onSetSort}
+            onHideColumn={onHideColumn}
           />
         ))}
       </tr>
