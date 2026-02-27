@@ -17,9 +17,6 @@ pnpm db:generate      # Generate Prisma client after schema changes
 pnpm db:push          # Push schema to PostgreSQL
 pnpm db:migrate       # Create migration + push
 pnpm db:studio        # Visual database browser
-pnpm db:docker        # Start PostgreSQL via Docker Compose
-pnpm db:docker:stop   # Stop PostgreSQL Docker containers
-pnpm db:docker:reset  # Reset Docker PostgreSQL (delete volumes)
 
 # Testing
 pnpm test             # Run tests once
@@ -344,7 +341,7 @@ git checkout main && git pull && git branch -d <branch-name>
 
 Railway config in `railway.toml`. Node.js >= 20.9.0 required (enforced in `package.json`). Requires PostgreSQL 16+.
 
-**Prerequisites:** PostgreSQL (system install or Docker via `pnpm db:docker`). Set `DATABASE_URL` in `.env` to your PostgreSQL connection string.
+**Prerequisites:** PostgreSQL 16+. Set `DATABASE_URL` in `.env` to your PostgreSQL connection string.
 
 Demo mode env vars: `NEXT_PUBLIC_DEMO_MODE=true`, `AUTH_SECRET`, `AUTH_TRUST_HOST=true`
 
