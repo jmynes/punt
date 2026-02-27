@@ -48,7 +48,9 @@ export function useProjectDetail(projectKey: string) {
  * Fetch all projects for the current user and sync with Zustand store
  */
 export function useProjects() {
-  const { setProjects, setLoading, setError } = useProjectsStore()
+  const setProjects = useProjectsStore((s) => s.setProjects)
+  const setLoading = useProjectsStore((s) => s.setLoading)
+  const setError = useProjectsStore((s) => s.setError)
 
   const query = useQuery<ProviderProjectSummary[], Error, ProjectSummary[]>({
     queryKey: projectKeys.all,
@@ -85,7 +87,8 @@ export function useProjects() {
  */
 export function useCreateProject() {
   const queryClient = useQueryClient()
-  const { addProject, removeProject } = useProjectsStore()
+  const addProject = useProjectsStore((s) => s.addProject)
+  const removeProject = useProjectsStore((s) => s.removeProject)
 
   return useMutation({
     mutationFn: async (data: {
@@ -140,7 +143,7 @@ export function useCreateProject() {
  */
 export function useUpdateProject() {
   const queryClient = useQueryClient()
-  const { updateProject: updateProjectInStore } = useProjectsStore()
+  const updateProjectInStore = useProjectsStore((s) => s.updateProject)
 
   return useMutation({
     mutationFn: async ({
@@ -191,7 +194,7 @@ export function useUpdateProject() {
  */
 export function useDeleteProject() {
   const queryClient = useQueryClient()
-  const { removeProject } = useProjectsStore()
+  const removeProject = useProjectsStore((s) => s.removeProject)
 
   return useMutation({
     mutationFn: async (id: string) => {
