@@ -98,6 +98,8 @@ function coerceJsonArray(value: unknown, fallback: string[], fieldName?: string)
   return fallback
 }
 
+export { coerceJsonArray as _coerceJsonArrayForTesting }
+
 /**
  * Fetch system settings from database, creating defaults if none exist.
  * Returns parsed settings with MIME type arrays.

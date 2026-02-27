@@ -151,7 +151,14 @@ export async function hashRecoveryCodes(codes: string[]): Promise<string[]> {
  */
 function coerceRecoveryCodes(value: unknown): string[] {
   if (Array.isArray(value)) return value as string[]
-  if (typeof value === 'string') return JSON.parse(value)
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) return parsed
+    } catch {
+      // fall through to fallback
+    }
+  }
   return []
 }
 

@@ -8,12 +8,19 @@ import { maliciousString } from './primitives'
 /**
  * Ticket type enum values
  */
-export const ticketType = fc.constantFrom<IssueType>('task', 'bug', 'story', 'epic')
+export const ticketType = fc.constantFrom<IssueType>('task', 'bug', 'story', 'epic', 'subtask')
 
 /**
  * Ticket priority enum values
  */
-export const ticketPriority = fc.constantFrom<Priority>('low', 'medium', 'high', 'critical')
+export const ticketPriority = fc.constantFrom<Priority>(
+  'lowest',
+  'low',
+  'medium',
+  'high',
+  'highest',
+  'critical',
+)
 
 /**
  * Valid ticket number (positive integer)

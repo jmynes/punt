@@ -54,8 +54,8 @@ describe('Generic API Validation Fuzz Tests', () => {
   })
 
   describe('Enum validation', () => {
-    const ticketTypeSchema = z.enum(['task', 'bug', 'story', 'epic'])
-    const prioritySchema = z.enum(['low', 'medium', 'high', 'critical'])
+    const ticketTypeSchema = z.enum(['task', 'bug', 'story', 'epic', 'subtask'])
+    const prioritySchema = z.enum(['lowest', 'low', 'medium', 'high', 'highest', 'critical'])
     const roleSchema = z.enum(['owner', 'admin', 'member'])
 
     it('should accept valid ticket types', () => {
@@ -91,7 +91,7 @@ describe('Generic API Validation Fuzz Tests', () => {
     it('should reject invalid enum values', () => {
       fc.assert(
         fc.property(
-          fc.string().filter((s) => !['task', 'bug', 'story', 'epic'].includes(s)),
+          fc.string().filter((s) => !['task', 'bug', 'story', 'epic', 'subtask'].includes(s)),
           (invalid) => {
             const result = ticketTypeSchema.safeParse(invalid)
             expect(result.success).toBe(false)
@@ -354,8 +354,8 @@ describe('Generic API Validation Fuzz Tests', () => {
     const ticketUpdateSchema = z.object({
       title: z.string().min(1).max(500).optional(),
       description: z.string().max(10000).nullable().optional(),
-      type: z.enum(['task', 'bug', 'story', 'epic']).optional(),
-      priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+      type: z.enum(['task', 'bug', 'story', 'epic', 'subtask']).optional(),
+      priority: z.enum(['lowest', 'low', 'medium', 'high', 'highest', 'critical']).optional(),
       columnId: z.string().uuid().optional(),
       assigneeId: z.string().uuid().nullable().optional(),
       sprintId: z.string().uuid().nullable().optional(),
@@ -458,8 +458,10 @@ describe('Generic API Validation Fuzz Tests', () => {
     const ticketCreateSchema = z.object({
       title: z.string().min(1).max(500),
       description: z.string().max(10000).optional(),
-      type: z.enum(['task', 'bug', 'story', 'epic']).default('task'),
-      priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+      type: z.enum(['task', 'bug', 'story', 'epic', 'subtask']).default('task'),
+      priority: z
+        .enum(['lowest', 'low', 'medium', 'high', 'highest', 'critical'])
+        .default('medium'),
       columnId: z.string().uuid(),
       assigneeId: z.string().uuid().nullable().optional(),
       sprintId: z.string().uuid().nullable().optional(),
