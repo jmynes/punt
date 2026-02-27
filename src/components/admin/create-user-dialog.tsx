@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Eye, EyeOff, Loader2, UserPlus } from 'lucide-react'
+import { AlertTriangle, Check, Eye, EyeOff, Loader2, UserPlus, X } from 'lucide-react'
 import { useState } from 'react'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,18 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
+
+interface PasswordRequirement {
+  label: string
+  test: (password: string) => boolean
+}
+
+const passwordRequirements: PasswordRequirement[] = [
+  { label: 'At least 12 characters', test: (p) => p.length >= 12 },
+  { label: 'One uppercase letter', test: (p) => /[A-Z]/.test(p) },
+  { label: 'One lowercase letter', test: (p) => /[a-z]/.test(p) },
+  { label: 'One number', test: (p) => /[0-9]/.test(p) },
+]
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false)
@@ -104,7 +116,8 @@ export function CreateUserDialog() {
     setShowReauthDialog(false)
   }
 
-  const canCreate = username.length > 0 && name.length > 0 && password.length > 0
+  const allRequirementsMet = passwordRequirements.every((req) => req.test(password))
+  const canCreate = username.length > 0 && name.length > 0 && allRequirementsMet
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -197,9 +210,32 @@ export function CreateUserDialog() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
-            <p className="text-xs text-zinc-500">
-              Must be at least 12 characters with uppercase, lowercase, and a number.
-            </p>
+            {password ? (
+              <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                {passwordRequirements.map((req) => {
+                  const met = req.test(password)
+                  return (
+                    <div
+                      key={req.label}
+                      className={`flex items-center gap-1.5 text-xs transition-colors ${
+                        met ? 'text-emerald-400' : 'text-zinc-500'
+                      }`}
+                    >
+                      {met ? (
+                        <Check className="h-3 w-3 shrink-0" />
+                      ) : (
+                        <X className="h-3 w-3 shrink-0" />
+                      )}
+                      <span>{req.label}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-500">
+                Must be at least 12 characters with uppercase, lowercase, and a number.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

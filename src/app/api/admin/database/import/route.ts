@@ -95,6 +95,8 @@ const REQUIRED_CONFIRMATION = 'DELETE ALL DATA'
  * - System admin
  * - Re-authentication with admin credentials
  * - Typing "DELETE ALL DATA" confirmation
+ *
+ * For first-run setup (no users), use POST /api/auth/setup/import instead.
  */
 export async function POST(request: Request) {
   try {
