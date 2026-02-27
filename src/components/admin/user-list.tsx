@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react'
 import Link from 'next/link'
+import { signOut } from 'next-auth/react'
 import { useCallback, useEffect, useState } from 'react'
 import { PageHeader } from '@/components/common'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
@@ -110,6 +111,10 @@ export function UserList() {
   const tabId = getTabId()
   const [deleteUsername, setDeleteUsername] = useState<string | null>(null)
   const [showDeleteReauthDialog, setShowDeleteReauthDialog] = useState(false)
+  const [adminToggleUsername, setAdminToggleUsername] = useState<string | null>(null)
+  const [showAdminReauthDialog, setShowAdminReauthDialog] = useState(false)
+  const [activeToggleUsername, setActiveToggleUsername] = useState<string | null>(null)
+  const [showActiveReauthDialog, setShowActiveReauthDialog] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [lastSelectedId, setLastSelectedId] = useState<string | null>(null)
   const [bulkAction, setBulkAction] = useState<BulkAction>(null)
@@ -139,6 +144,7 @@ export function UserList() {
     redo,
     canUndo,
     canRedo,
+    clear: clearUndoHistory,
   } = useAdminUndoStore()
 
   // Filter and sort state
@@ -225,20 +231,30 @@ export function UserList() {
       username,
       updates,
       previousUser,
+      confirmPassword,
+      totpCode,
+      isRecoveryCode,
     }: {
       username: string
       updates: Partial<User>
       previousUser?: User
+      confirmPassword?: string
+      totpCode?: string
+      isRecoveryCode?: boolean
     }) => {
       if (isDemoMode()) {
         // Demo mode: simulate success
         showToast.info('User management is read-only in demo mode')
         return { user: { username, ...updates }, updates, previousUser }
       }
+      const body: Record<string, unknown> = { ...updates }
+      if (confirmPassword) body.confirmPassword = confirmPassword
+      if (totpCode) body.totpCode = totpCode
+      if (isRecoveryCode) body.isRecoveryCode = isRecoveryCode
       const res = await fetch(`/api/admin/users/${username}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-        body: JSON.stringify(updates),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const error = await res.json()
@@ -249,10 +265,22 @@ export function UserList() {
     },
     onSuccess: ({ user, updates, previousUser }) => {
       if (isDemoMode()) return
+
+      // If the user disabled or demoted themselves, sign them out
+      if (user.username === currentUser?.username) {
+        if (
+          ('isActive' in updates && updates.isActive === false) ||
+          ('isSystemAdmin' in updates && updates.isSystemAdmin === false)
+        ) {
+          signOut({ callbackUrl: '/login' })
+          return
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 
-      // Show toast for admin status changes and track for undo
-      if ('isSystemAdmin' in updates && previousUser) {
+      // Track for undo and show toast
+      if (previousUser) {
         const userSnapshot = {
           id: previousUser.id,
           username: previousUser.username,
@@ -262,12 +290,24 @@ export function UserList() {
           isActive: previousUser.isActive,
         }
 
-        if (updates.isSystemAdmin) {
-          pushUserMakeAdmin([userSnapshot])
-          showToast.success(`${user.name} is now an admin (Ctrl+Z to undo)`)
-        } else {
-          pushUserRemoveAdmin([userSnapshot])
-          showToast.success(`${user.name} is no longer an admin (Ctrl+Z to undo)`)
+        if ('isSystemAdmin' in updates) {
+          if (updates.isSystemAdmin) {
+            pushUserMakeAdmin([userSnapshot])
+            showToast.success(`${user.name} is now an admin (Ctrl+Z to undo)`)
+          } else {
+            pushUserRemoveAdmin([userSnapshot])
+            showToast.success(`${user.name} is no longer an admin (Ctrl+Z to undo)`)
+          }
+        }
+
+        if ('isActive' in updates) {
+          if (updates.isActive === false) {
+            pushUserDisable([userSnapshot])
+            showToast.success(`${user.name} has been disabled (Ctrl+Z to undo)`)
+          } else {
+            pushUserEnable([userSnapshot])
+            showToast.success(`${user.name} has been enabled (Ctrl+Z to undo)`)
+          }
         }
       }
     },
@@ -310,7 +350,13 @@ export function UserList() {
     },
     onSuccess: (data) => {
       if (data.action === 'demo') return
+      // If the user deleted/disabled themselves, sign them out
+      if (deleteUsername === currentUser?.username) {
+        signOut({ callbackUrl: '/login' })
+        return
+      }
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+      clearUndoHistory()
       showToast.success(data.action === 'deleted' ? 'User permanently deleted' : 'User disabled')
       setDeleteUsername(null)
       setShowDeleteReauthDialog(false)
@@ -711,7 +757,7 @@ export function UserList() {
           fetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-            body: JSON.stringify(updates),
+            body: JSON.stringify({ ...updates, skipReauth: true }),
           }),
         ),
       )
@@ -768,7 +814,7 @@ export function UserList() {
           fetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-            body: JSON.stringify(updates),
+            body: JSON.stringify({ ...updates, skipReauth: true }),
           }),
         ),
       )
@@ -804,6 +850,12 @@ export function UserList() {
   }, [handleUndo, handleRedo, canUndo, canRedo])
 
   const userToDelete = deleteUsername ? users?.find((u) => u.username === deleteUsername) : null
+  const userToToggleAdmin = adminToggleUsername
+    ? users?.find((u) => u.username === adminToggleUsername)
+    : null
+  const userToToggleActive = activeToggleUsername
+    ? users?.find((u) => u.username === activeToggleUsername)
+    : null
   const selectedUsers = users?.filter((u) => selectedIds.has(u.id)) || []
 
   // Separate current user from other users
@@ -1012,13 +1064,10 @@ export function UserList() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-zinc-800" />
                 <DropdownMenuItem
-                  onClick={() =>
-                    updateUser.mutate({
-                      username: user.username,
-                      updates: { isSystemAdmin: !user.isSystemAdmin },
-                      previousUser: user,
-                    })
-                  }
+                  onClick={() => {
+                    setAdminToggleUsername(user.username)
+                    setShowAdminReauthDialog(true)
+                  }}
                   className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
                 >
                   {user.isSystemAdmin ? (
@@ -1035,12 +1084,10 @@ export function UserList() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-zinc-800" />
                 <DropdownMenuItem
-                  onClick={() =>
-                    updateUser.mutate({
-                      username: user.username,
-                      updates: { isActive: !user.isActive },
-                    })
-                  }
+                  onClick={() => {
+                    setActiveToggleUsername(user.username)
+                    setShowActiveReauthDialog(true)
+                  }}
                   className={
                     user.isActive
                       ? 'text-red-400 focus:text-red-300 focus:bg-zinc-800'
@@ -1545,6 +1592,56 @@ export function UserList() {
               totpCode,
               isRecoveryCode,
             })
+          }}
+        />
+
+        <ReauthDialog
+          open={showAdminReauthDialog}
+          onOpenChange={(open) => {
+            setShowAdminReauthDialog(open)
+            if (!open) setAdminToggleUsername(null)
+          }}
+          title={userToToggleAdmin?.isSystemAdmin ? 'Confirm Remove Admin' : 'Confirm Make Admin'}
+          description={`Enter your password to ${userToToggleAdmin?.isSystemAdmin ? 'remove admin privileges from' : 'grant admin privileges to'} ${userToToggleAdmin?.name ?? 'this user'}.`}
+          actionLabel={userToToggleAdmin?.isSystemAdmin ? 'Remove Admin' : 'Make Admin'}
+          actionVariant={userToToggleAdmin?.isSystemAdmin ? 'destructive' : 'default'}
+          onConfirm={async (password, totpCode, isRecoveryCode) => {
+            if (!adminToggleUsername || !userToToggleAdmin) return
+            await updateUser.mutateAsync({
+              username: adminToggleUsername,
+              updates: { isSystemAdmin: !userToToggleAdmin.isSystemAdmin },
+              previousUser: userToToggleAdmin,
+              confirmPassword: password,
+              totpCode,
+              isRecoveryCode,
+            })
+            setShowAdminReauthDialog(false)
+            setAdminToggleUsername(null)
+          }}
+        />
+
+        <ReauthDialog
+          open={showActiveReauthDialog}
+          onOpenChange={(open) => {
+            setShowActiveReauthDialog(open)
+            if (!open) setActiveToggleUsername(null)
+          }}
+          title={userToToggleActive?.isActive ? 'Confirm Disable User' : 'Confirm Enable User'}
+          description={`Enter your password to ${userToToggleActive?.isActive ? 'disable' : 'enable'} ${userToToggleActive?.name ?? 'this user'}.`}
+          actionLabel={userToToggleActive?.isActive ? 'Disable User' : 'Enable User'}
+          actionVariant={userToToggleActive?.isActive ? 'destructive' : 'default'}
+          onConfirm={async (password, totpCode, isRecoveryCode) => {
+            if (!activeToggleUsername || !userToToggleActive) return
+            await updateUser.mutateAsync({
+              username: activeToggleUsername,
+              updates: { isActive: !userToToggleActive.isActive },
+              previousUser: userToToggleActive,
+              confirmPassword: password,
+              totpCode,
+              isRecoveryCode,
+            })
+            setShowActiveReauthDialog(false)
+            setActiveToggleUsername(null)
           }}
         />
 
