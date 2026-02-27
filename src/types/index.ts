@@ -80,8 +80,8 @@ export const INVERSE_LINK_TYPES: Record<LinkType, LinkType> = {
 
 // Resolution values for closed/done tickets
 export const RESOLUTIONS = [
-  'Already Implemented',
   'Done',
+  'Already Implemented',
   'Cannot Reproduce',
   'Duplicate',
   'Incomplete',
