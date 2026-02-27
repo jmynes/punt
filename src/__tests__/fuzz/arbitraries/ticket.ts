@@ -77,7 +77,15 @@ const _sprintSummary = fc.record({
  * Resolution values
  */
 const resolution = fc.option(
-  fc.constantFrom('Done', "Won't Fix", 'Duplicate', 'Cannot Reproduce', 'Incomplete', "Won't Do"),
+  fc.constantFrom(
+    'Already Implemented',
+    'Done',
+    "Won't Fix",
+    'Duplicate',
+    'Cannot Reproduce',
+    'Incomplete',
+    "Won't Do",
+  ),
   { nil: null },
 )
 

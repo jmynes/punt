@@ -369,7 +369,7 @@ model Ticket {
   updatedAt DateTime  @updatedAt
 
   // Resolution (for closed/done tickets)
-  resolution   String? // Done, Won't Fix, Duplicate, Cannot Reproduce, Incomplete, Won't Do
+  resolution   String? // Already Implemented, Done, Won't Fix, Duplicate, Cannot Reproduce, Incomplete, Won't Do
   resolvedAt   DateTime? // When the ticket was resolved
 
   // Environment / Context
