@@ -42,7 +42,7 @@ export interface ParentTicketOption {
   id: string
   number: number
   title: string
-  type: 'epic' | 'story'
+  type: string
   projectKey: string
 }
 
