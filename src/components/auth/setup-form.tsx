@@ -393,7 +393,7 @@ function ImportBackupForm() {
     setIsImporting(true)
 
     try {
-      const res = await fetch('/api/admin/database/import', {
+      const res = await fetch('/api/auth/setup/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
