@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PUNT (Project Unified Nimble Tracker) is a local-first ticketing system with Jira-like backlog + Kanban board. Built with Next.js 16 (App Router), React 19, TypeScript, SQLite/Prisma, Zustand for state management, and NextAuth.js v5 for authentication.
+PUNT (Project Unified Nimble Tracker) is a local-first ticketing system with Jira-like backlog + Kanban board. Built with Next.js 16 (App Router), React 19, TypeScript, PostgreSQL/Prisma, Zustand for state management, and NextAuth.js v5 for authentication.
 
 ## Commands
 
@@ -12,11 +12,14 @@ PUNT (Project Unified Nimble Tracker) is a local-first ticketing system with Jir
 # Development
 pnpm dev              # Start dev server with Turbopack (port 3000)
 
-# Database
+# Database (PostgreSQL)
 pnpm db:generate      # Generate Prisma client after schema changes
-pnpm db:push          # Push schema to SQLite
+pnpm db:push          # Push schema to PostgreSQL
 pnpm db:migrate       # Create migration + push
 pnpm db:studio        # Visual database browser
+pnpm db:docker        # Start PostgreSQL via Docker Compose
+pnpm db:docker:stop   # Stop PostgreSQL Docker containers
+pnpm db:docker:reset  # Reset Docker PostgreSQL (delete volumes)
 
 # Testing
 pnpm test             # Run tests once
@@ -153,9 +156,15 @@ All client-side state lives in Zustand stores with localStorage persistence:
 
 Stores use `_hasHydrated` flag to prevent render before localStorage loads.
 
-### Database (Prisma + SQLite)
+### Database (Prisma + PostgreSQL)
 
 Schema in `prisma/schema.prisma`. Key models: User, Project, Ticket, Sprint, Label, Role, Column.
+
+**Native enums:** TicketType, TicketPriority, SprintStatus, InvitationStatus, InvitationRole, SprintEntryType, SprintExitStatus, LinkType. Resolution is kept as `String?` (contains spaces/apostrophes).
+
+**Json fields:** Role.permissions, ProjectMember.overrides, SystemSettings.defaultRolePermissions, User.totpRecoveryCodes, User.enabledMcpServers, Project.environmentBranches, Project.commitPatterns, ProjectSprintSettings.doneColumnIds, ChatMessage.metadata, SystemSettings.allowedImageTypes/allowedVideoTypes/allowedDocumentTypes. These are native PostgreSQL JSON - no manual `JSON.parse()`/`JSON.stringify()` needed. Use `Prisma.DbNull` (not `null`) when setting a nullable Json field to NULL.
+
+**Case-insensitive usernames:** PostgreSQL uses `findFirst` with `mode: 'insensitive'` instead of the old `usernameLower` column.
 
 Types generated to `@/generated/prisma/client`, re-exported with relations from `@/types/index.ts`.
 
@@ -224,7 +233,7 @@ src/
 
 Vitest + React Testing Library + MSW. Tests in `__tests__/` subdirectories. See `docs/TESTING.md` for detailed guide.
 
-Coverage target: 80% minimum, 90% for stores/API/utils. Database tests run in separate vitest project to prevent race conditions.
+Coverage target: 80% minimum, 90% for stores/API/utils. Database tests run in separate vitest project to prevent race conditions. Tests require a PostgreSQL test database (see `.env.test`).
 
 ### Security
 
@@ -333,7 +342,9 @@ git checkout main && git pull && git branch -d <branch-name>
 
 ### Deployment
 
-Railway config in `railway.toml`. Node.js >= 20.9.0 required (enforced in `package.json`).
+Railway config in `railway.toml`. Node.js >= 20.9.0 required (enforced in `package.json`). Requires PostgreSQL 16+.
+
+**Prerequisites:** PostgreSQL (system install or Docker via `pnpm db:docker`). Set `DATABASE_URL` in `.env` to your PostgreSQL connection string.
 
 Demo mode env vars: `NEXT_PUBLIC_DEMO_MODE=true`, `AUTH_SECRET`, `AUTH_TRUST_HOST=true`
 

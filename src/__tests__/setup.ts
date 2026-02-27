@@ -12,7 +12,7 @@ import { afterEach, vi } from 'vitest'
 // This check runs at import time to fail fast if misconfigured.
 // The database-backup tests wipe ALL data - this prevents catastrophic data loss.
 const dbUrl = process.env.DATABASE_URL || ''
-if (dbUrl && !dbUrl.includes('test.db')) {
+if (dbUrl && !dbUrl.includes('punt_test')) {
   throw new Error(
     `\n` +
       `${'='.repeat(70)}\n` +
@@ -21,7 +21,7 @@ if (dbUrl && !dbUrl.includes('test.db')) {
       `   DATABASE_URL: ${dbUrl}\n\n` +
       `   This would WIPE ALL YOUR DATA. Tests have been stopped.\n\n` +
       `   To fix this:\n` +
-      `   1. Ensure .env.test exists with DATABASE_URL="file:./test.db"\n` +
+      `   1. Ensure .env.test exists with DATABASE_URL pointing to punt_test\n` +
       `   2. Run tests with: pnpm test\n\n` +
       `${'='.repeat(70)}\n`,
   )

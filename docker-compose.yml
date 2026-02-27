@@ -1,0 +1,33 @@
+# Local PostgreSQL development database for PUNT
+# Usage: docker compose up -d
+# Stop:  docker compose down
+# Reset: docker compose down -v (deletes all data)
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: punt
+      POSTGRES_PASSWORD: punt
+      POSTGRES_DB: punt
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  db-test:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: punt
+      POSTGRES_PASSWORD: punt
+      POSTGRES_DB: punt_test
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata_test:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+  pgdata_test:

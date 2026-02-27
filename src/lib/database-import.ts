@@ -9,6 +9,17 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import JSZip from 'jszip'
+import {
+  type InvitationRole,
+  type InvitationStatus,
+  type LinkType,
+  Prisma,
+  type SprintEntryType,
+  type SprintExitStatus,
+  type SprintStatus,
+  type TicketPriority,
+  type TicketType,
+} from '@/generated/prisma'
 import { decrypt } from '@/lib/crypto'
 import { db } from '@/lib/db'
 import {
@@ -117,7 +128,7 @@ function parseBackupJson(
   const exportFile = result.data as AnyDatabaseExport
 
   // Check version compatibility
-  const COMPATIBLE_VERSIONS = ['1.0.0', '1.1.0', EXPORT_VERSION]
+  const COMPATIBLE_VERSIONS = ['1.0.0', '1.1.0', '1.2.0', EXPORT_VERSION]
   if (!COMPATIBLE_VERSIONS.includes(exportFile.version)) {
     return {
       success: false,
@@ -473,26 +484,35 @@ export async function importDatabase(
 
       // Step 2: Import SystemSettings (upsert)
       if (dataToImport.systemSettings) {
+        const { defaultRolePermissions, ...settingsRest } = dataToImport.systemSettings
+        const settingsData = {
+          ...settingsRest,
+          updatedAt: new Date(dataToImport.systemSettings.updatedAt),
+          defaultRolePermissions: defaultRolePermissions
+            ? (defaultRolePermissions as Prisma.InputJsonValue)
+            : Prisma.DbNull,
+        }
         await tx.systemSettings.upsert({
           where: { id: 'system-settings' },
-          create: {
-            ...dataToImport.systemSettings,
-            updatedAt: new Date(dataToImport.systemSettings.updatedAt),
-          },
-          update: {
-            ...dataToImport.systemSettings,
-            updatedAt: new Date(dataToImport.systemSettings.updatedAt),
-          },
+          create: settingsData,
+          update: settingsData,
         })
       }
 
       // Step 3: Import Users
       if (dataToImport.users.length > 0) {
         for (const user of dataToImport.users) {
+          // Strip legacy/extra fields from passthrough
+          const {
+            usernameLower: _ul,
+            enabledMcpServers: _ems,
+            totpRecoveryCodes,
+            ...userData
+          } = user as typeof user & { usernameLower?: string; enabledMcpServers?: unknown }
           await tx.user.create({
             data: {
-              ...user,
-              usernameLower: user.usernameLower ?? user.username.toLowerCase(),
+              ...userData,
+              totpRecoveryCodes: totpRecoveryCodes ?? Prisma.DbNull,
               createdAt: new Date(user.createdAt),
               updatedAt: new Date(user.updatedAt),
               lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt) : null,
@@ -524,6 +544,7 @@ export async function importDatabase(
           await tx.role.create({
             data: {
               ...role,
+              permissions: role.permissions as Prisma.InputJsonValue,
               createdAt: new Date(role.createdAt),
               updatedAt: new Date(role.updatedAt),
             },
@@ -554,6 +575,7 @@ export async function importDatabase(
           await tx.sprint.create({
             data: {
               ...sprint,
+              status: sprint.status as SprintStatus,
               startDate: sprint.startDate ? new Date(sprint.startDate) : null,
               endDate: sprint.endDate ? new Date(sprint.endDate) : null,
               completedAt: sprint.completedAt ? new Date(sprint.completedAt) : null,
@@ -571,6 +593,9 @@ export async function importDatabase(
           await tx.projectMember.create({
             data: {
               ...member,
+              overrides: member.overrides
+                ? (member.overrides as Prisma.InputJsonValue)
+                : Prisma.DbNull,
               createdAt: new Date(member.createdAt),
               updatedAt: new Date(member.updatedAt),
             },
@@ -585,6 +610,7 @@ export async function importDatabase(
           await tx.projectSprintSettings.create({
             data: {
               ...settings,
+              doneColumnIds: settings.doneColumnIds as Prisma.InputJsonValue,
               createdAt: new Date(settings.createdAt),
               updatedAt: new Date(settings.updatedAt),
             },
@@ -603,6 +629,8 @@ export async function importDatabase(
           await tx.ticket.create({
             data: {
               ...ticketData,
+              type: ticketData.type as TicketType,
+              priority: ticketData.priority as TicketPriority,
               parentId: null,
               startDate: ticketData.startDate ? new Date(ticketData.startDate) : null,
               dueDate: ticketData.dueDate ? new Date(ticketData.dueDate) : null,
@@ -645,6 +673,7 @@ export async function importDatabase(
           await tx.ticketLink.create({
             data: {
               ...link,
+              linkType: link.linkType as LinkType,
               createdAt: new Date(link.createdAt),
             },
           })
@@ -726,6 +755,8 @@ export async function importDatabase(
           await tx.ticketSprintHistory.create({
             data: {
               ...history,
+              entryType: history.entryType as SprintEntryType,
+              exitStatus: (history.exitStatus as SprintExitStatus) ?? null,
               addedAt: new Date(history.addedAt),
               removedAt: history.removedAt ? new Date(history.removedAt) : null,
             },
@@ -740,6 +771,8 @@ export async function importDatabase(
           await tx.invitation.create({
             data: {
               ...invitation,
+              role: invitation.role as InvitationRole,
+              status: invitation.status as InvitationStatus,
               expiresAt: new Date(invitation.expiresAt),
               createdAt: new Date(invitation.createdAt),
             },

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '../rate-limit'
 
 // Mock the database

@@ -48,6 +48,8 @@ function createMockSettings(overrides: Partial<SystemSettings> = {}): SystemSett
     forkRepoUrl: null,
     defaultBranchTemplate: '{type}/{key}-{slug}',
     defaultAgentGuidance: null,
+    defaultSprintStartTime: '09:00',
+    defaultSprintEndTime: '17:00',
     ...overrides,
   }
 }

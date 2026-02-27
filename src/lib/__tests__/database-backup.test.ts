@@ -10,6 +10,7 @@
 
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import type { TicketPriority, TicketType } from '@/generated/prisma'
 import { decrypt, encrypt } from '@/lib/crypto'
 import {
   createDatabaseExport,
@@ -37,7 +38,6 @@ import {
 const TEST_USER = {
   id: 'test-user-1',
   username: 'testuser',
-  usernameLower: 'testuser',
   email: 'test@example.com',
   name: 'Test User',
   avatar: null,
@@ -80,7 +80,7 @@ const TEST_ROLE = {
   name: 'Owner',
   color: '#3b82f6',
   description: 'Project owner',
-  permissions: '{"all": true}',
+  permissions: { all: true },
   isDefault: false,
   position: 0,
   projectId: 'test-project-1',
@@ -91,7 +91,6 @@ const TEST_ROLE = {
 const TEST_PROJECT_MEMBER = {
   id: 'test-member-1',
   roleId: 'test-role-1',
-  overrides: null,
   userId: 'test-user-1',
   projectId: 'test-project-1',
   createdAt: new Date(),
@@ -103,8 +102,8 @@ const TEST_TICKET = {
   number: 1,
   title: 'Test Ticket',
   description: 'Test description',
-  type: 'task',
-  priority: 'medium',
+  type: 'task' as TicketType,
+  priority: 'medium' as TicketPriority,
   order: 0,
   storyPoints: 3,
   estimate: null,

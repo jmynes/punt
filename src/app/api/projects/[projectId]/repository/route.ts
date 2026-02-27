@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '@/generated/prisma'
 import {
   requireAuth,
   requireMembership,
@@ -94,25 +95,9 @@ export async function GET(
     // Get system defaults for effective values
     const systemSettings = await getSystemSettings()
 
-    // Parse environmentBranches from JSON string
-    let environmentBranches = null
-    if (project.environmentBranches) {
-      try {
-        environmentBranches = JSON.parse(project.environmentBranches)
-      } catch {
-        environmentBranches = null
-      }
-    }
-
-    // Parse commitPatterns from JSON string
-    let commitPatterns = null
-    if (project.commitPatterns) {
-      try {
-        commitPatterns = JSON.parse(project.commitPatterns)
-      } catch {
-        commitPatterns = null
-      }
-    }
+    // Native JSON fields - already parsed by Prisma
+    const environmentBranches = project.environmentBranches ?? null
+    const commitPatterns = project.commitPatterns ?? null
 
     return NextResponse.json({
       projectId: project.id,
@@ -197,12 +182,10 @@ export async function PATCH(
     if (updates.agentGuidance !== undefined) dbData.agentGuidance = updates.agentGuidance
     if (updates.monorepoPath !== undefined) dbData.monorepoPath = updates.monorepoPath
     if (updates.environmentBranches !== undefined) {
-      dbData.environmentBranches = updates.environmentBranches
-        ? JSON.stringify(updates.environmentBranches)
-        : null
+      dbData.environmentBranches = updates.environmentBranches ?? Prisma.DbNull
     }
     if (updates.commitPatterns !== undefined) {
-      dbData.commitPatterns = updates.commitPatterns ? JSON.stringify(updates.commitPatterns) : null
+      dbData.commitPatterns = updates.commitPatterns ?? Prisma.DbNull
     }
 
     // Handle webhook secret actions
@@ -237,26 +220,6 @@ export async function PATCH(
     // Get system defaults for effective values
     const systemSettings = await getSystemSettings()
 
-    // Parse environmentBranches from JSON string
-    let parsedEnvironmentBranches = null
-    if (project.environmentBranches) {
-      try {
-        parsedEnvironmentBranches = JSON.parse(project.environmentBranches)
-      } catch {
-        parsedEnvironmentBranches = null
-      }
-    }
-
-    // Parse commitPatterns from JSON string
-    let parsedCommitPatterns = null
-    if (project.commitPatterns) {
-      try {
-        parsedCommitPatterns = JSON.parse(project.commitPatterns)
-      } catch {
-        parsedCommitPatterns = null
-      }
-    }
-
     return NextResponse.json({
       projectId: project.id,
       projectKey: project.key,
@@ -269,8 +232,8 @@ export async function PATCH(
       branchTemplate: project.branchTemplate,
       agentGuidance: project.agentGuidance,
       monorepoPath: project.monorepoPath,
-      environmentBranches: parsedEnvironmentBranches,
-      commitPatterns: parsedCommitPatterns,
+      environmentBranches: project.environmentBranches ?? null,
+      commitPatterns: project.commitPatterns ?? null,
       // Webhook integration
       hasWebhookSecret: !!project.webhookSecret,
       // Only return the secret when it was just generated (for copying)

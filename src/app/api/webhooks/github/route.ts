@@ -379,16 +379,9 @@ export async function POST(request: Request) {
       })
     }
 
-    // Parse custom commit patterns if configured
-    let customPatterns: CommitPattern[] | null = null
-    if (project.commitPatterns) {
-      try {
-        customPatterns = JSON.parse(project.commitPatterns)
-      } catch {
-        // If parsing fails, fall back to defaults
-        customPatterns = null
-      }
-    }
+    // Native JSON field - already parsed by Prisma
+    const customPatterns: CommitPattern[] | null =
+      (project.commitPatterns as CommitPattern[] | null) ?? null
 
     // Process all commits
     const allUpdates: TicketUpdate[] = []

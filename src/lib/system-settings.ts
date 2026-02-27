@@ -76,26 +76,26 @@ export interface UploadConfig {
 }
 
 /**
- * Parse JSON string array from database, with fallback to default.
- * Logs a warning if parsing fails to aid in debugging corrupted data.
+ * Coerce a Json field value to a string array, with fallback to default.
+ * With PostgreSQL native Json, the value is already parsed. Handles both
+ * pre-parsed arrays and legacy string values for backwards compatibility.
  */
-function parseJsonArray(jsonString: string, fallback: string[], fieldName?: string): string[] {
-  try {
-    const parsed = JSON.parse(jsonString)
-    if (!Array.isArray(parsed)) {
-      logger.warn(
-        `System settings JSON field${fieldName ? ` '${fieldName}'` : ''} is not an array, using fallback`,
-      )
-      return fallback
-    }
-    return parsed
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    logger.warn(
-      `Failed to parse system settings JSON${fieldName ? ` '${fieldName}'` : ''}: ${errorMessage}. Using fallback.`,
-    )
-    return fallback
+function coerceJsonArray(value: unknown, fallback: string[], fieldName?: string): string[] {
+  if (Array.isArray(value)) {
+    return value as string[]
   }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) return parsed
+    } catch {
+      // fall through to fallback
+    }
+  }
+  logger.warn(
+    `System settings JSON field${fieldName ? ` '${fieldName}'` : ''} is not an array, using fallback`,
+  )
+  return fallback
 }
 
 /**
@@ -127,17 +127,17 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     maxVideoSizeMB: settings.maxVideoSizeMB,
     maxDocumentSizeMB: settings.maxDocumentSizeMB,
     maxAttachmentsPerTicket: settings.maxAttachmentsPerTicket,
-    allowedImageTypes: parseJsonArray(
+    allowedImageTypes: coerceJsonArray(
       settings.allowedImageTypes,
       DEFAULT_SETTINGS.allowedImageTypes,
       'allowedImageTypes',
     ),
-    allowedVideoTypes: parseJsonArray(
+    allowedVideoTypes: coerceJsonArray(
       settings.allowedVideoTypes,
       DEFAULT_SETTINGS.allowedVideoTypes,
       'allowedVideoTypes',
     ),
-    allowedDocumentTypes: parseJsonArray(
+    allowedDocumentTypes: coerceJsonArray(
       settings.allowedDocumentTypes,
       DEFAULT_SETTINGS.allowedDocumentTypes,
       'allowedDocumentTypes',

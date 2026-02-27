@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod/v4'
+import { Prisma } from '@/generated/prisma'
 import { requireAuth } from '@/lib/auth-helpers'
 import { buildSystemPrompt } from '@/lib/chat/context'
 import { getUserProvider, type StreamEvent } from '@/lib/chat/providers'
@@ -175,7 +176,10 @@ export async function POST(request: Request) {
               data: {
                 role: 'assistant',
                 content: assistantContent,
-                metadata: toolCalls.length > 0 ? JSON.stringify({ toolCalls }) : null,
+                metadata:
+                  toolCalls.length > 0
+                    ? ({ toolCalls } as unknown as Prisma.InputJsonValue)
+                    : Prisma.DbNull,
                 sessionId: sessionId,
               },
             })

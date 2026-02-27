@@ -19,7 +19,7 @@ export default defineConfig({
     // File selection is handled by projects below
     projects: [
       {
-        // Database tests share SQLite and must run sequentially to avoid races
+        // Database tests share a test database and must run sequentially to avoid races
         extends: true,
         test: {
           name: 'db',

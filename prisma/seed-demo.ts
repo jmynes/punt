@@ -1,7 +1,12 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import bcrypt from 'bcryptjs'
-import { PrismaClient } from '../src/generated/prisma'
+import {
+  PrismaClient,
+  type SprintStatus,
+  type TicketPriority,
+  type TicketType,
+} from '../src/generated/prisma'
 
 const prisma = new PrismaClient()
 const SALT_ROUNDS = 12
@@ -203,8 +208,8 @@ const descriptions = [
   'Follow-up from the last retrospective.',
 ]
 
-const priorities = ['lowest', 'low', 'medium', 'high', 'highest', 'critical']
-const types = ['bug', 'task', 'story', 'epic', 'subtask']
+const priorities: TicketPriority[] = ['lowest', 'low', 'medium', 'high', 'highest', 'critical']
+const types: TicketType[] = ['bug', 'task', 'story', 'epic', 'subtask']
 const environments = ['Production', 'Staging', 'Development', 'QA', null]
 const storyPointValues = [1, 2, 3, 5, 8, 13, 21, null]
 const estimates = ['1h', '2h', '4h', '1d', '2d', '3d', '1w', '2w', null]
@@ -447,7 +452,14 @@ async function main() {
   // Create sprints for all projects
   console.log('\n🏃 Creating sprints...')
   const now = new Date()
-  const sprintConfigs = [
+  const sprintConfigs: {
+    name: string
+    goal: string
+    status: SprintStatus
+    startDate: Date
+    endDate: Date
+    completedAt?: Date
+  }[] = [
     {
       name: 'Sprint 1',
       goal: 'Set up project infrastructure and basic features',
@@ -692,7 +704,7 @@ async function main() {
         projectId: project.id,
         defaultSprintDuration: 14,
         autoCarryOverIncomplete: true,
-        doneColumnIds: JSON.stringify(doneColumn ? [doneColumn.id] : []),
+        doneColumnIds: doneColumn ? [doneColumn.id] : [],
       },
     })
   }

@@ -139,7 +139,7 @@ export async function PATCH(
     if (color !== undefined) updateData.color = color
     if (description !== undefined) updateData.description = description
     if (validPermissions !== undefined) {
-      updateData.permissions = JSON.stringify(validPermissions)
+      updateData.permissions = validPermissions
     }
     if (position !== undefined) updateData.position = position
 

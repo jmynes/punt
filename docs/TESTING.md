@@ -210,7 +210,7 @@ Vitest integrates with VS Code. Install the Vitest extension for:
 
 ## Database Test Isolation
 
-Tests that interact with SQLite (e.g., `database-backup*.test.ts`) share a single database file and cannot run in parallel. To prevent race conditions, the vitest config uses two projects:
+Tests that interact with the database (e.g., `database-backup*.test.ts`) share a single test database and cannot run in parallel. To prevent race conditions, the vitest config uses two projects:
 
 - **`db` project**: Runs database tests with `fileParallelism: false` (sequential execution)
 - **`unit` project**: Runs all other tests with full parallelism

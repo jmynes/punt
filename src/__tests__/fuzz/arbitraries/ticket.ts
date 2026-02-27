@@ -2,7 +2,7 @@
  * Ticket-related arbitraries for fuzz testing.
  */
 import * as fc from 'fast-check'
-import type { IssueType, Priority, SprintStatus } from '@/types'
+import type { IssueType, LabelSummary, Priority, SprintStatus, UserSummary } from '@/types'
 import { maliciousString } from './primitives'
 
 /**
@@ -109,8 +109,8 @@ export const ticketBase = fc.record({
   // Keep relation fields lightweight — board store tests don't need
   // fully populated nested objects, and complex arbitraries cause
   // timeout interruptions in fuzz runs.
-  labels: fc.constant([]),
-  watchers: fc.constant([]),
+  labels: fc.constant([] as LabelSummary[]),
+  watchers: fc.constant([] as UserSummary[]),
   assignee: fc.constant(null),
   creator: fc.record({
     id: fc.uuid(),
@@ -162,8 +162,8 @@ export const maliciousTicket = fc.record({
   isCarriedOver: fc.boolean(),
   carriedOverCount: fc.nat({ max: 10 }),
   carriedFromSprintId: fc.option(fc.uuid(), { nil: null }),
-  labels: fc.constant([]),
-  watchers: fc.constant([]),
+  labels: fc.constant([] as LabelSummary[]),
+  watchers: fc.constant([] as UserSummary[]),
   assignee: fc.constant(null),
   creator: fc.record({
     id: fc.uuid(),
