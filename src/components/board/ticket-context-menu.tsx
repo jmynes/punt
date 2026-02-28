@@ -453,8 +453,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       const after: TicketWithRelations = {
         ...current,
         resolution,
-        // Sync resolvedAt with resolution changes
-        // Update timestamp when resolution changes (not just when first set)
+        // Sync resolvedAt: update timestamp on any resolution change, clear when unresolved
         resolvedAt: resolution ? new Date() : null,
         ...(needsMove && doneCol ? { columnId: doneCol.id } : {}),
         ...(needsClear ? { resolution: null, resolvedAt: null } : {}),
@@ -1102,19 +1101,16 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                               </button>
                             )
                           })}
-                          {!inDoneColumn && (
-                            <>
-                              <div className="my-1 border-t border-zinc-800" />
-                              <button
-                                type="button"
-                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                                onClick={() => doResolution(null)}
-                              >
-                                <CheckCircle2 className="h-4 w-4 text-zinc-500" />
-                                <span className="text-zinc-400">Unresolved</span>
-                              </button>
-                            </>
-                          )}
+                          <div className="my-1 border-t border-zinc-800" />
+                          <button
+                            type="button"
+                            className={`flex w-full items-center gap-2 px-3 py-1.5 text-left ${inDoneColumn ? 'cursor-not-allowed opacity-40' : 'hover:bg-zinc-800'}`}
+                            onClick={() => !inDoneColumn && doResolution(null)}
+                            disabled={!!inDoneColumn}
+                          >
+                            <CheckCircle2 className="h-4 w-4 text-zinc-500" />
+                            <span className="text-zinc-400">Unresolved</span>
+                          </button>
                         </>
                       )
                     })()}
