@@ -266,7 +266,7 @@ export default function SprintPlanningPage() {
   }
 
   return (
-    <div className="flex h-full flex-col" onClick={handleEmptySpaceClick}>
+    <div className="flex h-full flex-col">
       {/* Page header */}
       <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:px-6">
         <div className="flex items-center gap-3">
@@ -295,7 +295,7 @@ export default function SprintPlanningPage() {
       </div>
 
       {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0" onClick={handleEmptySpaceClick}>
         <div className="p-4 lg:p-6 space-y-4">
           {/* Active sprint header with progress */}
           <SprintHeader
