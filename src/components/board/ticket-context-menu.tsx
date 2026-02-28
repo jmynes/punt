@@ -460,7 +460,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       }
       updates.push({ ticketId: id, before: current, after })
       updateTicket(projectId, id, {
-        resolution,
+        resolution: after.resolution,
+        resolvedAt: after.resolvedAt,
         ...(needsMove && doneCol ? { columnId: doneCol.id } : {}),
       })
     }
