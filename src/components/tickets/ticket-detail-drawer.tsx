@@ -584,6 +584,8 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     }
     if (tempResolution !== (ticket.resolution || null)) {
       updates.resolution = tempResolution
+      // Sync resolvedAt: set fresh timestamp on any resolution change, clear when unresolved
+      updates.resolvedAt = tempResolution ? new Date() : null
     }
     if (tempEnvironment !== (ticket.environment || '')) {
       updates.environment = tempEnvironment || null
