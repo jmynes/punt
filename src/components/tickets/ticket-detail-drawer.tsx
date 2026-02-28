@@ -1296,9 +1296,18 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                       <SelectValue placeholder="Unresolved" />
                     </SelectTrigger>
                     <SelectContent className="bg-zinc-900 border-zinc-700">
-                      <SelectItem value="none" className="focus:bg-zinc-800 focus:text-zinc-100">
-                        Unresolved
-                      </SelectItem>
+                      {(() => {
+                        const currentCol = columns.find((c) => c.id === tempStatusId)
+                        const inDoneColumn = currentCol && isCompletedColumn(currentCol.name)
+                        return !inDoneColumn ? (
+                          <SelectItem
+                            value="none"
+                            className="focus:bg-zinc-800 focus:text-zinc-100"
+                          >
+                            Unresolved
+                          </SelectItem>
+                        ) : null
+                      })()}
                       {RESOLUTIONS.map((resolution) => {
                         const config = resolutionConfig[resolution]
                         const Icon = config?.icon
