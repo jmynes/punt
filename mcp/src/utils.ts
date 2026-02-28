@@ -377,6 +377,56 @@ export function formatSprintList(
 }
 
 /**
+ * Format a file size in bytes to a human-readable string
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  const k = 1024
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1)
+  const value = bytes / k ** i
+  return `${value < 10 && i > 0 ? value.toFixed(1) : Math.round(value)} ${units[i]}`
+}
+
+/**
+ * Format a list of attachments as a markdown table
+ */
+export function formatAttachmentList(
+  attachments: Array<{
+    id: string
+    filename: string
+    mimeType: string
+    size: number
+    createdAt: string
+  }>,
+  ticketKey: string,
+): string {
+  if (attachments.length === 0) {
+    return `No attachments on ${ticketKey}.`
+  }
+
+  const lines: string[] = []
+  lines.push(`## Attachments on ${ticketKey}`)
+  lines.push('')
+  lines.push('| ID | Filename | Type | Size | Uploaded |')
+  lines.push('|----|----------|------|------|----------|')
+
+  for (const att of attachments) {
+    const filename = safeTableCell(att.filename, 40)
+    const size = formatFileSize(att.size)
+    const uploaded = formatDate(att.createdAt)
+    lines.push(
+      `| ${att.id} | ${filename} | ${escapeTableCell(att.mimeType)} | ${size} | ${uploaded} |`,
+    )
+  }
+
+  lines.push('')
+  lines.push(`Total: ${attachments.length} attachment(s)`)
+
+  return lines.join('\n')
+}
+
+/**
  * Create a text response for MCP
  */
 export function textResponse(text: string) {

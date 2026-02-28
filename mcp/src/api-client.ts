@@ -631,3 +631,131 @@ export async function searchTickets(projectKey: string, query: string) {
 export async function getRepositoryConfig(projectKey: string) {
   return apiRequest<RepositoryConfigData>('GET', `/api/projects/${projectKey}/repository`)
 }
+
+// ============================================================================
+// Upload API (multipart/form-data)
+// ============================================================================
+
+/**
+ * Make an authenticated multipart/form-data request to the PUNT API
+ */
+async function apiUploadRequest<T>(path: string, formData: FormData): Promise<ApiResponse<T>> {
+  const apiKey = resolveApiKey()
+  if (!apiKey) {
+    const credPath = getCredentialsFilePath()
+    return {
+      error:
+        'MCP credentials not configured. Either:\n' +
+        `1. Create credentials file at ${credPath}\n` +
+        '2. Set PUNT_API_KEY and PUNT_API_URL environment variables\n' +
+        'See: https://github.com/your-org/punt#mcp-server for setup instructions',
+    }
+  }
+
+  const baseUrl = resolveApiUrl()
+  const url = `${baseUrl}${path}`
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        // Do NOT set Content-Type - fetch auto-sets multipart boundary
+        'X-MCP-API-Key': apiKey,
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const text = await response.text()
+      let errorMessage: string
+      try {
+        const errorJson = JSON.parse(text)
+        errorMessage = errorJson.error || errorJson.message || text
+      } catch {
+        errorMessage = text || `HTTP ${response.status}`
+      }
+      return { error: errorMessage }
+    }
+
+    const text = await response.text()
+    if (!text) {
+      return { data: undefined as T }
+    }
+
+    const data = JSON.parse(text) as T
+    return { data }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { error: `Upload request failed: ${message}` }
+  }
+}
+
+// ============================================================================
+// Attachments API
+// ============================================================================
+
+export interface UploadedFileData {
+  id: string
+  filename: string
+  originalName: string
+  mimetype: string
+  size: number
+  url: string
+  category: string
+}
+
+export interface UploadResponse {
+  success: boolean
+  files: UploadedFileData[]
+}
+
+export interface AttachmentData {
+  id: string
+  filename: string
+  mimeType: string
+  size: number
+  url: string
+  createdAt: string
+  ticketId: string
+  uploaderId: string | null
+}
+
+export async function uploadFiles(formData: FormData) {
+  return apiUploadRequest<UploadResponse>('/api/upload', formData)
+}
+
+export async function listAttachments(projectKey: string, ticketId: string) {
+  return apiRequest<AttachmentData[]>(
+    'GET',
+    `/api/projects/${projectKey}/tickets/${ticketId}/attachments`,
+  )
+}
+
+export interface LinkAttachmentsInput {
+  attachments: Array<{
+    filename: string
+    originalName: string
+    mimeType: string
+    size: number
+    url: string
+  }>
+}
+
+export async function linkAttachments(
+  projectKey: string,
+  ticketId: string,
+  data: LinkAttachmentsInput,
+) {
+  return apiRequest<AttachmentData[]>(
+    'POST',
+    `/api/projects/${projectKey}/tickets/${ticketId}/attachments`,
+    data,
+  )
+}
+
+export async function deleteAttachment(projectKey: string, ticketId: string, attachmentId: string) {
+  return apiRequest<{ success: boolean }>(
+    'DELETE',
+    `/api/projects/${projectKey}/tickets/${ticketId}/attachments/${attachmentId}`,
+  )
+}
