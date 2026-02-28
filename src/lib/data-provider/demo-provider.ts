@@ -192,9 +192,14 @@ export class DemoDataProvider implements DataProvider {
     ticketId: string,
     data: UpdateTicketInput,
   ): Promise<TicketWithRelations> {
-    // Build the updates object (exclude reporterId from spread to avoid type conflicts)
-    const { reporterId: _reporterId, ...restData } = data
+    // Build the updates object (exclude reporterId and resolvedAt from spread to handle separately)
+    const { reporterId: _reporterId, resolvedAt: rawResolvedAt, ...restData } = data
     const updates: Partial<TicketWithRelations> = { ...restData }
+
+    // Handle resolvedAt: convert string to Date if needed
+    if (rawResolvedAt !== undefined) {
+      updates.resolvedAt = rawResolvedAt ? new Date(rawResolvedAt) : null
+    }
 
     // Handle labels
     if (data.labelIds !== undefined) {

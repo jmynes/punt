@@ -74,6 +74,8 @@ export interface UpdateTicketInput {
   startDate?: Date | null
   dueDate?: Date | null
   resolution?: string | null
+  // For undo/redo operations - preserve original resolvedAt timestamp
+  resolvedAt?: Date | string | null
   environment?: string | null
   affectedVersion?: string | null
   fixVersion?: string | null

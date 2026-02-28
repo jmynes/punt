@@ -453,8 +453,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       const after: TicketWithRelations = {
         ...current,
         resolution,
+        // Sync resolvedAt with resolution changes
+        resolvedAt: resolution ? (current.resolvedAt ?? new Date()) : null,
         ...(needsMove && doneCol ? { columnId: doneCol.id } : {}),
-        ...(needsClear ? { resolution: null } : {}),
+        ...(needsClear ? { resolution: null, resolvedAt: null } : {}),
       }
       updates.push({ ticketId: id, before: current, after })
       updateTicket(projectId, id, {

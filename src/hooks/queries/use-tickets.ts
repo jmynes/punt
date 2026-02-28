@@ -212,6 +212,7 @@ export function useUpdateTicket() {
       if ('startDate' in updates) apiUpdates.startDate = updates.startDate
       if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
       if ('resolution' in updates) apiUpdates.resolution = updates.resolution
+      if ('resolvedAt' in updates) apiUpdates.resolvedAt = updates.resolvedAt
       if ('environment' in updates) apiUpdates.environment = updates.environment
       if ('affectedVersion' in updates) apiUpdates.affectedVersion = updates.affectedVersion
       if ('fixVersion' in updates) apiUpdates.fixVersion = updates.fixVersion
@@ -460,6 +461,7 @@ export async function updateTicketAPI(
   if ('startDate' in updates) apiUpdates.startDate = updates.startDate
   if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
   if ('resolution' in updates) apiUpdates.resolution = updates.resolution
+  if ('resolvedAt' in updates) apiUpdates.resolvedAt = updates.resolvedAt
 
   if ('labels' in updates && updates.labels) {
     apiUpdates.labelIds = updates.labels.map((l) => l.id)
@@ -517,6 +519,7 @@ export async function updateTicketWithActivity(
   if ('startDate' in updates) apiUpdates.startDate = updates.startDate
   if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
   if ('resolution' in updates) apiUpdates.resolution = updates.resolution
+  if ('resolvedAt' in updates) apiUpdates.resolvedAt = updates.resolvedAt
 
   if ('labels' in updates && updates.labels) {
     apiUpdates.labelIds = updates.labels.map((l) => l.id)

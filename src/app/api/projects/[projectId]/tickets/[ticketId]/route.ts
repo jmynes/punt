@@ -28,6 +28,12 @@ const updateTicketSchema = z.object({
   storyPoints: z.number().nullable().optional(),
   estimate: z.string().nullable().optional(),
   resolution: z.enum(RESOLUTIONS).nullable().optional(),
+  // For undo/redo operations - preserve original resolvedAt timestamp
+  resolvedAt: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => (val ? new Date(val) : val === null ? null : undefined)),
   startDate: z
     .string()
     .nullable()
@@ -252,7 +258,8 @@ export async function PATCH(
         ) {
           // Moving to a "done" column → auto-set resolution to "Done"
           dbUpdateData.resolution = 'Done'
-          dbUpdateData.resolvedAt = new Date()
+          // Use explicitly-provided resolvedAt (undo/redo) or current time
+          dbUpdateData.resolvedAt = dbUpdateData.resolvedAt ?? new Date()
         } else if (
           !isCompletedColumn(targetCol.name) &&
           dbUpdateData.resolution === undefined &&

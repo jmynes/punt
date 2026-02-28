@@ -782,11 +782,21 @@ export function KeyboardShortcuts() {
               if (entry.activityMeta) {
                 await deleteActivityEntries(entry.projectId, entry.activityMeta)
               }
-              // Update each moved ticket's columnId back to original
+              // Update each moved ticket's columnId back to original,
+              // including resolution/resolvedAt to keep them in sync
               for (const move of action.moves) {
-                await updateTicketAPI(entry.projectId, move.ticketId, {
+                // Look up the original ticket state to restore resolution/resolvedAt
+                const originalTicket = action.originalColumns
+                  ?.flatMap((col) => col.tickets)
+                  .find((t) => t.id === move.ticketId)
+                const updates: Partial<TicketWithRelations> = {
                   columnId: move.fromColumnId,
-                })
+                }
+                if (originalTicket) {
+                  updates.resolution = originalTicket.resolution
+                  updates.resolvedAt = originalTicket.resolvedAt
+                }
+                await updateTicketAPI(entry.projectId, move.ticketId, updates)
               }
             } catch (err) {
               console.error('Failed to persist move undo:', err)
@@ -1293,9 +1303,18 @@ export function KeyboardShortcuts() {
           ;(async () => {
             try {
               for (const move of action.moves) {
-                await updateTicketAPI(entry.projectId, move.ticketId, {
+                // Look up the after-move ticket state to restore resolution/resolvedAt
+                const afterTicket = action.afterColumns
+                  ?.flatMap((col) => col.tickets)
+                  .find((t) => t.id === move.ticketId)
+                const updates: Partial<TicketWithRelations> = {
                   columnId: move.toColumnId,
-                })
+                }
+                if (afterTicket) {
+                  updates.resolution = afterTicket.resolution
+                  updates.resolvedAt = afterTicket.resolvedAt
+                }
+                await updateTicketAPI(entry.projectId, move.ticketId, updates)
               }
             } catch (err) {
               console.error('Failed to persist move redo:', err)
