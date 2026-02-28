@@ -35,6 +35,7 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'text/plain',
     'text/csv',
+    'application/json',
   ],
   // Branding settings
   appName: 'PUNT',

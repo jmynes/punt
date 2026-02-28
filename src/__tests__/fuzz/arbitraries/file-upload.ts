@@ -34,6 +34,7 @@ export const allowedDocumentTypes = fc.constantFrom(
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/plain',
   'text/csv',
+  'application/json',
 )
 
 /**
@@ -160,5 +161,6 @@ export const uploadSettings = fc.record({
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'text/plain',
     'text/csv',
+    'application/json',
   ] as string[]),
 })

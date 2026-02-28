@@ -40,6 +40,7 @@ const EXTENSION_TO_MIME: Record<string, string> = {
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   '.txt': 'text/plain',
   '.csv': 'text/csv',
+  '.json': 'application/json',
 }
 
 /**

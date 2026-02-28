@@ -40,6 +40,7 @@ const ALL_DOCUMENT_TYPES = [
   },
   { value: 'text/plain', label: 'Plain Text (TXT)' },
   { value: 'text/csv', label: 'CSV' },
+  { value: 'application/json', label: 'JSON' },
 ]
 
 export function SettingsForm() {

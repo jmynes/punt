@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS = {
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'text/plain',
     'text/csv',
+    'application/json',
   ],
 }
 

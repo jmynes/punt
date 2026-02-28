@@ -149,7 +149,7 @@ GET /api/admin/settings
   "maxAttachmentsPerTicket": 20,
   "allowedImageTypes": ["image/jpeg", "image/png", "image/gif", "image/webp"],
   "allowedVideoTypes": ["video/mp4", "video/webm", "video/ogg", "video/quicktime"],
-  "allowedDocumentTypes": ["application/pdf", "text/plain", "text/csv"]
+  "allowedDocumentTypes": ["application/pdf", "text/plain", "text/csv", "application/json"]
 }
 ```
 

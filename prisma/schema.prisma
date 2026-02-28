@@ -607,7 +607,7 @@ model SystemSettings {
   // Allowed MIME types (native JSON arrays)
   allowedImageTypes    Json @default("[\"image/jpeg\",\"image/png\",\"image/gif\",\"image/webp\"]")
   allowedVideoTypes    Json @default("[\"video/mp4\",\"video/webm\",\"video/ogg\",\"video/quicktime\"]")
-  allowedDocumentTypes Json @default("[\"application/pdf\",\"application/msword\",\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"application/vnd.ms-excel\",\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\",\"text/plain\",\"text/csv\"]")
+  allowedDocumentTypes Json @default("[\"application/pdf\",\"application/msword\",\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"application/vnd.ms-excel\",\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\",\"text/plain\",\"text/csv\",\"application/json\"]")
 
   // Email provider configuration
   emailEnabled     Boolean @default(false)

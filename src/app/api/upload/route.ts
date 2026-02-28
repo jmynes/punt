@@ -27,6 +27,7 @@ const SAFE_EXTENSIONS: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
   'text/plain': 'txt',
   'text/csv': 'csv',
+  'application/json': 'json',
 }
 
 function generateFilename(originalName: string, mimeType: string): string {
@@ -193,6 +194,7 @@ export async function GET() {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'text/plain',
         'text/csv',
+        'application/json',
       ],
       maxSizes: {
         image: 10 * 1024 * 1024,

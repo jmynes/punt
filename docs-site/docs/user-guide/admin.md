@@ -127,6 +127,7 @@ Control which file types can be uploaded:
 - Excel (`application/vnd.ms-excel`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`)
 - Text (`text/plain`)
 - CSV (`text/csv`)
+- JSON (`application/json`)
 
 :::note
 SVG files are blocked for security reasons (potential XSS via embedded scripts).

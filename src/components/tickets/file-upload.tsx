@@ -64,6 +64,7 @@ function mimeTypesToExtensions(types: string[]): string[] {
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
     'text/plain': '.txt',
     'text/csv': '.csv',
+    'application/json': '.json',
   }
   return types.map((type) => mimeToExt[type]).filter(Boolean)
 }

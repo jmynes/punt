@@ -41,6 +41,7 @@ function createMockSettings(overrides: Partial<SystemSettings> = {}): SystemSett
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'text/plain',
       'text/csv',
+      'application/json',
     ],
     showAddColumnButton: true,
     canonicalRepoUrl: null,
