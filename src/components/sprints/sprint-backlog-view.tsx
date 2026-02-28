@@ -64,7 +64,7 @@ export function SprintBacklogView({
   const { setSprintCreateOpen, openCreateTicketWithData } = useUIStore()
   const { updateTicket, getColumns } = useBoardStore()
   const statusColumns = getColumns(projectId)
-  const { selectedTicketIds } = useSelectionStore()
+  const { selectedTicketIds, clearSelection } = useSelectionStore()
   const {
     columns: backlogColumns,
     filterByType,
@@ -635,6 +635,20 @@ export function SprintBacklogView({
     [deleteSprint],
   )
 
+  // Clear selection when clicking on empty space (not on a ticket row)
+  const handleEmptySpaceClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (
+        target.closest('[data-ticket-row]') === null &&
+        useSelectionStore.getState().selectedTicketIds.size > 0
+      ) {
+        clearSelection()
+      }
+    },
+    [clearSelection],
+  )
+
   if (sprintsLoading) {
     return (
       <div className={cn('space-y-4', className)}>
@@ -658,7 +672,7 @@ export function SprintBacklogView({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className={cn('space-y-3', className)}>
+      <div className={cn('space-y-3', className)} onClick={handleEmptySpaceClick}>
         {/* Header */}
         {showHeader && (
           <div className="flex flex-col gap-4 mb-4">

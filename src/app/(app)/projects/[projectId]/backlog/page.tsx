@@ -897,6 +897,20 @@ export default function BacklogPage() {
     ],
   )
 
+  // Clear selection when clicking on empty space (not on a ticket row)
+  const handleEmptySpaceClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (
+        target.closest('[data-ticket-row]') === null &&
+        useSelectionStore.getState().selectedTicketIds.size > 0
+      ) {
+        clearSelection()
+      }
+    },
+    [clearSelection],
+  )
+
   // Redirect to dashboard if project doesn't exist after loading
   useEffect(() => {
     if (!projectsLoading && !project) {
@@ -930,7 +944,7 @@ export default function BacklogPage() {
   const hasActiveSprints = activeSprints.length > 0 || planningSprints.length > 0
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" onClick={handleEmptySpaceClick}>
       {/* Page header */}
       <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
         <div className="flex items-center gap-3">
