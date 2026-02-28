@@ -759,3 +759,51 @@ export async function deleteAttachment(projectKey: string, ticketId: string, att
     `/api/projects/${projectKey}/tickets/${ticketId}/attachments/${attachmentId}`,
   )
 }
+
+export async function downloadAttachment(
+  projectKey: string,
+  ticketId: string,
+  attachmentId: string,
+): Promise<ApiResponse<ArrayBuffer>> {
+  const apiKey = resolveApiKey()
+  if (!apiKey) {
+    const credPath = getCredentialsFilePath()
+    return {
+      error:
+        'MCP credentials not configured. Either:\n' +
+        `1. Create credentials file at ${credPath}\n` +
+        '2. Set PUNT_API_KEY and PUNT_API_URL environment variables\n' +
+        'See: https://github.com/your-org/punt#mcp-server for setup instructions',
+    }
+  }
+
+  const baseUrl = resolveApiUrl()
+  const url = `${baseUrl}/api/projects/${projectKey}/tickets/${ticketId}/attachments/${attachmentId}/download`
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-MCP-API-Key': apiKey,
+      },
+    })
+
+    if (!response.ok) {
+      const text = await response.text()
+      let errorMessage: string
+      try {
+        const errorJson = JSON.parse(text)
+        errorMessage = errorJson.error || errorJson.message || text
+      } catch {
+        errorMessage = text || `HTTP ${response.status}`
+      }
+      return { error: errorMessage }
+    }
+
+    const data = await response.arrayBuffer()
+    return { data }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { error: `API request failed: ${message}` }
+  }
+}

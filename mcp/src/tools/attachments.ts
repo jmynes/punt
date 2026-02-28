@@ -1,9 +1,10 @@
-import { readFile, stat } from 'node:fs/promises'
-import { basename, extname } from 'node:path'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { basename, dirname, extname, resolve } from 'node:path'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import {
   deleteAttachment,
+  downloadAttachment,
   linkAttachments,
   listAttachments,
   listTickets,
@@ -245,6 +246,95 @@ export function registerAttachmentTools(server: McpServer) {
       const ticketKey = `${parsed.projectKey.toUpperCase()}-${parsed.number}`
       const displayName = targetFilename ? escapeMarkdown(targetFilename) : targetId
       return textResponse(`Removed attachment **${displayName}** from **${ticketKey}**`)
+    },
+  )
+
+  server.tool(
+    'download_attachment',
+    'Download an attachment from a ticket to a local file path',
+    {
+      key: z.string().describe('Ticket key (e.g., PUNT-42)'),
+      attachmentId: z
+        .string()
+        .optional()
+        .describe('Attachment ID to download (from list_attachments)'),
+      filename: z
+        .string()
+        .optional()
+        .describe('Filename to search for (if attachmentId not provided)'),
+      outputPath: z.string().describe('Absolute path where the file should be saved'),
+    },
+    async ({ key, attachmentId, filename, outputPath }) => {
+      const parsed = parseTicketKey(key)
+      if (!parsed) {
+        return errorResponse(`Invalid ticket key format: ${key}. Expected format: PROJECT-123`)
+      }
+
+      if (!attachmentId && !filename) {
+        return errorResponse('Either attachmentId or filename must be provided')
+      }
+
+      // Resolve ticket ID
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
+      }
+
+      const ticket = ticketsResult.data?.find((t) => t.number === parsed.number)
+      if (!ticket) {
+        return errorResponse(`Ticket not found: ${key}`)
+      }
+
+      // Find the attachment (always need metadata for the response)
+      const listResult = await listAttachments(parsed.projectKey, ticket.id)
+      if (listResult.error) {
+        return errorResponse(listResult.error)
+      }
+
+      const attachments = listResult.data ?? []
+      let targetAttachment: (typeof attachments)[number] | undefined
+
+      if (attachmentId) {
+        targetAttachment = attachments.find((a) => a.id === attachmentId)
+        if (!targetAttachment) {
+          return errorResponse(`Attachment not found with ID: ${attachmentId}`)
+        }
+      } else {
+        const searchTerm = filename?.toLowerCase() ?? ''
+        targetAttachment = attachments.find((a) => a.filename.toLowerCase().includes(searchTerm))
+        if (!targetAttachment) {
+          return errorResponse(`No attachment found matching filename: ${filename}`)
+        }
+      }
+
+      // Download the file content
+      const downloadResult = await downloadAttachment(
+        parsed.projectKey,
+        ticket.id,
+        targetAttachment.id,
+      )
+      if (downloadResult.error) {
+        return errorResponse(`Download failed: ${downloadResult.error}`)
+      }
+
+      if (!downloadResult.data) {
+        return errorResponse('Download succeeded but no data was returned')
+      }
+
+      // Write to output path
+      const resolvedPath = resolve(outputPath)
+      try {
+        await mkdir(dirname(resolvedPath), { recursive: true })
+        await writeFile(resolvedPath, Buffer.from(downloadResult.data))
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error'
+        return errorResponse(`Failed to write file: ${message}`)
+      }
+
+      const ticketKey = `${parsed.projectKey.toUpperCase()}-${parsed.number}`
+      return textResponse(
+        `Downloaded **${escapeMarkdown(targetAttachment.filename)}** (${formatFileSize(targetAttachment.size)}) from **${ticketKey}** to \`${escapeMarkdown(resolvedPath)}\``,
+      )
     },
   )
 }
