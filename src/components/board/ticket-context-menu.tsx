@@ -454,7 +454,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         ...current,
         resolution,
         // Sync resolvedAt with resolution changes
-        resolvedAt: resolution ? (current.resolvedAt ?? new Date()) : null,
+        // Update timestamp when resolution changes (not just when first set)
+        resolvedAt: resolution ? new Date() : null,
         ...(needsMove && doneCol ? { columnId: doneCol.id } : {}),
         ...(needsClear ? { resolution: null, resolvedAt: null } : {}),
       }
