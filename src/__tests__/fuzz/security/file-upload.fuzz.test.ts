@@ -43,6 +43,7 @@ function createMockSettings(overrides: Partial<SystemSettings> = {}): SystemSett
       'text/csv',
       'application/json',
       'application/jsonl',
+      'text/markdown',
     ],
     showAddColumnButton: true,
     canonicalRepoUrl: null,

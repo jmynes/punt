@@ -42,6 +42,7 @@ const ALL_DOCUMENT_TYPES = [
   { value: 'text/csv', label: 'CSV' },
   { value: 'application/json', label: 'JSON' },
   { value: 'application/jsonl', label: 'JSONL' },
+  { value: 'text/markdown', label: 'Markdown' },
 ]
 
 export function SettingsForm() {

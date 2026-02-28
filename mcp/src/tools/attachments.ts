@@ -42,6 +42,7 @@ const EXTENSION_TO_MIME: Record<string, string> = {
   '.csv': 'text/csv',
   '.json': 'application/json',
   '.jsonl': 'application/jsonl',
+  '.md': 'text/markdown',
 }
 
 /**

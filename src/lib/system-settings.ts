@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS = {
     'text/csv',
     'application/json',
     'application/jsonl',
+    'text/markdown',
   ],
 }
 
