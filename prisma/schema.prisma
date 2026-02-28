@@ -69,6 +69,14 @@ enum LinkType {
   is_duplicated_by
 }
 
+enum AttachmentPurpose {
+  plan
+  session_transcript
+  screenshot
+  reference
+  other
+}
+
 // ============================================================================
 // Models
 // ============================================================================
@@ -528,12 +536,15 @@ model Comment {
 }
 
 model Attachment {
-  id        String   @id @default(cuid())
-  filename  String
-  mimeType  String
-  size      Int      // File size in bytes
-  url       String   // Storage path or URL
-  createdAt DateTime @default(now())
+  id                 String              @id @default(cuid())
+  filename           String
+  mimeType           String
+  size               Int                 // File size in bytes
+  url                String              // Storage path or URL
+  purpose            AttachmentPurpose?
+  sourceCommit       String?             // Git commit hash at time of attachment
+  commitDirtyStatus  String?             // null if clean; git status output if dirty
+  createdAt          DateTime            @default(now())
 
   ticketId String
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)

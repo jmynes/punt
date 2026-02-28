@@ -68,6 +68,9 @@ export const ATTACHMENT_SELECT = {
   mimeType: true,
   size: true,
   url: true,
+  purpose: true,
+  sourceCommit: true,
+  commitDirtyStatus: true,
   createdAt: true,
 } as const
 

@@ -38,6 +38,9 @@ interface AttachmentInfo {
   mimetype: string
   size: number
   url: string
+  purpose?: string | null
+  sourceCommit?: string | null
+  commitDirtyStatus?: string | null
 }
 
 interface AttachmentAction {

@@ -333,6 +333,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
           size: a.size,
           url: a.url,
           category: getMimeTypeCategory(a.mimeType),
+          purpose: a.purpose ?? null,
+          sourceCommit: a.sourceCommit ?? null,
+          commitDirtyStatus: a.commitDirtyStatus ?? null,
         })),
       )
       // Reset attachments collapsed state based on preference
@@ -1544,6 +1547,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                           size: a.size,
                           url: a.url,
                           category: getMimeTypeCategory(a.mimetype),
+                          purpose: a.purpose ?? null,
+                          sourceCommit: a.sourceCommit ?? null,
+                          commitDirtyStatus: a.commitDirtyStatus ?? null,
                         }))}
                         onRemove={(fileId) => {
                           const removed = tempAttachments.find((a) => a.id === fileId)
@@ -1631,6 +1637,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                                 size: a.size,
                                 url: a.url,
                                 category: getMimeTypeCategory(a.mimeType),
+                                purpose: a.purpose ?? null,
+                                sourceCommit: a.sourceCommit ?? null,
+                                commitDirtyStatus: a.commitDirtyStatus ?? null,
                               }))
                               // Update local state with correct server IDs
                               setTempAttachments((prev) => {

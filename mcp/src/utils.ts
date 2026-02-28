@@ -397,6 +397,9 @@ export function formatAttachmentList(
     filename: string
     mimeType: string
     size: number
+    purpose?: string | null
+    sourceCommit?: string | null
+    commitDirtyStatus?: string | null
     createdAt: string
   }>,
   ticketKey: string,
@@ -408,15 +411,19 @@ export function formatAttachmentList(
   const lines: string[] = []
   lines.push(`## Attachments on ${ticketKey}`)
   lines.push('')
-  lines.push('| ID | Filename | Type | Size | Uploaded |')
-  lines.push('|----|----------|------|------|----------|')
+  lines.push('| ID | Filename | Type | Size | Purpose | Commit | Uploaded |')
+  lines.push('|----|----------|------|------|---------|--------|----------|')
 
   for (const att of attachments) {
     const filename = safeTableCell(att.filename, 40)
     const size = formatFileSize(att.size)
+    const purpose = att.purpose ?? '-'
+    const commit = att.sourceCommit
+      ? `${att.sourceCommit.slice(0, 7)}${att.commitDirtyStatus ? '\\*' : ''}`
+      : '-'
     const uploaded = formatDate(att.createdAt)
     lines.push(
-      `| ${att.id} | ${filename} | ${escapeTableCell(att.mimeType)} | ${size} | ${uploaded} |`,
+      `| ${att.id} | ${filename} | ${escapeTableCell(att.mimeType)} | ${size} | ${purpose} | ${commit} | ${uploaded} |`,
     )
   }
 

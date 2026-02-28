@@ -715,6 +715,9 @@ export interface AttachmentData {
   mimeType: string
   size: number
   url: string
+  purpose: string | null
+  sourceCommit: string | null
+  commitDirtyStatus: string | null
   createdAt: string
   ticketId: string
   uploaderId: string | null
@@ -738,6 +741,9 @@ export interface LinkAttachmentsInput {
     mimeType: string
     size: number
     url: string
+    purpose?: string | null
+    sourceCommit?: string | null
+    commitDirtyStatus?: string | null
   }>
 }
 
@@ -757,6 +763,23 @@ export async function deleteAttachment(projectKey: string, ticketId: string, att
   return apiRequest<{ success: boolean }>(
     'DELETE',
     `/api/projects/${projectKey}/tickets/${ticketId}/attachments/${attachmentId}`,
+  )
+}
+
+export async function updateAttachment(
+  projectKey: string,
+  ticketId: string,
+  attachmentId: string,
+  data: {
+    purpose?: string | null
+    sourceCommit?: string | null
+    commitDirtyStatus?: string | null
+  },
+) {
+  return apiRequest<AttachmentData>(
+    'PATCH',
+    `/api/projects/${projectKey}/tickets/${ticketId}/attachments/${attachmentId}`,
+    data,
   )
 }
 

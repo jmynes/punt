@@ -8,6 +8,7 @@ import {
   linkAttachments,
   listAttachments,
   listTickets,
+  updateAttachment,
   uploadFiles,
 } from '../api-client.js'
 import {
@@ -55,6 +56,14 @@ function detectMimeType(filePath: string): string | null {
   return EXTENSION_TO_MIME[ext] ?? null
 }
 
+const ATTACHMENT_PURPOSE_ENUM = z.enum([
+  'plan',
+  'session_transcript',
+  'screenshot',
+  'reference',
+  'other',
+])
+
 export function registerAttachmentTools(server: McpServer) {
   server.tool(
     'add_attachment',
@@ -62,8 +71,19 @@ export function registerAttachmentTools(server: McpServer) {
     {
       key: z.string().describe('Ticket key (e.g., PUNT-42)'),
       filePath: z.string().describe('Absolute path to the local file to upload'),
+      purpose: ATTACHMENT_PURPOSE_ENUM.optional().describe(
+        'Purpose of this attachment (plan, session_transcript, screenshot, reference, other)',
+      ),
+      sourceCommit: z
+        .string()
+        .optional()
+        .describe('Git commit hash the client had checked out when creating this attachment'),
+      commitDirtyStatus: z
+        .string()
+        .optional()
+        .describe('Output of git status if the working tree was dirty (null/omit if clean)'),
     },
-    async ({ key, filePath }) => {
+    async ({ key, filePath, purpose, sourceCommit, commitDirtyStatus }) => {
       const parsed = parseTicketKey(key)
       if (!parsed) {
         return errorResponse(`Invalid ticket key format: ${key}. Expected format: PROJECT-123`)
@@ -133,6 +153,9 @@ export function registerAttachmentTools(server: McpServer) {
             mimeType: uploaded.mimetype,
             size: uploaded.size,
             url: uploaded.url,
+            purpose: purpose ?? null,
+            sourceCommit: sourceCommit ?? null,
+            commitDirtyStatus: commitDirtyStatus ?? null,
           },
         ],
       })
@@ -142,9 +165,15 @@ export function registerAttachmentTools(server: McpServer) {
       }
 
       const ticketKey = `${parsed.projectKey.toUpperCase()}-${parsed.number}`
-      return textResponse(
+      const parts = [
         `Attached **${escapeMarkdown(fileName)}** (${formatFileSize(fileSize)}, ${mimeType}) to **${ticketKey}**`,
-      )
+      ]
+      if (purpose) parts.push(`Purpose: ${purpose}`)
+      if (sourceCommit) {
+        const shortHash = sourceCommit.slice(0, 7)
+        parts.push(`Commit: ${shortHash}${commitDirtyStatus ? ' (dirty)' : ''}`)
+      }
+      return textResponse(parts.join('\n'))
     },
   )
 
@@ -335,6 +364,76 @@ export function registerAttachmentTools(server: McpServer) {
       return textResponse(
         `Downloaded **${escapeMarkdown(targetAttachment.filename)}** (${formatFileSize(targetAttachment.size)}) from **${ticketKey}** to \`${escapeMarkdown(resolvedPath)}\``,
       )
+    },
+  )
+
+  server.tool(
+    'update_attachment',
+    'Update the purpose or source commit metadata of an attachment on a ticket',
+    {
+      key: z.string().describe('Ticket key (e.g., PUNT-42)'),
+      attachmentId: z.string().describe('Attachment ID (from list_attachments)'),
+      purpose: ATTACHMENT_PURPOSE_ENUM.nullable()
+        .optional()
+        .describe('New purpose (null to clear)'),
+      sourceCommit: z.string().nullable().optional().describe('Git commit hash (null to clear)'),
+      commitDirtyStatus: z
+        .string()
+        .nullable()
+        .optional()
+        .describe('Git dirty status output (null to clear)'),
+    },
+    async ({ key, attachmentId, purpose, sourceCommit, commitDirtyStatus }) => {
+      const parsed = parseTicketKey(key)
+      if (!parsed) {
+        return errorResponse(`Invalid ticket key format: ${key}. Expected format: PROJECT-123`)
+      }
+
+      // Resolve ticket ID
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
+      }
+
+      const ticket = ticketsResult.data?.find((t) => t.number === parsed.number)
+      if (!ticket) {
+        return errorResponse(`Ticket not found: ${key}`)
+      }
+
+      const data: Record<string, unknown> = {}
+      if (purpose !== undefined) data.purpose = purpose
+      if (sourceCommit !== undefined) data.sourceCommit = sourceCommit
+      if (commitDirtyStatus !== undefined) data.commitDirtyStatus = commitDirtyStatus
+
+      if (Object.keys(data).length === 0) {
+        return errorResponse(
+          'No fields to update. Provide purpose, sourceCommit, or commitDirtyStatus.',
+        )
+      }
+
+      const result = await updateAttachment(
+        parsed.projectKey,
+        ticket.id,
+        attachmentId,
+        data as {
+          purpose?: string | null
+          sourceCommit?: string | null
+          commitDirtyStatus?: string | null
+        },
+      )
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      const ticketKey = `${parsed.projectKey.toUpperCase()}-${parsed.number}`
+      const updated = result.data
+      const parts = [`Updated attachment on **${ticketKey}**`]
+      if (updated?.purpose) parts.push(`Purpose: ${updated.purpose}`)
+      if (updated?.sourceCommit) {
+        const shortHash = updated.sourceCommit.slice(0, 7)
+        parts.push(`Commit: ${shortHash}${updated.commitDirtyStatus ? ' (dirty)' : ''}`)
+      }
+      return textResponse(parts.join('\n'))
     },
   )
 }

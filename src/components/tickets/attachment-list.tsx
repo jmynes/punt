@@ -57,6 +57,23 @@ function getFileIcon(category: 'image' | 'video' | 'document') {
   }
 }
 
+const PURPOSE_LABELS: Record<string, string> = {
+  plan: 'Plan',
+  session_transcript: 'Transcript',
+  screenshot: 'Screenshot',
+  reference: 'Reference',
+  other: 'Other',
+}
+
+function formatPurpose(purpose: string): string {
+  return PURPOSE_LABELS[purpose] ?? purpose
+}
+
+function formatCommitBadge(sourceCommit: string, commitDirtyStatus?: string | null): string {
+  const shortHash = sourceCommit.slice(0, 7)
+  return commitDirtyStatus ? `${shortHash}*` : shortHash
+}
+
 // Check if a file can be previewed in the modal
 function canPreview(file: UploadedFile): boolean {
   return (
@@ -204,13 +221,30 @@ export function AttachmentList({
                 <div className="flex items-center gap-2 px-2.5 py-2 border-t border-zinc-800/50">
                   <Icon className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <p
-                      className="truncate text-xs font-medium text-zinc-300"
-                      title={file.originalName}
-                    >
-                      {file.originalName}
-                    </p>
-                    <p className="text-[10px] text-zinc-500">{formatFileSize(file.size)}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p
+                        className="truncate text-xs font-medium text-zinc-300"
+                        title={file.originalName}
+                      >
+                        {file.originalName}
+                      </p>
+                      {file.purpose && (
+                        <span className="inline-flex shrink-0 items-center rounded px-1 py-0.5 text-[10px] font-medium bg-zinc-800 text-zinc-400">
+                          {formatPurpose(file.purpose)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-[10px] text-zinc-500">{formatFileSize(file.size)}</p>
+                      {file.sourceCommit && (
+                        <span
+                          className="text-[10px] text-zinc-600 font-mono"
+                          title={`Commit: ${file.sourceCommit}${file.commitDirtyStatus ? ' (dirty)' : ''}`}
+                        >
+                          {formatCommitBadge(file.sourceCommit, file.commitDirtyStatus)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -320,8 +354,25 @@ export function AttachmentList({
 
               {/* File info */}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-zinc-200">{file.originalName}</p>
-                <p className="text-xs text-zinc-500">{formatFileSize(file.size)}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-sm font-medium text-zinc-200">{file.originalName}</p>
+                  {file.purpose && (
+                    <span className="inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-zinc-800 text-zinc-400">
+                      {formatPurpose(file.purpose)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs text-zinc-500">{formatFileSize(file.size)}</p>
+                  {file.sourceCommit && (
+                    <span
+                      className="text-[10px] text-zinc-600 font-mono"
+                      title={`Commit: ${file.sourceCommit}${file.commitDirtyStatus ? ' (dirty)' : ''}`}
+                    >
+                      {formatCommitBadge(file.sourceCommit, file.commitDirtyStatus)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Actions */}

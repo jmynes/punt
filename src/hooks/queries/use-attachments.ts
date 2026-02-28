@@ -62,6 +62,9 @@ export interface AddAttachmentParams {
   mimeType: string
   size: number
   url: string
+  purpose?: string | null
+  sourceCommit?: string | null
+  commitDirtyStatus?: string | null
 }
 
 /**

@@ -14,6 +14,9 @@ export interface UploadedFile {
   size: number
   url: string
   category: 'image' | 'video' | 'document'
+  purpose?: string | null
+  sourceCommit?: string | null
+  commitDirtyStatus?: string | null
 }
 
 interface FileUploadProps {

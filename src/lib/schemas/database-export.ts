@@ -249,6 +249,12 @@ export const AttachmentSchema = z.object({
   mimeType: z.string(),
   size: z.number(),
   url: z.string(),
+  purpose: z
+    .enum(['plan', 'session_transcript', 'screenshot', 'reference', 'other'])
+    .nullable()
+    .optional(),
+  sourceCommit: z.string().nullable().optional(),
+  commitDirtyStatus: z.string().nullable().optional(),
   createdAt: z.string().datetime(),
   ticketId: z.string(),
   uploaderId: z.string().nullable(),

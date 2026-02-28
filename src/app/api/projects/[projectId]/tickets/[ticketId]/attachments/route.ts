@@ -6,6 +6,14 @@ import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { getSystemSettings } from '@/lib/system-settings'
 
+const attachmentPurposeEnum = z.enum([
+  'plan',
+  'session_transcript',
+  'screenshot',
+  'reference',
+  'other',
+])
+
 const addAttachmentsSchema = z.object({
   attachments: z.array(
     z.object({
@@ -14,6 +22,9 @@ const addAttachmentsSchema = z.object({
       mimeType: z.string().min(1),
       size: z.number().int().positive(),
       url: z.string().min(1),
+      purpose: attachmentPurposeEnum.nullish(),
+      sourceCommit: z.string().max(40).nullish(),
+      commitDirtyStatus: z.string().nullish(),
     }),
   ),
 })
@@ -113,6 +124,9 @@ export async function POST(
         mimeType: attachment.mimeType,
         size: attachment.size,
         url: attachment.url,
+        purpose: attachment.purpose ?? undefined,
+        sourceCommit: attachment.sourceCommit ?? undefined,
+        commitDirtyStatus: attachment.commitDirtyStatus ?? undefined,
         uploaderId: user.id,
       })),
     })

@@ -202,6 +202,9 @@ export interface AttachmentInfo {
   mimeType: string
   size: number
   url: string
+  purpose: string | null
+  sourceCommit: string | null
+  commitDirtyStatus: string | null
   createdAt: Date
 }
 
@@ -306,6 +309,9 @@ export interface UploadedFileInfo {
   size: number
   url: string
   category: 'image' | 'video' | 'document'
+  purpose?: string | null
+  sourceCommit?: string | null
+  commitDirtyStatus?: string | null
 }
 
 // Form data for creating/editing tickets
