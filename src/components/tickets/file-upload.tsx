@@ -65,6 +65,7 @@ function mimeTypesToExtensions(types: string[]): string[] {
     'text/plain': '.txt',
     'text/csv': '.csv',
     'application/json': '.json',
+    'application/jsonl': '.jsonl',
   }
   return types.map((type) => mimeToExt[type]).filter(Boolean)
 }

@@ -35,6 +35,7 @@ export const allowedDocumentTypes = fc.constantFrom(
   'text/plain',
   'text/csv',
   'application/json',
+  'application/jsonl',
 )
 
 /**
@@ -162,5 +163,6 @@ export const uploadSettings = fc.record({
     'text/plain',
     'text/csv',
     'application/json',
+    'application/jsonl',
   ] as string[]),
 })

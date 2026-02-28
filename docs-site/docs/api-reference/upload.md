@@ -26,7 +26,7 @@ GET /api/upload
   "allowedTypes": {
     "image": ["image/jpeg", "image/png", "image/gif", "image/webp"],
     "video": ["video/mp4", "video/webm", "video/ogg", "video/quicktime"],
-    "document": ["application/pdf", "text/plain", "text/csv", "application/json"]
+    "document": ["application/pdf", "text/plain", "text/csv", "application/json", "application/jsonl"]
   }
 }
 ```

@@ -36,6 +36,7 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
     'text/plain',
     'text/csv',
     'application/json',
+    'application/jsonl',
   ],
   // Branding settings
   appName: 'PUNT',

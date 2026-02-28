@@ -28,6 +28,7 @@ const SAFE_EXTENSIONS: Record<string, string> = {
   'text/plain': 'txt',
   'text/csv': 'csv',
   'application/json': 'json',
+  'application/jsonl': 'jsonl',
 }
 
 function generateFilename(originalName: string, mimeType: string): string {
@@ -195,6 +196,7 @@ export async function GET() {
         'text/plain',
         'text/csv',
         'application/json',
+        'application/jsonl',
       ],
       maxSizes: {
         image: 10 * 1024 * 1024,

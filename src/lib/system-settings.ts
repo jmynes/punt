@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
     'text/plain',
     'text/csv',
     'application/json',
+    'application/jsonl',
   ],
 }
 

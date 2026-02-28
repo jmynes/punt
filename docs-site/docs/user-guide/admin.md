@@ -128,6 +128,7 @@ Control which file types can be uploaded:
 - Text (`text/plain`)
 - CSV (`text/csv`)
 - JSON (`application/json`)
+- JSONL (`application/jsonl`)
 
 :::note
 SVG files are blocked for security reasons (potential XSS via embedded scripts).
