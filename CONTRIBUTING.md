@@ -36,17 +36,30 @@ You only need to sign the CLA once. After signing, all your future contributions
 
 ## Development Setup
 
+PUNT requires **Node.js 20.9+**, **pnpm 9+**, and **PostgreSQL 16+**.
+
 ```bash
 # Install dependencies
 pnpm install
 
-# Set up the database
+# Copy the example environment file and configure it
+cp .env.example .env
+# Edit .env: set DATABASE_URL and AUTH_SECRET (generate with: openssl rand -base64 32)
+
+# Generate the Prisma client
 pnpm db:generate
+
+# Push the schema to your PostgreSQL database
 pnpm db:push
+
+# Create an admin user
+pnpm db:seed --username admin --password "YourSecurePass1" --name "Admin"
 
 # Start development server
 pnpm dev
 ```
+
+See the [README](README.md#quick-start-full-mode) for detailed PostgreSQL installation and database creation steps.
 
 ## Code Style
 
