@@ -459,6 +459,22 @@ export async function deleteLabel(projectKey: string, labelId: string) {
 }
 
 // ============================================================================
+// Current User API (whoami)
+// ============================================================================
+
+export interface MeData {
+  id: string
+  name: string
+  email: string | null
+  avatar: string | null
+  isSystemAdmin: boolean
+}
+
+export async function getMe() {
+  return apiRequest<MeData>('GET', '/api/me')
+}
+
+// ============================================================================
 // Users API
 // ============================================================================
 
