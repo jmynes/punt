@@ -2,20 +2,26 @@
 
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  Bug,
   CalendarMinus,
   CalendarPlus,
   CheckCircle2,
+  CheckSquare,
   ChevronRight,
   ClipboardCopy,
   ClipboardPaste,
   FolderOpen,
   Hash,
+  Layers,
+  Lightbulb,
   Pencil,
   Plus,
   Send,
+  Shapes,
   Trash2,
   UserCheck,
   User as UserIcon,
+  Zap,
 } from 'lucide-react'
 import {
   cloneElement,
@@ -62,8 +68,25 @@ import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
-import type { ColumnWithTickets, Resolution, SprintSummary, TicketWithRelations } from '@/types'
-import { RESOLUTIONS } from '@/types'
+import type {
+  ColumnWithTickets,
+  IssueType,
+  Resolution,
+  SprintSummary,
+  TicketWithRelations,
+} from '@/types'
+import { ISSUE_TYPES, RESOLUTIONS } from '@/types'
+
+const typeMenuConfig: Record<
+  IssueType,
+  { label: string; icon: React.ComponentType<{ className?: string }>; color: string }
+> = {
+  epic: { label: 'Epic', icon: Zap, color: 'text-purple-400' },
+  story: { label: 'Story', icon: Lightbulb, color: 'text-green-400' },
+  task: { label: 'Task', icon: CheckSquare, color: 'text-blue-400' },
+  bug: { label: 'Bug', icon: Bug, color: 'text-red-400' },
+  subtask: { label: 'Subtask', icon: Layers, color: 'text-cyan-400' },
+}
 
 type MenuProps = {
   ticket: TicketWithRelations
@@ -122,7 +145,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const multi = selectedIds.length > 1
   const [submenu, setSubmenu] = useState<null | {
-    id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution'
+    id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution' | 'type'
     anchor: { x: number; y: number; height: number; left: number }
   }>(null)
 
@@ -424,6 +447,48 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         }
       } catch (err) {
         console.error('Failed to persist priority update:', err)
+      }
+    })()
+
+    setOpen(false)
+    setSubmenu(null)
+  }
+
+  const doType = (type: IssueType) => {
+    const updateTicket = board.updateTicket || (() => {})
+    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
+      []
+    for (const id of selectedIds) {
+      const current = columns
+        .flatMap((c: ColumnWithTickets) => c.tickets)
+        .find((t: TicketWithRelations) => t.id === id)
+      if (!current || current.type === type) continue
+      const after = { ...current, type }
+      updates.push({ ticketId: id, before: current, after })
+      updateTicket(projectId, id, { type })
+    }
+    if (updates.length === 0) return
+
+    const ticketKeys = formatTicketIds(
+      columns,
+      updates.map((u) => u.ticketId),
+    )
+
+    rawToast.success(updates.length === 1 ? 'Type updated' : `${updates.length} types updated`, {
+      description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+      duration: getEffectiveDuration(3000),
+    })
+    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+    undoState.pushUpdate(projectId, updates)
+
+    // Persist to database
+    ;(async () => {
+      try {
+        for (const update of updates) {
+          await updateTicketWithActivity(projectId, update.ticketId, { type })
+        }
+      } catch (err) {
+        console.error('Failed to persist type update:', err)
       }
     })()
 
@@ -827,7 +892,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   )
 
   const openSubmenu =
-    (id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution') =>
+    (id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution' | 'type') =>
     (e: React.MouseEvent) => {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
       setSubmenu({
@@ -878,6 +943,12 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
               label="Priority"
               trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
               onMouseEnter={openSubmenu('priority')}
+            />
+            <MenuButton
+              icon={<Shapes className="h-4 w-4" />}
+              label="Type"
+              trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+              onMouseEnter={openSubmenu('type')}
             />
             <MenuButton
               icon={<Hash className="h-4 w-4" />}
@@ -1001,6 +1072,26 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                         </button>
                       ),
                     )}
+
+                  {submenu.id === 'type' &&
+                    ISSUE_TYPES.map((t) => {
+                      const cfg = typeMenuConfig[t]
+                      const TypeIcon = cfg.icon
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                          onClick={() => doType(t)}
+                        >
+                          <TypeIcon className={`h-4 w-4 ${cfg.color}`} />
+                          <span>{cfg.label}</span>
+                          {ticket.type === t && !multi && (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 ml-auto" />
+                          )}
+                        </button>
+                      )
+                    })}
 
                   {submenu.id === 'assign' && (
                     <>
