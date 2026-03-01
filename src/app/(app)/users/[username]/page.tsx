@@ -720,7 +720,8 @@ function UserProfileContent() {
     enabled: !!currentUser,
   })
 
-  const isSelf = user?.isSelf ?? false
+  const fromAdmin = searchParams.get('from') != null
+  const isSelf = (user?.isSelf ?? false) && !fromAdmin
   const isViewerAdmin = user?.isViewerAdmin ?? false
 
   // Tab management (for self-view)
@@ -1408,7 +1409,7 @@ function UserProfileContent() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-6 pb-16 space-y-6">
+      <div className="max-w-3xl mx-auto px-6 pt-6 pb-16 space-y-6">
         {/* User Info */}
         <Card className="border-zinc-800 bg-zinc-900/50">
           <CardHeader className="pb-4">
