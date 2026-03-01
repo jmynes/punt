@@ -782,6 +782,9 @@ function AdminUserProfileContent() {
         },
       )
 
+      // Re-fetch user detail to pick up project membership changes from admin promotion/demotion
+      invalidateUserQueries()
+
       showToast.success(
         newValue ? `${user.name} is now an admin` : `${user.name} is no longer an admin`,
       )
