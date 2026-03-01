@@ -58,8 +58,7 @@ export function EditProjectDialog() {
   // Load project data when dialog opens
   useEffect(() => {
     if (editProjectOpen && editProjectId) {
-      // Cancel any pending reset from a previous close to prevent it from
-      // wiping the form data we're about to set
+      // Cancel any pending reset from a previous close
       if (resetTimeoutRef.current) {
         clearTimeout(resetTimeoutRef.current)
         resetTimeoutRef.current = null
@@ -79,8 +78,7 @@ export function EditProjectDialog() {
 
   const handleClose = useCallback(() => {
     closeEditProject()
-    // Reset form after close animation. The timeout ref allows the open
-    // effect to cancel this if the dialog is reopened within 200ms.
+    // Reset form after close animation
     resetTimeoutRef.current = setTimeout(() => {
       resetTimeoutRef.current = null
       setFormData({
@@ -105,7 +103,7 @@ export function EditProjectDialog() {
       {
         id: editProjectId,
         name: formData.name.trim(),
-        key: keyChanged ? formData.key.toUpperCase() : undefined,
+        ...(keyChanged && { key: formData.key.toUpperCase() }),
         description: formData.description.trim() || undefined,
         color: formData.color,
       },
