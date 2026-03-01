@@ -5,6 +5,7 @@ import {
   Bug,
   CalendarMinus,
   CalendarPlus,
+  Check,
   CheckCircle2,
   CheckSquare,
   ChevronRight,
@@ -1069,6 +1070,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           onClick={() => doPriority(p)}
                         >
                           <PriorityBadge priority={p} size="sm" />
+                          {ticket.priority === p && !multi && (
+                            <Check className="size-4 text-zinc-400 ml-auto" />
+                          )}
                         </button>
                       ),
                     )}
@@ -1087,7 +1091,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           <TypeIcon className={`h-4 w-4 ${cfg.color}`} />
                           <span>{cfg.label}</span>
                           {ticket.type === t && !multi && (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 ml-auto" />
+                            <Check className="size-4 text-zinc-400 ml-auto" />
                           )}
                         </button>
                       )
@@ -1114,6 +1118,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                               </AvatarFallback>
                             </Avatar>
                             <span>Assign to me</span>
+                            {ticket.assigneeId === currentUser.id && !multi && (
+                              <Check className="size-4 text-zinc-400 ml-auto" />
+                            )}
                           </button>
                           <div className="my-1 border-t border-zinc-800" />
                         </>
@@ -1135,6 +1142,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                             </AvatarFallback>
                           </Avatar>
                           <span>{m.name}</span>
+                          {ticket.assigneeId === m.id && !multi && (
+                            <Check className="size-4 text-zinc-400 ml-auto" />
+                          )}
                         </button>
                       ))}
                       <div className="my-1 border-t border-zinc-800" />
@@ -1165,6 +1175,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                         >
                           <StatusIcon className={`h-4 w-4 ${color}`} />
                           <span>{col.name}</span>
+                          {ticket.columnId === col.id && !multi && (
+                            <Check className="size-4 text-zinc-400 ml-auto" />
+                          )}
                         </button>
                       )
                     })}
@@ -1185,6 +1198,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                               >
                                 <Icon className="h-4 w-4" style={{ color: config.color }} />
                                 <span>{r}</span>
+                                {ticket.resolution === r && !multi && (
+                                  <Check className="size-4 text-zinc-400 ml-auto" />
+                                )}
                               </button>
                             )
                           })}
@@ -1205,6 +1221,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           <span>
                             {p} point{p === 1 ? '' : 's'}
                           </span>
+                          {ticket.storyPoints === p && !multi && (
+                            <Check className="size-4 text-zinc-400 ml-auto" />
+                          )}
                         </button>
                       ))}
                       {!multi && (
@@ -1247,10 +1266,14 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                         >
                           <CalendarPlus className="h-4 w-4 text-blue-400" />
                           <span>{sprint.name}</span>
-                          {sprint.status === 'active' && (
-                            <span className="ml-auto text-[10px] text-emerald-400 uppercase">
-                              Active
-                            </span>
+                          {ticket.sprintId === sprint.id && !multi ? (
+                            <Check className="size-4 text-zinc-400 ml-auto" />
+                          ) : (
+                            sprint.status === 'active' && (
+                              <span className="ml-auto text-[10px] text-emerald-400 uppercase">
+                                Active
+                              </span>
+                            )
                           )}
                         </button>
                       ))}
