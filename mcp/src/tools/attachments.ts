@@ -133,13 +133,11 @@ export function registerAttachmentTools(server: McpServer) {
         )
       }
 
-      // Decode base64 content
-      let fileBuffer: Buffer
-      try {
-        fileBuffer = Buffer.from(content, 'base64')
-      } catch {
+      // Validate and decode base64 content
+      if (/[^A-Za-z0-9+/=]/.test(content)) {
         return errorResponse('Invalid base64 content')
       }
+      const fileBuffer = Buffer.from(content, 'base64')
 
       // Validate file size against limits
       const fileSize = fileBuffer.length
