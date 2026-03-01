@@ -8,7 +8,6 @@ import { SprintBacklogView, SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
-import { useClickToDeselect } from '@/hooks/use-click-to-deselect'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getProjectViewTabs, useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
@@ -33,9 +32,6 @@ export default function SprintPlanningPage() {
   const { getColumns, _hasHydrated } = useBoardStore()
   const { setActiveProjectId, activeTicketId, setActiveTicketId } = useUIStore()
   const { clearSelection } = useSelectionStore()
-
-  // Click-to-deselect on empty space (covers page header, filter bar, and content)
-  const handleDeselect = useClickToDeselect()
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
   useTabCycleShortcut({ tabs: getProjectViewTabs(projectKey) })
@@ -256,7 +252,7 @@ export default function SprintPlanningPage() {
   }
 
   return (
-    <div className="flex h-full flex-col" onClick={handleDeselect}>
+    <div className="flex h-full flex-col">
       {/* Page header */}
       <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:px-6">
         <div className="flex items-center gap-3">
