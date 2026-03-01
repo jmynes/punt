@@ -886,9 +886,11 @@ export function KeyboardShortcuts() {
           const boardStore = useBoardStore.getState()
 
           // Move tickets back to original sprint in store
+          // Clear the sprint relation object so the UI doesn't show stale sprint data
           for (const move of action.moves) {
             boardStore.updateTicket(entry.projectId, move.ticketId, {
               sprintId: move.fromSprintId,
+              sprint: null,
             })
           }
 
@@ -1456,9 +1458,11 @@ export function KeyboardShortcuts() {
           // Redo sprint move = move tickets to target sprint again
           const boardStore = useBoardStore.getState()
 
+          // Clear the sprint relation object so the UI doesn't show stale sprint data
           for (const move of action.moves) {
             boardStore.updateTicket(entry.projectId, move.ticketId, {
               sprintId: move.toSprintId,
+              sprint: null,
             })
           }
           // Persist redo to database
