@@ -1353,7 +1353,7 @@ function UserProfileContent() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-3xl px-6 overflow-auto">
+        <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-3xl px-6 pt-6 overflow-auto">
           {/* Tab Navigation */}
           <div className="flex gap-1 mb-6 border-b border-zinc-800">
             <Link
