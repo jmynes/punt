@@ -198,7 +198,9 @@ export function DatabaseImportDialog({
       onComplete()
       // Sign out to clear the session cookie and redirect to login
       // The imported database has different users, so current session is invalid
-      signOut({ callbackUrl: '/login' })
+      signOut({ redirect: false }).then(() => {
+        window.location.href = '/login'
+      })
       return
     }
 
