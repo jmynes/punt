@@ -6,7 +6,7 @@ import {
   updateMemberRole as apiUpdateMemberRole,
 } from '../api-client.js'
 import { db } from '../db.js'
-import { errorResponse, escapeMarkdown, safeTableCell, textResponse } from '../utils.js'
+import { errorResponse, escapeMarkdown, formatDate, safeTableCell, textResponse } from '../utils.js'
 
 export function registerMemberTools(server: McpServer) {
   // list_members - List project members
@@ -279,6 +279,117 @@ export function registerMemberTools(server: McpServer) {
       }
       lines.push('')
       lines.push(`Total: ${users.length} user(s)`)
+
+      return textResponse(lines.join('\n'))
+    },
+  )
+
+  // get_user - Get a user's full profile by name, username, or email
+  server.tool(
+    'get_user',
+    "Look up a user's full profile by name, username, or email. Returns profile details and project memberships.",
+    {
+      user: z.string().describe('User identifier: display name, username, or email address'),
+    },
+    async ({ user: query }) => {
+      // Search across name, username, and email (case-insensitive)
+      const users = await db.user.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { username: { contains: query, mode: 'insensitive' } },
+            { email: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          email: true,
+          avatar: true,
+          isSystemAdmin: true,
+          isActive: true,
+          createdAt: true,
+          projects: {
+            select: {
+              role: { select: { name: true } },
+              project: {
+                select: {
+                  key: true,
+                  name: true,
+                },
+              },
+            },
+            orderBy: { project: { name: 'asc' } },
+          },
+        },
+        orderBy: { name: 'asc' },
+      })
+
+      if (users.length === 0) {
+        return errorResponse(
+          `No user found matching "${query}". Try searching by display name, username, or email.`,
+        )
+      }
+
+      // If multiple matches, return a disambiguation list
+      if (users.length > 1) {
+        const lines: string[] = []
+        lines.push(`# Multiple users match "${escapeMarkdown(query)}"`)
+        lines.push('')
+        lines.push('Please be more specific. Matching users:')
+        lines.push('')
+        lines.push('| Name | Username | Email | Active |')
+        lines.push('|------|----------|-------|--------|')
+        for (const u of users) {
+          const name = safeTableCell(u.name, 30)
+          const username = safeTableCell(u.username, 25)
+          const email = u.email ? safeTableCell(u.email, 40) : '-'
+          const active = u.isActive ? 'Yes' : 'No'
+          lines.push(`| ${name} | ${username} | ${email} | ${active} |`)
+        }
+        lines.push('')
+        lines.push(`Total: ${users.length} match(es)`)
+
+        return textResponse(lines.join('\n'))
+      }
+
+      // Exactly one match - return full profile
+      const u = users[0]
+      const lines: string[] = []
+
+      lines.push(`# ${escapeMarkdown(u.name)}`)
+      lines.push('')
+
+      // Core profile fields
+      lines.push(`**Username:** ${escapeMarkdown(u.username)}  `)
+      lines.push(`**Email:** ${u.email ? escapeMarkdown(u.email) : 'Not set'}  `)
+      lines.push(`**System Admin:** ${u.isSystemAdmin ? 'Yes' : 'No'}  `)
+      lines.push(`**Active:** ${u.isActive ? 'Yes' : 'No'}  `)
+      lines.push(`**Created:** ${formatDate(u.createdAt)}  `)
+      if (u.avatar) {
+        lines.push(`**Avatar:** ${escapeMarkdown(u.avatar)}  `)
+      }
+
+      // Project memberships
+      lines.push('')
+      if (u.projects.length === 0) {
+        lines.push('## Projects')
+        lines.push('')
+        lines.push('No project memberships.')
+      } else {
+        lines.push('## Projects')
+        lines.push('')
+        lines.push('| Project | Key | Role |')
+        lines.push('|---------|-----|------|')
+        for (const m of u.projects) {
+          const projectName = safeTableCell(m.project.name, 30)
+          const role = safeTableCell(m.role.name, 20)
+          lines.push(`| ${projectName} | ${m.project.key} | ${role} |`)
+        }
+        lines.push('')
+        lines.push(`Total: ${u.projects.length} project(s)`)
+      }
 
       return textResponse(lines.join('\n'))
     },
