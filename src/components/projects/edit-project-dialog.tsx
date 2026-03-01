@@ -1,7 +1,7 @@
 'use client'
 
 import { AlertTriangle, Loader2, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
@@ -51,12 +51,18 @@ export function EditProjectDialog() {
   })
   const [originalKey, setOriginalKey] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const keyChanged = formData.key !== originalKey && originalKey !== ''
 
   // Load project data when dialog opens
   useEffect(() => {
     if (editProjectOpen && editProjectId) {
+      // Cancel any pending reset from a previous close
+      if (resetTimeoutRef.current) {
+        clearTimeout(resetTimeoutRef.current)
+        resetTimeoutRef.current = null
+      }
       const project = getProject(editProjectId)
       if (project) {
         setFormData({
@@ -73,7 +79,8 @@ export function EditProjectDialog() {
   const handleClose = useCallback(() => {
     closeEditProject()
     // Reset form after close animation
-    setTimeout(() => {
+    resetTimeoutRef.current = setTimeout(() => {
+      resetTimeoutRef.current = null
       setFormData({
         name: '',
         key: '',
@@ -96,7 +103,7 @@ export function EditProjectDialog() {
       {
         id: editProjectId,
         name: formData.name.trim(),
-        key: keyChanged ? formData.key.toUpperCase() : undefined,
+        ...(keyChanged && { key: formData.key.toUpperCase() }),
         description: formData.description.trim() || undefined,
         color: formData.color,
       },
