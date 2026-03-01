@@ -226,6 +226,11 @@ interface BacklogState {
   backlogOrder: Record<string, string[]>
   setBacklogOrder: (projectId: string, orderedIds: string[]) => void
   clearBacklogOrder: (projectId: string) => void
+
+  // Collapsed parent ticket IDs (for nested subtask display)
+  collapsedParentIds: string[]
+  toggleParentCollapsed: (ticketId: string) => void
+  isParentCollapsed: (ticketId: string) => boolean
 }
 
 export const useBacklogStore = create<BacklogState>()(
@@ -413,6 +418,19 @@ export const useBacklogStore = create<BacklogState>()(
           const { [projectId]: _removed, ...rest } = state.backlogOrder
           return { backlogOrder: rest }
         }),
+
+      // Collapsed parent ticket IDs
+      collapsedParentIds: [],
+      toggleParentCollapsed: (ticketId) =>
+        set((state) => {
+          const isCollapsed = state.collapsedParentIds.includes(ticketId)
+          return {
+            collapsedParentIds: isCollapsed
+              ? state.collapsedParentIds.filter((id) => id !== ticketId)
+              : [...state.collapsedParentIds, ticketId],
+          }
+        }),
+      isParentCollapsed: (_ticketId) => false, // Will be read from state directly
     }),
     {
       name: 'punt-backlog-config',
@@ -423,6 +441,7 @@ export const useBacklogStore = create<BacklogState>()(
         groupByEpic: state.groupByEpic,
         backlogOrder: state.backlogOrder,
         filterButtons: state.filterButtons,
+        collapsedParentIds: state.collapsedParentIds,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return

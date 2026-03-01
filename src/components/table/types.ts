@@ -76,6 +76,20 @@ export interface TicketTableRowProps {
   draggingCount?: number
   /** Whether this is a drag overlay (standalone rendering) */
   isOverlay?: boolean
+
+  // Nesting metadata
+  /** Whether this ticket is displayed as a nested subtask */
+  isNested?: boolean
+  /** Nesting depth (0 = top-level, 1 = subtask) */
+  depth?: number
+  /** Whether this ticket has children in the current view */
+  hasChildren?: boolean
+  /** Number of children this ticket has in the current view */
+  childCount?: number
+  /** Whether this parent's children are currently collapsed */
+  isCollapsed?: boolean
+  /** Callback to toggle collapse state */
+  onToggleCollapse?: (ticketId: string) => void
 }
 
 /**

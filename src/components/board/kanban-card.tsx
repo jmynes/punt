@@ -3,7 +3,15 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { format, isPast, isToday } from 'date-fns'
-import { Ban, Calendar, GripVertical, MessageSquare, Paperclip, User } from 'lucide-react'
+import {
+  Ban,
+  Calendar,
+  GitBranch,
+  GripVertical,
+  MessageSquare,
+  Paperclip,
+  User,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
@@ -86,6 +94,7 @@ export function KanbanCard({
 
   const commentCount = ticket._count?.comments ?? 0
   const attachmentCount = ticket._count?.attachments ?? 0
+  const subtaskCount = ticket._count?.subtasks ?? 0
   const isOverdue = ticket.dueDate && isPast(ticket.dueDate) && !isToday(ticket.dueDate)
   const isDueToday = ticket.dueDate && isToday(ticket.dueDate)
 
@@ -201,6 +210,12 @@ export function KanbanCard({
 
               {/* Metadata counts */}
               <div className="flex items-center gap-2 text-zinc-600">
+                {subtaskCount > 0 && (
+                  <div className="flex items-center gap-0.5" title={`${subtaskCount} subtask(s)`}>
+                    <GitBranch className="h-3 w-3" />
+                    <span className="text-[10px]">{subtaskCount}</span>
+                  </div>
+                )}
                 {attachmentCount > 0 && (
                   <div
                     className="flex items-center gap-0.5"

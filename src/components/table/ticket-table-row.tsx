@@ -1,7 +1,7 @@
 'use client'
 
 import { useSortable } from '@dnd-kit/sortable'
-import { GripVertical } from 'lucide-react'
+import { ChevronDown, ChevronRight, CornerDownRight, GripVertical } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 import { TicketContextMenu } from '@/components/board/ticket-context-menu'
 import { cn } from '@/lib/utils'
@@ -14,7 +14,7 @@ import type { TicketTableRowProps } from './types'
 /**
  * Unified table row for tickets.
  * Used by both BacklogTable and SprintSection.
- * Handles selection, drag-and-drop, and visual states.
+ * Handles selection, drag-and-drop, visual states, and nested subtask display.
  */
 export function TicketTableRow({
   ticket,
@@ -25,6 +25,12 @@ export function TicketTableRow({
   showDropIndicator = false,
   draggingCount = 0,
   isOverlay = false,
+  isNested = false,
+  depth: _depth = 0,
+  hasChildren = false,
+  childCount = 0,
+  isCollapsed = false,
+  onToggleCollapse,
 }: TicketTableRowProps) {
   const { setActiveTicketId } = useUIStore()
   const { isSelected, selectTicket, toggleTicket, selectRange } = useSelectionStore()
@@ -85,6 +91,14 @@ export function TicketTableRow({
     [ticket.id, selectTicket, setActiveTicketId],
   )
 
+  const handleToggleCollapse = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      onToggleCollapse?.(ticket.id)
+    },
+    [ticket.id, onToggleCollapse],
+  )
+
   // Memoize row styles
   const rowClassName = useMemo(
     () =>
@@ -103,8 +117,10 @@ export function TicketTableRow({
         selected &&
           !isBeingDragged &&
           'bg-amber-500/20 hover:bg-amber-500/25 focus:bg-amber-500/25 border-amber-500/50',
+        // Nested subtask - subtle visual distinction
+        isNested && !selected && !isBeingDragged && 'bg-zinc-900/30 hover:bg-zinc-800/40',
       ),
-    [selected, isBeingDragged],
+    [selected, isBeingDragged, isNested],
   )
 
   // For overlay, render as a standalone table
@@ -162,10 +178,40 @@ export function TicketTableRow({
           onClick={handleClick}
           onKeyDown={handleKeyDown}
         >
-          {/* Drag handle */}
+          {/* Drag handle + collapse/expand + indent */}
           <td className="w-8 px-1 py-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              <GripVertical className="h-4 w-4 text-zinc-500" />
+            <div className="flex items-center">
+              {/* Indentation for nested subtasks */}
+              {isNested && (
+                <div className="flex items-center justify-center w-5 ml-1 mr-0.5">
+                  <CornerDownRight className="h-3 w-3 text-zinc-600" />
+                </div>
+              )}
+              {/* Collapse/expand toggle for parent rows */}
+              {hasChildren && (
+                <button
+                  type="button"
+                  className="flex h-5 w-5 items-center justify-center rounded hover:bg-zinc-700 transition-colors text-zinc-500 hover:text-zinc-300"
+                  onClick={handleToggleCollapse}
+                  title={
+                    isCollapsed
+                      ? `Expand ${childCount} subtasks`
+                      : `Collapse ${childCount} subtasks`
+                  }
+                >
+                  {isCollapsed ? (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              )}
+              {/* Drag handle (only when not showing other controls) */}
+              {!hasChildren && !isNested && (
+                <div className="flex h-6 w-6 items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <GripVertical className="h-4 w-4 text-zinc-500" />
+                </div>
+              )}
             </div>
           </td>
 
@@ -176,7 +222,11 @@ export function TicketTableRow({
                 width: column.width || undefined,
                 minWidth: column.minWidth,
               }}
-              className="px-3 py-2"
+              className={cn(
+                'px-3 py-2',
+                // Add left padding to the first visible column for nested rows
+                isNested && column === columns[0] && 'pl-6',
+              )}
             >
               <TicketCell
                 column={column}

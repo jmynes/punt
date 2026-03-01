@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockColumns, createMockTicket } from '@/__tests__/utils/mocks'
 import { render } from '@/__tests__/utils/test-utils'
-import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { BacklogTable } from '../backlog-table'
 
-// Mock stores
+// Mock stores - backlog store supports both selector and no-selector usage
+const backlogStoreState: Record<string, unknown> = {}
 vi.mock('@/stores/backlog-store', () => ({
-  useBacklogStore: vi.fn(),
+  useBacklogStore: vi.fn((selector?: (state: Record<string, unknown>) => unknown) => {
+    if (typeof selector === 'function') {
+      return selector(backlogStoreState)
+    }
+    return backlogStoreState
+  }),
 }))
 
 vi.mock('@/stores/board-store', () => ({
@@ -38,7 +43,8 @@ describe('BacklogTable', () => {
   ]
 
   beforeEach(() => {
-    vi.mocked(useBacklogStore).mockReturnValue({
+    // Populate backlog store state
+    Object.assign(backlogStoreState, {
       columns: [],
       setColumns: vi.fn(),
       toggleColumnVisibility: vi.fn(),
@@ -86,6 +92,9 @@ describe('BacklogTable', () => {
       backlogOrder: {},
       setBacklogOrder: vi.fn(),
       clearBacklogOrder: vi.fn(),
+      collapsedParentIds: [],
+      toggleParentCollapsed: vi.fn(),
+      isParentCollapsed: vi.fn(() => false),
     })
 
     vi.mocked(useBoardStore).mockReturnValue({
