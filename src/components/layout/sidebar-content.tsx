@@ -195,11 +195,6 @@ export function SidebarContent({
   const [editMode, setEditMode] = useState(false)
   const { sidebarExpandedSections, toggleSidebarSection, setSidebarSectionExpanded } =
     useSettingsStore()
-  const profileExpanded = sidebarExpandedSections.profile ?? false
-  const toggleProfileExpanded = useCallback(
-    () => toggleSidebarSection('profile'),
-    [toggleSidebarSection],
-  )
   const preferencesExpanded = sidebarExpandedSections.preferences ?? false
   const togglePreferencesExpanded = useCallback(
     () => toggleSidebarSection('preferences'),
@@ -324,99 +319,7 @@ export function SidebarContent({
             </Link>
           )
         })}
-        {/* Profile with collapsible tabs */}
-        <div className="pl-[9px]">
-          <div className="flex items-center">
-            <button
-              type="button"
-              className="h-9 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
-              onClick={toggleProfileExpanded}
-            >
-              {profileExpanded ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-            </button>
-            <Link href="/profile" onClick={handleLinkClick} className="flex-1 min-w-0">
-              <Button
-                variant="ghost"
-                className={cn(
-                  'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 pl-1',
-                  pathname.startsWith('/profile') && 'bg-zinc-800/50 text-zinc-100',
-                )}
-              >
-                <User className="h-4 w-4" />
-                Profile
-              </Button>
-            </Link>
-          </div>
-          <CollapsibleSection expanded={profileExpanded}>
-            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-              <Link href="/profile?tab=profile" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/profile' &&
-                      (searchParams.get('tab') === 'profile' || !searchParams.get('tab')) &&
-                      'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <User className="h-3 w-3" />
-                  Profile
-                </Button>
-              </Link>
-              <Link href="/profile?tab=security" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/profile' &&
-                      searchParams.get('tab') === 'security' &&
-                      'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <KeyRound className="h-3 w-3" />
-                  Security
-                </Button>
-              </Link>
-              <Link href="/profile?tab=mcp" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/profile' &&
-                      searchParams.get('tab') === 'mcp' &&
-                      'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Terminal className="h-3 w-3" />
-                  MCP
-                </Button>
-              </Link>
-              <Link href="/profile?tab=claude-chat" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/profile' &&
-                      searchParams.get('tab') === 'claude-chat' &&
-                      'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Bot className="h-3 w-3" />
-                  Claude Chat
-                </Button>
-              </Link>
-            </div>
-          </CollapsibleSection>
-        </div>
-        {/* Preferences with collapsible tabs */}
+        {/* Preferences with profile + settings tabs */}
         <div className="pl-[9px]">
           <div className="flex items-center">
             <button
@@ -445,6 +348,66 @@ export function SidebarContent({
           </div>
           <CollapsibleSection expanded={preferencesExpanded}>
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+              <Link href="/preferences?tab=profile" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/preferences' &&
+                      (searchParams.get('tab') === 'profile' || !searchParams.get('tab')) &&
+                      'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <User className="h-3 w-3" />
+                  Profile
+                </Button>
+              </Link>
+              <Link href="/preferences?tab=security" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/preferences' &&
+                      searchParams.get('tab') === 'security' &&
+                      'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <KeyRound className="h-3 w-3" />
+                  Security
+                </Button>
+              </Link>
+              <Link href="/preferences?tab=mcp" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/preferences' &&
+                      searchParams.get('tab') === 'mcp' &&
+                      'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Terminal className="h-3 w-3" />
+                  MCP
+                </Button>
+              </Link>
+              <Link href="/preferences?tab=claude-chat" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/preferences' &&
+                      searchParams.get('tab') === 'claude-chat' &&
+                      'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Bot className="h-3 w-3" />
+                  Claude Chat
+                </Button>
+              </Link>
               <Link href="/preferences?tab=general" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"

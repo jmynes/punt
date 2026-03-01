@@ -51,6 +51,7 @@ async function getMcpUser() {
     where: { mcpApiKey: keyHash },
     select: {
       id: true,
+      username: true,
       email: true,
       name: true,
       avatar: true,
@@ -82,6 +83,7 @@ export async function getCurrentUser() {
   if (isDemoMode()) {
     return {
       id: DEMO_USER.id,
+      username: DEMO_USER.username,
       email: DEMO_USER.email,
       name: DEMO_USER.name,
       avatar: DEMO_USER.avatar,
@@ -100,6 +102,7 @@ export async function getCurrentUser() {
     where: { id: session.user.id },
     select: {
       id: true,
+      username: true,
       email: true,
       name: true,
       avatar: true,

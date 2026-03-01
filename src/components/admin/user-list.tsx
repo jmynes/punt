@@ -974,7 +974,7 @@ export function UserList() {
               className="border-zinc-500 data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-600"
             />
             <Link
-              href={`/admin/users/${user.username}?from=admin-users`}
+              href={`/users/${user.username}?from=admin-users`}
               onClick={(e) => e.stopPropagation()}
               className="group/profile flex items-center gap-3 text-inherit hover:text-zinc-50 transition-colors"
             >
@@ -1069,7 +1069,7 @@ export function UserList() {
                   asChild
                   className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
                 >
-                  <Link href={`/admin/users/${user.username}?from=admin-users`}>
+                  <Link href={`/users/${user.username}?from=admin-users`}>
                     <UserIcon className="h-4 w-4 mr-2" />
                     View profile
                   </Link>

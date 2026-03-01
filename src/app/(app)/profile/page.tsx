@@ -1,18 +1,11 @@
-import { Suspense } from 'react'
-import { ProfileContent } from './profile-content'
+import { redirect } from 'next/navigation'
 
-function ProfileLoading() {
-  return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="animate-pulse text-zinc-500">Loading...</div>
-    </div>
-  )
-}
-
-export default function ProfilePage() {
-  return (
-    <Suspense fallback={<ProfileLoading />}>
-      <ProfileContent />
-    </Suspense>
-  )
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const { tab } = await searchParams
+  const tabParam = tab ? `?tab=${tab}` : ''
+  redirect(`/preferences${tabParam}`)
 }

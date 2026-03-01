@@ -1,10 +1,15 @@
 'use client'
 
-import { Bell, Palette, Settings, Sliders } from 'lucide-react'
+import { Bell, Bot, KeyRound, Palette, Settings, Sliders, Terminal, User } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useRef } from 'react'
+import { useSession } from 'next-auth/react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { PageHeader } from '@/components/common'
+import { ClaudeChatTab } from '@/components/profile/claude-chat-tab'
+import { MCPTab } from '@/components/profile/mcp-tab'
+import { ProfileTab } from '@/components/profile/profile-tab'
+import { SecurityTab } from '@/components/profile/security-tab'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,17 +18,43 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
+import { DEMO_USER, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSettingsStore } from '@/stores/settings-store'
 
-type PreferencesTab = 'general' | 'notifications' | 'appearance'
+type PreferencesTab =
+  | 'profile'
+  | 'security'
+  | 'mcp'
+  | 'claude-chat'
+  | 'general'
+  | 'notifications'
+  | 'appearance'
 
-const VALID_TABS: PreferencesTab[] = ['general', 'notifications', 'appearance']
+const VALID_TABS: PreferencesTab[] = [
+  'profile',
+  'security',
+  'mcp',
+  'claude-chat',
+  'general',
+  'notifications',
+  'appearance',
+]
 
 function isValidTab(tab: string | null): tab is PreferencesTab {
   return tab !== null && VALID_TABS.includes(tab as PreferencesTab)
+}
+
+// Stable user data type for profile tabs
+interface UserData {
+  id: string
+  name: string
+  email: string | null
+  avatar: string | null
+  avatarColor: string | null
+  isSystemAdmin: boolean
 }
 
 export default function PreferencesPage() {
@@ -35,6 +66,77 @@ export default function PreferencesPage() {
 }
 
 function PreferencesContent() {
+  const isDemo = isDemoMode()
+
+  // Session management for profile tabs
+  const { data: session, update: updateSession } = isDemo
+    ? { data: null, update: async () => null }
+    : // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
+      useSession()
+
+  const [stableUser, setStableUser] = useState<UserData | null>(
+    isDemo
+      ? {
+          id: DEMO_USER.id,
+          name: DEMO_USER.name,
+          email: DEMO_USER.email,
+          avatar: DEMO_USER.avatar,
+          avatarColor: null,
+          isSystemAdmin: DEMO_USER.isSystemAdmin,
+        }
+      : null,
+  )
+
+  const isUpdatingRef = useRef(false)
+
+  useEffect(() => {
+    if (isDemo) return
+    if (session?.user?.id && !isUpdatingRef.current) {
+      setStableUser({
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        avatar: session.user.avatar,
+        avatarColor: session.user.avatarColor,
+        isSystemAdmin: session.user.isSystemAdmin,
+      })
+    }
+  }, [
+    isDemo,
+    session?.user?.id,
+    session?.user?.name,
+    session?.user?.email,
+    session?.user?.avatar,
+    session?.user?.avatarColor,
+    session?.user?.isSystemAdmin,
+  ])
+
+  // Debounced session update
+  const pendingUpdateRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debouncedUpdateSession = useCallback(async () => {
+    if (isDemo) return
+    if (pendingUpdateRef.current) {
+      clearTimeout(pendingUpdateRef.current)
+    }
+    return new Promise<void>((resolve) => {
+      pendingUpdateRef.current = setTimeout(async () => {
+        isUpdatingRef.current = true
+        try {
+          await updateSession()
+        } finally {
+          setTimeout(() => {
+            isUpdatingRef.current = false
+          }, 100)
+          resolve()
+        }
+      }, 50)
+    })
+  }, [isDemo, updateSession])
+
+  const handleUserUpdate = useCallback((updates: Partial<UserData>) => {
+    setStableUser((prev) => (prev ? { ...prev, ...updates } : null))
+  }, [])
+
   const {
     openSinglePastedTicket,
     setOpenSinglePastedTicket,
@@ -78,7 +180,7 @@ function PreferencesContent() {
 
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const activeTab: PreferencesTab = isValidTab(tabParam) ? tabParam : 'general'
+  const activeTab: PreferencesTab = isValidTab(tabParam) ? tabParam : 'profile'
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
   useTabCycleShortcut({
@@ -110,11 +212,59 @@ function PreferencesContent() {
 
       <div className="mx-auto max-w-4xl px-6 pb-6">
         {/* Tab Navigation */}
-        <div className="flex gap-1 mb-6 border-b border-zinc-800">
+        <div className="flex gap-1 mb-6 border-b border-zinc-800 overflow-x-auto">
+          <Link
+            href="/preferences?tab=profile"
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
+              activeTab === 'profile'
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            <User className="h-4 w-4" />
+            Profile
+          </Link>
+          <Link
+            href="/preferences?tab=security"
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
+              activeTab === 'security'
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            <KeyRound className="h-4 w-4" />
+            Security
+          </Link>
+          <Link
+            href="/preferences?tab=mcp"
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
+              activeTab === 'mcp'
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            <Terminal className="h-4 w-4" />
+            MCP
+          </Link>
+          <Link
+            href="/preferences?tab=claude-chat"
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
+              activeTab === 'claude-chat'
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            <Bot className="h-4 w-4" />
+            Claude Chat
+          </Link>
           <Link
             href="/preferences?tab=general"
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
               activeTab === 'general'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
@@ -126,7 +276,7 @@ function PreferencesContent() {
           <Link
             href="/preferences?tab=notifications"
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
               activeTab === 'notifications'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
@@ -138,7 +288,7 @@ function PreferencesContent() {
           <Link
             href="/preferences?tab=appearance"
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
               activeTab === 'appearance'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
@@ -148,6 +298,32 @@ function PreferencesContent() {
             Appearance
           </Link>
         </div>
+
+        {/* Profile Tab */}
+        {activeTab === 'profile' && stableUser && (
+          <ProfileTab
+            user={stableUser}
+            isDemo={isDemo}
+            onUserUpdate={handleUserUpdate}
+            onSessionUpdate={debouncedUpdateSession}
+          />
+        )}
+
+        {/* Security Tab */}
+        {activeTab === 'security' && stableUser && (
+          <SecurityTab
+            user={stableUser}
+            isDemo={isDemo}
+            onUserUpdate={handleUserUpdate}
+            onSessionUpdate={debouncedUpdateSession}
+          />
+        )}
+
+        {/* MCP Tab */}
+        {activeTab === 'mcp' && <MCPTab isDemo={isDemo} />}
+
+        {/* Claude Chat Tab */}
+        {activeTab === 'claude-chat' && <ClaudeChatTab isDemo={isDemo} />}
 
         {/* General Tab */}
         {activeTab === 'general' && (
