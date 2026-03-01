@@ -453,12 +453,15 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       const after: TicketWithRelations = {
         ...current,
         resolution,
+        // Sync resolvedAt: update timestamp on any resolution change, clear when unresolved
+        resolvedAt: resolution ? new Date() : null,
         ...(needsMove && doneCol ? { columnId: doneCol.id } : {}),
-        ...(needsClear ? { resolution: null } : {}),
+        ...(needsClear ? { resolution: null, resolvedAt: null } : {}),
       }
       updates.push({ ticketId: id, before: current, after })
       updateTicket(projectId, id, {
-        resolution,
+        resolution: after.resolution,
+        resolvedAt: after.resolvedAt,
         ...(needsMove && doneCol ? { columnId: doneCol.id } : {}),
       })
     }
@@ -1077,10 +1080,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
                   {submenu.id === 'resolution' &&
                     (() => {
-                      const ticketCol = columns.find(
-                        (c: ColumnWithTickets) => c.id === ticket.columnId,
-                      )
-                      const inDoneColumn = ticketCol && isCompletedColumn(ticketCol.name)
                       return (
                         <>
                           {RESOLUTIONS.map((r) => {
@@ -1098,19 +1097,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                               </button>
                             )
                           })}
-                          {!inDoneColumn && (
-                            <>
-                              <div className="my-1 border-t border-zinc-800" />
-                              <button
-                                type="button"
-                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                                onClick={() => doResolution(null)}
-                              >
-                                <CheckCircle2 className="h-4 w-4 text-zinc-500" />
-                                <span className="text-zinc-400">Unresolved</span>
-                              </button>
-                            </>
-                          )}
                         </>
                       )
                     })()}

@@ -15,6 +15,7 @@ import { Layers } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { EmptyState } from '@/components/common/empty-state'
 import { useMoveTicket, useMoveTickets } from '@/hooks/queries/use-tickets'
+import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getStatusIcon } from '@/lib/status-icons'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
@@ -230,6 +231,33 @@ export function KanbanBoard({
           reorderTickets(projectId, targetColumnId, draggedIds, insertIndex)
         } else {
           moveTickets(projectId, draggedIds, targetColumnId, insertIndex)
+        }
+      }
+
+      // Auto-couple resolution/resolvedAt when moving to/from done columns
+      if (!isSameColumn) {
+        const currentColumns = useBoardStore.getState().getColumns(projectId)
+        const targetCol = currentColumns.find((col) => col.id === targetColumnId)
+        if (targetCol && isCompletedColumn(targetCol.name)) {
+          // Moving to done column → set resolution/resolvedAt for tickets that don't have one
+          for (const id of draggedIds) {
+            const t = targetCol.tickets.find((tk) => tk.id === id)
+            if (t && !t.resolution) {
+              useBoardStore
+                .getState()
+                .updateTicket(projectId, id, { resolution: 'Done', resolvedAt: new Date() })
+            }
+          }
+        } else if (targetCol) {
+          // Moving out of done column → clear resolution/resolvedAt
+          for (const id of draggedIds) {
+            const t = targetCol.tickets.find((tk) => tk.id === id)
+            if (t?.resolution) {
+              useBoardStore
+                .getState()
+                .updateTicket(projectId, id, { resolution: null, resolvedAt: null })
+            }
+          }
         }
       }
 
