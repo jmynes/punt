@@ -63,7 +63,6 @@ import {
 } from '@/components/ui/select'
 import { useCurrentUser, useIsSystemAdmin } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
-import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { type MemberSnapshot, useAdminUndoStore } from '@/stores/admin-undo-store'
@@ -120,8 +119,6 @@ interface AvailableProject {
   color: string | null
   roles: ProjectRole[]
 }
-
-type ProfileTabType = 'projects' | 'admin'
 
 // ============================================================================
 // Sub-components
@@ -720,24 +717,7 @@ function UserProfileContent() {
     enabled: !!currentUser,
   })
 
-  const fromAdmin = searchParams.get('from') != null
-  const isSelf = (user?.isSelf ?? false) && !fromAdmin
   const isViewerAdmin = user?.isViewerAdmin ?? false
-
-  // Tab management (for self-view)
-  const SELF_TABS: ProfileTabType[] = isViewerAdmin ? ['projects', 'admin'] : ['projects']
-
-  const tabParam = searchParams.get('tab')
-  const activeTab: ProfileTabType =
-    tabParam && SELF_TABS.includes(tabParam as ProfileTabType)
-      ? (tabParam as ProfileTabType)
-      : 'projects'
-
-  // Tab cycling keyboard shortcut (for self-view)
-  useTabCycleShortcut({
-    tabs: isSelf ? SELF_TABS : [],
-    queryBasePath: `/users/${username}`,
-  })
 
   // State for dialogs
   const [removingMembership, setRemovingMembership] = useState<ProjectMembership | null>(null)
@@ -1216,131 +1196,7 @@ function UserProfileContent() {
     )
   }
 
-  // Self-view: hero header + tabs
-  if (isSelf) {
-    return (
-      <div className="h-full flex flex-col overflow-hidden">
-        {/* Hero Header */}
-        <div className="relative overflow-hidden shrink-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent" />
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl" />
-          <div className="absolute top-20 right-1/4 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl" />
-
-          <div className="relative max-w-3xl mx-auto px-6 py-8">
-            <div className="flex items-center gap-6">
-              <Avatar className="h-20 w-20 ring-4 ring-zinc-800">
-                <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                <AvatarFallback
-                  className="text-2xl font-semibold text-white"
-                  style={{ backgroundColor: user.avatarColor || getAvatarColor(user.id) }}
-                >
-                  {getInitials(user.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold text-zinc-100">{user.name}</h1>
-                  {user.isSystemAdmin && (
-                    <Badge
-                      variant="secondary"
-                      className="bg-amber-500/20 text-amber-400 border-amber-500/30"
-                    >
-                      <Shield className="h-3 w-3 mr-1" />
-                      Super Admin
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-zinc-400 mt-1">{user.email || 'No email'}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-3xl px-6 pt-6 overflow-auto">
-          {/* Tab Navigation */}
-          <div className="flex gap-1 mb-6 border-b border-zinc-800">
-            <Link
-              href={`/users/${username}?tab=projects`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                activeTab === 'projects'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <FolderKanban className="h-4 w-4" />
-              Projects
-            </Link>
-            {isViewerAdmin && (
-              <Link
-                href={`/users/${username}?tab=admin`}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                  activeTab === 'admin'
-                    ? 'text-amber-500 border-amber-500'
-                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
-                )}
-              >
-                <Shield className="h-4 w-4" />
-                Admin
-              </Link>
-            )}
-          </div>
-
-          {/* Tab Content */}
-          <div className="flex-1 min-h-0">
-            {activeTab === 'projects' && (
-              <div className="pb-8">
-                <ProjectsCard user={user} isViewerAdmin={false} />
-              </div>
-            )}
-            {activeTab === 'admin' && isViewerAdmin && (
-              <div className="space-y-6 pb-8">
-                <AdminControlsCard
-                  user={user}
-                  onToggleAdmin={() => setShowAdminReauthDialog(true)}
-                  onToggleActive={() => setShowActiveReauthDialog(true)}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="h-6 flex-shrink-0" />
-
-        {/* Reauth Dialogs */}
-        <ReauthDialog
-          open={showAdminReauthDialog}
-          onOpenChange={setShowAdminReauthDialog}
-          title={user.isSystemAdmin ? 'Confirm Remove Admin' : 'Confirm Make Admin'}
-          description={
-            user.isSystemAdmin
-              ? `Remove super admin privileges from ${user.name}?`
-              : `Grant super admin privileges to ${user.name}? They will have full access to manage all users and settings.`
-          }
-          actionLabel={user.isSystemAdmin ? 'Remove Admin' : 'Make Admin'}
-          actionVariant={user.isSystemAdmin ? 'destructive' : 'default'}
-          onConfirm={handleToggleAdmin}
-        />
-
-        <ReauthDialog
-          open={showActiveReauthDialog}
-          onOpenChange={setShowActiveReauthDialog}
-          title={user.isActive ? 'Confirm Disable User' : 'Confirm Enable User'}
-          description={
-            user.isActive
-              ? `Disable ${user.name}? They will be blocked from signing in.`
-              : `Enable ${user.name}? They will be able to sign in again.`
-          }
-          actionLabel={user.isActive ? 'Disable User' : 'Enable User'}
-          actionVariant={user.isActive ? 'destructive' : 'default'}
-          onConfirm={handleToggleActive}
-        />
-      </div>
-    )
-  }
-
-  // Admin viewing another user: hero header + cards
+  // User profile: hero header + cards
   const createdDate = new Date(user.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
