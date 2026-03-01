@@ -65,6 +65,7 @@ const mockIsMember = vi.mocked(isMember)
 // Test data
 const TEST_USER = {
   id: 'user-1',
+  username: 'testuser',
   email: 'test@test.com',
   name: 'Test',
   isSystemAdmin: false,

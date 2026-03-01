@@ -99,6 +99,7 @@ describe('Password Change API - Current Password Verification', () => {
     mockIsDemoMode.mockReturnValue(false)
     mockRequireAuth.mockResolvedValue({
       id: 'user-1',
+      username: 'testuser',
       email: null,
       name: 'Test User',
       avatar: null,
@@ -178,6 +179,7 @@ describe('Password Change API - Password Strength Validation', () => {
     mockIsDemoMode.mockReturnValue(false)
     mockRequireAuth.mockResolvedValue({
       id: 'user-1',
+      username: 'testuser',
       email: null,
       name: 'Test User',
       avatar: null,
@@ -246,6 +248,7 @@ describe('Password Change API - Rate Limiting', () => {
     mockIsDemoMode.mockReturnValue(false)
     mockRequireAuth.mockResolvedValue({
       id: 'user-1',
+      username: 'testuser',
       email: null,
       name: 'Test User',
       avatar: null,
@@ -299,6 +302,7 @@ describe('Password Change API - Session Invalidation', () => {
     mockIsDemoMode.mockReturnValue(false)
     mockRequireAuth.mockResolvedValue({
       id: 'user-1',
+      username: 'testuser',
       email: null,
       name: 'Test User',
       avatar: null,
@@ -337,6 +341,7 @@ describe('Password Change API - Input Validation', () => {
     mockIsDemoMode.mockReturnValue(false)
     mockRequireAuth.mockResolvedValue({
       id: 'user-1',
+      username: 'testuser',
       email: null,
       name: 'Test User',
       avatar: null,

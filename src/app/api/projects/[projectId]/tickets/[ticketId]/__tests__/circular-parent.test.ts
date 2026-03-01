@@ -55,6 +55,7 @@ const mockRequireAuth = vi.mocked(requireAuth)
 
 const TEST_USER = {
   id: 'user-1',
+  username: 'testuser',
   email: 'test@test.com',
   name: 'Test',
   isSystemAdmin: false,

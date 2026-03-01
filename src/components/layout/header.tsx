@@ -120,7 +120,7 @@ export function Header() {
                 asChild
                 className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
               >
-                <Link href="/profile">
+                <Link href={`/users/${currentUser.username}`}>
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </Link>

@@ -1,18 +1,25 @@
-import { Suspense } from 'react'
-import { ProfileContent } from './profile-content'
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth-helpers'
+import { DEMO_USER, isDemoMode } from '@/lib/demo'
 
-function ProfileLoading() {
-  return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="animate-pulse text-zinc-500">Loading...</div>
-    </div>
-  )
-}
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const { tab } = await searchParams
 
-export default function ProfilePage() {
-  return (
-    <Suspense fallback={<ProfileLoading />}>
-      <ProfileContent />
-    </Suspense>
-  )
+  let username: string
+  if (isDemoMode()) {
+    username = DEMO_USER.username
+  } else {
+    const user = await getCurrentUser()
+    if (!user || !('username' in user) || !user.username) {
+      redirect('/login')
+    }
+    username = user.username
+  }
+
+  const tabParam = tab ? `?tab=${tab}` : ''
+  redirect(`/users/${username}${tabParam}`)
 }

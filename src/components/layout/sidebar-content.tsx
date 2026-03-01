@@ -338,12 +338,16 @@ export function SidebarContent({
                 <ChevronRight className="h-3 w-3" />
               )}
             </button>
-            <Link href="/profile" onClick={handleLinkClick} className="flex-1 min-w-0">
+            <Link
+              href={`/users/${currentUser.username}`}
+              onClick={handleLinkClick}
+              className="flex-1 min-w-0"
+            >
               <Button
                 variant="ghost"
                 className={cn(
                   'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 pl-1',
-                  pathname.startsWith('/profile') && 'bg-zinc-800/50 text-zinc-100',
+                  pathname.startsWith('/users/') && 'bg-zinc-800/50 text-zinc-100',
                 )}
               >
                 <User className="h-4 w-4" />
@@ -353,13 +357,13 @@ export function SidebarContent({
           </div>
           <CollapsibleSection expanded={profileExpanded}>
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-              <Link href="/profile?tab=profile" onClick={handleLinkClick}>
+              <Link href={`/users/${currentUser.username}?tab=profile`} onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/profile' &&
+                    pathname.startsWith('/users/') &&
                       (searchParams.get('tab') === 'profile' || !searchParams.get('tab')) &&
                       'bg-zinc-800/50 text-zinc-100',
                   )}
@@ -368,13 +372,13 @@ export function SidebarContent({
                   Profile
                 </Button>
               </Link>
-              <Link href="/profile?tab=security" onClick={handleLinkClick}>
+              <Link href={`/users/${currentUser.username}?tab=security`} onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/profile' &&
+                    pathname.startsWith('/users/') &&
                       searchParams.get('tab') === 'security' &&
                       'bg-zinc-800/50 text-zinc-100',
                   )}
@@ -383,13 +387,13 @@ export function SidebarContent({
                   Security
                 </Button>
               </Link>
-              <Link href="/profile?tab=mcp" onClick={handleLinkClick}>
+              <Link href={`/users/${currentUser.username}?tab=mcp`} onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/profile' &&
+                    pathname.startsWith('/users/') &&
                       searchParams.get('tab') === 'mcp' &&
                       'bg-zinc-800/50 text-zinc-100',
                   )}
@@ -398,13 +402,16 @@ export function SidebarContent({
                   MCP
                 </Button>
               </Link>
-              <Link href="/profile?tab=claude-chat" onClick={handleLinkClick}>
+              <Link
+                href={`/users/${currentUser.username}?tab=claude-chat`}
+                onClick={handleLinkClick}
+              >
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/profile' &&
+                    pathname.startsWith('/users/') &&
                       searchParams.get('tab') === 'claude-chat' &&
                       'bg-zinc-800/50 text-zinc-100',
                   )}

@@ -69,6 +69,7 @@ const _mockGetEffectivePermissions = vi.mocked(getEffectivePermissions)
 // Test data
 const TEST_USER = {
   id: 'user-1',
+  username: 'testuser',
   email: 'test@test.com',
   name: 'Test',
   isSystemAdmin: false,
@@ -77,6 +78,7 @@ const TEST_USER = {
 }
 const ADMIN_USER = {
   id: 'admin-1',
+  username: 'admin',
   email: 'admin@test.com',
   name: 'Admin',
   isSystemAdmin: true,

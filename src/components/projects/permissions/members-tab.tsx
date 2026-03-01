@@ -605,7 +605,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
               onRemove={() => setRemovingMember(currentMember)}
               profileUrl={
                 isSystemAdmin
-                  ? `/admin/users/${currentMember.user.username}?from=project-settings&projectKey=${projectKey}&tab=members`
+                  ? `/users/${currentMember.user.username}?from=project-settings&projectKey=${projectKey}&tab=members`
                   : undefined
               }
             />
@@ -636,7 +636,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
             onRemove={() => setRemovingMember(member)}
             profileUrl={
               isSystemAdmin
-                ? `/admin/users/${member.user.username}?from=project-settings&projectKey=${projectKey}&tab=members`
+                ? `/users/${member.user.username}?from=project-settings&projectKey=${projectKey}&tab=members`
                 : undefined
             }
           />
