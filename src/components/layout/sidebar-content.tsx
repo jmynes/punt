@@ -699,9 +699,9 @@ export function SidebarContent({
                     onLinkClick={onLinkClick}
                   >
                     <div
-                      className={cn('pl-[9px] transition-opacity', isDimmedProject && 'opacity-40')}
+                      className={cn('pl-0.5 transition-opacity', isDimmedProject && 'opacity-40')}
                     >
-                      <div className="relative flex items-center">
+                      <div className="relative flex items-center min-w-0">
                         <button
                           type="button"
                           className="h-8 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
