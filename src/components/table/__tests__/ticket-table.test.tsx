@@ -72,6 +72,20 @@ vi.mock('@/stores/undo-store', () => {
   }
 })
 
+// Mock backlog store with selector support (TicketTable uses selectors)
+const backlogStoreState = {
+  collapsedParentIds: [] as string[],
+  toggleParentCollapsed: vi.fn(),
+}
+vi.mock('@/stores/backlog-store', () => ({
+  useBacklogStore: vi.fn((selector?: (state: Record<string, unknown>) => unknown) => {
+    if (typeof selector === 'function') {
+      return selector(backlogStoreState as unknown as Record<string, unknown>)
+    }
+    return backlogStoreState
+  }),
+}))
+
 const mockColumns: BacklogColumn[] = [
   { id: 'key', label: 'Key', visible: true, width: 100, minWidth: 80, sortable: true },
   { id: 'title', label: 'Title', visible: true, width: 300, minWidth: 150, sortable: true },
@@ -95,6 +109,7 @@ function DndWrapper({ children }: { children: React.ReactNode }) {
 describe('TicketTable', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    backlogStoreState.collapsedParentIds = []
   })
 
   it('should render table with multiple tickets', () => {
@@ -313,5 +328,77 @@ describe('TicketTable', () => {
     )
 
     expect(screen.getByText('TEST-1')).toBeInTheDocument()
+  })
+
+  it('should nest subtasks under their parent tickets', () => {
+    const parent = createMockTicket({ id: 'parent-1', number: 1, title: 'Parent ticket' })
+    const subtask = createMockTicket({
+      id: 'subtask-1',
+      number: 2,
+      title: 'Child subtask',
+      type: 'subtask',
+      parentId: 'parent-1',
+    })
+    const standalone = createMockTicket({ id: 'ticket-3', number: 3, title: 'Standalone ticket' })
+
+    const tickets = [parent, standalone, subtask]
+
+    const { container } = render(
+      <DndWrapper>
+        <TicketTable
+          context={mockContext}
+          tickets={tickets}
+          columns={mockColumns}
+          allTicketIds={tickets.map((t) => t.id)}
+          showHeader={false}
+        />
+      </DndWrapper>,
+    )
+
+    // All three should be rendered
+    expect(screen.getByText('Parent ticket')).toBeInTheDocument()
+    expect(screen.getByText('Child subtask')).toBeInTheDocument()
+    expect(screen.getByText('Standalone ticket')).toBeInTheDocument()
+
+    // The rows should be in order: parent, subtask, standalone
+    const rows = container.querySelectorAll('tr[data-ticket-row]')
+    expect(rows).toHaveLength(3)
+    expect(rows[0].getAttribute('data-ticket-id')).toBe('parent-1')
+    expect(rows[1].getAttribute('data-ticket-id')).toBe('subtask-1')
+    expect(rows[2].getAttribute('data-ticket-id')).toBe('ticket-3')
+  })
+
+  it('should hide subtasks when parent is collapsed', () => {
+    backlogStoreState.collapsedParentIds = ['parent-1']
+
+    const parent = createMockTicket({ id: 'parent-1', number: 1, title: 'Parent ticket' })
+    const subtask = createMockTicket({
+      id: 'subtask-1',
+      number: 2,
+      title: 'Child subtask',
+      type: 'subtask',
+      parentId: 'parent-1',
+    })
+
+    const tickets = [parent, subtask]
+
+    const { container } = render(
+      <DndWrapper>
+        <TicketTable
+          context={mockContext}
+          tickets={tickets}
+          columns={mockColumns}
+          allTicketIds={tickets.map((t) => t.id)}
+          showHeader={false}
+        />
+      </DndWrapper>,
+    )
+
+    // Parent should be visible, subtask should be hidden
+    expect(screen.getByText('Parent ticket')).toBeInTheDocument()
+    expect(screen.queryByText('Child subtask')).not.toBeInTheDocument()
+
+    const rows = container.querySelectorAll('tr[data-ticket-row]')
+    expect(rows).toHaveLength(1)
   })
 })

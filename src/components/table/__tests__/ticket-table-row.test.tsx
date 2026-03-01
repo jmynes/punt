@@ -312,4 +312,84 @@ describe('TicketTableRow', () => {
     expect(mockSelectTicket).toHaveBeenCalledWith('ticket-1')
     expect(mockSetActiveTicketId).toHaveBeenCalledWith('ticket-1')
   })
+
+  it('should show collapse toggle for parent rows with children', () => {
+    const ticket = createMockTicket({ id: 'parent-1', title: 'Parent ticket' })
+    const mockToggle = vi.fn()
+
+    const { container } = render(
+      <DndWrapper>
+        <TicketTableRow
+          ticket={ticket}
+          context={mockContext}
+          columns={mockColumns}
+          allTicketIds={['parent-1']}
+          hasChildren={true}
+          childCount={3}
+          isCollapsed={false}
+          onToggleCollapse={mockToggle}
+        />
+      </DndWrapper>,
+    )
+
+    // Should have a collapse button
+    const collapseButton = container.querySelector('button[title="Collapse 3 subtasks"]')
+    expect(collapseButton).toBeInTheDocument()
+
+    // Click the collapse button
+    if (collapseButton) {
+      fireEvent.click(collapseButton)
+      expect(mockToggle).toHaveBeenCalledWith('parent-1')
+    }
+  })
+
+  it('should show expand toggle for collapsed parent rows', () => {
+    const ticket = createMockTicket({ id: 'parent-1', title: 'Parent ticket' })
+
+    const { container } = render(
+      <DndWrapper>
+        <TicketTableRow
+          ticket={ticket}
+          context={mockContext}
+          columns={mockColumns}
+          allTicketIds={['parent-1']}
+          hasChildren={true}
+          childCount={2}
+          isCollapsed={true}
+          onToggleCollapse={vi.fn()}
+        />
+      </DndWrapper>,
+    )
+
+    // Should have an expand button
+    const expandButton = container.querySelector('button[title="Expand 2 subtasks"]')
+    expect(expandButton).toBeInTheDocument()
+  })
+
+  it('should show indentation for nested subtask rows', () => {
+    const ticket = createMockTicket({
+      id: 'subtask-1',
+      title: 'Nested subtask',
+      type: 'subtask',
+      parentId: 'parent-1',
+    })
+
+    const { container } = render(
+      <DndWrapper>
+        <TicketTableRow
+          ticket={ticket}
+          context={mockContext}
+          columns={mockColumns}
+          allTicketIds={['subtask-1']}
+          isNested={true}
+          depth={1}
+        />
+      </DndWrapper>,
+    )
+
+    // Should have subtle nested styling
+    // biome-ignore lint/style/noNonNullAssertion: test assertion
+    const row = container.querySelector('tr[data-ticket-row]')!
+    expect(row.className).toContain('bg-zinc-900/30')
+  })
 })
