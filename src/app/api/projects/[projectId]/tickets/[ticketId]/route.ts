@@ -162,6 +162,18 @@ export async function PATCH(
         return badRequestError('Cannot set parent: ticket cannot be its own parent')
       }
 
+      // Prevent subtasks from having subtasks (max 1 level deep)
+      const proposedParent = await db.ticket.findFirst({
+        where: { id: updateData.parentId, projectId },
+        select: { type: true },
+      })
+      if (!proposedParent) {
+        return badRequestError('Parent ticket not found or does not belong to project')
+      }
+      if (proposedParent.type === 'subtask') {
+        return badRequestError('Subtasks cannot have subtasks')
+      }
+
       // Walk up the parent chain from the proposed parent to detect cycles
       const MAX_DEPTH = 50
       let currentId: string | null = updateData.parentId
@@ -185,6 +197,16 @@ export async function PATCH(
 
       if (depth >= MAX_DEPTH) {
         return badRequestError('Cannot set parent: parent chain exceeds maximum depth')
+      }
+    }
+
+    // Prevent changing type to subtask if ticket has children
+    if (updateData.type === 'subtask' && existingTicket.type !== 'subtask') {
+      const childCount = await db.ticket.count({
+        where: { parentId: ticketId },
+      })
+      if (childCount > 0) {
+        return badRequestError('Cannot make a ticket with subtasks into a subtask')
       }
     }
 
