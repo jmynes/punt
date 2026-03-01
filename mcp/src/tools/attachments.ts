@@ -55,6 +55,43 @@ function formatAttachmentList(attachments: AttachmentData[], ticketKey: string):
 }
 
 export function registerAttachmentTools(server: McpServer) {
+  // get_upload_config - Get file upload limits and allowed types
+  server.tool(
+    'get_upload_config',
+    'Get file upload size limits, max attachments per ticket, and allowed file types',
+    {},
+    async () => {
+      const result = await getUploadConfig()
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+      const config = result.data
+      if (!config) {
+        return errorResponse('Failed to fetch upload configuration')
+      }
+
+      const lines: string[] = []
+      lines.push('# Upload Configuration')
+      lines.push('')
+      lines.push('## Size Limits')
+      lines.push(`- **Image:** ${formatFileSize(config.maxSizes.image)}`)
+      lines.push(`- **Video:** ${formatFileSize(config.maxSizes.video)}`)
+      lines.push(`- **Document:** ${formatFileSize(config.maxSizes.document)}`)
+      lines.push('')
+      lines.push(`## Attachments per Ticket`)
+      lines.push(`- **Max:** ${config.maxAttachmentsPerTicket}`)
+      lines.push('')
+      lines.push('## Allowed File Types')
+      for (const type of config.allowedTypes) {
+        lines.push(`- ${type}`)
+      }
+      lines.push('')
+      lines.push('*Note: SVG files are always blocked regardless of configuration.*')
+
+      return textResponse(lines.join('\n'))
+    },
+  )
+
   // list_attachments - List all attachments on a ticket
   server.tool(
     'list_attachments',
