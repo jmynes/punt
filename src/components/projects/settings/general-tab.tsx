@@ -3,6 +3,7 @@
 import { AlertTriangle, Loader2, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useDeleteProject, useProjectDetail, useUpdateProject } from '@/hooks/queries/use-projects'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useHasPermission } from '@/hooks/use-permissions'
+import { isDemoMode } from '@/lib/demo/demo-config'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showToast } from '@/lib/toast'
 
@@ -90,6 +92,7 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
     color: project.color,
   })
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showDeleteReauth, setShowDeleteReauth] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [hasChanges, setHasChanges] = useState(false)
 
@@ -145,24 +148,53 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
     )
   }, [canEditSettings, project.id, formData, keyChanged, updateProject, router])
 
-  const handleDelete = useCallback(async () => {
+  const handleDeleteConfirmed = useCallback(() => {
     if (!canDeleteProject) return
-
-    deleteProject.mutate(project.id, {
-      onSuccess: () => {
-        showToast.success('Project deleted', {
-          description: project.name,
-        })
-        router.push('/')
-      },
-      onError: (error) => {
-        showToast.error('Failed to delete project', {
-          description: error.message,
-        })
-      },
-    })
     setShowDeleteConfirm(false)
+
+    // In demo mode, skip reauth and delete directly
+    if (isDemoMode()) {
+      deleteProject.mutate(
+        { id: project.id },
+        {
+          onSuccess: () => {
+            showToast.success('Project deleted', { description: project.name })
+            router.push('/')
+          },
+          onError: (error) => {
+            showToast.error('Failed to delete project', { description: error.message })
+          },
+        },
+      )
+    } else {
+      setShowDeleteReauth(true)
+    }
   }, [canDeleteProject, project.id, project.name, deleteProject, router])
+
+  const handleDeleteWithReauth = useCallback(
+    async (password: string, totpCode?: string, isRecoveryCode?: boolean) => {
+      if (!canDeleteProject) return
+
+      await deleteProject.mutateAsync(
+        {
+          id: project.id,
+          confirmPassword: password,
+          totpCode,
+          isRecoveryCode,
+        },
+        {
+          onSuccess: () => {
+            showToast.success('Project deleted', { description: project.name })
+            router.push('/')
+          },
+          onError: (error) => {
+            throw error
+          },
+        },
+      )
+    },
+    [canDeleteProject, project.id, project.name, deleteProject, router],
+  )
 
   const handleReset = useCallback(() => {
     setFormData({
@@ -497,7 +529,7 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={handleDeleteConfirmed}
               disabled={deleteProject.isPending || deleteConfirmText !== project.name}
               className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -513,6 +545,17 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Password reauthentication dialog */}
+      <ReauthDialog
+        open={showDeleteReauth}
+        onOpenChange={setShowDeleteReauth}
+        title="Confirm Project Deletion"
+        description={`Enter your password to permanently delete "${project.name}" and all its data.`}
+        actionLabel="Delete Project"
+        actionVariant="destructive"
+        onConfirm={handleDeleteWithReauth}
+      />
     </div>
   )
 }

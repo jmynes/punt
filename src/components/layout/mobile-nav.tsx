@@ -2,6 +2,7 @@
 
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useDeleteProject } from '@/hooks/queries/use-projects'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { isDemoMode } from '@/lib/demo/demo-config'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
 import { SidebarContent } from './sidebar-content'
@@ -34,6 +36,7 @@ export function MobileNav() {
   const { projects, isLoading } = useProjectsStore()
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [showDeleteReauth, setShowDeleteReauth] = useState(false)
 
   const deleteProject = useDeleteProject()
 
@@ -46,8 +49,32 @@ export function MobileNav() {
 
   const handleDeleteProject = () => {
     if (!deleteProjectId) return
-    deleteProject.mutate(deleteProjectId)
+
+    // In demo mode, skip reauth and delete directly
+    if (isDemoMode()) {
+      deleteProject.mutate({ id: deleteProjectId })
+      setDeleteProjectId(null)
+      setDeleteConfirmText('')
+    } else {
+      setShowDeleteReauth(true)
+    }
+  }
+
+  const handleDeleteWithReauth = async (
+    password: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
+    if (!deleteProjectId) return
+
+    await deleteProject.mutateAsync({
+      id: deleteProjectId,
+      confirmPassword: password,
+      totpCode,
+      isRecoveryCode,
+    })
     setDeleteProjectId(null)
+    setDeleteConfirmText('')
   }
 
   const handleLinkClick = () => {
@@ -145,6 +172,23 @@ export function MobileNav() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Password reauthentication dialog */}
+      <ReauthDialog
+        open={showDeleteReauth}
+        onOpenChange={(open) => {
+          setShowDeleteReauth(open)
+          if (!open) {
+            setDeleteProjectId(null)
+            setDeleteConfirmText('')
+          }
+        }}
+        title="Confirm Project Deletion"
+        description={`Enter your password to permanently delete "${projectToDelete?.name}" and all its data.`}
+        actionLabel="Delete Project"
+        actionVariant="destructive"
+        onConfirm={handleDeleteWithReauth}
+      />
     </>
   )
 }
