@@ -608,6 +608,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         .filter((l): l is LabelSummary => l !== undefined)
     }
 
+    // Check if there are actual field changes (not just updatedAt)
+    const fieldKeys = Object.keys(updates).filter((k) => k !== 'updatedAt')
+    if (fieldKeys.length === 0) return
+
     // Use API mutation (optimistic update is handled by the mutation)
     updateTicketMutation.mutate({
       projectId,
@@ -615,6 +619,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       updates,
       previousTicket: oldTicket,
     })
+
+    // Push to undo store so Ctrl+Z can revert this edit
+    const afterTicket = { ...oldTicket, ...updates }
+    useUndoStore
+      .getState()
+      .pushUpdate(projectId, [{ ticketId: ticket.id, before: oldTicket, after: afterTicket }])
 
     // Submit pending comment if any
     if (commentsSectionRef.current?.hasPendingComment()) {
@@ -659,16 +669,26 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const handleDescriptionMarkdownChange = useCallback(
     (newMarkdown: string) => {
       if (!ticket) return
+      const newDescription = newMarkdown.trim() || null
+      // Skip no-op changes
+      if (newDescription === (ticket.description || null)) return
       const oldTicket = { ...ticket }
+      const updates = {
+        description: newDescription,
+        updatedAt: new Date(),
+      }
       updateTicketMutation.mutate({
         projectId,
         ticketId: ticket.id,
-        updates: {
-          description: newMarkdown.trim() || null,
-          updatedAt: new Date(),
-        },
+        updates,
         previousTicket: oldTicket,
       })
+
+      // Push to undo store so Ctrl+Z can revert this edit
+      const afterTicket = { ...oldTicket, ...updates }
+      useUndoStore
+        .getState()
+        .pushUpdate(projectId, [{ ticketId: ticket.id, before: oldTicket, after: afterTicket }])
     },
     [ticket, projectId, updateTicketMutation],
   )
@@ -758,6 +778,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         break
     }
 
+    // Check if there are actual field changes (not just updatedAt)
+    const fieldKeys = Object.keys(updates).filter((k) => k !== 'updatedAt')
+    if (fieldKeys.length === 0) {
+      setEditingField(null)
+      return
+    }
+
     // Use API mutation (optimistic update is handled by the mutation)
     updateTicketMutation.mutate({
       projectId,
@@ -765,6 +792,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       updates,
       previousTicket: oldTicket,
     })
+
+    // Push to undo store so Ctrl+Z can revert this edit
+    const afterTicket = { ...oldTicket, ...updates }
+    useUndoStore
+      .getState()
+      .pushUpdate(projectId, [{ ticketId: ticket.id, before: oldTicket, after: afterTicket }])
 
     setEditingField(null)
   }
