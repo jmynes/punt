@@ -3,19 +3,16 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
-  Bot,
   Calendar,
   Check,
   ChevronsUpDown,
   FolderKanban,
-  KeyRound,
   Loader2,
   Mail,
   Plus,
   Settings,
   Shield,
   ShieldOff,
-  Terminal,
   User,
   UserCheck,
   UserMinus,
@@ -23,13 +20,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useSession } from 'next-auth/react'
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ClaudeChatTab } from '@/components/profile/claude-chat-tab'
-import { MCPTab } from '@/components/profile/mcp-tab'
-import { ProfileTab } from '@/components/profile/profile-tab'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
-import { SecurityTab } from '@/components/profile/security-tab'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,7 +64,6 @@ import {
 import { useCurrentUser, useIsSystemAdmin } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
 import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
-import { DEMO_USER, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { type MemberSnapshot, useAdminUndoStore } from '@/stores/admin-undo-store'
@@ -130,17 +121,7 @@ interface AvailableProject {
   roles: ProjectRole[]
 }
 
-// Stable user data type for profile tabs
-interface UserData {
-  id: string
-  name: string
-  email: string | null
-  avatar: string | null
-  avatarColor: string | null
-  isSystemAdmin: boolean
-}
-
-type ProfileTabType = 'profile' | 'security' | 'mcp' | 'claude-chat' | 'projects' | 'admin'
+type ProfileTabType = 'projects' | 'admin'
 
 // ============================================================================
 // Sub-components
@@ -716,21 +697,10 @@ function UserProfileContent() {
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const username = params.username as string
-  const isDemo = isDemoMode()
   const currentUser = useCurrentUser()
   const { isLoading: isAdminLoading } = useIsSystemAdmin()
   const { pushMemberRoleChange, pushMemberAdd, pushMemberRemove, undo, redo, canUndo, canRedo } =
     useAdminUndoStore()
-
-  // Session management (for self-view profile tabs)
-  const {
-    data: session,
-    status: sessionStatus,
-    update: updateSession,
-  } = isDemo
-    ? { data: null, status: 'authenticated' as const, update: async () => null }
-    : // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
-      useSession()
 
   // Fetch user data from unified API
   const {
@@ -754,87 +724,19 @@ function UserProfileContent() {
   const isViewerAdmin = user?.isViewerAdmin ?? false
 
   // Tab management (for self-view)
-  const SELF_TABS: ProfileTabType[] = isViewerAdmin
-    ? ['profile', 'security', 'mcp', 'claude-chat', 'projects', 'admin']
-    : ['profile', 'security', 'mcp', 'claude-chat', 'projects']
+  const SELF_TABS: ProfileTabType[] = isViewerAdmin ? ['projects', 'admin'] : ['projects']
 
   const tabParam = searchParams.get('tab')
   const activeTab: ProfileTabType =
     tabParam && SELF_TABS.includes(tabParam as ProfileTabType)
       ? (tabParam as ProfileTabType)
-      : isSelf
-        ? 'profile'
-        : 'projects'
+      : 'projects'
 
   // Tab cycling keyboard shortcut (for self-view)
   useTabCycleShortcut({
     tabs: isSelf ? SELF_TABS : [],
     queryBasePath: `/users/${username}`,
   })
-
-  // Stable user data for profile tabs (prevents flash during session refresh)
-  const [stableUser, setStableUser] = useState<UserData | null>(
-    isDemo
-      ? {
-          id: DEMO_USER.id,
-          name: DEMO_USER.name,
-          email: DEMO_USER.email,
-          avatar: DEMO_USER.avatar,
-          avatarColor: null,
-          isSystemAdmin: DEMO_USER.isSystemAdmin,
-        }
-      : null,
-  )
-
-  const isUpdatingRef = useRef(false)
-
-  useEffect(() => {
-    if (isDemo) return
-    if (session?.user?.id && !isUpdatingRef.current) {
-      setStableUser({
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
-        avatar: session.user.avatar,
-        avatarColor: session.user.avatarColor,
-        isSystemAdmin: session.user.isSystemAdmin,
-      })
-    }
-  }, [
-    isDemo,
-    session?.user?.id,
-    session?.user?.name,
-    session?.user?.email,
-    session?.user?.avatar,
-    session?.user?.avatarColor,
-    session?.user?.isSystemAdmin,
-  ])
-
-  // Debounced session update
-  const pendingUpdateRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const debouncedUpdateSession = useCallback(async () => {
-    if (isDemo) return
-    if (pendingUpdateRef.current) {
-      clearTimeout(pendingUpdateRef.current)
-    }
-    return new Promise<void>((resolve) => {
-      pendingUpdateRef.current = setTimeout(async () => {
-        isUpdatingRef.current = true
-        try {
-          await updateSession()
-        } finally {
-          setTimeout(() => {
-            isUpdatingRef.current = false
-          }, 100)
-          resolve()
-        }
-      }, 50)
-    })
-  }, [isDemo, updateSession])
-
-  const handleUserUpdate = useCallback((updates: Partial<UserData>) => {
-    setStableUser((prev) => (prev ? { ...prev, ...updates } : null))
-  }, [])
 
   // State for dialogs
   const [removingMembership, setRemovingMembership] = useState<ProjectMembership | null>(null)
@@ -1285,7 +1187,7 @@ function UserProfileContent() {
   }, [isLoading, isAdminLoading, user, router])
 
   // Loading state
-  if (isLoading || isAdminLoading || (!isDemo && sessionStatus === 'loading' && !stableUser)) {
+  if (isLoading || isAdminLoading) {
     return <ProfileLoading />
   }
 
@@ -1357,54 +1259,6 @@ function UserProfileContent() {
           {/* Tab Navigation */}
           <div className="flex gap-1 mb-6 border-b border-zinc-800">
             <Link
-              href={`/users/${username}?tab=profile`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                activeTab === 'profile'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <User className="h-4 w-4" />
-              Profile
-            </Link>
-            <Link
-              href={`/users/${username}?tab=security`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                activeTab === 'security'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <KeyRound className="h-4 w-4" />
-              Security
-            </Link>
-            <Link
-              href={`/users/${username}?tab=mcp`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                activeTab === 'mcp'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Terminal className="h-4 w-4" />
-              MCP
-            </Link>
-            <Link
-              href={`/users/${username}?tab=claude-chat`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                activeTab === 'claude-chat'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Bot className="h-4 w-4" />
-              Claude Chat
-            </Link>
-            <Link
               href={`/users/${username}?tab=projects`}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
@@ -1434,24 +1288,6 @@ function UserProfileContent() {
 
           {/* Tab Content */}
           <div className="flex-1 min-h-0">
-            {activeTab === 'profile' && stableUser && (
-              <ProfileTab
-                user={stableUser}
-                isDemo={isDemo}
-                onUserUpdate={handleUserUpdate}
-                onSessionUpdate={debouncedUpdateSession}
-              />
-            )}
-            {activeTab === 'security' && stableUser && (
-              <SecurityTab
-                user={stableUser}
-                isDemo={isDemo}
-                onUserUpdate={handleUserUpdate}
-                onSessionUpdate={debouncedUpdateSession}
-              />
-            )}
-            {activeTab === 'mcp' && <MCPTab isDemo={isDemo} />}
-            {activeTab === 'claude-chat' && <ClaudeChatTab isDemo={isDemo} />}
             {activeTab === 'projects' && (
               <div className="pb-8">
                 <ProjectsCard user={user} isViewerAdmin={false} />
