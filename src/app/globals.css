@@ -93,6 +93,12 @@
   }
 }
 
+/* Sidebar: override Radix ScrollArea's internal display:table wrapper
+   which prevents text truncation by sizing to content width */
+aside [data-slot="scroll-area-viewport"] > div {
+  display: block !important;
+}
+
 /* Hide native number input spinners (we use custom spinners) */
 /* Chrome, Safari, Edge, Opera */
 input[type="number"]::-webkit-outer-spin-button,
