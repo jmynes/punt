@@ -6,7 +6,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -528,7 +527,7 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
             >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
+            <Button
               onClick={handleDeleteConfirmed}
               disabled={deleteProject.isPending || deleteConfirmText !== project.name}
               className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
@@ -541,7 +540,7 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
               ) : (
                 'Delete Project'
               )}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

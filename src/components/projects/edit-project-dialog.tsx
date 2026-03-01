@@ -6,7 +6,6 @@ import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -54,6 +53,7 @@ export function EditProjectDialog() {
   const [originalKey, setOriginalKey] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showDeleteReauth, setShowDeleteReauth] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const keyChanged = formData.key !== originalKey && originalKey !== ''
@@ -322,13 +322,40 @@ export function EditProjectDialog() {
       </Dialog>
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          setShowDeleteConfirm(open)
+          if (!open) {
+            setDeleteConfirmText('')
+          }
+        }}
+      >
         <AlertDialogContent className="bg-zinc-950 border-zinc-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete &quot;{formData.name}&quot;? This action cannot be
-              undone and will remove all associated tickets.
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 text-zinc-400">
+                <p>
+                  Are you sure you want to delete &quot;{formData.name}&quot;? This action cannot be
+                  undone and will remove all associated tickets.
+                </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-zinc-300">
+                    Type <span className="font-mono font-bold text-red-400">{formData.name}</span>{' '}
+                    to confirm:
+                  </p>
+                  <Input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder={`Type ${formData.name} to confirm`}
+                    className="bg-zinc-900 border-zinc-700 text-zinc-100"
+                    autoComplete="off"
+                    disabled={deleteProject.isPending}
+                  />
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -338,10 +365,10 @@ export function EditProjectDialog() {
             >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
+            <Button
               onClick={handleDeleteConfirmed}
-              disabled={deleteProject.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleteProject.isPending || deleteConfirmText !== formData.name}
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {deleteProject.isPending ? (
                 <>
@@ -351,7 +378,7 @@ export function EditProjectDialog() {
               ) : (
                 'Delete Project'
               )}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

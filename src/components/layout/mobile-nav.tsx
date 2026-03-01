@@ -5,7 +5,6 @@ import { useState } from 'react'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -13,6 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -112,7 +112,7 @@ export function MobileNav() {
 
       {/* Delete confirmation dialog */}
       <AlertDialog
-        open={!!deleteProjectId}
+        open={!!deleteProjectId && !showDeleteReauth}
         onOpenChange={(open) => {
           if (!open) {
             setDeleteProjectId(null)
@@ -132,15 +132,17 @@ export function MobileNav() {
                 <div className="space-y-2">
                   <p className="text-sm text-zinc-300">
                     Type{' '}
-                    <span className="font-mono font-bold text-red-400">{projectToDelete?.key}</span>{' '}
+                    <span className="font-mono font-bold text-red-400">
+                      {projectToDelete?.name}
+                    </span>{' '}
                     to confirm:
                   </p>
                   <Input
                     type="text"
                     value={deleteConfirmText}
                     onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    placeholder={`Type ${projectToDelete?.key} to confirm`}
-                    className="bg-zinc-900 border-zinc-700 text-zinc-100 font-mono"
+                    placeholder={`Type ${projectToDelete?.name} to confirm`}
+                    className="bg-zinc-900 border-zinc-700 text-zinc-100"
                     autoComplete="off"
                     disabled={deleteProject.isPending}
                   />
@@ -155,9 +157,9 @@ export function MobileNav() {
             >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
+            <Button
               onClick={handleDeleteProject}
-              disabled={deleteProject.isPending || deleteConfirmText !== projectToDelete?.key}
+              disabled={deleteProject.isPending || deleteConfirmText !== projectToDelete?.name}
               className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {deleteProject.isPending ? (
@@ -168,7 +170,7 @@ export function MobileNav() {
               ) : (
                 'Delete Project'
               )}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

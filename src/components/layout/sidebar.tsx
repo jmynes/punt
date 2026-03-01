@@ -5,7 +5,6 @@ import { useState } from 'react'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -13,6 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useDeleteProject, useProjects } from '@/hooks/queries/use-projects'
@@ -105,7 +105,7 @@ export function Sidebar() {
 
       {/* Delete confirmation dialog */}
       <AlertDialog
-        open={!!deleteProjectId}
+        open={!!deleteProjectId && !showDeleteReauth}
         onOpenChange={(open) => {
           if (!open) {
             setDeleteProjectId(null)
@@ -150,7 +150,7 @@ export function Sidebar() {
             >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
+            <Button
               onClick={handleDeleteProject}
               disabled={deleteProject.isPending || deleteConfirmText !== projectToDelete?.name}
               className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
@@ -163,7 +163,7 @@ export function Sidebar() {
               ) : (
                 'Delete Project'
               )}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
