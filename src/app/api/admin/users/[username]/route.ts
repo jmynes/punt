@@ -345,18 +345,17 @@ export async function PATCH(
       },
     })
 
-    // If user became a system admin, add them to all projects they're not already in
+    // If user became a system admin, ensure they have Admin role in all projects
     if (becomingSystemAdmin) {
-      // Get projects the user is already a member of
+      // Get existing memberships with their role info
       const existingMemberships = await db.projectMember.findMany({
         where: { userId: existingUser.id },
-        select: { projectId: true },
+        select: { id: true, projectId: true, role: { select: { name: true } } },
       })
       const existingProjectIds = existingMemberships.map((m) => m.projectId)
 
-      // Get all projects the user is not a member of
-      const projectsToJoin = await db.project.findMany({
-        where: { id: { notIn: existingProjectIds } },
+      // Get all projects with their Admin role
+      const allProjects = await db.project.findMany({
         select: {
           id: true,
           roles: {
@@ -367,16 +366,25 @@ export async function PATCH(
         },
       })
 
-      // Add user to each project with Admin role
-      for (const project of projectsToJoin) {
+      for (const project of allProjects) {
         const adminRole = project.roles[0]
-        if (adminRole) {
+        if (!adminRole) continue
+
+        const existing = existingMemberships.find((m) => m.projectId === project.id)
+        if (!existing) {
+          // Add user to projects they're not in
           await db.projectMember.create({
             data: {
               userId: existingUser.id,
               projectId: project.id,
               roleId: adminRole.id,
             },
+          })
+        } else if (existing.role.name !== 'Admin' && existing.role.name !== 'Owner') {
+          // Promote existing members below Admin to Admin
+          await db.projectMember.update({
+            where: { id: existing.id },
+            data: { roleId: adminRole.id },
           })
         }
       }

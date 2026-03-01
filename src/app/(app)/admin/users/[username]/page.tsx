@@ -7,17 +7,31 @@ import {
   Check,
   ChevronsUpDown,
   FolderKanban,
+  Loader2,
   Mail,
+  Plus,
   Settings,
   Shield,
   ShieldOff,
   User,
   UserCheck,
+  UserMinus,
   UserX,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,15 +40,32 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useIsSystemAdmin } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
 import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
-import { useAdminUndoStore } from '@/stores/admin-undo-store'
+import { type MemberSnapshot, useAdminUndoStore } from '@/stores/admin-undo-store'
 
 interface ProjectRole {
   id: string
@@ -73,6 +104,14 @@ interface UserDetails {
   _count: {
     projects: number
   }
+}
+
+interface AvailableProject {
+  id: string
+  name: string
+  key: string
+  color: string | null
+  roles: ProjectRole[]
 }
 
 function RoleSelector({
@@ -168,6 +207,260 @@ function RoleBadge({ roleName }: { roleName: string }) {
   )
 }
 
+function AddToProjectDialog({
+  userId,
+  userName,
+  username,
+  onAdded,
+}: {
+  userId: string
+  userName: string
+  username: string
+  onAdded: (snapshot: MemberSnapshot) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [projectSearchOpen, setProjectSearchOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [selectedProject, setSelectedProject] = useState<AvailableProject | null>(null)
+  const [selectedRoleId, setSelectedRoleId] = useState<string>('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const queryClient = useQueryClient()
+
+  const { data: availableProjects, isLoading: projectsLoading } = useQuery<AvailableProject[]>({
+    queryKey: ['admin', 'user', username, 'available-projects'],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/users/${username}/available-projects`)
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to fetch available projects')
+      }
+      return res.json()
+    },
+    enabled: open,
+  })
+
+  const filteredProjects = useMemo(() => {
+    if (!availableProjects) return []
+    if (!search.trim()) return availableProjects
+    const searchLower = search.toLowerCase()
+    return availableProjects.filter(
+      (p) =>
+        p.name.toLowerCase().includes(searchLower) || p.key.toLowerCase().includes(searchLower),
+    )
+  }, [availableProjects, search])
+
+  const handleOpenChange = useCallback((newOpen: boolean) => {
+    setOpen(newOpen)
+    if (!newOpen) {
+      setSearch('')
+      setSelectedProject(null)
+      setSelectedRoleId('')
+    }
+  }, [])
+
+  const handleSelectProject = (project: AvailableProject) => {
+    setSelectedProject(project)
+    // Default to Member role, or first non-Owner role
+    const defaultRole =
+      project.roles.find((r) => r.name === 'Member') ??
+      project.roles.find((r) => r.name !== 'Owner')
+    setSelectedRoleId(defaultRole?.id ?? project.roles[0]?.id ?? '')
+    setProjectSearchOpen(false)
+    setSearch('')
+  }
+
+  const handleSubmit = async () => {
+    if (!selectedProject || !selectedRoleId) return
+
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/projects/${selectedProject.key}/members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify({ userId, roleId: selectedRoleId }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to add member')
+      }
+
+      const data = await res.json()
+      const roleName = selectedProject.roles.find((r) => r.id === selectedRoleId)?.name ?? 'Member'
+
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ['admin', 'user', username] })
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'user', username, 'available-projects'],
+      })
+
+      // Notify parent for undo support
+      onAdded({
+        membershipId: data.id,
+        projectId: selectedProject.id,
+        userId,
+        userName,
+        roleId: selectedRoleId,
+        roleName,
+      })
+
+      showToast.success(
+        `Added ${userName} to ${selectedProject.name} as ${roleName} (Ctrl+Z to undo)`,
+      )
+      handleOpenChange(false)
+    } catch (err) {
+      showToast.error(err instanceof Error ? err.message : 'Failed to add to project')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Plus className="mr-2 h-4 w-4" />
+          Add to Project
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add to Project</DialogTitle>
+          <DialogDescription>Add {userName} to a project with a specific role.</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {/* Project Search */}
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-zinc-200">Project</span>
+            <Popover open={projectSearchOpen} onOpenChange={setProjectSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={projectSearchOpen}
+                  className="w-full justify-between bg-zinc-900 border-zinc-800 hover:bg-zinc-800"
+                >
+                  {selectedProject ? (
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-4 h-4 rounded shrink-0"
+                        style={{ backgroundColor: selectedProject.color || '#71717a' }}
+                      />
+                      <span>{selectedProject.name}</span>
+                      <span className="text-zinc-500">({selectedProject.key})</span>
+                    </div>
+                  ) : (
+                    <span className="text-zinc-500">Select a project...</span>
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[380px] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Search projects..."
+                    value={search}
+                    onValueChange={setSearch}
+                  />
+                  <CommandList>
+                    {projectsLoading ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
+                      </div>
+                    ) : (
+                      <>
+                        <CommandEmpty>
+                          {availableProjects?.length === 0
+                            ? 'User is already a member of all projects.'
+                            : 'No projects found.'}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {filteredProjects.map((project) => (
+                            <CommandItem
+                              key={project.id}
+                              value={project.id}
+                              onSelect={() => handleSelectProject(project)}
+                            >
+                              <div className="flex items-center gap-2 flex-1">
+                                <div
+                                  className="w-6 h-6 rounded flex items-center justify-center text-white font-semibold text-xs shrink-0"
+                                  style={{ backgroundColor: project.color || '#71717a' }}
+                                >
+                                  {project.key.charAt(0)}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm">{project.name}</p>
+                                  <p className="truncate text-xs text-zinc-400">{project.key}</p>
+                                </div>
+                              </div>
+                              <Check
+                                className={cn(
+                                  'ml-2 h-4 w-4',
+                                  selectedProject?.id === project.id ? 'opacity-100' : 'opacity-0',
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Role Selection */}
+          {selectedProject && (
+            <div className="space-y-2">
+              <span className="text-sm font-medium text-zinc-200">Role</span>
+              <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+                <SelectTrigger className="w-full bg-zinc-900 border-zinc-800">
+                  <SelectValue placeholder="Select a role..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedProject.roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={!selectedProject || !selectedRoleId || isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                Add to Project
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function ProfileLoading() {
   return (
     <div className="h-full overflow-auto bg-zinc-950">
@@ -187,8 +480,16 @@ function AdminUserProfileContent() {
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const username = params.username as string
-  const { pushMemberRoleChange, undo, redo, canUndo, canRedo } = useAdminUndoStore()
+  const { pushMemberRoleChange, pushMemberAdd, pushMemberRemove, undo, redo, canUndo, canRedo } =
+    useAdminUndoStore()
   const { isSystemAdmin, isLoading: isAdminLoading } = useIsSystemAdmin()
+
+  // Remove member confirmation dialog state
+  const [removingMembership, setRemovingMembership] = useState<ProjectMembership | null>(null)
+
+  // Reauth dialog state
+  const [showAdminReauthDialog, setShowAdminReauthDialog] = useState(false)
+  const [showActiveReauthDialog, setShowActiveReauthDialog] = useState(false)
 
   // Navigation context from query params
   const navContext = useMemo(() => {
@@ -225,6 +526,14 @@ function AdminUserProfileContent() {
     },
   })
 
+  // Helper to invalidate user-related queries
+  const invalidateUserQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['admin', 'user', username] })
+    queryClient.invalidateQueries({
+      queryKey: ['admin', 'user', username, 'available-projects'],
+    })
+  }, [queryClient, username])
+
   // Helper to perform role change API call
   const performRoleChange = useCallback(
     async (
@@ -249,12 +558,44 @@ function AdminUserProfileContent() {
       }
 
       // Invalidate the cache to get fresh data
-      queryClient.invalidateQueries({ queryKey: ['admin', 'user', username] })
+      invalidateUserQueries()
 
       showToast.success(isUndo ? `Role reverted to ${roleName}` : `Role updated to ${roleName}`)
     },
-    [queryClient, username],
+    [invalidateUserQueries],
   )
+
+  // Helper to add a member to a project (projectId can be key or UUID - resolveProjectKey handles both)
+  const performAddMember = useCallback(
+    async (projectId: string, userId: string, roleId: string) => {
+      const res = await fetch(`/api/projects/${projectId}/members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tab-Id': getTabId(),
+        },
+        body: JSON.stringify({ userId, roleId }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to add member')
+      }
+      return res.json()
+    },
+    [],
+  )
+
+  // Helper to remove a member from a project
+  const performRemoveMember = useCallback(async (projectId: string, membershipId: string) => {
+    const res = await fetch(`/api/projects/${projectId}/members/${membershipId}`, {
+      method: 'DELETE',
+      headers: { 'X-Tab-Id': getTabId() },
+    })
+    if (!res.ok) {
+      const data = await res.json()
+      throw new Error(data.error || 'Failed to remove member')
+    }
+  }, [])
 
   // Handle undo
   const handleUndo = useCallback(async () => {
@@ -275,8 +616,46 @@ function AdminUserProfileContent() {
         // Re-push the action since undo failed
         pushMemberRoleChange(action.member)
       }
+    } else if (action.type === 'memberAdd') {
+      // Undo add = remove the member(s)
+      try {
+        for (const member of action.members) {
+          // We need the current membership ID (it may have changed after re-creation)
+          const currentUser = queryClient.getQueryData<UserDetails>(['admin', 'user', username])
+          const currentMembership = currentUser?.projects.find(
+            (p) => p.project.id === member.projectId,
+          )
+          if (currentMembership) {
+            await performRemoveMember(member.projectId, currentMembership.id)
+          }
+        }
+        invalidateUserQueries()
+        showToast.success('Membership removed (undo)')
+      } catch (err) {
+        showToast.error(err instanceof Error ? err.message : 'Failed to undo')
+      }
+    } else if (action.type === 'memberRemove') {
+      // Undo remove = re-add the member(s)
+      try {
+        for (const member of action.members) {
+          await performAddMember(member.projectId, member.userId, member.roleId)
+        }
+        invalidateUserQueries()
+        showToast.success('Membership restored (undo)')
+      } catch (err) {
+        showToast.error(err instanceof Error ? err.message : 'Failed to undo')
+      }
     }
-  }, [undo, performRoleChange, pushMemberRoleChange])
+  }, [
+    undo,
+    performRoleChange,
+    pushMemberRoleChange,
+    performAddMember,
+    performRemoveMember,
+    invalidateUserQueries,
+    queryClient,
+    username,
+  ])
 
   // Handle redo
   const handleRedo = useCallback(async () => {
@@ -295,8 +674,44 @@ function AdminUserProfileContent() {
       } catch (err) {
         showToast.error(err instanceof Error ? err.message : 'Failed to redo')
       }
+    } else if (action.type === 'memberAdd') {
+      // Redo add = re-add the member(s)
+      try {
+        for (const member of action.members) {
+          await performAddMember(member.projectId, member.userId, member.roleId)
+        }
+        invalidateUserQueries()
+        showToast.success('Member re-added to project')
+      } catch (err) {
+        showToast.error(err instanceof Error ? err.message : 'Failed to redo')
+      }
+    } else if (action.type === 'memberRemove') {
+      // Redo remove = remove the member(s) again
+      try {
+        for (const member of action.members) {
+          const currentUser = queryClient.getQueryData<UserDetails>(['admin', 'user', username])
+          const currentMembership = currentUser?.projects.find(
+            (p) => p.project.id === member.projectId,
+          )
+          if (currentMembership) {
+            await performRemoveMember(member.projectId, currentMembership.id)
+          }
+        }
+        invalidateUserQueries()
+        showToast.success('Membership removed')
+      } catch (err) {
+        showToast.error(err instanceof Error ? err.message : 'Failed to redo')
+      }
     }
-  }, [redo, performRoleChange])
+  }, [
+    redo,
+    performRoleChange,
+    performAddMember,
+    performRemoveMember,
+    invalidateUserQueries,
+    queryClient,
+    username,
+  ])
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -321,7 +736,11 @@ function AdminUserProfileContent() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [canUndo, canRedo, handleUndo, handleRedo])
 
-  const handleToggleAdmin = async () => {
+  const handleToggleAdmin = async (
+    confirmPassword: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
     if (!user) return
 
     const newValue = !user.isSystemAdmin
@@ -339,7 +758,12 @@ function AdminUserProfileContent() {
           'Content-Type': 'application/json',
           'X-Tab-Id': getTabId(),
         },
-        body: JSON.stringify({ isSystemAdmin: newValue }),
+        body: JSON.stringify({
+          isSystemAdmin: newValue,
+          confirmPassword,
+          totpCode,
+          isRecoveryCode,
+        }),
       })
 
       if (!res.ok) {
@@ -358,15 +782,24 @@ function AdminUserProfileContent() {
         },
       )
 
+      // Re-fetch user detail to pick up project membership changes from admin promotion/demotion
+      invalidateUserQueries()
+
       showToast.success(
         newValue ? `${user.name} is now an admin` : `${user.name} is no longer an admin`,
       )
     } catch (err) {
-      showToast.error(err instanceof Error ? err.message : 'Failed to update user')
+      // Rollback on error
+      queryClient.setQueryData(['admin', 'user', username], previousUser)
+      throw err
     }
   }
 
-  const handleToggleActive = async () => {
+  const handleToggleActive = async (
+    confirmPassword: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
     if (!user) return
 
     const newValue = !user.isActive
@@ -384,7 +817,7 @@ function AdminUserProfileContent() {
           'Content-Type': 'application/json',
           'X-Tab-Id': getTabId(),
         },
-        body: JSON.stringify({ isActive: newValue }),
+        body: JSON.stringify({ isActive: newValue, confirmPassword, totpCode, isRecoveryCode }),
       })
 
       if (!res.ok) {
@@ -407,7 +840,9 @@ function AdminUserProfileContent() {
         newValue ? `${user.name} has been enabled` : `${user.name} has been disabled`,
       )
     } catch (err) {
-      showToast.error(err instanceof Error ? err.message : 'Failed to update user')
+      // Rollback on error
+      queryClient.setQueryData(['admin', 'user', username], previousUser)
+      throw err
     }
   }
 
@@ -473,6 +908,66 @@ function AdminUserProfileContent() {
       })
     } catch (err) {
       showToast.error(err instanceof Error ? err.message : 'Failed to update role')
+    }
+  }
+
+  const handleMemberAdded = useCallback(
+    (snapshot: MemberSnapshot) => {
+      // Push to undo stack - use a dummy projectId since we're tracking from user perspective
+      pushMemberAdd(snapshot.projectId, [snapshot])
+    },
+    [pushMemberAdd],
+  )
+
+  const handleRemoveMember = async () => {
+    if (!removingMembership || !user) return
+
+    const membership = removingMembership
+    const memberSnapshot: MemberSnapshot = {
+      membershipId: membership.id,
+      projectId: membership.project.id,
+      userId: user.id,
+      userName: user.name,
+      roleId: membership.roleId,
+      roleName: membership.role.name,
+    }
+
+    // Optimistic update - remove the membership from the UI
+    queryClient.setQueryData<UserDetails>(['admin', 'user', username], (old) => {
+      if (!old) return old
+      return {
+        ...old,
+        projects: old.projects.filter((p) => p.id !== membership.id),
+        _count: { ...old._count, projects: old._count.projects - 1 },
+      }
+    })
+
+    setRemovingMembership(null)
+
+    try {
+      const res = await fetch(`/api/projects/${membership.project.key}/members/${membership.id}`, {
+        method: 'DELETE',
+        headers: { 'X-Tab-Id': getTabId() },
+      })
+
+      if (!res.ok) {
+        // Rollback on error
+        invalidateUserQueries()
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to remove member')
+      }
+
+      // Invalidate available projects cache
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'user', username, 'available-projects'],
+      })
+
+      // Push to undo stack
+      pushMemberRemove(membership.project.id, [memberSnapshot])
+
+      showToast.success(`Removed from ${membership.project.name} (Ctrl+Z to undo)`)
+    } catch (err) {
+      showToast.error(err instanceof Error ? err.message : 'Failed to remove from project')
     }
   }
 
@@ -616,13 +1111,25 @@ function AdminUserProfileContent() {
         {/* Projects */}
         <Card className="border-zinc-800 bg-zinc-900/50">
           <CardHeader className="pb-4">
-            <div className="flex items-center gap-2">
-              <FolderKanban className="h-5 w-5 text-amber-500" />
-              <CardTitle className="text-zinc-100">Projects</CardTitle>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <FolderKanban className="h-5 w-5 text-amber-500" />
+                  <CardTitle className="text-zinc-100">Projects</CardTitle>
+                </div>
+                <CardDescription className="text-zinc-500 mt-1">
+                  Projects this user has access to
+                </CardDescription>
+              </div>
+              {isSystemAdmin && (
+                <AddToProjectDialog
+                  userId={user.id}
+                  userName={user.name}
+                  username={username}
+                  onAdded={handleMemberAdded}
+                />
+              )}
             </div>
-            <CardDescription className="text-zinc-500">
-              Projects this user has access to
-            </CardDescription>
           </CardHeader>
           <CardContent>
             {user.projects.length === 0 ? (
@@ -663,6 +1170,15 @@ function AdminUserProfileContent() {
                               )
                             }
                           />
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="text-zinc-500 hover:text-red-400 hover:bg-red-900/20"
+                            title="Remove from project"
+                            onClick={() => setRemovingMembership(membership)}
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon-sm"
@@ -711,7 +1227,7 @@ function AdminUserProfileContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleToggleAdmin}
+                  onClick={() => setShowAdminReauthDialog(true)}
                   className={
                     user.isSystemAdmin
                       ? 'border-zinc-600 text-zinc-300 hover:bg-zinc-800'
@@ -744,7 +1260,7 @@ function AdminUserProfileContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleToggleActive}
+                  onClick={() => setShowActiveReauthDialog(true)}
                   className={
                     user.isActive
                       ? 'border-red-500/50 text-red-400 hover:bg-red-500/10'
@@ -768,6 +1284,62 @@ function AdminUserProfileContent() {
           </Card>
         )}
       </div>
+
+      {/* Remove Member Confirmation Dialog */}
+      <AlertDialog
+        open={!!removingMembership}
+        onOpenChange={(open) => !open && setRemovingMembership(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove from Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {user.name} from{' '}
+              <span className="font-medium text-zinc-300">{removingMembership?.project.name}</span>?
+              They will lose access to all project resources.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveMember}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              autoFocus
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reauth Dialogs */}
+      <ReauthDialog
+        open={showAdminReauthDialog}
+        onOpenChange={setShowAdminReauthDialog}
+        title={user.isSystemAdmin ? 'Confirm Remove Admin' : 'Confirm Make Admin'}
+        description={
+          user.isSystemAdmin
+            ? `Remove super admin privileges from ${user.name}?`
+            : `Grant super admin privileges to ${user.name}? They will have full access to manage all users and settings.`
+        }
+        actionLabel={user.isSystemAdmin ? 'Remove Admin' : 'Make Admin'}
+        actionVariant={user.isSystemAdmin ? 'destructive' : 'default'}
+        onConfirm={handleToggleAdmin}
+      />
+
+      <ReauthDialog
+        open={showActiveReauthDialog}
+        onOpenChange={setShowActiveReauthDialog}
+        title={user.isActive ? 'Confirm Disable User' : 'Confirm Enable User'}
+        description={
+          user.isActive
+            ? `Disable ${user.name}? They will be blocked from signing in.`
+            : `Enable ${user.name}? They will be able to sign in again.`
+        }
+        actionLabel={user.isActive ? 'Disable User' : 'Enable User'}
+        actionVariant={user.isActive ? 'destructive' : 'default'}
+        onConfirm={handleToggleActive}
+      />
     </div>
   )
 }
