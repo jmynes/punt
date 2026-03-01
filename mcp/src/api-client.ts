@@ -480,6 +480,7 @@ export async function getMe() {
 
 export interface UserData {
   id: string
+  username: string
   name: string
   email: string | null
   isSystemAdmin: boolean
