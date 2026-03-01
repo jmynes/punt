@@ -98,15 +98,17 @@ export function Sidebar() {
                 <div className="space-y-2">
                   <p className="text-sm text-zinc-300">
                     Type{' '}
-                    <span className="font-mono font-bold text-red-400">{projectToDelete?.key}</span>{' '}
+                    <span className="font-mono font-bold text-red-400">
+                      {projectToDelete?.name}
+                    </span>{' '}
                     to confirm:
                   </p>
                   <Input
                     type="text"
                     value={deleteConfirmText}
                     onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    placeholder={`Type ${projectToDelete?.key} to confirm`}
-                    className="bg-zinc-900 border-zinc-700 text-zinc-100 font-mono"
+                    placeholder={`Type ${projectToDelete?.name} to confirm`}
+                    className="bg-zinc-900 border-zinc-700 text-zinc-100"
                     autoComplete="off"
                     disabled={deleteProject.isPending}
                   />
@@ -123,7 +125,7 @@ export function Sidebar() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteProject}
-              disabled={deleteProject.isPending || deleteConfirmText !== projectToDelete?.key}
+              disabled={deleteProject.isPending || deleteConfirmText !== projectToDelete?.name}
               className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {deleteProject.isPending ? (

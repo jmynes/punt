@@ -473,15 +473,15 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
                 </p>
                 <div className="space-y-2">
                   <p className="text-sm">
-                    To confirm, type <span className="font-mono text-red-400">{project.key}</span>{' '}
+                    To confirm, type <span className="font-mono text-red-400">{project.name}</span>{' '}
                     below:
                   </p>
                   <Input
                     type="text"
                     value={deleteConfirmText}
                     onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    placeholder={`Type ${project.key} to confirm`}
-                    className="bg-zinc-900 border-zinc-700 text-zinc-100 font-mono"
+                    placeholder={`Type ${project.name} to confirm`}
+                    className="bg-zinc-900 border-zinc-700 text-zinc-100"
                     autoComplete="off"
                     disabled={deleteProject.isPending}
                   />
@@ -498,7 +498,7 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleteProject.isPending || deleteConfirmText !== project.key}
+              disabled={deleteProject.isPending || deleteConfirmText !== project.name}
               className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {deleteProject.isPending ? (
