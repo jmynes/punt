@@ -727,7 +727,7 @@ export function SidebarContent({
                                 variant="ghost"
                                 size="sm"
                                 className={cn(
-                                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+                                  'w-full min-w-0 justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
                                   (isActive || isOnProjectPage) && 'bg-zinc-800/50 text-zinc-100',
                                 )}
                               >
