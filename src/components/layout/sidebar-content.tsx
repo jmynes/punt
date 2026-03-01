@@ -195,11 +195,6 @@ export function SidebarContent({
   const [editMode, setEditMode] = useState(false)
   const { sidebarExpandedSections, toggleSidebarSection, setSidebarSectionExpanded } =
     useSettingsStore()
-  const profileExpanded = sidebarExpandedSections.profile ?? false
-  const toggleProfileExpanded = useCallback(
-    () => toggleSidebarSection('profile'),
-    [toggleSidebarSection],
-  )
   const preferencesExpanded = sidebarExpandedSections.preferences ?? false
   const togglePreferencesExpanded = useCallback(
     () => toggleSidebarSection('preferences'),
@@ -324,15 +319,15 @@ export function SidebarContent({
             </Link>
           )
         })}
-        {/* Profile with collapsible tabs */}
+        {/* Preferences with profile + settings tabs */}
         <div className="pl-[9px]">
           <div className="flex items-center">
             <button
               type="button"
               className="h-9 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
-              onClick={toggleProfileExpanded}
+              onClick={togglePreferencesExpanded}
             >
-              {profileExpanded ? (
+              {preferencesExpanded ? (
                 <ChevronDown className="h-3 w-3" />
               ) : (
                 <ChevronRight className="h-3 w-3" />
@@ -347,15 +342,16 @@ export function SidebarContent({
                 variant="ghost"
                 className={cn(
                   'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 pl-1',
-                  pathname.startsWith('/users/') && 'bg-zinc-800/50 text-zinc-100',
+                  (pathname.startsWith('/users/') || pathname.startsWith('/preferences')) &&
+                    'bg-zinc-800/50 text-zinc-100',
                 )}
               >
-                <User className="h-4 w-4" />
-                Profile
+                <SlidersHorizontal className="h-4 w-4" />
+                Preferences
               </Button>
             </Link>
           </div>
-          <CollapsibleSection expanded={profileExpanded}>
+          <CollapsibleSection expanded={preferencesExpanded}>
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
               <Link href={`/users/${currentUser.username}?tab=profile`} onClick={handleLinkClick}>
                 <Button
@@ -420,38 +416,6 @@ export function SidebarContent({
                   Claude Chat
                 </Button>
               </Link>
-            </div>
-          </CollapsibleSection>
-        </div>
-        {/* Preferences with collapsible tabs */}
-        <div className="pl-[9px]">
-          <div className="flex items-center">
-            <button
-              type="button"
-              className="h-9 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
-              onClick={togglePreferencesExpanded}
-            >
-              {preferencesExpanded ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-            </button>
-            <Link href="/preferences" onClick={handleLinkClick} className="flex-1 min-w-0">
-              <Button
-                variant="ghost"
-                className={cn(
-                  'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 pl-1',
-                  pathname.startsWith('/preferences') && 'bg-zinc-800/50 text-zinc-100',
-                )}
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                Preferences
-              </Button>
-            </Link>
-          </div>
-          <CollapsibleSection expanded={preferencesExpanded}>
-            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
               <Link href="/preferences?tab=general" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
