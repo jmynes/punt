@@ -29,7 +29,6 @@ import {
   useColumnsByProject,
   useTicketsByProject,
 } from '@/hooks/queries/use-tickets'
-import { useClickToDeselect } from '@/hooks/use-click-to-deselect'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
@@ -300,9 +299,6 @@ export default function BacklogPage() {
     setQueryText,
     setQueryMode,
   } = useBacklogStore()
-
-  // Click-to-deselect on empty space (covers page header and areas outside BacklogTable)
-  const handleDeselect = useClickToDeselect()
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
   useTabCycleShortcut({ tabs: getProjectViewTabs(projectKey) })
@@ -934,7 +930,7 @@ export default function BacklogPage() {
   const hasActiveSprints = activeSprints.length > 0 || planningSprints.length > 0
 
   return (
-    <div className="flex h-full flex-col" onClick={handleDeselect}>
+    <div className="flex h-full flex-col">
       {/* Page header */}
       <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
         <div className="flex items-center gap-3">
