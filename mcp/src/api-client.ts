@@ -648,3 +648,141 @@ export async function searchTickets(projectKey: string, query: string) {
 export async function getRepositoryConfig(projectKey: string) {
   return apiRequest<RepositoryConfigData>('GET', `/api/projects/${projectKey}/repository`)
 }
+
+// ============================================================================
+// Attachments API
+// ============================================================================
+
+export interface AttachmentData {
+  id: string
+  filename: string
+  mimeType: string
+  size: number
+  url: string
+  uploaderId: string | null
+  createdAt: string
+}
+
+export async function listAttachments(projectKey: string, ticketId: string) {
+  return apiRequest<AttachmentData[]>(
+    'GET',
+    `/api/projects/${projectKey}/tickets/${ticketId}/attachments`,
+  )
+}
+
+export async function deleteAttachment(projectKey: string, ticketId: string, attachmentId: string) {
+  return apiRequest<{ success: boolean }>(
+    'DELETE',
+    `/api/projects/${projectKey}/tickets/${ticketId}/attachments/${attachmentId}`,
+  )
+}
+
+/**
+ * Upload a file via multipart form data and link it to a ticket.
+ * This is a two-step process:
+ * 1. Upload the file to /api/upload (returns file metadata)
+ * 2. Link the uploaded file to the ticket via the attachments API
+ */
+export async function uploadAndAttachFile(
+  projectKey: string,
+  ticketId: string,
+  filename: string,
+  contentType: string,
+  fileBuffer: Buffer,
+): Promise<ApiResponse<AttachmentData[]>> {
+  const apiKey = resolveApiKey()
+  if (!apiKey) {
+    const credPath = getCredentialsFilePath()
+    return {
+      error:
+        'MCP credentials not configured. Either:\n' +
+        `1. Create credentials file at ${credPath}\n` +
+        '2. Set PUNT_API_KEY and PUNT_API_URL environment variables\n' +
+        'See: https://github.com/your-org/punt#mcp-server for setup instructions',
+    }
+  }
+
+  const baseUrl = resolveApiUrl()
+
+  try {
+    // Step 1: Upload the file via multipart form data
+    // Convert Buffer to Uint8Array<ArrayBuffer> for Blob compatibility in strict TypeScript
+    const uint8 = new Uint8Array(fileBuffer) as Uint8Array<ArrayBuffer>
+    const blob = new Blob([uint8], { type: contentType })
+    const formData = new FormData()
+    formData.append('files', blob, filename)
+
+    const uploadResponse = await fetch(`${baseUrl}/api/upload`, {
+      method: 'POST',
+      headers: {
+        'X-MCP-API-Key': apiKey,
+      },
+      body: formData,
+    })
+
+    if (!uploadResponse.ok) {
+      const text = await uploadResponse.text()
+      let errorMessage: string
+      try {
+        const errorJson = JSON.parse(text)
+        errorMessage = errorJson.error || errorJson.message || text
+      } catch {
+        errorMessage = text || `HTTP ${uploadResponse.status}`
+      }
+      return { error: errorMessage }
+    }
+
+    const uploadResult = (await uploadResponse.json()) as {
+      success: boolean
+      files: Array<{
+        id: string
+        filename: string
+        originalName: string
+        mimetype: string
+        size: number
+        url: string
+        category: string
+      }>
+    }
+
+    if (!uploadResult.success || !uploadResult.files?.length) {
+      return { error: 'Upload succeeded but returned no files' }
+    }
+
+    // Step 2: Link the uploaded file to the ticket
+    const attachments = uploadResult.files.map((f) => ({
+      filename: f.filename,
+      originalName: f.originalName,
+      mimeType: f.mimetype,
+      size: f.size,
+      url: f.url,
+    }))
+
+    return apiRequest<AttachmentData[]>(
+      'POST',
+      `/api/projects/${projectKey}/tickets/${ticketId}/attachments`,
+      { attachments },
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return { error: `File upload failed: ${message}` }
+  }
+}
+
+// ============================================================================
+// Upload Config API
+// ============================================================================
+
+export interface UploadConfigData {
+  allowedTypes: string[]
+  maxSizes: {
+    image: number
+    video: number
+    document: number
+  }
+  maxAttachmentsPerTicket: number
+}
+
+export async function getUploadConfig() {
+  return apiRequest<UploadConfigData>('GET', '/api/upload')
+}

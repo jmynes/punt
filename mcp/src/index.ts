@@ -4,6 +4,7 @@ import './env.js'
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { registerAttachmentTools } from './tools/attachments.js'
 import { registerColumnTools } from './tools/columns.js'
 import { registerLabelTools } from './tools/labels.js'
 import { registerMemberTools } from './tools/members.js'
@@ -25,6 +26,7 @@ registerSprintTools(server)
 registerMemberTools(server)
 registerLabelTools(server)
 registerColumnTools(server)
+registerAttachmentTools(server)
 registerRepositoryTools(server)
 registerWhoamiTools(server)
 
