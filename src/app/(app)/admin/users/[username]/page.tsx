@@ -21,6 +21,7 @@ import {
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -486,6 +487,10 @@ function AdminUserProfileContent() {
   // Remove member confirmation dialog state
   const [removingMembership, setRemovingMembership] = useState<ProjectMembership | null>(null)
 
+  // Reauth dialog state
+  const [showAdminReauthDialog, setShowAdminReauthDialog] = useState(false)
+  const [showActiveReauthDialog, setShowActiveReauthDialog] = useState(false)
+
   // Navigation context from query params
   const navContext = useMemo(() => {
     const from = searchParams.get('from')
@@ -731,7 +736,11 @@ function AdminUserProfileContent() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [canUndo, canRedo, handleUndo, handleRedo])
 
-  const handleToggleAdmin = async () => {
+  const handleToggleAdmin = async (
+    confirmPassword: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
     if (!user) return
 
     const newValue = !user.isSystemAdmin
@@ -749,7 +758,12 @@ function AdminUserProfileContent() {
           'Content-Type': 'application/json',
           'X-Tab-Id': getTabId(),
         },
-        body: JSON.stringify({ isSystemAdmin: newValue }),
+        body: JSON.stringify({
+          isSystemAdmin: newValue,
+          confirmPassword,
+          totpCode,
+          isRecoveryCode,
+        }),
       })
 
       if (!res.ok) {
@@ -772,11 +786,17 @@ function AdminUserProfileContent() {
         newValue ? `${user.name} is now an admin` : `${user.name} is no longer an admin`,
       )
     } catch (err) {
-      showToast.error(err instanceof Error ? err.message : 'Failed to update user')
+      // Rollback on error
+      queryClient.setQueryData(['admin', 'user', username], previousUser)
+      throw err
     }
   }
 
-  const handleToggleActive = async () => {
+  const handleToggleActive = async (
+    confirmPassword: string,
+    totpCode?: string,
+    isRecoveryCode?: boolean,
+  ) => {
     if (!user) return
 
     const newValue = !user.isActive
@@ -794,7 +814,7 @@ function AdminUserProfileContent() {
           'Content-Type': 'application/json',
           'X-Tab-Id': getTabId(),
         },
-        body: JSON.stringify({ isActive: newValue }),
+        body: JSON.stringify({ isActive: newValue, confirmPassword, totpCode, isRecoveryCode }),
       })
 
       if (!res.ok) {
@@ -817,7 +837,9 @@ function AdminUserProfileContent() {
         newValue ? `${user.name} has been enabled` : `${user.name} has been disabled`,
       )
     } catch (err) {
-      showToast.error(err instanceof Error ? err.message : 'Failed to update user')
+      // Rollback on error
+      queryClient.setQueryData(['admin', 'user', username], previousUser)
+      throw err
     }
   }
 
@@ -1202,7 +1224,7 @@ function AdminUserProfileContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleToggleAdmin}
+                  onClick={() => setShowAdminReauthDialog(true)}
                   className={
                     user.isSystemAdmin
                       ? 'border-zinc-600 text-zinc-300 hover:bg-zinc-800'
@@ -1235,7 +1257,7 @@ function AdminUserProfileContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleToggleActive}
+                  onClick={() => setShowActiveReauthDialog(true)}
                   className={
                     user.isActive
                       ? 'border-red-500/50 text-red-400 hover:bg-red-500/10'
@@ -1286,6 +1308,35 @@ function AdminUserProfileContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reauth Dialogs */}
+      <ReauthDialog
+        open={showAdminReauthDialog}
+        onOpenChange={setShowAdminReauthDialog}
+        title={user.isSystemAdmin ? 'Confirm Remove Admin' : 'Confirm Make Admin'}
+        description={
+          user.isSystemAdmin
+            ? `Remove super admin privileges from ${user.name}?`
+            : `Grant super admin privileges to ${user.name}? They will have full access to manage all users and settings.`
+        }
+        actionLabel={user.isSystemAdmin ? 'Remove Admin' : 'Make Admin'}
+        actionVariant={user.isSystemAdmin ? 'destructive' : 'default'}
+        onConfirm={handleToggleAdmin}
+      />
+
+      <ReauthDialog
+        open={showActiveReauthDialog}
+        onOpenChange={setShowActiveReauthDialog}
+        title={user.isActive ? 'Confirm Disable User' : 'Confirm Enable User'}
+        description={
+          user.isActive
+            ? `Disable ${user.name}? They will be blocked from signing in.`
+            : `Enable ${user.name}? They will be able to sign in again.`
+        }
+        actionLabel={user.isActive ? 'Disable User' : 'Enable User'}
+        actionVariant={user.isActive ? 'destructive' : 'default'}
+        onConfirm={handleToggleActive}
+      />
     </div>
   )
 }
