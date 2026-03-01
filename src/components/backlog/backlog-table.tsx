@@ -647,16 +647,7 @@ export function BacklogTable({
   const isFiltered = filteredTickets.length !== tickets.length
 
   return (
-    <div
-      className="flex h-full flex-col"
-      onClick={(e) => {
-        // Clear selection when clicking on empty space (not on a ticket row)
-        const target = e.target as HTMLElement
-        if (target.closest('[data-ticket-row]') === null && selectedTicketIds.size > 0) {
-          clearSelection()
-        }
-      }}
-    >
+    <div className="flex h-full flex-col">
       {/* Toolbar */}
       <div className="flex flex-col border-b border-zinc-800">
         <div className="flex items-center justify-between gap-4 px-4 py-3">
