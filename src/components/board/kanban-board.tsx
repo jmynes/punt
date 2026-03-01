@@ -411,16 +411,6 @@ export function KanbanBoard({
     ],
   )
 
-  const handleBoardClick = useCallback((e: React.MouseEvent) => {
-    const target = e.target as HTMLElement
-    if (
-      target.closest('[data-ticket-card]') === null &&
-      useSelectionStore.getState().selectedTicketIds.size > 0
-    ) {
-      useSelectionStore.getState().clearSelection()
-    }
-  }, [])
-
   // Show loading skeleton until Zustand hydrates from localStorage
   if (!_hasHydrated) {
     return (
@@ -468,7 +458,7 @@ export function KanbanBoard({
           }}
         />
       ) : (
-        <div className="flex gap-4 h-full min-h-0 overflow-x-auto pb-4" onClick={handleBoardClick}>
+        <div className="flex gap-4 h-full min-h-0 overflow-x-auto pb-4">
           {filteredColumns.map((column) => (
             <KanbanColumn
               key={column.id}
