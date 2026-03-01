@@ -14,7 +14,6 @@ import {
   listSprints,
   listTicketLinks,
   listTickets,
-  listUsers,
   searchTickets,
   type TicketData,
   type TicketLinkData,
@@ -22,6 +21,7 @@ import {
   updateComment,
   updateTicket,
 } from '../api-client.js'
+import { resolveUser } from '../resolve-user.js'
 import {
   errorResponse,
   escapeMarkdown,
@@ -417,8 +417,11 @@ export function registerTicketTools(server: McpServer) {
         .describe('Ticket priority'),
       description: z.string().optional().describe('Ticket description'),
       column: z.string().optional().describe('Column name (defaults to first column)'),
-      assignee: z.string().optional().describe('Assignee name'),
-      reporter: z.string().optional().describe('Reporter name (defaults to authenticated user)'),
+      assignee: z.string().optional().describe('Assignee (name, username, or email)'),
+      reporter: z
+        .string()
+        .optional()
+        .describe('Reporter (name, username, or email; defaults to authenticated user)'),
       storyPoints: z.number().min(0).optional().describe('Story points'),
       estimate: z.string().optional().describe('Time estimate (e.g., "2h", "1d")'),
       startDate: z.string().optional().describe('Start date (ISO format: YYYY-MM-DD)'),
@@ -500,33 +503,17 @@ export function registerTicketTools(server: McpServer) {
       // Get assignee ID if specified
       let assigneeId: string | undefined
       if (assignee) {
-        const usersResult = await listUsers()
-        if (usersResult.error) {
-          return errorResponse(usersResult.error)
-        }
-        const user = usersResult.data?.find((u) =>
-          u.name.toLowerCase().includes(assignee.toLowerCase()),
-        )
-        if (!user) {
-          return errorResponse(`User not found: ${assignee}`)
-        }
-        assigneeId = user.id
+        const result = await resolveUser(assignee)
+        if (result.error) return result.error
+        assigneeId = result.user.id
       }
 
       // Get reporter ID if specified
       let reporterId: string | undefined
       if (reporter) {
-        const usersResult = await listUsers()
-        if (usersResult.error) {
-          return errorResponse(usersResult.error)
-        }
-        const user = usersResult.data?.find((u) =>
-          u.name.toLowerCase().includes(reporter.toLowerCase()),
-        )
-        if (!user) {
-          return errorResponse(`User not found: ${reporter}`)
-        }
-        reporterId = user.id
+        const result = await resolveUser(reporter)
+        if (result.error) return result.error
+        reporterId = result.user.id
       }
 
       // Get sprint ID if specified
@@ -643,7 +630,11 @@ export function registerTicketTools(server: McpServer) {
         .optional()
         .describe('New priority'),
       type: z.enum(['epic', 'story', 'task', 'bug', 'subtask']).optional().describe('New type'),
-      assignee: z.string().nullable().optional().describe('New assignee name (null to unassign)'),
+      assignee: z
+        .string()
+        .nullable()
+        .optional()
+        .describe('New assignee (name, username, or email; null to unassign)'),
       storyPoints: z.number().min(0).nullable().optional().describe('New story points'),
       estimate: z.string().nullable().optional().describe('Time estimate'),
       startDate: z.string().nullable().optional().describe('Start date (null to clear)'),
@@ -752,17 +743,9 @@ export function registerTicketTools(server: McpServer) {
         if (assignee === null) {
           updateData.assigneeId = null
         } else {
-          const usersResult = await listUsers()
-          if (usersResult.error) {
-            return errorResponse(usersResult.error)
-          }
-          const user = usersResult.data?.find((u) =>
-            u.name.toLowerCase().includes(assignee.toLowerCase()),
-          )
-          if (!user) {
-            return errorResponse(`User not found: ${assignee}`)
-          }
-          updateData.assigneeId = user.id
+          const result = await resolveUser(assignee)
+          if (result.error) return result.error
+          updateData.assigneeId = result.user.id
         }
       }
 

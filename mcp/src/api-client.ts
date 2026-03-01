@@ -464,6 +464,7 @@ export async function deleteLabel(projectKey: string, labelId: string) {
 
 export interface UserData {
   id: string
+  username: string
   name: string
   email: string | null
   isSystemAdmin: boolean

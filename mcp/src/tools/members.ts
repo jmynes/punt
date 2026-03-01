@@ -6,6 +6,7 @@ import {
   updateMemberRole as apiUpdateMemberRole,
 } from '../api-client.js'
 import { db } from '../db.js'
+import { resolveUser } from '../resolve-user.js'
 import { errorResponse, escapeMarkdown, safeTableCell, textResponse } from '../utils.js'
 
 export function registerMemberTools(server: McpServer) {
@@ -70,7 +71,7 @@ export function registerMemberTools(server: McpServer) {
     'Add a user to a project',
     {
       projectKey: z.string().describe('Project key'),
-      userName: z.string().describe('User name to add'),
+      userName: z.string().describe('User identifier (name, username, or email)'),
       role: z.string().default('Member').describe('Role name (e.g., Owner, Admin, Member)'),
     },
     async ({ projectKey, userName, role }) => {
@@ -90,14 +91,9 @@ export function registerMemberTools(server: McpServer) {
       }
 
       // Find user
-      const user = await db.user.findFirst({
-        where: { name: { contains: userName } },
-        select: { id: true, name: true },
-      })
-
-      if (!user) {
-        return errorResponse(`User not found: ${userName}`)
-      }
+      const resolved = await resolveUser(userName)
+      if (resolved.error) return resolved.error
+      const user = resolved.user
 
       // Find role
       const foundRole = project.roles.find((r) => r.name.toLowerCase() === role.toLowerCase())
@@ -127,7 +123,7 @@ export function registerMemberTools(server: McpServer) {
     'Remove a user from a project',
     {
       projectKey: z.string().describe('Project key'),
-      userName: z.string().describe('User name to remove'),
+      userName: z.string().describe('User identifier (name, username, or email)'),
     },
     async ({ projectKey, userName }) => {
       const upperKey = projectKey.toUpperCase()
@@ -142,14 +138,9 @@ export function registerMemberTools(server: McpServer) {
       }
 
       // Find user
-      const user = await db.user.findFirst({
-        where: { name: { contains: userName } },
-        select: { id: true, name: true },
-      })
-
-      if (!user) {
-        return errorResponse(`User not found: ${userName}`)
-      }
+      const resolved = await resolveUser(userName)
+      if (resolved.error) return resolved.error
+      const user = resolved.user
 
       // Find membership
       const member = await db.projectMember.findUnique({
@@ -179,7 +170,7 @@ export function registerMemberTools(server: McpServer) {
     "Change a project member's role",
     {
       projectKey: z.string().describe('Project key'),
-      userName: z.string().describe('User name'),
+      userName: z.string().describe('User identifier (name, username, or email)'),
       role: z.string().describe('New role name'),
     },
     async ({ projectKey, userName, role }) => {
@@ -200,14 +191,9 @@ export function registerMemberTools(server: McpServer) {
       }
 
       // Find user
-      const user = await db.user.findFirst({
-        where: { name: { contains: userName } },
-        select: { id: true, name: true },
-      })
-
-      if (!user) {
-        return errorResponse(`User not found: ${userName}`)
-      }
+      const resolved = await resolveUser(userName)
+      if (resolved.error) return resolved.error
+      const user = resolved.user
 
       // Find membership
       const member = await db.projectMember.findUnique({
@@ -255,6 +241,7 @@ export function registerMemberTools(server: McpServer) {
         where: { isActive: true },
         select: {
           id: true,
+          username: true,
           name: true,
           email: true,
           isSystemAdmin: true,
@@ -267,14 +254,15 @@ export function registerMemberTools(server: McpServer) {
       const lines: string[] = []
       lines.push('# Users')
       lines.push('')
-      lines.push('| Name | Email | Admin | Projects |')
-      lines.push('|------|-------|-------|----------|')
+      lines.push('| Name | Username | Email | Admin | Projects |')
+      lines.push('|------|----------|-------|-------|----------|')
       for (const u of users) {
         // Escape user-controlled fields for safe table rendering
         const name = safeTableCell(u.name, 30)
+        const username = safeTableCell(u.username, 20)
         const email = u.email ? safeTableCell(u.email, 40) : '-'
         lines.push(
-          `| ${name} | ${email} | ${u.isSystemAdmin ? 'Yes' : '-'} | ${u._count.projects} |`,
+          `| ${name} | ${username} | ${email} | ${u.isSystemAdmin ? 'Yes' : '-'} | ${u._count.projects} |`,
         )
       }
       lines.push('')
