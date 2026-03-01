@@ -1269,9 +1269,19 @@ function UserProfileContent() {
         {/* User Info */}
         <Card className="border-zinc-800 bg-zinc-900/50">
           <CardHeader className="pb-4">
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-amber-500" />
-              <CardTitle className="text-zinc-100">User Information</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-amber-500" />
+                <CardTitle className="text-zinc-100">User Information</CardTitle>
+              </div>
+              {user.isSelf && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/preferences?tab=profile">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Edit Profile
+                  </Link>
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
