@@ -84,7 +84,7 @@ export function ChatMessageComponent({ message, user }: ChatMessageProps) {
       {/* Message content */}
       <div
         className={cn(
-          'flex max-w-[80%] flex-col gap-2 rounded-lg px-4 py-2',
+          'flex max-w-[80%] min-w-0 flex-col gap-2 rounded-lg px-4 py-2 break-words',
           isUser ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-100',
         )}
       >
