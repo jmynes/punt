@@ -2,12 +2,13 @@
 
 import { Loader2, Target } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BacklogFilters } from '@/components/backlog'
 import { SprintBacklogView, SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
+import { useClickToDeselect } from '@/hooks/use-click-to-deselect'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getProjectViewTabs, useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
@@ -32,6 +33,9 @@ export default function SprintPlanningPage() {
   const { getColumns, _hasHydrated } = useBoardStore()
   const { setActiveProjectId, activeTicketId, setActiveTicketId } = useUIStore()
   const { clearSelection } = useSelectionStore()
+
+  // Click-to-deselect on empty space (covers page header, filter bar, and content)
+  const handleDeselect = useClickToDeselect()
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
   useTabCycleShortcut({ tabs: getProjectViewTabs(projectKey) })
@@ -217,20 +221,6 @@ export default function SprintPlanningPage() {
     [activeTicketId, allTickets],
   )
 
-  // Clear selection when clicking on empty space (not on a ticket row)
-  const handleEmptySpaceClick = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (
-        target.closest('[data-ticket-row]') === null &&
-        useSelectionStore.getState().selectedTicketIds.size > 0
-      ) {
-        clearSelection()
-      }
-    },
-    [clearSelection],
-  )
-
   // Redirect to dashboard if project doesn't exist after loading
   useEffect(() => {
     if (!projectsLoading && !project) {
@@ -266,7 +256,7 @@ export default function SprintPlanningPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" onClick={handleDeselect}>
       {/* Page header */}
       <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:px-6">
         <div className="flex items-center gap-3">
@@ -295,7 +285,7 @@ export default function SprintPlanningPage() {
       </div>
 
       {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto min-h-0" onClick={handleEmptySpaceClick}>
+      <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-4 lg:p-6 space-y-4">
           {/* Active sprint header with progress */}
           <SprintHeader
