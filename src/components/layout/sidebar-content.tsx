@@ -94,6 +94,79 @@ function CollapsibleSection({
   )
 }
 
+// Project link with truncation-aware tooltip
+function TruncatedProjectLink({
+  project,
+  isActive,
+  isOnProjectPage,
+  isProjectSimulating,
+  editMode,
+  onSetActiveProjectId,
+  handleLinkClick,
+}: {
+  project: ProjectSummary
+  isActive: boolean
+  isOnProjectPage: boolean
+  isProjectSimulating: boolean
+  editMode: boolean
+  onSetActiveProjectId: (id: string) => void
+  handleLinkClick: () => void
+}) {
+  const nameRef = useRef<HTMLSpanElement>(null)
+  const [isTruncated, setIsTruncated] = useState(false)
+
+  useEffect(() => {
+    const el = nameRef.current
+    if (!el) return
+    const check = () => setIsTruncated(el.scrollWidth > el.clientWidth)
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <Tooltip open={isTruncated ? undefined : false}>
+      <TooltipTrigger asChild>
+        <Link
+          href={`/projects/${project.key}/board`}
+          onClick={() => {
+            onSetActiveProjectId(project.id)
+            handleLinkClick()
+          }}
+          className={cn('flex-1 min-w-0', editMode && 'mr-14')}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'w-full min-w-0 justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+              (isActive || isOnProjectPage) && 'bg-zinc-800/50 text-zinc-100',
+            )}
+          >
+            <div
+              className="h-3 w-3 rounded-sm shrink-0"
+              style={{ backgroundColor: project.color }}
+            />
+            <span ref={nameRef} className="truncate">
+              {project.name}
+            </span>
+            {!editMode && (
+              <span className="ml-auto flex items-center gap-1 shrink-0">
+                {isProjectSimulating && <Eye className="h-3 w-3 text-violet-400" />}
+                <span className="text-xs text-zinc-600">{project.key}</span>
+              </span>
+            )}
+          </Button>
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8}>
+        {project.name}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 interface SidebarContentProps {
   currentUser: UserSummary | null
   projects: ProjectSummary[]
@@ -713,44 +786,15 @@ export function SidebarContent({
                             <ChevronRight className="h-3.5 w-3.5" />
                           )}
                         </button>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Link
-                              href={`/projects/${project.key}/board`}
-                              onClick={() => {
-                                onSetActiveProjectId(project.id)
-                                handleLinkClick()
-                              }}
-                              className="flex-1 min-w-0"
-                            >
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className={cn(
-                                  'w-full min-w-0 justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
-                                  (isActive || isOnProjectPage) && 'bg-zinc-800/50 text-zinc-100',
-                                )}
-                              >
-                                <div
-                                  className="h-3 w-3 rounded-sm shrink-0"
-                                  style={{ backgroundColor: project.color }}
-                                />
-                                <span className="truncate">{project.name}</span>
-                                {!editMode && (
-                                  <span className="ml-auto flex items-center gap-1 shrink-0">
-                                    {isProjectSimulating && (
-                                      <Eye className="h-3 w-3 text-violet-400" />
-                                    )}
-                                    <span className="text-xs text-zinc-600">{project.key}</span>
-                                  </span>
-                                )}
-                              </Button>
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent side="right" sideOffset={8}>
-                            {project.name}
-                          </TooltipContent>
-                        </Tooltip>
+                        <TruncatedProjectLink
+                          project={project}
+                          isActive={isActive}
+                          isOnProjectPage={isOnProjectPage}
+                          isProjectSimulating={isProjectSimulating}
+                          editMode={editMode}
+                          onSetActiveProjectId={onSetActiveProjectId}
+                          handleLinkClick={handleLinkClick}
+                        />
                         {editMode && (
                           <div className="absolute right-0 flex items-center gap-0.5">
                             <Button
