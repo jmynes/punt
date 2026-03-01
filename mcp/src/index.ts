@@ -11,6 +11,7 @@ import { registerProjectTools } from './tools/projects.js'
 import { registerRepositoryTools } from './tools/repository.js'
 import { registerSprintTools } from './tools/sprints.js'
 import { registerTicketTools } from './tools/tickets.js'
+import { registerWhoamiTools } from './tools/whoami.js'
 
 const server = new McpServer({
   name: 'punt',
@@ -25,6 +26,7 @@ registerMemberTools(server)
 registerLabelTools(server)
 registerColumnTools(server)
 registerRepositoryTools(server)
+registerWhoamiTools(server)
 
 // Connect via stdio
 const transport = new StdioServerTransport()
