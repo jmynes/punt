@@ -151,6 +151,20 @@ export async function POST(
       }
     }
 
+    // Validate parentId: prevent subtasks from having subtasks (max 1 level deep)
+    if (ticketData.parentId) {
+      const parentTicket = await db.ticket.findFirst({
+        where: { id: ticketData.parentId, projectId },
+        select: { type: true },
+      })
+      if (!parentTicket) {
+        return badRequestError('Parent ticket not found or does not belong to project')
+      }
+      if (parentTicket.type === 'subtask') {
+        return badRequestError('Subtasks cannot have subtasks')
+      }
+    }
+
     // Validate assigneeId is a project member (if provided)
     if (ticketData.assigneeId) {
       const assigneeMembership = await db.projectMember.findUnique({
