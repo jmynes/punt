@@ -3,6 +3,7 @@
 import {
   AlertTriangle,
   Archive,
+  Check,
   Download,
   Eye,
   EyeOff,
@@ -14,15 +15,12 @@ import {
   Lock,
   MessageSquare,
   Paperclip,
-  Settings2,
   Trash2,
   Upload,
 } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { Accordion } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -263,254 +261,242 @@ export function DatabaseSettings() {
             )}
           </CardTitle>
           <CardDescription className="text-zinc-400">
-            Download a complete backup of your database. All data is included by default.
+            Download a complete backup of your database.
+            {includeFiles
+              ? ' Export will be a ZIP file containing data and files.'
+              : ' Export will be a ZIP file containing data and profile pictures.'}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Advanced Options Accordion */}
-          <Accordion
-            title={
-              hasCustomOptions
-                ? `Advanced Options (${[
-                    !includeAttachments && 'no attachments',
-                    !includeComments && 'no comments',
-                    !includeActivities && 'no activity',
-                    excludeProjectIds.size > 0 &&
-                      `${excludeProjectIds.size} project${excludeProjectIds.size !== 1 ? 's' : ''} excluded`,
-                  ]
-                    .filter(Boolean)
-                    .join(', ')})`
-                : 'Advanced Options'
-            }
-            className="border-zinc-700/50"
-          >
-            {/* Data toggles */}
+        <CardContent className="space-y-5">
+          {/* Data Toggles */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                Include in Export
+              </h4>
+              <button
+                type="button"
+                onClick={() => {
+                  const allSelected = includeAttachments && includeComments && includeActivities
+                  setIncludeAttachments(!allSelected)
+                  setIncludeComments(!allSelected)
+                  setIncludeActivities(!allSelected)
+                }}
+                className="text-xs text-amber-500 hover:text-amber-400"
+              >
+                {includeAttachments && includeComments && includeActivities
+                  ? 'Deselect All'
+                  : 'Select All'}
+              </button>
+            </div>
+            <div className="grid gap-2">
+              {[
+                {
+                  id: 'attachments',
+                  icon: Paperclip,
+                  label: 'Ticket attachments',
+                  checked: includeAttachments,
+                  onChange: setIncludeAttachments,
+                  size: estimate?.totals.attachmentBytes,
+                },
+                {
+                  id: 'comments',
+                  icon: MessageSquare,
+                  label: 'Comment history',
+                  checked: includeComments,
+                  onChange: setIncludeComments,
+                  size: estimate?.totals.commentBytes,
+                },
+                {
+                  id: 'activities',
+                  icon: History,
+                  label: 'Activity history',
+                  checked: includeActivities,
+                  onChange: setIncludeActivities,
+                  size: estimate?.totals.activityBytes,
+                },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => item.onChange(!item.checked)}
+                  className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                    item.checked
+                      ? 'border-amber-600/40 bg-amber-950/20'
+                      : 'border-zinc-700/50 bg-zinc-800/30 opacity-60'
+                  }`}
+                >
+                  <div
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                      item.checked
+                        ? 'border-amber-600 bg-amber-600'
+                        : 'border-zinc-600 bg-transparent'
+                    }`}
+                  >
+                    {item.checked && <Check className="h-3 w-3 text-white" />}
+                  </div>
+                  <item.icon className="h-4 w-4 shrink-0 text-zinc-400" />
+                  <span className="flex-1 text-sm text-zinc-200">{item.label}</span>
+                  {item.size != null && (
+                    <span className="text-xs tabular-nums text-zinc-500">
+                      {formatSize(item.size)}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Project Selection */}
+          {estimate && estimate.projects.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-zinc-300 flex items-center gap-2">
-                  <Settings2 className="h-4 w-4 text-zinc-500" />
-                  Include in Export
-                </Label>
+                <h4 className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                  Projects
+                </h4>
                 <button
                   type="button"
                   onClick={() => {
-                    const allSelected = includeAttachments && includeComments && includeActivities
-                    setIncludeAttachments(!allSelected)
-                    setIncludeComments(!allSelected)
-                    setIncludeActivities(!allSelected)
+                    if (excludeProjectIds.size === 0) {
+                      setExcludeProjectIds(new Set(estimate.projects.map((p) => p.id)))
+                    } else {
+                      setExcludeProjectIds(new Set())
+                    }
                   }}
                   className="text-xs text-amber-500 hover:text-amber-400"
                 >
-                  {includeAttachments && includeComments && includeActivities
-                    ? 'Deselect All'
-                    : 'Select All'}
+                  {excludeProjectIds.size === 0 ? 'Deselect All' : 'Select All'}
                 </button>
               </div>
-              <div className="space-y-2.5">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="includeAttachments"
-                    checked={includeAttachments}
-                    onCheckedChange={(checked) => setIncludeAttachments(checked === true)}
-                    className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                  />
-                  <Label
-                    htmlFor="includeAttachments"
-                    className="text-zinc-300 cursor-pointer flex items-center gap-2"
-                  >
-                    <Paperclip className="h-4 w-4" />
-                    Ticket attachments
-                    {estimate && (
-                      <span className="text-xs text-zinc-500">
-                        ({formatSize(estimate.totals.attachmentBytes)})
-                      </span>
-                    )}
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="includeComments"
-                    checked={includeComments}
-                    onCheckedChange={(checked) => setIncludeComments(checked === true)}
-                    className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                  />
-                  <Label
-                    htmlFor="includeComments"
-                    className="text-zinc-300 cursor-pointer flex items-center gap-2"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    Comment history
-                    {estimate && (
-                      <span className="text-xs text-zinc-500">
-                        ({formatSize(estimate.totals.commentBytes)})
-                      </span>
-                    )}
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="includeActivities"
-                    checked={includeActivities}
-                    onCheckedChange={(checked) => setIncludeActivities(checked === true)}
-                    className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                  />
-                  <Label
-                    htmlFor="includeActivities"
-                    className="text-zinc-300 cursor-pointer flex items-center gap-2"
-                  >
-                    <History className="h-4 w-4" />
-                    Activity history
-                    {estimate && (
-                      <span className="text-xs text-zinc-500">
-                        ({formatSize(estimate.totals.activityBytes)})
-                      </span>
-                    )}
-                  </Label>
-                </div>
-              </div>
-            </div>
+              <div className="grid gap-2 max-h-48 overflow-y-auto pr-1">
+                {estimate.projects.map((project) => {
+                  const isIncluded = !excludeProjectIds.has(project.id)
+                  const projectSize = calculateEstimatedSize(
+                    {
+                      ...estimate,
+                      projects: [project],
+                      global: { ...estimate.global, estimatedBytes: 0, avatarSizeBytes: 0 },
+                    },
+                    {
+                      includeAttachments,
+                      includeComments,
+                      includeActivities,
+                      excludeProjectIds: new Set(),
+                    },
+                  )
 
-            {/* Per-project toggles */}
-            {estimate && estimate.projects.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-zinc-300 flex items-center gap-2">
-                    <FolderClosed className="h-4 w-4 text-zinc-500" />
-                    Projects
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (excludeProjectIds.size === 0) {
-                        // Deselect all
-                        setExcludeProjectIds(new Set(estimate.projects.map((p) => p.id)))
-                      } else {
-                        // Select all
-                        setExcludeProjectIds(new Set())
-                      }
-                    }}
-                    className="text-xs text-amber-500 hover:text-amber-400"
-                  >
-                    {excludeProjectIds.size === 0 ? 'Deselect All' : 'Select All'}
-                  </button>
-                </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {estimate.projects.map((project) => {
-                    const isIncluded = !excludeProjectIds.has(project.id)
-                    const projectSize = calculateEstimatedSize(
-                      {
-                        ...estimate,
-                        projects: [project],
-                        global: { ...estimate.global, estimatedBytes: 0, avatarSizeBytes: 0 },
-                      },
-                      {
-                        includeAttachments,
-                        includeComments,
-                        includeActivities,
-                        excludeProjectIds: new Set(),
-                      },
-                    )
-
-                    return (
-                      <div key={project.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`project-${project.id}`}
-                          checked={isIncluded}
-                          onCheckedChange={() => toggleProjectExclusion(project.id)}
-                          className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                        />
-                        <Label
-                          htmlFor={`project-${project.id}`}
-                          className="text-zinc-300 cursor-pointer flex items-center gap-2 min-w-0"
-                        >
-                          <span
-                            className="h-3 w-3 rounded-sm shrink-0"
-                            style={{ backgroundColor: project.color }}
-                          />
-                          <span className="truncate">
-                            {project.key} - {project.name}
-                          </span>
-                          <span className="text-xs text-zinc-500 shrink-0">
-                            {project.ticketCount} ticket{project.ticketCount !== 1 ? 's' : ''}
-                            {projectSize > 0 && `, ${formatSize(projectSize)}`}
-                          </span>
-                        </Label>
+                  return (
+                    <button
+                      key={project.id}
+                      type="button"
+                      onClick={() => toggleProjectExclusion(project.id)}
+                      className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                        isIncluded
+                          ? 'border-amber-600/40 bg-amber-950/20'
+                          : 'border-zinc-700/50 bg-zinc-800/30 opacity-60'
+                      }`}
+                    >
+                      <div
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                          isIncluded
+                            ? 'border-amber-600 bg-amber-600'
+                            : 'border-zinc-600 bg-transparent'
+                        }`}
+                      >
+                        {isIncluded && <Check className="h-3 w-3 text-white" />}
                       </div>
-                    )
-                  })}
-                </div>
+                      <span
+                        className="h-3 w-3 rounded-sm shrink-0"
+                        style={{ backgroundColor: project.color }}
+                      />
+                      <span className="flex-1 truncate text-sm text-zinc-200">
+                        {project.key} &mdash; {project.name}
+                      </span>
+                      <span className="text-xs tabular-nums text-zinc-500 shrink-0">
+                        {project.ticketCount} ticket{project.ticketCount !== 1 ? 's' : ''}
+                        {projectSize > 0 && ` / ${formatSize(projectSize)}`}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
-            )}
-
-            <p className="text-xs text-amber-500 flex items-center gap-1">
-              <Archive className="h-3 w-3" />
-              Export will be a ZIP file containing data
-              {includeFiles ? ' and files' : ' and profile pictures'}
-            </p>
-          </Accordion>
-
-          {/* Password */}
-          <div className="space-y-2">
-            <Label htmlFor="exportPassword" className="text-zinc-300">
-              Encryption Password {totpRequiresPassword ? '(Required)' : '(Optional)'}
-            </Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-              <Input
-                id="exportPassword"
-                type="text"
-                value={exportPassword}
-                onChange={(e) => setExportPassword(e.target.value)}
-                placeholder={
-                  totpRequiresPassword
-                    ? 'Required to protect 2FA secrets'
-                    : 'Leave empty for unencrypted backup'
-                }
-                className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10 ${!showExportPassword ? 'password-mask' : ''}`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowExportPassword(!showExportPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-              >
-                {showExportPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            <PasswordStrengthIndicator password={exportPassword} />
-            <div className="space-y-1.5">
-              <Label htmlFor="confirmExportPassword" className="text-zinc-300">
-                Confirm Password
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                <Input
-                  id="confirmExportPassword"
-                  type="text"
-                  value={confirmExportPassword}
-                  onChange={(e) => setConfirmExportPassword(e.target.value)}
-                  placeholder="Re-enter encryption password"
-                  className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 ${!showExportPassword ? 'password-mask' : ''} ${
-                    confirmExportPassword && confirmExportPassword !== exportPassword
-                      ? 'border-red-500'
-                      : ''
-                  }`}
-                />
-              </div>
-              {confirmExportPassword && confirmExportPassword !== exportPassword && (
-                <p className="text-xs text-red-400">Passwords do not match.</p>
+              {allProjectsExcluded && (
+                <p className="text-xs text-red-400">
+                  At least one project must be selected for export.
+                </p>
               )}
             </div>
+          )}
+
+          {/* Encryption */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              Encryption {totpRequiresPassword ? '(Required)' : '(Optional)'}
+            </h4>
             {totpRequiresPassword && !exportPassword && (
               <div className="flex items-start gap-2 p-3 bg-amber-900/20 border border-amber-800/50 rounded-lg">
                 <Info className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-400">
                   {usersWithTotp} user{usersWithTotp !== 1 ? 's' : ''} ha
                   {usersWithTotp !== 1 ? 've' : 's'} 2FA enabled. Password encryption is required to
-                  preserve 2FA across servers.
+                  preserve 2FA secrets across servers.
                 </p>
               </div>
             )}
-            {exportPassword && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="exportPassword" className="text-xs text-zinc-400">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <Input
+                    id="exportPassword"
+                    type="text"
+                    value={exportPassword}
+                    onChange={(e) => setExportPassword(e.target.value)}
+                    placeholder={totpRequiresPassword ? 'Required' : 'Leave empty to skip'}
+                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10 ${!showExportPassword ? 'password-mask' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowExportPassword(!showExportPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  >
+                    {showExportPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmExportPassword" className="text-xs text-zinc-400">
+                  Confirm Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <Input
+                    id="confirmExportPassword"
+                    type="text"
+                    value={confirmExportPassword}
+                    onChange={(e) => setConfirmExportPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 ${!showExportPassword ? 'password-mask' : ''} ${
+                      confirmExportPassword && confirmExportPassword !== exportPassword
+                        ? 'border-red-500'
+                        : ''
+                    }`}
+                  />
+                </div>
+              </div>
+            </div>
+            <PasswordStrengthIndicator password={exportPassword} />
+            {confirmExportPassword && confirmExportPassword !== exportPassword && (
+              <p className="text-xs text-red-400">Passwords do not match.</p>
+            )}
+            {exportPassword && confirmExportPassword === exportPassword && (
               <p className="text-xs text-amber-500">
                 Remember this password. You will need it to restore the backup.
               </p>
@@ -532,11 +518,6 @@ export function DatabaseSettings() {
             <Download className="h-4 w-4" />
             Export Database
           </Button>
-          {allProjectsExcluded && (
-            <p className="text-xs text-red-400">
-              At least one project must be selected for export.
-            </p>
-          )}
         </CardContent>
       </Card>
 
