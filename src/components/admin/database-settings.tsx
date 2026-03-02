@@ -7,7 +7,6 @@ import {
   Download,
   Eye,
   EyeOff,
-  FolderClosed,
   FolderX,
   HardDrive,
   History,
@@ -87,7 +86,8 @@ function formatSize(bytes: number): string {
 }
 
 /**
- * Calculate estimated export size based on current options
+ * Calculate estimated export size based on current options.
+ * Uses pre-calculated byte estimates from the API for each category.
  */
 function calculateEstimatedSize(
   estimate: ExportSizeEstimate | undefined,
@@ -105,19 +105,18 @@ function calculateEstimatedSize(
   for (const project of estimate.projects) {
     if (options.excludeProjectIds.has(project.id)) continue
 
-    // Always include base ticket data
-    total += project.ticketCount * 500 // AVG_TICKET_SIZE
+    total += project.baseEstimatedBytes
 
     if (options.includeAttachments) {
       total += project.attachmentSizeBytes
     }
 
     if (options.includeComments) {
-      total += project.commentCount * 300 // AVG_COMMENT_SIZE
+      total += project.commentEstimatedBytes
     }
 
     if (options.includeActivities) {
-      total += project.activityCount * 150 // AVG_ACTIVITY_SIZE
+      total += project.activityEstimatedBytes
     }
   }
 
@@ -501,12 +500,23 @@ export function DatabaseSettings() {
                     value={confirmExportPassword}
                     onChange={(e) => setConfirmExportPassword(e.target.value)}
                     placeholder="Re-enter password"
-                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 ${!showExportPassword ? 'password-mask' : ''} ${
+                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10 ${!showExportPassword ? 'password-mask' : ''} ${
                       confirmExportPassword && confirmExportPassword !== exportPassword
                         ? 'border-red-500'
                         : ''
                     }`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowExportPassword(!showExportPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  >
+                    {showExportPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
