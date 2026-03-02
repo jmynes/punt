@@ -22,6 +22,7 @@ import { RolePermissionsForm } from '@/components/admin/role-permissions-form'
 import { SettingsForm } from '@/components/admin/settings-form'
 import { SprintSettingsForm } from '@/components/admin/sprint-settings-form'
 import { PageHeader } from '@/components/common'
+import { ScrollableTabs } from '@/components/ui/scrollable-tabs'
 import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { cn } from '@/lib/utils'
 
@@ -74,104 +75,106 @@ export default function AdminSettingsPage() {
 
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-auto">
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-zinc-800">
-          <Link
-            href="/admin/settings?tab=board"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-              activeTab === 'board'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Columns3 className="h-4 w-4" />
-            Board
-          </Link>
-          <Link
-            href="/admin/settings?tab=branding"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-              activeTab === 'branding'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Palette className="h-4 w-4" />
-            Branding
-          </Link>
-          <Link
-            href="/admin/settings?tab=database"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-              activeTab === 'database'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Database className="h-4 w-4" />
-            Database
-          </Link>
-          <Link
-            href="/admin/settings?tab=roles"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-              activeTab === 'roles'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Shield className="h-4 w-4" />
-            Default Roles
-          </Link>
-          <Link
-            href="/admin/settings?tab=email"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-              activeTab === 'email'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Mail className="h-4 w-4" />
-            Email
-          </Link>
-          <Link
-            href="/admin/settings?tab=uploads"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-              activeTab === 'uploads'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Upload className="h-4 w-4" />
-            File Uploads
-          </Link>
-          <Link
-            href="/admin/settings?tab=sprints"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-              activeTab === 'sprints'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <CalendarClock className="h-4 w-4" />
-            Sprints
-          </Link>
-          <Link
-            href="/admin/settings?tab=updates"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-              activeTab === 'updates'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Updates
-          </Link>
-        </div>
+        <ScrollableTabs className="mb-6">
+          <div className="flex gap-1 border-b border-zinc-800">
+            <Link
+              href="/admin/settings?tab=board"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'board'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Columns3 className="h-4 w-4" />
+              Board
+            </Link>
+            <Link
+              href="/admin/settings?tab=branding"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'branding'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Palette className="h-4 w-4" />
+              Branding
+            </Link>
+            <Link
+              href="/admin/settings?tab=database"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'database'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Database className="h-4 w-4" />
+              Database
+            </Link>
+            <Link
+              href="/admin/settings?tab=roles"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'roles'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Shield className="h-4 w-4" />
+              Default Roles
+            </Link>
+            <Link
+              href="/admin/settings?tab=email"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'email'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Mail className="h-4 w-4" />
+              Email
+            </Link>
+            <Link
+              href="/admin/settings?tab=uploads"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'uploads'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Upload className="h-4 w-4" />
+              File Uploads
+            </Link>
+            <Link
+              href="/admin/settings?tab=sprints"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'sprints'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <CalendarClock className="h-4 w-4" />
+              Sprints
+            </Link>
+            <Link
+              href="/admin/settings?tab=updates"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'updates'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Updates
+            </Link>
+          </div>
+        </ScrollableTabs>
 
         {/* Tab Content */}
         {activeTab === 'board' && <BoardSettingsForm />}

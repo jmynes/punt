@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { ScrollableTabs } from '@/components/ui/scrollable-tabs'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
@@ -212,92 +213,94 @@ function PreferencesContent() {
 
       <div className="mx-auto max-w-4xl px-6 pb-6">
         {/* Tab Navigation */}
-        <div className="flex gap-1 mb-6 border-b border-zinc-800 overflow-x-auto">
-          <Link
-            href="/preferences?tab=general"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'general'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Sliders className="h-4 w-4" />
-            General
-          </Link>
-          <Link
-            href="/preferences?tab=appearance"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'appearance'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Palette className="h-4 w-4" />
-            Appearance
-          </Link>
-          <Link
-            href="/preferences?tab=claude-chat"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'claude-chat'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Bot className="h-4 w-4" />
-            Claude Chat
-          </Link>
-          <Link
-            href="/preferences?tab=mcp"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'mcp'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Terminal className="h-4 w-4" />
-            MCP
-          </Link>
-          <Link
-            href="/preferences?tab=notifications"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'notifications'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Bell className="h-4 w-4" />
-            Notifications
-          </Link>
-          <Link
-            href="/preferences?tab=profile"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'profile'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <User className="h-4 w-4" />
-            Profile
-          </Link>
-          <Link
-            href="/preferences?tab=security"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'security'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <KeyRound className="h-4 w-4" />
-            Security
-          </Link>
-        </div>
+        <ScrollableTabs className="mb-6">
+          <div className="flex gap-1 border-b border-zinc-800">
+            <Link
+              href="/preferences?tab=general"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'general'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Sliders className="h-4 w-4" />
+              General
+            </Link>
+            <Link
+              href="/preferences?tab=appearance"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'appearance'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Palette className="h-4 w-4" />
+              Appearance
+            </Link>
+            <Link
+              href="/preferences?tab=claude-chat"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'claude-chat'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Bot className="h-4 w-4" />
+              Claude Chat
+            </Link>
+            <Link
+              href="/preferences?tab=mcp"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'mcp'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Terminal className="h-4 w-4" />
+              MCP
+            </Link>
+            <Link
+              href="/preferences?tab=notifications"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'notifications'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Bell className="h-4 w-4" />
+              Notifications
+            </Link>
+            <Link
+              href="/preferences?tab=profile"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'profile'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <User className="h-4 w-4" />
+              Profile
+            </Link>
+            <Link
+              href="/preferences?tab=security"
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                activeTab === 'security'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <KeyRound className="h-4 w-4" />
+              Security
+            </Link>
+          </div>
+        </ScrollableTabs>
 
         {/* Appearance Tab */}
         {activeTab === 'appearance' && (

@@ -23,6 +23,7 @@ import { HooksTab } from '@/components/projects/settings/hooks-tab'
 import { LabelsTab } from '@/components/projects/settings/labels-tab'
 import { RepositoryTab } from '@/components/projects/settings/repository-tab'
 import { SprintsTab } from '@/components/projects/settings/sprints-tab'
+import { ScrollableTabs } from '@/components/ui/scrollable-tabs'
 import { useHasPermission, useMyPermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
@@ -190,120 +191,122 @@ export default function ProjectSettingsPage() {
 
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-hidden">
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-zinc-800">
-          {canViewSettings && (
-            <Link
-              href={`/projects/${projectKey}/settings?tab=general`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'general'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Settings className="h-4 w-4" />
-              General
-            </Link>
-          )}
-          {canViewSettings && (
-            <Link
-              href={`/projects/${projectKey}/settings?tab=agents`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'agents'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Bot className="h-4 w-4" />
-              Agents
-            </Link>
-          )}
-          {canViewSettings && (
-            <Link
-              href={`/projects/${projectKey}/settings?tab=hooks`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'hooks'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Webhook className="h-4 w-4" />
-              Hooks
-            </Link>
-          )}
-          {canManageLabels && (
-            <Link
-              href={`/projects/${projectKey}/settings?tab=labels`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'labels'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Tag className="h-4 w-4" />
-              Labels
-            </Link>
-          )}
-          {canManageMembers && (
-            <Link
-              href={`/projects/${projectKey}/settings?tab=members`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'members'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Users className="h-4 w-4" />
-              Members
-            </Link>
-          )}
-          {canViewSettings && (
-            <Link
-              href={`/projects/${projectKey}/settings?tab=repository`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'repository'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <GitBranch className="h-4 w-4" />
-              Repository
-            </Link>
-          )}
-          {canManageRoles && (
-            <Link
-              href={`/projects/${projectKey}/settings?tab=roles`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'roles'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Shield className="h-4 w-4" />
-              Roles
-            </Link>
-          )}
-          {canViewSettings && (
-            <Link
-              href={`/projects/${projectKey}/settings?tab=sprints`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'sprints'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <CalendarClock className="h-4 w-4" />
-              Sprints
-            </Link>
-          )}
-        </div>
+        <ScrollableTabs className="mb-6">
+          <div className="flex gap-1 border-b border-zinc-800">
+            {canViewSettings && (
+              <Link
+                href={`/projects/${projectKey}/settings?tab=general`}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                  effectiveTab === 'general'
+                    ? 'text-amber-500 border-amber-500'
+                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
+                )}
+              >
+                <Settings className="h-4 w-4" />
+                General
+              </Link>
+            )}
+            {canViewSettings && (
+              <Link
+                href={`/projects/${projectKey}/settings?tab=agents`}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                  effectiveTab === 'agents'
+                    ? 'text-amber-500 border-amber-500'
+                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
+                )}
+              >
+                <Bot className="h-4 w-4" />
+                Agents
+              </Link>
+            )}
+            {canViewSettings && (
+              <Link
+                href={`/projects/${projectKey}/settings?tab=hooks`}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                  effectiveTab === 'hooks'
+                    ? 'text-amber-500 border-amber-500'
+                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
+                )}
+              >
+                <Webhook className="h-4 w-4" />
+                Hooks
+              </Link>
+            )}
+            {canManageLabels && (
+              <Link
+                href={`/projects/${projectKey}/settings?tab=labels`}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                  effectiveTab === 'labels'
+                    ? 'text-amber-500 border-amber-500'
+                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
+                )}
+              >
+                <Tag className="h-4 w-4" />
+                Labels
+              </Link>
+            )}
+            {canManageMembers && (
+              <Link
+                href={`/projects/${projectKey}/settings?tab=members`}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                  effectiveTab === 'members'
+                    ? 'text-amber-500 border-amber-500'
+                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
+                )}
+              >
+                <Users className="h-4 w-4" />
+                Members
+              </Link>
+            )}
+            {canViewSettings && (
+              <Link
+                href={`/projects/${projectKey}/settings?tab=repository`}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                  effectiveTab === 'repository'
+                    ? 'text-amber-500 border-amber-500'
+                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
+                )}
+              >
+                <GitBranch className="h-4 w-4" />
+                Repository
+              </Link>
+            )}
+            {canManageRoles && (
+              <Link
+                href={`/projects/${projectKey}/settings?tab=roles`}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                  effectiveTab === 'roles'
+                    ? 'text-amber-500 border-amber-500'
+                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
+                )}
+              >
+                <Shield className="h-4 w-4" />
+                Roles
+              </Link>
+            )}
+            {canViewSettings && (
+              <Link
+                href={`/projects/${projectKey}/settings?tab=sprints`}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                  effectiveTab === 'sprints'
+                    ? 'text-amber-500 border-amber-500'
+                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
+                )}
+              >
+                <CalendarClock className="h-4 w-4" />
+                Sprints
+              </Link>
+            )}
+          </div>
+        </ScrollableTabs>
 
         {/* Tab Content */}
         <div className="flex-1 min-h-0 overflow-auto">
