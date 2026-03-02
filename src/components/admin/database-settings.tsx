@@ -6,7 +6,6 @@ import {
   Download,
   Eye,
   EyeOff,
-  FileImage,
   FolderClosed,
   FolderX,
   HardDrive,
@@ -95,7 +94,6 @@ function calculateEstimatedSize(
   estimate: ExportSizeEstimate | undefined,
   options: {
     includeAttachments: boolean
-    includeAvatars: boolean
     includeComments: boolean
     includeActivities: boolean
     excludeProjectIds: Set<string>
@@ -103,7 +101,7 @@ function calculateEstimatedSize(
 ): number {
   if (!estimate) return 0
 
-  let total = estimate.global.estimatedBytes
+  let total = estimate.global.estimatedBytes + estimate.global.avatarSizeBytes
 
   for (const project of estimate.projects) {
     if (options.excludeProjectIds.has(project.id)) continue
@@ -124,10 +122,6 @@ function calculateEstimatedSize(
     }
   }
 
-  if (options.includeAvatars) {
-    total += estimate.global.avatarSizeBytes
-  }
-
   return total
 }
 
@@ -140,7 +134,6 @@ export function DatabaseSettings() {
   const [exportPassword, setExportPassword] = useState('')
   const [showExportPassword, setShowExportPassword] = useState(false)
   const [includeAttachments, setIncludeAttachments] = useState(true)
-  const [includeAvatars, setIncludeAvatars] = useState(true)
   const [includeComments, setIncludeComments] = useState(true)
   const [includeActivities, setIncludeActivities] = useState(true)
   const [excludeProjectIds, setExcludeProjectIds] = useState<Set<string>>(new Set())
@@ -161,7 +154,6 @@ export function DatabaseSettings() {
   const handleExportComplete = () => {
     setExportPassword('')
     setIncludeAttachments(true)
-    setIncludeAvatars(true)
     setIncludeComments(true)
     setIncludeActivities(true)
     setExcludeProjectIds(new Set())
@@ -233,35 +225,26 @@ export function DatabaseSettings() {
     })
   }, [])
 
-  const includeFiles = includeAttachments || includeAvatars
+  const includeFiles = includeAttachments
 
   // Calculate estimated export size
   const estimatedSize = useMemo(
     () =>
       calculateEstimatedSize(estimate, {
         includeAttachments,
-        includeAvatars,
         includeComments,
         includeActivities,
         excludeProjectIds,
       }),
-    [
-      estimate,
-      includeAttachments,
-      includeAvatars,
-      includeComments,
-      includeActivities,
-      excludeProjectIds,
-    ],
+    [estimate, includeAttachments, includeComments, includeActivities, excludeProjectIds],
   )
+
+  const totalProjects = estimate?.projects.length ?? 0
+  const allProjectsExcluded = totalProjects > 0 && excludeProjectIds.size >= totalProjects
 
   // Check if any advanced option differs from default
   const hasCustomOptions =
-    !includeAttachments ||
-    !includeAvatars ||
-    !includeComments ||
-    !includeActivities ||
-    excludeProjectIds.size > 0
+    !includeAttachments || !includeComments || !includeActivities || excludeProjectIds.size > 0
 
   return (
     <div className="space-y-6">
@@ -288,7 +271,6 @@ export function DatabaseSettings() {
               hasCustomOptions
                 ? `Advanced Options (${[
                     !includeAttachments && 'no attachments',
-                    !includeAvatars && 'no avatars',
                     !includeComments && 'no comments',
                     !includeActivities && 'no activity',
                     excludeProjectIds.size > 0 &&
@@ -323,26 +305,6 @@ export function DatabaseSettings() {
                     {estimate && (
                       <span className="text-xs text-zinc-500">
                         ({formatSize(estimate.totals.attachmentBytes)})
-                      </span>
-                    )}
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="includeAvatars"
-                    checked={includeAvatars}
-                    onCheckedChange={(checked) => setIncludeAvatars(checked === true)}
-                    className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                  />
-                  <Label
-                    htmlFor="includeAvatars"
-                    className="text-zinc-300 cursor-pointer flex items-center gap-2"
-                  >
-                    <FileImage className="h-4 w-4" />
-                    Profile pictures
-                    {estimate && (
-                      <span className="text-xs text-zinc-500">
-                        ({formatSize(estimate.global.avatarSizeBytes)})
                       </span>
                     )}
                   </Label>
@@ -393,10 +355,27 @@ export function DatabaseSettings() {
             {/* Per-project toggles */}
             {estimate && estimate.projects.length > 0 && (
               <div className="space-y-3">
-                <Label className="text-zinc-300 flex items-center gap-2">
-                  <FolderClosed className="h-4 w-4 text-zinc-500" />
-                  Projects
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-zinc-300 flex items-center gap-2">
+                    <FolderClosed className="h-4 w-4 text-zinc-500" />
+                    Projects
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (excludeProjectIds.size === 0) {
+                        // Deselect all
+                        setExcludeProjectIds(new Set(estimate.projects.map((p) => p.id)))
+                      } else {
+                        // Select all
+                        setExcludeProjectIds(new Set())
+                      }
+                    }}
+                    className="text-xs text-amber-500 hover:text-amber-400"
+                  >
+                    {excludeProjectIds.size === 0 ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {estimate.projects.map((project) => {
                     const isIncluded = !excludeProjectIds.has(project.id)
@@ -408,7 +387,6 @@ export function DatabaseSettings() {
                       },
                       {
                         includeAttachments,
-                        includeAvatars: false,
                         includeComments,
                         includeActivities,
                         excludeProjectIds: new Set(),
@@ -446,12 +424,11 @@ export function DatabaseSettings() {
               </div>
             )}
 
-            {includeFiles && (
-              <p className="text-xs text-amber-500 flex items-center gap-1">
-                <Archive className="h-3 w-3" />
-                Export will be a ZIP file containing data and files
-              </p>
-            )}
+            <p className="text-xs text-amber-500 flex items-center gap-1">
+              <Archive className="h-3 w-3" />
+              Export will be a ZIP file containing data
+              {includeFiles ? ' and files' : ' and profile pictures'}
+            </p>
           </Accordion>
 
           {/* Password */}
@@ -501,13 +478,18 @@ export function DatabaseSettings() {
 
           <Button
             onClick={handleExportClick}
-            disabled={totpRequiresPassword && !exportPassword}
+            disabled={(totpRequiresPassword && !exportPassword) || allProjectsExcluded}
             variant="primary"
             className="w-full sm:w-auto"
           >
             <Download className="h-4 w-4" />
             Export Database
           </Button>
+          {allProjectsExcluded && (
+            <p className="text-xs text-red-400">
+              At least one project must be selected for export.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -663,7 +645,7 @@ export function DatabaseSettings() {
         exportOptions={{
           password: exportPassword || undefined,
           includeAttachments,
-          includeAvatars,
+          includeAvatars: true,
           includeComments,
           includeActivities,
           excludeProjectIds: excludeProjectIds.size > 0 ? [...excludeProjectIds] : undefined,

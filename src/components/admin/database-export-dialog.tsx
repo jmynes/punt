@@ -3,7 +3,6 @@
 import {
   Archive,
   ChevronRight,
-  FileImage,
   FolderClosed,
   History,
   Loader2,
@@ -194,19 +193,6 @@ export function DatabaseExportDialog({
                       <>
                         <Paperclip className="h-4 w-4" />
                         <span>No attachments</span>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    {exportOptions.includeAvatars ? (
-                      <>
-                        <FileImage className="h-4 w-4 text-green-400" />
-                        <span className="text-zinc-200">Including profile pictures</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileImage className="h-4 w-4" />
-                        <span>No profile pictures</span>
                       </>
                     )}
                   </div>
