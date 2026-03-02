@@ -52,6 +52,7 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
           <InlineCodeText text={ticket.title} className="truncate font-medium" />
           {ticket._count && ticket._count.subtasks > 0 && (
             <Badge variant="outline" className="shrink-0 text-xs">
+              {ticket.subtasks?.filter((s) => s.resolution != null).length ?? 0}/
               {ticket._count.subtasks} subtasks
             </Badge>
           )}

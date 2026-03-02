@@ -173,6 +173,9 @@ export const TICKET_SELECT_FULL = {
       },
     },
   },
+  subtasks: {
+    select: { id: true, resolution: true },
+  },
   _count: {
     select: {
       comments: true,
