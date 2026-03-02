@@ -313,7 +313,6 @@ export function DatabaseSettings() {
                     label: 'Ticket attachments',
                     checked: includeAttachments,
                     onChange: setIncludeAttachments,
-                    size: estimate?.totals.attachmentBytes,
                   },
                   {
                     id: 'comments',
@@ -321,7 +320,6 @@ export function DatabaseSettings() {
                     label: 'Comment history',
                     checked: includeComments,
                     onChange: setIncludeComments,
-                    size: estimate?.totals.commentBytes,
                   },
                   {
                     id: 'activities',
@@ -329,7 +327,6 @@ export function DatabaseSettings() {
                     label: 'Activity history',
                     checked: includeActivities,
                     onChange: setIncludeActivities,
-                    size: estimate?.totals.activityBytes,
                   },
                 ].map((item) => (
                   <button
@@ -353,11 +350,6 @@ export function DatabaseSettings() {
                     </div>
                     <item.icon className="h-4 w-4 shrink-0 text-zinc-400" />
                     <span className="flex-1 text-sm text-zinc-200">{item.label}</span>
-                    {item.size != null && (
-                      <span className="text-xs tabular-nums text-zinc-500">
-                        {formatSize(item.size)}
-                      </span>
-                    )}
                   </button>
                 ))}
               </div>
