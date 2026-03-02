@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   Archive,
   Check,
-  ChevronRight,
   Eye,
   EyeOff,
   FileImage,
@@ -49,7 +48,7 @@ interface DatabaseImportDialogProps {
   onComplete: () => void
 }
 
-type Step = 'loading' | 'preview' | 'warning' | 'confirm' | 'importing' | 'success' | 'error'
+type Step = 'loading' | 'preview' | 'importing' | 'success' | 'error'
 
 const REQUIRED_CONFIRMATION = 'DELETE ALL DATA'
 
@@ -133,22 +132,6 @@ export function DatabaseImportDialog({
     setStep('loading') // useEffect will trigger loadPreview when step is 'loading'
   }
 
-  const handleNext = () => {
-    if (step === 'preview') {
-      setStep('warning')
-    } else if (step === 'warning') {
-      setStep('confirm')
-    }
-  }
-
-  const handleBack = () => {
-    if (step === 'warning') {
-      setStep('preview')
-    } else if (step === 'confirm') {
-      setStep('warning')
-    }
-  }
-
   const handleReauthConfirm = async (
     reauthPassword: string,
     totpCode?: string,
@@ -229,7 +212,7 @@ export function DatabaseImportDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="sm:max-w-md"
+        className="sm:max-w-lg"
         showCloseButton={step !== 'importing' && step !== 'loading' && step !== 'success'}
       >
         {/* Step 0: Loading Preview */}
@@ -250,7 +233,7 @@ export function DatabaseImportDialog({
           </>
         )}
 
-        {/* Step 1: Preview */}
+        {/* Step 1: Preview + Confirm */}
         {step === 'preview' && (
           <>
             <DialogHeader>
@@ -263,7 +246,7 @@ export function DatabaseImportDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
               {error && (
                 <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg">
                   <p className="text-sm text-red-300">{error}</p>
@@ -303,7 +286,7 @@ export function DatabaseImportDialog({
                 </div>
               )}
 
-              {/* Preview data */}
+              {/* Preview data + danger warning + confirmation */}
               {preview && (
                 <>
                   <div className="bg-zinc-800 rounded-lg p-4 space-y-3">
@@ -386,6 +369,40 @@ export function DatabaseImportDialog({
                       )}
                     </div>
                   </div>
+
+                  {/* Danger warning */}
+                  <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg space-y-2">
+                    <p className="text-sm text-red-300 font-medium flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                      This action will:
+                    </p>
+                    <ul className="text-sm text-red-300/80 space-y-1 ml-4 list-disc">
+                      <li>Permanently delete ALL existing data</li>
+                      <li>Replace it with data from the backup file</li>
+                      <li>Log out all users (sessions will be invalidated)</li>
+                      <li>Cannot be undone</li>
+                    </ul>
+                  </div>
+
+                  {/* Confirmation input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmText" className="text-zinc-300">
+                      Type <span className="font-mono text-red-400">{REQUIRED_CONFIRMATION}</span>{' '}
+                      to confirm
+                    </Label>
+                    <Input
+                      id="confirmText"
+                      type="text"
+                      value={confirmText}
+                      onChange={(e) => setConfirmText(e.target.value)}
+                      placeholder={REQUIRED_CONFIRMATION}
+                      className="bg-zinc-800 border-zinc-700 text-zinc-100 font-mono"
+                      autoComplete="off"
+                    />
+                    {confirmText && !isConfirmValid && (
+                      <p className="text-xs text-red-400">Text does not match</p>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -404,108 +421,15 @@ export function DatabaseImportDialog({
                   Decrypt & Preview
                 </Button>
               ) : (
-                <Button variant="destructive" onClick={handleNext} disabled={!preview}>
-                  Continue to Import
-                  <ChevronRight className="h-4 w-4" />
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowReauthDialog(true)}
+                  disabled={!preview || !isConfirmValid}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Import and Replace All Data
                 </Button>
               )}
-            </DialogFooter>
-          </>
-        )}
-
-        {/* Step 2: Warning */}
-        {step === 'warning' && (
-          <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-red-400">
-                <AlertTriangle className="h-5 w-5" />
-                Danger Zone
-              </DialogTitle>
-              <DialogDescription>
-                You are about to import a database backup. Please read carefully.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg space-y-2">
-                <p className="text-sm text-red-300 font-medium">This action will:</p>
-                <ul className="text-sm text-red-300/80 space-y-1 ml-4 list-disc">
-                  <li>Permanently delete ALL existing data</li>
-                  <li>Replace it with data from the backup file</li>
-                  <li>Log out all users (sessions will be invalidated)</li>
-                  <li>Cannot be undone</li>
-                </ul>
-              </div>
-
-              {preview && (
-                <div className="bg-zinc-800 rounded-lg p-3 text-sm">
-                  <span className="text-zinc-400">Importing: </span>
-                  <span className="text-zinc-200">
-                    {preview.counts.users} users, {preview.counts.projects} projects,{' '}
-                    {preview.counts.tickets} tickets
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={handleBack}>
-                Back
-              </Button>
-              <Button variant="destructive" onClick={handleNext}>
-                I Understand
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-
-        {/* Step 3: Type Confirmation */}
-        {step === 'confirm' && (
-          <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-red-400">
-                <Trash2 className="h-5 w-5" />
-                Final Confirmation
-              </DialogTitle>
-              <DialogDescription>
-                Type <span className="font-mono text-red-400">{REQUIRED_CONFIRMATION}</span> to
-                proceed.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="confirmText" className="text-zinc-300">
-                  Type the confirmation text
-                </Label>
-                <Input
-                  id="confirmText"
-                  type="text"
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  placeholder={REQUIRED_CONFIRMATION}
-                  className="bg-zinc-800 border-zinc-700 text-zinc-100 font-mono"
-                  autoComplete="off"
-                />
-                {confirmText && !isConfirmValid && (
-                  <p className="text-xs text-red-400">Text does not match</p>
-                )}
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={handleBack}>
-                Back
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => setShowReauthDialog(true)}
-                disabled={!isConfirmValid}
-              >
-                <Trash2 className="h-4 w-4" />
-                Import and Replace All Data
-              </Button>
             </DialogFooter>
           </>
         )}
@@ -727,7 +651,7 @@ export function DatabaseImportDialog({
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => setStep(preview ? 'warning' : 'loading')}
+                onClick={() => setStep(preview ? 'preview' : 'loading')}
               >
                 Try Again
               </Button>
