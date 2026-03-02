@@ -34,23 +34,23 @@ import { useUIStore } from '@/stores/ui-store'
 
 type SettingsTab =
   | 'general'
-  | 'members'
+  | 'agents'
+  | 'hooks'
   | 'labels'
+  | 'members'
+  | 'repository'
   | 'roles'
   | 'sprints'
-  | 'repository'
-  | 'hooks'
-  | 'agents'
 
 const VALID_TABS: SettingsTab[] = [
   'general',
-  'members',
+  'agents',
+  'hooks',
   'labels',
+  'members',
+  'repository',
   'roles',
   'sprints',
-  'repository',
-  'hooks',
-  'agents',
 ]
 
 function isValidTab(tab: string | null): tab is SettingsTab {
@@ -145,8 +145,8 @@ export default function ProjectSettingsPage() {
   // Find the first accessible tab for fallback
   const firstAccessibleTab = (): SettingsTab => {
     if (canViewSettings) return 'general'
-    if (canManageMembers) return 'members'
     if (canManageLabels) return 'labels'
+    if (canManageMembers) return 'members'
     return 'roles'
   }
 
@@ -154,20 +154,20 @@ export default function ProjectSettingsPage() {
     switch (activeTab) {
       case 'general':
         return canViewSettings ? 'general' : firstAccessibleTab()
-      case 'members':
-        return canManageMembers ? 'members' : firstAccessibleTab()
+      case 'agents':
+        return canViewSettings ? 'agents' : firstAccessibleTab()
+      case 'hooks':
+        return canViewSettings ? 'hooks' : firstAccessibleTab()
       case 'labels':
         return canManageLabels ? 'labels' : firstAccessibleTab()
+      case 'members':
+        return canManageMembers ? 'members' : firstAccessibleTab()
+      case 'repository':
+        return canViewSettings ? 'repository' : firstAccessibleTab()
       case 'roles':
         return canManageRoles ? 'roles' : firstAccessibleTab()
       case 'sprints':
         return canViewSettings ? 'sprints' : firstAccessibleTab()
-      case 'repository':
-        return canViewSettings ? 'repository' : firstAccessibleTab()
-      case 'hooks':
-        return canViewSettings ? 'hooks' : firstAccessibleTab()
-      case 'agents':
-        return canViewSettings ? 'agents' : firstAccessibleTab()
       default:
         return firstAccessibleTab()
     }
@@ -203,18 +203,32 @@ export default function ProjectSettingsPage() {
               General
             </Link>
           )}
-          {canManageMembers && (
+          {canViewSettings && (
             <Link
-              href={`/projects/${projectKey}/settings?tab=members`}
+              href={`/projects/${projectKey}/settings?tab=agents`}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'members'
+                effectiveTab === 'agents'
                   ? 'text-amber-500 border-amber-500'
                   : 'text-zinc-400 border-transparent hover:text-zinc-300',
               )}
             >
-              <Users className="h-4 w-4" />
-              Members
+              <Bot className="h-4 w-4" />
+              Agents
+            </Link>
+          )}
+          {canViewSettings && (
+            <Link
+              href={`/projects/${projectKey}/settings?tab=hooks`}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+                effectiveTab === 'hooks'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Webhook className="h-4 w-4" />
+              Hooks
             </Link>
           )}
           {canManageLabels && (
@@ -229,6 +243,34 @@ export default function ProjectSettingsPage() {
             >
               <Tag className="h-4 w-4" />
               Labels
+            </Link>
+          )}
+          {canManageMembers && (
+            <Link
+              href={`/projects/${projectKey}/settings?tab=members`}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+                effectiveTab === 'members'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <Users className="h-4 w-4" />
+              Members
+            </Link>
+          )}
+          {canViewSettings && (
+            <Link
+              href={`/projects/${projectKey}/settings?tab=repository`}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+                effectiveTab === 'repository'
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              <GitBranch className="h-4 w-4" />
+              Repository
             </Link>
           )}
           {canManageRoles && (
@@ -259,48 +301,6 @@ export default function ProjectSettingsPage() {
               Sprints
             </Link>
           )}
-          {canViewSettings && (
-            <Link
-              href={`/projects/${projectKey}/settings?tab=repository`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'repository'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <GitBranch className="h-4 w-4" />
-              Repository
-            </Link>
-          )}
-          {canViewSettings && (
-            <Link
-              href={`/projects/${projectKey}/settings?tab=hooks`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'hooks'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Webhook className="h-4 w-4" />
-              Hooks
-            </Link>
-          )}
-          {canViewSettings && (
-            <Link
-              href={`/projects/${projectKey}/settings?tab=agents`}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
-                effectiveTab === 'agents'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Bot className="h-4 w-4" />
-              Agents
-            </Link>
-          )}
         </div>
 
         {/* Tab Content */}
@@ -317,19 +317,19 @@ export default function ProjectSettingsPage() {
               }}
             />
           )}
+          {effectiveTab === 'agents' && <AgentsTab projectId={projectId} projectKey={projectKey} />}
+          {effectiveTab === 'hooks' && <HooksTab projectId={projectId} projectKey={projectKey} />}
+          {effectiveTab === 'labels' && <LabelsTab projectId={projectId} />}
           {effectiveTab === 'members' && (
             <MembersTab projectId={projectId} projectKey={projectKey} />
-          )}
-          {effectiveTab === 'labels' && <LabelsTab projectId={projectId} />}
-          {effectiveTab === 'roles' && <RolesTab projectId={projectId} projectKey={projectKey} />}
-          {effectiveTab === 'sprints' && (
-            <SprintsTab projectId={projectId} projectKey={projectKey} />
           )}
           {effectiveTab === 'repository' && (
             <RepositoryTab projectId={projectId} projectKey={projectKey} />
           )}
-          {effectiveTab === 'hooks' && <HooksTab projectId={projectId} projectKey={projectKey} />}
-          {effectiveTab === 'agents' && <AgentsTab projectId={projectId} projectKey={projectKey} />}
+          {effectiveTab === 'roles' && <RolesTab projectId={projectId} projectKey={projectKey} />}
+          {effectiveTab === 'sprints' && (
+            <SprintsTab projectId={projectId} projectKey={projectKey} />
+          )}
         </div>
 
         {/* Footer spacer */}

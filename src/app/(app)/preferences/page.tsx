@@ -25,22 +25,22 @@ import { useProjectsStore } from '@/stores/projects-store'
 import { useSettingsStore } from '@/stores/settings-store'
 
 type PreferencesTab =
-  | 'profile'
-  | 'security'
-  | 'mcp'
+  | 'appearance'
   | 'claude-chat'
   | 'general'
+  | 'mcp'
   | 'notifications'
-  | 'appearance'
+  | 'profile'
+  | 'security'
 
 const VALID_TABS: PreferencesTab[] = [
-  'profile',
-  'security',
-  'mcp',
+  'appearance',
   'claude-chat',
   'general',
+  'mcp',
   'notifications',
-  'appearance',
+  'profile',
+  'security',
 ]
 
 function isValidTab(tab: string | null): tab is PreferencesTab {
@@ -180,7 +180,7 @@ function PreferencesContent() {
 
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const activeTab: PreferencesTab = isValidTab(tabParam) ? tabParam : 'profile'
+  const activeTab: PreferencesTab = isValidTab(tabParam) ? tabParam : 'appearance'
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
   useTabCycleShortcut({
@@ -214,40 +214,16 @@ function PreferencesContent() {
         {/* Tab Navigation */}
         <div className="flex gap-1 mb-6 border-b border-zinc-800 overflow-x-auto">
           <Link
-            href="/preferences?tab=profile"
+            href="/preferences?tab=appearance"
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'profile'
+              activeTab === 'appearance'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
             )}
           >
-            <User className="h-4 w-4" />
-            Profile
-          </Link>
-          <Link
-            href="/preferences?tab=security"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'security'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <KeyRound className="h-4 w-4" />
-            Security
-          </Link>
-          <Link
-            href="/preferences?tab=mcp"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'mcp'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Terminal className="h-4 w-4" />
-            MCP
+            <Palette className="h-4 w-4" />
+            Appearance
           </Link>
           <Link
             href="/preferences?tab=claude-chat"
@@ -274,6 +250,18 @@ function PreferencesContent() {
             General
           </Link>
           <Link
+            href="/preferences?tab=mcp"
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
+              activeTab === 'mcp'
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            <Terminal className="h-4 w-4" />
+            MCP
+          </Link>
+          <Link
             href="/preferences?tab=notifications"
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
@@ -286,41 +274,320 @@ function PreferencesContent() {
             Notifications
           </Link>
           <Link
-            href="/preferences?tab=appearance"
+            href="/preferences?tab=profile"
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'appearance'
+              activeTab === 'profile'
                 ? 'text-amber-500 border-amber-500'
                 : 'text-zinc-400 border-transparent hover:text-zinc-300',
             )}
           >
-            <Palette className="h-4 w-4" />
-            Appearance
+            <User className="h-4 w-4" />
+            Profile
+          </Link>
+          <Link
+            href="/preferences?tab=security"
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
+              activeTab === 'security'
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            <KeyRound className="h-4 w-4" />
+            Security
           </Link>
         </div>
 
-        {/* Profile Tab */}
-        {activeTab === 'profile' && stableUser && (
-          <ProfileTab
-            user={stableUser}
-            isDemo={isDemo}
-            onUserUpdate={handleUserUpdate}
-            onSessionUpdate={debouncedUpdateSession}
-          />
-        )}
+        {/* Appearance Tab */}
+        {activeTab === 'appearance' && (
+          <div className="space-y-6">
+            {/* Date Picker Settings */}
+            <Card className="border-zinc-800 bg-zinc-900/50">
+              <CardHeader>
+                <CardTitle className="text-zinc-100">Date Picker</CardTitle>
+                <CardDescription className="text-zinc-500">
+                  Configure date picker behavior for ticket forms
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <Label className="text-zinc-300">Maximum year</Label>
+                  <RadioGroup
+                    value={ticketDateMaxYearMode}
+                    onValueChange={(value) => {
+                      setTicketDateMaxYearMode(value as 'default' | 'custom')
+                      if (value === 'custom' && ticketDateMaxYear === defaultMaxYear) {
+                        setTicketDateMaxYear(defaultMaxYear)
+                      }
+                    }}
+                    className="space-y-3"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem
+                        value="default"
+                        id="date-max-year-default"
+                        className="border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                      />
+                      <Label
+                        htmlFor="date-max-year-default"
+                        className="text-sm text-zinc-300 cursor-pointer font-normal"
+                      >
+                        Default (current year + 5, i.e. {defaultMaxYear})
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem
+                        value="custom"
+                        id="date-max-year-custom"
+                        className="border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                      />
+                      <Label
+                        htmlFor="date-max-year-custom"
+                        className="text-sm text-zinc-300 cursor-pointer font-normal"
+                      >
+                        Custom
+                      </Label>
+                      <div
+                        onClick={() => {
+                          if (ticketDateMaxYearMode !== 'custom') {
+                            setTicketDateMaxYearMode('custom')
+                            if (ticketDateMaxYear === defaultMaxYear) {
+                              setTicketDateMaxYear(defaultMaxYear)
+                            }
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            if (ticketDateMaxYearMode !== 'custom') {
+                              setTicketDateMaxYearMode('custom')
+                              if (ticketDateMaxYear === defaultMaxYear) {
+                                setTicketDateMaxYear(defaultMaxYear)
+                              }
+                            }
+                          }
+                        }}
+                        role="button"
+                        tabIndex={ticketDateMaxYearMode !== 'custom' ? 0 : -1}
+                        className={cn(ticketDateMaxYearMode !== 'custom' && 'cursor-pointer')}
+                      >
+                        <Input
+                          ref={customInputRef}
+                          id="date-max-year"
+                          type="number"
+                          min={new Date().getFullYear()}
+                          max={new Date().getFullYear() + 100}
+                          value={ticketDateMaxYear}
+                          onChange={(e) =>
+                            setTicketDateMaxYear(Number.parseInt(e.target.value, 10))
+                          }
+                          disabled={ticketDateMaxYearMode !== 'custom'}
+                          className={cn(
+                            'w-32 border-zinc-700 bg-zinc-900 text-zinc-100 focus:border-amber-500',
+                            ticketDateMaxYearMode !== 'custom' && 'opacity-50',
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Security Tab */}
-        {activeTab === 'security' && stableUser && (
-          <SecurityTab
-            user={stableUser}
-            isDemo={isDemo}
-            onUserUpdate={handleUserUpdate}
-            onSessionUpdate={debouncedUpdateSession}
-          />
-        )}
+            {/* Color Picker */}
+            <Card className="border-zinc-800 bg-zinc-900/50">
+              <CardHeader>
+                <CardTitle className="text-zinc-100">Color Picker</CardTitle>
+                <CardDescription className="text-zinc-500">
+                  Configure color picker behavior and notifications
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start justify-between space-x-4">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="hide-color-removal-warning" className="text-zinc-300">
+                      Skip color removal confirmation
+                    </Label>
+                    <p className="text-sm text-zinc-500">
+                      Don&apos;t show the confirmation dialog when removing a saved color from your
+                      swatches
+                    </p>
+                  </div>
+                  <Switch
+                    id="hide-color-removal-warning"
+                    checked={hideColorRemovalWarning}
+                    onCheckedChange={(checked) => setHideColorRemovalWarning(checked === true)}
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* MCP Tab */}
-        {activeTab === 'mcp' && <MCPTab isDemo={isDemo} />}
+            {/* Animations */}
+            <Card className="border-zinc-800 bg-zinc-900/50">
+              <CardHeader>
+                <CardTitle className="text-zinc-100">Animations</CardTitle>
+                <CardDescription className="text-zinc-500">
+                  Control visual effects and celebration animations
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start justify-between space-x-4">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="enable-particle-animations" className="text-zinc-300">
+                      Particle celebrations
+                    </Label>
+                    <p className="text-sm text-zinc-500">
+                      Show confetti when completing sprints and fire effects when exceeding sprint
+                      budget. Automatically disabled when your system prefers reduced motion.
+                    </p>
+                  </div>
+                  <Switch
+                    id="enable-particle-animations"
+                    checked={enableParticleAnimations}
+                    onCheckedChange={(checked) => setEnableParticleAnimations(checked === true)}
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Chat Panel */}
+            <Card className="border-zinc-800 bg-zinc-900/50">
+              <CardHeader>
+                <CardTitle className="text-zinc-100">Chat Panel</CardTitle>
+                <CardDescription className="text-zinc-500">
+                  Control the Claude Chat panel visibility
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start justify-between space-x-4">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="enable-chat-panel" className="text-zinc-300">
+                      Enable chat panel
+                    </Label>
+                    <p className="text-sm text-zinc-500">
+                      Show the Claude Chat panel and floating action button. When disabled, the chat
+                      panel and FAB will be hidden from the interface.
+                    </p>
+                  </div>
+                  <Switch
+                    id="enable-chat-panel"
+                    checked={showChatPanel}
+                    onCheckedChange={(checked) => setShowChatPanel(checked === true)}
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Sidebar */}
+            <Card className="border-zinc-800 bg-zinc-900/50">
+              <CardHeader>
+                <CardTitle className="text-zinc-100">Sidebar</CardTitle>
+                <CardDescription className="text-zinc-500">
+                  Control which settings sections are expanded by default in the sidebar
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start justify-between space-x-4">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="sidebar-admin" className="text-zinc-300">
+                      Admin settings expanded
+                    </Label>
+                    <p className="text-sm text-zinc-500">
+                      Keep the admin settings section expanded in the sidebar
+                    </p>
+                  </div>
+                  <Switch
+                    id="sidebar-admin"
+                    checked={sidebarExpandedSections.admin ?? false}
+                    onCheckedChange={(checked) =>
+                      setSidebarSectionExpanded('admin', checked === true)
+                    }
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
+
+                <Separator className="bg-zinc-800" />
+
+                <div className="flex items-start justify-between space-x-4">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="sidebar-profile" className="text-zinc-300">
+                      Profile tabs expanded
+                    </Label>
+                    <p className="text-sm text-zinc-500">
+                      Keep the profile tabs section expanded in the sidebar
+                    </p>
+                  </div>
+                  <Switch
+                    id="sidebar-profile"
+                    checked={sidebarExpandedSections.profile ?? false}
+                    onCheckedChange={(checked) =>
+                      setSidebarSectionExpanded('profile', checked === true)
+                    }
+                    className="data-[state=checked]:bg-amber-600"
+                  />
+                </div>
+
+                {projects.length > 0 && (
+                  <>
+                    <Separator className="bg-zinc-800" />
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label className="text-zinc-300">Project settings expanded</Label>
+                          <p className="text-sm text-zinc-500">
+                            Keep project settings sections expanded in the sidebar
+                          </p>
+                        </div>
+                        <Switch
+                          id="sidebar-all-projects"
+                          checked={projects.every((p) => sidebarExpandedSections[p.id] ?? false)}
+                          onCheckedChange={(checked) => {
+                            for (const project of projects) {
+                              setSidebarSectionExpanded(project.id, checked === true)
+                            }
+                          }}
+                          className="data-[state=checked]:bg-amber-600"
+                        />
+                      </div>
+                      <div className="space-y-3 mt-3">
+                        {projects.map((project) => (
+                          <div
+                            key={project.id}
+                            className="flex items-center justify-between space-x-4"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="h-2 w-2 rounded-full shrink-0"
+                                style={{ backgroundColor: project.color || '#6b7280' }}
+                              />
+                              <Label
+                                htmlFor={`sidebar-project-${project.id}`}
+                                className="text-sm text-zinc-400 font-normal cursor-pointer"
+                              >
+                                {project.name}
+                              </Label>
+                            </div>
+                            <Switch
+                              id={`sidebar-project-${project.id}`}
+                              checked={sidebarExpandedSections[project.id] ?? false}
+                              onCheckedChange={(checked) =>
+                                setSidebarSectionExpanded(project.id, checked === true)
+                              }
+                              className="data-[state=checked]:bg-amber-600"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Claude Chat Tab */}
         {activeTab === 'claude-chat' && <ClaudeChatTab isDemo={isDemo} />}
@@ -746,294 +1013,27 @@ function PreferencesContent() {
           </div>
         )}
 
-        {/* Appearance Tab */}
-        {activeTab === 'appearance' && (
-          <div className="space-y-6">
-            {/* Date Picker Settings */}
-            <Card className="border-zinc-800 bg-zinc-900/50">
-              <CardHeader>
-                <CardTitle className="text-zinc-100">Date Picker</CardTitle>
-                <CardDescription className="text-zinc-500">
-                  Configure date picker behavior for ticket forms
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <Label className="text-zinc-300">Maximum year</Label>
-                  <RadioGroup
-                    value={ticketDateMaxYearMode}
-                    onValueChange={(value) => {
-                      setTicketDateMaxYearMode(value as 'default' | 'custom')
-                      if (value === 'custom' && ticketDateMaxYear === defaultMaxYear) {
-                        setTicketDateMaxYear(defaultMaxYear)
-                      }
-                    }}
-                    className="space-y-3"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem
-                        value="default"
-                        id="date-max-year-default"
-                        className="border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                      />
-                      <Label
-                        htmlFor="date-max-year-default"
-                        className="text-sm text-zinc-300 cursor-pointer font-normal"
-                      >
-                        Default (current year + 5, i.e. {defaultMaxYear})
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem
-                        value="custom"
-                        id="date-max-year-custom"
-                        className="border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                      />
-                      <Label
-                        htmlFor="date-max-year-custom"
-                        className="text-sm text-zinc-300 cursor-pointer font-normal"
-                      >
-                        Custom
-                      </Label>
-                      <div
-                        onClick={() => {
-                          if (ticketDateMaxYearMode !== 'custom') {
-                            setTicketDateMaxYearMode('custom')
-                            if (ticketDateMaxYear === defaultMaxYear) {
-                              setTicketDateMaxYear(defaultMaxYear)
-                            }
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            if (ticketDateMaxYearMode !== 'custom') {
-                              setTicketDateMaxYearMode('custom')
-                              if (ticketDateMaxYear === defaultMaxYear) {
-                                setTicketDateMaxYear(defaultMaxYear)
-                              }
-                            }
-                          }
-                        }}
-                        role="button"
-                        tabIndex={ticketDateMaxYearMode !== 'custom' ? 0 : -1}
-                        className={cn(ticketDateMaxYearMode !== 'custom' && 'cursor-pointer')}
-                      >
-                        <Input
-                          ref={customInputRef}
-                          id="date-max-year"
-                          type="number"
-                          min={new Date().getFullYear()}
-                          max={new Date().getFullYear() + 100}
-                          value={ticketDateMaxYear}
-                          onChange={(e) =>
-                            setTicketDateMaxYear(Number.parseInt(e.target.value, 10))
-                          }
-                          disabled={ticketDateMaxYearMode !== 'custom'}
-                          className={cn(
-                            'w-32 border-zinc-700 bg-zinc-900 text-zinc-100 focus:border-amber-500',
-                            ticketDateMaxYearMode !== 'custom' && 'opacity-50',
-                          )}
-                        />
-                      </div>
-                    </div>
-                  </RadioGroup>
-                </div>
-              </CardContent>
-            </Card>
+        {/* MCP Tab */}
+        {activeTab === 'mcp' && <MCPTab isDemo={isDemo} />}
 
-            {/* Color Picker */}
-            <Card className="border-zinc-800 bg-zinc-900/50">
-              <CardHeader>
-                <CardTitle className="text-zinc-100">Color Picker</CardTitle>
-                <CardDescription className="text-zinc-500">
-                  Configure color picker behavior and notifications
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-start justify-between space-x-4">
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor="hide-color-removal-warning" className="text-zinc-300">
-                      Skip color removal confirmation
-                    </Label>
-                    <p className="text-sm text-zinc-500">
-                      Don&apos;t show the confirmation dialog when removing a saved color from your
-                      swatches
-                    </p>
-                  </div>
-                  <Switch
-                    id="hide-color-removal-warning"
-                    checked={hideColorRemovalWarning}
-                    onCheckedChange={(checked) => setHideColorRemovalWarning(checked === true)}
-                    className="data-[state=checked]:bg-amber-600"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+        {/* Profile Tab */}
+        {activeTab === 'profile' && stableUser && (
+          <ProfileTab
+            user={stableUser}
+            isDemo={isDemo}
+            onUserUpdate={handleUserUpdate}
+            onSessionUpdate={debouncedUpdateSession}
+          />
+        )}
 
-            {/* Animations */}
-            <Card className="border-zinc-800 bg-zinc-900/50">
-              <CardHeader>
-                <CardTitle className="text-zinc-100">Animations</CardTitle>
-                <CardDescription className="text-zinc-500">
-                  Control visual effects and celebration animations
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-start justify-between space-x-4">
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor="enable-particle-animations" className="text-zinc-300">
-                      Particle celebrations
-                    </Label>
-                    <p className="text-sm text-zinc-500">
-                      Show confetti when completing sprints and fire effects when exceeding sprint
-                      budget. Automatically disabled when your system prefers reduced motion.
-                    </p>
-                  </div>
-                  <Switch
-                    id="enable-particle-animations"
-                    checked={enableParticleAnimations}
-                    onCheckedChange={(checked) => setEnableParticleAnimations(checked === true)}
-                    className="data-[state=checked]:bg-amber-600"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Chat Panel */}
-            <Card className="border-zinc-800 bg-zinc-900/50">
-              <CardHeader>
-                <CardTitle className="text-zinc-100">Chat Panel</CardTitle>
-                <CardDescription className="text-zinc-500">
-                  Control the Claude Chat panel visibility
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-start justify-between space-x-4">
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor="enable-chat-panel" className="text-zinc-300">
-                      Enable chat panel
-                    </Label>
-                    <p className="text-sm text-zinc-500">
-                      Show the Claude Chat panel and floating action button. When disabled, the chat
-                      panel and FAB will be hidden from the interface.
-                    </p>
-                  </div>
-                  <Switch
-                    id="enable-chat-panel"
-                    checked={showChatPanel}
-                    onCheckedChange={(checked) => setShowChatPanel(checked === true)}
-                    className="data-[state=checked]:bg-amber-600"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Sidebar */}
-            <Card className="border-zinc-800 bg-zinc-900/50">
-              <CardHeader>
-                <CardTitle className="text-zinc-100">Sidebar</CardTitle>
-                <CardDescription className="text-zinc-500">
-                  Control which settings sections are expanded by default in the sidebar
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-start justify-between space-x-4">
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor="sidebar-admin" className="text-zinc-300">
-                      Admin settings expanded
-                    </Label>
-                    <p className="text-sm text-zinc-500">
-                      Keep the admin settings section expanded in the sidebar
-                    </p>
-                  </div>
-                  <Switch
-                    id="sidebar-admin"
-                    checked={sidebarExpandedSections.admin ?? false}
-                    onCheckedChange={(checked) =>
-                      setSidebarSectionExpanded('admin', checked === true)
-                    }
-                    className="data-[state=checked]:bg-amber-600"
-                  />
-                </div>
-
-                <Separator className="bg-zinc-800" />
-
-                <div className="flex items-start justify-between space-x-4">
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor="sidebar-profile" className="text-zinc-300">
-                      Profile tabs expanded
-                    </Label>
-                    <p className="text-sm text-zinc-500">
-                      Keep the profile tabs section expanded in the sidebar
-                    </p>
-                  </div>
-                  <Switch
-                    id="sidebar-profile"
-                    checked={sidebarExpandedSections.profile ?? false}
-                    onCheckedChange={(checked) =>
-                      setSidebarSectionExpanded('profile', checked === true)
-                    }
-                    className="data-[state=checked]:bg-amber-600"
-                  />
-                </div>
-
-                {projects.length > 0 && (
-                  <>
-                    <Separator className="bg-zinc-800" />
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <Label className="text-zinc-300">Project settings expanded</Label>
-                          <p className="text-sm text-zinc-500">
-                            Keep project settings sections expanded in the sidebar
-                          </p>
-                        </div>
-                        <Switch
-                          id="sidebar-all-projects"
-                          checked={projects.every((p) => sidebarExpandedSections[p.id] ?? false)}
-                          onCheckedChange={(checked) => {
-                            for (const project of projects) {
-                              setSidebarSectionExpanded(project.id, checked === true)
-                            }
-                          }}
-                          className="data-[state=checked]:bg-amber-600"
-                        />
-                      </div>
-                      <div className="space-y-3 mt-3">
-                        {projects.map((project) => (
-                          <div
-                            key={project.id}
-                            className="flex items-center justify-between space-x-4"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="h-2 w-2 rounded-full shrink-0"
-                                style={{ backgroundColor: project.color || '#6b7280' }}
-                              />
-                              <Label
-                                htmlFor={`sidebar-project-${project.id}`}
-                                className="text-sm text-zinc-400 font-normal cursor-pointer"
-                              >
-                                {project.name}
-                              </Label>
-                            </div>
-                            <Switch
-                              id={`sidebar-project-${project.id}`}
-                              checked={sidebarExpandedSections[project.id] ?? false}
-                              onCheckedChange={(checked) =>
-                                setSidebarSectionExpanded(project.id, checked === true)
-                              }
-                              className="data-[state=checked]:bg-amber-600"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+        {/* Security Tab */}
+        {activeTab === 'security' && stableUser && (
+          <SecurityTab
+            user={stableUser}
+            isDemo={isDemo}
+            onUserUpdate={handleUserUpdate}
+            onSessionUpdate={debouncedUpdateSession}
+          />
         )}
       </div>
     </div>
