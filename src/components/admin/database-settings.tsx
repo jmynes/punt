@@ -514,11 +514,9 @@ export function DatabaseSettings() {
             {confirmExportPassword && confirmExportPassword !== exportPassword && (
               <p className="text-xs text-red-400">Passwords do not match.</p>
             )}
-            {exportPassword && confirmExportPassword === exportPassword && (
-              <p className="text-xs text-amber-500">
-                Remember this password. You will need it to restore the backup.
-              </p>
-            )}
+            <p className="text-xs text-amber-500">
+              Remember this password. You will need it to restore the backup.
+            </p>
           </div>
 
           <Button
