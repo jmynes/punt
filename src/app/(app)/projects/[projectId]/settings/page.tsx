@@ -191,11 +191,12 @@ export default function ProjectSettingsPage() {
 
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-hidden">
         {/* Tabs */}
-        <ScrollableTabs className="mb-6">
+        <ScrollableTabs className="mb-6" activeValue={effectiveTab}>
           <div className="flex gap-1 border-b border-zinc-800">
             {canViewSettings && (
               <Link
                 href={`/projects/${projectKey}/settings?tab=general`}
+                data-active={effectiveTab === 'general' || undefined}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                   effectiveTab === 'general'
@@ -210,6 +211,7 @@ export default function ProjectSettingsPage() {
             {canViewSettings && (
               <Link
                 href={`/projects/${projectKey}/settings?tab=agents`}
+                data-active={effectiveTab === 'agents' || undefined}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                   effectiveTab === 'agents'
@@ -224,6 +226,7 @@ export default function ProjectSettingsPage() {
             {canViewSettings && (
               <Link
                 href={`/projects/${projectKey}/settings?tab=hooks`}
+                data-active={effectiveTab === 'hooks' || undefined}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                   effectiveTab === 'hooks'
@@ -238,6 +241,7 @@ export default function ProjectSettingsPage() {
             {canManageLabels && (
               <Link
                 href={`/projects/${projectKey}/settings?tab=labels`}
+                data-active={effectiveTab === 'labels' || undefined}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                   effectiveTab === 'labels'
@@ -252,6 +256,7 @@ export default function ProjectSettingsPage() {
             {canManageMembers && (
               <Link
                 href={`/projects/${projectKey}/settings?tab=members`}
+                data-active={effectiveTab === 'members' || undefined}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                   effectiveTab === 'members'
@@ -266,6 +271,7 @@ export default function ProjectSettingsPage() {
             {canViewSettings && (
               <Link
                 href={`/projects/${projectKey}/settings?tab=repository`}
+                data-active={effectiveTab === 'repository' || undefined}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                   effectiveTab === 'repository'
@@ -280,6 +286,7 @@ export default function ProjectSettingsPage() {
             {canManageRoles && (
               <Link
                 href={`/projects/${projectKey}/settings?tab=roles`}
+                data-active={effectiveTab === 'roles' || undefined}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                   effectiveTab === 'roles'
@@ -294,6 +301,7 @@ export default function ProjectSettingsPage() {
             {canViewSettings && (
               <Link
                 href={`/projects/${projectKey}/settings?tab=sprints`}
+                data-active={effectiveTab === 'sprints' || undefined}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                   effectiveTab === 'sprints'

@@ -213,10 +213,11 @@ function PreferencesContent() {
 
       <div className="mx-auto max-w-4xl px-6 pb-6">
         {/* Tab Navigation */}
-        <ScrollableTabs className="mb-6">
+        <ScrollableTabs className="mb-6" activeValue={activeTab}>
           <div className="flex gap-1 border-b border-zinc-800">
             <Link
               href="/preferences?tab=general"
+              data-active={activeTab === 'general' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'general'
@@ -229,6 +230,7 @@ function PreferencesContent() {
             </Link>
             <Link
               href="/preferences?tab=appearance"
+              data-active={activeTab === 'appearance' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'appearance'
@@ -241,6 +243,7 @@ function PreferencesContent() {
             </Link>
             <Link
               href="/preferences?tab=claude-chat"
+              data-active={activeTab === 'claude-chat' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'claude-chat'
@@ -253,6 +256,7 @@ function PreferencesContent() {
             </Link>
             <Link
               href="/preferences?tab=mcp"
+              data-active={activeTab === 'mcp' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'mcp'
@@ -265,6 +269,7 @@ function PreferencesContent() {
             </Link>
             <Link
               href="/preferences?tab=notifications"
+              data-active={activeTab === 'notifications' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'notifications'
@@ -277,6 +282,7 @@ function PreferencesContent() {
             </Link>
             <Link
               href="/preferences?tab=profile"
+              data-active={activeTab === 'profile' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'profile'
@@ -289,6 +295,7 @@ function PreferencesContent() {
             </Link>
             <Link
               href="/preferences?tab=security"
+              data-active={activeTab === 'security' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'security'

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 interface ScrollableTabsProps {
   children: React.ReactNode
   className?: string
+  activeValue?: string
 }
 
 /**
@@ -14,7 +15,7 @@ interface ScrollableTabsProps {
  * with native horizontal scrolling (mouse wheel, trackpad, touch).
  * The scrollbar is visually hidden.
  */
-export function ScrollableTabs({ children, className }: ScrollableTabsProps) {
+export function ScrollableTabs({ children, className, activeValue }: ScrollableTabsProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
@@ -46,17 +47,17 @@ export function ScrollableTabs({ children, className }: ScrollableTabsProps) {
     }
   }, [updateScrollState])
 
-  // Scroll active tab into view on mount
+  // Scroll active tab into view on mount and when active tab changes
   useEffect(() => {
     const el = scrollRef.current
-    if (!el) return
+    if (!el || !activeValue) return
 
-    // Find the active tab by looking for the amber border indicator
-    const activeTab = el.querySelector('[class*="border-amber"]') as HTMLElement | null
+    // Find the active tab by looking for the data-active attribute
+    const activeTab = el.querySelector('[data-active]') as HTMLElement | null
     if (activeTab) {
       activeTab.scrollIntoView({ inline: 'nearest', block: 'nearest' })
     }
-  }, [])
+  }, [activeValue])
 
   return (
     <div className={cn('relative', className)}>

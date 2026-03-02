@@ -75,10 +75,11 @@ export default function AdminSettingsPage() {
 
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-auto">
         {/* Tabs */}
-        <ScrollableTabs className="mb-6">
+        <ScrollableTabs className="mb-6" activeValue={activeTab}>
           <div className="flex gap-1 border-b border-zinc-800">
             <Link
               href="/admin/settings?tab=board"
+              data-active={activeTab === 'board' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'board'
@@ -91,6 +92,7 @@ export default function AdminSettingsPage() {
             </Link>
             <Link
               href="/admin/settings?tab=branding"
+              data-active={activeTab === 'branding' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'branding'
@@ -103,6 +105,7 @@ export default function AdminSettingsPage() {
             </Link>
             <Link
               href="/admin/settings?tab=database"
+              data-active={activeTab === 'database' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'database'
@@ -115,6 +118,7 @@ export default function AdminSettingsPage() {
             </Link>
             <Link
               href="/admin/settings?tab=roles"
+              data-active={activeTab === 'roles' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'roles'
@@ -127,6 +131,7 @@ export default function AdminSettingsPage() {
             </Link>
             <Link
               href="/admin/settings?tab=email"
+              data-active={activeTab === 'email' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'email'
@@ -139,6 +144,7 @@ export default function AdminSettingsPage() {
             </Link>
             <Link
               href="/admin/settings?tab=uploads"
+              data-active={activeTab === 'uploads' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'uploads'
@@ -151,6 +157,7 @@ export default function AdminSettingsPage() {
             </Link>
             <Link
               href="/admin/settings?tab=sprints"
+              data-active={activeTab === 'sprints' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'sprints'
@@ -163,6 +170,7 @@ export default function AdminSettingsPage() {
             </Link>
             <Link
               href="/admin/settings?tab=updates"
+              data-active={activeTab === 'updates' || undefined}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
                 activeTab === 'updates'
