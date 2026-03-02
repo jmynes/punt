@@ -278,8 +278,9 @@ When `database.wiped` is received:
 if (data.type === 'database.wiped') {
   // Clear all queries
   queryClient.clear()
-  // Sign out
-  signOut({ callbackUrl: '/login' })
+  // Sign out (use redirect: false + client-side redirect to avoid AUTH_URL resolving to localhost)
+  await signOut({ redirect: false })
+  window.location.href = '/login'
 }
 ```
 
