@@ -109,8 +109,10 @@ export default function ProjectSettingsPage() {
     return null
   }
 
-  // Wait for store hydration and permissions to load
-  if (!_hasHydrated || permissionsLoading) {
+  // Wait for store hydration and permissions to resolve
+  // Note: permissionsLoading is false when the query is disabled (user session still loading),
+  // so we also check that permissions have actually resolved to avoid a brief "Access Denied" flash.
+  if (!_hasHydrated || permissionsLoading || canViewSettings === undefined) {
     return (
       <div className="flex h-full flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
