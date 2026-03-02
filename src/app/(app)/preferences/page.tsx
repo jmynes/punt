@@ -34,9 +34,9 @@ type PreferencesTab =
   | 'security'
 
 const VALID_TABS: PreferencesTab[] = [
+  'general',
   'appearance',
   'claude-chat',
-  'general',
   'mcp',
   'notifications',
   'profile',
@@ -180,7 +180,7 @@ function PreferencesContent() {
 
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const activeTab: PreferencesTab = isValidTab(tabParam) ? tabParam : 'appearance'
+  const activeTab: PreferencesTab = isValidTab(tabParam) ? tabParam : 'general'
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
   useTabCycleShortcut({
@@ -214,6 +214,18 @@ function PreferencesContent() {
         {/* Tab Navigation */}
         <div className="flex gap-1 mb-6 border-b border-zinc-800 overflow-x-auto">
           <Link
+            href="/preferences?tab=general"
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
+              activeTab === 'general'
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            <Sliders className="h-4 w-4" />
+            General
+          </Link>
+          <Link
             href="/preferences?tab=appearance"
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
@@ -236,18 +248,6 @@ function PreferencesContent() {
           >
             <Bot className="h-4 w-4" />
             Claude Chat
-          </Link>
-          <Link
-            href="/preferences?tab=general"
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-              activeTab === 'general'
-                ? 'text-amber-500 border-amber-500'
-                : 'text-zinc-400 border-transparent hover:text-zinc-300',
-            )}
-          >
-            <Sliders className="h-4 w-4" />
-            General
           </Link>
           <Link
             href="/preferences?tab=mcp"
