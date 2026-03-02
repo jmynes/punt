@@ -1017,6 +1017,21 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             </MenuSection>
 
             <MenuSection title="Operations">
+              {!multi && ticket.type !== 'subtask' && (
+                <MenuButton
+                  icon={<Plus className="h-4 w-4" />}
+                  label="Add Subtask"
+                  onMouseEnter={closeSubmenu}
+                  onClick={() => {
+                    uiStore.openCreateTicketWithData({
+                      type: 'subtask',
+                      parentId: ticket.id,
+                    })
+                    setOpen(false)
+                    setSubmenu(null)
+                  }}
+                />
+              )}
               <MenuButton
                 icon={<ClipboardCopy className="h-4 w-4" />}
                 label="Copy"

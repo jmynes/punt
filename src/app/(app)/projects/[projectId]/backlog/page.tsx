@@ -56,6 +56,7 @@ import type { TicketWithRelations } from '@/types'
  */
 const createPointerCollisionDetection = (
   ticketsBySprint: Record<string, { id: string }[]>,
+  sprintContainerRef?: React.RefObject<HTMLDivElement | null>,
 ): CollisionDetection => {
   return (args) => {
     const { pointerCoordinates, droppableRects, droppableContainers } = args
@@ -123,9 +124,18 @@ const createPointerCollisionDetection = (
       ticketsBySection[t.sectionId].push(t)
     }
 
+    // Check if pointer is below the sprint container's visible area.
+    // When dragging far enough past the sprint section, target the backlog instead.
+    const sprintContainerRect = sprintContainerRef?.current?.getBoundingClientRect()
+    const pointerBelowSprintContainer =
+      sprintContainerRect != null && cursorY > sprintContainerRect.bottom
+
     // First, check if cursor is within any section's ticket area
     for (const [sectionId, sectionTickets] of Object.entries(ticketsBySection)) {
       if (sectionTickets.length === 0) continue
+
+      // Skip sprint sections when pointer has escaped below the container
+      if (pointerBelowSprintContainer && sectionId !== 'backlog') continue
 
       // Sort by Y position within section - this gives us the VISUAL order
       sectionTickets.sort((a, b) => a.rect.top - b.rect.top)
@@ -245,6 +255,9 @@ const createPointerCollisionDetection = (
 
     // If not over any ticket area, check if over a section container (for empty sections)
     for (const section of sectionDroppables) {
+      // Skip sprint sections when pointer has escaped below the container
+      if (pointerBelowSprintContainer && section.sectionId !== 'backlog') continue
+
       if (
         cursorY >= section.rect.top &&
         cursorY <= section.rect.bottom &&
@@ -315,6 +328,7 @@ export default function BacklogPage() {
     insertIndex: number
   } | null>(null)
   const draggedIdsRef = useRef<string[]>([])
+  const sprintContainerRef = useRef<HTMLDivElement>(null)
   // Store active drag data because sortable item gets filtered out during drag
   const activeDragDataRef = useRef<{
     type: string | undefined
@@ -968,14 +982,17 @@ export default function BacklogPage() {
       <DndContext
         id="unified-backlog-dnd"
         sensors={sensors}
-        collisionDetection={createPointerCollisionDetection(ticketsBySprint)}
+        collisionDetection={createPointerCollisionDetection(ticketsBySprint, sprintContainerRef)}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         {/* Sprint sections (if any sprints exist) */}
         {hasActiveSprints && (
-          <div className="flex-shrink-0 max-h-[350px] overflow-y-auto p-4 lg:px-6 space-y-3 border-b border-zinc-800">
+          <div
+            ref={sprintContainerRef}
+            className="flex-shrink-0 max-h-[350px] overflow-y-auto p-4 lg:px-6 space-y-3 border-b border-zinc-800"
+          >
             {/* Active Sprints */}
             {activeSprints.map((sprint) => (
               <SprintSection

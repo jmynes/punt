@@ -343,7 +343,9 @@ export function useWipeDatabase() {
       showToast.success('Database wiped successfully. Redirecting to login...')
       // Sign out to clear the session cookie, then redirect to login
       setTimeout(() => {
-        signOut({ callbackUrl: '/login' })
+        signOut({ redirect: false }).then(() => {
+          window.location.href = '/login'
+        })
       }, 1500)
     },
     onError: (err) => {
