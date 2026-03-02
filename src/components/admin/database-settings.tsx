@@ -477,31 +477,29 @@ export function DatabaseSettings() {
               </button>
             </div>
             <PasswordStrengthIndicator password={exportPassword} />
-            {exportPassword && (
-              <div className="space-y-1.5">
-                <Label htmlFor="confirmExportPassword" className="text-zinc-300">
-                  Confirm Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                  <Input
-                    id="confirmExportPassword"
-                    type="text"
-                    value={confirmExportPassword}
-                    onChange={(e) => setConfirmExportPassword(e.target.value)}
-                    placeholder="Re-enter encryption password"
-                    className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 ${!showExportPassword ? 'password-mask' : ''} ${
-                      confirmExportPassword && confirmExportPassword !== exportPassword
-                        ? 'border-red-500'
-                        : ''
-                    }`}
-                  />
-                </div>
-                {confirmExportPassword && confirmExportPassword !== exportPassword && (
-                  <p className="text-xs text-red-400">Passwords do not match.</p>
-                )}
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmExportPassword" className="text-zinc-300">
+                Confirm Password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                <Input
+                  id="confirmExportPassword"
+                  type="text"
+                  value={confirmExportPassword}
+                  onChange={(e) => setConfirmExportPassword(e.target.value)}
+                  placeholder="Re-enter encryption password"
+                  className={`bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 ${!showExportPassword ? 'password-mask' : ''} ${
+                    confirmExportPassword && confirmExportPassword !== exportPassword
+                      ? 'border-red-500'
+                      : ''
+                  }`}
+                />
               </div>
-            )}
+              {confirmExportPassword && confirmExportPassword !== exportPassword && (
+                <p className="text-xs text-red-400">Passwords do not match.</p>
+              )}
+            </div>
             {totpRequiresPassword && !exportPassword && (
               <div className="flex items-start gap-2 p-3 bg-amber-900/20 border border-amber-800/50 rounded-lg">
                 <Info className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
@@ -523,7 +521,9 @@ export function DatabaseSettings() {
             onClick={handleExportClick}
             disabled={
               (totpRequiresPassword && !exportPassword) ||
-              (exportPassword && confirmExportPassword !== exportPassword) ||
+              (exportPassword || confirmExportPassword
+                ? confirmExportPassword !== exportPassword
+                : false) ||
               allProjectsExcluded
             }
             variant="primary"
