@@ -19,6 +19,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { Accordion } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -268,165 +269,182 @@ export function DatabaseSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          {/* Data Toggles */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                Include in Export
-              </h4>
-              <button
-                type="button"
-                onClick={() => {
-                  const allSelected = includeAttachments && includeComments && includeActivities
-                  setIncludeAttachments(!allSelected)
-                  setIncludeComments(!allSelected)
-                  setIncludeActivities(!allSelected)
-                }}
-                className="text-xs text-amber-500 hover:text-amber-400"
-              >
-                {includeAttachments && includeComments && includeActivities
-                  ? 'Deselect All'
-                  : 'Select All'}
-              </button>
-            </div>
-            <div className="grid gap-2">
-              {[
-                {
-                  id: 'attachments',
-                  icon: Paperclip,
-                  label: 'Ticket attachments',
-                  checked: includeAttachments,
-                  onChange: setIncludeAttachments,
-                  size: estimate?.totals.attachmentBytes,
-                },
-                {
-                  id: 'comments',
-                  icon: MessageSquare,
-                  label: 'Comment history',
-                  checked: includeComments,
-                  onChange: setIncludeComments,
-                  size: estimate?.totals.commentBytes,
-                },
-                {
-                  id: 'activities',
-                  icon: History,
-                  label: 'Activity history',
-                  checked: includeActivities,
-                  onChange: setIncludeActivities,
-                  size: estimate?.totals.activityBytes,
-                },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => item.onChange(!item.checked)}
-                  className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
-                    item.checked
-                      ? 'border-amber-600/40 bg-amber-950/20'
-                      : 'border-zinc-700/50 bg-zinc-800/30 opacity-60'
-                  }`}
-                >
-                  <div
-                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                      item.checked
-                        ? 'border-amber-600 bg-amber-600'
-                        : 'border-zinc-600 bg-transparent'
-                    }`}
-                  >
-                    {item.checked && <Check className="h-3 w-3 text-white" />}
-                  </div>
-                  <item.icon className="h-4 w-4 shrink-0 text-zinc-400" />
-                  <span className="flex-1 text-sm text-zinc-200">{item.label}</span>
-                  {item.size != null && (
-                    <span className="text-xs tabular-nums text-zinc-500">
-                      {formatSize(item.size)}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Project Selection */}
-          {estimate && estimate.projects.length > 0 && (
+          <Accordion
+            title={
+              hasCustomOptions
+                ? `Advanced Options (${[
+                    !includeAttachments && 'no attachments',
+                    !includeComments && 'no comments',
+                    !includeActivities && 'no activity',
+                    excludeProjectIds.size > 0 &&
+                      `${excludeProjectIds.size} project${excludeProjectIds.size !== 1 ? 's' : ''} excluded`,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')})`
+                : 'Advanced Options'
+            }
+            className="border-zinc-700/50"
+          >
+            {/* Data Toggles */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                  Projects
+                  Include in Export
                 </h4>
                 <button
                   type="button"
                   onClick={() => {
-                    if (excludeProjectIds.size === 0) {
-                      setExcludeProjectIds(new Set(estimate.projects.map((p) => p.id)))
-                    } else {
-                      setExcludeProjectIds(new Set())
-                    }
+                    const allSelected = includeAttachments && includeComments && includeActivities
+                    setIncludeAttachments(!allSelected)
+                    setIncludeComments(!allSelected)
+                    setIncludeActivities(!allSelected)
                   }}
                   className="text-xs text-amber-500 hover:text-amber-400"
                 >
-                  {excludeProjectIds.size === 0 ? 'Deselect All' : 'Select All'}
+                  {includeAttachments && includeComments && includeActivities
+                    ? 'Deselect All'
+                    : 'Select All'}
                 </button>
               </div>
-              <div className="grid gap-2 max-h-48 overflow-y-auto pr-1">
-                {estimate.projects.map((project) => {
-                  const isIncluded = !excludeProjectIds.has(project.id)
-                  const projectSize = calculateEstimatedSize(
-                    {
-                      ...estimate,
-                      projects: [project],
-                      global: { ...estimate.global, estimatedBytes: 0, avatarSizeBytes: 0 },
-                    },
-                    {
-                      includeAttachments,
-                      includeComments,
-                      includeActivities,
-                      excludeProjectIds: new Set(),
-                    },
-                  )
-
-                  return (
-                    <button
-                      key={project.id}
-                      type="button"
-                      onClick={() => toggleProjectExclusion(project.id)}
-                      className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
-                        isIncluded
-                          ? 'border-amber-600/40 bg-amber-950/20'
-                          : 'border-zinc-700/50 bg-zinc-800/30 opacity-60'
+              <div className="grid gap-2">
+                {[
+                  {
+                    id: 'attachments',
+                    icon: Paperclip,
+                    label: 'Ticket attachments',
+                    checked: includeAttachments,
+                    onChange: setIncludeAttachments,
+                    size: estimate?.totals.attachmentBytes,
+                  },
+                  {
+                    id: 'comments',
+                    icon: MessageSquare,
+                    label: 'Comment history',
+                    checked: includeComments,
+                    onChange: setIncludeComments,
+                    size: estimate?.totals.commentBytes,
+                  },
+                  {
+                    id: 'activities',
+                    icon: History,
+                    label: 'Activity history',
+                    checked: includeActivities,
+                    onChange: setIncludeActivities,
+                    size: estimate?.totals.activityBytes,
+                  },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => item.onChange(!item.checked)}
+                    className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                      item.checked
+                        ? 'border-amber-600/40 bg-amber-950/20'
+                        : 'border-zinc-700/50 bg-zinc-800/30 opacity-60'
+                    }`}
+                  >
+                    <div
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                        item.checked
+                          ? 'border-amber-600 bg-amber-600'
+                          : 'border-zinc-600 bg-transparent'
                       }`}
                     >
-                      <div
-                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                      {item.checked && <Check className="h-3 w-3 text-white" />}
+                    </div>
+                    <item.icon className="h-4 w-4 shrink-0 text-zinc-400" />
+                    <span className="flex-1 text-sm text-zinc-200">{item.label}</span>
+                    {item.size != null && (
+                      <span className="text-xs tabular-nums text-zinc-500">
+                        {formatSize(item.size)}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Project Selection */}
+            {estimate && estimate.projects.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                    Projects
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (excludeProjectIds.size === 0) {
+                        setExcludeProjectIds(new Set(estimate.projects.map((p) => p.id)))
+                      } else {
+                        setExcludeProjectIds(new Set())
+                      }
+                    }}
+                    className="text-xs text-amber-500 hover:text-amber-400"
+                  >
+                    {excludeProjectIds.size === 0 ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
+                <div className="grid gap-2 max-h-48 overflow-y-auto pr-1">
+                  {estimate.projects.map((project) => {
+                    const isIncluded = !excludeProjectIds.has(project.id)
+                    const projectSize = calculateEstimatedSize(
+                      {
+                        ...estimate,
+                        projects: [project],
+                        global: { ...estimate.global, estimatedBytes: 0, avatarSizeBytes: 0 },
+                      },
+                      {
+                        includeAttachments,
+                        includeComments,
+                        includeActivities,
+                        excludeProjectIds: new Set(),
+                      },
+                    )
+
+                    return (
+                      <button
+                        key={project.id}
+                        type="button"
+                        onClick={() => toggleProjectExclusion(project.id)}
+                        className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors ${
                           isIncluded
-                            ? 'border-amber-600 bg-amber-600'
-                            : 'border-zinc-600 bg-transparent'
+                            ? 'border-amber-600/40 bg-amber-950/20'
+                            : 'border-zinc-700/50 bg-zinc-800/30 opacity-60'
                         }`}
                       >
-                        {isIncluded && <Check className="h-3 w-3 text-white" />}
-                      </div>
-                      <span
-                        className="h-3 w-3 rounded-sm shrink-0"
-                        style={{ backgroundColor: project.color }}
-                      />
-                      <span className="flex-1 truncate text-sm text-zinc-200">
-                        {project.key} &mdash; {project.name}
-                      </span>
-                      <span className="text-xs tabular-nums text-zinc-500 shrink-0">
-                        {project.ticketCount} ticket{project.ticketCount !== 1 ? 's' : ''}
-                        {projectSize > 0 && ` / ${formatSize(projectSize)}`}
-                      </span>
-                    </button>
-                  )
-                })}
+                        <div
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                            isIncluded
+                              ? 'border-amber-600 bg-amber-600'
+                              : 'border-zinc-600 bg-transparent'
+                          }`}
+                        >
+                          {isIncluded && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        <span
+                          className="h-3 w-3 rounded-sm shrink-0"
+                          style={{ backgroundColor: project.color }}
+                        />
+                        <span className="flex-1 truncate text-sm text-zinc-200">
+                          {project.key} &mdash; {project.name}
+                        </span>
+                        <span className="text-xs tabular-nums text-zinc-500 shrink-0">
+                          {project.ticketCount} ticket{project.ticketCount !== 1 ? 's' : ''}
+                          {projectSize > 0 && ` / ${formatSize(projectSize)}`}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                {allProjectsExcluded && (
+                  <p className="text-xs text-red-400">
+                    At least one project must be selected for export.
+                  </p>
+                )}
               </div>
-              {allProjectsExcluded && (
-                <p className="text-xs text-red-400">
-                  At least one project must be selected for export.
-                </p>
-              )}
-            </div>
-          )}
+            )}
+          </Accordion>
 
           {/* Encryption */}
           <div className="space-y-3">
