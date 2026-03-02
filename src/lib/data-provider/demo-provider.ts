@@ -66,7 +66,10 @@ export class DemoDataProvider implements DataProvider {
     return updated
   }
 
-  async deleteProject(projectId: string): Promise<void> {
+  async deleteProject(
+    projectId: string,
+    _reauth?: { confirmPassword: string; totpCode?: string; isRecoveryCode?: boolean },
+  ): Promise<void> {
     demoStorage.deleteProject(projectId)
   }
 

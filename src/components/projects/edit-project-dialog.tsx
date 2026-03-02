@@ -2,10 +2,10 @@
 
 import { AlertTriangle, Loader2, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useDeleteProject, useUpdateProject } from '@/hooks/queries/use-projects'
 import { LABEL_COLORS } from '@/lib/constants'
+import { isDemoMode } from '@/lib/demo/demo-config'
 import { showToast } from '@/lib/toast'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -51,6 +52,8 @@ export function EditProjectDialog() {
   })
   const [originalKey, setOriginalKey] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showDeleteReauth, setShowDeleteReauth] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const keyChanged = formData.key !== originalKey && originalKey !== ''
@@ -125,30 +128,68 @@ export function EditProjectDialog() {
     )
   }, [editProjectId, formData, keyChanged, originalKey, updateProject, handleClose])
 
-  const handleDelete = useCallback(async () => {
+  const handleDeleteConfirmed = useCallback(() => {
     if (!editProjectId) return
 
-    // Get the full project data before deleting
     const project = getProject(editProjectId)
     if (!project) return
 
-    deleteProject.mutate(editProjectId, {
-      onSuccess: () => {
-        showToast.success('Project deleted', {
-          description: project.name,
-          duration: 4000,
-        })
-        setShowDeleteConfirm(false)
-        handleClose()
-      },
-      onError: (error) => {
-        showToast.error('Failed to delete project', {
-          description: error.message,
-        })
-        setShowDeleteConfirm(false)
-      },
-    })
+    setShowDeleteConfirm(false)
+
+    // In demo mode, skip reauth and delete directly
+    if (isDemoMode()) {
+      deleteProject.mutate(
+        { id: editProjectId },
+        {
+          onSuccess: () => {
+            showToast.success('Project deleted', {
+              description: project.name,
+              duration: 4000,
+            })
+            handleClose()
+          },
+          onError: (error) => {
+            showToast.error('Failed to delete project', {
+              description: error.message,
+            })
+          },
+        },
+      )
+    } else {
+      setShowDeleteReauth(true)
+    }
   }, [editProjectId, getProject, deleteProject, handleClose])
+
+  const handleDeleteWithReauth = useCallback(
+    async (password: string, totpCode?: string, isRecoveryCode?: boolean) => {
+      if (!editProjectId) return
+
+      const project = getProject(editProjectId)
+      if (!project) return
+
+      await deleteProject.mutateAsync(
+        {
+          id: editProjectId,
+          confirmPassword: password,
+          totpCode,
+          isRecoveryCode,
+        },
+        {
+          onSuccess: () => {
+            showToast.success('Project deleted', {
+              description: project.name,
+              duration: 4000,
+            })
+            handleClose()
+          },
+          onError: (error) => {
+            throw error
+          },
+        },
+      )
+    },
+    [editProjectId, getProject, deleteProject, handleClose],
+  )
 
   const isValid = formData.name.trim().length > 0 && formData.key.length > 0
   const isPending = updateProject.isPending || deleteProject.isPending
@@ -281,13 +322,40 @@ export function EditProjectDialog() {
       </Dialog>
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <AlertDialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          setShowDeleteConfirm(open)
+          if (!open) {
+            setDeleteConfirmText('')
+          }
+        }}
+      >
         <AlertDialogContent className="bg-zinc-950 border-zinc-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete &quot;{formData.name}&quot;? This action cannot be
-              undone and will remove all associated tickets.
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 text-zinc-400">
+                <p>
+                  Are you sure you want to delete &quot;{formData.name}&quot;? This action cannot be
+                  undone and will remove all associated tickets.
+                </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-zinc-300">
+                    Type <span className="font-mono font-bold text-red-400">{formData.name}</span>{' '}
+                    to confirm:
+                  </p>
+                  <Input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder={`Type ${formData.name} to confirm`}
+                    className="bg-zinc-900 border-zinc-700 text-zinc-100"
+                    autoComplete="off"
+                    disabled={deleteProject.isPending}
+                  />
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -297,10 +365,10 @@ export function EditProjectDialog() {
             >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteProject.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white"
+            <Button
+              onClick={handleDeleteConfirmed}
+              disabled={deleteProject.isPending || deleteConfirmText !== formData.name}
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {deleteProject.isPending ? (
                 <>
@@ -310,10 +378,21 @@ export function EditProjectDialog() {
               ) : (
                 'Delete Project'
               )}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Password reauthentication dialog */}
+      <ReauthDialog
+        open={showDeleteReauth}
+        onOpenChange={setShowDeleteReauth}
+        title="Confirm Project Deletion"
+        description={`Enter your password to permanently delete "${formData.name}" and all its data.`}
+        actionLabel="Delete Project"
+        actionVariant="destructive"
+        onConfirm={handleDeleteWithReauth}
+      />
     </>
   )
 }

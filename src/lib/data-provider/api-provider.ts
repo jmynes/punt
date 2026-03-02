@@ -83,9 +83,13 @@ export class APIDataProvider implements DataProvider {
     })
   }
 
-  async deleteProject(projectId: string): Promise<void> {
+  async deleteProject(
+    projectId: string,
+    reauth?: { confirmPassword: string; totpCode?: string; isRecoveryCode?: boolean },
+  ): Promise<void> {
     await this.fetchJson(`/api/projects/${projectId}`, {
       method: 'DELETE',
+      ...(reauth && { body: JSON.stringify(reauth) }),
     })
   }
 

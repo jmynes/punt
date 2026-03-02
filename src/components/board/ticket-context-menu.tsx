@@ -734,8 +734,11 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }))
 
     showUndoRedoToast('success', {
-      title: count === 1 ? 'Removed from sprint' : `${count} tickets removed from sprint`,
-      description: count === 1 ? `${ticketKeys[0]} sent to Backlog` : `Sent to Backlog`,
+      title:
+        count === 1
+          ? `${ticketKeys[0]} removed from sprint`
+          : `${count} tickets removed from sprint`,
+      description: count === 1 ? 'Sent to Backlog' : `${ticketKeys.join(', ')} — sent to Backlog`,
       duration: getEffectiveDuration(5000),
     })
 
@@ -831,9 +834,9 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     showUndoRedoToast('success', {
       title:
         count === 1
-          ? `Added to ${targetSprint.name}`
+          ? `${ticketKeys[0]} added to ${targetSprint.name}`
           : `${count} tickets added to ${targetSprint.name}`,
-      description: count === 1 ? ticketKeys[0] : ticketKeys.join(', '),
+      description: count === 1 ? undefined : ticketKeys.join(', '),
       duration: getEffectiveDuration(5000),
     })
 
@@ -1014,6 +1017,21 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             </MenuSection>
 
             <MenuSection title="Operations">
+              {!multi && ticket.type !== 'subtask' && (
+                <MenuButton
+                  icon={<Plus className="h-4 w-4" />}
+                  label="Add Subtask"
+                  onMouseEnter={closeSubmenu}
+                  onClick={() => {
+                    uiStore.openCreateTicketWithData({
+                      type: 'subtask',
+                      parentId: ticket.id,
+                    })
+                    setOpen(false)
+                    setSubmenu(null)
+                  }}
+                />
+              )}
               <MenuButton
                 icon={<ClipboardCopy className="h-4 w-4" />}
                 label="Copy"

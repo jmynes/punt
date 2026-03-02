@@ -16,6 +16,7 @@ import {
   Link2,
   MessageSquare,
   Paperclip,
+  Plus,
   RotateCcw,
   Trash2,
   X,
@@ -1445,30 +1446,52 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               )}
 
               {/* Child Tickets */}
-              {childTickets.length > 0 && (
+              {(childTickets.length > 0 || ticket.type !== 'subtask') && (
                 <div className="space-y-2">
-                  <Label className="text-zinc-400">Children ({childTickets.length})</Label>
-                  <div className="space-y-1">
-                    {childTickets.map((child) => (
+                  <div className="flex items-center justify-between">
+                    <Label className="text-zinc-400">
+                      Children{childTickets.length > 0 ? ` (${childTickets.length})` : ''}
+                    </Label>
+                    {ticket.type !== 'subtask' && (
                       <Button
-                        key={child.id}
-                        variant="outline"
-                        className="w-full justify-start text-left h-auto py-2 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 hover:border-amber-500"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
                         onClick={() => {
-                          setActiveTicketId(child.id)
+                          openCreateTicketWithData({
+                            type: 'subtask',
+                            parentId: ticket.id,
+                          })
                         }}
                       >
-                        <div className="flex items-center gap-2 w-full">
-                          <TypeBadge type={child.type} size="sm" />
-                          <span className="font-mono text-zinc-500 shrink-0">
-                            {projectKey}-{child.number}
-                          </span>
-                          <InlineCodeText text={child.title} className="truncate text-zinc-300" />
-                          <Link2 className="h-3.5 w-3.5 text-zinc-500 ml-auto shrink-0" />
-                        </div>
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        Add Subtask
                       </Button>
-                    ))}
+                    )}
                   </div>
+                  {childTickets.length > 0 && (
+                    <div className="space-y-1">
+                      {childTickets.map((child) => (
+                        <Button
+                          key={child.id}
+                          variant="outline"
+                          className="w-full justify-start text-left h-auto py-2 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 hover:border-amber-500"
+                          onClick={() => {
+                            setActiveTicketId(child.id)
+                          }}
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <TypeBadge type={child.type} size="sm" />
+                            <span className="font-mono text-zinc-500 shrink-0">
+                              {projectKey}-{child.number}
+                            </span>
+                            <InlineCodeText text={child.title} className="truncate text-zinc-300" />
+                            <Link2 className="h-3.5 w-3.5 text-zinc-500 ml-auto shrink-0" />
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

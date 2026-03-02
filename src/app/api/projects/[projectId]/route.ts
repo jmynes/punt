@@ -7,9 +7,17 @@ import {
   requireProjectByKey,
 } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { isDemoMode } from '@/lib/demo/demo-config'
 import { projectEvents } from '@/lib/events'
+import { verifyPassword } from '@/lib/password'
 import { PERMISSIONS } from '@/lib/permissions'
 import { getSystemSettings } from '@/lib/system-settings'
+import {
+  decryptTotpSecret,
+  markRecoveryCodeUsed,
+  verifyRecoveryCode,
+  verifyTotpToken,
+} from '@/lib/totp'
 
 const updateProjectSchema = z.object({
   name: z.string().min(1).optional(),
@@ -219,7 +227,7 @@ export async function PATCH(
 
 /**
  * DELETE /api/projects/[projectId] - Delete a project
- * Requires owner role
+ * Requires owner role and password reauthentication
  */
 export async function DELETE(
   request: Request,
@@ -234,6 +242,78 @@ export async function DELETE(
 
     // Check project delete permission
     await requirePermission(user.id, projectId, PERMISSIONS.PROJECT_DELETE)
+
+    // Require password reauthentication (skip in demo mode)
+    if (!isDemoMode()) {
+      let body: {
+        confirmPassword?: string
+        totpCode?: string
+        isRecoveryCode?: boolean
+      } = {}
+      try {
+        body = await request.json()
+      } catch {
+        // No body provided
+      }
+
+      if (!body.confirmPassword) {
+        return NextResponse.json(
+          { error: 'Password is required to confirm this action' },
+          { status: 400 },
+        )
+      }
+
+      const currentUser = await db.user.findUnique({
+        where: { id: user.id },
+        select: {
+          passwordHash: true,
+          totpEnabled: true,
+          totpSecret: true,
+          totpRecoveryCodes: true,
+        },
+      })
+
+      if (!currentUser?.passwordHash) {
+        return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+      }
+
+      const isValidPassword = await verifyPassword(body.confirmPassword, currentUser.passwordHash)
+      if (!isValidPassword) {
+        return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
+      }
+
+      if (currentUser.totpEnabled && currentUser.totpSecret) {
+        if (!body.totpCode) {
+          return NextResponse.json(
+            { error: '2FA code required', requires2fa: true },
+            { status: 401 },
+          )
+        }
+
+        if (body.isRecoveryCode) {
+          if (!currentUser.totpRecoveryCodes) {
+            return NextResponse.json({ error: 'No recovery codes available' }, { status: 401 })
+          }
+
+          const codeIndex = await verifyRecoveryCode(body.totpCode, currentUser.totpRecoveryCodes)
+          if (codeIndex === -1) {
+            return NextResponse.json({ error: 'Invalid recovery code' }, { status: 401 })
+          }
+
+          const updatedCodes = markRecoveryCodeUsed(currentUser.totpRecoveryCodes, codeIndex)
+          await db.user.update({
+            where: { id: user.id },
+            data: { totpRecoveryCodes: updatedCodes },
+          })
+        } else {
+          const secret = decryptTotpSecret(currentUser.totpSecret)
+          const isValidTotp = verifyTotpToken(body.totpCode, secret)
+          if (!isValidTotp) {
+            return NextResponse.json({ error: 'Invalid 2FA code' }, { status: 401 })
+          }
+        }
+      }
+    }
 
     // Check if project exists and get all members (for SSE events after deletion)
     const project = await db.project.findUnique({

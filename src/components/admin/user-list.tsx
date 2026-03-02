@@ -274,7 +274,9 @@ export function UserList() {
           ('isActive' in updates && updates.isActive === false) ||
           ('isSystemAdmin' in updates && updates.isSystemAdmin === false)
         ) {
-          signOut({ callbackUrl: '/login' })
+          signOut({ redirect: false }).then(() => {
+            window.location.href = '/login'
+          })
           return
         }
       }
@@ -354,7 +356,9 @@ export function UserList() {
       if (data.action === 'demo') return
       // If the user deleted/disabled themselves, sign them out
       if (deleteUsername === currentUser?.username) {
-        signOut({ callbackUrl: '/login' })
+        signOut({ redirect: false }).then(() => {
+          window.location.href = '/login'
+        })
         return
       }
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
