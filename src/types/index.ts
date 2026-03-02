@@ -257,6 +257,7 @@ export interface TicketWithRelations {
   carriedFromSprint: SprintSummary | null
   labels: LabelSummary[]
   watchers: UserSummary[]
+  subtasks?: { id: string; resolution: string | null }[]
   attachments?: AttachmentInfo[]
   links?: TicketLinkSummary[]
   _count?: {

@@ -76,6 +76,11 @@ describe('TicketCell', () => {
     it('should show subtask count when present', () => {
       const ticket = createMockTicket({
         title: 'Parent task',
+        subtasks: [
+          { id: 's1', resolution: null },
+          { id: 's2', resolution: 'Done' },
+          { id: 's3', resolution: null },
+        ],
         _count: { comments: 0, subtasks: 3, attachments: 0 },
       })
       render(
@@ -86,7 +91,7 @@ describe('TicketCell', () => {
           getStatusName={mockGetStatusName}
         />,
       )
-      expect(screen.getByText('3 subtasks')).toBeInTheDocument()
+      expect(screen.getByText('1/3 subtasks')).toBeInTheDocument()
     })
   })
 
