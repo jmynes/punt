@@ -50,7 +50,7 @@ interface DatabaseImportDialogProps {
 
 type Step = 'loading' | 'preview' | 'importing' | 'success' | 'error'
 
-const REQUIRED_CONFIRMATION = 'DELETE ALL DATA'
+const REQUIRED_CONFIRMATION = 'REPLACE ALL DATA'
 
 export function DatabaseImportDialog({
   open,
