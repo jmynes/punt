@@ -348,49 +348,19 @@ export function SidebarContent({
           </div>
           <CollapsibleSection expanded={preferencesExpanded}>
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-              <Link href="/preferences?tab=profile" onClick={handleLinkClick}>
+              <Link href="/preferences?tab=appearance" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
                     pathname === '/preferences' &&
-                      (searchParams.get('tab') === 'profile' || !searchParams.get('tab')) &&
+                      (searchParams.get('tab') === 'appearance' || !searchParams.get('tab')) &&
                       'bg-zinc-800/50 text-zinc-100',
                   )}
                 >
-                  <User className="h-3 w-3" />
-                  Profile
-                </Button>
-              </Link>
-              <Link href="/preferences?tab=security" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences' &&
-                      searchParams.get('tab') === 'security' &&
-                      'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <KeyRound className="h-3 w-3" />
-                  Security
-                </Button>
-              </Link>
-              <Link href="/preferences?tab=mcp" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences' &&
-                      searchParams.get('tab') === 'mcp' &&
-                      'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Terminal className="h-3 w-3" />
-                  MCP
+                  <Palette className="h-3 w-3" />
+                  Appearance
                 </Button>
               </Link>
               <Link href="/preferences?tab=claude-chat" onClick={handleLinkClick}>
@@ -415,12 +385,27 @@ export function SidebarContent({
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
                     pathname === '/preferences' &&
-                      (searchParams.get('tab') === 'general' || !searchParams.get('tab')) &&
+                      searchParams.get('tab') === 'general' &&
                       'bg-zinc-800/50 text-zinc-100',
                   )}
                 >
                   <Sliders className="h-3 w-3" />
                   General
+                </Button>
+              </Link>
+              <Link href="/preferences?tab=mcp" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/preferences' &&
+                      searchParams.get('tab') === 'mcp' &&
+                      'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Terminal className="h-3 w-3" />
+                  MCP
                 </Button>
               </Link>
               <Link href="/preferences?tab=notifications" onClick={handleLinkClick}>
@@ -438,19 +423,34 @@ export function SidebarContent({
                   Notifications
                 </Button>
               </Link>
-              <Link href="/preferences?tab=appearance" onClick={handleLinkClick}>
+              <Link href="/preferences?tab=profile" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
                     pathname === '/preferences' &&
-                      searchParams.get('tab') === 'appearance' &&
+                      searchParams.get('tab') === 'profile' &&
                       'bg-zinc-800/50 text-zinc-100',
                   )}
                 >
-                  <Palette className="h-3 w-3" />
-                  Appearance
+                  <User className="h-3 w-3" />
+                  Profile
+                </Button>
+              </Link>
+              <Link href="/preferences?tab=security" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/preferences' &&
+                      searchParams.get('tab') === 'security' &&
+                      'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <KeyRound className="h-3 w-3" />
+                  Security
                 </Button>
               </Link>
             </div>
@@ -532,19 +532,19 @@ export function SidebarContent({
                 </div>
                 <CollapsibleSection expanded={adminSettingsExpanded}>
                   <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-                    <Link href="/admin/settings?tab=email" onClick={handleLinkClick}>
+                    <Link href="/admin/settings?tab=board" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
                           pathname === '/admin/settings' &&
-                            (searchParams.get('tab') === 'email' || !searchParams.get('tab')) &&
+                            (searchParams.get('tab') === 'board' || !searchParams.get('tab')) &&
                             'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
-                        <Mail className="h-3 w-3" />
-                        Email
+                        <Columns3 className="h-3 w-3" />
+                        Board
                       </Button>
                     </Link>
                     <Link href="/admin/settings?tab=branding" onClick={handleLinkClick}>
@@ -562,49 +562,19 @@ export function SidebarContent({
                         Branding
                       </Button>
                     </Link>
-                    <Link href="/admin/settings?tab=uploads" onClick={handleLinkClick}>
+                    <Link href="/admin/settings?tab=database" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
                           pathname === '/admin/settings' &&
-                            searchParams.get('tab') === 'uploads' &&
+                            searchParams.get('tab') === 'database' &&
                             'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
-                        <Upload className="h-3 w-3" />
-                        File Uploads
-                      </Button>
-                    </Link>
-                    <Link href="/admin/settings?tab=board" onClick={handleLinkClick}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings' &&
-                            searchParams.get('tab') === 'board' &&
-                            'bg-zinc-800/50 text-zinc-100',
-                        )}
-                      >
-                        <Columns3 className="h-3 w-3" />
-                        Board
-                      </Button>
-                    </Link>
-                    <Link href="/admin/settings?tab=sprints" onClick={handleLinkClick}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings' &&
-                            searchParams.get('tab') === 'sprints' &&
-                            'bg-zinc-800/50 text-zinc-100',
-                        )}
-                      >
-                        <CalendarClock className="h-3 w-3" />
-                        Sprints
+                        <Database className="h-3 w-3" />
+                        Database
                       </Button>
                     </Link>
                     <Link href="/admin/settings?tab=roles" onClick={handleLinkClick}>
@@ -622,6 +592,51 @@ export function SidebarContent({
                         Default Roles
                       </Button>
                     </Link>
+                    <Link href="/admin/settings?tab=email" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings' &&
+                            searchParams.get('tab') === 'email' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Mail className="h-3 w-3" />
+                        Email
+                      </Button>
+                    </Link>
+                    <Link href="/admin/settings?tab=uploads" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings' &&
+                            searchParams.get('tab') === 'uploads' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Upload className="h-3 w-3" />
+                        File Uploads
+                      </Button>
+                    </Link>
+                    <Link href="/admin/settings?tab=sprints" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings' &&
+                            searchParams.get('tab') === 'sprints' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <CalendarClock className="h-3 w-3" />
+                        Sprints
+                      </Button>
+                    </Link>
                     <Link href="/admin/settings?tab=updates" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -635,21 +650,6 @@ export function SidebarContent({
                       >
                         <RefreshCw className="h-3 w-3" />
                         Updates
-                      </Button>
-                    </Link>
-                    <Link href="/admin/settings?tab=database" onClick={handleLinkClick}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings' &&
-                            searchParams.get('tab') === 'database' &&
-                            'bg-zinc-800/50 text-zinc-100',
-                        )}
-                      >
-                        <Database className="h-3 w-3" />
-                        Database
                       </Button>
                     </Link>
                   </div>
@@ -958,18 +958,33 @@ function ProjectSettingsLink({
               </Button>
             </Link>
           )}
-          {canManageMembers && (
-            <Link href={`/projects/${projectKey}/settings?tab=members`} onClick={onClick}>
+          {canViewSettings && (
+            <Link href={`/projects/${projectKey}/settings?tab=agents`} onClick={onClick}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage && currentTab === 'members' && 'bg-zinc-800/50 text-zinc-100',
+                  isOnSettingsPage && currentTab === 'agents' && 'bg-zinc-800/50 text-zinc-100',
                 )}
               >
-                <Users className="h-3 w-3" />
-                Members
+                <Bot className="h-3 w-3" />
+                Agents
+              </Button>
+            </Link>
+          )}
+          {canViewSettings && (
+            <Link href={`/projects/${projectKey}/settings?tab=hooks`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  isOnSettingsPage && currentTab === 'hooks' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Webhook className="h-3 w-3" />
+                Hooks
               </Button>
             </Link>
           )}
@@ -985,6 +1000,36 @@ function ProjectSettingsLink({
               >
                 <Tag className="h-3 w-3" />
                 Labels
+              </Button>
+            </Link>
+          )}
+          {canManageMembers && (
+            <Link href={`/projects/${projectKey}/settings?tab=members`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  isOnSettingsPage && currentTab === 'members' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Users className="h-3 w-3" />
+                Members
+              </Button>
+            </Link>
+          )}
+          {canViewSettings && (
+            <Link href={`/projects/${projectKey}/settings?tab=repository`} onClick={onClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  isOnSettingsPage && currentTab === 'repository' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <GitBranch className="h-3 w-3" />
+                Repository
               </Button>
             </Link>
           )}
@@ -1015,51 +1060,6 @@ function ProjectSettingsLink({
               >
                 <CalendarClock className="h-3 w-3" />
                 Sprints
-              </Button>
-            </Link>
-          )}
-          {canViewSettings && (
-            <Link href={`/projects/${projectKey}/settings?tab=repository`} onClick={onClick}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage && currentTab === 'repository' && 'bg-zinc-800/50 text-zinc-100',
-                )}
-              >
-                <GitBranch className="h-3 w-3" />
-                Repository
-              </Button>
-            </Link>
-          )}
-          {canViewSettings && (
-            <Link href={`/projects/${projectKey}/settings?tab=hooks`} onClick={onClick}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage && currentTab === 'hooks' && 'bg-zinc-800/50 text-zinc-100',
-                )}
-              >
-                <Webhook className="h-3 w-3" />
-                Hooks
-              </Button>
-            </Link>
-          )}
-          {canViewSettings && (
-            <Link href={`/projects/${projectKey}/settings?tab=agents`} onClick={onClick}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage && currentTab === 'agents' && 'bg-zinc-800/50 text-zinc-100',
-                )}
-              >
-                <Bot className="h-3 w-3" />
-                Agents
               </Button>
             </Link>
           )}
