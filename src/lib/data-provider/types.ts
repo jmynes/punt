@@ -234,7 +234,10 @@ export interface DataProvider {
   getProject(projectId: string): Promise<ProjectWithDetails | null>
   createProject(data: CreateProjectInput): Promise<ProjectSummary>
   updateProject(projectId: string, data: UpdateProjectInput): Promise<ProjectSummary>
-  deleteProject(projectId: string): Promise<void>
+  deleteProject(
+    projectId: string,
+    reauth?: { confirmPassword: string; totpCode?: string; isRecoveryCode?: boolean },
+  ): Promise<void>
 
   // Columns
   getColumnsWithTickets(projectId: string): Promise<ColumnWithTickets[]>

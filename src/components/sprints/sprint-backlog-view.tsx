@@ -539,6 +539,7 @@ export function SprintBacklogView({
           : (sprints?.find((s) => s.id === targetSprintId)?.name ?? 'Sprint')
 
       const count = ticketsChangingSprint.length
+      const ticketKeys = ticketsChangingSprint.map((t) => `${projectKey}-${t.number}`)
       const fromLabel =
         fromSprints.size === 1
           ? fromSprints.has('backlog')
@@ -559,9 +560,10 @@ export function SprintBacklogView({
       showUndoRedoToast('success', {
         title:
           count === 1
-            ? `Ticket moved to ${targetSprintName}`
+            ? `${ticketKeys[0]} moved to ${targetSprintName}`
             : `${count} tickets moved to ${targetSprintName}`,
-        description: `From ${fromLabel}`,
+        description:
+          count === 1 ? `From ${fromLabel}` : `${ticketKeys.join(', ')} — from ${fromLabel}`,
       })
 
       // Register in undo store for keyboard shortcuts (Ctrl+Z/Y)
@@ -606,6 +608,7 @@ export function SprintBacklogView({
       tickets,
       sprints,
       projectId,
+      projectKey,
       updateTicket,
       updateTicketSprintMutation,
       ticketsBySprint,

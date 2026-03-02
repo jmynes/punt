@@ -39,6 +39,18 @@ vi.mock('@/lib/auth-helpers', async (importOriginal) => {
   }
 })
 
+vi.mock('@/lib/password', () => ({
+  verifyPassword: vi.fn(),
+}))
+
+vi.mock('@/lib/demo/demo-config', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/lib/demo/demo-config')>()
+  return {
+    ...original,
+    isDemoMode: vi.fn(() => false),
+  }
+})
+
 vi.mock('@/lib/permissions/check', () => ({
   hasPermission: vi.fn(),
   hasAnyPermission: vi.fn(),
@@ -52,6 +64,7 @@ vi.mock('@/lib/permissions/check', () => ({
 
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { verifyPassword } from '@/lib/password'
 import { hasPermission, isMember } from '@/lib/permissions/check'
 // Import routes after mocks
 import { DELETE, GET, PATCH } from '../route'
@@ -61,6 +74,7 @@ const mockDb = vi.mocked(db) as any
 const mockRequireAuth = vi.mocked(requireAuth)
 const mockHasPermission = vi.mocked(hasPermission)
 const mockIsMember = vi.mocked(isMember)
+const mockVerifyPassword = vi.mocked(verifyPassword)
 
 // Test data
 const TEST_USER = {
@@ -172,13 +186,20 @@ describe('Project API - Permission Tests', () => {
     it('should return 200 when user has project.delete permission', async () => {
       mockRequireAuth.mockResolvedValue(TEST_USER)
       mockHasPermission.mockResolvedValue(true)
+      mockVerifyPassword.mockResolvedValue(true)
+      mockDb.user.findUnique.mockResolvedValue({
+        passwordHash: 'hashed-password',
+        totpEnabled: false,
+        totpSecret: null,
+        totpRecoveryCodes: null,
+      })
       mockDb.project.findUnique.mockResolvedValue({
         id: TEST_PROJECT_ID,
         members: [{ id: 'member-1', userId: TEST_USER.id, role: { id: 'role-1', name: 'owner' } }],
       })
       mockDb.project.delete.mockResolvedValue({ id: TEST_PROJECT_ID })
 
-      const response = await DELETE(createRequest('DELETE'), {
+      const response = await DELETE(createRequest('DELETE', { confirmPassword: 'password123' }), {
         params: Promise.resolve({ projectId: TEST_PROJECT_ID }),
       })
 

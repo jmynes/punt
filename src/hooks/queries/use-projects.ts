@@ -197,12 +197,23 @@ export function useDeleteProject() {
   const removeProject = useProjectsStore((s) => s.removeProject)
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({
+      id,
+      confirmPassword,
+      totpCode,
+      isRecoveryCode,
+    }: {
+      id: string
+      confirmPassword?: string
+      totpCode?: string
+      isRecoveryCode?: boolean
+    }) => {
       const provider = getDataProvider(getTabId())
-      await provider.deleteProject(id)
+      const reauth = confirmPassword ? { confirmPassword, totpCode, isRecoveryCode } : undefined
+      await provider.deleteProject(id, reauth)
       return { success: true }
     },
-    onMutate: async (id) => {
+    onMutate: async ({ id }) => {
       await queryClient.cancelQueries({ queryKey: projectKeys.all })
 
       const previousProjects = queryClient.getQueryData<ProjectSummary[]>(projectKeys.all)
