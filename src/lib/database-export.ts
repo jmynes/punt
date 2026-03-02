@@ -21,6 +21,9 @@ import {
 export interface ExportOptions {
   includeAttachments?: boolean
   includeAvatars?: boolean
+  includeComments?: boolean
+  includeActivities?: boolean
+  excludeProjectIds?: string[]
   password?: string
 }
 
@@ -52,7 +55,14 @@ export interface FileManifest {
  * 17. TicketSprintHistory (depends on Tickets, Sprints)
  * 18. Invitations (depends on Projects, Users)
  */
-export async function exportDatabase(): Promise<ExportData> {
+export async function exportDatabase(options: ExportOptions = {}): Promise<ExportData> {
+  const { includeComments = true, includeActivities = true, excludeProjectIds = [] } = options
+
+  // Build project filter for project-scoped queries
+  const projectFilter =
+    excludeProjectIds.length > 0 ? { projectId: { notIn: excludeProjectIds } } : {}
+  const projectListFilter = excludeProjectIds.length > 0 ? { id: { notIn: excludeProjectIds } } : {}
+
   // Fetch all data in parallel for efficiency
   const [
     systemSettings,
@@ -79,25 +89,34 @@ export async function exportDatabase(): Promise<ExportData> {
       orderBy: { createdAt: 'asc' },
     }),
     db.project.findMany({
+      where: projectListFilter,
       orderBy: { createdAt: 'asc' },
     }),
     db.role.findMany({
+      where: projectFilter,
       orderBy: { createdAt: 'asc' },
     }),
     db.column.findMany({
+      where: projectFilter,
       orderBy: { order: 'asc' },
     }),
     db.label.findMany({
+      where: projectFilter,
       orderBy: { name: 'asc' },
     }),
     db.sprint.findMany({
+      where: projectFilter,
       orderBy: { createdAt: 'asc' },
     }),
     db.projectMember.findMany({
+      where: projectFilter,
       orderBy: { createdAt: 'asc' },
     }),
-    db.projectSprintSettings.findMany(),
+    db.projectSprintSettings.findMany({
+      where: projectFilter,
+    }),
     db.ticket.findMany({
+      where: projectFilter,
       include: { labels: { select: { id: true } } },
       orderBy: { createdAt: 'asc' },
     }),
@@ -107,15 +126,19 @@ export async function exportDatabase(): Promise<ExportData> {
     db.ticketWatcher.findMany({
       orderBy: { createdAt: 'asc' },
     }),
-    db.comment.findMany({
-      orderBy: { createdAt: 'asc' },
-    }),
+    includeComments
+      ? db.comment.findMany({
+          orderBy: { createdAt: 'asc' },
+        })
+      : Promise.resolve([]),
     db.ticketEdit.findMany({
       orderBy: { createdAt: 'asc' },
     }),
-    db.ticketActivity.findMany({
-      orderBy: { createdAt: 'asc' },
-    }),
+    includeActivities
+      ? db.ticketActivity.findMany({
+          orderBy: { createdAt: 'asc' },
+        })
+      : Promise.resolve([]),
     db.attachment.findMany({
       orderBy: { createdAt: 'asc' },
     }),
@@ -123,9 +146,33 @@ export async function exportDatabase(): Promise<ExportData> {
       orderBy: { addedAt: 'asc' },
     }),
     db.invitation.findMany({
+      where: projectFilter,
       orderBy: { createdAt: 'asc' },
     }),
   ])
+
+  // When excluding projects, filter ticket-scoped data by ticket IDs
+  const ticketIds = excludeProjectIds.length > 0 ? new Set(tickets.map((t) => t.id)) : null
+
+  const filteredTicketLinks = ticketIds
+    ? ticketLinks.filter((tl) => ticketIds.has(tl.fromTicketId) && ticketIds.has(tl.toTicketId))
+    : ticketLinks
+  const filteredTicketWatchers = ticketIds
+    ? ticketWatchers.filter((tw) => ticketIds.has(tw.ticketId))
+    : ticketWatchers
+  const filteredComments = ticketIds ? comments.filter((c) => ticketIds.has(c.ticketId)) : comments
+  const filteredTicketEdits = ticketIds
+    ? ticketEdits.filter((te) => ticketIds.has(te.ticketId))
+    : ticketEdits
+  const filteredTicketActivities = ticketIds
+    ? ticketActivities.filter((ta) => ticketIds.has(ta.ticketId))
+    : ticketActivities
+  const filteredAttachments = ticketIds
+    ? attachments.filter((a) => ticketIds.has(a.ticketId))
+    : attachments
+  const filteredTicketSprintHistory = ticketIds
+    ? ticketSprintHistory.filter((tsh) => ticketIds.has(tsh.ticketId))
+    : ticketSprintHistory
 
   // Convert dates to ISO strings and extract label IDs for tickets
   const ticketsWithLabelIds = tickets.map((ticket) => ({
@@ -189,32 +236,32 @@ export async function exportDatabase(): Promise<ExportData> {
       updatedAt: pss.updatedAt.toISOString(),
     })),
     tickets: ticketsForExport,
-    ticketLinks: ticketLinks.map((tl) => ({
+    ticketLinks: filteredTicketLinks.map((tl) => ({
       ...tl,
       createdAt: tl.createdAt.toISOString(),
     })),
-    ticketWatchers: ticketWatchers.map((tw) => ({
+    ticketWatchers: filteredTicketWatchers.map((tw) => ({
       ...tw,
       createdAt: tw.createdAt.toISOString(),
     })),
-    comments: comments.map((c) => ({
+    comments: filteredComments.map((c) => ({
       ...c,
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
     })),
-    ticketEdits: ticketEdits.map((te) => ({
+    ticketEdits: filteredTicketEdits.map((te) => ({
       ...te,
       createdAt: te.createdAt.toISOString(),
     })),
-    ticketActivities: ticketActivities.map((ta) => ({
+    ticketActivities: filteredTicketActivities.map((ta) => ({
       ...ta,
       createdAt: ta.createdAt.toISOString(),
     })),
-    attachments: attachments.map((a) => ({
+    attachments: filteredAttachments.map((a) => ({
       ...a,
       createdAt: a.createdAt.toISOString(),
     })),
-    ticketSprintHistory: ticketSprintHistory.map((tsh) => ({
+    ticketSprintHistory: filteredTicketSprintHistory.map((tsh) => ({
       ...tsh,
       addedAt: tsh.addedAt.toISOString(),
       removedAt: tsh.removedAt?.toISOString() ?? null,
@@ -286,7 +333,7 @@ export async function createDatabaseExportZip(
   userId: string,
   options: ExportOptions = {},
 ): Promise<{ buffer: Buffer; manifest: FileManifest }> {
-  const data = await exportDatabase()
+  const data = await exportDatabase(options)
   const backupJson = createBackupJson(data, userId, options)
 
   const manifest: FileManifest = {
@@ -343,10 +390,13 @@ export async function createDatabaseExportZip(
 }
 
 /**
- * Creates a simple JSON export (no files, legacy format)
+ * Creates a simple JSON export (no files)
  */
-export async function createDatabaseExport(userId: string): Promise<DatabaseExport> {
-  const data = await exportDatabase()
+export async function createDatabaseExport(
+  userId: string,
+  options: ExportOptions = {},
+): Promise<DatabaseExport> {
+  const data = await exportDatabase(options)
 
   return {
     version: EXPORT_VERSION,
@@ -358,13 +408,14 @@ export async function createDatabaseExport(userId: string): Promise<DatabaseExpo
 }
 
 /**
- * Creates an encrypted JSON export (no files, legacy format)
+ * Creates an encrypted JSON export (no files)
  */
 export async function createEncryptedDatabaseExport(
   userId: string,
   password: string,
+  options: ExportOptions = {},
 ): Promise<EncryptedDatabaseExport> {
-  const data = await exportDatabase()
+  const data = await exportDatabase({ ...options, password })
   // Bundle AUTH_SECRET inside encrypted payload when TOTP users exist
   const hasTotpUsers = data.users.some((u) => u.totpEnabled && u.totpSecret)
   const dataToEncrypt = hasTotpUsers

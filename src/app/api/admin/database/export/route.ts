@@ -21,6 +21,9 @@ const ExportRequestSchema = z.object({
   password: z.string().optional(),
   includeAttachments: z.boolean().optional(),
   includeAvatars: z.boolean().optional(),
+  includeComments: z.boolean().optional(),
+  includeActivities: z.boolean().optional(),
+  excludeProjectIds: z.array(z.string()).optional(),
   confirmPassword: z.string().min(1, 'Your password is required to confirm this action'),
   totpCode: z.string().optional(),
   isRecoveryCode: z.boolean().optional(),
@@ -117,6 +120,9 @@ export async function POST(request: Request) {
       password,
       includeAttachments,
       includeAvatars,
+      includeComments,
+      includeActivities,
+      excludeProjectIds,
       confirmPassword,
       totpCode,
       isRecoveryCode,
@@ -137,13 +143,18 @@ export async function POST(request: Request) {
 
     const includeFiles = includeAttachments || includeAvatars
 
+    const exportOpts = {
+      password,
+      includeAttachments,
+      includeAvatars,
+      includeComments,
+      includeActivities,
+      excludeProjectIds,
+    }
+
     if (includeFiles) {
       // Create ZIP with files
-      const { buffer } = await createDatabaseExportZip(user.id, {
-        password,
-        includeAttachments,
-        includeAvatars,
-      })
+      const { buffer } = await createDatabaseExportZip(user.id, exportOpts)
 
       const filename = generateExportFilename(true)
 
@@ -156,12 +167,12 @@ export async function POST(request: Request) {
       })
     }
 
-    // Create JSON export (legacy format, no files)
+    // Create JSON export (no files)
     let exportData: object
     if (password) {
-      exportData = await createEncryptedDatabaseExport(user.id, password)
+      exportData = await createEncryptedDatabaseExport(user.id, password, exportOpts)
     } else {
-      exportData = await createDatabaseExport(user.id)
+      exportData = await createDatabaseExport(user.id, exportOpts)
     }
 
     // Return as downloadable JSON
