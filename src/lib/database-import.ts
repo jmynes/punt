@@ -169,7 +169,14 @@ function parseBackupJson(
     // Validate decrypted data
     const dataResult = ExportDataSchema.safeParse(decryptedData)
     if (!dataResult.success) {
-      return { success: false, error: 'Decrypted data has invalid structure' }
+      const paths = dataResult.error.issues
+        .slice(0, 5)
+        .map((i) => i.path.join('.'))
+        .join(', ')
+      return {
+        success: false,
+        error: `Decrypted data has invalid structure: ${paths}`,
+      }
     }
 
     return {
@@ -513,7 +520,10 @@ export async function importDatabase(
             data: {
               ...userData,
               enabledMcpServers: enabledMcpServers ?? Prisma.DbNull,
-              totpRecoveryCodes: totpRecoveryCodes ?? Prisma.DbNull,
+              totpRecoveryCodes:
+                Array.isArray(totpRecoveryCodes) || typeof totpRecoveryCodes === 'string'
+                  ? totpRecoveryCodes
+                  : Prisma.DbNull,
               createdAt: new Date(user.createdAt),
               updatedAt: new Date(user.updatedAt),
               lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt) : null,

@@ -77,7 +77,7 @@ export const UserSchema = z
     totpSecret: z.string().nullable().optional(),
     totpEnabled: z.boolean().optional(),
     totpRecoveryCodes: z
-      .union([z.string(), z.array(z.string())])
+      .union([z.string(), z.array(z.string()), z.record(z.string(), z.unknown())])
       .nullable()
       .optional(),
   })

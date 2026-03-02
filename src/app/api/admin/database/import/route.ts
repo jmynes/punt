@@ -83,7 +83,7 @@ async function verifyReauth(
   return null
 }
 
-const REQUIRED_CONFIRMATION = 'DELETE ALL DATA'
+const REQUIRED_CONFIRMATION = 'REPLACE ALL DATA'
 
 /**
  * POST /api/admin/database/import
@@ -94,7 +94,7 @@ const REQUIRED_CONFIRMATION = 'DELETE ALL DATA'
  * Requires:
  * - System admin
  * - Re-authentication with admin credentials
- * - Typing "DELETE ALL DATA" confirmation
+ * - Typing "REPLACE ALL DATA" confirmation
  *
  * For first-run setup (no users), use POST /api/auth/setup/import instead.
  */
