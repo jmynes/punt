@@ -9,7 +9,7 @@
     "inspect": "npx @modelcontextprotocol/inspector tsx src/index.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "dotenv": "^17.3.1",
     "zod": "^4.3.6"
   },
