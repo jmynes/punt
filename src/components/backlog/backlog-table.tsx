@@ -777,7 +777,7 @@ export function BacklogTable({
           )}
         </div>
 
-        <ScrollBar orientation="horizontal" />
+        {activeDraggingIds.length === 0 && <ScrollBar orientation="horizontal" />}
       </ScrollArea>
     </div>
   )
