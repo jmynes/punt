@@ -107,7 +107,9 @@ export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
           // Skip tab check since all tabs need to sign out
           // If suppressed, the import dialog will handle sign-out after showing results
           if (!_suppressWipeSignOut) {
-            signOut({ callbackUrl: '/login' })
+            signOut({ redirect: false }).then(() => {
+              window.location.href = '/login'
+            })
           }
           return
         }
