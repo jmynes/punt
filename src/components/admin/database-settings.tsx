@@ -284,10 +284,26 @@ export function DatabaseSettings() {
           >
             {/* Data toggles */}
             <div className="space-y-3">
-              <Label className="text-zinc-300 flex items-center gap-2">
-                <Settings2 className="h-4 w-4 text-zinc-500" />
-                Include in Export
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-zinc-300 flex items-center gap-2">
+                  <Settings2 className="h-4 w-4 text-zinc-500" />
+                  Include in Export
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allSelected = includeAttachments && includeComments && includeActivities
+                    setIncludeAttachments(!allSelected)
+                    setIncludeComments(!allSelected)
+                    setIncludeActivities(!allSelected)
+                  }}
+                  className="text-xs text-amber-500 hover:text-amber-400"
+                >
+                  {includeAttachments && includeComments && includeActivities
+                    ? 'Deselect All'
+                    : 'Select All'}
+                </button>
+              </div>
               <div className="space-y-2.5">
                 <div className="flex items-center space-x-2">
                   <Checkbox
