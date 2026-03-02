@@ -7,14 +7,20 @@ import {
   Eye,
   EyeOff,
   FileImage,
+  FolderClosed,
   FolderX,
+  HardDrive,
+  History,
   Info,
   Lock,
+  MessageSquare,
   Paperclip,
+  Settings2,
   Trash2,
   Upload,
 } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { Accordion } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -22,9 +28,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   checkIfExportEncrypted,
+  type ExportSizeEstimate,
   fileToBase64,
   isZipContent,
   useDatabaseStats,
+  useExportEstimate,
 } from '@/hooks/queries/use-database-backup'
 import { DatabaseExportDialog } from './database-export-dialog'
 import { DatabaseImportDialog } from './database-import-dialog'
@@ -69,15 +77,73 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
   )
 }
 
+/**
+ * Format bytes into a human-readable size string
+ */
+function formatSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+}
+
+/**
+ * Calculate estimated export size based on current options
+ */
+function calculateEstimatedSize(
+  estimate: ExportSizeEstimate | undefined,
+  options: {
+    includeAttachments: boolean
+    includeAvatars: boolean
+    includeComments: boolean
+    includeActivities: boolean
+    excludeProjectIds: Set<string>
+  },
+): number {
+  if (!estimate) return 0
+
+  let total = estimate.global.estimatedBytes
+
+  for (const project of estimate.projects) {
+    if (options.excludeProjectIds.has(project.id)) continue
+
+    // Always include base ticket data
+    total += project.ticketCount * 500 // AVG_TICKET_SIZE
+
+    if (options.includeAttachments) {
+      total += project.attachmentSizeBytes
+    }
+
+    if (options.includeComments) {
+      total += project.commentCount * 300 // AVG_COMMENT_SIZE
+    }
+
+    if (options.includeActivities) {
+      total += project.activityCount * 150 // AVG_ACTIVITY_SIZE
+    }
+  }
+
+  if (options.includeAvatars) {
+    total += estimate.global.avatarSizeBytes
+  }
+
+  return total
+}
+
 export function DatabaseSettings() {
   const { data: stats } = useDatabaseStats()
+  const { data: estimate } = useExportEstimate()
   const usersWithTotp = stats?.usersWithTotp ?? 0
   const totpRequiresPassword = usersWithTotp > 0
 
   const [exportPassword, setExportPassword] = useState('')
   const [showExportPassword, setShowExportPassword] = useState(false)
-  const [includeAttachments, setIncludeAttachments] = useState(false)
-  const [includeAvatars, setIncludeAvatars] = useState(false)
+  const [includeAttachments, setIncludeAttachments] = useState(true)
+  const [includeAvatars, setIncludeAvatars] = useState(true)
+  const [includeComments, setIncludeComments] = useState(true)
+  const [includeActivities, setIncludeActivities] = useState(true)
+  const [excludeProjectIds, setExcludeProjectIds] = useState<Set<string>>(new Set())
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importFileBase64, setImportFileBase64] = useState<string | null>(null)
   const [isZip, setIsZip] = useState(false)
@@ -94,8 +160,11 @@ export function DatabaseSettings() {
 
   const handleExportComplete = () => {
     setExportPassword('')
-    setIncludeAttachments(false)
-    setIncludeAvatars(false)
+    setIncludeAttachments(true)
+    setIncludeAvatars(true)
+    setIncludeComments(true)
+    setIncludeActivities(true)
+    setExcludeProjectIds(new Set())
   }
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,7 +221,47 @@ export function DatabaseSettings() {
     }
   }
 
+  const toggleProjectExclusion = useCallback((projectId: string) => {
+    setExcludeProjectIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(projectId)) {
+        next.delete(projectId)
+      } else {
+        next.add(projectId)
+      }
+      return next
+    })
+  }, [])
+
   const includeFiles = includeAttachments || includeAvatars
+
+  // Calculate estimated export size
+  const estimatedSize = useMemo(
+    () =>
+      calculateEstimatedSize(estimate, {
+        includeAttachments,
+        includeAvatars,
+        includeComments,
+        includeActivities,
+        excludeProjectIds,
+      }),
+    [
+      estimate,
+      includeAttachments,
+      includeAvatars,
+      includeComments,
+      includeActivities,
+      excludeProjectIds,
+    ],
+  )
+
+  // Check if any advanced option differs from default
+  const hasCustomOptions =
+    !includeAttachments ||
+    !includeAvatars ||
+    !includeComments ||
+    !includeActivities ||
+    excludeProjectIds.size > 0
 
   return (
     <div className="space-y-6">
@@ -162,55 +271,188 @@ export function DatabaseSettings() {
           <CardTitle className="text-zinc-100 flex items-center gap-2">
             <Download className="h-5 w-5" />
             Export Database
+            {estimate && (
+              <span className="ml-auto text-xs font-normal text-zinc-500 flex items-center gap-1.5">
+                <HardDrive className="h-3 w-3" />~{formatSize(estimatedSize)}
+              </span>
+            )}
           </CardTitle>
           <CardDescription className="text-zinc-400">
-            Download a complete backup of your database. Optionally include files and encrypt with a
-            password.
+            Download a complete backup of your database. All data is included by default.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* File Options */}
-          <div className="space-y-3">
-            <Label className="text-zinc-300">Include Files</Label>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="includeAttachments"
-                  checked={includeAttachments}
-                  onCheckedChange={(checked) => setIncludeAttachments(checked === true)}
-                  className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                />
-                <Label
-                  htmlFor="includeAttachments"
-                  className="text-zinc-300 cursor-pointer flex items-center gap-2"
-                >
-                  <Paperclip className="h-4 w-4" />
-                  Ticket attachments
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="includeAvatars"
-                  checked={includeAvatars}
-                  onCheckedChange={(checked) => setIncludeAvatars(checked === true)}
-                  className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                />
-                <Label
-                  htmlFor="includeAvatars"
-                  className="text-zinc-300 cursor-pointer flex items-center gap-2"
-                >
-                  <FileImage className="h-4 w-4" />
-                  Profile pictures
-                </Label>
+          {/* Advanced Options Accordion */}
+          <Accordion
+            title={
+              hasCustomOptions
+                ? `Advanced Options (${[
+                    !includeAttachments && 'no attachments',
+                    !includeAvatars && 'no avatars',
+                    !includeComments && 'no comments',
+                    !includeActivities && 'no activity',
+                    excludeProjectIds.size > 0 &&
+                      `${excludeProjectIds.size} project${excludeProjectIds.size !== 1 ? 's' : ''} excluded`,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')})`
+                : 'Advanced Options'
+            }
+            className="border-zinc-700/50"
+          >
+            {/* Data toggles */}
+            <div className="space-y-3">
+              <Label className="text-zinc-300 flex items-center gap-2">
+                <Settings2 className="h-4 w-4 text-zinc-500" />
+                Include in Export
+              </Label>
+              <div className="space-y-2.5">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="includeAttachments"
+                    checked={includeAttachments}
+                    onCheckedChange={(checked) => setIncludeAttachments(checked === true)}
+                    className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                  />
+                  <Label
+                    htmlFor="includeAttachments"
+                    className="text-zinc-300 cursor-pointer flex items-center gap-2"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                    Ticket attachments
+                    {estimate && (
+                      <span className="text-xs text-zinc-500">
+                        ({formatSize(estimate.totals.attachmentBytes)})
+                      </span>
+                    )}
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="includeAvatars"
+                    checked={includeAvatars}
+                    onCheckedChange={(checked) => setIncludeAvatars(checked === true)}
+                    className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                  />
+                  <Label
+                    htmlFor="includeAvatars"
+                    className="text-zinc-300 cursor-pointer flex items-center gap-2"
+                  >
+                    <FileImage className="h-4 w-4" />
+                    Profile pictures
+                    {estimate && (
+                      <span className="text-xs text-zinc-500">
+                        ({formatSize(estimate.global.avatarSizeBytes)})
+                      </span>
+                    )}
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="includeComments"
+                    checked={includeComments}
+                    onCheckedChange={(checked) => setIncludeComments(checked === true)}
+                    className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                  />
+                  <Label
+                    htmlFor="includeComments"
+                    className="text-zinc-300 cursor-pointer flex items-center gap-2"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Comment history
+                    {estimate && (
+                      <span className="text-xs text-zinc-500">
+                        ({formatSize(estimate.totals.commentBytes)})
+                      </span>
+                    )}
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="includeActivities"
+                    checked={includeActivities}
+                    onCheckedChange={(checked) => setIncludeActivities(checked === true)}
+                    className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                  />
+                  <Label
+                    htmlFor="includeActivities"
+                    className="text-zinc-300 cursor-pointer flex items-center gap-2"
+                  >
+                    <History className="h-4 w-4" />
+                    Activity history
+                    {estimate && (
+                      <span className="text-xs text-zinc-500">
+                        ({formatSize(estimate.totals.activityBytes)})
+                      </span>
+                    )}
+                  </Label>
+                </div>
               </div>
             </div>
+
+            {/* Per-project toggles */}
+            {estimate && estimate.projects.length > 0 && (
+              <div className="space-y-3">
+                <Label className="text-zinc-300 flex items-center gap-2">
+                  <FolderClosed className="h-4 w-4 text-zinc-500" />
+                  Projects
+                </Label>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {estimate.projects.map((project) => {
+                    const isIncluded = !excludeProjectIds.has(project.id)
+                    const projectSize = calculateEstimatedSize(
+                      {
+                        ...estimate,
+                        projects: [project],
+                        global: { ...estimate.global, estimatedBytes: 0, avatarSizeBytes: 0 },
+                      },
+                      {
+                        includeAttachments,
+                        includeAvatars: false,
+                        includeComments,
+                        includeActivities,
+                        excludeProjectIds: new Set(),
+                      },
+                    )
+
+                    return (
+                      <div key={project.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`project-${project.id}`}
+                          checked={isIncluded}
+                          onCheckedChange={() => toggleProjectExclusion(project.id)}
+                          className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                        />
+                        <Label
+                          htmlFor={`project-${project.id}`}
+                          className="text-zinc-300 cursor-pointer flex items-center gap-2 min-w-0"
+                        >
+                          <span
+                            className="h-3 w-3 rounded-sm shrink-0"
+                            style={{ backgroundColor: project.color }}
+                          />
+                          <span className="truncate">
+                            {project.key} - {project.name}
+                          </span>
+                          <span className="text-xs text-zinc-500 shrink-0">
+                            {project.ticketCount} ticket{project.ticketCount !== 1 ? 's' : ''}
+                            {projectSize > 0 && `, ${formatSize(projectSize)}`}
+                          </span>
+                        </Label>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {includeFiles && (
               <p className="text-xs text-amber-500 flex items-center gap-1">
                 <Archive className="h-3 w-3" />
                 Export will be a ZIP file containing data and files
               </p>
             )}
-          </div>
+          </Accordion>
 
           {/* Password */}
           <div className="space-y-2">
@@ -422,9 +664,13 @@ export function DatabaseSettings() {
           password: exportPassword || undefined,
           includeAttachments,
           includeAvatars,
+          includeComments,
+          includeActivities,
+          excludeProjectIds: excludeProjectIds.size > 0 ? [...excludeProjectIds] : undefined,
         }}
         onComplete={handleExportComplete}
         usersWithTotp={usersWithTotp}
+        excludedProjectCount={excludeProjectIds.size}
       />
 
       {/* Import Dialog */}

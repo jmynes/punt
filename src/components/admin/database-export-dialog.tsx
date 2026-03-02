@@ -4,8 +4,11 @@ import {
   Archive,
   ChevronRight,
   FileImage,
+  FolderClosed,
+  History,
   Loader2,
   Lock,
+  MessageSquare,
   Paperclip,
   ShieldCheck,
 } from 'lucide-react'
@@ -32,6 +35,7 @@ interface DatabaseExportDialogProps {
   exportOptions: Omit<ExportOptions, 'confirmPassword' | 'totpCode' | 'isRecoveryCode'>
   onComplete: () => void
   usersWithTotp?: number
+  excludedProjectCount?: number
 }
 
 type Step = 'summary' | 'exporting'
@@ -42,6 +46,7 @@ export function DatabaseExportDialog({
   exportOptions,
   onComplete,
   usersWithTotp = 0,
+  excludedProjectCount = 0,
 }: DatabaseExportDialogProps) {
   const [step, setStep] = useState<Step>('summary')
   const [showReauthDialog, setShowReauthDialog] = useState(false)
@@ -78,6 +83,8 @@ export function DatabaseExportDialog({
   }
 
   const willBeZip = exportOptions.includeAttachments || exportOptions.includeAvatars
+  const includeComments = exportOptions.includeComments !== false
+  const includeActivities = exportOptions.includeActivities !== false
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -113,7 +120,11 @@ export function DatabaseExportDialog({
                     {stats.projects > 0 && (
                       <>
                         <span className="text-zinc-400">Projects:</span>
-                        <span className="text-zinc-200">{stats.projects}</span>
+                        <span className="text-zinc-200">
+                          {excludedProjectCount > 0
+                            ? `${stats.projects - excludedProjectCount} of ${stats.projects}`
+                            : stats.projects}
+                        </span>
                       </>
                     )}
                     {stats.tickets > 0 && (
@@ -140,7 +151,7 @@ export function DatabaseExportDialog({
                         <span className="text-zinc-200">{stats.columns}</span>
                       </>
                     )}
-                    {stats.comments > 0 && (
+                    {includeComments && stats.comments > 0 && (
                       <>
                         <span className="text-zinc-400">Comments:</span>
                         <span className="text-zinc-200">{stats.comments}</span>
@@ -199,6 +210,41 @@ export function DatabaseExportDialog({
                       </>
                     )}
                   </div>
+                  <div className="flex items-center gap-2 text-zinc-400">
+                    {includeComments ? (
+                      <>
+                        <MessageSquare className="h-4 w-4 text-green-400" />
+                        <span className="text-zinc-200">Including comment history</span>
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="h-4 w-4" />
+                        <span>No comment history</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-400">
+                    {includeActivities ? (
+                      <>
+                        <History className="h-4 w-4 text-green-400" />
+                        <span className="text-zinc-200">Including activity history</span>
+                      </>
+                    ) : (
+                      <>
+                        <History className="h-4 w-4" />
+                        <span>No activity history</span>
+                      </>
+                    )}
+                  </div>
+                  {excludedProjectCount > 0 && (
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <FolderClosed className="h-4 w-4 text-amber-400" />
+                      <span className="text-amber-400">
+                        {excludedProjectCount} project{excludedProjectCount !== 1 ? 's' : ''}{' '}
+                        excluded
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-zinc-400">
                     {exportOptions.password ? (
                       <>

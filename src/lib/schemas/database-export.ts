@@ -312,6 +312,9 @@ export type ExportData = z.infer<typeof ExportDataSchema>
 export const ExportOptionsSchema = z.object({
   includeAttachments: z.boolean().optional(),
   includeAvatars: z.boolean().optional(),
+  includeComments: z.boolean().optional(),
+  includeActivities: z.boolean().optional(),
+  excludeProjectIds: z.array(z.string()).optional(),
 })
 
 export type ExportOptionsType = z.infer<typeof ExportOptionsSchema>

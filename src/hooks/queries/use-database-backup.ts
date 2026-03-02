@@ -2,13 +2,14 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { signOut } from 'next-auth/react'
+import type { ExportSizeEstimate } from '@/app/api/admin/database/export/estimate/route'
 import type { ImportPreview } from '@/app/api/admin/database/preview/route'
 import type { DatabaseStats } from '@/app/api/admin/database/stats/route'
 import type { ImportResult } from '@/lib/database-import'
 import { isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 
-export type { ImportPreview, DatabaseStats }
+export type { ExportSizeEstimate, ImportPreview, DatabaseStats }
 
 /**
  * Get current database statistics
@@ -42,10 +43,50 @@ export function useDatabaseStats() {
   })
 }
 
+/**
+ * Get export size estimates broken down by category and project
+ */
+export function useExportEstimate() {
+  return useQuery({
+    queryKey: ['export-estimate'],
+    queryFn: async (): Promise<ExportSizeEstimate> => {
+      if (isDemoMode()) {
+        return {
+          projects: [],
+          global: {
+            userCount: 3,
+            avatarSizeBytes: 150_000,
+            systemSettingsBytes: 2000,
+            estimatedBytes: 3200,
+          },
+          totals: {
+            baseDataBytes: 10_000,
+            attachmentBytes: 0,
+            avatarBytes: 150_000,
+            commentBytes: 0,
+            activityBytes: 0,
+            totalBytes: 160_000,
+          },
+        }
+      }
+
+      const res = await fetch('/api/admin/database/export/estimate')
+      if (!res.ok) {
+        throw new Error('Failed to fetch export estimate')
+      }
+      return res.json()
+    },
+    staleTime: 30000, // 30 seconds
+  })
+}
+
 export interface ExportOptions {
   password?: string
   includeAttachments?: boolean
   includeAvatars?: boolean
+  includeComments?: boolean
+  includeActivities?: boolean
+  excludeProjectIds?: string[]
   confirmPassword: string
   totpCode?: string
   isRecoveryCode?: boolean
