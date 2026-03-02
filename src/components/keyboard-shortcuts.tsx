@@ -593,15 +593,16 @@ export function KeyboardShortcuts() {
         return
       }
 
-      // Block undo/redo when a modal or drawer is open to prevent accidental
+      // Block undo/redo when a modal is open to prevent accidental
       // board modifications while the user is interacting with overlay content.
+      // The ticket detail drawer is excluded — drawer edits push to the undo
+      // store, so Ctrl+Z/Y should work while the drawer is open.
       if (
         (e.ctrlKey || e.metaKey) &&
         (e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y')
       ) {
         const uiState = useUIStore.getState()
         if (
-          uiState.activeTicketId ||
           uiState.createTicketOpen ||
           uiState.createProjectOpen ||
           uiState.editProjectOpen ||
@@ -610,6 +611,7 @@ export function KeyboardShortcuts() {
           uiState.sprintCompleteOpen ||
           uiState.sprintStartOpen
         ) {
+          e.preventDefault()
           return
         }
       }
@@ -633,7 +635,11 @@ export function KeyboardShortcuts() {
           for (const { ticket, columnId } of action.tickets) {
             addTicket(entry.projectId, columnId, ticket)
           }
-          useUIStore.getState().setActiveTicketId(null)
+          const deletedIds = new Set(action.tickets.map(({ ticket }) => ticket.id))
+          const activeId = useUIStore.getState().activeTicketId
+          if (activeId && deletedIds.has(activeId)) {
+            useUIStore.getState().setActiveTicketId(null)
+          }
           useSelectionStore.getState().clearSelection()
           undoStore.pushRedo(entry)
 
@@ -832,8 +838,11 @@ export function KeyboardShortcuts() {
             ticketIdsToDelete.push(ticket.id)
           }
 
-          // Ensure drawer is closed and selection cleared
-          useUIStore.getState().setActiveTicketId(null)
+          // Close drawer if viewing one of the deleted tickets
+          const pasteActiveId = useUIStore.getState().activeTicketId
+          if (pasteActiveId && ticketIdsToDelete.includes(pasteActiveId)) {
+            useUIStore.getState().setActiveTicketId(null)
+          }
           useSelectionStore.getState().clearSelection()
           undoStore.pushRedo(entry)
 
