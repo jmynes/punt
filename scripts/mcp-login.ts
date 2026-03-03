@@ -240,13 +240,17 @@ function extractCookies(headers: http.IncomingHttpHeaders): string[] {
 
 /**
  * Build a Cookie header from Set-Cookie values.
- * Extracts just the cookie name=value pairs.
+ * Extracts just the cookie name=value pairs, deduplicating by name (last wins).
  */
 function buildCookieHeader(setCookies: string[]): string {
-  return setCookies
-    .map((cookie) => cookie.split(';')[0].trim())
-    .filter(Boolean)
-    .join('; ')
+  const map = new Map<string, string>()
+  for (const cookie of setCookies) {
+    const pair = cookie.split(';')[0].trim()
+    if (!pair) continue
+    const name = pair.split('=')[0]
+    map.set(name, pair)
+  }
+  return Array.from(map.values()).join('; ')
 }
 
 /**
@@ -435,37 +439,50 @@ async function authenticate(
     body: signInBody.toString(),
   })
 
-  // Check if 2FA is required by examining the response URL for the error code.
-  // NextAuth returns a JSON body with a "url" field containing error params when json=true.
+  // NextAuth v5 responds with either:
+  // - 302 redirect (Location header contains success URL or error params)
+  // - 200 JSON body with { url } when json=true is respected
   let signInCookies = extractCookies(signInRes.headers)
   let requires2FA = false
 
-  try {
-    const signInData = JSON.parse(signInRes.body) as { url?: string }
-    if (signInData.url) {
-      const responseUrl = new URL(signInData.url)
-      const errorCode = responseUrl.searchParams.get('code')
-      const errorParam = responseUrl.searchParams.get('error')
-
-      if (errorCode === '2FA_REQUIRED') {
-        requires2FA = true
-      } else if (errorCode === 'RATE_LIMITED') {
-        throw new Error(
-          'Too many login attempts. For security, please wait 15 minutes before trying again.',
-        )
-      } else if (errorParam === 'CredentialsSignin') {
-        throw new Error('Invalid username or password')
+  // Extract the redirect/response URL from either the Location header or JSON body
+  let responseUrl: URL | null = null
+  if (signInRes.statusCode === 302 && signInRes.headers.location) {
+    try {
+      responseUrl = new URL(signInRes.headers.location, serverUrl)
+    } catch {
+      /* ignore malformed URLs */
+    }
+  } else {
+    try {
+      const signInData = JSON.parse(signInRes.body) as { url?: string }
+      if (signInData.url) {
+        responseUrl = new URL(signInData.url)
       }
+    } catch {
+      /* not JSON */
     }
-  } catch (e) {
-    // Re-throw our own errors
-    if (e instanceof Error && (e.message.includes('Too many') || e.message.includes('Invalid'))) {
-      throw e
+  }
+
+  if (responseUrl) {
+    const errorCode = responseUrl.searchParams.get('code')
+    const errorParam = responseUrl.searchParams.get('error')
+
+    if (errorCode === '2FA_REQUIRED') {
+      requires2FA = true
+    } else if (errorCode === 'RATE_LIMITED') {
+      throw new Error(
+        'Too many login attempts. For security, please wait 15 minutes before trying again.',
+      )
+    } else if (errorParam === 'CredentialsSignin') {
+      throw new Error('Invalid username or password')
+    } else if (errorParam === 'MissingCSRF') {
+      throw new Error('CSRF token mismatch. Please try again.')
+    } else if (errorParam) {
+      throw new Error(`Authentication error: ${errorParam}`)
     }
-    // If JSON parsing fails and we didn't get session cookies, the sign-in likely failed
-    if (signInCookies.length === 0) {
-      throw new Error('Authentication failed. Please check your credentials and try again.')
-    }
+  } else if (signInCookies.length === 0 && signInRes.statusCode !== 200) {
+    throw new Error('Authentication failed. Please check your credentials and try again.')
   }
 
   // Step 3: If 2FA is required, prompt for code and retry
@@ -502,30 +519,38 @@ async function authenticate(
 
     signInCookies = extractCookies(retryRes.headers)
 
-    // Check for errors in the retry response
-    try {
-      const retryData = JSON.parse(retryRes.body) as { url?: string }
-      if (retryData.url) {
-        const retryUrl = new URL(retryData.url)
-        const retryErrorCode = retryUrl.searchParams.get('code')
-        const retryError = retryUrl.searchParams.get('error')
-
-        if (retryErrorCode === 'RATE_LIMITED') {
-          throw new Error(
-            'Too many verification attempts. For security, please wait 15 minutes before trying again.',
-          )
-        }
-        if (retryErrorCode === 'INVALID_2FA_CODE' || retryError === 'CredentialsSignin') {
-          throw new Error(
-            useRecovery
-              ? 'Invalid recovery code. Make sure you are using an unused code (format: XXXXX-XXXXX).'
-              : 'Invalid verification code. Make sure the code matches your authenticator app.',
-          )
-        }
+    // Check for errors in the retry response (handle both 302 redirect and JSON body)
+    let retryUrl: URL | null = null
+    if (retryRes.statusCode === 302 && retryRes.headers.location) {
+      try {
+        retryUrl = new URL(retryRes.headers.location, serverUrl)
+      } catch {
+        /* ignore */
       }
-    } catch (e) {
-      if (e instanceof Error && (e.message.includes('Too many') || e.message.includes('Invalid'))) {
-        throw e
+    } else {
+      try {
+        const retryData = JSON.parse(retryRes.body) as { url?: string }
+        if (retryData.url) retryUrl = new URL(retryData.url)
+      } catch {
+        /* not JSON */
+      }
+    }
+
+    if (retryUrl) {
+      const retryErrorCode = retryUrl.searchParams.get('code')
+      const retryError = retryUrl.searchParams.get('error')
+
+      if (retryErrorCode === 'RATE_LIMITED') {
+        throw new Error(
+          'Too many verification attempts. For security, please wait 15 minutes before trying again.',
+        )
+      }
+      if (retryErrorCode === 'INVALID_2FA_CODE' || retryError === 'CredentialsSignin') {
+        throw new Error(
+          useRecovery
+            ? 'Invalid recovery code. Make sure you are using an unused code (format: XXXXX-XXXXX).'
+            : 'Invalid verification code. Make sure the code matches your authenticator app.',
+        )
       }
     }
   }
