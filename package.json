@@ -30,7 +30,8 @@
     "db:seed-demo": "tsx prisma/seed-demo.ts",
     "db:generate-avatars": "tsx prisma/generate-avatars.ts",
     "prepare": "husky",
-    "release": "node scripts/release.js"
+    "release": "node scripts/release.js",
+    "mcp:login": "tsx scripts/mcp-login.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

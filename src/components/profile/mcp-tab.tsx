@@ -64,6 +64,10 @@ export function MCPTab({ isDemo }: MCPTabProps) {
   const [mcpKeyCopied, setMcpKeyCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Defer Radix Tabs to client to avoid hydration ID mismatch
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   // Reauth dialog state
   const [showGenerateDialog, setShowGenerateDialog] = useState(false)
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
@@ -75,23 +79,32 @@ export function MCPTab({ isDemo }: MCPTabProps) {
     }
   }, [])
 
-  useEffect(() => {
-    if (isDemo || mcpKeyFetched) return
-    const fetchMcpKeyStatus = async () => {
-      try {
-        const res = await fetch('/api/me/mcp-key')
-        if (res.ok) {
-          const data = await res.json()
-          setMcpHasKey(data.hasKey)
-          setMcpKeyHint(data.keyHint)
-          setMcpKeyFetched(true)
-        }
-      } catch {
-        // Silently fail
+  const fetchMcpKeyStatus = useCallback(async () => {
+    if (isDemo) return
+    try {
+      const res = await fetch('/api/me/mcp-key')
+      if (res.ok) {
+        const data = (await res.json()) as { hasKey: boolean; keyHint: string | null }
+        setMcpHasKey(data.hasKey)
+        setMcpKeyHint(data.keyHint)
+        setMcpKeyFetched(true)
       }
+    } catch {
+      // Silently fail
     }
-    fetchMcpKeyStatus()
-  }, [isDemo, mcpKeyFetched])
+  }, [isDemo])
+
+  // Fetch on mount
+  useEffect(() => {
+    if (!mcpKeyFetched) fetchMcpKeyStatus()
+  }, [mcpKeyFetched, fetchMcpKeyStatus])
+
+  // Refetch when SSE notifies of key change (covers CLI, UI, and cross-tab updates)
+  useEffect(() => {
+    const onKeyUpdated = () => fetchMcpKeyStatus()
+    window.addEventListener('punt:mcp-key-updated', onKeyUpdated)
+    return () => window.removeEventListener('punt:mcp-key-updated', onKeyUpdated)
+  }, [fetchMcpKeyStatus])
 
   const handleGenerateMcpKey = async (
     password?: string,
@@ -244,8 +257,14 @@ export function MCPTab({ isDemo }: MCPTabProps) {
                 <div className="flex items-center gap-3 px-3 py-2 bg-zinc-800/50 border border-zinc-700 rounded-lg">
                   <KeyRound className="h-4 w-4 text-emerald-500 shrink-0" />
                   <p className="text-sm text-zinc-300">
-                    Active key ending in{' '}
-                    <code className="text-amber-400 font-mono">...{mcpKeyHint}</code>
+                    {mcpKeyHint ? (
+                      <>
+                        Active key ending in{' '}
+                        <code className="text-amber-400 font-mono">...{mcpKeyHint}</code>
+                      </>
+                    ) : (
+                      'MCP API key is configured'
+                    )}
                   </p>
                 </div>
               )}
@@ -397,97 +416,101 @@ export function MCPTab({ isDemo }: MCPTabProps) {
                     Create a credentials file in your config directory:
                   </p>
 
-                  <Tabs defaultValue="linux" className="w-full">
-                    <TabsList className="bg-zinc-800/50 p-0.5 h-8">
-                      <TabsTrigger
-                        value="linux"
-                        className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
-                      >
-                        Linux
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="macos"
-                        className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
-                      >
-                        macOS
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="windows"
-                        className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
-                      >
-                        Windows
-                      </TabsTrigger>
-                    </TabsList>
+                  {mounted ? (
+                    <Tabs defaultValue="linux" className="w-full">
+                      <TabsList className="bg-zinc-800/50 p-0.5 h-8">
+                        <TabsTrigger
+                          value="linux"
+                          className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
+                        >
+                          Linux
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="macos"
+                          className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
+                        >
+                          macOS
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="windows"
+                          className="text-xs px-3 h-7 data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100"
+                        >
+                          Windows
+                        </TabsTrigger>
+                      </TabsList>
 
-                    <TabsContent value="linux" className="mt-2">
-                      <div>
-                        <PathDisplay
-                          path="~/.config/punt/credentials.json"
-                          onCopy={() => showToast.success('Path copied to clipboard')}
-                        />
-                        <CodeBlock
-                          language="json"
-                          className="[&>div]:rounded-t-none [&>div]:border-t-0"
-                          code={`{
+                      <TabsContent value="linux" className="mt-2">
+                        <div>
+                          <PathDisplay
+                            path="~/.config/punt/credentials.json"
+                            onCopy={() => showToast.success('Path copied to clipboard')}
+                          />
+                          <CodeBlock
+                            language="json"
+                            className="[&>div]:rounded-t-none [&>div]:border-t-0"
+                            code={`{
   "servers": {
     "default": {
-      "url": "${typeof window !== 'undefined' ? window.location.origin : 'https://your-punt-server.com'}",
+      "url": "${window.location.origin}",
       "apiKey": "YOUR_API_KEY_HERE"
     }
   },
   "activeServer": "default"
 }`}
-                          onCopy={() => showToast.success('Copied to clipboard')}
-                        />
-                      </div>
-                    </TabsContent>
+                            onCopy={() => showToast.success('Copied to clipboard')}
+                          />
+                        </div>
+                      </TabsContent>
 
-                    <TabsContent value="macos" className="mt-2">
-                      <div>
-                        <PathDisplay
-                          path="~/Library/Application Support/punt/credentials.json"
-                          onCopy={() => showToast.success('Path copied to clipboard')}
-                        />
-                        <CodeBlock
-                          language="json"
-                          className="[&>div]:rounded-t-none [&>div]:border-t-0"
-                          code={`{
+                      <TabsContent value="macos" className="mt-2">
+                        <div>
+                          <PathDisplay
+                            path="~/Library/Application Support/punt/credentials.json"
+                            onCopy={() => showToast.success('Path copied to clipboard')}
+                          />
+                          <CodeBlock
+                            language="json"
+                            className="[&>div]:rounded-t-none [&>div]:border-t-0"
+                            code={`{
   "servers": {
     "default": {
-      "url": "${typeof window !== 'undefined' ? window.location.origin : 'https://your-punt-server.com'}",
+      "url": "${window.location.origin}",
       "apiKey": "YOUR_API_KEY_HERE"
     }
   },
   "activeServer": "default"
 }`}
-                          onCopy={() => showToast.success('Copied to clipboard')}
-                        />
-                      </div>
-                    </TabsContent>
+                            onCopy={() => showToast.success('Copied to clipboard')}
+                          />
+                        </div>
+                      </TabsContent>
 
-                    <TabsContent value="windows" className="mt-2">
-                      <div>
-                        <PathDisplay
-                          path="%APPDATA%\punt\credentials.json"
-                          onCopy={() => showToast.success('Path copied to clipboard')}
-                        />
-                        <CodeBlock
-                          language="json"
-                          className="[&>div]:rounded-t-none [&>div]:border-t-0"
-                          code={`{
+                      <TabsContent value="windows" className="mt-2">
+                        <div>
+                          <PathDisplay
+                            path="%APPDATA%\punt\credentials.json"
+                            onCopy={() => showToast.success('Path copied to clipboard')}
+                          />
+                          <CodeBlock
+                            language="json"
+                            className="[&>div]:rounded-t-none [&>div]:border-t-0"
+                            code={`{
   "servers": {
     "default": {
-      "url": "${typeof window !== 'undefined' ? window.location.origin : 'https://your-punt-server.com'}",
+      "url": "${window.location.origin}",
       "apiKey": "YOUR_API_KEY_HERE"
     }
   },
   "activeServer": "default"
 }`}
-                          onCopy={() => showToast.success('Copied to clipboard')}
-                        />
-                      </div>
-                    </TabsContent>
-                  </Tabs>
+                            onCopy={() => showToast.success('Copied to clipboard')}
+                          />
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  ) : (
+                    <div className="h-20 rounded-md bg-zinc-800/30 animate-pulse" />
+                  )}
                 </div>
               </div>
 
