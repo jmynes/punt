@@ -137,6 +137,7 @@ export interface UserEvent {
     avatar?: string | null
     isSystemAdmin?: boolean
     isActive?: boolean
+    mcpKeyUpdated?: boolean
   }
 }
 

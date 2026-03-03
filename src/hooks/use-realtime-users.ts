@@ -115,6 +115,11 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
             updateSession()
           }
 
+          // Notify MCP tab of key changes via DOM event
+          if (data.changes?.mcpKeyUpdated) {
+            window.dispatchEvent(new CustomEvent('punt:mcp-key-updated'))
+          }
+
           // Update the admin users list cache directly instead of refetching
           queryClient.setQueriesData<
             Array<{ id: string; isSystemAdmin?: boolean; isActive?: boolean; name?: string }>

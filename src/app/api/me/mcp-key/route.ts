@@ -5,6 +5,7 @@ import { handleApiError, validationError } from '@/lib/api-utils'
 import { requireAuth } from '@/lib/auth-helpers'
 import { encryptSession } from '@/lib/chat/encryption'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 import { verifyPassword } from '@/lib/password'
 import {
   decryptTotpSecret,
@@ -164,6 +165,15 @@ export async function POST(request: Request) {
       },
     })
 
+    // Notify other tabs/browsers via SSE
+    projectEvents.emitUserEvent({
+      type: 'user.updated',
+      userId: currentUser.id,
+      tabId: request.headers.get('x-tab-id') || undefined,
+      timestamp: Date.now(),
+      changes: { mcpKeyUpdated: true },
+    })
+
     // Return the full key only on creation - user must save it
     // This is the only time the plaintext key is available
     return NextResponse.json({
@@ -204,6 +214,15 @@ export async function DELETE(request: Request) {
         mcpApiKeyEncrypted: null,
         mcpApiKeyHint: null,
       },
+    })
+
+    // Notify other tabs/browsers via SSE
+    projectEvents.emitUserEvent({
+      type: 'user.updated',
+      userId: currentUser.id,
+      tabId: request.headers.get('x-tab-id') || undefined,
+      timestamp: Date.now(),
+      changes: { mcpKeyUpdated: true },
     })
 
     return NextResponse.json({ success: true })
