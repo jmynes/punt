@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  type CommitPattern,
   extractTicketKeys,
   getTicketAction,
   parseCommitMessage,
+  parseCommitMessageWithPatterns,
   parseCommits,
   referencesTicket,
 } from '../commit-parser'
@@ -241,6 +243,100 @@ Also working on PUNT-789.`
 
     it('returns null for unreferenced ticket', () => {
       expect(getTicketAction('fixes PUNT-123', 'PUNT-999')).toBe(null)
+    })
+  })
+
+  describe('parseCommitMessageWithPatterns (multiple keywords)', () => {
+    const patternsWithKeywords: CommitPattern[] = [
+      {
+        id: '1',
+        pattern: 'fixes',
+        keywords: ['closes', 'resolves', 'done'],
+        action: 'close',
+        enabled: true,
+      },
+      {
+        id: '2',
+        pattern: 'wip',
+        keywords: ['started', 'working on'],
+        action: 'in_progress',
+        enabled: true,
+      },
+    ]
+
+    it('matches the primary pattern', () => {
+      const result = parseCommitMessageWithPatterns('fixes PUNT-1', patternsWithKeywords)
+      expect(result.tickets).toHaveLength(1)
+      expect(result.tickets[0].action).toBe('close')
+    })
+
+    it('matches additional keywords', () => {
+      const result = parseCommitMessageWithPatterns('closes PUNT-1', patternsWithKeywords)
+      expect(result.tickets).toHaveLength(1)
+      expect(result.tickets[0].action).toBe('close')
+    })
+
+    it('matches all keywords in the list', () => {
+      const r1 = parseCommitMessageWithPatterns('resolves PUNT-10', patternsWithKeywords)
+      expect(r1.tickets[0].action).toBe('close')
+
+      const r2 = parseCommitMessageWithPatterns('done PUNT-10', patternsWithKeywords)
+      expect(r2.tickets[0].action).toBe('close')
+    })
+
+    it('matches in_progress keywords', () => {
+      const r1 = parseCommitMessageWithPatterns('wip PUNT-5', patternsWithKeywords)
+      expect(r1.tickets[0].action).toBe('in_progress')
+
+      const r2 = parseCommitMessageWithPatterns('started PUNT-5', patternsWithKeywords)
+      expect(r2.tickets[0].action).toBe('in_progress')
+
+      const r3 = parseCommitMessageWithPatterns('working on PUNT-5', patternsWithKeywords)
+      expect(r3.tickets[0].action).toBe('in_progress')
+    })
+
+    it('falls back to standalone reference for unmatched keywords', () => {
+      const result = parseCommitMessageWithPatterns(
+        'mentioned PUNT-1 in passing',
+        patternsWithKeywords,
+      )
+      expect(result.tickets).toHaveLength(1)
+      expect(result.tickets[0].action).toBe('reference')
+    })
+
+    it('handles patterns without keywords field (backward compat)', () => {
+      const legacyPatterns: CommitPattern[] = [
+        { id: '1', pattern: 'fixes', action: 'close', enabled: true },
+        { id: '2', pattern: 'closes', action: 'close', enabled: true },
+      ]
+      const result = parseCommitMessageWithPatterns('closes PUNT-1', legacyPatterns)
+      expect(result.tickets).toHaveLength(1)
+      expect(result.tickets[0].action).toBe('close')
+    })
+
+    it('handles patterns with empty keywords array', () => {
+      const patterns: CommitPattern[] = [
+        { id: '1', pattern: 'fixes', keywords: [], action: 'close', enabled: true },
+      ]
+      const result = parseCommitMessageWithPatterns('fixes PUNT-1', patterns)
+      expect(result.tickets).toHaveLength(1)
+      expect(result.tickets[0].action).toBe('close')
+    })
+
+    it('disabled patterns are ignored including their keywords', () => {
+      const patterns: CommitPattern[] = [
+        {
+          id: '1',
+          pattern: 'fixes',
+          keywords: ['closes'],
+          action: 'close',
+          enabled: false,
+        },
+      ]
+      const result = parseCommitMessageWithPatterns('closes PUNT-1', patterns)
+      expect(result.tickets).toHaveLength(1)
+      // Should fall back to standalone reference since the pattern is disabled
+      expect(result.tickets[0].action).toBe('reference')
     })
   })
 })
