@@ -185,7 +185,7 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
 
   useEffect(() => {
     if (config && !hasLocalChangesRef.current) {
-      setPatterns(config.commitPatterns || [])
+      setPatterns(Array.isArray(config.commitPatterns) ? config.commitPatterns : [])
       setPatternsHaveChanges(false)
     }
   }, [config])
@@ -268,7 +268,7 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
   }, [commitPatternsMutation, patterns])
 
   const resetPatterns = useCallback(() => {
-    setPatterns(config?.commitPatterns || [])
+    setPatterns(Array.isArray(config?.commitPatterns) ? config.commitPatterns : [])
     setPatternsHaveChanges(false)
   }, [config?.commitPatterns])
 
@@ -586,7 +586,7 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
               <div className="space-y-3">
                 <ScrollArea className="max-h-[400px]">
                   <div className="space-y-1.5 pr-2">
-                    {patterns.map((pattern) => {
+                    {(patterns ?? []).map((pattern) => {
                       const actionConfig = getActionConfig(pattern.action)
                       const allKeywords = [pattern.pattern, ...(pattern.keywords ?? [])].filter(
                         Boolean,
