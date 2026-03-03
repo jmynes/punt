@@ -530,7 +530,7 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                   Define patterns to trigger ticket actions from commit messages.
                 </CardDescription>
               </div>
-              {patterns.length === 0 && !isDisabled && hasWebhookSecret && (
+              {!isDisabled && hasWebhookSecret && (
                 <Button
                   type="button"
                   variant="outline"
@@ -539,7 +539,7 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                   className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
                 >
                   <Zap className="h-3.5 w-3.5 mr-1.5" />
-                  Load Defaults
+                  {patterns.length === 0 ? 'Load Defaults' : 'Reset to Defaults'}
                 </Button>
               )}
             </div>
