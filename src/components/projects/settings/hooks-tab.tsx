@@ -18,7 +18,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -98,14 +98,86 @@ const PATTERN_ACTIONS: {
 
 // Default commit patterns
 const DEFAULT_PATTERNS: CommitPattern[] = [
-  { id: '1', pattern: 'fixes', action: 'close', enabled: true },
-  { id: '2', pattern: 'closes', action: 'close', enabled: true },
-  { id: '3', pattern: 'resolves', action: 'close', enabled: true },
-  { id: '4', pattern: 'wip', action: 'in_progress', enabled: true },
+  { id: '1', pattern: 'fixes', keywords: ['closes', 'resolves'], action: 'close', enabled: true },
+  { id: '2', pattern: 'wip', action: 'in_progress', enabled: true },
 ]
 
 function getActionConfig(action: CommitPatternAction) {
   return PATTERN_ACTIONS.find((a) => a.value === action) ?? PATTERN_ACTIONS[2]
+}
+
+/** Check if two pattern arrays match by content (ignoring IDs). */
+function patternsMatch(a: CommitPattern[], b: CommitPattern[]): boolean {
+  if (a.length !== b.length) return false
+  return a.every((pa, i) => {
+    const pb = b[i]
+    return (
+      pa.pattern === pb.pattern &&
+      pa.action === pb.action &&
+      pa.enabled === pb.enabled &&
+      JSON.stringify(pa.keywords ?? []) === JSON.stringify(pb.keywords ?? [])
+    )
+  })
+}
+
+/** Check if current patterns match the defaults (ignoring IDs). */
+function isMatchingDefaults(patterns: CommitPattern[]): boolean {
+  return patternsMatch(patterns, DEFAULT_PATTERNS)
+}
+
+/**
+ * Inline input for adding keywords to a pattern.
+ * Submits on Enter or comma, trims whitespace, and prevents duplicates.
+ */
+function KeywordInput({
+  patternId,
+  onAdd,
+  existingKeywords,
+}: {
+  patternId: string
+  onAdd: (id: string, keyword: string) => void
+  existingKeywords: string[]
+}) {
+  const [value, setValue] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const submit = () => {
+    const trimmed = value.trim().toLowerCase().replace(/,+$/, '').trim()
+    if (trimmed && !existingKeywords.some((k) => k.toLowerCase() === trimmed)) {
+      onAdd(patternId, trimmed)
+    }
+    setValue('')
+  }
+
+  return (
+    <input
+      ref={inputRef}
+      value={value}
+      onChange={(e) => {
+        const v = e.target.value
+        // Auto-submit on comma
+        if (v.endsWith(',')) {
+          const keyword = v.slice(0, -1).trim().toLowerCase()
+          if (keyword && !existingKeywords.some((k) => k.toLowerCase() === keyword)) {
+            onAdd(patternId, keyword)
+          }
+          setValue('')
+          return
+        }
+        setValue(v)
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          submit()
+        }
+        // Backspace on empty input could remove last keyword, but we'll keep it simple
+      }}
+      onBlur={submit}
+      placeholder={existingKeywords.length === 0 ? 'e.g., fixes' : 'add keyword...'}
+      className="w-20 min-w-[80px] flex-shrink bg-transparent border-none outline-none text-zinc-300 placeholder:text-zinc-600 font-mono text-xs py-0.5 focus:ring-0"
+    />
+  )
 }
 
 export function HooksTab({ projectId, projectKey }: HooksTabProps) {
@@ -124,7 +196,14 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
 
   // Commit patterns state
   const [patterns, setPatterns] = useState<CommitPattern[]>([])
-  const [patternsHaveChanges, setPatternsHaveChanges] = useState(false)
+  // Track the server-saved patterns so we can detect net-zero changes
+  const [savedPatterns, setSavedPatterns] = useState<CommitPattern[]>([])
+
+  // Compute whether there are actual changes vs the saved state
+  const patternsHaveChanges = useMemo(
+    () => !patternsMatch(patterns, savedPatterns),
+    [patterns, savedPatterns],
+  )
 
   // Initialize commit patterns when config loads
   // Use a ref to track if we have local changes to avoid overwriting them on config refetch
@@ -132,12 +211,13 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
 
   useEffect(() => {
     if (config && !hasLocalChangesRef.current) {
-      setPatterns(config.commitPatterns || [])
-      setPatternsHaveChanges(false)
+      const serverPatterns = Array.isArray(config.commitPatterns) ? config.commitPatterns : []
+      setPatterns(serverPatterns)
+      setSavedPatterns(serverPatterns)
     }
   }, [config])
 
-  // Keep ref in sync with state
+  // Keep ref in sync with computed state
   useEffect(() => {
     hasLocalChangesRef.current = patternsHaveChanges
   }, [patternsHaveChanges])
@@ -151,36 +231,66 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
       enabled: true,
     }
     setPatterns((prev) => [...prev, newPattern])
-    setPatternsHaveChanges(true)
   }, [])
 
   const updatePattern = useCallback(
-    (id: string, field: keyof CommitPattern, value: string | boolean) => {
+    (id: string, field: keyof CommitPattern, value: string | boolean | string[]) => {
       setPatterns((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)))
-      setPatternsHaveChanges(true)
     },
     [],
   )
 
+  const addKeyword = useCallback((id: string, keyword: string) => {
+    const trimmed = keyword.trim().toLowerCase()
+    if (!trimmed) return
+    setPatterns((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p
+        // If primary pattern is empty, set it as the primary
+        if (!p.pattern) {
+          return { ...p, pattern: trimmed }
+        }
+        // Don't add if it matches the primary pattern or already exists
+        if (p.pattern.toLowerCase() === trimmed) return p
+        if (p.keywords?.some((k) => k.toLowerCase() === trimmed)) return p
+        return { ...p, keywords: [...(p.keywords ?? []), trimmed] }
+      }),
+    )
+  }, [])
+
+  const removeKeyword = useCallback((id: string, index: number) => {
+    setPatterns((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id !== id) return p
+        const keywords = [...(p.keywords ?? [])]
+        keywords.splice(index, 1)
+        return { ...p, keywords: keywords.length > 0 ? keywords : undefined }
+      })
+      // If the pattern now has no keywords at all, remove the entire row
+      return updated.filter((p) => {
+        if (p.id !== id) return true
+        const remaining = [p.pattern, ...(p.keywords ?? [])].filter(Boolean)
+        return remaining.length > 0
+      })
+    })
+  }, [])
+
   const removePattern = useCallback((id: string) => {
     setPatterns((prev) => prev.filter((p) => p.id !== id))
-    setPatternsHaveChanges(true)
   }, [])
 
   const resetPatternsToDefaults = useCallback(() => {
     setPatterns(DEFAULT_PATTERNS.map((p) => ({ ...p, id: crypto.randomUUID() })))
-    setPatternsHaveChanges(true)
   }, [])
 
   const savePatterns = useCallback(async () => {
     await commitPatternsMutation.mutateAsync(patterns.length > 0 ? patterns : null)
-    setPatternsHaveChanges(false)
+    setSavedPatterns(patterns)
   }, [commitPatternsMutation, patterns])
 
   const resetPatterns = useCallback(() => {
-    setPatterns(config?.commitPatterns || [])
-    setPatternsHaveChanges(false)
-  }, [config?.commitPatterns])
+    setPatterns(savedPatterns)
+  }, [savedPatterns])
 
   const isDisabled = !canEditSettings
   const hasWebhookSecret = config?.hasWebhookSecret || generatedSecret
@@ -440,7 +550,7 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                   Define patterns to trigger ticket actions from commit messages.
                 </CardDescription>
               </div>
-              {patterns.length === 0 && !isDisabled && hasWebhookSecret && (
+              {!isDisabled && hasWebhookSecret && !isMatchingDefaults(patterns) && (
                 <Button
                   type="button"
                   variant="outline"
@@ -449,7 +559,7 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                   className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
                 >
                   <Zap className="h-3.5 w-3.5 mr-1.5" />
-                  Load Defaults
+                  {patterns.length === 0 ? 'Load Defaults' : 'Reset to Defaults'}
                 </Button>
               )}
             </div>
@@ -496,84 +606,138 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
               <div className="space-y-3">
                 <ScrollArea className="max-h-[400px]">
                   <div className="space-y-1.5 pr-2">
-                    {patterns.map((pattern) => {
+                    {(patterns ?? []).map((pattern) => {
                       const actionConfig = getActionConfig(pattern.action)
+                      const allKeywords = [pattern.pattern, ...(pattern.keywords ?? [])].filter(
+                        Boolean,
+                      )
 
                       return (
                         <div
                           key={pattern.id}
-                          className={`group relative flex items-center gap-3 p-2.5 rounded-md border transition-all duration-150 ${
+                          className={`group relative flex flex-col gap-2 p-2.5 rounded-md border transition-all duration-150 ${
                             pattern.enabled !== false
                               ? 'bg-zinc-800/40 border-zinc-700/50 hover:border-zinc-600/50'
                               : 'bg-zinc-900/30 border-zinc-800/30 opacity-50'
                           }`}
                         >
-                          {/* Action indicator */}
-                          <div
-                            className={`w-1 h-8 rounded-full ${actionConfig.accent.replace('text-', 'bg-')}`}
-                          />
-
-                          {/* Pattern input */}
-                          <div className="flex-1 min-w-0">
-                            <Input
-                              value={pattern.pattern}
-                              onChange={(e) => updatePattern(pattern.id, 'pattern', e.target.value)}
-                              placeholder="e.g., fixes, closes, wip"
-                              disabled={isDisabled}
-                              className="h-8 bg-zinc-900/60 border-zinc-700/50 text-zinc-100 placeholder:text-zinc-600 font-mono text-sm focus:border-zinc-500"
+                          <div className="flex items-center gap-3">
+                            {/* Action indicator */}
+                            <div
+                              className={`w-1 self-stretch rounded-full ${actionConfig.accent.replace('text-', 'bg-')}`}
                             />
-                          </div>
 
-                          {/* Action selector */}
-                          <div className="flex items-center gap-0.5 p-1 rounded-md bg-zinc-900/50">
-                            {PATTERN_ACTIONS.map((action) => {
-                              const Icon = action.icon
-                              const isSelected = pattern.action === action.value
-                              return (
-                                <Tooltip key={action.value} delayDuration={300}>
-                                  <TooltipTrigger asChild>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        updatePattern(pattern.id, 'action', action.value)
-                                      }
-                                      disabled={isDisabled}
-                                      className={`p-1.5 rounded transition-all duration-100 disabled:opacity-50 ${
-                                        isSelected
-                                          ? `${action.accent} bg-zinc-800`
-                                          : `${action.accentMuted} hover:${action.accent} hover:bg-zinc-800/50`
-                                      }`}
-                                    >
-                                      <Icon className="h-3.5 w-3.5" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent
-                                    side="bottom"
-                                    className="bg-zinc-950 border-zinc-700 px-3 py-2"
+                            {/* Keywords area */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {/* Keyword chips */}
+                                {allKeywords.map((kw, idx) => (
+                                  <span
+                                    key={`${kw}-${idx}`}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-700/60 border border-zinc-600/40 text-zinc-200 font-mono text-xs"
                                   >
-                                    <p className={`font-medium text-sm ${action.accent}`}>
-                                      {action.label}
-                                    </p>
-                                    <p className="text-zinc-400 text-xs mt-0.5">
-                                      {action.description}
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              )
-                            })}
-                          </div>
+                                    {kw}
+                                    {!isDisabled && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (idx === 0) {
+                                            // Removing the primary pattern
+                                            if (pattern.keywords && pattern.keywords.length > 0) {
+                                              // Promote first keyword to primary
+                                              const [newPrimary, ...rest] = pattern.keywords
+                                              setPatterns((prev) =>
+                                                prev.map((p) =>
+                                                  p.id === pattern.id
+                                                    ? {
+                                                        ...p,
+                                                        pattern: newPrimary,
+                                                        keywords:
+                                                          rest.length > 0 ? rest : undefined,
+                                                      }
+                                                    : p,
+                                                ),
+                                              )
+                                            } else {
+                                              // No keywords left, remove the entire pattern row
+                                              removePattern(pattern.id)
+                                            }
+                                          } else {
+                                            // Removing an additional keyword
+                                            removeKeyword(pattern.id, idx - 1)
+                                          }
+                                        }}
+                                        className="ml-0.5 rounded-full hover:bg-zinc-500/40 hover:text-rose-300 transition-colors"
+                                        aria-label={`Remove keyword "${kw}"`}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </button>
+                                    )}
+                                  </span>
+                                ))}
 
-                          {/* Delete button */}
-                          {!isDisabled && (
-                            <button
-                              type="button"
-                              onClick={() => removePattern(pattern.id)}
-                              className="p-1.5 rounded text-zinc-600 hover:text-rose-400 hover:bg-rose-950/30 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-100"
-                              aria-label="Remove pattern"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          )}
+                                {/* Inline add keyword input */}
+                                {!isDisabled && (
+                                  <KeywordInput
+                                    patternId={pattern.id}
+                                    onAdd={addKeyword}
+                                    existingKeywords={allKeywords}
+                                  />
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Action selector */}
+                            <div className="flex items-center gap-0.5 p-1 rounded-md bg-zinc-900/50">
+                              {PATTERN_ACTIONS.map((action) => {
+                                const Icon = action.icon
+                                const isSelected = pattern.action === action.value
+                                return (
+                                  <Tooltip key={action.value} delayDuration={300}>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          updatePattern(pattern.id, 'action', action.value)
+                                        }
+                                        disabled={isDisabled}
+                                        className={`p-1.5 rounded transition-all duration-100 disabled:opacity-50 ${
+                                          isSelected
+                                            ? `${action.accent} bg-zinc-800`
+                                            : `${action.accentMuted} hover:${action.accent} hover:bg-zinc-800/50`
+                                        }`}
+                                      >
+                                        <Icon className="h-3.5 w-3.5" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="bottom"
+                                      className="bg-zinc-950 border-zinc-700 px-3 py-2"
+                                    >
+                                      <p className={`font-medium text-sm ${action.accent}`}>
+                                        {action.label}
+                                      </p>
+                                      <p className="text-zinc-400 text-xs mt-0.5">
+                                        {action.description}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )
+                              })}
+                            </div>
+
+                            {/* Delete button */}
+                            {!isDisabled && (
+                              <button
+                                type="button"
+                                onClick={() => removePattern(pattern.id)}
+                                className="p-1.5 rounded text-zinc-600 hover:text-rose-400 hover:bg-rose-950/30 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-100"
+                                aria-label="Remove pattern"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )
                     })}
@@ -600,21 +764,48 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                   </div>
                   <div className="space-y-1.5">
                     {patterns
-                      .filter((p) => p.pattern && p.enabled !== false)
+                      .filter(
+                        (p) =>
+                          p.enabled !== false &&
+                          (p.pattern || (p.keywords && p.keywords.length > 0)),
+                      )
                       .slice(0, 3)
                       .map((p) => {
                         const cfg = getActionConfig(p.action)
+                        const previewKeywords = [p.pattern, ...(p.keywords ?? [])].filter(Boolean)
+                        const displayKeyword = previewKeywords[0]
+                        const extraCount = previewKeywords.length - 1
                         return (
                           <div key={p.id} className="flex items-center gap-2 text-xs font-mono">
                             <span className="text-zinc-500">
-                              &quot;{p.pattern} {projectKey}-42&quot;
+                              &quot;{displayKeyword} {projectKey}-42&quot;
+                              {extraCount > 0 && (
+                                <Tooltip delayDuration={200}>
+                                  <TooltipTrigger asChild>
+                                    <span className="ml-1 text-zinc-600 cursor-default">
+                                      +{extraCount} more
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="top"
+                                    className="bg-zinc-950 border-zinc-700 px-3 py-2"
+                                  >
+                                    <p className="text-zinc-300 text-xs">
+                                      Also matches: {previewKeywords.slice(1).join(', ')}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
                             </span>
                             <ArrowRight className="h-3 w-3 text-zinc-600" />
                             <span className={cfg.accent}>{cfg.label}</span>
                           </div>
                         )
                       })}
-                    {patterns.filter((p) => p.pattern && p.enabled !== false).length === 0 && (
+                    {patterns.filter(
+                      (p) =>
+                        p.enabled !== false && (p.pattern || (p.keywords && p.keywords.length > 0)),
+                    ).length === 0 && (
                       <p className="text-xs text-zinc-600 italic">Add patterns to see preview</p>
                     )}
                   </div>
