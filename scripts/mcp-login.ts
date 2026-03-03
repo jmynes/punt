@@ -457,7 +457,7 @@ async function authenticate(
   serverUrl: string,
   username: string,
   password: string,
-): Promise<string[]> {
+): Promise<{ cookies: string[]; totpCode?: string }> {
   // Step 1: Validate credentials and check if 2FA is required
   info('Verifying credentials...')
   const checkRes = await httpRequest(`${serverUrl}/api/auth/check-2fa`, {
@@ -621,7 +621,7 @@ async function authenticate(
   }
 
   info(`Authenticated as ${bold(sessionData.user.name ?? username)}`)
-  return allCookies
+  return { cookies: allCookies, totpCode }
 }
 
 /**
@@ -632,17 +632,22 @@ async function generateMcpKey(
   serverUrl: string,
   cookies: string[],
   password: string,
+  loginTotpCode?: string,
 ): Promise<string> {
   info('Generating MCP API key...')
   const cookieHeader = buildCookieHeader(cookies)
 
+  // If we used a TOTP code during login, try reusing it (valid for ~30s window)
   const res = await httpRequest(`${serverUrl}/api/me/mcp-key`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Cookie: cookieHeader,
     },
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({
+      password,
+      ...(loginTotpCode && !isRecoveryCode(loginTotpCode) ? { totpCode: loginTotpCode } : {}),
+    }),
   })
 
   if (res.statusCode === 401) {
@@ -654,8 +659,8 @@ async function generateMcpKey(
     }
 
     if (errorData.requires2fa) {
-      // Need 2FA for key generation too
-      const totpCode = await prompt(`${bold('2FA Code (for key generation, or recovery code):')} `)
+      // TOTP code expired or was a recovery code — prompt for a fresh one
+      const totpCode = await prompt(`${bold('2FA Code (for key generation):')} `)
       if (!totpCode) {
         throw new Error('2FA code is required for API key generation')
       }
@@ -809,10 +814,10 @@ ${bold('Credentials location:')}
 
   try {
     // Authenticate
-    const cookies = await authenticate(serverUrl, username, password)
+    const { cookies, totpCode: loginTotpCode } = await authenticate(serverUrl, username, password)
 
-    // Generate MCP API key
-    const apiKey = await generateMcpKey(serverUrl, cookies, password)
+    // Generate MCP API key (reuse TOTP code from login if still valid)
+    const apiKey = await generateMcpKey(serverUrl, cookies, password, loginTotpCode)
 
     // Save credentials
     const credentialsFile = readCredentialsFile()
