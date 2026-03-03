@@ -99,15 +99,11 @@ export function MCPTab({ isDemo }: MCPTabProps) {
     if (!mcpKeyFetched) fetchMcpKeyStatus()
   }, [mcpKeyFetched, fetchMcpKeyStatus])
 
-  // Refetch when the tab regains focus or SSE notifies of key change
+  // Refetch when SSE notifies of key change (covers CLI, UI, and cross-tab updates)
   useEffect(() => {
-    const onFocus = () => fetchMcpKeyStatus()
-    window.addEventListener('focus', onFocus)
-    window.addEventListener('punt:mcp-key-updated', onFocus)
-    return () => {
-      window.removeEventListener('focus', onFocus)
-      window.removeEventListener('punt:mcp-key-updated', onFocus)
-    }
+    const onKeyUpdated = () => fetchMcpKeyStatus()
+    window.addEventListener('punt:mcp-key-updated', onKeyUpdated)
+    return () => window.removeEventListener('punt:mcp-key-updated', onKeyUpdated)
   }, [fetchMcpKeyStatus])
 
   const handleGenerateMcpKey = async (
