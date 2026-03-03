@@ -156,7 +156,14 @@ export function ResponsiveTabs({ tabs, activeValue, className }: ResponsiveTabsP
         <div
           ref={scrollRef}
           onScroll={updateScrollState}
-          className="flex gap-1 overflow-x-auto scrollbar-none"
+          onWheel={(e) => {
+            // Convert vertical scroll to horizontal
+            if (e.deltaY !== 0 && scrollRef.current) {
+              e.preventDefault()
+              scrollRef.current.scrollLeft += e.deltaY
+            }
+          }}
+          className="flex gap-1 overflow-x-auto overflow-y-hidden scrollbar-none"
         >
           {tabs.map((tab) => (
             <Link
