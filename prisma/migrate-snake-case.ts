@@ -314,9 +314,17 @@ async function main() {
       await tx.$executeRawUnsafe(`ALTER TABLE ${table} RENAME COLUMN "${oldCol}" TO ${newCol}`)
     }
 
-    // Phase 3: Rename indexes
+    // Phase 3: Rename indexes (skip if index doesn't exist yet)
     for (const [oldName, newName] of INDEX_RENAMES) {
-      await tx.$executeRawUnsafe(`ALTER INDEX "${oldName}" RENAME TO ${newName}`)
+      const exists = await tx.$queryRaw<{ exists: boolean }[]>`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_indexes
+          WHERE schemaname = 'public' AND indexname = ${oldName}
+        ) as exists
+      `
+      if (exists[0]?.exists) {
+        await tx.$executeRawUnsafe(`ALTER INDEX "${oldName}" RENAME TO ${newName}`)
+      }
     }
   })
 
