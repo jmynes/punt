@@ -144,7 +144,7 @@ function writeCredentialsFile(credentials: CredentialsFile): void {
 
   // Create directory if it doesn't exist
   if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true })
+    mkdirSync(dir, { recursive: true, mode: 0o700 })
   }
 
   writeFileSync(path, `${JSON.stringify(credentials, null, 2)}\n`, { mode: 0o600 })
@@ -249,6 +249,36 @@ function buildCookieHeader(setCookies: string[]): string {
     .join('; ')
 }
 
+/**
+ * Merge multiple cookie arrays, deduplicating by cookie name.
+ * Later values override earlier ones (newest wins).
+ */
+function mergeCookies(...cookieArrays: string[][]): string[] {
+  const map = new Map<string, string>()
+  for (const cookies of cookieArrays) {
+    for (const cookie of cookies) {
+      const name = cookie.split('=')[0].trim()
+      map.set(name, cookie)
+    }
+  }
+  return Array.from(map.values())
+}
+
+/**
+ * Detect whether a code looks like a recovery code vs a TOTP code.
+ * Recovery codes are in format XXXXX-XXXXX (11 chars, alphanumeric with hyphen).
+ * TOTP codes are exactly 6 numeric digits.
+ */
+function isRecoveryCode(code: string): boolean {
+  const trimmed = code.trim()
+  // TOTP codes are exactly 6 digits
+  if (/^\d{6}$/.test(trimmed)) {
+    return false
+  }
+  // Anything else (longer, contains letters/hyphens) is treated as a recovery code
+  return true
+}
+
 // ============================================================================
 // User input helpers
 // ============================================================================
@@ -269,21 +299,29 @@ function prompt(question: string): Promise<string> {
 
 function promptPassword(question: string): Promise<string> {
   return new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    })
-
-    // Mute output for password entry
     process.stdout.write(question)
     const stdin = process.stdin
     const wasTTY = stdin.isTTY
+
+    // Cleanup handler to restore terminal state on unexpected exit
+    const cleanup = () => {
+      if (wasTTY) {
+        try {
+          stdin.setRawMode(false)
+        } catch {
+          // Ignore errors during cleanup
+        }
+      }
+    }
+    process.once('SIGTERM', cleanup)
+    process.once('SIGINT', cleanup)
+    process.once('exit', cleanup)
+
     if (wasTTY) {
       stdin.setRawMode(true)
     }
 
     let password = ''
-    rl.close()
 
     const onData = (data: Buffer): void => {
       const char = data.toString('utf-8')
@@ -294,6 +332,9 @@ function promptPassword(question: string): Promise<string> {
           stdin.setRawMode(false)
         }
         stdin.removeListener('data', onData)
+        process.removeListener('SIGTERM', cleanup)
+        process.removeListener('SIGINT', cleanup)
+        process.removeListener('exit', cleanup)
         process.stdout.write('\n')
         resolve(password)
         return
@@ -305,6 +346,9 @@ function promptPassword(question: string): Promise<string> {
           stdin.setRawMode(false)
         }
         stdin.removeListener('data', onData)
+        process.removeListener('SIGTERM', cleanup)
+        process.removeListener('SIGINT', cleanup)
+        process.removeListener('exit', cleanup)
         process.stdout.write('\n')
         process.exit(1)
       }
@@ -335,6 +379,12 @@ function promptPassword(question: string): Promise<string> {
 /**
  * Authenticate with the PUNT server via NextAuth credentials flow.
  * Returns the session cookies on success.
+ *
+ * Flow:
+ *   1. Fetch CSRF token
+ *   2. Attempt sign-in via NextAuth callback
+ *   3. If 2FA is required (detected from error response), prompt for code and retry
+ *   4. Verify session
  */
 async function authenticate(
   serverUrl: string,
@@ -368,55 +418,13 @@ async function authenticate(
   const csrfCookies = extractCookies(csrfRes.headers)
   const cookieHeader = buildCookieHeader(csrfCookies)
 
-  // Step 2: Check if 2FA is required (also validates credentials)
-  info('Verifying credentials...')
-  const check2faRes = await httpRequest(`${serverUrl}/api/auth/check-2fa`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(cookieHeader ? { Cookie: cookieHeader } : {}),
-    },
-    body: JSON.stringify({ username, password }),
-  })
-
-  if (check2faRes.statusCode === 429) {
-    throw new Error(
-      'Too many login attempts. For security, please wait 15 minutes before trying again.',
-    )
-  }
-
-  if (check2faRes.statusCode !== 200) {
-    throw new Error('Invalid username or password')
-  }
-
-  let requires2FA = false
-  try {
-    const checkData = JSON.parse(check2faRes.body) as { requires2FA: boolean }
-    requires2FA = checkData.requires2FA
-  } catch {
-    throw new Error('Could not parse 2FA check response')
-  }
-
-  // Step 3: If 2FA is required, prompt for the code
-  let totpCode: string | undefined
-  if (requires2FA) {
-    console.log(`\n${yellow('Two-factor authentication is enabled for this account.')}`)
-    totpCode = await prompt(`${bold('2FA Code:')} `)
-    if (!totpCode) {
-      throw new Error('2FA code is required')
-    }
-  }
-
-  // Step 4: Sign in via NextAuth credentials callback
+  // Step 2: Attempt sign-in via NextAuth credentials callback
   info('Signing in...')
   const signInBody = new URLSearchParams()
   signInBody.set('username', username)
   signInBody.set('password', password)
   signInBody.set('csrfToken', csrfToken)
   signInBody.set('json', 'true')
-  if (totpCode) {
-    signInBody.set('totpCode', totpCode)
-  }
 
   const signInRes = await httpRequest(`${serverUrl}/api/auth/callback/credentials`, {
     method: 'POST',
@@ -427,12 +435,103 @@ async function authenticate(
     body: signInBody.toString(),
   })
 
-  // NextAuth returns a redirect (302) on success with updated session cookies
-  // It can also return 200 with a JSON body containing the redirect URL
-  const signInCookies = extractCookies(signInRes.headers)
+  // Check if 2FA is required by examining the response URL for the error code.
+  // NextAuth returns a JSON body with a "url" field containing error params when json=true.
+  let signInCookies = extractCookies(signInRes.headers)
+  let requires2FA = false
 
-  // Merge all cookies
-  const allCookies = [...csrfCookies, ...signInCookies]
+  try {
+    const signInData = JSON.parse(signInRes.body) as { url?: string }
+    if (signInData.url) {
+      const responseUrl = new URL(signInData.url)
+      const errorCode = responseUrl.searchParams.get('code')
+      const errorParam = responseUrl.searchParams.get('error')
+
+      if (errorCode === '2FA_REQUIRED') {
+        requires2FA = true
+      } else if (errorCode === 'RATE_LIMITED') {
+        throw new Error(
+          'Too many login attempts. For security, please wait 15 minutes before trying again.',
+        )
+      } else if (errorParam === 'CredentialsSignin') {
+        throw new Error('Invalid username or password')
+      }
+    }
+  } catch (e) {
+    // Re-throw our own errors
+    if (e instanceof Error && (e.message.includes('Too many') || e.message.includes('Invalid'))) {
+      throw e
+    }
+    // If JSON parsing fails and we didn't get session cookies, the sign-in likely failed
+    if (signInCookies.length === 0) {
+      throw new Error('Authentication failed. Please check your credentials and try again.')
+    }
+  }
+
+  // Step 3: If 2FA is required, prompt for code and retry
+  if (requires2FA) {
+    console.log(`\n${yellow('Two-factor authentication is enabled for this account.')}`)
+    const totpCode = await prompt(`${bold('2FA Code (or recovery code):')} `)
+    if (!totpCode) {
+      throw new Error('2FA code is required')
+    }
+
+    const useRecovery = isRecoveryCode(totpCode)
+    if (useRecovery) {
+      info('Using recovery code...')
+    }
+
+    const retryBody = new URLSearchParams()
+    retryBody.set('username', username)
+    retryBody.set('password', password)
+    retryBody.set('csrfToken', csrfToken)
+    retryBody.set('json', 'true')
+    retryBody.set('totpCode', totpCode)
+    if (useRecovery) {
+      retryBody.set('isRecoveryCode', 'true')
+    }
+
+    const retryRes = await httpRequest(`${serverUrl}/api/auth/callback/credentials`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+      },
+      body: retryBody.toString(),
+    })
+
+    signInCookies = extractCookies(retryRes.headers)
+
+    // Check for errors in the retry response
+    try {
+      const retryData = JSON.parse(retryRes.body) as { url?: string }
+      if (retryData.url) {
+        const retryUrl = new URL(retryData.url)
+        const retryErrorCode = retryUrl.searchParams.get('code')
+        const retryError = retryUrl.searchParams.get('error')
+
+        if (retryErrorCode === 'RATE_LIMITED') {
+          throw new Error(
+            'Too many verification attempts. For security, please wait 15 minutes before trying again.',
+          )
+        }
+        if (retryErrorCode === 'INVALID_2FA_CODE' || retryError === 'CredentialsSignin') {
+          throw new Error(
+            useRecovery
+              ? 'Invalid recovery code. Make sure you are using an unused code (format: XXXXX-XXXXX).'
+              : 'Invalid verification code. Make sure the code matches your authenticator app.',
+          )
+        }
+      }
+    } catch (e) {
+      if (e instanceof Error && (e.message.includes('Too many') || e.message.includes('Invalid'))) {
+        throw e
+      }
+    }
+  }
+
+  // Merge all cookies, deduplicating by name (newest wins)
+  const allCookies = mergeCookies(csrfCookies, signInCookies)
   const sessionCookie = buildCookieHeader(allCookies)
 
   if (!sessionCookie) {
@@ -496,9 +595,14 @@ async function generateMcpKey(
 
     if (errorData.requires2fa) {
       // Need 2FA for key generation too
-      const totpCode = await prompt(`${bold('2FA Code (for key generation):')} `)
+      const totpCode = await prompt(`${bold('2FA Code (for key generation, or recovery code):')} `)
       if (!totpCode) {
         throw new Error('2FA code is required for API key generation')
+      }
+
+      const useRecovery = isRecoveryCode(totpCode)
+      if (useRecovery) {
+        info('Using recovery code...')
       }
 
       const retryRes = await httpRequest(`${serverUrl}/api/me/mcp-key`, {
@@ -507,7 +611,11 @@ async function generateMcpKey(
           'Content-Type': 'application/json',
           Cookie: cookieHeader,
         },
-        body: JSON.stringify({ password, totpCode }),
+        body: JSON.stringify({
+          password,
+          totpCode,
+          ...(useRecovery ? { isRecoveryCode: true } : {}),
+        }),
       })
 
       if (retryRes.statusCode !== 200) {
@@ -668,11 +776,8 @@ ${bold('Credentials location:')}
       info(`Created profile ${bold(profileName)}`)
     }
 
-    // Set as active server if it's the only one or if no active server is set
-    const serverCount = Object.keys(credentialsFile.servers).length
-    if (serverCount === 1 || !credentialsFile.activeServer) {
-      credentialsFile.activeServer = profileName
-    }
+    // Always update activeServer to the server just authenticated
+    credentialsFile.activeServer = profileName
 
     writeCredentialsFile(credentialsFile)
 
