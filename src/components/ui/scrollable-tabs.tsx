@@ -79,6 +79,20 @@ export function ResponsiveTabs({ tabs, activeValue, className }: ResponsiveTabsP
     }
   }, [activeValue])
 
+  // Remap vertical scroll wheel to horizontal — must be non-passive to allow preventDefault
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const handler = (e: WheelEvent) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault()
+        el.scrollLeft += e.deltaY
+      }
+    }
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  }, [])
+
   const scroll = (direction: 'left' | 'right') => {
     const el = scrollRef.current
     if (!el) return
@@ -156,13 +170,6 @@ export function ResponsiveTabs({ tabs, activeValue, className }: ResponsiveTabsP
         <div
           ref={scrollRef}
           onScroll={updateScrollState}
-          onWheel={(e) => {
-            // Convert vertical scroll to horizontal
-            if (e.deltaY !== 0 && scrollRef.current) {
-              e.preventDefault()
-              scrollRef.current.scrollLeft += e.deltaY
-            }
-          }}
           className="flex gap-1 overflow-x-auto overflow-y-hidden scrollbar-none"
         >
           {tabs.map((tab) => (
