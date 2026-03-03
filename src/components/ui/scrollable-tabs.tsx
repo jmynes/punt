@@ -2,6 +2,7 @@
 
 import { ChevronDown } from 'lucide-react'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,40 +33,54 @@ interface ResponsiveTabsProps {
 export function ResponsiveTabs({ tabs, activeValue, className }: ResponsiveTabsProps) {
   const activeTab = tabs.find((t) => t.value === activeValue) ?? tabs[0]
 
+  // Defer Radix dropdown to client to avoid hydration mismatch (server/client ID divergence)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   return (
     <div className={className}>
-      {/* Mobile: dropdown */}
+      {/* Mobile: dropdown (client-only to avoid Radix hydration ID mismatch) */}
       <div className="sm:hidden">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="flex w-full items-center justify-between gap-2 rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-100 hover:bg-zinc-800 transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                {activeTab?.icon}
-                {activeTab?.label}
-              </span>
-              <ChevronDown className="h-4 w-4 text-zinc-400" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-(--radix-dropdown-menu-trigger-width)">
-            {tabs.map((tab) => (
-              <DropdownMenuItem key={tab.value} asChild>
-                <Link
-                  href={tab.href}
-                  className={cn(
-                    'flex items-center gap-2',
-                    tab.value === activeValue && 'text-amber-500',
-                  )}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </Link>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {mounted ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-2 rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-100 hover:bg-zinc-800 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  {activeTab?.icon}
+                  {activeTab?.label}
+                </span>
+                <ChevronDown className="h-4 w-4 text-zinc-400" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-(--radix-dropdown-menu-trigger-width)">
+              {tabs.map((tab) => (
+                <DropdownMenuItem key={tab.value} asChild>
+                  <Link
+                    href={tab.href}
+                    className={cn(
+                      'flex items-center gap-2',
+                      tab.value === activeValue && 'text-amber-500',
+                    )}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="flex w-full items-center justify-between gap-2 rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-100">
+            <span className="flex items-center gap-2">
+              {activeTab?.icon}
+              {activeTab?.label}
+            </span>
+            <ChevronDown className="h-4 w-4 text-zinc-400" />
+          </div>
+        )}
       </div>
 
       {/* Desktop: wrapping horizontal tabs */}
