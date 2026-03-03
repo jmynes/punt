@@ -17,6 +17,8 @@ export interface CommitPattern {
   action: TicketAction
   isRegex?: boolean
   enabled?: boolean
+  /** Additional keywords that trigger this pattern's action (alongside `pattern`) */
+  keywords?: string[]
 }
 
 export interface TicketReference {
@@ -213,16 +215,23 @@ export function parseCommitMessageWithPatterns(
   const tickets: TicketReference[] = []
   const seenTickets = new Set<string>()
 
-  // Group patterns by action
+  // Group patterns by action, collecting all keywords per pattern
+  const collectKeywords = (p: CommitPattern): string[] => {
+    const all: string[] = []
+    if (p.pattern) all.push(p.pattern)
+    if (p.keywords) all.push(...p.keywords.filter(Boolean))
+    return all
+  }
+
   const closePatterns = customPatterns
-    .filter((p) => p.action === 'close' && p.enabled !== false && p.pattern)
-    .map((p) => p.pattern)
+    .filter((p) => p.action === 'close' && p.enabled !== false)
+    .flatMap(collectKeywords)
   const wipPatterns = customPatterns
-    .filter((p) => p.action === 'in_progress' && p.enabled !== false && p.pattern)
-    .map((p) => p.pattern)
+    .filter((p) => p.action === 'in_progress' && p.enabled !== false)
+    .flatMap(collectKeywords)
   const refPatterns = customPatterns
-    .filter((p) => p.action === 'reference' && p.enabled !== false && p.pattern)
-    .map((p) => p.pattern)
+    .filter((p) => p.action === 'reference' && p.enabled !== false)
+    .flatMap(collectKeywords)
 
   // Process patterns in order of precedence: close > wip > reference
   if (closePatterns.length > 0) {
