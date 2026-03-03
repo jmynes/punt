@@ -29,6 +29,24 @@ export function ScrollableTabs({ children, className, activeValue }: ScrollableT
     setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1)
   }, [])
 
+  // Scroll active tab into view without disturbing ancestor scroll containers
+  const scrollActiveTabIntoView = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    const activeTab = el.querySelector('[data-active]') as HTMLElement | null
+    if (!activeTab) return
+
+    const containerRect = el.getBoundingClientRect()
+    const tabRect = activeTab.getBoundingClientRect()
+
+    if (tabRect.left < containerRect.left) {
+      el.scrollLeft -= containerRect.left - tabRect.left
+    } else if (tabRect.right > containerRect.right) {
+      el.scrollLeft += tabRect.right - containerRect.right
+    }
+  }, [])
+
   // Check scroll state on mount, scroll, and resize
   useEffect(() => {
     const el = scrollRef.current
@@ -38,8 +56,12 @@ export function ScrollableTabs({ children, className, activeValue }: ScrollableT
 
     el.addEventListener('scroll', updateScrollState, { passive: true })
 
+    // Observe both the container (viewport resize) and its first child
+    // (children added/removed, e.g. permission-gated tabs appearing)
     const resizeObserver = new ResizeObserver(updateScrollState)
     resizeObserver.observe(el)
+    const inner = el.firstElementChild
+    if (inner) resizeObserver.observe(inner)
 
     return () => {
       el.removeEventListener('scroll', updateScrollState)
@@ -47,24 +69,20 @@ export function ScrollableTabs({ children, className, activeValue }: ScrollableT
     }
   }, [updateScrollState])
 
-  // Scroll active tab into view on mount and when active tab changes
+  // Scroll active tab into view on mount and when active tab changes.
+  // activeValue is an intentional trigger — when the user switches tabs,
+  // the newly active tab needs to be scrolled into view.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: activeValue is an intentional trigger
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el || !activeValue) return
-
-    // Find the active tab by looking for the data-active attribute
-    const activeTab = el.querySelector('[data-active]') as HTMLElement | null
-    if (activeTab) {
-      activeTab.scrollIntoView({ inline: 'nearest', block: 'nearest' })
-    }
-  }, [activeValue])
+    scrollActiveTabIntoView()
+  }, [activeValue, scrollActiveTabIntoView])
 
   return (
     <div className={cn('relative', className)}>
       {/* Left fade gradient */}
       <div
         className={cn(
-          'pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-10 bg-gradient-to-r from-zinc-950 to-transparent transition-opacity duration-150',
+          'pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-10 bg-gradient-to-r from-background to-transparent transition-opacity duration-150',
           canScrollLeft ? 'opacity-100' : 'opacity-0',
         )}
       />
@@ -80,7 +98,7 @@ export function ScrollableTabs({ children, className, activeValue }: ScrollableT
       {/* Right fade gradient */}
       <div
         className={cn(
-          'pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-10 bg-gradient-to-l from-zinc-950 to-transparent transition-opacity duration-150',
+          'pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-10 bg-gradient-to-l from-background to-transparent transition-opacity duration-150',
           canScrollRight ? 'opacity-100' : 'opacity-0',
         )}
       />
