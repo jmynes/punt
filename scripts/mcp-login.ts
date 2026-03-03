@@ -448,9 +448,9 @@ function promptPassword(question: string): Promise<string> {
  * Returns the session cookies on success.
  *
  * Flow:
- *   1. Fetch CSRF token
- *   2. Attempt sign-in via NextAuth callback
- *   3. If 2FA is required (detected from error response), prompt for code and retry
+ *   1. Validate credentials and check 2FA status via /api/auth/check-2fa
+ *   2. If 2FA required, prompt for code
+ *   3. Sign in via NextAuth callback with credentials + optional TOTP
  *   4. Verify session
  */
 async function authenticate(
@@ -458,8 +458,54 @@ async function authenticate(
   username: string,
   password: string,
 ): Promise<string[]> {
-  // Step 1: Get CSRF token from NextAuth
-  info('Fetching CSRF token...')
+  // Step 1: Validate credentials and check if 2FA is required
+  info('Verifying credentials...')
+  const checkRes = await httpRequest(`${serverUrl}/api/auth/check-2fa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  })
+
+  if (checkRes.statusCode === 429) {
+    throw new Error(
+      'Too many login attempts. For security, please wait 15 minutes before trying again.',
+    )
+  }
+
+  if (checkRes.statusCode === 401) {
+    throw new Error('Invalid username or password')
+  }
+
+  if (checkRes.statusCode !== 200) {
+    throw new Error(`Server returned ${checkRes.statusCode} during credential check`)
+  }
+
+  let requires2FA = false
+  try {
+    const checkData = JSON.parse(checkRes.body) as { requires2FA?: boolean }
+    requires2FA = !!checkData.requires2FA
+  } catch {
+    throw new Error('Could not parse credential check response')
+  }
+
+  // Step 2: If 2FA required, prompt for code
+  let totpCode: string | undefined
+  let useRecovery = false
+
+  if (requires2FA) {
+    console.log(`\n${yellow('Two-factor authentication is enabled for this account.')}`)
+    totpCode = await prompt(`${bold('2FA Code (or recovery code):')} `)
+    if (!totpCode) {
+      throw new Error('2FA code is required')
+    }
+    useRecovery = isRecoveryCode(totpCode)
+    if (useRecovery) {
+      info('Using recovery code...')
+    }
+  }
+
+  // Step 3: Get CSRF token and sign in via NextAuth
+  info('Signing in...')
   const csrfRes = await httpRequest(`${serverUrl}/api/auth/csrf`)
 
   if (csrfRes.statusCode !== 200) {
@@ -481,17 +527,20 @@ async function authenticate(
     throw new Error('Server did not return a CSRF token')
   }
 
-  // Collect cookies from CSRF response (session token cookie)
   const csrfCookies = extractCookies(csrfRes.headers)
   const cookieHeader = buildCookieHeader(csrfCookies)
 
-  // Step 2: Attempt sign-in via NextAuth credentials callback
-  info('Signing in...')
   const signInBody = new URLSearchParams()
   signInBody.set('username', username)
   signInBody.set('password', password)
   signInBody.set('csrfToken', csrfToken)
   signInBody.set('json', 'true')
+  if (totpCode) {
+    signInBody.set('totpCode', totpCode)
+    if (useRecovery) {
+      signInBody.set('isRecoveryCode', 'true')
+    }
+  }
 
   const signInRes = await httpRequest(`${serverUrl}/api/auth/callback/credentials`, {
     method: 'POST',
@@ -502,13 +551,9 @@ async function authenticate(
     body: signInBody.toString(),
   })
 
-  // NextAuth v5 responds with either:
-  // - 302 redirect (Location header contains success URL or error params)
-  // - 200 JSON body with { url } when json=true is respected
-  let signInCookies = extractCookies(signInRes.headers)
-  let requires2FA = false
+  const signInCookies = extractCookies(signInRes.headers)
 
-  // Extract the redirect/response URL from either the Location header or JSON body
+  // Check for errors in the redirect response
   let responseUrl: URL | null = null
   if (signInRes.statusCode === 302 && signInRes.headers.location) {
     try {
@@ -528,93 +573,20 @@ async function authenticate(
   }
 
   if (responseUrl) {
-    const errorCode = responseUrl.searchParams.get('code')
     const errorParam = responseUrl.searchParams.get('error')
 
-    if (errorCode === '2FA_REQUIRED') {
-      requires2FA = true
-    } else if (errorCode === 'RATE_LIMITED') {
-      throw new Error(
-        'Too many login attempts. For security, please wait 15 minutes before trying again.',
-      )
-    } else if (errorParam === 'CredentialsSignin') {
+    if (errorParam === 'CredentialsSignin') {
       throw new Error('Invalid username or password')
-    } else if (errorParam === 'MissingCSRF') {
-      throw new Error('CSRF token mismatch. Please try again.')
-    } else if (errorParam) {
+    }
+    if (errorParam === 'Configuration' && requires2FA) {
+      throw new Error(
+        useRecovery
+          ? 'Invalid recovery code. Make sure you are using an unused code (format: XXXXX-XXXXX).'
+          : 'Invalid verification code. Make sure the code matches your authenticator app.',
+      )
+    }
+    if (errorParam && errorParam !== 'Configuration') {
       throw new Error(`Authentication error: ${errorParam}`)
-    }
-  } else if (signInCookies.length === 0 && signInRes.statusCode !== 200) {
-    throw new Error('Authentication failed. Please check your credentials and try again.')
-  }
-
-  // Step 3: If 2FA is required, prompt for code and retry
-  if (requires2FA) {
-    console.log(`\n${yellow('Two-factor authentication is enabled for this account.')}`)
-    const totpCode = await prompt(`${bold('2FA Code (or recovery code):')} `)
-    if (!totpCode) {
-      throw new Error('2FA code is required')
-    }
-
-    const useRecovery = isRecoveryCode(totpCode)
-    if (useRecovery) {
-      info('Using recovery code...')
-    }
-
-    const retryBody = new URLSearchParams()
-    retryBody.set('username', username)
-    retryBody.set('password', password)
-    retryBody.set('csrfToken', csrfToken)
-    retryBody.set('json', 'true')
-    retryBody.set('totpCode', totpCode)
-    if (useRecovery) {
-      retryBody.set('isRecoveryCode', 'true')
-    }
-
-    const retryRes = await httpRequest(`${serverUrl}/api/auth/callback/credentials`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
-      },
-      body: retryBody.toString(),
-    })
-
-    signInCookies = extractCookies(retryRes.headers)
-
-    // Check for errors in the retry response (handle both 302 redirect and JSON body)
-    let retryUrl: URL | null = null
-    if (retryRes.statusCode === 302 && retryRes.headers.location) {
-      try {
-        retryUrl = new URL(retryRes.headers.location, serverUrl)
-      } catch {
-        /* ignore */
-      }
-    } else {
-      try {
-        const retryData = JSON.parse(retryRes.body) as { url?: string }
-        if (retryData.url) retryUrl = new URL(retryData.url)
-      } catch {
-        /* not JSON */
-      }
-    }
-
-    if (retryUrl) {
-      const retryErrorCode = retryUrl.searchParams.get('code')
-      const retryError = retryUrl.searchParams.get('error')
-
-      if (retryErrorCode === 'RATE_LIMITED') {
-        throw new Error(
-          'Too many verification attempts. For security, please wait 15 minutes before trying again.',
-        )
-      }
-      if (retryErrorCode === 'INVALID_2FA_CODE' || retryError === 'CredentialsSignin') {
-        throw new Error(
-          useRecovery
-            ? 'Invalid recovery code. Make sure you are using an unused code (format: XXXXX-XXXXX).'
-            : 'Invalid verification code. Make sure the code matches your authenticator app.',
-        )
-      }
     }
   }
 
