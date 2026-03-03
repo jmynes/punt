@@ -99,6 +99,7 @@ model User {
   // MCP API access
   mcpApiKey          String? @unique // SHA-256 hash of API key for authentication
   mcpApiKeyEncrypted String?         // Encrypted raw API key for Claude CLI chat feature
+  mcpApiKeyHint      String?         // Last 4 characters of key for user identification
 
   // Claude Chat API access
   anthropicApiKey        String? // User's own Anthropic API key for embedded chat

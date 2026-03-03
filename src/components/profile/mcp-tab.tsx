@@ -257,8 +257,14 @@ export function MCPTab({ isDemo }: MCPTabProps) {
                 <div className="flex items-center gap-3 px-3 py-2 bg-zinc-800/50 border border-zinc-700 rounded-lg">
                   <KeyRound className="h-4 w-4 text-emerald-500 shrink-0" />
                   <p className="text-sm text-zinc-300">
-                    Active key ending in{' '}
-                    <code className="text-amber-400 font-mono">...{mcpKeyHint}</code>
+                    {mcpKeyHint ? (
+                      <>
+                        Active key ending in{' '}
+                        <code className="text-amber-400 font-mono">...{mcpKeyHint}</code>
+                      </>
+                    ) : (
+                      'MCP API key is configured'
+                    )}
                   </p>
                 </div>
               )}

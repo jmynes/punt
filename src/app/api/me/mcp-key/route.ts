@@ -104,14 +104,12 @@ export async function GET() {
 
     const user = await db.user.findUnique({
       where: { id: currentUser.id },
-      select: { mcpApiKey: true },
+      select: { mcpApiKey: true, mcpApiKeyHint: true },
     })
 
-    // Note: Since we now store hashes, we can't show a hint of the original key
-    // We can only indicate whether a key exists
     return NextResponse.json({
       hasKey: !!user?.mcpApiKey,
-      keyHint: null, // No longer available since keys are hashed
+      keyHint: user?.mcpApiKeyHint ?? null,
     })
   } catch (error) {
     return handleApiError(error, 'get MCP key status')
@@ -162,6 +160,7 @@ export async function POST(request: Request) {
       data: {
         mcpApiKey: keyHash,
         mcpApiKeyEncrypted: encryptedKey,
+        mcpApiKeyHint: apiKey.slice(-4),
       },
     })
 
@@ -203,6 +202,7 @@ export async function DELETE(request: Request) {
       data: {
         mcpApiKey: null,
         mcpApiKeyEncrypted: null,
+        mcpApiKeyHint: null,
       },
     })
 
