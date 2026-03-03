@@ -227,6 +227,11 @@ function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
+/** Validate a PostgreSQL identifier (database name, username) against a strict allowlist. */
+function isValidIdentifier(value: string): boolean {
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value) && value.length <= 63
+}
+
 // ---------------------------------------------------------------------------
 // Steps
 // ---------------------------------------------------------------------------
@@ -277,16 +282,25 @@ function printInstallInstructions(platform: 'macos' | 'linux') {
 function createDatabase(
   dbName: string,
   dbUser: string,
+  dbHost: string,
+  dbPort: string,
 ): { success: boolean; alreadyExists?: boolean } {
-  // Check if database already exists
-  const exists = runCapture(`psql -h localhost -U ${dbUser} -lqt 2>/dev/null | grep -w ${dbName}`)
+  // Check if database already exists using a precise pg_database query
+  const exists = runCapture(
+    `sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${dbName}'"`,
+  )
 
-  if (exists) {
+  if (exists === null) {
+    // Connection to PostgreSQL failed entirely
+    warn('Could not connect to PostgreSQL to check database existence.')
+  } else if (exists.trim() === '1') {
     return { success: true, alreadyExists: true }
   }
 
   // Try creating as the specified user first
-  const createDb = runCapture(`psql -h localhost -U ${dbUser} -c "CREATE DATABASE ${dbName};" 2>&1`)
+  const createDb = runCapture(
+    `psql -h ${dbHost} -p ${dbPort} -U ${dbUser} -c "CREATE DATABASE ${dbName};" 2>&1`,
+  )
   if (createDb !== null && !createDb.includes('ERROR')) {
     return { success: true }
   }
@@ -302,29 +316,34 @@ function createDatabase(
   return { success: false }
 }
 
-/** Try to create a PostgreSQL user. */
+/** Try to create a PostgreSQL user. Password is piped via stdin to avoid exposure in process list. */
 function createPgUser(
   dbUser: string,
   dbPassword: string,
 ): { success: boolean; alreadyExists?: boolean } {
   // Check if user exists
   const exists = runCapture(
-    `sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${dbUser}'" 2>&1`,
+    `sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${dbUser}'"`,
   )
 
   if (exists?.trim() === '1') {
     return { success: true, alreadyExists: true }
   }
 
-  const result = runCapture(
-    `sudo -u postgres psql -c "CREATE USER ${dbUser} WITH PASSWORD '${dbPassword}' CREATEDB;" 2>&1`,
-  )
+  // Escape single quotes in password for SQL
+  const escapedPassword = dbPassword.replace(/'/g, "''")
+  const sql = `CREATE USER ${dbUser} WITH PASSWORD '${escapedPassword}' CREATEDB;`
 
-  if (result !== null && !result.includes('ERROR')) {
+  try {
+    execSync('sudo -u postgres psql', {
+      cwd: ROOT,
+      input: sql,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
     return { success: true }
+  } catch {
+    return { success: false }
   }
-
-  return { success: false }
 }
 
 function generateAuthSecret(): string {
@@ -441,15 +460,32 @@ async function main() {
   stepHeader(2, TOTAL_STEPS, 'Database Setup')
 
   const dbUser = await prompt.ask('PostgreSQL username:', 'punt')
-  const dbPassword = await prompt.ask('PostgreSQL password:', 'punt')
+  if (!isValidIdentifier(dbUser)) {
+    fail(
+      `Invalid username "${dbUser}". Must start with a letter or underscore, contain only alphanumerics/underscores, and be at most 63 characters.`,
+    )
+    prompt.close()
+    process.exit(1)
+  }
+
+  const dbPassword = await prompt.askPassword('PostgreSQL password (default: punt):')
+  const effectiveDbPassword = dbPassword || 'punt'
   const dbHost = await prompt.ask('PostgreSQL host:', 'localhost')
   const dbPort = await prompt.ask('PostgreSQL port:', '5432')
   const dbName = await prompt.ask('Database name:', 'punt')
 
-  const databaseUrl = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`
+  if (!isValidIdentifier(dbName)) {
+    fail(
+      `Invalid database name "${dbName}". Must start with a letter or underscore, contain only alphanumerics/underscores, and be at most 63 characters.`,
+    )
+    prompt.close()
+    process.exit(1)
+  }
+
+  const databaseUrl = `postgresql://${dbUser}:${effectiveDbPassword}@${dbHost}:${dbPort}/${dbName}`
 
   info('Attempting to create PostgreSQL user...')
-  const userResult = createPgUser(dbUser, dbPassword)
+  const userResult = createPgUser(dbUser, effectiveDbPassword)
   if (userResult.alreadyExists) {
     success(`User "${dbUser}" already exists.`)
   } else if (userResult.success) {
@@ -458,14 +494,12 @@ async function main() {
     warn(`Could not auto-create user "${dbUser}".`)
     info('You may need to create it manually:')
     console.log(
-      fmt.dim(
-        `    sudo -u postgres psql -c "CREATE USER ${dbUser} WITH PASSWORD '${dbPassword}' CREATEDB;"`,
-      ),
+      fmt.dim(`    sudo -u postgres psql -c "CREATE USER ${dbUser} WITH PASSWORD '...' CREATEDB;"`),
     )
   }
 
   info(`Creating database "${dbName}"...`)
-  const dbResult = createDatabase(dbName, dbUser)
+  const dbResult = createDatabase(dbName, dbUser, dbHost, dbPort)
   if (dbResult.alreadyExists) {
     success(`Database "${dbName}" already exists.`)
   } else if (dbResult.success) {
@@ -484,8 +518,8 @@ async function main() {
 
   if (wantTestDb) {
     const testDbName = `${dbName}_test`
-    const testResult = createDatabase(testDbName, dbUser)
-    testDatabaseUrl = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${testDbName}`
+    const testResult = createDatabase(testDbName, dbUser, dbHost, dbPort)
+    testDatabaseUrl = `postgresql://${dbUser}:${effectiveDbPassword}@${dbHost}:${dbPort}/${testDbName}`
 
     if (testResult.alreadyExists) {
       success(`Test database "${testDbName}" already exists.`)
@@ -526,8 +560,8 @@ async function main() {
       '# CRITICAL: Use a separate test database to prevent wiping production data',
       `DATABASE_URL="${testDatabaseUrl}"`,
       '',
-      '# Auth secret for tests (can be any value for testing)',
-      'AUTH_SECRET="test-secret-do-not-use-in-production"',
+      '# Auth secret for tests',
+      `AUTH_SECRET="${generateAuthSecret()}"`,
       'AUTH_TRUST_HOST=true',
       '',
       '# Disable debug logging in tests',
@@ -747,7 +781,7 @@ async function createAdminUser(prompt: ReturnType<typeof createPrompter>) {
 
   try {
     const bcrypt = await import('bcryptjs')
-    const { PrismaClient } = await import('../src/generated/prisma/index.js')
+    const { PrismaClient } = await import('../src/generated/prisma')
     const prisma = new PrismaClient()
 
     try {
