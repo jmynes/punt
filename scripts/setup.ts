@@ -8,7 +8,7 @@
  * 4. Prisma schema push and client generation
  * 5. Admin user creation
  *
- * Usage: pnpm setup
+ * Usage: pnpm run setup
  */
 
 import { execSync } from 'node:child_process'
@@ -275,7 +275,7 @@ function printInstallInstructions(platform: 'macos' | 'linux') {
     console.log(`    ${fmt.bold('sudo systemctl start postgresql')}`)
   }
   console.log('')
-  info('After installing, re-run: pnpm setup')
+  info('After installing, re-run: pnpm run setup')
 }
 
 /** Try to create a database via psql. Returns true on success. */
@@ -471,7 +471,19 @@ async function main() {
   const dbPassword = await prompt.askPassword('PostgreSQL password (default: punt):')
   const effectiveDbPassword = dbPassword || 'punt'
   const dbHost = await prompt.ask('PostgreSQL host:', 'localhost')
+  if (!/^[a-zA-Z0-9._-]+$/.test(dbHost)) {
+    fail(
+      `Invalid host "${dbHost}". Must contain only alphanumeric characters, dots, hyphens, and underscores.`,
+    )
+    prompt.close()
+    process.exit(1)
+  }
   const dbPort = await prompt.ask('PostgreSQL port:', '5432')
+  if (!/^\d{1,5}$/.test(dbPort)) {
+    fail(`Invalid port "${dbPort}". Must be a number.`)
+    prompt.close()
+    process.exit(1)
+  }
   const dbName = await prompt.ask('Database name:', 'punt')
 
   if (!isValidIdentifier(dbName)) {
