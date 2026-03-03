@@ -169,6 +169,69 @@ function deriveServerName(serverUrl: string): string {
 }
 
 // ============================================================================
+// .mcp.json auto-configuration
+// ============================================================================
+
+const MCP_SERVER_CONFIG = {
+  type: 'stdio' as const,
+  command: 'pnpm',
+  args: ['--dir', 'mcp', 'exec', 'tsx', 'src/index.ts'],
+}
+
+/**
+ * Check for .mcp.json in the current working directory and auto-add the
+ * PUNT MCP server entry if it's missing. If the file doesn't exist at all,
+ * create it.
+ */
+function configureMcpJson(): void {
+  const mcpJsonPath = join(process.cwd(), '.mcp.json')
+
+  if (existsSync(mcpJsonPath)) {
+    try {
+      const content = readFileSync(mcpJsonPath, 'utf-8')
+      const config = JSON.parse(content) as { mcpServers?: Record<string, unknown> }
+
+      if (config.mcpServers?.punt) {
+        info(`.mcp.json already has a ${bold('punt')} server entry`)
+        return
+      }
+
+      // Add punt entry to existing config
+      if (!config.mcpServers) {
+        config.mcpServers = {}
+      }
+      config.mcpServers.punt = MCP_SERVER_CONFIG
+      writeFileSync(mcpJsonPath, `${JSON.stringify(config, null, 2)}\n`)
+      info(`Added ${bold('punt')} server to existing ${cyan('.mcp.json')}`)
+    } catch {
+      console.warn(`${yellow('Warning:')} Could not update .mcp.json — add the punt entry manually`)
+      showMcpJsonInstructions()
+    }
+    return
+  }
+
+  // No .mcp.json — create one
+  const config = { mcpServers: { punt: MCP_SERVER_CONFIG } }
+  writeFileSync(mcpJsonPath, `${JSON.stringify(config, null, 2)}\n`)
+  info(`Created ${cyan('.mcp.json')} with punt server configuration`)
+}
+
+function showMcpJsonInstructions(): void {
+  console.log()
+  console.log(`  Add this to your project's ${cyan('.mcp.json')}:`)
+  console.log()
+  console.log(dim('  {'))
+  console.log(dim('    "mcpServers": {'))
+  console.log(dim('      "punt": {'))
+  console.log(dim('        "type": "stdio",'))
+  console.log(dim('        "command": "pnpm",'))
+  console.log(dim('        "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"]'))
+  console.log(dim('      }'))
+  console.log(dim('    }'))
+  console.log(dim('  }'))
+}
+
+// ============================================================================
 // HTTP request helper (Node.js stdlib only)
 // ============================================================================
 
@@ -815,23 +878,11 @@ ${bold('Credentials location:')}
     console.log(`  ${dim('Saved to:')}    ${credPath}`)
     console.log()
 
-    // Show .mcp.json setup instructions
-    console.log(bold('Next steps:'))
+    // Auto-configure .mcp.json if needed
+    configureMcpJson()
+
     console.log()
-    console.log(`  Add this to your project's ${cyan('.mcp.json')} to enable the MCP server:`)
-    console.log()
-    console.log(dim('  {'))
-    console.log(dim('    "mcpServers": {'))
-    console.log(dim('      "punt": {'))
-    console.log(dim('        "type": "stdio",'))
-    console.log(dim('        "command": "pnpm",'))
-    console.log(dim('        "args": ["--dir", "mcp", "exec", "tsx", "src/index.ts"]'))
-    console.log(dim('      }'))
-    console.log(dim('    }'))
-    console.log(dim('  }'))
-    console.log()
-    console.log(`  The MCP server will automatically read credentials from ${dim(credPath)}`)
-    console.log()
+    process.exit(0)
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'An unexpected error occurred'
     error(msg)
