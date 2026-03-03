@@ -106,6 +106,20 @@ function getActionConfig(action: CommitPatternAction) {
   return PATTERN_ACTIONS.find((a) => a.value === action) ?? PATTERN_ACTIONS[2]
 }
 
+/** Check if current patterns match the defaults (ignoring IDs). */
+function isMatchingDefaults(patterns: CommitPattern[]): boolean {
+  if (patterns.length !== DEFAULT_PATTERNS.length) return false
+  return DEFAULT_PATTERNS.every((def, i) => {
+    const p = patterns[i]
+    return (
+      p.pattern === def.pattern &&
+      p.action === def.action &&
+      p.enabled === def.enabled &&
+      JSON.stringify(p.keywords ?? []) === JSON.stringify(def.keywords ?? [])
+    )
+  })
+}
+
 /**
  * Inline input for adding keywords to a pattern.
  * Submits on Enter or comma, trims whitespace, and prevents duplicates.
@@ -530,7 +544,7 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                   Define patterns to trigger ticket actions from commit messages.
                 </CardDescription>
               </div>
-              {!isDisabled && hasWebhookSecret && (
+              {!isDisabled && hasWebhookSecret && !isMatchingDefaults(patterns) && (
                 <Button
                   type="button"
                   variant="outline"
