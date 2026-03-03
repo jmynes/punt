@@ -17,9 +17,9 @@ async function main() {
   // index on `username` cannot be used for this — PostgreSQL needs a
   // functional index on the lowercased value.
   await prisma.$executeRawUnsafe(
-    `CREATE UNIQUE INDEX IF NOT EXISTS "User_username_lower_idx" ON "User" (lower(username))`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users (lower(username))`,
   )
-  console.log('Created index: User_username_lower_idx')
+  console.log('Created index: users_username_lower_idx')
 }
 
 main()

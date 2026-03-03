@@ -79,32 +79,32 @@ model User {
   email       String?   @unique
   name        String
   avatar      String?
-  avatarColor String?   // Custom background color for fallback avatar
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  lastLoginAt DateTime?
+  avatarColor String?   @map("avatar_color") // Custom background color for fallback avatar
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  lastLoginAt DateTime? @map("last_login_at")
 
   // Auth fields
-  passwordHash      String?
-  passwordChangedAt DateTime? // For session invalidation after password change
-  emailVerified     DateTime?
-  isSystemAdmin     Boolean   @default(false)
-  isActive          Boolean   @default(true)
+  passwordHash      String?   @map("password_hash")
+  passwordChangedAt DateTime? @map("password_changed_at") // For session invalidation after password change
+  emailVerified     DateTime? @map("email_verified")
+  isSystemAdmin     Boolean   @default(false) @map("is_system_admin")
+  isActive          Boolean   @default(true) @map("is_active")
 
   // Two-factor authentication (TOTP)
-  totpSecret        String?   // Encrypted TOTP secret key
-  totpEnabled       Boolean   @default(false) // Whether 2FA is active
-  totpRecoveryCodes Json?     // JSON array of hashed recovery codes
+  totpSecret        String?   @map("totp_secret") // Encrypted TOTP secret key
+  totpEnabled       Boolean   @default(false) @map("totp_enabled") // Whether 2FA is active
+  totpRecoveryCodes Json?     @map("totp_recovery_codes") // JSON array of hashed recovery codes
 
   // MCP API access
-  mcpApiKey          String? @unique // SHA-256 hash of API key for authentication
-  mcpApiKeyEncrypted String?         // Encrypted raw API key for Claude CLI chat feature
+  mcpApiKey          String? @unique @map("mcp_api_key") // SHA-256 hash of API key for authentication
+  mcpApiKeyEncrypted String?         @map("mcp_api_key_encrypted") // Encrypted raw API key for Claude CLI chat feature
 
   // Claude Chat API access
-  anthropicApiKey        String? // User's own Anthropic API key for embedded chat
-  chatProvider           String? // Preferred chat provider: "anthropic" | "claude-cli"
-  claudeSessionEncrypted String? // Encrypted Claude CLI session credentials (experimental)
-  enabledMcpServers      Json?   // JSON array of enabled MCP server names from Claude CLI credentials
+  anthropicApiKey        String? @map("anthropic_api_key") // User's own Anthropic API key for embedded chat
+  chatProvider           String? @map("chat_provider") // Preferred chat provider: "anthropic" | "claude-cli"
+  claudeSessionEncrypted String? @map("claude_session_encrypted") // Encrypted Claude CLI session credentials (experimental)
+  enabledMcpServers      Json?   @map("enabled_mcp_servers") // JSON array of enabled MCP server names from Claude CLI credentials
 
   // Ticket relations
   assignedTickets  Ticket[]        @relation("Assignee")
@@ -134,15 +134,17 @@ model User {
 
   // Chat relations
   chatSessions ChatSession[]
+
+  @@map("users")
 }
 
 // Auth.js Account model for OAuth providers (future-proofing)
 model Account {
   id                String  @id @default(cuid())
-  userId            String
+  userId            String  @map("user_id")
   type              String
   provider          String
-  providerAccountId String
+  providerAccountId String  @map("provider_account_id")
   refresh_token     String?
   access_token      String?
   expires_at        Int?
@@ -155,23 +157,25 @@ model Account {
 
   @@unique([provider, providerAccountId])
   @@index([userId])
+  @@map("accounts")
 }
 
 // Server-side session storage
 model Session {
   id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
   expires      DateTime
-  userAgent    String?
-  ipAddress    String?
-  createdAt    DateTime @default(now())
-  lastActive   DateTime @default(now())
+  userAgent    String?  @map("user_agent")
+  ipAddress    String?  @map("ip_address")
+  createdAt    DateTime @default(now()) @map("created_at")
+  lastActive   DateTime @default(now()) @map("last_active")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expires])
+  @@map("sessions")
 }
 
 // Rate limiting for auth endpoints
@@ -180,10 +184,11 @@ model RateLimit {
   identifier  String   // IP address or user ID
   endpoint    String   // e.g., "auth/login", "auth/register"
   count       Int      @default(1)
-  windowStart DateTime @default(now())
+  windowStart DateTime @default(now()) @map("window_start")
 
   @@unique([identifier, endpoint])
   @@index([windowStart])
+  @@map("rate_limits")
 }
 
 // Project invitation tokens (link-based)
@@ -192,19 +197,20 @@ model Invitation {
   email     String
   role      InvitationRole   @default(member)
   token     String           @unique @default(cuid())
-  expiresAt DateTime
+  expiresAt DateTime         @map("expires_at")
   status    InvitationStatus @default(pending)
-  createdAt DateTime         @default(now())
+  createdAt DateTime         @default(now()) @map("created_at")
 
-  senderId  String?
+  senderId  String?  @map("sender_id")
   sender    User?   @relation(fields: [senderId], references: [id], onDelete: SetNull)
-  projectId String
+  projectId String   @map("project_id")
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([email, projectId])
   @@index([projectId])
   @@index([token])
   @@index([email])
+  @@map("invitations")
 }
 
 model Project {
@@ -213,22 +219,22 @@ model Project {
   key         String   @unique // e.g., "PUNT", "PROJ"
   description String?
   color       String   @default("#6366f1")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  showAddColumnButton Boolean? // null = inherit from global SystemSettings
+  showAddColumnButton Boolean? @map("show_add_column_button") // null = inherit from global SystemSettings
 
   // Repository integration configuration
-  repositoryUrl       String? // Repository URL (e.g., https://github.com/owner/repo)
-  repositoryProvider  String? // github, gitlab, bitbucket, gitea, codeberg, other
-  localPath           String? // Local filesystem path to the repo (for agent context)
-  defaultBranch       String? // Default branch name (e.g., main, master)
-  branchTemplate      String? // Branch naming template (e.g., "{type}/{key}-{slug}")
-  agentGuidance       String? // Markdown instructions for AI agents working on this project
-  monorepoPath        String? // Path within monorepo (e.g., "packages/frontend")
-  environmentBranches Json?   // JSON array of {id, environment, branchName} objects
-  webhookSecret       String? // Secret for verifying GitHub/GitLab webhook signatures
-  commitPatterns      Json?   // JSON array of custom commit patterns for webhook processing
+  repositoryUrl       String? @map("repository_url") // Repository URL (e.g., https://github.com/owner/repo)
+  repositoryProvider  String? @map("repository_provider") // github, gitlab, bitbucket, gitea, codeberg, other
+  localPath           String? @map("local_path") // Local filesystem path to the repo (for agent context)
+  defaultBranch       String? @map("default_branch") // Default branch name (e.g., main, master)
+  branchTemplate      String? @map("branch_template") // Branch naming template (e.g., "{type}/{key}-{slug}")
+  agentGuidance       String? @map("agent_guidance") // Markdown instructions for AI agents working on this project
+  monorepoPath        String? @map("monorepo_path") // Path within monorepo (e.g., "packages/frontend")
+  environmentBranches Json?   @map("environment_branches") // JSON array of {id, environment, branchName} objects
+  webhookSecret       String? @map("webhook_secret") // Secret for verifying GitHub/GitLab webhook signatures
+  commitPatterns      Json?   @map("commit_patterns") // JSON array of custom commit patterns for webhook processing
 
   columns        Column[]
   tickets        Ticket[]
@@ -239,30 +245,33 @@ model Project {
   sprintSettings ProjectSprintSettings?
   roles          Role[]
   chatSessions   ChatSession[]
+
+  @@map("projects")
 }
 
 model ProjectMember {
   id String @id @default(cuid())
 
   // Role relation (replaces old string role field)
-  roleId String
+  roleId String @map("role_id")
   role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   // Optional per-member permission overrides (additive to role permissions)
   // JSON array of permission strings, e.g., ["sprints.manage", "labels.manage"]
   overrides Json?
 
-  userId    String
+  userId    String  @map("user_id")
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projectId String
+  projectId String  @map("project_id")
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([userId, projectId])
   @@index([projectId])
   @@index([roleId])
+  @@map("project_members")
 }
 
 // Custom roles for granular permissions (Discord/Jira-style)
@@ -276,28 +285,29 @@ model Role {
   permissions Json @default("[]")
 
   // Built-in roles (Owner, Admin, Member, Viewer) cannot be deleted
-  isDefault Boolean @default(false)
+  isDefault Boolean @default(false) @map("is_default")
 
   // Position for display ordering (lower = higher rank)
   position Int @default(0)
 
-  projectId String
+  projectId String          @map("project_id")
   project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   members   ProjectMember[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([projectId, name])
   @@index([projectId])
+  @@map("roles")
 }
 
 model Sprint {
   id        String       @id @default(cuid())
   name      String
   goal      String?
-  startDate DateTime?
-  endDate   DateTime?
+  startDate DateTime?    @map("start_date")
+  endDate   DateTime?    @map("end_date")
 
   // Budget: expected story points capacity (optional)
   budget    Int?
@@ -306,20 +316,20 @@ model Sprint {
   status    SprintStatus @default(planning)
 
   // Completion tracking
-  completedAt   DateTime?
-  completedById String?
+  completedAt   DateTime? @map("completed_at")
+  completedById String?   @map("completed_by_id")
   completedBy   User?     @relation("SprintCompleter", fields: [completedById], references: [id], onDelete: SetNull)
 
   // Completion metrics (calculated at close)
-  completedTicketCount   Int?
-  incompleteTicketCount  Int?
-  completedStoryPoints   Int?
-  incompleteStoryPoints  Int?
+  completedTicketCount   Int? @map("completed_ticket_count")
+  incompleteTicketCount  Int? @map("incomplete_ticket_count")
+  completedStoryPoints   Int? @map("completed_story_points")
+  incompleteStoryPoints  Int? @map("incomplete_story_points")
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
-  projectId String
+  projectId String   @map("project_id")
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tickets   Ticket[]
 
@@ -329,6 +339,7 @@ model Sprint {
 
   @@index([projectId])
   @@index([projectId, status])
+  @@map("sprints")
 }
 
 model Column {
@@ -337,12 +348,13 @@ model Column {
   icon      String?
   color     String?
   order     Int
-  projectId String
+  projectId String  @map("project_id")
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   tickets Ticket[]
 
   @@index([projectId])
+  @@map("columns")
 }
 
 model Ticket {
@@ -359,51 +371,51 @@ model Ticket {
   order    Int            // Position within column
 
   // Estimation
-  storyPoints Int?
+  storyPoints Int?    @map("story_points")
   estimate    String? // Time estimate like "2h", "1d", "1w"
 
   // Dates
-  startDate DateTime?
-  dueDate   DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  startDate DateTime? @map("start_date")
+  dueDate   DateTime? @map("due_date")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   // Resolution (for closed/done tickets)
   resolution   String? // Already Implemented, Done, Won't Fix, Duplicate, Cannot Reproduce, Incomplete, Won't Do
-  resolvedAt   DateTime? // When the ticket was resolved
+  resolvedAt   DateTime? @map("resolved_at") // When the ticket was resolved
 
   // Environment / Context
   environment  String? // e.g., "Production", "Staging", "Development"
-  affectedVersion String?
-  fixVersion   String?
+  affectedVersion String? @map("affected_version")
+  fixVersion   String?    @map("fix_version")
 
   // Relationships
-  projectId  String
+  projectId  String  @map("project_id")
   project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  columnId   String
+  columnId   String  @map("column_id")
   column     Column  @relation(fields: [columnId], references: [id])
 
   // Users
-  assigneeId String?
+  assigneeId String? @map("assignee_id")
   assignee   User?   @relation("Assignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  creatorId  String?
+  creatorId  String? @map("creator_id")
   creator    User?   @relation("Creator", fields: [creatorId], references: [id], onDelete: SetNull)
 
   // Sprint
-  sprintId String?
+  sprintId String? @map("sprint_id")
   sprint   Sprint? @relation(fields: [sprintId], references: [id], onDelete: SetNull)
 
   // Carryover tracking
-  isCarriedOver         Boolean   @default(false)
-  carriedFromSprintId   String?
+  isCarriedOver         Boolean   @default(false) @map("is_carried_over")
+  carriedFromSprintId   String?   @map("carried_from_sprint_id")
   carriedFromSprint     Sprint?   @relation("CarriedFrom", fields: [carriedFromSprintId], references: [id], onDelete: SetNull)
-  carriedOverCount      Int       @default(0)
+  carriedOverCount      Int       @default(0) @map("carried_over_count")
 
   // Sprint history
   sprintHistory         TicketSprintHistory[]
 
   // Parent ticket (for subtasks)
-  parentId String?
+  parentId String?  @map("parent_id")
   parent   Ticket?  @relation("Subtasks", fields: [parentId], references: [id], onDelete: SetNull)
   subtasks Ticket[] @relation("Subtasks")
 
@@ -426,269 +438,284 @@ model Ticket {
   @@index([sprintId])
   @@index([parentId])
   @@index([carriedFromSprintId])
+  @@map("tickets")
 }
 
 // Watchers (CC users on a ticket)
 model TicketWatcher {
   id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
-  ticketId String
+  ticketId String @map("ticket_id")
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  userId   String
+  userId   String @map("user_id")
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([ticketId, userId])
   @@index([ticketId])
   @@index([userId])
+  @@map("ticket_watchers")
 }
 
 // Linked tickets (blocks, is blocked by, relates to, duplicates, etc.)
 model TicketLink {
   id       String   @id @default(cuid())
-  linkType LinkType
+  linkType LinkType @map("link_type")
 
-  fromTicketId String
+  fromTicketId String @map("from_ticket_id")
   fromTicket   Ticket @relation("LinkedFrom", fields: [fromTicketId], references: [id], onDelete: Cascade)
-  toTicketId   String
+  toTicketId   String @map("to_ticket_id")
   toTicket     Ticket @relation("LinkedTo", fields: [toTicketId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([fromTicketId, toTicketId, linkType])
   @@index([fromTicketId])
   @@index([toTicketId])
+  @@map("ticket_links")
 }
 
 // Edit history for tickets
 model TicketEdit {
   id        String   @id @default(cuid())
   field     String   // Which field was changed
-  oldValue  String?  // Previous value (JSON stringified if complex)
-  newValue  String?  // New value
-  createdAt DateTime @default(now())
+  oldValue  String?  @map("old_value") // Previous value (JSON stringified if complex)
+  newValue  String?  @map("new_value") // New value
+  createdAt DateTime @default(now()) @map("created_at")
 
-  ticketId String
+  ticketId String @map("ticket_id")
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  userId   String
+  userId   String @map("user_id")
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
   @@index([createdAt])
+  @@map("ticket_edits")
 }
 
 // Comprehensive audit trail for ticket changes
 model TicketActivity {
   id        String   @id @default(cuid())
-  ticketId  String
+  ticketId  String   @map("ticket_id")
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  userId    String?
+  userId    String?  @map("user_id")
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   action    String   // created, updated, moved, assigned, labeled, sprint_changed, commented, etc.
   field     String?  // which field changed (for updates)
-  oldValue  String?  // previous value (stringified)
-  newValue  String?  // new value (stringified)
-  groupId   String?  // groups related changes (e.g., drag-move updates column + order)
-  createdAt DateTime @default(now())
+  oldValue  String?  @map("old_value") // previous value (stringified)
+  newValue  String?  @map("new_value") // new value (stringified)
+  groupId   String?  @map("group_id") // groups related changes (e.g., drag-move updates column + order)
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([ticketId, createdAt])
   @@index([userId])
   @@index([groupId])
+  @@map("ticket_activities")
 }
 
 model Label {
   id        String  @id @default(cuid())
   name      String
   color     String
-  projectId String
+  projectId String  @map("project_id")
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   tickets Ticket[]
 
   @@unique([projectId, name])
   @@index([projectId])
+  @@map("labels")
 }
 
 model Comment {
   id        String   @id @default(cuid())
   content   String   // Markdown content
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Track system-generated comments (e.g., MCP context logs)
-  isSystemGenerated Boolean @default(false)
+  isSystemGenerated Boolean @default(false) @map("is_system_generated")
   source            String? // Optional source identifier (e.g., "mcp", "automation")
 
-  ticketId String
+  ticketId String @map("ticket_id")
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  authorId String
+  authorId String @map("author_id")
   author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
+  @@map("comments")
 }
 
 model Attachment {
   id        String   @id @default(cuid())
   filename  String
-  mimeType  String
+  mimeType  String   @map("mime_type")
   size      Int      // File size in bytes
   url       String   // Storage path or URL
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
-  ticketId String
+  ticketId String @map("ticket_id")
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   // Track who uploaded the attachment for ownership-based permission checks
-  uploaderId String?
+  uploaderId String? @map("uploader_id")
   uploader   User?  @relation("Uploader", fields: [uploaderId], references: [id], onDelete: SetNull)
 
   @@index([ticketId])
   @@index([uploaderId])
+  @@map("attachments")
 }
 
 // Track which sprints a ticket has been in for historical reporting
 model TicketSprintHistory {
   id        String   @id @default(cuid())
-  ticketId  String
+  ticketId  String   @map("ticket_id")
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  sprintId  String
+  sprintId  String   @map("sprint_id")
   sprint    Sprint   @relation(fields: [sprintId], references: [id], onDelete: Cascade)
 
-  addedAt   DateTime @default(now())
-  removedAt DateTime?
+  addedAt   DateTime @default(now()) @map("added_at")
+  removedAt DateTime? @map("removed_at")
 
-  entryType       SprintEntryType   @default(added)
-  exitStatus      SprintExitStatus?
+  entryType       SprintEntryType   @default(added) @map("entry_type")
+  exitStatus      SprintExitStatus? @map("exit_status")
 
-  carriedFromSprintId String?
+  carriedFromSprintId String? @map("carried_from_sprint_id")
 
   @@unique([ticketId, sprintId])
   @@index([ticketId])
   @@index([sprintId])
+  @@map("ticket_sprint_history")
 }
 
 // Project-level sprint configuration
 model ProjectSprintSettings {
   id                      String  @id @default(cuid())
-  projectId               String  @unique
+  projectId               String  @unique @map("project_id")
   project                 Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  defaultSprintDuration   Int     @default(14) // days
-  autoCarryOverIncomplete Boolean @default(true)
-  doneColumnIds           Json    @default("[]") // JSON array
+  defaultSprintDuration   Int     @default(14) @map("default_sprint_duration") // days
+  autoCarryOverIncomplete Boolean @default(true) @map("auto_carry_over_incomplete")
+  doneColumnIds           Json    @default("[]") @map("done_column_ids") // JSON array
 
   // Default times for sprint start/end (HH:mm format, e.g., "09:00")
-  defaultStartTime        String  @default("09:00")
-  defaultEndTime          String  @default("17:00")
+  defaultStartTime        String  @default("09:00") @map("default_start_time")
+  defaultEndTime          String  @default("17:00") @map("default_end_time")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("project_sprint_settings")
 }
 
 // System-wide settings for file upload limits (singleton)
 model SystemSettings {
   id        String   @id @default("system-settings")
-  updatedAt DateTime @updatedAt
-  updatedBy String?
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by")
 
   // Branding settings
-  appName          String  @default("PUNT")
-  logoUrl          String? // URL to uploaded logo image
-  logoLetter       String  @default("P")
-  logoGradientFrom String  @default("#f59e0b")
-  logoGradientTo   String  @default("#ea580c")
+  appName          String  @default("PUNT") @map("app_name")
+  logoUrl          String? @map("logo_url") // URL to uploaded logo image
+  logoLetter       String  @default("P") @map("logo_letter")
+  logoGradientFrom String  @default("#f59e0b") @map("logo_gradient_from")
+  logoGradientTo   String  @default("#ea580c") @map("logo_gradient_to")
 
   // File upload limits (in MB)
-  maxImageSizeMB          Int @default(10)
-  maxVideoSizeMB          Int @default(100)
-  maxDocumentSizeMB       Int @default(25)
-  maxAttachmentsPerTicket Int @default(20)
+  maxImageSizeMB          Int @default(10) @map("max_image_size_mb")
+  maxVideoSizeMB          Int @default(100) @map("max_video_size_mb")
+  maxDocumentSizeMB       Int @default(25) @map("max_document_size_mb")
+  maxAttachmentsPerTicket Int @default(20) @map("max_attachments_per_ticket")
 
   // Allowed MIME types (native JSON arrays)
-  allowedImageTypes    Json @default("[\"image/jpeg\",\"image/png\",\"image/gif\",\"image/webp\"]")
-  allowedVideoTypes    Json @default("[\"video/mp4\",\"video/webm\",\"video/ogg\",\"video/quicktime\"]")
-  allowedDocumentTypes Json @default("[\"application/pdf\",\"application/msword\",\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"application/vnd.ms-excel\",\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\",\"text/plain\",\"text/csv\"]")
+  allowedImageTypes    Json @default("[\"image/jpeg\",\"image/png\",\"image/gif\",\"image/webp\"]") @map("allowed_image_types")
+  allowedVideoTypes    Json @default("[\"video/mp4\",\"video/webm\",\"video/ogg\",\"video/quicktime\"]") @map("allowed_video_types")
+  allowedDocumentTypes Json @default("[\"application/pdf\",\"application/msword\",\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"application/vnd.ms-excel\",\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\",\"text/plain\",\"text/csv\"]") @map("allowed_document_types")
 
   // Email provider configuration
-  emailEnabled     Boolean @default(false)
-  emailProvider    String  @default("none") // none, smtp, resend, console
-  emailFromAddress String  @default("")
-  emailFromName    String  @default("PUNT")
+  emailEnabled     Boolean @default(false) @map("email_enabled")
+  emailProvider    String  @default("none") @map("email_provider") // none, smtp, resend, console
+  emailFromAddress String  @default("") @map("email_from_address")
+  emailFromName    String  @default("PUNT") @map("email_from_name")
 
   // SMTP settings (password stored in env var EMAIL_SMTP_PASSWORD)
-  smtpHost     String  @default("")
-  smtpPort     Int     @default(587)
-  smtpUsername String  @default("")
-  smtpSecure   Boolean @default(true)
+  smtpHost     String  @default("") @map("smtp_host")
+  smtpPort     Int     @default(587) @map("smtp_port")
+  smtpUsername String  @default("") @map("smtp_username")
+  smtpSecure   Boolean @default(true) @map("smtp_secure")
 
   // Email feature toggles
-  emailPasswordReset Boolean @default(true)
-  emailWelcome       Boolean @default(false)
-  emailVerification  Boolean @default(false)
-  emailInvitations   Boolean @default(true)
+  emailPasswordReset Boolean @default(true) @map("email_password_reset")
+  emailWelcome       Boolean @default(false) @map("email_welcome")
+  emailVerification  Boolean @default(false) @map("email_verification")
+  emailInvitations   Boolean @default(true) @map("email_invitations")
 
   // Board settings
-  showAddColumnButton Boolean @default(true)
+  showAddColumnButton Boolean @default(true) @map("show_add_column_button")
 
   // Default role permissions for new projects (JSON object)
   // Keys: "Owner", "Admin", "Member", "Viewer"
   // Values: array of permission strings
-  defaultRolePermissions Json?
+  defaultRolePermissions Json? @map("default_role_permissions")
 
   // Repository configuration (global defaults)
-  canonicalRepoUrl     String? // Upstream repository URL (e.g., https://github.com/owner/repo)
-  repoHostingProvider  String? // github, gitlab, bitbucket, gitea, codeberg, other
-  forkRepoUrl          String? // Fork repository URL (if different from canonical)
+  canonicalRepoUrl     String? @map("canonical_repo_url") // Upstream repository URL (e.g., https://github.com/owner/repo)
+  repoHostingProvider  String? @map("repo_hosting_provider") // github, gitlab, bitbucket, gitea, codeberg, other
+  forkRepoUrl          String? @map("fork_repo_url") // Fork repository URL (if different from canonical)
 
   // Agent configuration (global defaults)
-  defaultBranchTemplate   String  @default("{type}/{key}-{slug}") // Default branch naming template
-  defaultAgentGuidance    String? // Default Markdown instructions for AI agents
+  defaultBranchTemplate   String  @default("{type}/{key}-{slug}") @map("default_branch_template") // Default branch naming template
+  defaultAgentGuidance    String? @map("default_agent_guidance") // Default Markdown instructions for AI agents
 
   // Default sprint times (system-wide defaults for new projects)
-  defaultSprintStartTime  String  @default("09:00") // HH:mm format
-  defaultSprintEndTime    String  @default("17:00") // HH:mm format
+  defaultSprintStartTime  String  @default("09:00") @map("default_sprint_start_time") // HH:mm format
+  defaultSprintEndTime    String  @default("17:00") @map("default_sprint_end_time") // HH:mm format
+
+  @@map("system_settings")
 }
 
 // Password reset tokens (for forgot password flow)
 model PasswordResetToken {
   id        String    @id @default(cuid())
-  tokenHash String    @unique // SHA-256 hash of the token (never store plain token)
-  userId    String
+  tokenHash String    @unique @map("token_hash") // SHA-256 hash of the token (never store plain token)
+  userId    String    @map("user_id")
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   @@index([userId])
   @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 // Email verification tokens
 model EmailVerificationToken {
   id        String   @id @default(cuid())
-  tokenHash String   @unique // SHA-256 hash of the token
-  userId    String
+  tokenHash String   @unique @map("token_hash") // SHA-256 hash of the token
+  userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   email     String   // Email being verified (may differ from current user email)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([userId])
+  @@map("email_verification_tokens")
 }
 
 // Chat session for storing conversation history
 model ChatSession {
   id        String   @id @default(cuid())
   name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Owner
-  userId String
+  userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Optional project context (for project-scoped conversations)
-  projectId String?
+  projectId String?  @map("project_id")
   project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   messages ChatMessage[]
@@ -696,6 +723,7 @@ model ChatSession {
   @@index([userId])
   @@index([projectId])
   @@index([userId, updatedAt])
+  @@map("chat_sessions")
 }
 
 // Individual chat messages within a session
@@ -704,11 +732,12 @@ model ChatMessage {
   role      String // "user" | "assistant"
   content   String
   metadata  Json?  // JSON: tool calls, errors, etc.
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
-  sessionId String
+  sessionId String      @map("session_id")
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([sessionId, createdAt])
+  @@map("chat_messages")
 }

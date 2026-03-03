@@ -161,6 +161,8 @@ Schema in `prisma/schema.prisma`. Key models: User, Project, Ticket, Sprint, Lab
 
 **Json fields:** Role.permissions, ProjectMember.overrides, SystemSettings.defaultRolePermissions, User.totpRecoveryCodes, User.enabledMcpServers, Project.environmentBranches, Project.commitPatterns, ProjectSprintSettings.doneColumnIds, ChatMessage.metadata, SystemSettings.allowedImageTypes/allowedVideoTypes/allowedDocumentTypes. These are native PostgreSQL JSON - no manual `JSON.parse()`/`JSON.stringify()` needed. Use `Prisma.DbNull` (not `null`) when setting a nullable Json field to NULL.
 
+**Naming convention:** Database tables/columns use snake_case, mapped from Prisma's PascalCase/camelCase via `@@map`/`@map`. When adding new models or fields, always add `@@map("snake_case_plural")` to models and `@map("snake_case")` to camelCase fields. Single-word lowercase fields (`id`, `name`, `email`) don't need `@map`.
+
 **Case-insensitive usernames:** PostgreSQL uses `findFirst` with `mode: 'insensitive'` instead of the old `usernameLower` column.
 
 Types generated to `@/generated/prisma/client`, re-exported with relations from `@/types/index.ts`.

@@ -117,22 +117,22 @@ export async function GET() {
         _count: { id: true },
       }),
       db.$queryRaw<ProjectIdCount[]>`
-        SELECT t."projectId", COUNT(c.id)::bigint as count
-        FROM "Comment" c
-        JOIN "Ticket" t ON c."ticketId" = t.id
-        GROUP BY t."projectId"
+        SELECT t.project_id AS "projectId", COUNT(c.id)::bigint as count
+        FROM comments c
+        JOIN tickets t ON c.ticket_id = t.id
+        GROUP BY t.project_id
       `,
       db.$queryRaw<ProjectIdCount[]>`
-        SELECT t."projectId", COUNT(ta.id)::bigint as count
-        FROM "TicketActivity" ta
-        JOIN "Ticket" t ON ta."ticketId" = t.id
-        GROUP BY t."projectId"
+        SELECT t.project_id AS "projectId", COUNT(ta.id)::bigint as count
+        FROM ticket_activities ta
+        JOIN tickets t ON ta.ticket_id = t.id
+        GROUP BY t.project_id
       `,
       db.$queryRaw<ProjectIdAttachmentAgg[]>`
-        SELECT t."projectId", COUNT(a.id)::bigint as count, COALESCE(SUM(a.size), 0)::bigint as "totalSize"
-        FROM "Attachment" a
-        JOIN "Ticket" t ON a."ticketId" = t.id
-        GROUP BY t."projectId"
+        SELECT t.project_id AS "projectId", COUNT(a.id)::bigint as count, COALESCE(SUM(a.size), 0)::bigint as "totalSize"
+        FROM attachments a
+        JOIN tickets t ON a.ticket_id = t.id
+        GROUP BY t.project_id
       `,
       db.role.groupBy({
         by: ['projectId'],
@@ -155,25 +155,25 @@ export async function GET() {
         _count: { id: true },
       }),
       db.$queryRaw<ProjectIdCount[]>`
-        SELECT t."projectId", COUNT(tsh.id)::bigint as count
-        FROM "TicketSprintHistory" tsh
-        JOIN "Ticket" t ON tsh."ticketId" = t.id
-        GROUP BY t."projectId"
+        SELECT t.project_id AS "projectId", COUNT(tsh.id)::bigint as count
+        FROM ticket_sprint_history tsh
+        JOIN tickets t ON tsh.ticket_id = t.id
+        GROUP BY t.project_id
       `,
       db.$queryRaw<ProjectIdCount[]>`
-        SELECT t."projectId", COUNT(te.id)::bigint as count
-        FROM "TicketEdit" te
-        JOIN "Ticket" t ON te."ticketId" = t.id
-        GROUP BY t."projectId"
+        SELECT t.project_id AS "projectId", COUNT(te.id)::bigint as count
+        FROM ticket_edits te
+        JOIN tickets t ON te.ticket_id = t.id
+        GROUP BY t.project_id
       `,
       db.$queryRaw<ProjectIdCount[]>`
-        SELECT "projectId", COUNT(id)::bigint as count
+        SELECT project_id AS "projectId", COUNT(id)::bigint as count
         FROM (
-          SELECT DISTINCT tl.id, t."projectId"
-          FROM "TicketLink" tl
-          JOIN "Ticket" t ON tl."fromTicketId" = t.id
+          SELECT DISTINCT tl.id, t.project_id
+          FROM ticket_links tl
+          JOIN tickets t ON tl.from_ticket_id = t.id
         ) sub
-        GROUP BY "projectId"
+        GROUP BY project_id
       `,
     ])
 
