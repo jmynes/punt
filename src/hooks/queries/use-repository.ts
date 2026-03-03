@@ -16,10 +16,11 @@ export type CommitPatternAction = 'close' | 'in_progress' | 'reference'
 
 export interface CommitPattern {
   id: string
-  pattern: string // The pattern text (e.g., "fixes", "closes", "wip")
+  pattern: string // The primary keyword (e.g., "fixes", "closes", "wip")
   action: CommitPatternAction
   isRegex?: boolean // Whether pattern is a regex
   enabled?: boolean
+  keywords?: string[] // Additional keywords that trigger the same action
 }
 
 export const repositoryKeys = {
