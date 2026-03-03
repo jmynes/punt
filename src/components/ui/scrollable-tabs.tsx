@@ -1,5 +1,6 @@
 'use client'
 
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -9,9 +10,11 @@ interface ScrollableTabsProps {
   activeValue?: string
 }
 
+const SCROLL_AMOUNT = 150
+
 /**
  * Wraps a horizontal tab bar with scroll overflow handling.
- * Shows subtle fade gradients on edges when content overflows,
+ * Shows arrow buttons and fade gradients on edges when content overflows,
  * with native horizontal scrolling (mouse wheel, trackpad, touch).
  * The scrollbar is visually hidden.
  */
@@ -27,6 +30,15 @@ export function ScrollableTabs({ children, className, activeValue }: ScrollableT
     const { scrollLeft, scrollWidth, clientWidth } = el
     setCanScrollLeft(scrollLeft > 1)
     setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1)
+  }, [])
+
+  const scrollBy = useCallback((direction: 'left' | 'right') => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollBy({
+      left: direction === 'left' ? -SCROLL_AMOUNT : SCROLL_AMOUNT,
+      behavior: 'smooth',
+    })
   }, [])
 
   // Scroll active tab into view without disturbing ancestor scroll containers
@@ -77,31 +89,56 @@ export function ScrollableTabs({ children, className, activeValue }: ScrollableT
     scrollActiveTabIntoView()
   }, [activeValue, scrollActiveTabIntoView])
 
+  const hasOverflow = canScrollLeft || canScrollRight
+
   return (
     <div className={cn('relative', className)}>
-      {/* Left fade gradient */}
+      {/* Left arrow button + fade gradient */}
       <div
         className={cn(
-          'pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-10 bg-gradient-to-r from-background to-transparent transition-opacity duration-150',
-          canScrollLeft ? 'opacity-100' : 'opacity-0',
+          'absolute left-0 top-0 bottom-0 z-10 flex items-center bg-gradient-to-r from-background via-background/80 to-transparent transition-opacity duration-150',
+          canScrollLeft ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
-      />
+      >
+        <button
+          type="button"
+          onClick={() => scrollBy('left')}
+          className="flex h-full items-center px-1 text-zinc-400 hover:text-zinc-200 transition-colors"
+          aria-label="Scroll tabs left"
+          tabIndex={canScrollLeft ? 0 : -1}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      </div>
 
       {/* Scrollable container */}
       <div
         ref={scrollRef}
-        className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          'overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+          hasOverflow && 'px-6',
+        )}
       >
         {children}
       </div>
 
-      {/* Right fade gradient */}
+      {/* Right arrow button + fade gradient */}
       <div
         className={cn(
-          'pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-10 bg-gradient-to-l from-background to-transparent transition-opacity duration-150',
-          canScrollRight ? 'opacity-100' : 'opacity-0',
+          'absolute right-0 top-0 bottom-0 z-10 flex items-center bg-gradient-to-l from-background via-background/80 to-transparent transition-opacity duration-150',
+          canScrollRight ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
-      />
+      >
+        <button
+          type="button"
+          onClick={() => scrollBy('right')}
+          className="flex h-full items-center px-1 text-zinc-400 hover:text-zinc-200 transition-colors"
+          aria-label="Scroll tabs right"
+          tabIndex={canScrollRight ? 0 : -1}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   )
 }
