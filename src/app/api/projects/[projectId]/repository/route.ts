@@ -34,6 +34,7 @@ const commitPatternSchema = z.object({
   action: z.enum(['close', 'in_progress', 'reference']),
   isRegex: z.boolean().optional(), // Whether pattern is a regex
   enabled: z.boolean().optional(),
+  keywords: z.array(z.string()).optional(), // Additional keywords for this pattern
 })
 
 const updateRepositorySchema = z.object({

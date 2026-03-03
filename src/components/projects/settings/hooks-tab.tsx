@@ -138,8 +138,8 @@ function KeywordInput({
         const v = e.target.value
         // Auto-submit on comma
         if (v.endsWith(',')) {
-          const keyword = v.slice(0, -1).trim()
-          if (keyword) {
+          const keyword = v.slice(0, -1).trim().toLowerCase()
+          if (keyword && !existingKeywords.some((k) => k.toLowerCase() === keyword)) {
             onAdd(patternId, keyword)
           }
           setValue('')
@@ -235,14 +235,20 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
   }, [])
 
   const removeKeyword = useCallback((id: string, index: number) => {
-    setPatterns((prev) =>
-      prev.map((p) => {
+    setPatterns((prev) => {
+      const updated = prev.map((p) => {
         if (p.id !== id) return p
-        const updated = [...(p.keywords ?? [])]
-        updated.splice(index, 1)
-        return { ...p, keywords: updated.length > 0 ? updated : undefined }
-      }),
-    )
+        const keywords = [...(p.keywords ?? [])]
+        keywords.splice(index, 1)
+        return { ...p, keywords: keywords.length > 0 ? keywords : undefined }
+      })
+      // If the pattern now has no keywords at all, remove the entire row
+      return updated.filter((p) => {
+        if (p.id !== id) return true
+        const remaining = [p.pattern, ...(p.keywords ?? [])].filter(Boolean)
+        return remaining.length > 0
+      })
+    })
     setPatternsHaveChanges(true)
   }, [])
 
@@ -634,8 +640,8 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                                               )
                                               setPatternsHaveChanges(true)
                                             } else {
-                                              // No keywords left, clear the primary
-                                              updatePattern(pattern.id, 'pattern', '')
+                                              // No keywords left, remove the entire pattern row
+                                              removePattern(pattern.id)
                                             }
                                           } else {
                                             // Removing an additional keyword

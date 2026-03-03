@@ -76,7 +76,10 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
       config?.commitPatterns && config.commitPatterns.length > 0
         ? config.commitPatterns
             .filter((p) => p.enabled !== false)
-            .map((p) => `  - "${p.pattern}" → ${p.action}`)
+            .map((p) => {
+              const allKeywords = [p.pattern, ...(p.keywords ?? [])].filter(Boolean)
+              return `  - "${allKeywords.join(', ')}" → ${p.action}`
+            })
             .join('\n')
         : null
 
