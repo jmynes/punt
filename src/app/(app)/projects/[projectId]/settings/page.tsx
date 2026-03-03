@@ -23,12 +23,11 @@ import { HooksTab } from '@/components/projects/settings/hooks-tab'
 import { LabelsTab } from '@/components/projects/settings/labels-tab'
 import { RepositoryTab } from '@/components/projects/settings/repository-tab'
 import { SprintsTab } from '@/components/projects/settings/sprints-tab'
-import { ScrollableTabs } from '@/components/ui/scrollable-tabs'
+import { ResponsiveTabs, type TabItem } from '@/components/ui/scrollable-tabs'
 import { useHasPermission, useMyPermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { PERMISSIONS } from '@/lib/permissions'
-import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useUIStore } from '@/stores/ui-store'
@@ -178,6 +177,91 @@ export default function ProjectSettingsPage() {
 
   const effectiveTab = getEffectiveTab()
 
+  // Build tabs dynamically based on permissions
+  const basePath = `/projects/${projectKey}/settings`
+  const tabs: TabItem[] = [
+    ...(canViewSettings
+      ? [
+          {
+            value: 'general',
+            label: 'General',
+            href: `${basePath}?tab=general`,
+            icon: <Settings className="h-4 w-4" />,
+          },
+        ]
+      : []),
+    ...(canViewSettings
+      ? [
+          {
+            value: 'agents',
+            label: 'Agents',
+            href: `${basePath}?tab=agents`,
+            icon: <Bot className="h-4 w-4" />,
+          },
+        ]
+      : []),
+    ...(canViewSettings
+      ? [
+          {
+            value: 'hooks',
+            label: 'Hooks',
+            href: `${basePath}?tab=hooks`,
+            icon: <Webhook className="h-4 w-4" />,
+          },
+        ]
+      : []),
+    ...(canManageLabels
+      ? [
+          {
+            value: 'labels',
+            label: 'Labels',
+            href: `${basePath}?tab=labels`,
+            icon: <Tag className="h-4 w-4" />,
+          },
+        ]
+      : []),
+    ...(canManageMembers
+      ? [
+          {
+            value: 'members',
+            label: 'Members',
+            href: `${basePath}?tab=members`,
+            icon: <Users className="h-4 w-4" />,
+          },
+        ]
+      : []),
+    ...(canViewSettings
+      ? [
+          {
+            value: 'repository',
+            label: 'Repository',
+            href: `${basePath}?tab=repository`,
+            icon: <GitBranch className="h-4 w-4" />,
+          },
+        ]
+      : []),
+    ...(canManageRoles
+      ? [
+          {
+            value: 'roles',
+            label: 'Roles',
+            href: `${basePath}?tab=roles`,
+            icon: <Shield className="h-4 w-4" />,
+          },
+        ]
+      : []),
+    ...(canViewSettings
+      ? [
+          {
+            value: 'sprints',
+            label: 'Sprints',
+            href: `${basePath}?tab=sprints`,
+            icon: <CalendarClock className="h-4 w-4" />,
+          },
+        ]
+      : []),
+  ]
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <PageHeader
@@ -191,130 +275,7 @@ export default function ProjectSettingsPage() {
 
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-hidden">
         {/* Tabs */}
-        <ScrollableTabs className="mb-6" activeValue={effectiveTab}>
-          <div className="flex gap-1 border-b border-zinc-800">
-            {canViewSettings && (
-              <Link
-                href={`/projects/${projectKey}/settings?tab=general`}
-                data-active={effectiveTab === 'general' || undefined}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                  effectiveTab === 'general'
-                    ? 'text-amber-500 border-amber-500'
-                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
-                )}
-              >
-                <Settings className="h-4 w-4" />
-                General
-              </Link>
-            )}
-            {canViewSettings && (
-              <Link
-                href={`/projects/${projectKey}/settings?tab=agents`}
-                data-active={effectiveTab === 'agents' || undefined}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                  effectiveTab === 'agents'
-                    ? 'text-amber-500 border-amber-500'
-                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
-                )}
-              >
-                <Bot className="h-4 w-4" />
-                Agents
-              </Link>
-            )}
-            {canViewSettings && (
-              <Link
-                href={`/projects/${projectKey}/settings?tab=hooks`}
-                data-active={effectiveTab === 'hooks' || undefined}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                  effectiveTab === 'hooks'
-                    ? 'text-amber-500 border-amber-500'
-                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
-                )}
-              >
-                <Webhook className="h-4 w-4" />
-                Hooks
-              </Link>
-            )}
-            {canManageLabels && (
-              <Link
-                href={`/projects/${projectKey}/settings?tab=labels`}
-                data-active={effectiveTab === 'labels' || undefined}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                  effectiveTab === 'labels'
-                    ? 'text-amber-500 border-amber-500'
-                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
-                )}
-              >
-                <Tag className="h-4 w-4" />
-                Labels
-              </Link>
-            )}
-            {canManageMembers && (
-              <Link
-                href={`/projects/${projectKey}/settings?tab=members`}
-                data-active={effectiveTab === 'members' || undefined}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                  effectiveTab === 'members'
-                    ? 'text-amber-500 border-amber-500'
-                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
-                )}
-              >
-                <Users className="h-4 w-4" />
-                Members
-              </Link>
-            )}
-            {canViewSettings && (
-              <Link
-                href={`/projects/${projectKey}/settings?tab=repository`}
-                data-active={effectiveTab === 'repository' || undefined}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                  effectiveTab === 'repository'
-                    ? 'text-amber-500 border-amber-500'
-                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
-                )}
-              >
-                <GitBranch className="h-4 w-4" />
-                Repository
-              </Link>
-            )}
-            {canManageRoles && (
-              <Link
-                href={`/projects/${projectKey}/settings?tab=roles`}
-                data-active={effectiveTab === 'roles' || undefined}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                  effectiveTab === 'roles'
-                    ? 'text-amber-500 border-amber-500'
-                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
-                )}
-              >
-                <Shield className="h-4 w-4" />
-                Roles
-              </Link>
-            )}
-            {canViewSettings && (
-              <Link
-                href={`/projects/${projectKey}/settings?tab=sprints`}
-                data-active={effectiveTab === 'sprints' || undefined}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                  effectiveTab === 'sprints'
-                    ? 'text-amber-500 border-amber-500'
-                    : 'text-zinc-400 border-transparent hover:text-zinc-300',
-                )}
-              >
-                <CalendarClock className="h-4 w-4" />
-                Sprints
-              </Link>
-            )}
-          </div>
-        </ScrollableTabs>
+        <ResponsiveTabs tabs={tabs} activeValue={effectiveTab} className="mb-6" />
 
         {/* Tab Content */}
         <div className="flex-1 min-h-0 overflow-auto">

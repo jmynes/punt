@@ -1,7 +1,6 @@
 'use client'
 
 import { Bell, Bot, KeyRound, Palette, Settings, Sliders, Terminal, User } from 'lucide-react'
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
@@ -15,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { ScrollableTabs } from '@/components/ui/scrollable-tabs'
+import { ResponsiveTabs, type TabItem } from '@/components/ui/scrollable-tabs'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
@@ -42,6 +41,51 @@ const VALID_TABS: PreferencesTab[] = [
   'notifications',
   'profile',
   'security',
+]
+
+const TABS: TabItem[] = [
+  {
+    value: 'general',
+    label: 'General',
+    href: '/preferences?tab=general',
+    icon: <Sliders className="h-4 w-4" />,
+  },
+  {
+    value: 'appearance',
+    label: 'Appearance',
+    href: '/preferences?tab=appearance',
+    icon: <Palette className="h-4 w-4" />,
+  },
+  {
+    value: 'claude-chat',
+    label: 'Claude Chat',
+    href: '/preferences?tab=claude-chat',
+    icon: <Bot className="h-4 w-4" />,
+  },
+  {
+    value: 'mcp',
+    label: 'MCP',
+    href: '/preferences?tab=mcp',
+    icon: <Terminal className="h-4 w-4" />,
+  },
+  {
+    value: 'notifications',
+    label: 'Notifications',
+    href: '/preferences?tab=notifications',
+    icon: <Bell className="h-4 w-4" />,
+  },
+  {
+    value: 'profile',
+    label: 'Profile',
+    href: '/preferences?tab=profile',
+    icon: <User className="h-4 w-4" />,
+  },
+  {
+    value: 'security',
+    label: 'Security',
+    href: '/preferences?tab=security',
+    icon: <KeyRound className="h-4 w-4" />,
+  },
 ]
 
 function isValidTab(tab: string | null): tab is PreferencesTab {
@@ -213,101 +257,7 @@ function PreferencesContent() {
 
       <div className="mx-auto max-w-4xl px-6 pb-6">
         {/* Tab Navigation */}
-        <ScrollableTabs className="mb-6" activeValue={activeTab}>
-          <div className="flex gap-1 border-b border-zinc-800">
-            <Link
-              href="/preferences?tab=general"
-              data-active={activeTab === 'general' || undefined}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                activeTab === 'general'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Sliders className="h-4 w-4" />
-              General
-            </Link>
-            <Link
-              href="/preferences?tab=appearance"
-              data-active={activeTab === 'appearance' || undefined}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                activeTab === 'appearance'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Palette className="h-4 w-4" />
-              Appearance
-            </Link>
-            <Link
-              href="/preferences?tab=claude-chat"
-              data-active={activeTab === 'claude-chat' || undefined}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                activeTab === 'claude-chat'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Bot className="h-4 w-4" />
-              Claude Chat
-            </Link>
-            <Link
-              href="/preferences?tab=mcp"
-              data-active={activeTab === 'mcp' || undefined}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                activeTab === 'mcp'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Terminal className="h-4 w-4" />
-              MCP
-            </Link>
-            <Link
-              href="/preferences?tab=notifications"
-              data-active={activeTab === 'notifications' || undefined}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                activeTab === 'notifications'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <Bell className="h-4 w-4" />
-              Notifications
-            </Link>
-            <Link
-              href="/preferences?tab=profile"
-              data-active={activeTab === 'profile' || undefined}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                activeTab === 'profile'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <User className="h-4 w-4" />
-              Profile
-            </Link>
-            <Link
-              href="/preferences?tab=security"
-              data-active={activeTab === 'security' || undefined}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                activeTab === 'security'
-                  ? 'text-amber-500 border-amber-500'
-                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
-              )}
-            >
-              <KeyRound className="h-4 w-4" />
-              Security
-            </Link>
-          </div>
-        </ScrollableTabs>
+        <ResponsiveTabs tabs={TABS} activeValue={activeTab} className="mb-6" />
 
         {/* Appearance Tab */}
         {activeTab === 'appearance' && (

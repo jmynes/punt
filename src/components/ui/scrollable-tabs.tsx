@@ -1,143 +1,90 @@
 'use client'
 
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+import Link from 'next/link'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
-interface ScrollableTabsProps {
-  children: React.ReactNode
-  className?: string
-  activeValue?: string
+export interface TabItem {
+  value: string
+  label: string
+  href: string
+  icon: React.ReactNode
 }
 
-const SCROLL_AMOUNT = 150
+interface ResponsiveTabsProps {
+  tabs: TabItem[]
+  activeValue: string
+  className?: string
+}
 
 /**
- * Wraps a horizontal tab bar with scroll overflow handling.
- * Shows arrow buttons and fade gradients on edges when content overflows,
- * with native horizontal scrolling (mouse wheel, trackpad, touch).
- * The scrollbar is visually hidden.
+ * Responsive tab navigation.
+ *
+ * - Desktop (sm+): horizontal flex-wrap — all tabs visible, wraps to second row if needed.
+ * - Mobile (<sm): dropdown button showing the active tab, full list in menu.
  */
-export function ScrollableTabs({ children, className, activeValue }: ScrollableTabsProps) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-
-  const updateScrollState = useCallback(() => {
-    const el = scrollRef.current
-    if (!el) return
-
-    const { scrollLeft, scrollWidth, clientWidth } = el
-    setCanScrollLeft(scrollLeft > 1)
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1)
-  }, [])
-
-  const scrollBy = useCallback((direction: 'left' | 'right') => {
-    const el = scrollRef.current
-    if (!el) return
-    el.scrollBy({
-      left: direction === 'left' ? -SCROLL_AMOUNT : SCROLL_AMOUNT,
-      behavior: 'smooth',
-    })
-  }, [])
-
-  // Scroll active tab into view without disturbing ancestor scroll containers
-  const scrollActiveTabIntoView = useCallback(() => {
-    const el = scrollRef.current
-    if (!el) return
-
-    const activeTab = el.querySelector('[data-active]') as HTMLElement | null
-    if (!activeTab) return
-
-    const containerRect = el.getBoundingClientRect()
-    const tabRect = activeTab.getBoundingClientRect()
-
-    if (tabRect.left < containerRect.left) {
-      el.scrollLeft -= containerRect.left - tabRect.left
-    } else if (tabRect.right > containerRect.right) {
-      el.scrollLeft += tabRect.right - containerRect.right
-    }
-  }, [])
-
-  // Check scroll state on mount, scroll, and resize
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-
-    updateScrollState()
-
-    el.addEventListener('scroll', updateScrollState, { passive: true })
-
-    // Observe both the container (viewport resize) and its first child
-    // (children added/removed, e.g. permission-gated tabs appearing)
-    const resizeObserver = new ResizeObserver(updateScrollState)
-    resizeObserver.observe(el)
-    const inner = el.firstElementChild
-    if (inner) resizeObserver.observe(inner)
-
-    return () => {
-      el.removeEventListener('scroll', updateScrollState)
-      resizeObserver.disconnect()
-    }
-  }, [updateScrollState])
-
-  // Scroll active tab into view on mount and when active tab changes.
-  // activeValue is an intentional trigger — when the user switches tabs,
-  // the newly active tab needs to be scrolled into view.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: activeValue is an intentional trigger
-  useEffect(() => {
-    scrollActiveTabIntoView()
-  }, [activeValue, scrollActiveTabIntoView])
-
-  const hasOverflow = canScrollLeft || canScrollRight
+export function ResponsiveTabs({ tabs, activeValue, className }: ResponsiveTabsProps) {
+  const activeTab = tabs.find((t) => t.value === activeValue) ?? tabs[0]
 
   return (
-    <div className={cn('relative', className)}>
-      {/* Left arrow button + fade gradient */}
-      <div
-        className={cn(
-          'absolute left-0 top-0 bottom-0 z-10 flex items-center bg-gradient-to-r from-background via-background/80 to-transparent transition-opacity duration-150',
-          canScrollLeft ? 'opacity-100' : 'pointer-events-none opacity-0',
-        )}
-      >
-        <button
-          type="button"
-          onClick={() => scrollBy('left')}
-          className="flex h-full items-center px-1 text-zinc-400 hover:text-zinc-200 transition-colors"
-          aria-label="Scroll tabs left"
-          tabIndex={canScrollLeft ? 0 : -1}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
+    <div className={className}>
+      {/* Mobile: dropdown */}
+      <div className="sm:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-2 rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-100 hover:bg-zinc-800 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                {activeTab?.icon}
+                {activeTab?.label}
+              </span>
+              <ChevronDown className="h-4 w-4 text-zinc-400" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-(--radix-dropdown-menu-trigger-width)">
+            {tabs.map((tab) => (
+              <DropdownMenuItem key={tab.value} asChild>
+                <Link
+                  href={tab.href}
+                  className={cn(
+                    'flex items-center gap-2',
+                    tab.value === activeValue && 'text-amber-500',
+                  )}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Scrollable container */}
-      <div
-        ref={scrollRef}
-        className={cn(
-          'overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-          hasOverflow && 'px-6',
-        )}
-      >
-        {children}
-      </div>
-
-      {/* Right arrow button + fade gradient */}
-      <div
-        className={cn(
-          'absolute right-0 top-0 bottom-0 z-10 flex items-center bg-gradient-to-l from-background via-background/80 to-transparent transition-opacity duration-150',
-          canScrollRight ? 'opacity-100' : 'pointer-events-none opacity-0',
-        )}
-      >
-        <button
-          type="button"
-          onClick={() => scrollBy('right')}
-          className="flex h-full items-center px-1 text-zinc-400 hover:text-zinc-200 transition-colors"
-          aria-label="Scroll tabs right"
-          tabIndex={canScrollRight ? 0 : -1}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+      {/* Desktop: wrapping horizontal tabs */}
+      <div className="hidden sm:flex sm:flex-wrap sm:gap-1 border-b border-zinc-800">
+        {tabs.map((tab) => (
+          <Link
+            key={tab.value}
+            href={tab.href}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
+              tab.value === activeValue
+                ? 'text-amber-500 border-amber-500'
+                : 'text-zinc-400 border-transparent hover:text-zinc-300',
+            )}
+          >
+            {tab.icon}
+            {tab.label}
+          </Link>
+        ))}
       </div>
     </div>
   )
