@@ -18,7 +18,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -106,18 +106,23 @@ function getActionConfig(action: CommitPatternAction) {
   return PATTERN_ACTIONS.find((a) => a.value === action) ?? PATTERN_ACTIONS[2]
 }
 
-/** Check if current patterns match the defaults (ignoring IDs). */
-function isMatchingDefaults(patterns: CommitPattern[]): boolean {
-  if (patterns.length !== DEFAULT_PATTERNS.length) return false
-  return DEFAULT_PATTERNS.every((def, i) => {
-    const p = patterns[i]
+/** Check if two pattern arrays match by content (ignoring IDs). */
+function patternsMatch(a: CommitPattern[], b: CommitPattern[]): boolean {
+  if (a.length !== b.length) return false
+  return a.every((pa, i) => {
+    const pb = b[i]
     return (
-      p.pattern === def.pattern &&
-      p.action === def.action &&
-      p.enabled === def.enabled &&
-      JSON.stringify(p.keywords ?? []) === JSON.stringify(def.keywords ?? [])
+      pa.pattern === pb.pattern &&
+      pa.action === pb.action &&
+      pa.enabled === pb.enabled &&
+      JSON.stringify(pa.keywords ?? []) === JSON.stringify(pb.keywords ?? [])
     )
   })
+}
+
+/** Check if current patterns match the defaults (ignoring IDs). */
+function isMatchingDefaults(patterns: CommitPattern[]): boolean {
+  return patternsMatch(patterns, DEFAULT_PATTERNS)
 }
 
 /**
@@ -191,7 +196,14 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
 
   // Commit patterns state
   const [patterns, setPatterns] = useState<CommitPattern[]>([])
-  const [patternsHaveChanges, setPatternsHaveChanges] = useState(false)
+  // Track the server-saved patterns so we can detect net-zero changes
+  const [savedPatterns, setSavedPatterns] = useState<CommitPattern[]>([])
+
+  // Compute whether there are actual changes vs the saved state
+  const patternsHaveChanges = useMemo(
+    () => !patternsMatch(patterns, savedPatterns),
+    [patterns, savedPatterns],
+  )
 
   // Initialize commit patterns when config loads
   // Use a ref to track if we have local changes to avoid overwriting them on config refetch
@@ -199,12 +211,13 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
 
   useEffect(() => {
     if (config && !hasLocalChangesRef.current) {
-      setPatterns(Array.isArray(config.commitPatterns) ? config.commitPatterns : [])
-      setPatternsHaveChanges(false)
+      const serverPatterns = Array.isArray(config.commitPatterns) ? config.commitPatterns : []
+      setPatterns(serverPatterns)
+      setSavedPatterns(serverPatterns)
     }
   }, [config])
 
-  // Keep ref in sync with state
+  // Keep ref in sync with computed state
   useEffect(() => {
     hasLocalChangesRef.current = patternsHaveChanges
   }, [patternsHaveChanges])
@@ -218,13 +231,11 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
       enabled: true,
     }
     setPatterns((prev) => [...prev, newPattern])
-    setPatternsHaveChanges(true)
   }, [])
 
   const updatePattern = useCallback(
     (id: string, field: keyof CommitPattern, value: string | boolean | string[]) => {
       setPatterns((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)))
-      setPatternsHaveChanges(true)
     },
     [],
   )
@@ -245,7 +256,6 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
         return { ...p, keywords: [...(p.keywords ?? []), trimmed] }
       }),
     )
-    setPatternsHaveChanges(true)
   }, [])
 
   const removeKeyword = useCallback((id: string, index: number) => {
@@ -263,28 +273,24 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
         return remaining.length > 0
       })
     })
-    setPatternsHaveChanges(true)
   }, [])
 
   const removePattern = useCallback((id: string) => {
     setPatterns((prev) => prev.filter((p) => p.id !== id))
-    setPatternsHaveChanges(true)
   }, [])
 
   const resetPatternsToDefaults = useCallback(() => {
     setPatterns(DEFAULT_PATTERNS.map((p) => ({ ...p, id: crypto.randomUUID() })))
-    setPatternsHaveChanges(true)
   }, [])
 
   const savePatterns = useCallback(async () => {
     await commitPatternsMutation.mutateAsync(patterns.length > 0 ? patterns : null)
-    setPatternsHaveChanges(false)
+    setSavedPatterns(patterns)
   }, [commitPatternsMutation, patterns])
 
   const resetPatterns = useCallback(() => {
-    setPatterns(Array.isArray(config?.commitPatterns) ? config.commitPatterns : [])
-    setPatternsHaveChanges(false)
-  }, [config?.commitPatterns])
+    setPatterns(savedPatterns)
+  }, [savedPatterns])
 
   const isDisabled = !canEditSettings
   const hasWebhookSecret = config?.hasWebhookSecret || generatedSecret
@@ -652,7 +658,6 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                                                     : p,
                                                 ),
                                               )
-                                              setPatternsHaveChanges(true)
                                             } else {
                                               // No keywords left, remove the entire pattern row
                                               removePattern(pattern.id)
