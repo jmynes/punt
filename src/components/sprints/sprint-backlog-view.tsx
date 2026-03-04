@@ -476,6 +476,23 @@ export function SprintBacklogView({
       // Case 2: Cross-section move
       if (ticketsChangingSprint.length === 0) return
 
+      // Block moving unresolved tickets to completed sprints
+      if (targetSprintId) {
+        const targetSprint = sprints?.find((s) => s.id === targetSprintId)
+        if (targetSprint?.status === 'completed') {
+          const unresolvedTickets = ticketsChangingSprint.filter((t) => !t.resolution)
+          if (unresolvedTickets.length > 0) {
+            showUndoRedoToast('error', {
+              title: 'Cannot move to completed sprint',
+              description:
+                'Unresolved tickets cannot be added to a completed sprint. ' +
+                "Set a resolution (e.g., Done, Won't Fix) first, or the tickets will be orphaned.",
+            })
+            return
+          }
+        }
+      }
+
       // Calculate new orders for tickets in target section
       const targetSectionKey = targetSprintId ?? 'backlog'
       const targetSectionTickets = ticketsBySprint[targetSectionKey] ?? []

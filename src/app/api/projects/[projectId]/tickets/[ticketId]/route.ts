@@ -342,8 +342,34 @@ export async function PATCH(
       }
     }
 
-    // Track sprint history when sprintId changes
+    // Validate: prevent assigning unresolved tickets to completed sprints
     const newSprintId = updateData.sprintId
+    if (
+      newSprintId !== undefined &&
+      newSprintId !== null &&
+      newSprintId !== existingTicket.sprintId
+    ) {
+      const targetSprint = await db.sprint.findFirst({
+        where: { id: newSprintId as string, projectId },
+        select: { status: true },
+      })
+      if (targetSprint?.status === 'completed') {
+        // Check the effective resolution: use the update value if provided, otherwise the existing value
+        const effectiveResolution =
+          dbUpdateData.resolution !== undefined
+            ? dbUpdateData.resolution
+            : existingTicket.resolution
+        if (!effectiveResolution) {
+          return badRequestError(
+            'Cannot assign an unresolved ticket to a completed sprint. ' +
+              'To add a ticket to a completed sprint, it must have a resolution status ' +
+              "(e.g., Done, Won't Fix). Otherwise the ticket will be orphaned and not visible in active views.",
+          )
+        }
+      }
+    }
+
+    // Track sprint history when sprintId changes
     if (newSprintId !== undefined && newSprintId !== existingTicket.sprintId) {
       // Close existing history entry for old sprint
       if (existingTicket.sprintId) {
