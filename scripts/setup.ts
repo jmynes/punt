@@ -143,7 +143,12 @@ function createPrompter() {
         return
       }
 
-      // Pause readline so it doesn't interfere with raw stdin
+      // Save and remove all existing stdin listeners to prevent readline echo
+      const savedListeners: Record<string, ((...args: unknown[]) => void)[]> = {}
+      for (const event of ['data', 'keypress', 'readable']) {
+        savedListeners[event] = (stdin.listeners(event) as ((...args: unknown[]) => void)[]).slice()
+        stdin.removeAllListeners(event)
+      }
       rl.pause()
 
       const raw = stdin.isRaw
@@ -152,19 +157,29 @@ function createPrompter() {
 
       let password = ''
 
+      const cleanup = () => {
+        stdin.setRawMode(raw ?? false)
+        stdin.removeListener('data', onData)
+        // Restore readline's listeners
+        for (const [event, listeners] of Object.entries(savedListeners)) {
+          for (const listener of listeners) {
+            stdin.on(event, listener)
+          }
+        }
+        rl.resume()
+      }
+
       const onData = (data: Buffer) => {
         const ch = data.toString()
         // Enter
         if (ch === '\r' || ch === '\n') {
-          stdin.setRawMode(raw ?? false)
-          stdin.removeListener('data', onData)
+          cleanup()
           stdout.write('\n')
-          rl.resume()
           resolve(password)
         }
         // Ctrl+C
         else if (ch === '\x03') {
-          stdin.setRawMode(raw ?? false)
+          cleanup()
           stdout.write('\n')
           process.exit(1)
         }
@@ -175,8 +190,8 @@ function createPrompter() {
             stdout.write('\b \b')
           }
         }
-        // Regular character
-        else {
+        // Regular printable character
+        else if (ch.charCodeAt(0) >= 32) {
           password += ch
           stdout.write('*')
         }
