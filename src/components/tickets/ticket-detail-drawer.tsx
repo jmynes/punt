@@ -456,6 +456,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               setTempStatusId(doneCol.id)
             }
           }
+        } else {
+          // Clearing resolution: if a completed sprint is selected, reset sprint
+          // since the API won't allow unresolved tickets in completed sprints
+          const selectedSprint = availableSprints.find((s) => s.id === tempSprintId)
+          if (selectedSprint?.status === 'completed') {
+            setTempSprintId(ticket.sprintId)
+          }
         }
         break
       }
@@ -1134,7 +1141,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     {availableSprints
                       .filter(
                         (s) =>
-                          s.status === 'active' || s.status === 'planning' || s.id === tempSprintId,
+                          s.status === 'active' ||
+                          s.status === 'planning' ||
+                          s.id === tempSprintId ||
+                          (s.status === 'completed' && !!tempResolution),
                       )
                       .map((sprint) => (
                         <DropdownMenuCheckboxItem
