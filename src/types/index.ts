@@ -6,6 +6,7 @@ import type { Permission as PermissionType } from '@/lib/permissions'
 
 // Re-export Prisma types
 export type {
+  Agent,
   Attachment,
   ChatMessage,
   ChatSession,
