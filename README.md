@@ -44,6 +44,9 @@ Open [http://localhost:3000](http://localhost:3000) and log in with the credenti
 - **pnpm** 9+
 - **PostgreSQL** 16+ (not required for demo mode)
 
+**Recommended for MCP / Claude Code workflow:**
+- [GitHub CLI (`gh`)](https://cli.github.com/) -- for PR creation, merging, and issue management from the terminal
+
 ## Documentation
 
 Full documentation is available at **[jmynes.github.io/punt](https://jmynes.github.io/punt/)**:

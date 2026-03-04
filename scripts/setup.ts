@@ -258,46 +258,159 @@ function isValidIdentifier(value: string): boolean {
 // Steps
 // ---------------------------------------------------------------------------
 
-function detectPlatform(): 'macos' | 'linux' {
-  const platform = process.platform
-  if (platform === 'darwin') return 'macos'
-  return 'linux'
-}
-
 function checkPostgres(): boolean {
   return runCapture('which psql') !== null
 }
 
-function printInstallInstructions(platform: 'macos' | 'linux') {
-  console.log('')
-  if (platform === 'macos') {
-    info('Install PostgreSQL on macOS:')
-    console.log('')
-    console.log(fmt.dim('    # Using Homebrew (recommended):'))
-    console.log(`    ${fmt.bold('brew install postgresql@16')}`)
-    console.log(`    ${fmt.bold('brew services start postgresql@16')}`)
-    console.log('')
-    console.log(fmt.dim('    # Or download from:'))
-    console.log(`    ${fmt.bold('https://www.postgresql.org/download/macosx/')}`)
-  } else {
-    info('Install PostgreSQL on Linux:')
-    console.log('')
-    console.log(fmt.dim('    # Debian/Ubuntu:'))
-    console.log(`    ${fmt.bold('sudo apt install postgresql postgresql-client')}`)
-    console.log(`    ${fmt.bold('sudo systemctl start postgresql')}`)
-    console.log('')
-    console.log(fmt.dim('    # Fedora/RHEL:'))
-    console.log(`    ${fmt.bold('sudo dnf install postgresql-server postgresql')}`)
-    console.log(`    ${fmt.bold('sudo postgresql-setup --initdb')}`)
-    console.log(`    ${fmt.bold('sudo systemctl start postgresql')}`)
-    console.log('')
-    console.log(fmt.dim('    # Arch Linux:'))
-    console.log(`    ${fmt.bold('sudo pacman -S postgresql')}`)
-    console.log(`    ${fmt.bold('sudo -u postgres initdb -D /var/lib/postgres/data')}`)
-    console.log(`    ${fmt.bold('sudo systemctl start postgresql')}`)
+type PgInstallMethod =
+  | { manager: 'brew'; install: string; start: string }
+  | { manager: 'apt'; install: string; start: string }
+  | { manager: 'dnf'; install: string; initdb?: string; start: string }
+  | { manager: 'pacman'; install: string; initdb: string; start: string }
+  | null
+
+/** Detect the system's package manager and return PostgreSQL install commands. */
+function detectPgInstallMethod(): PgInstallMethod {
+  // macOS
+  if (process.platform === 'darwin') {
+    if (runCapture('which brew') !== null) {
+      return {
+        manager: 'brew',
+        install: 'brew install postgresql@16',
+        start: 'brew services start postgresql@16',
+      }
+    }
+    return null
   }
+
+  // Linux: check /etc/os-release for distro family, fall back to package manager detection
+  const osRelease = runCapture('cat /etc/os-release 2>/dev/null') ?? ''
+  const idLike = osRelease.match(/^ID_LIKE=(.*)$/m)?.[1]?.toLowerCase() ?? ''
+  const id =
+    osRelease
+      .match(/^ID=(.*)$/m)?.[1]
+      ?.replace(/"/g, '')
+      .toLowerCase() ?? ''
+
+  // Debian/Ubuntu family
+  if (
+    id === 'debian' ||
+    id === 'ubuntu' ||
+    idLike.includes('debian') ||
+    idLike.includes('ubuntu') ||
+    runCapture('which apt') !== null
+  ) {
+    return {
+      manager: 'apt',
+      install: 'sudo apt install -y postgresql postgresql-client',
+      start: 'sudo systemctl start postgresql',
+    }
+  }
+
+  // Fedora/RHEL family
+  if (
+    id === 'fedora' ||
+    id === 'rhel' ||
+    id === 'centos' ||
+    idLike.includes('fedora') ||
+    idLike.includes('rhel') ||
+    runCapture('which dnf') !== null
+  ) {
+    return {
+      manager: 'dnf',
+      install: 'sudo dnf install -y postgresql-server postgresql',
+      initdb: 'sudo postgresql-setup --initdb',
+      start: 'sudo systemctl start postgresql',
+    }
+  }
+
+  // Arch family
+  if (id === 'arch' || idLike.includes('arch') || runCapture('which pacman') !== null) {
+    return {
+      manager: 'pacman',
+      install: 'sudo pacman -S --noconfirm postgresql',
+      initdb: 'sudo -u postgres initdb -D /var/lib/postgres/data',
+      start: 'sudo systemctl start postgresql',
+    }
+  }
+
+  return null
+}
+
+/** Attempt to install PostgreSQL using the detected package manager. */
+async function installPostgres(prompt: ReturnType<typeof createPrompter>): Promise<boolean> {
+  const method = detectPgInstallMethod()
+
+  if (!method) {
+    // Can't detect package manager — print manual instructions
+    fail('Could not detect a supported package manager.')
+    console.log('')
+    info('Please install PostgreSQL manually:')
+    console.log(`    ${fmt.bold('https://www.postgresql.org/download/')}`)
+    console.log('')
+    info('After installing, re-run: pnpm run setup')
+    return false
+  }
+
+  info(`Detected package manager: ${fmt.bold(method.manager)}`)
   console.log('')
-  info('After installing, re-run: pnpm run setup')
+  info('The following commands will be run:')
+  console.log(`    ${fmt.dim(method.install)}`)
+  if ('initdb' in method && method.initdb) {
+    console.log(`    ${fmt.dim(method.initdb)}`)
+  }
+  console.log(`    ${fmt.dim(method.start)}`)
+  console.log('')
+
+  const proceed = await prompt.askYesNo('Install PostgreSQL now?', true)
+  if (!proceed) {
+    info('Skipping automatic install.')
+    console.log('')
+    info('Install PostgreSQL manually, then re-run: pnpm run setup')
+    return false
+  }
+
+  // Run install
+  info('Installing PostgreSQL...')
+  if (!run(method.install)) {
+    console.log('')
+    fail('Installation failed. This is usually due to missing permissions or network issues.')
+    info('Try running the install command manually:')
+    console.log(`    ${fmt.bold(method.install)}`)
+    console.log('')
+    info('After installing, re-run: pnpm run setup')
+    return false
+  }
+
+  // Run initdb if needed (Fedora/Arch)
+  if ('initdb' in method && method.initdb) {
+    info('Initializing database cluster...')
+    if (!run(method.initdb)) {
+      warn('initdb failed — the cluster may already be initialized. Continuing...')
+    }
+  }
+
+  // Start the service
+  info('Starting PostgreSQL service...')
+  if (!run(method.start)) {
+    warn('Could not start PostgreSQL service.')
+    info('Try starting it manually:')
+    console.log(`    ${fmt.bold(method.start)}`)
+    console.log('')
+    info('After starting, re-run: pnpm run setup')
+    return false
+  }
+
+  // Verify psql is now available
+  if (!checkPostgres()) {
+    fail('PostgreSQL was installed but psql is still not on your PATH.')
+    info('You may need to open a new terminal or add PostgreSQL to your PATH.')
+    info('After fixing, re-run: pnpm run setup')
+    return false
+  }
+
+  success('PostgreSQL installed and running.')
+  return true
 }
 
 /** Run a shell command with environment variables and return stdout, or null on failure. */
@@ -457,10 +570,9 @@ async function main() {
   banner()
 
   const prompt = createPrompter()
-  const platform = detectPlatform()
   const TOTAL_STEPS = 6
 
-  info(`Detected platform: ${fmt.bold(platform)}`)
+  info(`Platform: ${fmt.bold(process.platform)}`)
   info(`Project root: ${fmt.dim(ROOT)}`)
 
   // ----------------------------------------------------------
@@ -487,10 +599,13 @@ async function main() {
     const version = runCapture('psql --version')
     success(`PostgreSQL found: ${version}`)
   } else {
-    fail('PostgreSQL (psql) not found on your PATH.')
-    printInstallInstructions(platform)
-    prompt.close()
-    process.exit(1)
+    warn('PostgreSQL (psql) not found on your PATH.')
+    console.log('')
+    const installed = await installPostgres(prompt)
+    if (!installed) {
+      prompt.close()
+      process.exit(1)
+    }
   }
 
   // ----------------------------------------------------------
