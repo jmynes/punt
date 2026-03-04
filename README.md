@@ -19,6 +19,8 @@ A self-hosted issue tracker with backlog and Kanban views. Keep your data on you
 
 ## Quick Start
 
+**Requirements:** Node.js 20.9+, pnpm 9+, PostgreSQL 16+ (not required for demo mode)
+
 ```bash
 git clone https://github.com/jmynes/punt.git
 cd punt
@@ -37,12 +39,6 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) and log in with the credentials you created.
-
-### Requirements
-
-- **Node.js** 20.9+
-- **pnpm** 9+
-- **PostgreSQL** 16+ (not required for demo mode)
 
 **Recommended for MCP / Claude Code workflow:**
 - [GitHub CLI (`gh`)](https://cli.github.com/) -- for PR creation, merging, and issue management from the terminal
