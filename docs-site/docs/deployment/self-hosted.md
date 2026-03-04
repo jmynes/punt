@@ -28,7 +28,32 @@ cd punt
 pnpm install
 ```
 
-### Configure Environment
+### Guided Setup (Recommended)
+
+The guided installer automates database setup, environment configuration, and admin user creation:
+
+```bash
+pnpm run setup
+```
+
+The installer will:
+1. Detect PostgreSQL and provide install instructions if missing
+2. Create the database user and database
+3. Generate `.env` with a secure `AUTH_SECRET`
+4. Run `prisma db push` to initialize the schema
+5. Create an admin user with your chosen credentials
+
+:::tip
+`pnpm setup` is a built-in pnpm command. Always use `pnpm run setup` to run the PUNT installer.
+:::
+
+After setup completes, skip ahead to [Build Application](#build-application).
+
+### Manual Setup
+
+If you prefer to configure manually:
+
+#### Configure Environment
 
 Create a `.env` file:
 
@@ -48,13 +73,13 @@ Generate `AUTH_SECRET`:
 openssl rand -base64 32
 ```
 
-### Set Up Database
+#### Set Up Database
 
 Install PostgreSQL 16+ and create a database and user:
 
 ```bash
 sudo apt install postgresql
-sudo -u postgres psql -c "CREATE USER punt WITH PASSWORD 'yourpassword';"
+sudo -u postgres psql -c "CREATE USER punt WITH PASSWORD 'yourpassword' CREATEDB;"
 sudo -u postgres psql -c "CREATE DATABASE punt OWNER punt;"
 ```
 

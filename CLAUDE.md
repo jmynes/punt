@@ -9,6 +9,10 @@ PUNT (Project Unified Nimble Tracker) is a local-first ticketing system with Jir
 ## Commands
 
 ```bash
+# Setup
+pnpm run setup        # Guided installer (DB, env, admin user, or demo mode)
+                      # NOTE: "pnpm setup" runs pnpm's built-in; always use "pnpm run setup"
+
 # Development
 pnpm dev              # Start dev server with Turbopack (port 3000)
 
@@ -340,6 +344,8 @@ git checkout main && git pull && git branch -d <branch-name>
 ### Deployment
 
 Railway config in `railway.toml`. Node.js >= 20.9.0 required (enforced in `package.json`). Requires PostgreSQL 16+.
+
+**Guided installer:** `pnpm run setup` walks through PostgreSQL detection, database creation, `.env` configuration, Prisma setup, and admin user creation. Also supports a demo mode path (no database). Script lives at `scripts/setup.ts`.
 
 **Prerequisites:** PostgreSQL 16+. Set `DATABASE_URL` in `.env` to your PostgreSQL connection string.
 

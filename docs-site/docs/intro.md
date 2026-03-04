@@ -25,6 +25,8 @@ slug: /
 
 ### Installation
 
+The easiest way to get started is with the guided installer:
+
 ```bash
 # Clone the repository
 git clone https://github.com/jmynes/punt.git
@@ -33,7 +35,24 @@ cd punt
 # Install dependencies
 pnpm install
 
-# Set up the database
+# Run the guided installer
+pnpm run setup
+```
+
+The installer walks you through:
+1. **PostgreSQL detection** with platform-specific install instructions
+2. **Database setup** (user and database creation)
+3. **Environment configuration** (`.env` file with `AUTH_SECRET`)
+4. **Prisma schema push** and client generation
+5. **Admin user creation** with secure password
+
+Alternatively, set things up manually:
+
+```bash
+# Copy and edit the environment file
+cp .env.example .env
+
+# Push the database schema
 pnpm db:push
 
 # Start the development server
@@ -42,16 +61,20 @@ pnpm dev
 
 The development server starts with Turbopack on port 3000.
 
+:::tip
+`pnpm setup` is a built-in pnpm command. Always use `pnpm run setup` to run the PUNT installer.
+:::
+
 ### First Steps
 
 1. Open your browser to `http://localhost:3000`
-2. Register a new account (first user automatically becomes system admin)
+2. Log in with the admin account created during setup (or register a new account — the first user automatically becomes system admin)
 3. Create your first project
 4. Start adding tickets to your board!
 
 ### Demo Mode
 
-PUNT also supports a client-side demo mode for trying out features without a database:
+Want to try PUNT without setting up a database? The installer offers a demo mode option, or you can enable it manually:
 
 ```bash
 NEXT_PUBLIC_DEMO_MODE=true pnpm dev

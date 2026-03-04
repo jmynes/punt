@@ -8,6 +8,18 @@ Demo Mode allows you to try PUNT without setting up a database. All data is stor
 
 ## Enabling Demo Mode
 
+### Using the Guided Installer
+
+The easiest way to set up demo mode is via the guided installer:
+
+```bash
+pnpm run setup
+```
+
+When prompted "Would you like to set up in demo mode?", select **yes**. The installer will create a `.env` file with the correct settings and generate the Prisma client.
+
+### Manual Setup
+
 Set the environment variable before starting PUNT:
 
 ```bash
@@ -132,22 +144,20 @@ location.reload()
 
 When ready to move from demo to production:
 
-1. Set up the database:
+1. Re-run the guided installer and select **no** for demo mode:
    ```bash
+   pnpm run setup
+   ```
+   This will configure PostgreSQL, create your `.env`, push the schema, and create an admin user.
+
+2. Or set up manually:
+   ```bash
+   # Update .env: remove NEXT_PUBLIC_DEMO_MODE=true, add DATABASE_URL
    pnpm db:push
-   ```
-
-2. Remove demo mode environment variable:
-   ```bash
-   # Remove NEXT_PUBLIC_DEMO_MODE=true from .env
-   ```
-
-3. Start without demo mode:
-   ```bash
    pnpm dev
    ```
 
-4. Register a new account (first user becomes admin)
+3. Register a new account (first user becomes admin)
 
 :::note
 Demo mode data cannot be migrated to production. You'll start fresh with a clean database.
