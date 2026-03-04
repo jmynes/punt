@@ -149,7 +149,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const multi = selectedIds.length > 1
   const [submenu, setSubmenu] = useState<null | {
-    id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution' | 'type'
+    id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution' | 'type' | 'move'
     anchor: { x: number; y: number; height: number; left: number }
   }>(null)
 
@@ -889,8 +889,17 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
    */
   const getTicketsInList = (sprintId: string | null): TicketWithRelations[] => {
     const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const sprintIdSet = new Set(sprints.map((s) => s.id))
     return allTickets
-      .filter((t: TicketWithRelations) => t.sprintId === sprintId)
+      .filter((t: TicketWithRelations) => {
+        const tSprint = t.sprintId ?? null
+        if (sprintId === null) {
+          // Backlog: include tickets with null/undefined sprintId
+          // AND tickets whose sprintId points to a non-existent sprint (orphaned)
+          return tSprint === null || (tSprint !== null && !sprintIdSet.has(tSprint))
+        }
+        return tSprint === sprintId
+      })
       .sort(
         (a: TicketWithRelations, b: TicketWithRelations) =>
           a.order - b.order || a.number - b.number,
@@ -1041,7 +1050,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     if (selectedTickets.length === 0) return
 
     // Filter tickets that actually need to move (not already in target list)
-    const ticketsToMove = selectedTickets.filter((t) => t.sprintId !== targetSprintId)
+    const ticketsToMove = selectedTickets.filter((t) => (t.sprintId ?? null) !== targetSprintId)
     if (ticketsToMove.length === 0) {
       // All selected tickets are already in the target list, just reposition
       doSendToPosition(position)
