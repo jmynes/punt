@@ -278,10 +278,26 @@ function printInstallInstructions(platform: 'macos' | 'linux') {
   info('After installing, re-run: pnpm run setup')
 }
 
+/** Run a shell command with environment variables and return stdout, or null on failure. */
+function runCaptureEnv(cmd: string, env?: Record<string, string>): string | null {
+  try {
+    return execSync(cmd, {
+      cwd: ROOT,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: env ? { ...process.env, ...env } : undefined,
+    })
+      .toString()
+      .trim()
+  } catch {
+    return null
+  }
+}
+
 /** Try to create a database via psql. Returns true on success. */
 function createDatabase(
   dbName: string,
   dbUser: string,
+  dbPassword: string,
   dbHost: string,
   dbPort: string,
 ): { success: boolean; alreadyExists?: boolean } {
@@ -297,19 +313,20 @@ function createDatabase(
     return { success: true, alreadyExists: true }
   }
 
-  // Try creating as the specified user first
-  const createDb = runCapture(
-    `psql -h ${dbHost} -p ${dbPort} -U ${dbUser} -c "CREATE DATABASE ${dbName};" 2>&1`,
-  )
-  if (createDb !== null && !createDb.includes('ERROR')) {
-    return { success: true }
-  }
-
-  // Try via the postgres superuser
+  // Try via the postgres superuser first (uses peer auth, no password needed)
   const sudoCreate = runCapture(
     `sudo -u postgres psql -c "CREATE DATABASE ${dbName} OWNER ${dbUser};" 2>&1`,
   )
   if (sudoCreate !== null && !sudoCreate.includes('ERROR')) {
+    return { success: true }
+  }
+
+  // Fall back to connecting as the specified user with PGPASSWORD
+  const createDb = runCaptureEnv(
+    `psql -h ${dbHost} -p ${dbPort} -U ${dbUser} -c "CREATE DATABASE ${dbName};" 2>&1`,
+    { PGPASSWORD: dbPassword },
+  )
+  if (createDb !== null && !createDb.includes('ERROR')) {
     return { success: true }
   }
 
@@ -511,7 +528,7 @@ async function main() {
   }
 
   info(`Creating database "${dbName}"...`)
-  const dbResult = createDatabase(dbName, dbUser, dbHost, dbPort)
+  const dbResult = createDatabase(dbName, dbUser, effectiveDbPassword, dbHost, dbPort)
   if (dbResult.alreadyExists) {
     success(`Database "${dbName}" already exists.`)
   } else if (dbResult.success) {
@@ -530,7 +547,7 @@ async function main() {
 
   if (wantTestDb) {
     const testDbName = `${dbName}_test`
-    const testResult = createDatabase(testDbName, dbUser, dbHost, dbPort)
+    const testResult = createDatabase(testDbName, dbUser, effectiveDbPassword, dbHost, dbPort)
     testDatabaseUrl = `postgresql://${dbUser}:${effectiveDbPassword}@${dbHost}:${dbPort}/${testDbName}`
 
     if (testResult.alreadyExists) {
