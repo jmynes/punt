@@ -1168,7 +1168,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   )
 
   const openSubmenu =
-    (id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution' | 'type') =>
+    (id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution' | 'type' | 'move') =>
     (e: React.MouseEvent) => {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
       setSubmenu({
@@ -1291,52 +1291,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
             <MenuSection title="Position">
               <MenuButton
                 icon={<ArrowUpToLine className="h-4 w-4" />}
-                label="Send to Top"
-                onMouseEnter={closeSubmenu}
-                onClick={() => doSendToPosition('top')}
+                label="Move"
+                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                onMouseEnter={openSubmenu('move')}
               />
-              <MenuButton
-                icon={<ArrowDownToLine className="h-4 w-4" />}
-                label="Send to Bottom"
-                onMouseEnter={closeSubmenu}
-                onClick={() => doSendToPosition('bottom')}
-              />
-              {/* Cross-list: when ticket is in a sprint, show send to backlog options */}
-              {selectedTicketSprintInfo.anyInSprint && (
-                <>
-                  <MenuButton
-                    icon={<ArrowUpToLine className="h-4 w-4" />}
-                    label="Send to Top of Backlog"
-                    onMouseEnter={closeSubmenu}
-                    onClick={() => doSendToListPosition(null, 'Backlog', 'top')}
-                  />
-                  <MenuButton
-                    icon={<ArrowDownToLine className="h-4 w-4" />}
-                    label="Send to Bottom of Backlog"
-                    onMouseEnter={closeSubmenu}
-                    onClick={() => doSendToListPosition(null, 'Backlog', 'bottom')}
-                  />
-                </>
-              )}
-              {/* Cross-list: when ticket is in backlog and active sprint exists, show send to sprint options */}
-              {selectedTicketSprintInfo.anyInBacklog && activeSprint && (
-                <>
-                  <MenuButton
-                    icon={<ArrowUpToLine className="h-4 w-4" />}
-                    label={`Send to Top of ${activeSprint.name}`}
-                    onMouseEnter={closeSubmenu}
-                    onClick={() => doSendToListPosition(activeSprint.id, activeSprint.name, 'top')}
-                  />
-                  <MenuButton
-                    icon={<ArrowDownToLine className="h-4 w-4" />}
-                    label={`Send to Bottom of ${activeSprint.name}`}
-                    onMouseEnter={closeSubmenu}
-                    onClick={() =>
-                      doSendToListPosition(activeSprint.id, activeSprint.name, 'bottom')
-                    }
-                  />
-                </>
-              )}
             </MenuSection>
 
             <MenuSection title="Operations">
@@ -1628,6 +1586,77 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           >
                             <Plus className="h-4 w-4 text-zinc-400" />
                             <span className="text-zinc-400">Create new sprint...</span>
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {submenu.id === 'move' && (
+                    <>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                        onClick={() => doSendToPosition('top')}
+                      >
+                        <ArrowUpToLine className="h-4 w-4" />
+                        <span>Top</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                        onClick={() => doSendToPosition('bottom')}
+                      >
+                        <ArrowDownToLine className="h-4 w-4" />
+                        <span>Bottom</span>
+                      </button>
+                      {selectedTicketSprintInfo.anyInSprint && (
+                        <>
+                          <div className="my-1 border-t border-zinc-800" />
+                          <div className="px-3 py-1 text-xs uppercase text-zinc-500">Backlog</div>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToListPosition(null, 'Backlog', 'top')}
+                          >
+                            <ArrowUpToLine className="h-4 w-4" />
+                            <span>Top</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToListPosition(null, 'Backlog', 'bottom')}
+                          >
+                            <ArrowDownToLine className="h-4 w-4" />
+                            <span>Bottom</span>
+                          </button>
+                        </>
+                      )}
+                      {selectedTicketSprintInfo.anyInBacklog && activeSprint && (
+                        <>
+                          <div className="my-1 border-t border-zinc-800" />
+                          <div className="px-3 py-1 text-xs uppercase text-zinc-500">
+                            {activeSprint.name}
+                          </div>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() =>
+                              doSendToListPosition(activeSprint.id, activeSprint.name, 'top')
+                            }
+                          >
+                            <ArrowUpToLine className="h-4 w-4" />
+                            <span>Top</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() =>
+                              doSendToListPosition(activeSprint.id, activeSprint.name, 'bottom')
+                            }
+                          >
+                            <ArrowDownToLine className="h-4 w-4" />
+                            <span>Bottom</span>
                           </button>
                         </>
                       )}
