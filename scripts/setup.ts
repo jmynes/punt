@@ -107,6 +107,9 @@ function runCapture(cmd: string): string | null {
 function createPrompter() {
   const rl = createInterface({ input: process.stdin, output: process.stdout })
 
+  /** When true, askYesNo returns the default without prompting. */
+  let autoAccept = false
+
   function ask(question: string, defaultValue?: string): Promise<string> {
     const suffix = defaultValue != null ? ` ${fmt.dim(`[${defaultValue}]`)}` : ''
     return new Promise((resolve) => {
@@ -117,6 +120,13 @@ function createPrompter() {
   }
 
   function askYesNo(question: string, defaultYes = true): Promise<boolean> {
+    if (autoAccept) {
+      const label = defaultYes ? 'yes' : 'no'
+      console.log(
+        `  ${fmt.cyan('?')} ${question} ${fmt.dim(`(yes/no)`)} ${fmt.dim(`[${label}]`)} ${label}`,
+      )
+      return Promise.resolve(defaultYes)
+    }
     const defaultLabel = defaultYes ? 'yes' : 'no'
     return new Promise((resolve) => {
       rl.question(
@@ -128,6 +138,10 @@ function createPrompter() {
         },
       )
     })
+  }
+
+  function setAutoAccept(value: boolean) {
+    autoAccept = value
   }
 
   /** Read a password without echoing (using raw mode). */
@@ -208,7 +222,7 @@ function createPrompter() {
     rl.close()
   }
 
-  return { ask, askYesNo, askPassword, close }
+  return { ask, askYesNo, askPassword, setAutoAccept, close }
 }
 
 // ---------------------------------------------------------------------------
@@ -713,6 +727,17 @@ async function main() {
     await setupDemoMode(prompt)
     prompt.close()
     return
+  }
+
+  // ----------------------------------------------------------
+  // Express vs custom setup
+  // ----------------------------------------------------------
+  console.log('')
+  info('Express setup uses standard defaults (recommended for most users).')
+  info("You'll provide database and admin credentials — everything else is automatic.")
+  const express = await prompt.askYesNo('Use express setup?', true)
+  if (express) {
+    prompt.setAutoAccept(true)
   }
 
   // ----------------------------------------------------------
