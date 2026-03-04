@@ -93,12 +93,18 @@ function run(cmd: string, opts?: { silent?: boolean; cwd?: string }): boolean {
 }
 
 /** Run a shell command and return stdout, or null on failure. */
-function runCapture(cmd: string): string | null {
+function runCapture(cmd: string, opts?: { verbose?: boolean }): string | null {
   try {
     return execSync(cmd, { cwd: ROOT, stdio: ['pipe', 'pipe', 'pipe'] })
       .toString()
       .trim()
-  } catch {
+  } catch (err) {
+    if (opts?.verbose && err instanceof Error && 'stderr' in err) {
+      const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim()
+      if (stderr) {
+        console.log(`  ${fmt.dim(stderr)}`)
+      }
+    }
     return null
   }
 }
@@ -486,6 +492,11 @@ async function ensurePasswordAuth(prompt: ReturnType<typeof createPrompter>): Pr
   const hbaPath = runCapture('sudo -u postgres psql -tAc "SHOW hba_file"')?.trim()
   if (!hbaPath) return // Can't determine path — skip silently
 
+  if (!/^\/[\w./-]+$/.test(hbaPath)) {
+    warn(`Unexpected pg_hba.conf path: ${hbaPath}`)
+    return
+  }
+
   let hbaContent: string
   try {
     hbaContent = runCapture(`sudo cat ${hbaPath}`) ?? ''
@@ -553,7 +564,11 @@ async function ensurePasswordAuth(prompt: ReturnType<typeof createPrompter>): Pr
 }
 
 /** Run a shell command with environment variables and return stdout, or null on failure. */
-function runCaptureEnv(cmd: string, env?: Record<string, string>): string | null {
+function runCaptureEnv(
+  cmd: string,
+  env?: Record<string, string>,
+  opts?: { verbose?: boolean },
+): string | null {
   try {
     return execSync(cmd, {
       cwd: ROOT,
@@ -562,7 +577,13 @@ function runCaptureEnv(cmd: string, env?: Record<string, string>): string | null
     })
       .toString()
       .trim()
-  } catch {
+  } catch (err) {
+    if (opts?.verbose && err instanceof Error && 'stderr' in err) {
+      const stderr = (err as { stderr?: Buffer }).stderr?.toString().trim()
+      if (stderr) {
+        console.log(`  ${fmt.dim(stderr)}`)
+      }
+    }
     return null
   }
 }
@@ -578,6 +599,7 @@ function createDatabase(
   // Check if database already exists using a precise pg_database query
   const exists = runCapture(
     `sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${dbName}'"`,
+    { verbose: true },
   )
 
   if (exists === null) {
@@ -589,7 +611,8 @@ function createDatabase(
 
   // Try via the postgres superuser first (uses peer auth, no password needed)
   const sudoCreate = runCapture(
-    `sudo -u postgres psql -c "CREATE DATABASE ${dbName} OWNER ${dbUser};" 2>&1`,
+    `sudo -u postgres psql -c "CREATE DATABASE \\"${dbName}\\" OWNER \\"${dbUser}\\";" 2>&1`,
+    { verbose: true },
   )
   if (sudoCreate !== null && !sudoCreate.includes('ERROR')) {
     return { success: true }
@@ -597,8 +620,9 @@ function createDatabase(
 
   // Fall back to connecting as the specified user with PGPASSWORD
   const createDb = runCaptureEnv(
-    `psql -h ${dbHost} -p ${dbPort} -U ${dbUser} -c "CREATE DATABASE ${dbName};" 2>&1`,
+    `psql -h ${dbHost} -p ${dbPort} -U ${dbUser} -c "CREATE DATABASE \\"${dbName}\\";" 2>&1`,
     { PGPASSWORD: dbPassword },
+    { verbose: true },
   )
   if (createDb !== null && !createDb.includes('ERROR')) {
     return { success: true }
@@ -615,6 +639,7 @@ function createPgUser(
   // Check if user exists
   const exists = runCapture(
     `sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${dbUser}'"`,
+    { verbose: true },
   )
 
   if (exists?.trim() === '1') {
@@ -623,7 +648,7 @@ function createPgUser(
 
   // Escape single quotes in password for SQL
   const escapedPassword = dbPassword.replace(/'/g, "''")
-  const sql = `CREATE USER ${dbUser} WITH PASSWORD '${escapedPassword}' CREATEDB;`
+  const sql = `CREATE USER "${dbUser}" WITH PASSWORD '${escapedPassword}' CREATEDB;`
 
   try {
     execSync('sudo -u postgres psql', {
@@ -709,6 +734,7 @@ async function main() {
   banner()
 
   const prompt = createPrompter()
+  const issues: string[] = []
   const TOTAL_STEPS = 6
 
   info(`Platform: ${fmt.bold(process.platform)}`)
@@ -813,7 +839,9 @@ async function main() {
     warn(`Could not auto-create user "${dbUser}".`)
     info('You may need to create it manually:')
     console.log(
-      fmt.dim(`    sudo -u postgres psql -c "CREATE USER ${dbUser} WITH PASSWORD '...' CREATEDB;"`),
+      fmt.dim(
+        `    sudo -u postgres psql -c "CREATE USER \\"${dbUser}\\" WITH PASSWORD '...' CREATEDB;"`,
+      ),
     )
   }
 
@@ -827,7 +855,9 @@ async function main() {
     warn(`Could not auto-create database "${dbName}".`)
     info('You may need to create it manually:')
     console.log(
-      fmt.dim(`    sudo -u postgres psql -c "CREATE DATABASE ${dbName} OWNER ${dbUser};"`),
+      fmt.dim(
+        `    sudo -u postgres psql -c "CREATE DATABASE \\"${dbName}\\" OWNER \\"${dbUser}\\";"`,
+      ),
     )
   }
 
@@ -869,27 +899,43 @@ async function main() {
     writeEnvFile(envPath, databaseUrl)
   }
 
-  // Update .env.test if test DB was created
+  // Update .env.test DATABASE_URL if test DB was created
   if (testDatabaseUrl) {
     const envTestPath = `${ROOT}.env.test`
-    const envTestContent = [
-      '# Test environment configuration',
-      '# Generated by pnpm setup',
-      '',
-      '# CRITICAL: Use a separate test database to prevent wiping production data',
-      `DATABASE_URL="${testDatabaseUrl}"`,
-      '',
-      '# Auth secret for tests',
-      `AUTH_SECRET="${generateAuthSecret()}"`,
-      'AUTH_TRUST_HOST=true',
-      '',
-      '# Disable debug logging in tests',
-      'NEXT_PUBLIC_DEBUG=false',
-      '',
-    ].join('\n')
 
-    writeFileSync(envTestPath, envTestContent, 'utf-8')
-    success('Wrote .env.test with test database URL.')
+    if (existsSync(envTestPath)) {
+      // Update DATABASE_URL in existing .env.test, preserve everything else
+      const existing = readFileSync(envTestPath, 'utf-8')
+      const updated = existing.replace(
+        /^DATABASE_URL="[^"]*"/m,
+        `DATABASE_URL="${testDatabaseUrl}"`,
+      )
+      if (updated !== existing) {
+        writeFileSync(envTestPath, updated, { encoding: 'utf-8', mode: 0o600 })
+        success('Updated DATABASE_URL in .env.test.')
+      } else {
+        info('.env.test already has the correct DATABASE_URL.')
+      }
+    } else {
+      const envTestContent = [
+        '# Test environment configuration',
+        '# Generated by pnpm setup',
+        '',
+        '# CRITICAL: Use a separate test database to prevent wiping production data',
+        `DATABASE_URL="${testDatabaseUrl}"`,
+        '',
+        '# Auth secret for tests (can be any value for testing)',
+        'AUTH_SECRET="test-secret-do-not-use-in-production"',
+        'AUTH_TRUST_HOST=true',
+        '',
+        '# Disable debug logging in tests',
+        'NEXT_PUBLIC_DEBUG=false',
+        '',
+      ].join('\n')
+
+      writeFileSync(envTestPath, envTestContent, { encoding: 'utf-8', mode: 0o600 })
+      success('Wrote .env.test with test database URL.')
+    }
   }
 
   // ----------------------------------------------------------
@@ -929,6 +975,7 @@ async function main() {
   } else {
     fail('Failed to generate Prisma client.')
     info('You can retry manually: pnpm db:generate')
+    issues.push('Prisma client generation failed — run "pnpm db:generate" manually')
   }
 
   info('Pushing schema to database...')
@@ -939,6 +986,7 @@ async function main() {
     fail('Failed to push schema to database.')
     info('Check your DATABASE_URL in .env and ensure PostgreSQL is running.')
     info('You can retry manually: pnpm db:push')
+    issues.push('Database schema push failed — run "pnpm db:push" manually')
   }
 
   // ----------------------------------------------------------
@@ -958,7 +1006,7 @@ async function main() {
   // ----------------------------------------------------------
   // Done
   // ----------------------------------------------------------
-  printCompletionBanner()
+  printCompletionBanner(issues)
   prompt.close()
 }
 
@@ -992,11 +1040,11 @@ async function setupDemoMode(prompt: ReturnType<typeof createPrompter>) {
     if (!overwrite) {
       info('Keeping existing .env file.')
     } else {
-      writeFileSync(envPath, envContent, 'utf-8')
+      writeFileSync(envPath, envContent, { encoding: 'utf-8', mode: 0o600 })
       success('Wrote .env for demo mode.')
     }
   } else {
-    writeFileSync(envPath, envContent, 'utf-8')
+    writeFileSync(envPath, envContent, { encoding: 'utf-8', mode: 0o600 })
     success('Wrote .env for demo mode.')
   }
 
@@ -1191,17 +1239,29 @@ function writeEnvFile(envPath: string, databaseUrl: string) {
     AUTH_SECRET: authSecret,
   })
 
-  writeFileSync(envPath, envContent, 'utf-8')
+  writeFileSync(envPath, envContent, { encoding: 'utf-8', mode: 0o600 })
   success('Wrote .env file.')
   info(`AUTH_SECRET generated: ${fmt.dim(`${authSecret.substring(0, 8)}...`)}`)
 }
 
-function printCompletionBanner() {
+function printCompletionBanner(issues: string[] = []) {
   console.log('')
-  console.log(fmt.success('  ========================================'))
-  console.log(fmt.success('         Setup Complete!'))
-  console.log(fmt.success('  ========================================'))
-  console.log('')
+  if (issues.length > 0) {
+    console.log(fmt.yellow(`  ========================================`))
+    console.log(fmt.yellow(`    Setup Complete (with warnings)`))
+    console.log(fmt.yellow(`  ========================================`))
+    console.log('')
+    warn('The following steps need attention:')
+    for (const issue of issues) {
+      console.log(`    ${fmt.yellow('-')} ${issue}`)
+    }
+    console.log('')
+  } else {
+    console.log(fmt.success('  ========================================'))
+    console.log(fmt.success('         Setup Complete!'))
+    console.log(fmt.success('  ========================================'))
+    console.log('')
+  }
   info(`Start the dev server:  ${fmt.bold('pnpm dev')}`)
   info(`Then open:             ${fmt.bold('http://localhost:3000')}`)
   console.log('')
