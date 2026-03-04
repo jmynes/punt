@@ -479,8 +479,8 @@ async function main() {
     process.exit(1)
   }
   const dbPort = await prompt.ask('PostgreSQL port:', '5432')
-  if (!/^\d{1,5}$/.test(dbPort)) {
-    fail(`Invalid port "${dbPort}". Must be a number.`)
+  if (!/^\d{1,5}$/.test(dbPort) || Number(dbPort) < 1 || Number(dbPort) > 65535) {
+    fail(`Invalid port "${dbPort}". Must be a number between 1 and 65535.`)
     prompt.close()
     process.exit(1)
   }
@@ -668,6 +668,9 @@ async function setupDemoMode(prompt: ReturnType<typeof createPrompter>) {
     '# Demo mode - all data stored in browser localStorage',
     'NEXT_PUBLIC_DEMO_MODE=true',
     '',
+    '# Placeholder DATABASE_URL (not used in demo mode, but required by Prisma client generation)',
+    'DATABASE_URL="postgresql://unused:unused@localhost:5432/unused"',
+    '',
     `AUTH_SECRET="${authSecret}"`,
     'AUTH_TRUST_HOST=true',
     '',
@@ -709,8 +712,13 @@ async function setupDemoMode(prompt: ReturnType<typeof createPrompter>) {
 
   stepHeader(3, 3, 'Generate Prisma Client')
   info('Generating Prisma client (needed even in demo mode for type definitions)...')
-  run('pnpm db:generate', { cwd: ROOT })
-  success('Prisma client generated.')
+  const genOk = run('pnpm db:generate', { cwd: ROOT })
+  if (genOk) {
+    success('Prisma client generated.')
+  } else {
+    fail('Failed to generate Prisma client.')
+    info('You can retry manually: pnpm db:generate')
+  }
 
   console.log('')
   console.log(fmt.success('  ========================================'))
