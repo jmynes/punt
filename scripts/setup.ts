@@ -462,6 +462,82 @@ async function installPostgres(prompt: ReturnType<typeof createPrompter>): Promi
   return true
 }
 
+/**
+ * Check if pg_hba.conf uses 'ident' auth for local TCP connections and offer to
+ * switch to 'scram-sha-256'. This is needed on Fedora/RHEL where the default
+ * pg_hba.conf blocks password authentication over TCP.
+ */
+async function ensurePasswordAuth(prompt: ReturnType<typeof createPrompter>): Promise<void> {
+  // Find pg_hba.conf via PostgreSQL itself
+  const hbaPath = runCapture('sudo -u postgres psql -tAc "SHOW hba_file"')?.trim()
+  if (!hbaPath) return // Can't determine path — skip silently
+
+  let hbaContent: string
+  try {
+    hbaContent = runCapture(`sudo cat ${hbaPath}`) ?? ''
+  } catch {
+    return
+  }
+  if (!hbaContent) return
+
+  // Check if any active (non-comment) lines use 'ident' for host connections
+  const lines = hbaContent.split('\n')
+  const hasIdent = lines.some((line) => {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('#') || trimmed === '') return false
+    // Match lines like: host all all 127.0.0.1/32 ident
+    return /^host\s+/.test(trimmed) && /\bident\b/.test(trimmed)
+  })
+
+  if (!hasIdent) return // Already using password auth
+
+  console.log('')
+  warn('pg_hba.conf uses "ident" authentication for TCP connections.')
+  info('This will prevent password-based connections (used by Prisma and the app).')
+  console.log('')
+
+  const fix = await prompt.askYesNo('Update pg_hba.conf to allow password authentication?', true)
+  if (!fix) {
+    info('Skipping. You may need to update pg_hba.conf manually if database connections fail.')
+    return
+  }
+
+  // Replace 'ident' with 'scram-sha-256' on host lines
+  const updated = lines
+    .map((line) => {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('#') || trimmed === '') return line
+      if (/^host\s+/.test(trimmed) && /\bident\b/.test(trimmed)) {
+        return line.replace(/\bident\b/, 'scram-sha-256')
+      }
+      return line
+    })
+    .join('\n')
+
+  // Write via sudo tee
+  try {
+    execSync(`sudo tee ${hbaPath} > /dev/null`, {
+      input: updated,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+  } catch {
+    fail('Could not update pg_hba.conf.')
+    info(`You can edit it manually: sudo nano ${hbaPath}`)
+    info(
+      'Change "ident" to "scram-sha-256" on the host lines, then run: sudo systemctl reload postgresql',
+    )
+    return
+  }
+
+  // Reload PostgreSQL to apply changes
+  if (run('sudo systemctl reload postgresql', { silent: true })) {
+    success('Updated pg_hba.conf to use scram-sha-256 and reloaded PostgreSQL.')
+  } else {
+    warn('Updated pg_hba.conf but could not reload PostgreSQL.')
+    info('Run manually: sudo systemctl reload postgresql')
+  }
+}
+
 /** Run a shell command with environment variables and return stdout, or null on failure. */
 function runCaptureEnv(cmd: string, env?: Record<string, string>): string | null {
   try {
@@ -656,6 +732,9 @@ async function main() {
       process.exit(1)
     }
   }
+
+  // Check if pg_hba.conf needs to be updated for password auth (common on Fedora/RHEL)
+  await ensurePasswordAuth(prompt)
 
   // ----------------------------------------------------------
   // Step 2: Database setup
