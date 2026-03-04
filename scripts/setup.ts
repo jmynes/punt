@@ -258,22 +258,46 @@ function isValidIdentifier(value: string): boolean {
 // Steps
 // ---------------------------------------------------------------------------
 
-function checkPostgres(): boolean {
-  return runCapture('which psql') !== null
+const isWindows = process.platform === 'win32'
+
+/** Check if a command exists on the system PATH. */
+function commandExists(cmd: string): boolean {
+  return runCapture(isWindows ? `where ${cmd}` : `which ${cmd}`) !== null
 }
 
-type PgInstallMethod =
-  | { manager: 'brew'; install: string; start: string }
-  | { manager: 'apt'; install: string; start: string }
-  | { manager: 'dnf'; install: string; initdb?: string; start: string }
-  | { manager: 'pacman'; install: string; initdb: string; start: string }
-  | null
+function checkPostgres(): boolean {
+  return commandExists('psql')
+}
+
+interface PgInstallMethod {
+  manager: string
+  install: string
+  initdb?: string
+  start?: string
+}
 
 /** Detect the system's package manager and return PostgreSQL install commands. */
-function detectPgInstallMethod(): PgInstallMethod {
+function detectPgInstallMethod(): PgInstallMethod | null {
+  // Windows
+  if (isWindows) {
+    if (commandExists('winget')) {
+      return {
+        manager: 'winget',
+        install: 'winget install -e --id PostgreSQL.PostgreSQL.16',
+      }
+    }
+    if (commandExists('choco')) {
+      return {
+        manager: 'choco',
+        install: 'choco install postgresql16 --params "/Password:postgres" -y',
+      }
+    }
+    return null
+  }
+
   // macOS
   if (process.platform === 'darwin') {
-    if (runCapture('which brew') !== null) {
+    if (commandExists('brew')) {
       return {
         manager: 'brew',
         install: 'brew install postgresql@16',
@@ -298,7 +322,7 @@ function detectPgInstallMethod(): PgInstallMethod {
     id === 'ubuntu' ||
     idLike.includes('debian') ||
     idLike.includes('ubuntu') ||
-    runCapture('which apt') !== null
+    commandExists('apt')
   ) {
     return {
       manager: 'apt',
@@ -314,7 +338,7 @@ function detectPgInstallMethod(): PgInstallMethod {
     id === 'centos' ||
     idLike.includes('fedora') ||
     idLike.includes('rhel') ||
-    runCapture('which dnf') !== null
+    commandExists('dnf')
   ) {
     return {
       manager: 'dnf',
@@ -325,7 +349,7 @@ function detectPgInstallMethod(): PgInstallMethod {
   }
 
   // Arch family
-  if (id === 'arch' || idLike.includes('arch') || runCapture('which pacman') !== null) {
+  if (id === 'arch' || idLike.includes('arch') || commandExists('pacman')) {
     return {
       manager: 'pacman',
       install: 'sudo pacman -S --noconfirm postgresql',
@@ -345,8 +369,23 @@ async function installPostgres(prompt: ReturnType<typeof createPrompter>): Promi
     // Can't detect package manager — print manual instructions
     fail('Could not detect a supported package manager.')
     console.log('')
-    info('Please install PostgreSQL manually:')
-    console.log(`    ${fmt.bold('https://www.postgresql.org/download/')}`)
+    if (isWindows) {
+      info('Install PostgreSQL using one of:')
+      console.log(`    ${fmt.bold('winget install -e --id PostgreSQL.PostgreSQL.16')}`)
+      console.log(`    ${fmt.bold('choco install postgresql16 -y')}`)
+      console.log('')
+      info('Or download the installer from:')
+      console.log(`    ${fmt.bold('https://www.postgresql.org/download/windows/')}`)
+    } else if (process.platform === 'darwin') {
+      info('Install PostgreSQL using Homebrew:')
+      console.log(`    ${fmt.bold('brew install postgresql@16')}`)
+      console.log('')
+      info('Or download from:')
+      console.log(`    ${fmt.bold('https://www.postgresql.org/download/macosx/')}`)
+    } else {
+      info('Please install PostgreSQL manually:')
+      console.log(`    ${fmt.bold('https://www.postgresql.org/download/')}`)
+    }
     console.log('')
     info('After installing, re-run: pnpm run setup')
     return false
@@ -356,10 +395,12 @@ async function installPostgres(prompt: ReturnType<typeof createPrompter>): Promi
   console.log('')
   info('The following commands will be run:')
   console.log(`    ${fmt.dim(method.install)}`)
-  if ('initdb' in method && method.initdb) {
+  if (method.initdb) {
     console.log(`    ${fmt.dim(method.initdb)}`)
   }
-  console.log(`    ${fmt.dim(method.start)}`)
+  if (method.start) {
+    console.log(`    ${fmt.dim(method.start)}`)
+  }
   console.log('')
 
   const proceed = await prompt.askYesNo('Install PostgreSQL now?', true)
@@ -383,29 +424,37 @@ async function installPostgres(prompt: ReturnType<typeof createPrompter>): Promi
   }
 
   // Run initdb if needed (Fedora/Arch)
-  if ('initdb' in method && method.initdb) {
+  if (method.initdb) {
     info('Initializing database cluster...')
     if (!run(method.initdb)) {
       warn('initdb failed — the cluster may already be initialized. Continuing...')
     }
   }
 
-  // Start the service
-  info('Starting PostgreSQL service...')
-  if (!run(method.start)) {
-    warn('Could not start PostgreSQL service.')
-    info('Try starting it manually:')
-    console.log(`    ${fmt.bold(method.start)}`)
-    console.log('')
-    info('After starting, re-run: pnpm run setup')
-    return false
+  // Start the service (not all platforms need this — e.g., winget/choco installers start it automatically)
+  if (method.start) {
+    info('Starting PostgreSQL service...')
+    if (!run(method.start)) {
+      warn('Could not start PostgreSQL service.')
+      info('Try starting it manually:')
+      console.log(`    ${fmt.bold(method.start)}`)
+      console.log('')
+      info('After starting, re-run: pnpm run setup')
+      return false
+    }
   }
 
   // Verify psql is now available
   if (!checkPostgres()) {
     fail('PostgreSQL was installed but psql is still not on your PATH.')
-    info('You may need to open a new terminal or add PostgreSQL to your PATH.')
-    info('After fixing, re-run: pnpm run setup')
+    if (isWindows) {
+      info('You may need to add PostgreSQL to your PATH:')
+      console.log(`    ${fmt.dim('C:\\Program Files\\PostgreSQL\\16\\bin')}`)
+      info('Then open a new terminal and re-run: pnpm run setup')
+    } else {
+      info('You may need to open a new terminal or add PostgreSQL to your PATH.')
+      info('After fixing, re-run: pnpm run setup')
+    }
     return false
   }
 
