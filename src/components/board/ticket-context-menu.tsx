@@ -902,7 +902,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
    * Preserves relative order of selected tickets when multi-selecting.
    */
   const doSendToPosition = (position: 'top' | 'bottom') => {
-    const updateTicket = board.updateTicket || (() => {})
+    const updateTickets = board.updateTickets || (() => {})
     const { setSprintSort } = useSprintStore.getState()
 
     // Get selected tickets with their current data
@@ -944,7 +944,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       reordered.forEach((ticket, index) => {
         if (ticket.order !== index) {
           allOrderUpdates.push({ ticketId: ticket.id, oldOrder: ticket.order, newOrder: index })
-          updateTicket(projectId, ticket.id, { order: index })
         }
       })
     }
@@ -959,6 +958,15 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       setSubmenu(null)
       return
     }
+
+    // Batch update all order changes in a single store update
+    updateTickets(
+      projectId,
+      allOrderUpdates.map(({ ticketId, newOrder }) => ({
+        ticketId,
+        updates: { order: newOrder },
+      })),
+    )
 
     // Build toast message
     const ticketKeys = formatTicketIds(columns, selectedIds)
@@ -1018,7 +1026,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     targetSprintName: string,
     position: 'top' | 'bottom',
   ) => {
-    const updateTicket = board.updateTicket || (() => {})
+    const updateTickets = board.updateTickets || (() => {})
     const { setSprintSort } = useSprintStore.getState()
 
     // Clear any active column-header sort on the target section
@@ -1081,29 +1089,33 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       }
     })
 
-    // Optimistic update - move tickets to target sprint and set order
+    // Batch optimistic update - move tickets and reorder in a single store update
+    const batchUpdates: { ticketId: string; updates: Partial<TicketWithRelations> }[] = []
     for (const t of ticketsToMove) {
       const newOrder = orderUpdates.find((u) => u.ticketId === t.id)?.newOrder ?? 0
-      updateTicket(projectId, t.id, {
-        sprintId: targetSprintId,
-        sprint: targetSprint
-          ? {
-              id: targetSprint.id,
-              name: targetSprint.name,
-              status: targetSprint.status,
-              startDate: targetSprint.startDate,
-              endDate: targetSprint.endDate,
-            }
-          : null,
-        order: newOrder,
+      batchUpdates.push({
+        ticketId: t.id,
+        updates: {
+          sprintId: targetSprintId,
+          sprint: targetSprint
+            ? {
+                id: targetSprint.id,
+                name: targetSprint.name,
+                status: targetSprint.status,
+                startDate: targetSprint.startDate,
+                endDate: targetSprint.endDate,
+              }
+            : null,
+          order: newOrder,
+        },
       })
     }
-    // Update order for existing tickets that need reordering
     for (const { ticketId, newOrder } of orderUpdates) {
       if (!movingIds.has(ticketId)) {
-        updateTicket(projectId, ticketId, { order: newOrder })
+        batchUpdates.push({ ticketId, updates: { order: newOrder } })
       }
     }
+    updateTickets(projectId, batchUpdates)
 
     // Build toast message
     const ticketKeys = formatTicketIds(
