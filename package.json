@@ -31,6 +31,7 @@
     "db:generate-avatars": "tsx prisma/generate-avatars.ts",
     "prepare": "husky",
     "release": "node scripts/release.js",
+    "setup": "tsx scripts/setup.ts",
     "mcp:login": "tsx scripts/mcp-login.ts"
   },
   "dependencies": {

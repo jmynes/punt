@@ -65,6 +65,21 @@ Or use Node.js:
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
+## Guided Setup
+
+The fastest way to configure PUNT for any deployment is the guided installer:
+
+```bash
+pnpm install
+pnpm run setup
+```
+
+This interactively configures PostgreSQL, generates `.env`, pushes the database schema, and creates an admin user. It also offers a **demo mode** path that skips database setup entirely.
+
+:::tip
+`pnpm setup` is a built-in pnpm command. Always use `pnpm run setup` to run the PUNT installer.
+:::
+
 ## Build Process
 
 ### Production Build
