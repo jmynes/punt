@@ -69,6 +69,7 @@ import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSprintStore } from '@/stores/sprint-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type {
@@ -890,7 +891,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
     return allTickets
       .filter((t: TicketWithRelations) => t.sprintId === sprintId)
-      .sort((a: TicketWithRelations, b: TicketWithRelations) => a.order - b.order)
+      .sort(
+        (a: TicketWithRelations, b: TicketWithRelations) =>
+          a.order - b.order || a.number - b.number,
+      )
   }
 
   /**
@@ -899,6 +903,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
    */
   const doSendToPosition = (position: 'top' | 'bottom') => {
     const updateTicket = board.updateTicket || (() => {})
+    const { setSprintSort } = useSprintStore.getState()
 
     // Get selected tickets with their current data
     const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
@@ -942,6 +947,11 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
           updateTicket(projectId, ticket.id, { order: index })
         }
       })
+    }
+
+    // Clear any active column-header sort so the new order is visible
+    for (const sprintId of bySprintId.keys()) {
+      setSprintSort(sprintId ?? 'backlog', null)
     }
 
     if (allOrderUpdates.length === 0) {
@@ -1009,6 +1019,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     position: 'top' | 'bottom',
   ) => {
     const updateTicket = board.updateTicket || (() => {})
+    const { setSprintSort } = useSprintStore.getState()
+
+    // Clear any active column-header sort on the target section
+    setSprintSort(targetSprintId ?? 'backlog', null)
 
     // Get selected tickets
     const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
