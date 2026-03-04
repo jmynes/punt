@@ -375,6 +375,11 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             setTempResolution('Done')
           } else if (!isCompletedColumn(targetCol.name) && tempResolution) {
             setTempResolution(null)
+            // If in a completed sprint, reset sprint since resolution is being cleared
+            const selectedSprint = availableSprints.find((s) => s.id === tempSprintId)
+            if (selectedSprint?.status === 'completed') {
+              setTempSprintId(ticket.sprintId)
+            }
           }
         }
         break
