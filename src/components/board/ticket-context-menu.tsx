@@ -2,6 +2,8 @@
 
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  ArrowDownToLine,
+  ArrowUpToLine,
   Bug,
   CalendarMinus,
   CalendarPlus,
@@ -171,6 +173,18 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       return !allTicketsInThisSprint
     })
   }, [sprints, selectedIds, columns])
+
+  // Compute whether selected tickets are in a sprint or backlog (for cross-list menu options)
+  const activeSprint = useMemo(() => sprints.find((s) => s.status === 'active') ?? null, [sprints])
+  const selectedTicketSprintInfo = useMemo(() => {
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const selected = selectedIds
+      .map((id: string) => allTickets.find((t: TicketWithRelations) => t.id === id))
+      .filter(Boolean) as TicketWithRelations[]
+    const anyInSprint = selected.some((t) => t.sprintId != null)
+    const anyInBacklog = selected.some((t) => t.sprintId == null)
+    return { anyInSprint, anyInBacklog }
+  }, [selectedIds, columns])
 
   // Set mounted state after hydration to enable client-only features
   useEffect(() => {
@@ -868,6 +882,264 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     setSubmenu(null)
   }
 
+  /**
+   * Get all tickets that share the same sprintId, sorted by order.
+   * Used for send-to-top/bottom positioning operations.
+   */
+  const getTicketsInList = (sprintId: string | null): TicketWithRelations[] => {
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    return allTickets
+      .filter((t: TicketWithRelations) => t.sprintId === sprintId)
+      .sort((a: TicketWithRelations, b: TicketWithRelations) => a.order - b.order)
+  }
+
+  /**
+   * Send selected tickets to the top or bottom of their current list (same sprintId).
+   * Preserves relative order of selected tickets when multi-selecting.
+   */
+  const doSendToPosition = (position: 'top' | 'bottom') => {
+    const updateTicket = board.updateTicket || (() => {})
+
+    // Get selected tickets with their current data
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const selectedTickets = selectedIds
+      .map((id: string) => allTickets.find((t: TicketWithRelations) => t.id === id))
+      .filter(Boolean) as TicketWithRelations[]
+
+    if (selectedTickets.length === 0) return
+
+    // Group by sprintId since selected tickets might be in different lists
+    const bySprintId = new Map<string | null, TicketWithRelations[]>()
+    for (const t of selectedTickets) {
+      const key = t.sprintId ?? null
+      const existing = bySprintId.get(key)
+      if (existing) {
+        existing.push(t)
+      } else {
+        bySprintId.set(key, [t])
+      }
+    }
+
+    const allOrderUpdates: { ticketId: string; oldOrder: number; newOrder: number }[] = []
+
+    for (const [sprintId, ticketsInSelection] of bySprintId.entries()) {
+      const listTickets = getTicketsInList(sprintId)
+      const selectedIdsInList = new Set(ticketsInSelection.map((t) => t.id))
+
+      // Separate selected and non-selected tickets
+      const nonSelected = listTickets.filter((t) => !selectedIdsInList.has(t.id))
+      // Preserve relative order of selected tickets
+      const selected = listTickets.filter((t) => selectedIdsInList.has(t.id))
+
+      // Build new order
+      const reordered =
+        position === 'top' ? [...selected, ...nonSelected] : [...nonSelected, ...selected]
+
+      // Calculate order updates
+      reordered.forEach((ticket, index) => {
+        if (ticket.order !== index) {
+          allOrderUpdates.push({ ticketId: ticket.id, oldOrder: ticket.order, newOrder: index })
+          updateTicket(projectId, ticket.id, { order: index })
+        }
+      })
+    }
+
+    if (allOrderUpdates.length === 0) {
+      setOpen(false)
+      setSubmenu(null)
+      return
+    }
+
+    // Build toast message
+    const ticketKeys = formatTicketIds(columns, selectedIds)
+    const count = selectedTickets.length
+    const posLabel = position === 'top' ? 'top' : 'bottom'
+
+    showUndoRedoToast('success', {
+      title:
+        count === 1
+          ? `${ticketKeys[0]} sent to ${posLabel}`
+          : `${count} tickets sent to ${posLabel}`,
+      description: count === 1 ? `Moved to ${posLabel} of list` : ticketKeys.join(', '),
+      duration: getEffectiveDuration(3000),
+    })
+
+    // Register in undo store as update actions (order changes)
+    const updates = allOrderUpdates
+      .map(({ ticketId, oldOrder, newOrder }) => {
+        const t = columns
+          .flatMap((c: ColumnWithTickets) => c.tickets)
+          .find((t: TicketWithRelations) => t.id === ticketId)
+        if (!t) return null
+        return {
+          ticketId,
+          before: { ...t, order: oldOrder } as TicketWithRelations,
+          after: { ...t, order: newOrder } as TicketWithRelations,
+        }
+      })
+      .filter(
+        (u): u is { ticketId: string; before: TicketWithRelations; after: TicketWithRelations } =>
+          u !== null,
+      )
+    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+    undoState.pushUpdate(projectId, updates)
+
+    // Persist order changes to API
+    ;(async () => {
+      try {
+        for (const { ticketId, newOrder } of allOrderUpdates) {
+          await updateTicketAPI(projectId, ticketId, { order: newOrder })
+        }
+      } catch (err) {
+        console.error('Failed to persist order update:', err)
+      }
+    })()
+
+    setOpen(false)
+    setSubmenu(null)
+  }
+
+  /**
+   * Send selected tickets to top or bottom of a different list (backlog or sprint).
+   * Handles sprint assignment change + order positioning.
+   */
+  const doSendToListPosition = (
+    targetSprintId: string | null,
+    targetSprintName: string,
+    position: 'top' | 'bottom',
+  ) => {
+    const updateTicket = board.updateTicket || (() => {})
+
+    // Get selected tickets
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const selectedTickets = selectedIds
+      .map((id: string) => allTickets.find((t: TicketWithRelations) => t.id === id))
+      .filter(Boolean) as TicketWithRelations[]
+
+    if (selectedTickets.length === 0) return
+
+    // Filter tickets that actually need to move (not already in target list)
+    const ticketsToMove = selectedTickets.filter((t) => t.sprintId !== targetSprintId)
+    if (ticketsToMove.length === 0) {
+      // All selected tickets are already in the target list, just reposition
+      doSendToPosition(position)
+      return
+    }
+
+    // Get target list tickets (excluding the ones being moved)
+    const targetListTickets = getTicketsInList(targetSprintId)
+    const movingIds = new Set(ticketsToMove.map((t) => t.id))
+    const existingTargetTickets = targetListTickets.filter((t) => !movingIds.has(t.id))
+
+    // Preserve relative order of tickets being moved
+    const sortedMovingTickets = [...ticketsToMove].sort((a, b) => a.order - b.order)
+
+    // Build new ordered list
+    const reordered =
+      position === 'top'
+        ? [...sortedMovingTickets, ...existingTargetTickets]
+        : [...existingTargetTickets, ...sortedMovingTickets]
+
+    // Capture original state for undo
+    const originalSprintIds = ticketsToMove.map((t) => ({
+      ticketId: t.id,
+      fromSprintId: t.sprintId,
+      fromSprintName: t.sprint?.name ?? null,
+    }))
+
+    // Get from label
+    const uniqueFromNames = [...new Set(originalSprintIds.map((t) => t.fromSprintName))]
+    const fromLabel =
+      uniqueFromNames.length === 1
+        ? (uniqueFromNames[0] ?? 'Backlog')
+        : uniqueFromNames.every((n) => n === null)
+          ? 'Backlog'
+          : 'multiple locations'
+
+    // Find the target sprint object for optimistic update
+    const targetSprint = targetSprintId ? sprints.find((s) => s.id === targetSprintId) : null
+
+    // Calculate order updates for all tickets in the reordered list
+    const orderUpdates: { ticketId: string; newOrder: number }[] = []
+    reordered.forEach((ticket, index) => {
+      if (ticket.order !== index || movingIds.has(ticket.id)) {
+        orderUpdates.push({ ticketId: ticket.id, newOrder: index })
+      }
+    })
+
+    // Optimistic update - move tickets to target sprint and set order
+    for (const t of ticketsToMove) {
+      const newOrder = orderUpdates.find((u) => u.ticketId === t.id)?.newOrder ?? 0
+      updateTicket(projectId, t.id, {
+        sprintId: targetSprintId,
+        sprint: targetSprint
+          ? {
+              id: targetSprint.id,
+              name: targetSprint.name,
+              status: targetSprint.status,
+              startDate: targetSprint.startDate,
+              endDate: targetSprint.endDate,
+            }
+          : null,
+        order: newOrder,
+      })
+    }
+    // Update order for existing tickets that need reordering
+    for (const { ticketId, newOrder } of orderUpdates) {
+      if (!movingIds.has(ticketId)) {
+        updateTicket(projectId, ticketId, { order: newOrder })
+      }
+    }
+
+    // Build toast message
+    const ticketKeys = formatTicketIds(
+      columns,
+      ticketsToMove.map((t) => t.id),
+    )
+    const count = ticketsToMove.length
+    const posLabel = position === 'top' ? 'top' : 'bottom'
+
+    showUndoRedoToast('success', {
+      title:
+        count === 1
+          ? `${ticketKeys[0]} sent to ${posLabel} of ${targetSprintName}`
+          : `${count} tickets sent to ${posLabel} of ${targetSprintName}`,
+      description: count > 1 ? ticketKeys.join(', ') : undefined,
+      duration: getEffectiveDuration(5000),
+    })
+
+    // Register sprint move in undo store
+    const moves = originalSprintIds.map(({ ticketId, fromSprintId }) => ({
+      ticketId,
+      fromSprintId,
+      toSprintId: targetSprintId,
+    }))
+    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+    undoState.pushSprintMove(projectId, moves, fromLabel, targetSprintName)
+
+    // Persist to API
+    ;(async () => {
+      try {
+        for (const t of ticketsToMove) {
+          const newOrder = orderUpdates.find((u) => u.ticketId === t.id)?.newOrder ?? 0
+          await updateTicketAPI(projectId, t.id, { sprintId: targetSprintId, order: newOrder })
+        }
+        for (const { ticketId, newOrder } of orderUpdates) {
+          if (!movingIds.has(ticketId)) {
+            await updateTicketAPI(projectId, ticketId, { order: newOrder })
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
+        queryClient.invalidateQueries({ queryKey: ticketQueryKeys.byProject(projectId) })
+      } catch (err) {
+        console.error('Failed to persist send-to-list-position:', err)
+      }
+    })()
+
+    setOpen(false)
+    setSubmenu(null)
+  }
+
   const confirmDeleteNow = async () => {
     const ticketsToDelete = pendingDelete
     if (ticketsToDelete.length === 0) return
@@ -1013,6 +1285,57 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                   onMouseEnter={closeSubmenu}
                   onClick={doCreateSprint}
                 />
+              )}
+            </MenuSection>
+
+            <MenuSection title="Position">
+              <MenuButton
+                icon={<ArrowUpToLine className="h-4 w-4" />}
+                label="Send to Top"
+                onMouseEnter={closeSubmenu}
+                onClick={() => doSendToPosition('top')}
+              />
+              <MenuButton
+                icon={<ArrowDownToLine className="h-4 w-4" />}
+                label="Send to Bottom"
+                onMouseEnter={closeSubmenu}
+                onClick={() => doSendToPosition('bottom')}
+              />
+              {/* Cross-list: when ticket is in a sprint, show send to backlog options */}
+              {selectedTicketSprintInfo.anyInSprint && (
+                <>
+                  <MenuButton
+                    icon={<ArrowUpToLine className="h-4 w-4" />}
+                    label="Send to Top of Backlog"
+                    onMouseEnter={closeSubmenu}
+                    onClick={() => doSendToListPosition(null, 'Backlog', 'top')}
+                  />
+                  <MenuButton
+                    icon={<ArrowDownToLine className="h-4 w-4" />}
+                    label="Send to Bottom of Backlog"
+                    onMouseEnter={closeSubmenu}
+                    onClick={() => doSendToListPosition(null, 'Backlog', 'bottom')}
+                  />
+                </>
+              )}
+              {/* Cross-list: when ticket is in backlog and active sprint exists, show send to sprint options */}
+              {selectedTicketSprintInfo.anyInBacklog && activeSprint && (
+                <>
+                  <MenuButton
+                    icon={<ArrowUpToLine className="h-4 w-4" />}
+                    label={`Send to Top of ${activeSprint.name}`}
+                    onMouseEnter={closeSubmenu}
+                    onClick={() => doSendToListPosition(activeSprint.id, activeSprint.name, 'top')}
+                  />
+                  <MenuButton
+                    icon={<ArrowDownToLine className="h-4 w-4" />}
+                    label={`Send to Bottom of ${activeSprint.name}`}
+                    onMouseEnter={closeSubmenu}
+                    onClick={() =>
+                      doSendToListPosition(activeSprint.id, activeSprint.name, 'bottom')
+                    }
+                  />
+                </>
               )}
             </MenuSection>
 
