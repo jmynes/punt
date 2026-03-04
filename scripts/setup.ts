@@ -143,6 +143,9 @@ function createPrompter() {
         return
       }
 
+      // Pause readline so it doesn't interfere with raw stdin
+      rl.pause()
+
       const raw = stdin.isRaw
       stdin.setRawMode(true)
       stdin.resume()
@@ -156,6 +159,7 @@ function createPrompter() {
           stdin.setRawMode(raw ?? false)
           stdin.removeListener('data', onData)
           stdout.write('\n')
+          rl.resume()
           resolve(password)
         }
         // Ctrl+C
