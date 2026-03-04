@@ -117,13 +117,16 @@ function createPrompter() {
   }
 
   function askYesNo(question: string, defaultYes = true): Promise<boolean> {
-    const hint = defaultYes ? 'Y/n' : 'y/N'
+    const defaultLabel = defaultYes ? 'yes' : 'no'
     return new Promise((resolve) => {
-      rl.question(`  ${fmt.cyan('?')} ${question} ${fmt.dim(`(${hint})`)} `, (answer) => {
-        const a = answer.trim().toLowerCase()
-        if (a === '') resolve(defaultYes)
-        else resolve(a === 'y' || a === 'yes')
-      })
+      rl.question(
+        `  ${fmt.cyan('?')} ${question} ${fmt.dim(`(yes/no)`)} ${fmt.dim(`[${defaultLabel}]`)} `,
+        (answer) => {
+          const a = answer.trim().toLowerCase()
+          if (a === '') resolve(defaultYes)
+          else resolve(a === 'y' || a === 'yes')
+        },
+      )
     })
   }
 
@@ -561,7 +564,7 @@ async function main() {
   }
 
   // Optionally create test database
-  const wantTestDb = await prompt.askYesNo('Create a test database (for running tests)?', false)
+  const wantTestDb = await prompt.askYesNo('Create a test database (for running tests)?', true)
   let testDatabaseUrl: string | undefined
 
   if (wantTestDb) {
@@ -588,7 +591,7 @@ async function main() {
 
   if (envExists) {
     warn('.env file already exists.')
-    const overwrite = await prompt.askYesNo('Overwrite existing .env file?', false)
+    const overwrite = await prompt.askYesNo('Overwrite existing .env file?', true)
     if (!overwrite) {
       info('Keeping existing .env file.')
     } else {
@@ -717,7 +720,7 @@ async function setupDemoMode(prompt: ReturnType<typeof createPrompter>) {
   const envExists = existsSync(envPath)
   if (envExists) {
     warn('.env file already exists.')
-    const overwrite = await prompt.askYesNo('Overwrite existing .env file?', false)
+    const overwrite = await prompt.askYesNo('Overwrite existing .env file?', true)
     if (!overwrite) {
       info('Keeping existing .env file.')
     } else {
