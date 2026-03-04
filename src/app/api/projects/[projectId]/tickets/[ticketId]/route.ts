@@ -369,6 +369,25 @@ export async function PATCH(
       }
     }
 
+    // Validate: prevent clearing resolution on a ticket already in a completed sprint
+    if (
+      dbUpdateData.resolution === null &&
+      existingTicket.resolution &&
+      (newSprintId === undefined || newSprintId === existingTicket.sprintId) &&
+      existingTicket.sprintId
+    ) {
+      const currentSprint = await db.sprint.findFirst({
+        where: { id: existingTicket.sprintId, projectId },
+        select: { status: true },
+      })
+      if (currentSprint?.status === 'completed') {
+        return badRequestError(
+          'Cannot clear the resolution of a ticket in a completed sprint. ' +
+            'Remove the ticket from the completed sprint first, or set a different resolution.',
+        )
+      }
+    }
+
     // Track sprint history when sprintId changes
     if (newSprintId !== undefined && newSprintId !== existingTicket.sprintId) {
       // Close existing history entry for old sprint
