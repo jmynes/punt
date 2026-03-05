@@ -227,6 +227,8 @@ export async function POST(
           order: nextOrder,
           projectId,
           creatorId,
+          // Attribute to agent if this is an MCP request
+          createdByAgentId: user.agentId ?? null,
           type: ticketData.type as IssueType,
           priority: ticketData.priority as Priority,
           // Set resolvedAt: use provided value (for restore), or current time if resolution exists
@@ -257,6 +259,7 @@ export async function POST(
     })
 
     // Log ticket creation in audit trail
+    // TODO: Pass agent context (user.agentId) to audit logging when the schema supports it
     const activityId = await logTicketCreated(ticket.id, user.id)
 
     // Emit real-time event for other clients
