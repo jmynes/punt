@@ -963,7 +963,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
     // Update backlogOrder in backlog store (used by BacklogTable for display order)
     if (backlogReordered) {
-      const { setBacklogOrder } = useBacklogStore.getState()
+      const { setBacklogOrder, setSort: setBacklogSort } = useBacklogStore.getState()
+      setBacklogSort(null)
       setBacklogOrder(
         projectId,
         backlogReordered.map((t) => t.id),
@@ -1136,7 +1137,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
     // Update backlogOrder when moving to backlog (used by BacklogTable for display order)
     if (targetSprintId === null) {
-      const { setBacklogOrder } = useBacklogStore.getState()
+      const { setBacklogOrder, setSort: setBacklogSort } = useBacklogStore.getState()
+      setBacklogSort(null)
       setBacklogOrder(
         projectId,
         reordered.map((t) => t.id),
