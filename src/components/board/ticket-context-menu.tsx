@@ -887,14 +887,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   /** Save scroll positions of all scrollable ancestors and restore after next paint. */
   const preserveScroll = () => {
     const scrollables: { el: Element; top: number; left: number }[] = []
-    let el: Element | null = menuRef.current?.parentElement ?? document.documentElement
-    while (el) {
-      if (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth) {
-        scrollables.push({ el, top: el.scrollTop, left: el.scrollLeft })
-      }
-      el = el.parentElement
-    }
-    // Also capture the main scrollable areas (backlog/sprint containers)
+    // Capture all Radix scroll viewports and overflow-y-auto containers
     for (const selector of ['[data-radix-scroll-area-viewport]', '.overflow-y-auto']) {
       document.querySelectorAll(selector).forEach((node) => {
         if (!scrollables.some((s) => s.el === node)) {
@@ -902,12 +895,17 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
         }
       })
     }
-    requestAnimationFrame(() => {
+    if (scrollables.length === 0) return
+    // Restore scroll across several frames to survive React re-renders
+    let remaining = 5
+    const restore = () => {
       for (const { el: node, top, left } of scrollables) {
         node.scrollTop = top
         node.scrollLeft = left
       }
-    })
+      if (--remaining > 0) requestAnimationFrame(restore)
+    }
+    requestAnimationFrame(restore)
   }
 
   /**
