@@ -1306,19 +1306,37 @@ function formatTicketLinkList(
   lines.push(`## Links on ${ticketKey}`)
   lines.push('')
 
-  // Group links by type and direction
+  // Display labels for link types (accounting for direction)
+  const INVERSE_LINK_TYPES: Record<string, string> = {
+    blocks: 'is_blocked_by',
+    is_blocked_by: 'blocks',
+    relates_to: 'relates_to',
+    duplicates: 'is_duplicated_by',
+    is_duplicated_by: 'duplicates',
+  }
+  const LINK_TYPE_LABELS: Record<string, string> = {
+    blocks: 'Blocks',
+    is_blocked_by: 'Is blocked by',
+    relates_to: 'Relates to',
+    duplicates: 'Duplicates',
+    is_duplicated_by: 'Is duplicated by',
+  }
+
+  // Group links by display type
   const grouped: Record<string, TicketLinkData[]> = {}
   for (const link of links) {
-    // Include direction in grouping key for clarity
-    const key = link.direction === 'inward' ? `is ${link.linkType} by` : link.linkType
-    if (!grouped[key]) {
-      grouped[key] = []
+    const displayType =
+      link.direction === 'inward'
+        ? (INVERSE_LINK_TYPES[link.linkType] ?? link.linkType)
+        : link.linkType
+    if (!grouped[displayType]) {
+      grouped[displayType] = []
     }
-    grouped[key].push(link)
+    grouped[displayType].push(link)
   }
 
   for (const [linkType, typeLinks] of Object.entries(grouped)) {
-    const label = linkType.replace(/_/g, ' ')
+    const label = LINK_TYPE_LABELS[linkType] ?? linkType.replace(/_/g, ' ')
     lines.push(`### ${label}`)
     for (const link of typeLinks) {
       const linkedKey = `${projectKey}-${link.linkedTicket.number}`

@@ -156,13 +156,32 @@ export async function POST(request: Request) {
       encryptedKey = encryptSession(apiKey)
     }
 
-    await db.user.update({
-      where: { id: currentUser.id },
-      data: {
-        mcpApiKey: keyHash,
-        mcpApiKeyEncrypted: encryptedKey,
-        mcpApiKeyHint: apiKey.slice(-4),
-      },
+    await db.$transaction(async (tx) => {
+      // Deactivate any existing Agent records for this user
+      await tx.agent.updateMany({
+        where: { ownerId: currentUser.id, isActive: true },
+        data: { isActive: false },
+      })
+
+      // Update the user's MCP key
+      await tx.user.update({
+        where: { id: currentUser.id },
+        data: {
+          mcpApiKey: keyHash,
+          mcpApiKeyEncrypted: encryptedKey,
+          mcpApiKeyHint: apiKey.slice(-4),
+        },
+      })
+
+      // Create a new Agent record linked to this key
+      await tx.agent.create({
+        data: {
+          name: 'Claude',
+          apiKeyHash: keyHash,
+          ownerId: currentUser.id,
+          isActive: true,
+        },
+      })
     })
 
     // Notify other tabs/browsers via SSE
@@ -207,13 +226,30 @@ export async function DELETE(request: Request) {
     const authError = await verifyReauth(currentUser.id, password, totpCode, isRecoveryCode)
     if (authError) return authError
 
-    await db.user.update({
+    // Get the current key hash before clearing it, to find the associated Agent
+    const user = await db.user.findUnique({
       where: { id: currentUser.id },
-      data: {
-        mcpApiKey: null,
-        mcpApiKeyEncrypted: null,
-        mcpApiKeyHint: null,
-      },
+      select: { mcpApiKey: true },
+    })
+
+    await db.$transaction(async (tx) => {
+      // Deactivate the Agent associated with the current key
+      if (user?.mcpApiKey) {
+        await tx.agent.updateMany({
+          where: { apiKeyHash: user.mcpApiKey, ownerId: currentUser.id },
+          data: { isActive: false },
+        })
+      }
+
+      // Clear the user's MCP key
+      await tx.user.update({
+        where: { id: currentUser.id },
+        data: {
+          mcpApiKey: null,
+          mcpApiKeyEncrypted: null,
+          mcpApiKeyHint: null,
+        },
+      })
     })
 
     // Notify other tabs/browsers via SSE
