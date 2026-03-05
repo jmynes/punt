@@ -925,6 +925,7 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
     if (allInBacklog) {
       // Backlog: just reorder the ID array (same as drag-and-drop)
       const { setBacklogOrder, setSort: setBacklogSort } = useBacklogStore.getState()
+      const beforeOrder = useBacklogStore.getState().backlogOrder[projectId] || []
       setBacklogSort(null)
       setSprintSort('backlog', null)
 
@@ -935,10 +936,12 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
       const reordered =
         position === 'top' ? [...selected, ...nonSelected] : [...nonSelected, ...selected]
 
-      setBacklogOrder(
-        projectId,
-        reordered.map((t) => t.id),
-      )
+      const afterOrder = reordered.map((t) => t.id)
+      setBacklogOrder(projectId, afterOrder)
+
+      // Register undo
+      const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+      undoState.pushBacklogReorder(projectId, beforeOrder, afterOrder)
     } else {
       // Sprint/board: update ticket.order for moved tickets only
       const bySprintId = new Map<string | null, TicketWithRelations[]>()

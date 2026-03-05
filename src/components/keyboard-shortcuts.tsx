@@ -43,6 +43,7 @@ import { isEditableTarget } from '@/lib/keyboard-utils'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
+import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
@@ -1173,6 +1174,17 @@ export function KeyboardShortcuts() {
               useUndoStore.getState().setProcessing(false)
             }
           })()
+        } else if (entry.action.type === 'backlogReorder') {
+          const action = entry.action
+          const { setBacklogOrder } = useBacklogStore.getState()
+          setBacklogOrder(entry.projectId, action.beforeOrder)
+          undoStore.pushRedo(entry)
+
+          showUndoRedoToast('success', {
+            title: 'Reorder undone',
+            description: 'Backlog order restored',
+            duration: 3000,
+          })
         }
 
         // Release processing lock for types that don't have their own async lock management
@@ -1725,6 +1737,17 @@ export function KeyboardShortcuts() {
           lastAttachmentToastRef.current = redoAttDelToastId
 
           redoStore.pushAttachmentDelete(entry.projectId, action.attachments, true)
+        } else if (entry.action.type === 'backlogReorder') {
+          const action = entry.action
+          const { setBacklogOrder } = useBacklogStore.getState()
+          setBacklogOrder(entry.projectId, action.afterOrder)
+          redoStore.pushBacklogReorder(entry.projectId, action.beforeOrder, action.afterOrder, true)
+
+          showUndoRedoToast('success', {
+            title: 'Reorder redone',
+            description: 'Backlog order restored',
+            duration: 3000,
+          })
         }
 
         // Release processing lock for types that don't have their own async lock management
