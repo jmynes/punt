@@ -905,13 +905,13 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
 
   /**
    * Send selected tickets to the top or bottom of their current list (same sprintId).
-   * Preserves relative order of selected tickets when multi-selecting.
+   * For backlog: updates backlogOrder (display-only, like drag does).
+   * For sprint/board: updates ticket.order for moved tickets only.
    */
   const doSendToPosition = (position: 'top' | 'bottom') => {
     const updateTickets = board.updateTickets || (() => {})
     const { setSprintSort } = useSprintStore.getState()
 
-    // Get selected tickets with their current data
     const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
     const selectedTickets = selectedIds
       .map((id: string) => allTickets.find((t: TicketWithRelations) => t.id === id))
@@ -919,82 +919,93 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
 
     if (selectedTickets.length === 0) return
 
-    // Group by sprintId since selected tickets might be in different lists
-    const bySprintId = new Map<string | null, TicketWithRelations[]>()
-    for (const t of selectedTickets) {
-      const key = t.sprintId ?? null
-      const existing = bySprintId.get(key)
-      if (existing) {
-        existing.push(t)
-      } else {
-        bySprintId.set(key, [t])
-      }
-    }
+    // Check if ALL selected tickets are in the backlog
+    const allInBacklog = selectedTickets.every((t) => t.sprintId == null)
 
-    const allOrderUpdates: { ticketId: string; oldOrder: number; newOrder: number }[] = []
-    let backlogReordered: TicketWithRelations[] | null = null
+    if (allInBacklog) {
+      // Backlog: just reorder the ID array (same as drag-and-drop)
+      const { setBacklogOrder, setSort: setBacklogSort } = useBacklogStore.getState()
+      setBacklogSort(null)
+      setSprintSort('backlog', null)
 
-    for (const [sprintId, ticketsInSelection] of bySprintId.entries()) {
-      const listTickets = getTicketsInList(sprintId)
-      const selectedIdsInList = new Set(ticketsInSelection.map((t) => t.id))
-
-      // Separate selected and non-selected tickets
-      const nonSelected = listTickets.filter((t) => !selectedIdsInList.has(t.id))
-      // Preserve relative order of selected tickets
-      const selected = listTickets.filter((t) => selectedIdsInList.has(t.id))
-
-      // Build new order
+      const listTickets = getTicketsInList(null)
+      const selectedSet = new Set(selectedIds)
+      const selected = listTickets.filter((t) => selectedSet.has(t.id))
+      const nonSelected = listTickets.filter((t) => !selectedSet.has(t.id))
       const reordered =
         position === 'top' ? [...selected, ...nonSelected] : [...nonSelected, ...selected]
 
-      // Track backlog reorder for backlogOrder store update
-      if (sprintId === null) {
-        backlogReordered = reordered
-      }
-
-      // Calculate order updates
-      reordered.forEach((ticket, index) => {
-        if (ticket.order !== index) {
-          allOrderUpdates.push({ ticketId: ticket.id, oldOrder: ticket.order, newOrder: index })
-        }
-      })
-    }
-
-    // Clear any active column-header sort so the new order is visible
-    for (const sprintId of bySprintId.keys()) {
-      setSprintSort(sprintId ?? 'backlog', null)
-    }
-
-    // Update backlogOrder in backlog store (used by BacklogTable for display order)
-    if (backlogReordered) {
-      const { setBacklogOrder, setSort: setBacklogSort } = useBacklogStore.getState()
-      setBacklogSort(null)
       setBacklogOrder(
         projectId,
-        backlogReordered.map((t) => t.id),
+        reordered.map((t) => t.id),
       )
+    } else {
+      // Sprint/board: update ticket.order for moved tickets only
+      const bySprintId = new Map<string | null, TicketWithRelations[]>()
+      for (const t of selectedTickets) {
+        const key = t.sprintId ?? null
+        const arr = bySprintId.get(key) || []
+        arr.push(t)
+        bySprintId.set(key, arr)
+      }
+
+      const orderUpdates: { ticketId: string; oldOrder: number; newOrder: number }[] = []
+
+      for (const [sprintId, ticketsInGroup] of bySprintId.entries()) {
+        const listTickets = getTicketsInList(sprintId)
+        const minOrder = Math.min(...listTickets.map((t) => t.order))
+        const maxOrder = Math.max(...listTickets.map((t) => t.order))
+
+        // Assign orders outside the current range
+        const sorted = [...ticketsInGroup].sort((a, b) => a.order - b.order)
+        sorted.forEach((t, i) => {
+          const newOrder = position === 'top' ? minOrder - sorted.length + i : maxOrder + 1 + i
+          if (t.order !== newOrder) {
+            orderUpdates.push({ ticketId: t.id, oldOrder: t.order, newOrder })
+          }
+        })
+
+        setSprintSort(sprintId ?? 'backlog', null)
+      }
+
+      if (orderUpdates.length > 0) {
+        updateTickets(
+          projectId,
+          orderUpdates.map(({ ticketId, newOrder }) => ({
+            ticketId,
+            updates: { order: newOrder },
+          })),
+        )
+
+        const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+        undoState.pushUpdate(
+          projectId,
+          orderUpdates.map(({ ticketId, oldOrder, newOrder }) => {
+            const t = allTickets.find((t) => t.id === ticketId)!
+            return {
+              ticketId,
+              before: { ...t, order: oldOrder } as TicketWithRelations,
+              after: { ...t, order: newOrder } as TicketWithRelations,
+            }
+          }),
+        )
+
+        ;(async () => {
+          try {
+            for (const { ticketId, newOrder } of orderUpdates) {
+              await updateTicketAPI(projectId, ticketId, { order: newOrder })
+            }
+          } catch (err) {
+            console.error('Failed to persist order update:', err)
+          }
+        })()
+      }
     }
 
-    if (allOrderUpdates.length === 0) {
-      setOpen(false)
-      setSubmenu(null)
-      return
-    }
-
-    // Batch update all order changes in a single store update
-    updateTickets(
-      projectId,
-      allOrderUpdates.map(({ ticketId, newOrder }) => ({
-        ticketId,
-        updates: { order: newOrder },
-      })),
-    )
-
-    // Build toast message
+    // Toast
     const ticketKeys = formatTicketIds(columns, selectedIds)
     const count = selectedTickets.length
     const posLabel = position === 'top' ? 'top' : 'bottom'
-
     showUndoRedoToast('success', {
       title:
         count === 1
@@ -1003,37 +1014,6 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
       description: count === 1 ? `Moved to ${posLabel} of list` : ticketKeys.join(', '),
       duration: getEffectiveDuration(3000),
     })
-
-    // Register in undo store as update actions (order changes)
-    const updates = allOrderUpdates
-      .map(({ ticketId, oldOrder, newOrder }) => {
-        const t = columns
-          .flatMap((c: ColumnWithTickets) => c.tickets)
-          .find((t: TicketWithRelations) => t.id === ticketId)
-        if (!t) return null
-        return {
-          ticketId,
-          before: { ...t, order: oldOrder } as TicketWithRelations,
-          after: { ...t, order: newOrder } as TicketWithRelations,
-        }
-      })
-      .filter(
-        (u): u is { ticketId: string; before: TicketWithRelations; after: TicketWithRelations } =>
-          u !== null,
-      )
-    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(projectId, updates)
-
-    // Persist order changes to API
-    ;(async () => {
-      try {
-        for (const { ticketId, newOrder } of allOrderUpdates) {
-          await updateTicketAPI(projectId, ticketId, { order: newOrder })
-        }
-      } catch (err) {
-        console.error('Failed to persist order update:', err)
-      }
-    })()
 
     setOpen(false)
     setSubmenu(null)
@@ -1065,24 +1045,9 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
     // Filter tickets that actually need to move (not already in target list)
     const ticketsToMove = selectedTickets.filter((t) => (t.sprintId ?? null) !== targetSprintId)
     if (ticketsToMove.length === 0) {
-      // All selected tickets are already in the target list, just reposition
       doSendToPosition(position)
       return
     }
-
-    // Get target list tickets (excluding the ones being moved)
-    const targetListTickets = getTicketsInList(targetSprintId)
-    const movingIds = new Set(ticketsToMove.map((t) => t.id))
-    const existingTargetTickets = targetListTickets.filter((t) => !movingIds.has(t.id))
-
-    // Preserve relative order of tickets being moved
-    const sortedMovingTickets = [...ticketsToMove].sort((a, b) => a.order - b.order)
-
-    // Build new ordered list
-    const reordered =
-      position === 'top'
-        ? [...sortedMovingTickets, ...existingTargetTickets]
-        : [...existingTargetTickets, ...sortedMovingTickets]
 
     // Capture original state for undo
     const originalSprintIds = ticketsToMove.map((t) => ({
@@ -1090,8 +1055,6 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
       fromSprintId: t.sprintId,
       fromSprintName: t.sprint?.name ?? null,
     }))
-
-    // Get from label
     const uniqueFromNames = [...new Set(originalSprintIds.map((t) => t.fromSprintName))]
     const fromLabel =
       uniqueFromNames.length === 1
@@ -1100,21 +1063,19 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
           ? 'Backlog'
           : 'multiple locations'
 
-    // Find the target sprint object for optimistic update
     const targetSprint = targetSprintId ? sprints.find((s) => s.id === targetSprintId) : null
+    const sortedMoving = [...ticketsToMove].sort((a, b) => a.order - b.order)
+    const targetListTickets = getTicketsInList(targetSprintId)
 
-    // Calculate order updates for all tickets in the reordered list
-    const orderUpdates: { ticketId: string; newOrder: number }[] = []
-    reordered.forEach((ticket, index) => {
-      if (ticket.order !== index || movingIds.has(ticket.id)) {
-        orderUpdates.push({ ticketId: ticket.id, newOrder: index })
-      }
-    })
+    // Assign orders outside the target list's current range (only for moved tickets)
+    const minOrder =
+      targetListTickets.length > 0 ? Math.min(...targetListTickets.map((t) => t.order)) : 0
+    const maxOrder =
+      targetListTickets.length > 0 ? Math.max(...targetListTickets.map((t) => t.order)) : -1
 
-    // Batch optimistic update - move tickets and reorder in a single store update
     const batchUpdates: { ticketId: string; updates: Partial<TicketWithRelations> }[] = []
-    for (const t of ticketsToMove) {
-      const newOrder = orderUpdates.find((u) => u.ticketId === t.id)?.newOrder ?? 0
+    sortedMoving.forEach((t, i) => {
+      const newOrder = position === 'top' ? minOrder - sortedMoving.length + i : maxOrder + 1 + i
       batchUpdates.push({
         ticketId: t.id,
         updates: {
@@ -1131,32 +1092,30 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
           order: newOrder,
         },
       })
-    }
-    for (const { ticketId, newOrder } of orderUpdates) {
-      if (!movingIds.has(ticketId)) {
-        batchUpdates.push({ ticketId, updates: { order: newOrder } })
-      }
-    }
+    })
     updateTickets(projectId, batchUpdates)
 
-    // Update backlogOrder when moving to backlog (used by BacklogTable for display order)
+    // Update backlogOrder when moving to backlog
     if (targetSprintId === null) {
       const { setBacklogOrder, setSort: setBacklogSort } = useBacklogStore.getState()
       setBacklogSort(null)
+      const movingIds = new Set(ticketsToMove.map((t) => t.id))
+      const existing = targetListTickets.filter((t) => !movingIds.has(t.id))
+      const reordered =
+        position === 'top' ? [...sortedMoving, ...existing] : [...existing, ...sortedMoving]
       setBacklogOrder(
         projectId,
         reordered.map((t) => t.id),
       )
     }
 
-    // Build toast message
+    // Toast
     const ticketKeys = formatTicketIds(
       columns,
       ticketsToMove.map((t) => t.id),
     )
     const count = ticketsToMove.length
     const posLabel = position === 'top' ? 'top' : 'bottom'
-
     showUndoRedoToast('success', {
       title:
         count === 1
@@ -1175,17 +1134,14 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushSprintMove(projectId, moves, fromLabel, targetSprintName)
 
-    // Persist to API
+    // Persist to API (only the moved tickets)
     ;(async () => {
       try {
-        for (const t of ticketsToMove) {
-          const newOrder = orderUpdates.find((u) => u.ticketId === t.id)?.newOrder ?? 0
-          await updateTicketAPI(projectId, t.id, { sprintId: targetSprintId, order: newOrder })
-        }
-        for (const { ticketId, newOrder } of orderUpdates) {
-          if (!movingIds.has(ticketId)) {
-            await updateTicketAPI(projectId, ticketId, { order: newOrder })
-          }
+        for (const upd of batchUpdates) {
+          await updateTicketAPI(projectId, upd.ticketId, {
+            sprintId: targetSprintId,
+            order: upd.updates.order as number,
+          })
         }
         queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
         queryClient.invalidateQueries({ queryKey: ticketQueryKeys.byProject(projectId) })
