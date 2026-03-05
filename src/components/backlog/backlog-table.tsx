@@ -164,8 +164,15 @@ export function BacklogTable({
   const [dropPosition, setDropPosition] = useState<number | null>(null)
   const draggedIdsRef = useRef<string[]>([])
 
+  // Ref for the ScrollArea viewport to preserve scroll during re-orders
+  const scrollViewportRef = useRef<HTMLElement | null>(null)
+
   // Sync with incoming tickets prop
   useEffect(() => {
+    // Capture scroll position before React re-renders the list
+    const viewport = scrollViewportRef.current
+    const scrollTop = viewport?.scrollTop ?? 0
+
     const projectOrder = backlogOrder[projectId] || []
     const ordered = applyBacklogOrder(tickets, projectOrder)
     setOrderedTickets(ordered)
@@ -175,6 +182,13 @@ export function BacklogTable({
     // order and making it look like the sort column was reset.
     if (!sort) {
       setHasManualOrder(projectOrder.length > 0)
+    }
+
+    // Restore scroll after React commits the DOM update
+    if (viewport && scrollTop > 0) {
+      requestAnimationFrame(() => {
+        viewport.scrollTop = scrollTop
+      })
     }
   }, [tickets, backlogOrder, projectId, applyBacklogOrder, sort])
 
@@ -744,7 +758,13 @@ export function BacklogTable({
       </div>
 
       {/* Table */}
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea
+        className="min-h-0 flex-1"
+        ref={(node: HTMLDivElement | null) => {
+          scrollViewportRef.current =
+            node?.querySelector('[data-radix-scroll-area-viewport]') ?? null
+        }}
+      >
         <div ref={setBacklogDropRef} className="flex min-h-full flex-col">
           {useExternalDnd ? (
             // When using external DnD, just render the sortable contexts (parent provides DndContext)

@@ -885,34 +885,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   }
 
   /** Save scroll positions of all scrollable ancestors and restore after next paint. */
-  const preserveScroll = () => {
-    const entries: { el: Element; top: number; left: number }[] = []
-    for (const selector of ['[data-radix-scroll-area-viewport]', '.overflow-y-auto']) {
-      document.querySelectorAll(selector).forEach((node) => {
-        if (!entries.some((s) => s.el === node)) {
-          entries.push({ el: node, top: node.scrollTop, left: node.scrollLeft })
-        }
-      })
-    }
-    if (entries.length === 0) return
-    const restore = () => {
-      for (const { el, top, left } of entries) {
-        el.scrollTop = top
-        el.scrollLeft = left
-      }
-    }
-    // Watch for DOM mutations (React re-renders) and restore scroll immediately
-    const observers = entries.map(({ el }) => {
-      const mo = new MutationObserver(() => requestAnimationFrame(restore))
-      mo.observe(el, { childList: true, subtree: true })
-      return mo
-    })
-    // Clean up after React has settled
-    setTimeout(() => {
-      for (const mo of observers) mo.disconnect()
-    }, 500)
-  }
-
   /**
    * Get all tickets that share the same sprintId, sorted by order.
    * Used for send-to-top/bottom positioning operations.
@@ -932,7 +904,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
    * Preserves relative order of selected tickets when multi-selecting.
    */
   const doSendToPosition = (position: 'top' | 'bottom') => {
-    preserveScroll()
     const updateTickets = board.updateTickets || (() => {})
     const { setSprintSort } = useSprintStore.getState()
 
@@ -1072,7 +1043,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     targetSprintName: string,
     position: 'top' | 'bottom',
   ) => {
-    preserveScroll()
     const updateTickets = board.updateTickets || (() => {})
     const { setSprintSort } = useSprintStore.getState()
 
