@@ -116,6 +116,10 @@ export const TICKET_SELECT_FULL = {
   creator: {
     select: USER_SELECT_SUMMARY,
   },
+  createdByAgentId: true,
+  createdByAgent: {
+    select: { id: true, name: true, ownerId: true },
+  },
   sprint: {
     select: SPRINT_SELECT_SUMMARY,
   },
