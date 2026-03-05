@@ -19,7 +19,7 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { Settings2, TrendingUp } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { DropZone, type TableContext, TicketTable } from '@/components/table'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
@@ -164,8 +164,15 @@ export function BacklogTable({
   const [dropPosition, setDropPosition] = useState<number | null>(null)
   const draggedIdsRef = useRef<string[]>([])
 
+  // Ref for the ScrollArea viewport to preserve scroll during re-orders
+  const scrollViewportRef = useRef<HTMLElement | null>(null)
+  const savedScrollRef = useRef<number | null>(null)
+
   // Sync with incoming tickets prop
   useEffect(() => {
+    // Capture scroll position before the state update triggers a re-render
+    savedScrollRef.current = scrollViewportRef.current?.scrollTop ?? null
+
     const projectOrder = backlogOrder[projectId] || []
     const ordered = applyBacklogOrder(tickets, projectOrder)
     setOrderedTickets(ordered)
@@ -177,6 +184,22 @@ export function BacklogTable({
       setHasManualOrder(projectOrder.length > 0)
     }
   }, [tickets, backlogOrder, projectId, applyBacklogOrder, sort])
+
+  // Restore scroll synchronously after DOM commit, before browser paint.
+  // The ScrollArea viewport has scroll-smooth which would animate the restore,
+  // so we temporarily force instant scrolling via scroll-behavior: auto.
+  // orderedTickets is intentionally in deps as the trigger (fires after setOrderedTickets).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: orderedTickets change is the trigger
+  useLayoutEffect(() => {
+    const saved = savedScrollRef.current
+    const viewport = scrollViewportRef.current
+    if (viewport && saved != null && saved > 0) {
+      viewport.style.scrollBehavior = 'auto'
+      viewport.scrollTop = saved
+      viewport.style.scrollBehavior = ''
+    }
+    savedScrollRef.current = null
+  }, [orderedTickets])
 
   // Reset manual order when sort changes (user clicked a column header to sort)
   useEffect(() => {
@@ -744,7 +767,13 @@ export function BacklogTable({
       </div>
 
       {/* Table */}
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea
+        className="min-h-0 flex-1"
+        ref={(node: HTMLDivElement | null) => {
+          scrollViewportRef.current =
+            node?.querySelector('[data-radix-scroll-area-viewport]') ?? null
+        }}
+      >
         <div ref={setBacklogDropRef} className="flex min-h-full flex-col">
           {useExternalDnd ? (
             // When using external DnD, just render the sortable contexts (parent provides DndContext)

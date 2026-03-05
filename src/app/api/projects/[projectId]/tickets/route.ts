@@ -188,6 +188,21 @@ export async function POST(
       }
     }
 
+    // Validate: prevent assigning unresolved tickets to completed sprints
+    if (ticketData.sprintId) {
+      const targetSprint = await db.sprint.findFirst({
+        where: { id: ticketData.sprintId, projectId },
+        select: { status: true },
+      })
+      if (targetSprint?.status === 'completed' && !ticketData.resolution) {
+        return badRequestError(
+          'Cannot assign an unresolved ticket to a completed sprint. ' +
+            'To add a ticket to a completed sprint, it must have a resolution status ' +
+            "(e.g., Done, Won't Fix). Otherwise the ticket will be orphaned and not visible in active views.",
+        )
+      }
+    }
+
     // Create ticket with atomic ticket number generation
     const ticket = await db.$transaction(async (tx) => {
       // Get max ticket number for this project

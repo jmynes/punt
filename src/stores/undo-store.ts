@@ -106,6 +106,11 @@ type UndoAction =
       type: 'attachmentDelete'
       attachments: AttachmentAction[]
     }
+  | {
+      type: 'backlogReorder'
+      beforeOrder: string[]
+      afterOrder: string[]
+    }
 
 interface UndoEntry {
   action: UndoAction
@@ -212,6 +217,14 @@ interface UndoState {
   pushAttachmentDelete: (
     projectId: string,
     attachments: AttachmentAction[],
+    isRedo?: boolean,
+  ) => void
+
+  // Add a backlog reorder action to the undo stack
+  pushBacklogReorder: (
+    projectId: string,
+    beforeOrder: string[],
+    afterOrder: string[],
     isRedo?: boolean,
   ) => void
 
@@ -582,6 +595,24 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           action: {
             type: 'attachmentDelete',
             attachments: attachments.map((a) => ({ ...a, attachment: { ...a.attachment } })),
+          },
+          timestamp: Date.now(),
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushBacklogReorder: (projectId, beforeOrder, afterOrder, isRedo = false) => {
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: {
+            type: 'backlogReorder',
+            beforeOrder: [...beforeOrder],
+            afterOrder: [...afterOrder],
           },
           timestamp: Date.now(),
           projectId,

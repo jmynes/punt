@@ -2,6 +2,8 @@
 
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  ArrowDownToLine,
+  ArrowUpToLine,
   Bug,
   CalendarMinus,
   CalendarPlus,
@@ -15,10 +17,12 @@ import {
   Hash,
   Layers,
   Lightbulb,
+  List,
   Pencil,
   Plus,
   Send,
   Shapes,
+  Target,
   Trash2,
   UserCheck,
   User as UserIcon,
@@ -59,14 +63,16 @@ import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { pasteTickets } from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
 import { isCompletedColumn } from '@/lib/sprint-utils'
-import { getStatusIcon } from '@/lib/status-icons'
+import { getColumnIcon, getStatusIcon } from '@/lib/status-icons'
 import { formatTicketIds } from '@/lib/ticket-format'
 import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSprintStore } from '@/stores/sprint-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type {
@@ -92,9 +98,11 @@ const typeMenuConfig: Record<
 type MenuProps = {
   ticket: TicketWithRelations
   children: React.ReactElement
+  /** Controls which move options appear: 'board' shows only top/bottom of column. */
+  view?: 'board' | 'list'
 }
 
-export function TicketContextMenu({ ticket, children }: MenuProps) {
+export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [adjustedCoords, setAdjustedCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -146,7 +154,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   const multi = selectedIds.length > 1
   const [submenu, setSubmenu] = useState<null | {
-    id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution' | 'type'
+    id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution' | 'type' | 'move'
     anchor: { x: number; y: number; height: number; left: number }
   }>(null)
 
@@ -171,6 +179,18 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       return !allTicketsInThisSprint
     })
   }, [sprints, selectedIds, columns])
+
+  // Compute whether selected tickets are in a sprint or backlog (for cross-list menu options)
+  const activeSprint = useMemo(() => sprints.find((s) => s.status === 'active') ?? null, [sprints])
+  const selectedTicketSprintInfo = useMemo(() => {
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const selected = selectedIds
+      .map((id: string) => allTickets.find((t: TicketWithRelations) => t.id === id))
+      .filter(Boolean) as TicketWithRelations[]
+    const anyInSprint = selected.some((t) => t.sprintId != null)
+    const anyInBacklog = selected.some((t) => t.sprintId == null)
+    return { anyInSprint, anyInBacklog }
+  }, [selectedIds, columns])
 
   // Set mounted state after hydration to enable client-only features
   useEffect(() => {
@@ -868,6 +888,275 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     setSubmenu(null)
   }
 
+  /** Save scroll positions of all scrollable ancestors and restore after next paint. */
+  /**
+   * Get all tickets that share the same sprintId, sorted by order.
+   * Used for send-to-top/bottom positioning operations.
+   */
+  const getTicketsInList = (sprintId: string | null): TicketWithRelations[] => {
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    return allTickets
+      .filter((t: TicketWithRelations) => (t.sprintId ?? null) === sprintId)
+      .sort(
+        (a: TicketWithRelations, b: TicketWithRelations) =>
+          a.order - b.order || a.number - b.number,
+      )
+  }
+
+  /**
+   * Send selected tickets to the top or bottom of their current list (same sprintId).
+   * For backlog: updates backlogOrder (display-only, like drag does).
+   * For sprint/board: updates ticket.order for moved tickets only.
+   */
+  const doSendToPosition = (position: 'top' | 'bottom') => {
+    const updateTickets = board.updateTickets || (() => {})
+    const { setSprintSort } = useSprintStore.getState()
+
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const selectedTickets = selectedIds
+      .map((id: string) => allTickets.find((t: TicketWithRelations) => t.id === id))
+      .filter(Boolean) as TicketWithRelations[]
+
+    if (selectedTickets.length === 0) return
+
+    // Check if ALL selected tickets are in the backlog
+    const allInBacklog = selectedTickets.every((t) => t.sprintId == null)
+
+    if (allInBacklog) {
+      // Backlog: just reorder the ID array (same as drag-and-drop)
+      const { setBacklogOrder, setSort: setBacklogSort } = useBacklogStore.getState()
+      const beforeOrder = useBacklogStore.getState().backlogOrder[projectId] || []
+      setBacklogSort(null)
+      setSprintSort('backlog', null)
+
+      const listTickets = getTicketsInList(null)
+      const selectedSet = new Set(selectedIds)
+      const selected = listTickets.filter((t) => selectedSet.has(t.id))
+      const nonSelected = listTickets.filter((t) => !selectedSet.has(t.id))
+      const reordered =
+        position === 'top' ? [...selected, ...nonSelected] : [...nonSelected, ...selected]
+
+      const afterOrder = reordered.map((t) => t.id)
+      setBacklogOrder(projectId, afterOrder)
+
+      // Register undo
+      const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+      undoState.pushBacklogReorder(projectId, beforeOrder, afterOrder)
+    } else {
+      // Sprint/board: update ticket.order for moved tickets only
+      const bySprintId = new Map<string | null, TicketWithRelations[]>()
+      for (const t of selectedTickets) {
+        const key = t.sprintId ?? null
+        const arr = bySprintId.get(key) || []
+        arr.push(t)
+        bySprintId.set(key, arr)
+      }
+
+      const orderUpdates: { ticketId: string; oldOrder: number; newOrder: number }[] = []
+
+      for (const [sprintId, ticketsInGroup] of bySprintId.entries()) {
+        const listTickets = getTicketsInList(sprintId)
+        const minOrder = Math.min(...listTickets.map((t) => t.order))
+        const maxOrder = Math.max(...listTickets.map((t) => t.order))
+
+        // Assign orders outside the current range
+        const sorted = [...ticketsInGroup].sort((a, b) => a.order - b.order)
+        sorted.forEach((t, i) => {
+          const newOrder = position === 'top' ? minOrder - sorted.length + i : maxOrder + 1 + i
+          if (t.order !== newOrder) {
+            orderUpdates.push({ ticketId: t.id, oldOrder: t.order, newOrder })
+          }
+        })
+
+        setSprintSort(sprintId ?? 'backlog', null)
+      }
+
+      if (orderUpdates.length > 0) {
+        updateTickets(
+          projectId,
+          orderUpdates.map(({ ticketId, newOrder }) => ({
+            ticketId,
+            updates: { order: newOrder },
+          })),
+        )
+
+        const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+        undoState.pushUpdate(
+          projectId,
+          orderUpdates.map(({ ticketId, oldOrder, newOrder }) => {
+            const t = allTickets.find((t) => t.id === ticketId)!
+            return {
+              ticketId,
+              before: { ...t, order: oldOrder } as TicketWithRelations,
+              after: { ...t, order: newOrder } as TicketWithRelations,
+            }
+          }),
+        )
+
+        ;(async () => {
+          try {
+            for (const { ticketId, newOrder } of orderUpdates) {
+              await updateTicketAPI(projectId, ticketId, { order: newOrder })
+            }
+          } catch (err) {
+            console.error('Failed to persist order update:', err)
+          }
+        })()
+      }
+    }
+
+    // Toast
+    const ticketKeys = formatTicketIds(columns, selectedIds)
+    const count = selectedTickets.length
+    const posLabel = position === 'top' ? 'top' : 'bottom'
+    showUndoRedoToast('success', {
+      title:
+        count === 1
+          ? `${ticketKeys[0]} sent to ${posLabel}`
+          : `${count} tickets sent to ${posLabel}`,
+      description: count === 1 ? `Moved to ${posLabel} of list` : ticketKeys.join(', '),
+      duration: getEffectiveDuration(3000),
+    })
+
+    setOpen(false)
+    setSubmenu(null)
+  }
+
+  /**
+   * Send selected tickets to top or bottom of a different list (backlog or sprint).
+   * Handles sprint assignment change + order positioning.
+   */
+  const doSendToListPosition = (
+    targetSprintId: string | null,
+    targetSprintName: string,
+    position: 'top' | 'bottom',
+  ) => {
+    const updateTickets = board.updateTickets || (() => {})
+    const { setSprintSort } = useSprintStore.getState()
+
+    // Clear any active column-header sort on the target section
+    setSprintSort(targetSprintId ?? 'backlog', null)
+
+    // Get selected tickets
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const selectedTickets = selectedIds
+      .map((id: string) => allTickets.find((t: TicketWithRelations) => t.id === id))
+      .filter(Boolean) as TicketWithRelations[]
+
+    if (selectedTickets.length === 0) return
+
+    // Filter tickets that actually need to move (not already in target list)
+    const ticketsToMove = selectedTickets.filter((t) => (t.sprintId ?? null) !== targetSprintId)
+    if (ticketsToMove.length === 0) {
+      doSendToPosition(position)
+      return
+    }
+
+    // Capture original state for undo
+    const originalSprintIds = ticketsToMove.map((t) => ({
+      ticketId: t.id,
+      fromSprintId: t.sprintId,
+      fromSprintName: t.sprint?.name ?? null,
+    }))
+    const uniqueFromNames = [...new Set(originalSprintIds.map((t) => t.fromSprintName))]
+    const fromLabel =
+      uniqueFromNames.length === 1
+        ? (uniqueFromNames[0] ?? 'Backlog')
+        : uniqueFromNames.every((n) => n === null)
+          ? 'Backlog'
+          : 'multiple locations'
+
+    const targetSprint = targetSprintId ? sprints.find((s) => s.id === targetSprintId) : null
+    const sortedMoving = [...ticketsToMove].sort((a, b) => a.order - b.order)
+    const targetListTickets = getTicketsInList(targetSprintId)
+
+    // Assign orders outside the target list's current range (only for moved tickets)
+    const minOrder =
+      targetListTickets.length > 0 ? Math.min(...targetListTickets.map((t) => t.order)) : 0
+    const maxOrder =
+      targetListTickets.length > 0 ? Math.max(...targetListTickets.map((t) => t.order)) : -1
+
+    const batchUpdates: { ticketId: string; updates: Partial<TicketWithRelations> }[] = []
+    sortedMoving.forEach((t, i) => {
+      const newOrder = position === 'top' ? minOrder - sortedMoving.length + i : maxOrder + 1 + i
+      batchUpdates.push({
+        ticketId: t.id,
+        updates: {
+          sprintId: targetSprintId,
+          sprint: targetSprint
+            ? {
+                id: targetSprint.id,
+                name: targetSprint.name,
+                status: targetSprint.status,
+                startDate: targetSprint.startDate,
+                endDate: targetSprint.endDate,
+              }
+            : null,
+          order: newOrder,
+        },
+      })
+    })
+    updateTickets(projectId, batchUpdates)
+
+    // Update backlogOrder when moving to backlog
+    if (targetSprintId === null) {
+      const { setBacklogOrder, setSort: setBacklogSort } = useBacklogStore.getState()
+      setBacklogSort(null)
+      const movingIds = new Set(ticketsToMove.map((t) => t.id))
+      const existing = targetListTickets.filter((t) => !movingIds.has(t.id))
+      const reordered =
+        position === 'top' ? [...sortedMoving, ...existing] : [...existing, ...sortedMoving]
+      setBacklogOrder(
+        projectId,
+        reordered.map((t) => t.id),
+      )
+    }
+
+    // Toast
+    const ticketKeys = formatTicketIds(
+      columns,
+      ticketsToMove.map((t) => t.id),
+    )
+    const count = ticketsToMove.length
+    const posLabel = position === 'top' ? 'top' : 'bottom'
+    showUndoRedoToast('success', {
+      title:
+        count === 1
+          ? `${ticketKeys[0]} sent to ${posLabel} of ${targetSprintName}`
+          : `${count} tickets sent to ${posLabel} of ${targetSprintName}`,
+      description: count > 1 ? ticketKeys.join(', ') : undefined,
+      duration: getEffectiveDuration(5000),
+    })
+
+    // Register sprint move in undo store
+    const moves = originalSprintIds.map(({ ticketId, fromSprintId }) => ({
+      ticketId,
+      fromSprintId,
+      toSprintId: targetSprintId,
+    }))
+    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
+    undoState.pushSprintMove(projectId, moves, fromLabel, targetSprintName)
+
+    // Persist to API (only the moved tickets)
+    ;(async () => {
+      try {
+        for (const upd of batchUpdates) {
+          await updateTicketAPI(projectId, upd.ticketId, {
+            sprintId: targetSprintId,
+            order: upd.updates.order as number,
+          })
+        }
+        queryClient.invalidateQueries({ queryKey: sprintKeys.byProject(projectId) })
+        queryClient.invalidateQueries({ queryKey: ticketQueryKeys.byProject(projectId) })
+      } catch (err) {
+        console.error('Failed to persist send-to-list-position:', err)
+      }
+    })()
+
+    setOpen(false)
+    setSubmenu(null)
+  }
+
   const confirmDeleteNow = async () => {
     const ticketsToDelete = pendingDelete
     if (ticketsToDelete.length === 0) return
@@ -896,7 +1185,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
   )
 
   const openSubmenu =
-    (id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution' | 'type') =>
+    (id: 'priority' | 'assign' | 'send' | 'points' | 'sprint' | 'resolution' | 'type' | 'move') =>
     (e: React.MouseEvent) => {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
       setSubmenu({
@@ -1014,6 +1303,15 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                   onClick={doCreateSprint}
                 />
               )}
+            </MenuSection>
+
+            <MenuSection title="Position">
+              <MenuButton
+                icon={<ArrowUpToLine className="h-4 w-4" />}
+                label="Move"
+                trailing={<ChevronRight className="h-4 w-4 text-zinc-500" />}
+                onMouseEnter={openSubmenu('move')}
+              />
             </MenuSection>
 
             <MenuSection title="Operations">
@@ -1305,6 +1603,150 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                           >
                             <Plus className="h-4 w-4 text-zinc-400" />
                             <span className="text-zinc-400">Create new sprint...</span>
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {submenu.id === 'move' &&
+                    view === 'board' &&
+                    (() => {
+                      const col = columns.find((c: ColumnWithTickets) => c.id === ticket.columnId)
+                      const { icon: ColIcon, color: colColor } = getColumnIcon(
+                        col?.icon,
+                        col?.name,
+                        col?.color,
+                      )
+                      const isHex = colColor.startsWith('#')
+                      return (
+                        <>
+                          <div className="flex items-center gap-1.5 px-3 py-1 text-xs uppercase text-zinc-500">
+                            <ColIcon
+                              className={`h-3 w-3 ${isHex ? '' : colColor}`}
+                              style={isHex ? { color: colColor } : undefined}
+                            />
+                            {col?.name ?? 'Column'}
+                          </div>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToPosition('top')}
+                          >
+                            <ArrowUpToLine className="h-4 w-4" />
+                            <span>Top</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToPosition('bottom')}
+                          >
+                            <ArrowDownToLine className="h-4 w-4" />
+                            <span>Bottom</span>
+                          </button>
+                        </>
+                      )
+                    })()}
+
+                  {submenu.id === 'move' && view === 'list' && (
+                    <>
+                      {/* Sprint section (always first when available) */}
+                      {activeSprint && (
+                        <>
+                          <div className="flex items-center gap-1.5 px-3 py-1 text-xs uppercase text-zinc-500">
+                            <Target
+                              className={`h-3 w-3 ${activeSprint.status === 'active' ? 'text-green-500' : 'text-blue-500'}`}
+                            />
+                            {activeSprint.name}
+                          </div>
+                          {selectedTicketSprintInfo.anyInSprint ? (
+                            <>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                                onClick={() => doSendToPosition('top')}
+                              >
+                                <ArrowUpToLine className="h-4 w-4" />
+                                <span>Top</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                                onClick={() => doSendToPosition('bottom')}
+                              >
+                                <ArrowDownToLine className="h-4 w-4" />
+                                <span>Bottom</span>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                                onClick={() =>
+                                  doSendToListPosition(activeSprint.id, activeSprint.name, 'top')
+                                }
+                              >
+                                <ArrowUpToLine className="h-4 w-4" />
+                                <span>Top</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                                onClick={() =>
+                                  doSendToListPosition(activeSprint.id, activeSprint.name, 'bottom')
+                                }
+                              >
+                                <ArrowDownToLine className="h-4 w-4" />
+                                <span>Bottom</span>
+                              </button>
+                            </>
+                          )}
+                          <div className="my-1 border-t border-zinc-800" />
+                        </>
+                      )}
+
+                      {/* Backlog section (always last) */}
+                      <div className="flex items-center gap-1.5 px-3 py-1 text-xs uppercase text-zinc-500">
+                        <List className="h-3 w-3" />
+                        Backlog
+                      </div>
+                      {selectedTicketSprintInfo.anyInBacklog || !activeSprint ? (
+                        <>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToPosition('top')}
+                          >
+                            <ArrowUpToLine className="h-4 w-4" />
+                            <span>Top</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToPosition('bottom')}
+                          >
+                            <ArrowDownToLine className="h-4 w-4" />
+                            <span>Bottom</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToListPosition(null, 'Backlog', 'top')}
+                          >
+                            <ArrowUpToLine className="h-4 w-4" />
+                            <span>Top</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToListPosition(null, 'Backlog', 'bottom')}
+                          >
+                            <ArrowDownToLine className="h-4 w-4" />
+                            <span>Bottom</span>
                           </button>
                         </>
                       )}

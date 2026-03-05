@@ -764,6 +764,18 @@ export function registerTicketTools(server: McpServer) {
           if (!sp) {
             return errorResponse(`Sprint not found: ${sprint}`)
           }
+          // Block assigning unresolved tickets to completed sprints
+          if (sp.status === 'completed') {
+            const effectiveResolution =
+              resolution !== undefined ? resolution : existingTicket.resolution
+            if (!effectiveResolution) {
+              return errorResponse(
+                `Cannot assign unresolved ticket to completed sprint "${sp.name}". ` +
+                  'To add a ticket to a completed sprint, it must have a resolution status ' +
+                  "(e.g., Done, Won't Fix). Otherwise the ticket will be orphaned and not visible in active views.",
+              )
+            }
+          }
           updateData.sprintId = sp.id
         }
       }
@@ -909,6 +921,14 @@ export function registerTicketTools(server: McpServer) {
           )
           if (!sp) {
             return errorResponse(`Sprint not found: ${sprint}`)
+          }
+          // Block assigning unresolved tickets to completed sprints
+          if (sp.status === 'completed' && !existingTicket.resolution) {
+            return errorResponse(
+              `Cannot move unresolved ticket to completed sprint "${sp.name}". ` +
+                'To add a ticket to a completed sprint, it must have a resolution status ' +
+                "(e.g., Done, Won't Fix). Otherwise the ticket will be orphaned and not visible in active views.",
+            )
           }
           updateData.sprintId = sp.id
           // Escape user-controlled sprint names
