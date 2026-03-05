@@ -186,13 +186,17 @@ export function BacklogTable({
   }, [tickets, backlogOrder, projectId, applyBacklogOrder, sort])
 
   // Restore scroll synchronously after DOM commit, before browser paint.
+  // The ScrollArea viewport has scroll-smooth which would animate the restore,
+  // so we temporarily force instant scrolling via scroll-behavior: auto.
   // orderedTickets is intentionally in deps as the trigger (fires after setOrderedTickets).
   // biome-ignore lint/correctness/useExhaustiveDependencies: orderedTickets change is the trigger
   useLayoutEffect(() => {
     const saved = savedScrollRef.current
     const viewport = scrollViewportRef.current
     if (viewport && saved != null && saved > 0) {
+      viewport.style.scrollBehavior = 'auto'
       viewport.scrollTop = saved
+      viewport.style.scrollBehavior = ''
     }
     savedScrollRef.current = null
   }, [orderedTickets])
