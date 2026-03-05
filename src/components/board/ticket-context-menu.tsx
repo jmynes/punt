@@ -890,17 +890,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
    */
   const getTicketsInList = (sprintId: string | null): TicketWithRelations[] => {
     const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
-    const sprintIdSet = new Set(sprints.map((s) => s.id))
     return allTickets
-      .filter((t: TicketWithRelations) => {
-        const tSprint = t.sprintId ?? null
-        if (sprintId === null) {
-          // Backlog: include tickets with null/undefined sprintId
-          // AND tickets whose sprintId points to a non-existent sprint (orphaned)
-          return tSprint === null || (tSprint !== null && !sprintIdSet.has(tSprint))
-        }
-        return tSprint === sprintId
-      })
+      .filter((t: TicketWithRelations) => (t.sprintId ?? null) === sprintId)
       .sort(
         (a: TicketWithRelations, b: TicketWithRelations) =>
           a.order - b.order || a.number - b.number,
