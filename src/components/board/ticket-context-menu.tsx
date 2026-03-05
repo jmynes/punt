@@ -98,9 +98,11 @@ const typeMenuConfig: Record<
 type MenuProps = {
   ticket: TicketWithRelations
   children: React.ReactElement
+  /** Controls which move options appear: 'board' shows only top/bottom of column. */
+  view?: 'board' | 'list'
 }
 
-export function TicketContextMenu({ ticket, children }: MenuProps) {
+export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [adjustedCoords, setAdjustedCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -1648,7 +1650,28 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                     </>
                   )}
 
-                  {submenu.id === 'move' && (
+                  {submenu.id === 'move' && view === 'board' && (
+                    <>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                        onClick={() => doSendToPosition('top')}
+                      >
+                        <ArrowUpToLine className="h-4 w-4" />
+                        <span>Top</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                        onClick={() => doSendToPosition('bottom')}
+                      >
+                        <ArrowDownToLine className="h-4 w-4" />
+                        <span>Bottom</span>
+                      </button>
+                    </>
+                  )}
+
+                  {submenu.id === 'move' && view === 'list' && (
                     <>
                       {/* Sprint section (always first when available) */}
                       {activeSprint && (
