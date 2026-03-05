@@ -20,7 +20,7 @@ import {
 export type AuthenticatedUser = {
   id: string
   username: string
-  email: string
+  email: string | null
   name: string | null
   avatar: string | null
   isSystemAdmin: boolean
