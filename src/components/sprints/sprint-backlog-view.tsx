@@ -233,7 +233,7 @@ export function SprintBacklogView({
 
     // Sort tickets within each group by order
     Object.keys(groups).forEach((key) => {
-      groups[key].sort((a, b) => a.order - b.order)
+      groups[key].sort((a, b) => a.order - b.order || a.number - b.number)
     })
 
     return groups

@@ -113,7 +113,7 @@ export function KanbanCard({
   }
 
   return (
-    <TicketContextMenu ticket={ticket}>
+    <TicketContextMenu ticket={ticket} view="board">
       <Card
         ref={setNodeRef}
         style={style}
