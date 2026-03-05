@@ -886,26 +886,31 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
   /** Save scroll positions of all scrollable ancestors and restore after next paint. */
   const preserveScroll = () => {
-    const scrollables: { el: Element; top: number; left: number }[] = []
-    // Capture all Radix scroll viewports and overflow-y-auto containers
+    const entries: { el: Element; top: number; left: number }[] = []
     for (const selector of ['[data-radix-scroll-area-viewport]', '.overflow-y-auto']) {
       document.querySelectorAll(selector).forEach((node) => {
-        if (!scrollables.some((s) => s.el === node)) {
-          scrollables.push({ el: node, top: node.scrollTop, left: node.scrollLeft })
+        if (!entries.some((s) => s.el === node)) {
+          entries.push({ el: node, top: node.scrollTop, left: node.scrollLeft })
         }
       })
     }
-    if (scrollables.length === 0) return
-    // Restore scroll across several frames to survive React re-renders
-    let remaining = 5
+    if (entries.length === 0) return
     const restore = () => {
-      for (const { el: node, top, left } of scrollables) {
-        node.scrollTop = top
-        node.scrollLeft = left
+      for (const { el, top, left } of entries) {
+        el.scrollTop = top
+        el.scrollLeft = left
       }
-      if (--remaining > 0) requestAnimationFrame(restore)
     }
-    requestAnimationFrame(restore)
+    // Watch for DOM mutations (React re-renders) and restore scroll immediately
+    const observers = entries.map(({ el }) => {
+      const mo = new MutationObserver(() => requestAnimationFrame(restore))
+      mo.observe(el, { childList: true, subtree: true })
+      return mo
+    })
+    // Clean up after React has settled
+    setTimeout(() => {
+      for (const mo of observers) mo.disconnect()
+    }, 500)
   }
 
   /**
