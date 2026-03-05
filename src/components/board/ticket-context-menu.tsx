@@ -17,10 +17,12 @@ import {
   Hash,
   Layers,
   Lightbulb,
+  List,
   Pencil,
   Plus,
   Send,
   Shapes,
+  Target,
   Trash2,
   UserCheck,
   User as UserIcon,
@@ -1652,8 +1654,8 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                       {activeSprint && (
                         <>
                           <div className="flex items-center gap-1.5 px-3 py-1 text-xs uppercase text-zinc-500">
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full ${activeSprint.status === 'active' ? 'bg-green-500' : 'bg-blue-500'}`}
+                            <Target
+                              className={`h-3 w-3 ${activeSprint.status === 'active' ? 'text-green-500' : 'text-blue-500'}`}
                             />
                             {activeSprint.name}
                           </div>
@@ -1705,7 +1707,10 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                       )}
 
                       {/* Backlog section (always last) */}
-                      <div className="px-3 py-1 text-xs uppercase text-zinc-500">Backlog</div>
+                      <div className="flex items-center gap-1.5 px-3 py-1 text-xs uppercase text-zinc-500">
+                        <List className="h-3 w-3" />
+                        Backlog
+                      </div>
                       {selectedTicketSprintInfo.anyInBacklog || !activeSprint ? (
                         <>
                           <button
