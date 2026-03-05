@@ -63,7 +63,7 @@ import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { pasteTickets } from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
 import { isCompletedColumn } from '@/lib/sprint-utils'
-import { getStatusIcon } from '@/lib/status-icons'
+import { getColumnIcon, getStatusIcon } from '@/lib/status-icons'
 import { formatTicketIds } from '@/lib/ticket-format'
 import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -1650,26 +1650,44 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
                     </>
                   )}
 
-                  {submenu.id === 'move' && view === 'board' && (
-                    <>
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                        onClick={() => doSendToPosition('top')}
-                      >
-                        <ArrowUpToLine className="h-4 w-4" />
-                        <span>Top</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                        onClick={() => doSendToPosition('bottom')}
-                      >
-                        <ArrowDownToLine className="h-4 w-4" />
-                        <span>Bottom</span>
-                      </button>
-                    </>
-                  )}
+                  {submenu.id === 'move' &&
+                    view === 'board' &&
+                    (() => {
+                      const col = columns.find((c: ColumnWithTickets) => c.id === ticket.columnId)
+                      const { icon: ColIcon, color: colColor } = getColumnIcon(
+                        col?.icon,
+                        col?.name,
+                        col?.color,
+                      )
+                      const isHex = colColor.startsWith('#')
+                      return (
+                        <>
+                          <div className="flex items-center gap-1.5 px-3 py-1 text-xs uppercase text-zinc-500">
+                            <ColIcon
+                              className={`h-3 w-3 ${isHex ? '' : colColor}`}
+                              style={isHex ? { color: colColor } : undefined}
+                            />
+                            {col?.name ?? 'Column'}
+                          </div>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToPosition('top')}
+                          >
+                            <ArrowUpToLine className="h-4 w-4" />
+                            <span>Top</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToPosition('bottom')}
+                          >
+                            <ArrowDownToLine className="h-4 w-4" />
+                            <span>Bottom</span>
+                          </button>
+                        </>
+                      )
+                    })()}
 
                   {submenu.id === 'move' && view === 'list' && (
                     <>
