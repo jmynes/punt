@@ -884,6 +884,32 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     setSubmenu(null)
   }
 
+  /** Save scroll positions of all scrollable ancestors and restore after next paint. */
+  const preserveScroll = () => {
+    const scrollables: { el: Element; top: number; left: number }[] = []
+    let el: Element | null = menuRef.current?.parentElement ?? document.documentElement
+    while (el) {
+      if (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth) {
+        scrollables.push({ el, top: el.scrollTop, left: el.scrollLeft })
+      }
+      el = el.parentElement
+    }
+    // Also capture the main scrollable areas (backlog/sprint containers)
+    for (const selector of ['[data-radix-scroll-area-viewport]', '.overflow-y-auto']) {
+      document.querySelectorAll(selector).forEach((node) => {
+        if (!scrollables.some((s) => s.el === node)) {
+          scrollables.push({ el: node, top: node.scrollTop, left: node.scrollLeft })
+        }
+      })
+    }
+    requestAnimationFrame(() => {
+      for (const { el: node, top, left } of scrollables) {
+        node.scrollTop = top
+        node.scrollLeft = left
+      }
+    })
+  }
+
   /**
    * Get all tickets that share the same sprintId, sorted by order.
    * Used for send-to-top/bottom positioning operations.
@@ -903,6 +929,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
    * Preserves relative order of selected tickets when multi-selecting.
    */
   const doSendToPosition = (position: 'top' | 'bottom') => {
+    preserveScroll()
     const updateTickets = board.updateTickets || (() => {})
     const { setSprintSort } = useSprintStore.getState()
 
@@ -1042,6 +1069,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     targetSprintName: string,
     position: 'top' | 'bottom',
   ) => {
+    preserveScroll()
     const updateTickets = board.updateTickets || (() => {})
     const { setSprintSort } = useSprintStore.getState()
 
