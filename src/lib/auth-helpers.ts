@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { DEMO_USER, isDemoMode } from '@/lib/demo'
+import { logger } from '@/lib/logger'
 import type { Permission } from '@/lib/permissions'
 import {
   hasAnyPermission as checkAnyPermission,
@@ -10,6 +11,23 @@ import {
   getEffectivePermissions,
   isMember,
 } from '@/lib/permissions/check'
+
+/**
+ * Represents an authenticated user, returned by getCurrentUser() and requireAuth().
+ * Browser session users will have agentId/agentName as undefined.
+ * MCP API key users will have agentId/agentName populated when an Agent record exists.
+ */
+export type AuthenticatedUser = {
+  id: string
+  username: string
+  email: string | null
+  name: string | null
+  avatar: string | null
+  isSystemAdmin: boolean
+  isActive: boolean
+  agentId?: string
+  agentName?: string
+}
 
 /**
  * Hash an MCP API key using SHA-256
@@ -61,18 +79,64 @@ async function getMcpUser() {
   })
 
   // Only return active users
-  if (user?.isActive) {
-    return user
+  if (!user?.isActive) {
+    return null
   }
 
-  return null
+  // Look up the Agent record with the same apiKeyHash
+  let agentId: string | undefined
+  let agentName: string | undefined
+
+  try {
+    const agent = await db.agent.findUnique({
+      where: { apiKeyHash: keyHash },
+      select: { id: true, name: true, lastActiveAt: true, isActive: true },
+    })
+
+    if (agent?.isActive) {
+      agentId = agent.id
+      agentName = agent.name
+
+      // Update lastActiveAt if more than 5 minutes since last update
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+      if (!agent.lastActiveAt || agent.lastActiveAt < fiveMinutesAgo) {
+        // Fire-and-forget: don't block the auth response
+        db.agent
+          .update({
+            where: { id: agent.id },
+            data: { lastActiveAt: new Date() },
+          })
+          .catch((err: unknown) => {
+            logger.error(
+              'Failed to update Agent.lastActiveAt',
+              err instanceof Error ? err : undefined,
+            )
+          })
+      }
+    }
+  } catch {
+    // Agent lookup failure should not block authentication
+    // Keys generated before PUNT-299 won't have Agent records
+  }
+
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    name: user.name,
+    avatar: user.avatar,
+    isSystemAdmin: user.isSystemAdmin,
+    isActive: user.isActive,
+    agentId,
+    agentName,
+  } satisfies AuthenticatedUser
 }
 
 /**
  * Get the current user from server-side session
  * Returns null if not authenticated
  */
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
   // Check for MCP API key first (internal service calls)
   const mcpUser = await getMcpUser()
   if (mcpUser) {
