@@ -1648,32 +1648,82 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
 
                   {submenu.id === 'move' && (
                     <>
-                      <div className="px-3 py-1 text-xs uppercase text-zinc-500">
-                        {selectedTicketSprintInfo.anyInSprint &&
-                        !selectedTicketSprintInfo.anyInBacklog
-                          ? (activeSprint?.name ?? 'Sprint')
-                          : 'Backlog'}
-                      </div>
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                        onClick={() => doSendToPosition('top')}
-                      >
-                        <ArrowUpToLine className="h-4 w-4" />
-                        <span>Top</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                        onClick={() => doSendToPosition('bottom')}
-                      >
-                        <ArrowDownToLine className="h-4 w-4" />
-                        <span>Bottom</span>
-                      </button>
-                      {selectedTicketSprintInfo.anyInSprint && (
+                      {/* Sprint section (always first when available) */}
+                      {activeSprint && (
                         <>
+                          <div className="px-3 py-1 text-xs uppercase text-zinc-500">
+                            {activeSprint.name}
+                          </div>
+                          {selectedTicketSprintInfo.anyInSprint ? (
+                            <>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                                onClick={() => doSendToPosition('top')}
+                              >
+                                <ArrowUpToLine className="h-4 w-4" />
+                                <span>Top</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                                onClick={() => doSendToPosition('bottom')}
+                              >
+                                <ArrowDownToLine className="h-4 w-4" />
+                                <span>Bottom</span>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                                onClick={() =>
+                                  doSendToListPosition(activeSprint.id, activeSprint.name, 'top')
+                                }
+                              >
+                                <ArrowUpToLine className="h-4 w-4" />
+                                <span>Top</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                                onClick={() =>
+                                  doSendToListPosition(activeSprint.id, activeSprint.name, 'bottom')
+                                }
+                              >
+                                <ArrowDownToLine className="h-4 w-4" />
+                                <span>Bottom</span>
+                              </button>
+                            </>
+                          )}
                           <div className="my-1 border-t border-zinc-800" />
-                          <div className="px-3 py-1 text-xs uppercase text-zinc-500">Backlog</div>
+                        </>
+                      )}
+
+                      {/* Backlog section (always last) */}
+                      <div className="px-3 py-1 text-xs uppercase text-zinc-500">Backlog</div>
+                      {selectedTicketSprintInfo.anyInBacklog || !activeSprint ? (
+                        <>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToPosition('top')}
+                          >
+                            <ArrowUpToLine className="h-4 w-4" />
+                            <span>Top</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doSendToPosition('bottom')}
+                          >
+                            <ArrowDownToLine className="h-4 w-4" />
+                            <span>Bottom</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
                           <button
                             type="button"
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
@@ -1686,34 +1736,6 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
                             type="button"
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
                             onClick={() => doSendToListPosition(null, 'Backlog', 'bottom')}
-                          >
-                            <ArrowDownToLine className="h-4 w-4" />
-                            <span>Bottom</span>
-                          </button>
-                        </>
-                      )}
-                      {selectedTicketSprintInfo.anyInBacklog && activeSprint && (
-                        <>
-                          <div className="my-1 border-t border-zinc-800" />
-                          <div className="px-3 py-1 text-xs uppercase text-zinc-500">
-                            {activeSprint.name}
-                          </div>
-                          <button
-                            type="button"
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                            onClick={() =>
-                              doSendToListPosition(activeSprint.id, activeSprint.name, 'top')
-                            }
-                          >
-                            <ArrowUpToLine className="h-4 w-4" />
-                            <span>Top</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                            onClick={() =>
-                              doSendToListPosition(activeSprint.id, activeSprint.name, 'bottom')
-                            }
                           >
                             <ArrowDownToLine className="h-4 w-4" />
                             <span>Bottom</span>
