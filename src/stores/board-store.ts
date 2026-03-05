@@ -108,6 +108,25 @@ export function sortTickets(
   return sorted
 }
 
+// When a ticket's resolution changes, update linkedTicket.resolution in other tickets' link data
+function propagateResolutionToLinks(
+  ticket: TicketWithRelations,
+  changedTicketId: string,
+  newResolution: string | null,
+): TicketWithRelations {
+  if (!ticket.links?.some((l) => l.linkedTicket.id === changedTicketId)) {
+    return ticket
+  }
+  return {
+    ...ticket,
+    links: ticket.links.map((link) =>
+      link.linkedTicket.id === changedTicketId
+        ? { ...link, linkedTicket: { ...link.linkedTicket, resolution: newResolution } }
+        : link,
+    ),
+  }
+}
+
 // Helper to create default columns for a project
 // Note: "Backlog" is not a column - tickets without a sprint are in the backlog view
 function createDefaultColumns(projectId: string): ColumnWithTickets[] {
@@ -604,19 +623,42 @@ export const useBoardStore = create<BoardState>()(
               }
 
               const updatedTicket = { ...ticket, ...updates }
+              const resChanged = 'resolution' in updates
 
               const newColumns = columns.map((column) => {
                 if (column.id === currentColumn.id) {
-                  // Remove from source column
+                  // Remove from source column, propagate resolution to links
                   return {
                     ...column,
-                    tickets: column.tickets.filter((t) => t.id !== ticketId),
+                    tickets: column.tickets
+                      .filter((t) => t.id !== ticketId)
+                      .map((t) =>
+                        resChanged
+                          ? propagateResolutionToLinks(t, ticketId, updates.resolution ?? null)
+                          : t,
+                      ),
                   }
                 } else if (column.id === updates.columnId) {
-                  // Add to target column at the end
+                  // Add to target column at the end, propagate resolution to links
                   return {
                     ...column,
-                    tickets: [...column.tickets, updatedTicket],
+                    tickets: [
+                      ...column.tickets.map((t) =>
+                        resChanged
+                          ? propagateResolutionToLinks(t, ticketId, updates.resolution ?? null)
+                          : t,
+                      ),
+                      updatedTicket,
+                    ],
+                  }
+                }
+                // Propagate resolution to links in other columns too
+                if (resChanged) {
+                  return {
+                    ...column,
+                    tickets: column.tickets.map((t) =>
+                      propagateResolutionToLinks(t, ticketId, updates.resolution ?? null),
+                    ),
                   }
                 }
                 return column
@@ -629,11 +671,19 @@ export const useBoardStore = create<BoardState>()(
           }
 
           // Regular update (no column change)
+          // When resolution changes, also update linkedTicket.resolution in other tickets' links
+          const resolutionChanged = 'resolution' in updates
           const newColumns = columns.map((column) => ({
             ...column,
-            tickets: column.tickets.map((ticket) =>
-              ticket.id === ticketId ? { ...ticket, ...updates } : ticket,
-            ),
+            tickets: column.tickets.map((ticket) => {
+              if (ticket.id === ticketId) {
+                return { ...ticket, ...updates }
+              }
+              if (resolutionChanged) {
+                return propagateResolutionToLinks(ticket, ticketId, updates.resolution ?? null)
+              }
+              return ticket
+            }),
           }))
 
           return {
@@ -701,11 +751,19 @@ export const useBoardStore = create<BoardState>()(
             }
 
             // Regular update (no column change)
+            const resChanged = 'resolution' in ticketUpdates
             columns = columns.map((column) => ({
               ...column,
-              tickets: column.tickets.map((ticket) =>
-                ticket.id === ticketId ? { ...ticket, ...ticketUpdates } : ticket,
-              ),
+              tickets: column.tickets.map((ticket) => {
+                if (ticket.id === ticketId) return { ...ticket, ...ticketUpdates }
+                if (resChanged)
+                  return propagateResolutionToLinks(
+                    ticket,
+                    ticketId,
+                    ticketUpdates.resolution ?? null,
+                  )
+                return ticket
+              }),
             }))
           }
 
