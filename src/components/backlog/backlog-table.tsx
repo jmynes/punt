@@ -19,7 +19,7 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { Settings2, TrendingUp } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { DropZone, type TableContext, TicketTable } from '@/components/table'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
@@ -166,12 +166,12 @@ export function BacklogTable({
 
   // Ref for the ScrollArea viewport to preserve scroll during re-orders
   const scrollViewportRef = useRef<HTMLElement | null>(null)
+  const savedScrollRef = useRef<number | null>(null)
 
   // Sync with incoming tickets prop
   useEffect(() => {
-    // Capture scroll position before React re-renders the list
-    const viewport = scrollViewportRef.current
-    const scrollTop = viewport?.scrollTop ?? 0
+    // Capture scroll position before the state update triggers a re-render
+    savedScrollRef.current = scrollViewportRef.current?.scrollTop ?? null
 
     const projectOrder = backlogOrder[projectId] || []
     const ordered = applyBacklogOrder(tickets, projectOrder)
@@ -183,14 +183,19 @@ export function BacklogTable({
     if (!sort) {
       setHasManualOrder(projectOrder.length > 0)
     }
-
-    // Restore scroll after React commits the DOM update
-    if (viewport && scrollTop > 0) {
-      requestAnimationFrame(() => {
-        viewport.scrollTop = scrollTop
-      })
-    }
   }, [tickets, backlogOrder, projectId, applyBacklogOrder, sort])
+
+  // Restore scroll synchronously after DOM commit, before browser paint.
+  // orderedTickets is intentionally in deps as the trigger (fires after setOrderedTickets).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: orderedTickets change is the trigger
+  useLayoutEffect(() => {
+    const saved = savedScrollRef.current
+    const viewport = scrollViewportRef.current
+    if (viewport && saved != null && saved > 0) {
+      viewport.scrollTop = saved
+    }
+    savedScrollRef.current = null
+  }, [orderedTickets])
 
   // Reset manual order when sort changes (user clicked a column header to sort)
   useEffect(() => {
