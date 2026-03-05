@@ -66,6 +66,7 @@ import { formatTicketIds } from '@/lib/ticket-format'
 import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
+import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
@@ -935,6 +936,7 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     }
 
     const allOrderUpdates: { ticketId: string; oldOrder: number; newOrder: number }[] = []
+    let backlogReordered: TicketWithRelations[] | null = null
 
     for (const [sprintId, ticketsInSelection] of bySprintId.entries()) {
       const listTickets = getTicketsInList(sprintId)
@@ -949,6 +951,11 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       const reordered =
         position === 'top' ? [...selected, ...nonSelected] : [...nonSelected, ...selected]
 
+      // Track backlog reorder for backlogOrder store update
+      if (sprintId === null) {
+        backlogReordered = reordered
+      }
+
       // Calculate order updates
       reordered.forEach((ticket, index) => {
         if (ticket.order !== index) {
@@ -960,6 +967,15 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
     // Clear any active column-header sort so the new order is visible
     for (const sprintId of bySprintId.keys()) {
       setSprintSort(sprintId ?? 'backlog', null)
+    }
+
+    // Update backlogOrder in backlog store (used by BacklogTable for display order)
+    if (backlogReordered) {
+      const { setBacklogOrder } = useBacklogStore.getState()
+      setBacklogOrder(
+        projectId,
+        backlogReordered.map((t) => t.id),
+      )
     }
 
     if (allOrderUpdates.length === 0) {
@@ -1125,6 +1141,15 @@ export function TicketContextMenu({ ticket, children }: MenuProps) {
       }
     }
     updateTickets(projectId, batchUpdates)
+
+    // Update backlogOrder when moving to backlog (used by BacklogTable for display order)
+    if (targetSprintId === null) {
+      const { setBacklogOrder } = useBacklogStore.getState()
+      setBacklogOrder(
+        projectId,
+        reordered.map((t) => t.id),
+      )
+    }
 
     // Build toast message
     const ticketKeys = formatTicketIds(
