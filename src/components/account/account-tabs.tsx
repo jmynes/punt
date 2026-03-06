@@ -7,7 +7,7 @@ import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 const ACCOUNT_TABS: TabItem[] = [
   {
     value: 'profile',
-    label: 'Profile',
+    label: 'Identity',
     href: '/account/profile',
     icon: <User className="h-4 w-4" />,
   },

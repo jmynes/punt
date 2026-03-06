@@ -123,7 +123,7 @@ export function Header() {
               >
                 <Link href={`/users/${currentUser.username}`}>
                   <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
+                  <span>View Profile</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem

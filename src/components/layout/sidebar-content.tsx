@@ -364,7 +364,7 @@ export function SidebarContent({
                   )}
                 >
                   <User className="h-3 w-3" />
-                  Profile
+                  Identity
                 </Button>
               </Link>
               <Link href="/account/security" onClick={handleLinkClick}>
