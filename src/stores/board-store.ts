@@ -108,6 +108,23 @@ export function sortTickets(
   return sorted
 }
 
+// When a child ticket's resolution changes, update the parent ticket's subtasks array
+function propagateResolutionToSubtasks(
+  ticket: TicketWithRelations,
+  changedTicketId: string,
+  newResolution: string | null,
+): TicketWithRelations {
+  if (!ticket.subtasks?.some((s) => s.id === changedTicketId)) {
+    return ticket
+  }
+  return {
+    ...ticket,
+    subtasks: ticket.subtasks.map((s) =>
+      s.id === changedTicketId ? { ...s, resolution: newResolution } : s,
+    ),
+  }
+}
+
 // When a ticket's resolution changes, update linkedTicket.resolution in other tickets' link data
 function propagateResolutionToLinks(
   ticket: TicketWithRelations,
@@ -125,6 +142,17 @@ function propagateResolutionToLinks(
         : link,
     ),
   }
+}
+
+// Propagate a resolution change to both links and parent subtask arrays
+function propagateResolution(
+  ticket: TicketWithRelations,
+  changedTicketId: string,
+  newResolution: string | null,
+): TicketWithRelations {
+  let result = propagateResolutionToLinks(ticket, changedTicketId, newResolution)
+  result = propagateResolutionToSubtasks(result, changedTicketId, newResolution)
+  return result
 }
 
 // Helper to create default columns for a project
@@ -390,7 +418,7 @@ export const useBoardStore = create<BoardState>()(
                 tickets: column.tickets
                   .filter((t) => t.id !== ticketId)
                   .map((t) =>
-                    resolutionChanged ? propagateResolutionToLinks(t, ticketId, newResolution) : t,
+                    resolutionChanged ? propagateResolution(t, ticketId, newResolution) : t,
                   ),
               }
             }
@@ -409,7 +437,7 @@ export const useBoardStore = create<BoardState>()(
 
               const newTickets = [
                 ...column.tickets.map((t) =>
-                  resolutionChanged ? propagateResolutionToLinks(t, ticketId, newResolution) : t,
+                  resolutionChanged ? propagateResolution(t, ticketId, newResolution) : t,
                 ),
               ]
               newTickets.splice(newOrder, 0, updatedTicket)
@@ -425,9 +453,7 @@ export const useBoardStore = create<BoardState>()(
             if (resolutionChanged) {
               return {
                 ...column,
-                tickets: column.tickets.map((t) =>
-                  propagateResolutionToLinks(t, ticketId, newResolution),
-                ),
+                tickets: column.tickets.map((t) => propagateResolution(t, ticketId, newResolution)),
               }
             }
 
@@ -507,7 +533,7 @@ export const useBoardStore = create<BoardState>()(
             // Propagate resolution changes to linked tickets
             for (const changed of resolutionChanges) {
               remainingTickets = remainingTickets.map((t) =>
-                propagateResolutionToLinks(t, changed.id, changed.resolution),
+                propagateResolution(t, changed.id, changed.resolution),
               )
             }
 
@@ -669,37 +695,37 @@ export const useBoardStore = create<BoardState>()(
 
               const newColumns = columns.map((column) => {
                 if (column.id === currentColumn.id) {
-                  // Remove from source column, propagate resolution to links
+                  // Remove from source column, propagate resolution to links/subtasks
                   return {
                     ...column,
                     tickets: column.tickets
                       .filter((t) => t.id !== ticketId)
                       .map((t) =>
                         resChanged
-                          ? propagateResolutionToLinks(t, ticketId, updates.resolution ?? null)
+                          ? propagateResolution(t, ticketId, updates.resolution ?? null)
                           : t,
                       ),
                   }
                 } else if (column.id === updates.columnId) {
-                  // Add to target column at the end, propagate resolution to links
+                  // Add to target column at the end, propagate resolution to links/subtasks
                   return {
                     ...column,
                     tickets: [
                       ...column.tickets.map((t) =>
                         resChanged
-                          ? propagateResolutionToLinks(t, ticketId, updates.resolution ?? null)
+                          ? propagateResolution(t, ticketId, updates.resolution ?? null)
                           : t,
                       ),
                       updatedTicket,
                     ],
                   }
                 }
-                // Propagate resolution to links in other columns too
+                // Propagate resolution to links/subtasks in other columns too
                 if (resChanged) {
                   return {
                     ...column,
                     tickets: column.tickets.map((t) =>
-                      propagateResolutionToLinks(t, ticketId, updates.resolution ?? null),
+                      propagateResolution(t, ticketId, updates.resolution ?? null),
                     ),
                   }
                 }
@@ -713,7 +739,7 @@ export const useBoardStore = create<BoardState>()(
           }
 
           // Regular update (no column change)
-          // When resolution changes, also update linkedTicket.resolution in other tickets' links
+          // When resolution changes, also update links and parent subtask arrays
           const resolutionChanged = 'resolution' in updates
           const newColumns = columns.map((column) => ({
             ...column,
@@ -722,7 +748,7 @@ export const useBoardStore = create<BoardState>()(
                 return { ...ticket, ...updates }
               }
               if (resolutionChanged) {
-                return propagateResolutionToLinks(ticket, ticketId, updates.resolution ?? null)
+                return propagateResolution(ticket, ticketId, updates.resolution ?? null)
               }
               return ticket
             }),
@@ -799,11 +825,7 @@ export const useBoardStore = create<BoardState>()(
               tickets: column.tickets.map((ticket) => {
                 if (ticket.id === ticketId) return { ...ticket, ...ticketUpdates }
                 if (resChanged)
-                  return propagateResolutionToLinks(
-                    ticket,
-                    ticketId,
-                    ticketUpdates.resolution ?? null,
-                  )
+                  return propagateResolution(ticket, ticketId, ticketUpdates.resolution ?? null)
                 return ticket
               }),
             }))
