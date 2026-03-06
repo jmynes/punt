@@ -1,5 +1,6 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import { Check, Copy, Eye, EyeOff, FileText, KeyRound, Terminal, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -56,6 +57,7 @@ function PathDisplay({ path, onCopy }: { path: string; onCopy?: () => void }) {
 }
 
 export function MCPTab({ isDemo }: MCPTabProps) {
+  const queryClient = useQueryClient()
   const [mcpKeyLoading, setMcpKeyLoading] = useState(false)
   const [mcpHasKey, setMcpHasKey] = useState(false)
   const [mcpKeyHint, setMcpKeyHint] = useState<string | null>(null)
@@ -131,6 +133,8 @@ export function MCPTab({ isDemo }: MCPTabProps) {
       setMcpKeyVisible(true)
       setMcpHasKey(true)
       setMcpKeyHint(data.apiKey.slice(-4))
+      queryClient.invalidateQueries({ queryKey: ['agents'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] })
       showToast.success('MCP API key generated')
     } finally {
       setMcpKeyLoading(false)
@@ -161,6 +165,8 @@ export function MCPTab({ isDemo }: MCPTabProps) {
       setMcpKeyHint(null)
       setMcpNewKey(null)
       setMcpKeyVisible(false)
+      queryClient.invalidateQueries({ queryKey: ['agents'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] })
       showToast.success('MCP API key revoked')
     } finally {
       setMcpKeyLoading(false)
