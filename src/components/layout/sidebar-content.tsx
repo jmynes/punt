@@ -649,6 +649,20 @@ export function SidebarContent({
                         File Uploads
                       </Button>
                     </Link>
+                    <Link href="/admin/settings/repository" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings/repository' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <GitBranch className="h-3 w-3" />
+                        Repository
+                      </Button>
+                    </Link>
                     <Link href="/admin/settings/sprints" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -972,7 +986,7 @@ function ProjectSettingsLink({
           </Button>
         </Link>
       </div>
-      <CollapsibleSection expanded={expanded}>
+      {expanded && (
         <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
           {canViewSettings && (
             <Link href={`/projects/${projectKey}/settings/general`} onClick={onClick}>
@@ -1103,7 +1117,7 @@ function ProjectSettingsLink({
             </Link>
           )}
         </div>
-      </CollapsibleSection>
+      )}
     </div>
   )
 }

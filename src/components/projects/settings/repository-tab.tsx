@@ -165,7 +165,9 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
         defaultBranch: config.defaultBranch || '',
         branchTemplate: config.branchTemplate || '',
         monorepoPath: config.monorepoPath || '',
-        environmentBranches: config.environmentBranches || [],
+        environmentBranches: Array.isArray(config.environmentBranches)
+          ? config.environmentBranches
+          : [],
       })
       setHasChanges(false)
     }
@@ -175,7 +177,9 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
   useEffect(() => {
     if (!config) return
 
-    const configBranches = config.environmentBranches || []
+    const configBranches = Array.isArray(config.environmentBranches)
+      ? config.environmentBranches
+      : []
     const branchesChanged =
       formData.environmentBranches.length !== configBranches.length ||
       formData.environmentBranches.some((b, i) => {
@@ -231,7 +235,9 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
         defaultBranch: config.defaultBranch || '',
         branchTemplate: config.branchTemplate || '',
         monorepoPath: config.monorepoPath || '',
-        environmentBranches: config.environmentBranches || [],
+        environmentBranches: Array.isArray(config.environmentBranches)
+          ? config.environmentBranches
+          : [],
       })
     }
   }, [config])
