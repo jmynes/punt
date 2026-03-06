@@ -75,3 +75,56 @@ export async function PATCH(
     return handleApiError(error, 'update agent')
   }
 }
+
+/**
+ * DELETE /api/admin/agents/[agentId] - Delete an agent record
+ *
+ * Removes the agent from the database. If the agent has created tickets,
+ * those tickets will have their createdByAgentId set to null (Prisma onDelete: SetNull).
+ */
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ agentId: string }> },
+) {
+  try {
+    await requireSystemAdmin()
+
+    const { agentId } = await params
+
+    const existing = await db.agent.findUnique({
+      where: { id: agentId },
+      select: { id: true, apiKeyHash: true, ownerId: true },
+    })
+
+    if (!existing) {
+      return notFoundError('Agent')
+    }
+
+    // If this agent's key hash matches the owner's current mcpApiKey, clear it
+    const owner = await db.user.findUnique({
+      where: { id: existing.ownerId },
+      select: { mcpApiKey: true },
+    })
+
+    await db.$transaction(async (tx) => {
+      if (owner?.mcpApiKey && owner.mcpApiKey === existing.apiKeyHash) {
+        await tx.user.update({
+          where: { id: existing.ownerId },
+          data: { mcpApiKey: null, mcpApiKeyEncrypted: null, mcpApiKeyHint: null },
+        })
+      }
+
+      // Clear agent attribution on tickets before deleting
+      await tx.ticket.updateMany({
+        where: { createdByAgentId: agentId },
+        data: { createdByAgentId: null },
+      })
+
+      await tx.agent.delete({ where: { id: agentId } })
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return handleApiError(error, 'delete agent')
+  }
+}

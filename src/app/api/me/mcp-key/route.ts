@@ -241,6 +241,13 @@ export async function DELETE(request: Request) {
         })
       }
 
+      // Also deactivate all active agents for this user as a safety net
+      // (handles edge cases where mcpApiKey is empty string or hash mismatch)
+      await tx.agent.updateMany({
+        where: { ownerId: currentUser.id, isActive: true },
+        data: { isActive: false },
+      })
+
       // Clear the user's MCP key
       await tx.user.update({
         where: { id: currentUser.id },

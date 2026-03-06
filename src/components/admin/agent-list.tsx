@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bot, Check, Loader2, Pencil, Power, PowerOff, X } from 'lucide-react'
+import { Bot, Check, Loader2, Pencil, Power, PowerOff, Trash2, X } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { PageHeader } from '@/components/common'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -222,6 +222,24 @@ export function AgentList() {
     },
   })
 
+  const deleteAgent = useMutation({
+    mutationFn: async (agentId: string) => {
+      const res = await fetch(`/api/admin/agents/${agentId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? 'Failed to delete agent')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] })
+      showToast.success('Agent deleted')
+    },
+    onError: (err: Error) => {
+      showToast.error(err.message)
+    },
+  })
+
   const handleToggleActive = useCallback(
     (agent: Agent) => {
       updateAgent.mutate({
@@ -286,14 +304,14 @@ export function AgentList() {
           {!isLoading && !error && agents && agents.length > 0 && (
             <div className="space-y-2">
               {/* Header row */}
-              <div className="grid grid-cols-[1fr_1fr_auto_auto_auto_auto_auto] gap-4 px-4 py-2 text-xs text-zinc-500 font-medium uppercase tracking-wider">
+              <div className="grid grid-cols-[1fr_1fr_auto_auto_auto_auto_auto_auto] gap-4 px-4 py-2 text-xs text-zinc-500 font-medium uppercase tracking-wider">
                 <span>Agent</span>
                 <span>Owner</span>
                 <span className="w-20 text-center">Status</span>
                 <span className="w-24">Created</span>
                 <span className="w-24">Last Active</span>
                 <span className="w-16 text-right">Tickets</span>
-                <span className="w-10" />
+                <span className="w-20" />
               </div>
 
               {agents.map((agent) => (
@@ -301,7 +319,7 @@ export function AgentList() {
                   key={agent.id}
                   className="border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900/80 transition-colors"
                 >
-                  <CardContent className="grid grid-cols-[1fr_1fr_auto_auto_auto_auto_auto] gap-4 items-center p-4">
+                  <CardContent className="grid grid-cols-[1fr_1fr_auto_auto_auto_auto_auto_auto] gap-4 items-center p-4">
                     <InlineRenameCell
                       agent={agent}
                       isEditing={editingAgentId === agent.id}
@@ -361,6 +379,23 @@ export function AgentList() {
                         <TooltipContent>
                           {agent.isActive ? 'Deactivate agent' : 'Activate agent'}
                         </TooltipContent>
+                      </Tooltip>
+                    </div>
+
+                    <div className="w-10 flex justify-end">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-zinc-500 hover:text-red-400"
+                            onClick={() => deleteAgent.mutate(agent.id)}
+                            disabled={deleteAgent.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete agent</TooltipContent>
                       </Tooltip>
                     </div>
                   </CardContent>
