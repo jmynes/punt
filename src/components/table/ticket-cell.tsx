@@ -2,6 +2,7 @@
 
 import { format, isBefore, isToday } from 'date-fns'
 import { Ban, Eye, User } from 'lucide-react'
+import { AgentIdenticon } from '@/components/common'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { ResolutionBadge } from '@/components/common/resolution-badge'
@@ -127,6 +128,15 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
             </AvatarFallback>
           </Avatar>
           <span className="truncate text-sm">{ticket.creator.name}</span>
+          {ticket.createdByAgent && (
+            <span title={`via ${ticket.createdByAgent.name}`}>
+              <AgentIdenticon
+                identifier={ticket.createdByAgent.id}
+                size={16}
+                className="shrink-0"
+              />
+            </span>
+          )}
         </div>
       )
 

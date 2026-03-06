@@ -13,6 +13,7 @@ import {
   User,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { AgentIdenticon } from '@/components/common'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { ResolutionBadge } from '@/components/common/resolution-badge'
@@ -240,8 +241,13 @@ export function KanbanCard({
               </div>
             </div>
 
-            {/* Right side: Resolution badge + Assignee */}
+            {/* Right side: Agent indicator + Resolution badge + Assignee */}
             <div className="flex items-center gap-2">
+              {ticket.createdByAgent && (
+                <span title={`Created via ${ticket.createdByAgent.name}`}>
+                  <AgentIdenticon identifier={ticket.createdByAgent.id} size={16} />
+                </span>
+              )}
               {ticket.resolution && ticket.resolution !== 'Done' && (
                 <ResolutionBadge resolution={ticket.resolution as Resolution} size="sm" />
               )}

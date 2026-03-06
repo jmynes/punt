@@ -987,14 +987,17 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
         const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
         undoState.pushUpdate(
           projectId,
-          orderUpdates.map(({ ticketId, oldOrder, newOrder }) => {
-            const t = allTickets.find((t) => t.id === ticketId)!
-            return {
-              ticketId,
-              before: { ...t, order: oldOrder } as TicketWithRelations,
-              after: { ...t, order: newOrder } as TicketWithRelations,
-            }
-          }),
+          orderUpdates
+            .map(({ ticketId, oldOrder, newOrder }) => {
+              const t = allTickets.find((t) => t.id === ticketId)
+              if (!t) return null
+              return {
+                ticketId,
+                before: { ...t, order: oldOrder } as TicketWithRelations,
+                after: { ...t, order: newOrder } as TicketWithRelations,
+              }
+            })
+            .filter((entry): entry is NonNullable<typeof entry> => entry !== null),
         )
 
         ;(async () => {
@@ -1539,7 +1542,8 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
                         >
                           <Hash className="h-4 w-4 text-green-400" />
                           <span>
-                            {p} point{p === 1 ? '' : 's'}
+                            <span className="inline-block w-2 text-right tabular-nums">{p}</span>{' '}
+                            point{p === 1 ? '' : 's'}
                           </span>
                           {ticket.storyPoints === p && !multi && (
                             <Check className="size-4 text-zinc-400 ml-auto" />

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { Bot, Check, Pencil, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
+import { AgentIdenticon } from '@/components/common'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -109,6 +110,7 @@ function AgentRow({ agent }: { agent: AgentData }) {
           </div>
         ) : (
           <div className="flex items-center gap-2">
+            <AgentIdenticon identifier={agent.id} size={22} />
             <span className="text-sm font-medium text-zinc-200 truncate">{agent.name}</span>
             <Button
               variant="ghost"

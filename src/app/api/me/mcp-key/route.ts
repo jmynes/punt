@@ -178,10 +178,21 @@ export async function POST(request: Request) {
         },
       })
 
+      // Count existing agents for this user (including just-deleted ones won't count
+      // since they were deleted above, so this effectively counts from prior sessions)
+      // We use the ticket count as a proxy for historical agent count
+      const existingAgentCount = await tx.agent.count({
+        where: { ownerId: currentUser.id },
+      })
+
+      // Generate a default name: "{username}'s agent #N"
+      const agentNumber = existingAgentCount + 1
+      const defaultName = `${currentUser.username}'s agent #${agentNumber}`
+
       // Create a new Agent record linked to this key
       await tx.agent.create({
         data: {
-          name: 'Claude',
+          name: defaultName,
           apiKeyHash: keyHash,
           ownerId: currentUser.id,
           isActive: true,
@@ -230,12 +241,6 @@ export async function DELETE(request: Request) {
     // Verify re-authentication
     const authError = await verifyReauth(currentUser.id, password, totpCode, isRecoveryCode)
     if (authError) return authError
-
-    // Get the current key hash before clearing it, to find the associated Agent
-    const user = await db.user.findUnique({
-      where: { id: currentUser.id },
-      select: { mcpApiKey: true },
-    })
 
     await db.$transaction(async (tx) => {
       // Clear agent attribution on tickets before deleting agents

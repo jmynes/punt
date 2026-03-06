@@ -219,6 +219,8 @@ export interface TicketLinkSummary {
     priority: Priority
     columnId: string
     resolution: string | null
+    storyPoints: number | null
+    assignee: UserSummary | null
   }
   direction: 'outward' | 'inward'
 }
@@ -253,6 +255,9 @@ export interface TicketWithRelations {
   isCarriedOver: boolean
   carriedFromSprintId: string | null
   carriedOverCount: number
+  // Agent attribution
+  createdByAgentId: string | null
+  createdByAgent: { id: string; name: string; ownerId: string } | null
   assignee: UserSummary | null
   creator: UserSummary
   sprint: SprintSummary | null
