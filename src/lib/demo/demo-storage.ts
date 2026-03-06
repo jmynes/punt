@@ -305,6 +305,8 @@ class DemoStorage {
       isCarriedOver: false,
       carriedFromSprintId: null,
       carriedOverCount: 0,
+      createdByAgentId: null,
+      createdByAgent: null,
       assignee: data.assignee ?? null,
       creator: data.creator ?? DEMO_USER_SUMMARY,
       sprint: data.sprint ?? null,

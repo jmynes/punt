@@ -209,6 +209,8 @@ export function CreateTicketDialog() {
       isCarriedOver: false,
       carriedFromSprintId: null,
       carriedOverCount: 0,
+      createdByAgentId: null,
+      createdByAgent: null,
       assignee: formData.assigneeId
         ? members.find((m) => m.id === formData.assigneeId) || null
         : null,
