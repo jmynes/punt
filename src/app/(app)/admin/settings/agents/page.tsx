@@ -2,10 +2,10 @@
 
 import { Settings } from 'lucide-react'
 import { AdminSettingsTabs } from '@/components/admin/admin-settings-tabs'
-import { RolePermissionsForm } from '@/components/admin/role-permissions-form'
+import { AgentsDefaultsForm } from '@/components/admin/agents-defaults-form'
 import { PageHeader } from '@/components/common'
 
-export default function AdminRolesSettingsPage() {
+export default function AdminAgentsSettingsPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <PageHeader
@@ -17,8 +17,8 @@ export default function AdminRolesSettingsPage() {
         accentColor="amber"
       />
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-auto">
-        <AdminSettingsTabs activeTab="default-roles" />
-        <RolePermissionsForm />
+        <AdminSettingsTabs activeTab="agents" />
+        <AgentsDefaultsForm />
         <div className="h-8 flex-shrink-0" />
       </div>
     </div>
