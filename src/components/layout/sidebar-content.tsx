@@ -331,15 +331,17 @@ export function SidebarContent({
       <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
         <button
           type="button"
-          className="flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none"
+          className="group flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none cursor-pointer"
           onClick={toggleAccountExpanded}
         >
-          {accountExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
-          )}
-          <User className="h-3.5 w-3.5 text-zinc-500" />
+          <span className="h-8 w-8 -ml-2 shrink-0 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 rounded group-hover:bg-zinc-800/50">
+            {accountExpanded ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
+          </span>
+          <User className="h-3.5 w-3.5 text-zinc-500 -ml-1" />
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Account
           </span>
@@ -406,15 +408,17 @@ export function SidebarContent({
       <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
         <button
           type="button"
-          className="flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none"
+          className="group flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none cursor-pointer"
           onClick={togglePreferencesExpanded}
         >
-          {preferencesExpanded ? (
-            <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
-          )}
-          <SlidersHorizontal className="h-3.5 w-3.5 text-zinc-500" />
+          <span className="h-8 w-8 -ml-2 shrink-0 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 rounded group-hover:bg-zinc-800/50">
+            {preferencesExpanded ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
+          </span>
+          <SlidersHorizontal className="h-3.5 w-3.5 text-zinc-500 -ml-1" />
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Preferences
           </span>
@@ -469,20 +473,22 @@ export function SidebarContent({
         <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
           <button
             type="button"
-            className="flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none"
+            className="group flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none cursor-pointer"
             onClick={toggleAdminExpanded}
           >
-            {adminExpanded ? (
-              <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
-            ) : (
-              <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
-            )}
-            <Shield className="h-3.5 w-3.5 text-zinc-500" />
+            <span className="h-8 w-8 -ml-2 shrink-0 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 rounded group-hover:bg-zinc-800/50">
+              {adminExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
+            </span>
+            <Shield className="h-3.5 w-3.5 text-zinc-500 -ml-1" />
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Admin
             </span>
           </button>
-          <CollapsibleSection expanded={adminExpanded}>
+          {adminExpanded && (
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
               <Link href="/admin" onClick={handleLinkClick}>
                 <Button
@@ -523,11 +529,11 @@ export function SidebarContent({
                   Agents
                 </Button>
               </Link>
-              <div className="pl-[9px]">
+              <div>
                 <div className="flex items-center">
                   <button
                     type="button"
-                    className="h-8 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
+                    className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
                     onClick={() => setAdminSettingsExpanded(!adminSettingsExpanded)}
                   >
                     {adminSettingsExpanded ? (
@@ -551,7 +557,7 @@ export function SidebarContent({
                   </Link>
                 </div>
                 <CollapsibleSection expanded={adminSettingsExpanded}>
-                  <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
                     <Link href="/admin/settings/board" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -661,7 +667,7 @@ export function SidebarContent({
                 </CollapsibleSection>
               </div>
             </div>
-          </CollapsibleSection>
+          )}
         </div>
       )}
 
@@ -670,15 +676,17 @@ export function SidebarContent({
         <div className="flex items-center justify-between px-3 mb-1">
           <button
             type="button"
-            className="flex items-center gap-1.5 select-none"
+            className="group flex-1 flex items-center gap-1.5 select-none cursor-pointer"
             onClick={toggleProjectsExpanded}
           >
-            {projectsExpanded ? (
-              <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
-            ) : (
-              <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
-            )}
-            <Layers className="h-3.5 w-3.5 text-zinc-500" />
+            <span className="h-8 w-8 -ml-2 shrink-0 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 rounded group-hover:bg-zinc-800/50">
+              {projectsExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
+            </span>
+            <Layers className="h-3.5 w-3.5 text-zinc-500 -ml-1" />
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Projects
             </span>
@@ -694,7 +702,13 @@ export function SidebarContent({
                     ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 hover:text-emerald-300 rounded-sm'
                     : 'text-zinc-500 hover:text-zinc-300',
                 )}
-                onClick={() => setEditMode(!editMode)}
+                onClick={() => {
+                  const entering = !editMode
+                  setEditMode(entering)
+                  if (entering && !projectsExpanded) {
+                    setSidebarSectionExpanded('section-projects', true)
+                  }
+                }}
               >
                 {editMode ? <Check className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
               </Button>
@@ -740,13 +754,11 @@ export function SidebarContent({
                     onDeleteProject={onDeleteProject}
                     onLinkClick={onLinkClick}
                   >
-                    <div
-                      className={cn('pl-0.5 transition-opacity', isDimmedProject && 'opacity-40')}
-                    >
+                    <div className={cn('transition-opacity', isDimmedProject && 'opacity-40')}>
                       <div className="relative flex items-center min-w-0">
                         <button
                           type="button"
-                          className="h-8 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
+                          className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
                           onClick={() => toggleProjectExpanded(project.id)}
                         >
                           {isExpanded ? (
@@ -796,7 +808,7 @@ export function SidebarContent({
                       </div>
                       {/* Project sub-nav */}
                       {isExpanded && (
-                        <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
                           <Link href={`/projects/${project.key}/backlog`} onClick={handleLinkClick}>
                             <Button
                               variant="ghost"
@@ -914,11 +926,11 @@ function ProjectSettingsLink({
   const isOnSettingsPage = pathname.startsWith(`/projects/${projectKey}/settings`)
 
   return (
-    <div className="pl-[9px]">
+    <div>
       <div className="flex items-center">
         <button
           type="button"
-          className="h-8 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
+          className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
           onClick={onToggleExpanded}
         >
           {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -942,7 +954,7 @@ function ProjectSettingsLink({
         </Link>
       </div>
       <CollapsibleSection expanded={expanded}>
-        <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
           {canViewSettings && (
             <Link href={`/projects/${projectKey}/settings/general`} onClick={onClick}>
               <Button
