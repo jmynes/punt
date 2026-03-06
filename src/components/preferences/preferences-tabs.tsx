@@ -6,16 +6,16 @@ import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 
 const PREFERENCES_TABS: TabItem[] = [
   {
-    value: 'appearance',
-    label: 'Appearance',
-    href: '/preferences/appearance',
-    icon: <Palette className="h-4 w-4" />,
-  },
-  {
     value: 'general',
     label: 'General',
     href: '/preferences/general',
     icon: <Sliders className="h-4 w-4" />,
+  },
+  {
+    value: 'appearance',
+    label: 'Appearance',
+    href: '/preferences/appearance',
+    icon: <Palette className="h-4 w-4" />,
   },
   {
     value: 'notifications',
@@ -25,7 +25,7 @@ const PREFERENCES_TABS: TabItem[] = [
   },
 ]
 
-const TAB_ROUTES = ['/preferences/appearance', '/preferences/general', '/preferences/notifications']
+const TAB_ROUTES = ['/preferences/general', '/preferences/appearance', '/preferences/notifications']
 
 interface PreferencesTabsProps {
   activeTab: string

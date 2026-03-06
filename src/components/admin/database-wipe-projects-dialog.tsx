@@ -70,7 +70,7 @@ export function DatabaseWipeProjectsDialog({
     resetState()
     onOpenChange(false)
     // Reload to reflect changes
-    window.location.href = '/admin/settings?tab=database'
+    window.location.href = '/admin/settings/database'
   }
 
   return (

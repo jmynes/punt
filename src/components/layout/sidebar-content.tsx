@@ -35,7 +35,7 @@ import {
   Webhook,
 } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -191,7 +191,7 @@ export function SidebarContent({
   onLinkClick,
 }: SidebarContentProps) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+
   const [editMode, setEditMode] = useState(false)
   const { sidebarExpandedSections, toggleSidebarSection, setSidebarSectionExpanded } =
     useSettingsStore()
@@ -438,19 +438,6 @@ export function SidebarContent({
           </div>
           <CollapsibleSection expanded={preferencesExpanded}>
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-              <Link href="/preferences/appearance" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences/appearance' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Palette className="h-3 w-3" />
-                  Appearance
-                </Button>
-              </Link>
               <Link href="/preferences/general" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
@@ -462,6 +449,19 @@ export function SidebarContent({
                 >
                   <Sliders className="h-3 w-3" />
                   General
+                </Button>
+              </Link>
+              <Link href="/preferences/appearance" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/preferences/appearance' && 'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Palette className="h-3 w-3" />
+                  Appearance
                 </Button>
               </Link>
               <Link href="/preferences/notifications" onClick={handleLinkClick}>
@@ -559,7 +559,7 @@ export function SidebarContent({
                       size="sm"
                       className={cn(
                         'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
-                        pathname === '/admin/settings' && 'bg-zinc-800/50 text-zinc-100',
+                        pathname.startsWith('/admin/settings') && 'bg-zinc-800/50 text-zinc-100',
                       )}
                     >
                       <Settings className="h-3.5 w-3.5" />
@@ -569,120 +569,104 @@ export function SidebarContent({
                 </div>
                 <CollapsibleSection expanded={adminSettingsExpanded}>
                   <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-                    <Link href="/admin/settings?tab=board" onClick={handleLinkClick}>
+                    <Link href="/admin/settings/board" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings' &&
-                            (searchParams.get('tab') === 'board' || !searchParams.get('tab')) &&
-                            'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/settings/board' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Columns3 className="h-3 w-3" />
                         Board
                       </Button>
                     </Link>
-                    <Link href="/admin/settings?tab=branding" onClick={handleLinkClick}>
+                    <Link href="/admin/settings/branding" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings' &&
-                            searchParams.get('tab') === 'branding' &&
-                            'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/settings/branding' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Palette className="h-3 w-3" />
                         Branding
                       </Button>
                     </Link>
-                    <Link href="/admin/settings?tab=database" onClick={handleLinkClick}>
+                    <Link href="/admin/settings/database" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings' &&
-                            searchParams.get('tab') === 'database' &&
-                            'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/settings/database' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Database className="h-3 w-3" />
                         Database
                       </Button>
                     </Link>
-                    <Link href="/admin/settings?tab=roles" onClick={handleLinkClick}>
+                    <Link href="/admin/settings/roles" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings' &&
-                            searchParams.get('tab') === 'roles' &&
-                            'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/settings/roles' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Shield className="h-3 w-3" />
                         Default Roles
                       </Button>
                     </Link>
-                    <Link href="/admin/settings?tab=email" onClick={handleLinkClick}>
+                    <Link href="/admin/settings/email" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings' &&
-                            searchParams.get('tab') === 'email' &&
-                            'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/settings/email' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Mail className="h-3 w-3" />
                         Email
                       </Button>
                     </Link>
-                    <Link href="/admin/settings?tab=uploads" onClick={handleLinkClick}>
+                    <Link href="/admin/settings/uploads" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings' &&
-                            searchParams.get('tab') === 'uploads' &&
-                            'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/settings/uploads' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Upload className="h-3 w-3" />
                         File Uploads
                       </Button>
                     </Link>
-                    <Link href="/admin/settings?tab=sprints" onClick={handleLinkClick}>
+                    <Link href="/admin/settings/sprints" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings' &&
-                            searchParams.get('tab') === 'sprints' &&
-                            'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/settings/sprints' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <CalendarClock className="h-3 w-3" />
                         Sprints
                       </Button>
                     </Link>
-                    <Link href="/admin/settings?tab=updates" onClick={handleLinkClick}>
+                    <Link href="/admin/settings/updates" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings' &&
-                            searchParams.get('tab') === 'updates' &&
-                            'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/settings/updates' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <RefreshCw className="h-3 w-3" />
@@ -891,7 +875,6 @@ export function SidebarContent({
                             projectId={project.id}
                             projectKey={project.key}
                             pathname={pathname}
-                            searchParams={searchParams}
                             expanded={isProjectSettingsExpanded(project.id)}
                             onToggleExpanded={() => toggleProjectSettingsExpanded(project.id)}
                             onClick={handleLinkClick}
@@ -915,7 +898,6 @@ function ProjectSettingsLink({
   projectId,
   projectKey,
   pathname,
-  searchParams,
   expanded,
   onToggleExpanded,
   onClick,
@@ -923,7 +905,6 @@ function ProjectSettingsLink({
   projectId: string
   projectKey: string
   pathname: string
-  searchParams: ReturnType<typeof useSearchParams>
   expanded: boolean
   onToggleExpanded: () => void
   onClick: () => void
@@ -946,7 +927,6 @@ function ProjectSettingsLink({
   if (!hasSettingsAccess) return null
 
   const isOnSettingsPage = pathname.startsWith(`/projects/${projectKey}/settings`)
-  const currentTab = searchParams.get('tab')
 
   return (
     <div className="pl-[9px]">
@@ -979,14 +959,13 @@ function ProjectSettingsLink({
       <CollapsibleSection expanded={expanded}>
         <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
           {canViewSettings && (
-            <Link href={`/projects/${projectKey}/settings?tab=general`} onClick={onClick}>
+            <Link href={`/projects/${projectKey}/settings/general`} onClick={onClick}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage &&
-                    (currentTab === 'general' || !currentTab) &&
+                  pathname === `/projects/${projectKey}/settings/general` &&
                     'bg-zinc-800/50 text-zinc-100',
                 )}
               >
@@ -996,13 +975,14 @@ function ProjectSettingsLink({
             </Link>
           )}
           {canViewSettings && (
-            <Link href={`/projects/${projectKey}/settings?tab=agents`} onClick={onClick}>
+            <Link href={`/projects/${projectKey}/settings/agents`} onClick={onClick}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage && currentTab === 'agents' && 'bg-zinc-800/50 text-zinc-100',
+                  pathname === `/projects/${projectKey}/settings/agents` &&
+                    'bg-zinc-800/50 text-zinc-100',
                 )}
               >
                 <Bot className="h-3 w-3" />
@@ -1011,13 +991,14 @@ function ProjectSettingsLink({
             </Link>
           )}
           {canViewSettings && (
-            <Link href={`/projects/${projectKey}/settings?tab=hooks`} onClick={onClick}>
+            <Link href={`/projects/${projectKey}/settings/hooks`} onClick={onClick}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage && currentTab === 'hooks' && 'bg-zinc-800/50 text-zinc-100',
+                  pathname === `/projects/${projectKey}/settings/hooks` &&
+                    'bg-zinc-800/50 text-zinc-100',
                 )}
               >
                 <Webhook className="h-3 w-3" />
@@ -1026,13 +1007,14 @@ function ProjectSettingsLink({
             </Link>
           )}
           {canManageLabels && (
-            <Link href={`/projects/${projectKey}/settings?tab=labels`} onClick={onClick}>
+            <Link href={`/projects/${projectKey}/settings/labels`} onClick={onClick}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage && currentTab === 'labels' && 'bg-zinc-800/50 text-zinc-100',
+                  pathname === `/projects/${projectKey}/settings/labels` &&
+                    'bg-zinc-800/50 text-zinc-100',
                 )}
               >
                 <Tag className="h-3 w-3" />
@@ -1041,13 +1023,14 @@ function ProjectSettingsLink({
             </Link>
           )}
           {canManageMembers && (
-            <Link href={`/projects/${projectKey}/settings?tab=members`} onClick={onClick}>
+            <Link href={`/projects/${projectKey}/settings/members`} onClick={onClick}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage && currentTab === 'members' && 'bg-zinc-800/50 text-zinc-100',
+                  pathname === `/projects/${projectKey}/settings/members` &&
+                    'bg-zinc-800/50 text-zinc-100',
                 )}
               >
                 <Users className="h-3 w-3" />
@@ -1056,13 +1039,14 @@ function ProjectSettingsLink({
             </Link>
           )}
           {canViewSettings && (
-            <Link href={`/projects/${projectKey}/settings?tab=repository`} onClick={onClick}>
+            <Link href={`/projects/${projectKey}/settings/repository`} onClick={onClick}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage && currentTab === 'repository' && 'bg-zinc-800/50 text-zinc-100',
+                  pathname === `/projects/${projectKey}/settings/repository` &&
+                    'bg-zinc-800/50 text-zinc-100',
                 )}
               >
                 <GitBranch className="h-3 w-3" />
@@ -1071,13 +1055,14 @@ function ProjectSettingsLink({
             </Link>
           )}
           {canManageRoles && (
-            <Link href={`/projects/${projectKey}/settings?tab=roles`} onClick={onClick}>
+            <Link href={`/projects/${projectKey}/settings/roles`} onClick={onClick}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage && currentTab === 'roles' && 'bg-zinc-800/50 text-zinc-100',
+                  pathname === `/projects/${projectKey}/settings/roles` &&
+                    'bg-zinc-800/50 text-zinc-100',
                 )}
               >
                 <Shield className="h-3 w-3" />
@@ -1086,13 +1071,14 @@ function ProjectSettingsLink({
             </Link>
           )}
           {canViewSettings && (
-            <Link href={`/projects/${projectKey}/settings?tab=sprints`} onClick={onClick}>
+            <Link href={`/projects/${projectKey}/settings/sprints`} onClick={onClick}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                  isOnSettingsPage && currentTab === 'sprints' && 'bg-zinc-800/50 text-zinc-100',
+                  pathname === `/projects/${projectKey}/settings/sprints` &&
+                    'bg-zinc-800/50 text-zinc-100',
                 )}
               >
                 <CalendarClock className="h-3 w-3" />
