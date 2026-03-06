@@ -30,7 +30,7 @@ function AccountClaudeChatContent() {
       />
 
       <div className="mx-auto max-w-4xl px-6 pb-6">
-        <AccountTabs activeTab="claude-chat" />
+        <AccountTabs activeTab="chat" />
         <ClaudeChatTab isDemo={isDemo} />
       </div>
     </div>

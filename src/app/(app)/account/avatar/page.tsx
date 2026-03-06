@@ -30,7 +30,7 @@ function AccountProfileContent() {
       />
 
       <div className="mx-auto max-w-4xl px-6 pb-6">
-        <AccountTabs activeTab="profile" />
+        <AccountTabs activeTab="avatar" />
 
         {user && (
           <ProfileTab

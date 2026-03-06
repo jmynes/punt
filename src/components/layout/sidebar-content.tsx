@@ -354,26 +354,26 @@ export function SidebarContent({
           </div>
           <CollapsibleSection expanded={accountExpanded}>
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-              <Link href="/account/profile" onClick={handleLinkClick}>
+              <Link href="/account/avatar" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/account/profile' && 'bg-zinc-800/50 text-zinc-100',
+                    pathname === '/account/avatar' && 'bg-zinc-800/50 text-zinc-100',
                   )}
                 >
                   <User className="h-3 w-3" />
                   Avatar
                 </Button>
               </Link>
-              <Link href="/account/claude-chat" onClick={handleLinkClick}>
+              <Link href="/account/chat" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/account/claude-chat' && 'bg-zinc-800/50 text-zinc-100',
+                    pathname === '/account/chat' && 'bg-zinc-800/50 text-zinc-100',
                   )}
                 >
                   <Bot className="h-3 w-3" />

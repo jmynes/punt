@@ -24,9 +24,9 @@ const VALID_TABS: PreferencesTab[] = ['general', 'appearance', 'notifications']
 
 // Tabs that have moved to /account
 const ACCOUNT_TAB_REDIRECTS: Record<string, string> = {
-  profile: '/account/profile',
+  profile: '/account/avatar',
   security: '/account/security',
-  'claude-chat': '/account/claude-chat',
+  'claude-chat': '/account/chat',
   mcp: '/account/mcp',
 }
 
