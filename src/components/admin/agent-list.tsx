@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bot, Check, Loader2, Pencil, Power, PowerOff, Trash2, X } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
-import { PageHeader } from '@/components/common'
+import { AgentIdenticon, PageHeader } from '@/components/common'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -151,7 +151,7 @@ function InlineRenameCell({
 
   return (
     <div className="flex items-center gap-2 group">
-      <Bot className="h-4 w-4 text-purple-400 shrink-0" />
+      <AgentIdenticon identifier={agent.id} size={24} />
       <span className="text-zinc-100 font-medium">{agent.name}</span>
       <Tooltip>
         <TooltipTrigger asChild>

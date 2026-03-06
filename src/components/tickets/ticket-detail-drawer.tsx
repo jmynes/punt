@@ -100,6 +100,7 @@ import type {
   UploadedFileInfo,
 } from '@/types'
 import { ISSUE_TYPES, PRIORITIES, RESOLUTIONS } from '@/types'
+import { AgentIdenticon } from '../common/agent-identicon'
 import { InlineCodeText } from '../common/inline-code'
 import { PriorityBadge } from '../common/priority-badge'
 import { resolutionConfig } from '../common/resolution-badge'
@@ -1312,6 +1313,19 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     showAssignToMe
                   />
                 </div>
+
+                {/* Agent attribution */}
+                {ticket.createdByAgent && (
+                  <div className="space-y-2">
+                    <Label className="text-zinc-400">Created by Agent</Label>
+                    <div className="flex items-center gap-2 h-9 px-3 rounded-md bg-zinc-900 border border-zinc-800">
+                      <AgentIdenticon identifier={ticket.createdByAgent.id} size={18} />
+                      <span className="text-sm text-zinc-300 truncate">
+                        {ticket.createdByAgent.name}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Status */}
                 <div className="space-y-2">

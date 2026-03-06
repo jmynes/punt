@@ -254,6 +254,7 @@ export interface TicketWithRelations {
   isCarriedOver: boolean
   carriedFromSprintId: string | null
   carriedOverCount: number
+  // Agent attribution
   createdByAgentId: string | null
   createdByAgent: { id: string; name: string; ownerId: string } | null
   assignee: UserSummary | null
