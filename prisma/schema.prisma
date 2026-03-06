@@ -589,6 +589,9 @@ model ProjectSprintSettings {
   defaultStartTime        String  @default("09:00")
   defaultEndTime          String  @default("17:00")
 
+  // Story point scale override (null = inherit from global SystemSettings)
+  storyPointScale         String? // "sequential" or "fibonacci"
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -637,6 +640,7 @@ model SystemSettings {
 
   // Board settings
   showAddColumnButton Boolean @default(true)
+  storyPointScale     String  @default("sequential") // "sequential" or "fibonacci"
 
   // Default role permissions for new projects (JSON object)
   // Keys: "Owner", "Admin", "Member", "Viewer"

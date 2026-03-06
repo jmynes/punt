@@ -8,36 +8,47 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-system-settings'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
+import {
+  STORY_POINT_SCALE_LABELS,
+  STORY_POINT_SCALES,
+  type StoryPointScale,
+} from '@/lib/story-points'
 
 export function BoardSettingsForm() {
   const { data: settings, isLoading, error } = useSystemSettings()
   const updateSettings = useUpdateSystemSettings()
 
   const [showAddColumnButton, setShowAddColumnButton] = useState(true)
+  const [storyPointScale, setStoryPointScale] = useState<StoryPointScale>('sequential')
 
   // Sync form state when settings are loaded
   useEffect(() => {
     if (settings) {
       setShowAddColumnButton(settings.showAddColumnButton)
+      setStoryPointScale(settings.storyPointScale)
     }
   }, [settings])
 
-  const hasChanges = settings && showAddColumnButton !== settings.showAddColumnButton
+  const hasChanges =
+    settings &&
+    (showAddColumnButton !== settings.showAddColumnButton ||
+      storyPointScale !== settings.storyPointScale)
 
   const handleSave = () => {
-    updateSettings.mutate({ showAddColumnButton })
+    updateSettings.mutate({ showAddColumnButton, storyPointScale })
   }
 
   const handleReset = () => {
     if (settings) {
       setShowAddColumnButton(settings.showAddColumnButton)
+      setStoryPointScale(settings.storyPointScale)
     }
   }
 
   // Ctrl+S / Cmd+S keyboard shortcut to save
   useCtrlSave({
     onSave: handleSave,
-    enabled: hasChanges && !updateSettings.isPending,
+    enabled: !!hasChanges && !updateSettings.isPending,
   })
 
   if (isLoading) {
@@ -82,6 +93,44 @@ export function BoardSettingsForm() {
               onCheckedChange={(checked) => setShowAddColumnButton(checked === true)}
               className="data-[state=checked]:bg-amber-600"
             />
+          </div>
+
+          {/* Story Point Scale */}
+          <div className="space-y-2 pt-2">
+            <Label className="text-zinc-300">Story Point Scale</Label>
+            <p className="text-xs text-zinc-500">
+              Choose the default point scale used across all projects. Individual projects can
+              override this setting.
+            </p>
+            <div className="flex flex-col gap-2 pt-1">
+              {(Object.keys(STORY_POINT_SCALES) as StoryPointScale[]).map((scale) => (
+                <label
+                  key={scale}
+                  className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
+                    storyPointScale === scale
+                      ? 'border-amber-600/50 bg-amber-950/20'
+                      : 'border-zinc-800 hover:border-zinc-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="storyPointScale"
+                    value={scale}
+                    checked={storyPointScale === scale}
+                    onChange={() => setStoryPointScale(scale)}
+                    className="mt-1 accent-amber-600"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-zinc-200">
+                      {STORY_POINT_SCALE_LABELS[scale]}
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-0.5 font-mono">
+                      {STORY_POINT_SCALES[scale].join(', ')}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Save/Reset buttons */}

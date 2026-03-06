@@ -51,6 +51,7 @@ export const SystemSettingsSchema = z.object({
   emailInvitations: z.boolean(),
   // Board settings
   showAddColumnButton: z.boolean().optional(),
+  storyPointScale: z.string().optional(),
   // Default role permissions (native JSON or legacy string)
   defaultRolePermissions: z.union([z.string(), z.record(z.string(), z.unknown())]).nullable(),
   // Repository configuration (global defaults)
@@ -189,6 +190,8 @@ export const ProjectSprintSettingsSchema = z.object({
   // Default times (optional for backward compatibility)
   defaultStartTime: z.string().optional(),
   defaultEndTime: z.string().optional(),
+  // Story point scale override (optional for backward compatibility)
+  storyPointScale: z.string().nullable().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })

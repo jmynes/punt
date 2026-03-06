@@ -190,6 +190,7 @@ export interface SprintSettings {
   doneColumnIds: string[]
   defaultStartTime: string // HH:mm format (e.g., "09:00")
   defaultEndTime: string // HH:mm format (e.g., "17:00")
+  storyPointScale: string | null // "sequential", "fibonacci", or null (use global default)
 }
 
 // ============================================================================

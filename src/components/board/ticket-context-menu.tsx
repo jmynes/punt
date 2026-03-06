@@ -60,6 +60,7 @@ import {
   updateTicketWithActivity,
 } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { useStoryPointScale } from '@/hooks/use-story-points'
 import { pasteTickets } from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
 import { isCompletedColumn } from '@/lib/sprint-utils'
@@ -160,6 +161,9 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
 
   // Query client for invalidating sprint/ticket queries after sprint changes
   const queryClient = useQueryClient()
+
+  // Get the active story point scale for this project
+  const { values: storyPointValues } = useStoryPointScale(projectId)
 
   // Fetch sprints for add to sprint menu
   const { data: sprints = [] } = useProjectSprints(projectId)
@@ -1526,7 +1530,7 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
 
                   {submenu.id === 'points' && (
                     <>
-                      {[1, 2, 3, 4, 5].map((p) => (
+                      {storyPointValues.map((p) => (
                         <button
                           key={p}
                           type="button"
