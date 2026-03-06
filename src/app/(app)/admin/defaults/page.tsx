@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
-export default function Redirect() {
+export default function AdminDefaultsPage() {
   redirect('/admin/defaults/agents')
 }

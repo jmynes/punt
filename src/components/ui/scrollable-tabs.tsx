@@ -2,13 +2,11 @@
 
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
@@ -18,8 +16,6 @@ export interface TabItem {
   label: string
   href: string
   icon: React.ReactNode
-  /** Optional section label. When set, a section header is rendered before this tab (on first occurrence of each unique section). */
-  section?: string
 }
 
 interface ResponsiveTabsProps {
@@ -125,33 +121,20 @@ export function ResponsiveTabs({ tabs, activeValue, className }: ResponsiveTabsP
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-(--radix-dropdown-menu-trigger-width)">
-              {tabs.map((tab, i) => {
-                const showSection = tab.section && (i === 0 || tabs[i - 1].section !== tab.section)
-                return (
-                  <React.Fragment key={tab.value}>
-                    {showSection && (
-                      <>
-                        {i > 0 && <DropdownMenuSeparator />}
-                        <DropdownMenuLabel className="text-xs text-zinc-500">
-                          {tab.section}
-                        </DropdownMenuLabel>
-                      </>
+              {tabs.map((tab) => (
+                <DropdownMenuItem key={tab.value} asChild>
+                  <Link
+                    href={tab.href}
+                    className={cn(
+                      'flex items-center gap-2',
+                      tab.value === activeValue && 'text-amber-500',
                     )}
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href={tab.href}
-                        className={cn(
-                          'flex items-center gap-2',
-                          tab.value === activeValue && 'text-amber-500',
-                        )}
-                      >
-                        {tab.icon}
-                        {tab.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  </React.Fragment>
-                )
-              })}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
@@ -189,36 +172,22 @@ export function ResponsiveTabs({ tabs, activeValue, className }: ResponsiveTabsP
           onScroll={updateScrollState}
           className="flex gap-1 overflow-x-auto overflow-y-hidden scrollbar-none"
         >
-          {tabs.map((tab, i) => {
-            const showSection = tab.section && (i === 0 || tabs[i - 1].section !== tab.section)
-            return (
-              <React.Fragment key={tab.value}>
-                {showSection && (
-                  <span
-                    className={cn(
-                      'flex items-center px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 whitespace-nowrap flex-shrink-0 select-none',
-                      i > 0 && 'ml-2 border-l border-zinc-700 pl-4',
-                    )}
-                  >
-                    {tab.section}
-                  </span>
-                )}
-                <Link
-                  href={tab.href}
-                  data-active={tab.value === activeValue || undefined}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
-                    tab.value === activeValue
-                      ? 'text-amber-500 border-amber-500'
-                      : 'text-zinc-400 border-transparent hover:text-zinc-300',
-                  )}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </Link>
-              </React.Fragment>
-            )
-          })}
+          {tabs.map((tab) => (
+            <Link
+              key={tab.value}
+              href={tab.href}
+              data-active={tab.value === activeValue || undefined}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap flex-shrink-0',
+                tab.value === activeValue
+                  ? 'text-amber-500 border-amber-500'
+                  : 'text-zinc-400 border-transparent hover:text-zinc-300',
+              )}
+            >
+              {tab.icon}
+              {tab.label}
+            </Link>
+          ))}
         </div>
 
         {/* Right arrow */}
