@@ -677,7 +677,10 @@ export function SidebarContent({
           <button
             type="button"
             className="group flex-1 flex items-center gap-1.5 select-none cursor-pointer"
-            onClick={toggleProjectsExpanded}
+            onClick={() => {
+              if (projectsExpanded && editMode) setEditMode(false)
+              toggleProjectsExpanded()
+            }}
           >
             <span className="h-8 w-8 -ml-2 shrink-0 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 rounded group-hover:bg-zinc-800/50">
               {projectsExpanded ? (
