@@ -123,6 +123,8 @@ export async function GET(
       systemDefaults: {
         branchTemplate: systemSettings.defaultBranchTemplate,
         agentGuidance: systemSettings.defaultAgentGuidance,
+        environmentBranches: systemSettings.defaultEnvironmentBranches,
+        commitPatterns: systemSettings.defaultCommitPatterns,
       },
     })
   } catch (error) {
@@ -246,6 +248,8 @@ export async function PATCH(
       systemDefaults: {
         branchTemplate: systemSettings.defaultBranchTemplate,
         agentGuidance: systemSettings.defaultAgentGuidance,
+        environmentBranches: systemSettings.defaultEnvironmentBranches,
+        commitPatterns: systemSettings.defaultCommitPatterns,
       },
     })
   } catch (error) {

@@ -52,6 +52,8 @@ export interface RepositoryConfig {
   systemDefaults: {
     branchTemplate: string
     agentGuidance: string | null
+    environmentBranches: EnvironmentBranch[] | null
+    commitPatterns: CommitPattern[] | null
   }
 }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '@/generated/prisma'
 import { handleApiError, validationError } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
@@ -56,6 +57,37 @@ const UpdateSettingsSchema = z.object({
     .optional()
     .nullable(),
   forkRepoUrl: z.string().regex(urlRegex, 'Invalid URL format').max(500).optional().nullable(),
+
+  // Agent configuration defaults
+  defaultBranchTemplate: z.string().max(200).optional(),
+  defaultAgentGuidance: z.string().max(10000).optional().nullable(),
+
+  // Default project settings
+  defaultCommitPatterns: z
+    .array(
+      z.object({
+        id: z.string(),
+        pattern: z.string(),
+        action: z.enum(['close', 'in_progress', 'reference']),
+        isRegex: z.boolean().optional(),
+        enabled: z.boolean().optional(),
+        keywords: z.array(z.string()).optional(),
+      }),
+    )
+    .optional()
+    .nullable(),
+  defaultEnvironmentBranches: z
+    .array(
+      z.object({
+        id: z.string(),
+        environment: z.string(),
+        branchName: z.string(),
+        color: z.string().optional(),
+      }),
+    )
+    .optional()
+    .nullable(),
+  defaultWebhookEnabled: z.boolean().optional(),
 
   // Default sprint times (system-wide defaults for new projects)
   defaultSprintStartTime: z
@@ -201,6 +233,25 @@ export async function PATCH(request: Request) {
     }
     if (updates.forkRepoUrl !== undefined) {
       updateData.forkRepoUrl = updates.forkRepoUrl
+    }
+
+    // Agent configuration defaults
+    if (updates.defaultBranchTemplate !== undefined) {
+      updateData.defaultBranchTemplate = updates.defaultBranchTemplate
+    }
+    if (updates.defaultAgentGuidance !== undefined) {
+      updateData.defaultAgentGuidance = updates.defaultAgentGuidance
+    }
+
+    // Default project settings
+    if (updates.defaultCommitPatterns !== undefined) {
+      updateData.defaultCommitPatterns = updates.defaultCommitPatterns ?? Prisma.DbNull
+    }
+    if (updates.defaultEnvironmentBranches !== undefined) {
+      updateData.defaultEnvironmentBranches = updates.defaultEnvironmentBranches ?? Prisma.DbNull
+    }
+    if (updates.defaultWebhookEnabled !== undefined) {
+      updateData.defaultWebhookEnabled = updates.defaultWebhookEnabled
     }
 
     // Default sprint times

@@ -1,6 +1,6 @@
 'use client'
 
-import { Bot, Copy, Info, Loader2 } from 'lucide-react'
+import { Bot, Copy, Info, Loader2, RotateCcw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -55,6 +55,12 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
     if (config) {
       setAgentGuidance(config.agentGuidance || '')
     }
+  }, [config])
+
+  const handleResetToSystemDefaults = useCallback(() => {
+    if (!config?.systemDefaults) return
+    // Clear project-level guidance so the system default is used as fallback
+    setAgentGuidance('')
   }, [config])
 
   const handleCopyContext = useCallback(() => {
@@ -130,11 +136,26 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto space-y-6 pb-4">
-        <div>
-          <h3 className="text-lg font-medium text-zinc-100">AI Agents</h3>
-          <p className="text-sm text-zinc-500">
-            Configure guidance and context for AI agents working on this project.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-zinc-100">AI Agents</h3>
+            <p className="text-sm text-zinc-500">
+              Configure guidance and context for AI agents working on this project.
+            </p>
+          </div>
+          {canEditSettings && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleResetToSystemDefaults}
+              disabled={isDisabled}
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+              Reset to System Defaults
+            </Button>
+          )}
         </div>
 
         {/* Agent Guidance Card */}

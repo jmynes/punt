@@ -4,6 +4,7 @@ import {
   CalendarClock,
   Columns3,
   Database,
+  GitBranch,
   Mail,
   Palette,
   RefreshCw,
@@ -51,6 +52,12 @@ const ADMIN_SETTINGS_TABS: TabItem[] = [
     icon: <Upload className="h-4 w-4" />,
   },
   {
+    value: 'repository',
+    label: 'Repository',
+    href: '/admin/settings/repository',
+    icon: <GitBranch className="h-4 w-4" />,
+  },
+  {
     value: 'sprints',
     label: 'Sprints',
     href: '/admin/settings/sprints',
@@ -71,6 +78,7 @@ const TAB_ROUTES = [
   '/admin/settings/default-roles',
   '/admin/settings/email',
   '/admin/settings/uploads',
+  '/admin/settings/repository',
   '/admin/settings/sprints',
   '/admin/settings/updates',
 ]

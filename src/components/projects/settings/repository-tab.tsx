@@ -8,6 +8,7 @@ import {
   Loader2,
   Palette,
   Plus,
+  RotateCcw,
   Server,
   X,
 } from 'lucide-react'
@@ -235,6 +236,28 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
     }
   }, [config])
 
+  const handleResetToSystemDefaults = useCallback(() => {
+    if (!config?.systemDefaults) return
+
+    const defaults = config.systemDefaults
+    const newFormData = { ...formData }
+
+    // Reset branch template to system default (empty means "use system default")
+    newFormData.branchTemplate = ''
+
+    // Reset environment branches to system defaults
+    if (defaults.environmentBranches && defaults.environmentBranches.length > 0) {
+      newFormData.environmentBranches = defaults.environmentBranches.map((b) => ({
+        ...b,
+        id: crypto.randomUUID(),
+      }))
+    } else {
+      newFormData.environmentBranches = []
+    }
+
+    setFormData(newFormData)
+  }, [config, formData])
+
   // Environment branch handlers
   const addEnvironmentBranch = useCallback(() => {
     setFormData((prev) => {
@@ -313,11 +336,26 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto space-y-6 pb-4">
-        <div>
-          <h3 className="text-lg font-medium text-zinc-100">Repository</h3>
-          <p className="text-sm text-zinc-500">
-            Configure the external repository this project manages.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-zinc-100">Repository</h3>
+            <p className="text-sm text-zinc-500">
+              Configure the external repository this project manages.
+            </p>
+          </div>
+          {canEditSettings && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleResetToSystemDefaults}
+              disabled={isDisabled}
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+              Reset to System Defaults
+            </Button>
+          )}
         </div>
 
         {/* Repository Details Card */}

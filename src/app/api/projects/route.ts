@@ -7,6 +7,7 @@ import { projectEvents } from '@/lib/events'
 import { DEFAULT_ROLE_NAMES } from '@/lib/permissions'
 import { createDefaultRolesForProject } from '@/lib/permissions/create-default-roles'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { getSystemSettings } from '@/lib/system-settings'
 
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -128,22 +129,81 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Project key already exists' }, { status: 400 })
     }
 
-    // Create project with default columns
-    const project = await db.project.create({
-      data: {
-        name,
-        key,
-        description,
-        color,
-        columns: {
-          create: [
-            { name: 'To Do', order: 0 },
-            { name: 'In Progress', order: 1 },
-            { name: 'Review', order: 2 },
-            { name: 'Done', order: 3 },
-          ],
-        },
+    // Fetch system defaults to apply to new projects
+    const systemSettings = await getSystemSettings()
+
+    // Build project data with system defaults
+    const projectData: Record<string, unknown> = {
+      name,
+      key,
+      description,
+      color,
+      columns: {
+        create: [
+          { name: 'To Do', order: 0 },
+          { name: 'In Progress', order: 1 },
+          { name: 'Review', order: 2 },
+          { name: 'Done', order: 3 },
+        ],
       },
+    }
+
+    // Apply system defaults for branch template (only if not the built-in default)
+    if (
+      systemSettings.defaultBranchTemplate &&
+      systemSettings.defaultBranchTemplate !== '{type}/{key}-{slug}'
+    ) {
+      projectData.branchTemplate = systemSettings.defaultBranchTemplate
+    }
+
+    // Apply system defaults for agent guidance
+    if (systemSettings.defaultAgentGuidance) {
+      projectData.agentGuidance = systemSettings.defaultAgentGuidance
+    }
+
+    // Apply system defaults for environment branches
+    if (
+      systemSettings.defaultEnvironmentBranches &&
+      systemSettings.defaultEnvironmentBranches.length > 0
+    ) {
+      // Assign new IDs to avoid sharing IDs across projects
+      const branches = systemSettings.defaultEnvironmentBranches.map((b: unknown) => {
+        const branch = b as { environment: string; branchName: string; color?: string }
+        return {
+          id: crypto.randomUUID(),
+          environment: branch.environment,
+          branchName: branch.branchName,
+          color: branch.color,
+        }
+      })
+      projectData.environmentBranches = branches
+    }
+
+    // Apply system defaults for commit patterns
+    if (systemSettings.defaultCommitPatterns && systemSettings.defaultCommitPatterns.length > 0) {
+      const patterns = systemSettings.defaultCommitPatterns.map((p: unknown) => {
+        const pattern = p as {
+          pattern: string
+          action: string
+          isRegex?: boolean
+          enabled?: boolean
+          keywords?: string[]
+        }
+        return {
+          id: crypto.randomUUID(),
+          pattern: pattern.pattern,
+          action: pattern.action,
+          isRegex: pattern.isRegex,
+          enabled: pattern.enabled,
+          keywords: pattern.keywords,
+        }
+      })
+      projectData.commitPatterns = patterns
+    }
+
+    // Create project with default columns and system defaults
+    const project = await db.project.create({
+      data: projectData as Parameters<typeof db.project.create>[0]['data'],
       select: {
         id: true,
         name: true,

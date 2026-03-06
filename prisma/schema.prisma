@@ -652,6 +652,11 @@ model SystemSettings {
   defaultBranchTemplate   String  @default("{type}/{key}-{slug}") // Default branch naming template
   defaultAgentGuidance    String? // Default Markdown instructions for AI agents
 
+  // Default project settings (applied to new projects on creation)
+  defaultCommitPatterns      Json? // Default commit message patterns (JSON array of CommitPattern objects)
+  defaultEnvironmentBranches Json? // Default environment branch mappings (JSON array of EnvironmentBranch objects)
+  defaultWebhookEnabled      Boolean @default(false) // Whether to auto-generate webhook secrets for new projects
+
   // Default sprint times (system-wide defaults for new projects)
   defaultSprintStartTime  String  @default("09:00") // HH:mm format
   defaultSprintEndTime    String  @default("17:00") // HH:mm format

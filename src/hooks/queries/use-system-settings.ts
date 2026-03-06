@@ -64,6 +64,10 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
   // Agent configuration defaults
   defaultBranchTemplate: '{type}/{key}-{slug}',
   defaultAgentGuidance: null,
+  // Default project settings
+  defaultCommitPatterns: null,
+  defaultEnvironmentBranches: null,
+  defaultWebhookEnabled: false,
   // Default sprint times
   defaultSprintStartTime: '09:00',
   defaultSprintEndTime: '17:00',
@@ -129,6 +133,15 @@ export interface UpdateSystemSettingsParams {
   canonicalRepoUrl?: string | null
   repoHostingProvider?: RepoHostingProvider | null
   forkRepoUrl?: string | null
+
+  // Agent configuration defaults
+  defaultBranchTemplate?: string
+  defaultAgentGuidance?: string | null
+
+  // Default project settings
+  defaultCommitPatterns?: unknown[] | null
+  defaultEnvironmentBranches?: unknown[] | null
+  defaultWebhookEnabled?: boolean
 
   // Default sprint times
   defaultSprintStartTime?: string
