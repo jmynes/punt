@@ -17,83 +17,110 @@ const nullableDate = z.union([z.string().datetime(), z.null()])
 // Helper for JSON fields that may be stored as strings (legacy exports) or native JSON
 const jsonOrString = z.union([z.string(), z.array(z.unknown()), z.record(z.string(), z.unknown())])
 
-export const SystemSettingsSchema = z
-  .object({
-    id: z.string(),
-    updatedAt: z.string().datetime(),
-    updatedBy: z.string().nullable(),
-    // Branding
-    appName: z.string(),
-    logoUrl: z.string().nullable(),
-    logoLetter: z.string(),
-    logoGradientFrom: z.string(),
-    logoGradientTo: z.string(),
-    // Upload limits
-    maxImageSizeMB: z.number(),
-    maxVideoSizeMB: z.number(),
-    maxDocumentSizeMB: z.number(),
-    maxAttachmentsPerTicket: z.number(),
-    // Allowed MIME types (native JSON arrays or legacy strings)
-    allowedImageTypes: z.union([z.string(), z.array(z.string())]),
-    allowedVideoTypes: z.union([z.string(), z.array(z.string())]),
-    allowedDocumentTypes: z.union([z.string(), z.array(z.string())]),
-    // Email settings
-    emailEnabled: z.boolean(),
-    emailProvider: z.string(),
-    emailFromAddress: z.string(),
-    emailFromName: z.string(),
-    smtpHost: z.string(),
-    smtpPort: z.number(),
-    smtpUsername: z.string(),
-    smtpSecure: z.boolean(),
-    emailPasswordReset: z.boolean(),
-    emailWelcome: z.boolean(),
-    emailVerification: z.boolean(),
-    emailInvitations: z.boolean(),
-    // Default role permissions (native JSON or legacy string)
-    defaultRolePermissions: z.union([z.string(), z.record(z.string(), z.unknown())]).nullable(),
-  })
-  .passthrough()
+export const SystemSettingsSchema = z.object({
+  id: z.string(),
+  updatedAt: z.string().datetime(),
+  updatedBy: z.string().nullable(),
+  // Branding
+  appName: z.string(),
+  logoUrl: z.string().nullable(),
+  logoLetter: z.string(),
+  logoGradientFrom: z.string(),
+  logoGradientTo: z.string(),
+  // Upload limits
+  maxImageSizeMB: z.number(),
+  maxVideoSizeMB: z.number(),
+  maxDocumentSizeMB: z.number(),
+  maxAttachmentsPerTicket: z.number(),
+  // Allowed MIME types (native JSON arrays or legacy strings)
+  allowedImageTypes: z.union([z.string(), z.array(z.string())]),
+  allowedVideoTypes: z.union([z.string(), z.array(z.string())]),
+  allowedDocumentTypes: z.union([z.string(), z.array(z.string())]),
+  // Email settings
+  emailEnabled: z.boolean(),
+  emailProvider: z.string(),
+  emailFromAddress: z.string(),
+  emailFromName: z.string(),
+  smtpHost: z.string(),
+  smtpPort: z.number(),
+  smtpUsername: z.string(),
+  smtpSecure: z.boolean(),
+  emailPasswordReset: z.boolean(),
+  emailWelcome: z.boolean(),
+  emailVerification: z.boolean(),
+  emailInvitations: z.boolean(),
+  // Board settings
+  showAddColumnButton: z.boolean().optional(),
+  // Default role permissions (native JSON or legacy string)
+  defaultRolePermissions: z.union([z.string(), z.record(z.string(), z.unknown())]).nullable(),
+  // Repository configuration (global defaults)
+  canonicalRepoUrl: z.string().nullable().optional(),
+  repoHostingProvider: z.string().nullable().optional(),
+  forkRepoUrl: z.string().nullable().optional(),
+  // Agent configuration (global defaults)
+  defaultBranchTemplate: z.string().optional(),
+  defaultAgentGuidance: z.string().nullable().optional(),
+  // Default sprint times (system-wide defaults)
+  defaultSprintStartTime: z.string().optional(),
+  defaultSprintEndTime: z.string().optional(),
+})
 
-export const UserSchema = z
-  .object({
-    id: z.string(),
-    username: z.string(),
-    usernameLower: z.string().nullable().optional(), // Legacy field, ignored on import
-    email: z.string().nullable(),
-    name: z.string(),
-    avatar: z.string().nullable(),
-    avatarColor: z.string().nullable(),
-    createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime(),
-    lastLoginAt: nullableDate,
-    passwordHash: z.string().nullable(),
-    passwordChangedAt: nullableDate,
-    emailVerified: nullableDate,
-    isSystemAdmin: z.boolean(),
-    isActive: z.boolean(),
-    mcpApiKey: z.string().nullable(),
-    // 2FA fields (optional for backward compatibility with pre-1.2.0 exports)
-    totpSecret: z.string().nullable().optional(),
-    totpEnabled: z.boolean().optional(),
-    totpRecoveryCodes: z
-      .union([z.string(), z.array(z.string()), z.record(z.string(), z.unknown())])
-      .nullable()
-      .optional(),
-  })
-  .passthrough()
+export const UserSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  usernameLower: z.string().nullable().optional(), // Legacy field, ignored on import
+  email: z.string().nullable(),
+  name: z.string(),
+  avatar: z.string().nullable(),
+  avatarColor: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  lastLoginAt: nullableDate,
+  passwordHash: z.string().nullable(),
+  passwordChangedAt: nullableDate,
+  emailVerified: nullableDate,
+  isSystemAdmin: z.boolean(),
+  isActive: z.boolean(),
+  mcpApiKey: z.string().nullable(),
+  // MCP API key fields (optional for backward compatibility)
+  mcpApiKeyEncrypted: z.string().nullable().optional(),
+  mcpApiKeyHint: z.string().nullable().optional(),
+  // Claude Chat API access (optional for backward compatibility)
+  anthropicApiKey: z.string().nullable().optional(),
+  chatProvider: z.string().nullable().optional(),
+  claudeSessionEncrypted: z.string().nullable().optional(),
+  enabledMcpServers: jsonOrString.nullable().optional(),
+  // 2FA fields (optional for backward compatibility with pre-1.2.0 exports)
+  totpSecret: z.string().nullable().optional(),
+  totpEnabled: z.boolean().optional(),
+  totpRecoveryCodes: z
+    .union([z.string(), z.array(z.string()), z.record(z.string(), z.unknown())])
+    .nullable()
+    .optional(),
+})
 
-export const ProjectSchema = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    key: z.string(),
-    description: z.string().nullable(),
-    color: z.string(),
-    createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime(),
-  })
-  .passthrough()
+export const ProjectSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  key: z.string(),
+  description: z.string().nullable(),
+  color: z.string(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  // Board settings (optional for backward compatibility)
+  showAddColumnButton: z.boolean().nullable().optional(),
+  // Repository integration (optional for backward compatibility)
+  repositoryUrl: z.string().nullable().optional(),
+  repositoryProvider: z.string().nullable().optional(),
+  localPath: z.string().nullable().optional(),
+  defaultBranch: z.string().nullable().optional(),
+  branchTemplate: z.string().nullable().optional(),
+  agentGuidance: z.string().nullable().optional(),
+  monorepoPath: z.string().nullable().optional(),
+  environmentBranches: jsonOrString.nullable().optional(),
+  webhookSecret: z.string().nullable().optional(),
+  commitPatterns: jsonOrString.nullable().optional(),
+})
 
 export const RoleSchema = z.object({
   id: z.string(),
@@ -153,17 +180,18 @@ export const ProjectMemberSchema = z.object({
   updatedAt: z.string().datetime(),
 })
 
-export const ProjectSprintSettingsSchema = z
-  .object({
-    id: z.string(),
-    projectId: z.string(),
-    defaultSprintDuration: z.number(),
-    autoCarryOverIncomplete: z.boolean(),
-    doneColumnIds: jsonOrString,
-    createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime(),
-  })
-  .passthrough()
+export const ProjectSprintSettingsSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  defaultSprintDuration: z.number(),
+  autoCarryOverIncomplete: z.boolean(),
+  doneColumnIds: jsonOrString,
+  // Default times (optional for backward compatibility)
+  defaultStartTime: z.string().optional(),
+  defaultEndTime: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+})
 
 export const TicketSchema = z.object({
   id: z.string(),
@@ -193,6 +221,8 @@ export const TicketSchema = z.object({
   carriedFromSprintId: z.string().nullable(),
   carriedOverCount: z.number(),
   parentId: z.string().nullable(),
+  // Agent attribution (optional for backward compatibility)
+  createdByAgentId: z.string().nullable().optional(),
   // Many-to-many label IDs (handled separately)
   labelIds: z.array(z.string()).optional(),
 })
@@ -277,6 +307,16 @@ export const InvitationSchema = z.object({
   projectId: z.string(),
 })
 
+export const AgentSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  apiKeyHash: z.string(),
+  ownerId: z.string(),
+  createdAt: z.string().datetime(),
+  lastActiveAt: nullableDate,
+  isActive: z.boolean(),
+})
+
 // ============================================================================
 // Export data schema
 // ============================================================================
@@ -301,6 +341,7 @@ export const ExportDataSchema = z.object({
   attachments: z.array(AttachmentSchema),
   ticketSprintHistory: z.array(TicketSprintHistorySchema),
   invitations: z.array(InvitationSchema),
+  agents: z.array(AgentSchema).optional().default([]),
 })
 
 export type ExportData = z.infer<typeof ExportDataSchema>
@@ -358,4 +399,4 @@ export const AnyDatabaseExportSchema = z.union([
 export type AnyDatabaseExport = z.infer<typeof AnyDatabaseExportSchema>
 
 // Export version for compatibility checks
-export const EXPORT_VERSION = '1.3.0'
+export const EXPORT_VERSION = '1.4.0'
