@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { isDemoMode } from '@/lib/demo'
 import type { EmailProviderType, EmailSettings } from '@/lib/email/types'
+import type { StoryPointScale } from '@/lib/story-points'
 import type { RepoHostingProvider, SystemSettings } from '@/lib/system-settings'
 import { showToast } from '@/lib/toast'
 import { brandingKeys } from './use-branding'
@@ -44,6 +45,7 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
   logoUrl: null,
   // Board settings
   showAddColumnButton: true,
+  storyPointScale: 'sequential' as StoryPointScale,
   // Email settings
   emailEnabled: false,
   emailProvider: 'none',
@@ -110,6 +112,7 @@ export interface UpdateSystemSettingsParams {
 
   // Board settings
   showAddColumnButton?: boolean
+  storyPointScale?: StoryPointScale
 
   // Email settings
   emailEnabled?: boolean

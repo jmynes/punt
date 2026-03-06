@@ -19,6 +19,7 @@ const updateSettingsSchema = z.object({
   doneColumnIds: z.array(z.string()).optional(),
   defaultStartTime: z.string().regex(timeRegex, 'Invalid time format (HH:mm)').optional(),
   defaultEndTime: z.string().regex(timeRegex, 'Invalid time format (HH:mm)').optional(),
+  storyPointScale: z.enum(['sequential', 'fibonacci']).nullable().optional(),
 })
 
 type RouteParams = { params: Promise<{ projectId: string }> }
@@ -50,6 +51,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         doneColumnIds: '[]',
         defaultStartTime: '09:00',
         defaultEndTime: '17:00',
+        storyPointScale: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       }
@@ -62,6 +64,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       doneColumnIds: settings.doneColumnIds,
       defaultStartTime: settings.defaultStartTime,
       defaultEndTime: settings.defaultEndTime,
+      storyPointScale: settings.storyPointScale,
     })
   } catch (error) {
     return handleApiError(error, 'fetch sprint settings')
@@ -93,6 +96,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       doneColumnIds,
       defaultStartTime,
       defaultEndTime,
+      storyPointScale,
     } = result.data
 
     const settings = await db.projectSprintSettings.upsert({
@@ -104,6 +108,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         ...(doneColumnIds !== undefined && { doneColumnIds: doneColumnIds }),
         ...(defaultStartTime !== undefined && { defaultStartTime }),
         ...(defaultEndTime !== undefined && { defaultEndTime }),
+        ...(storyPointScale !== undefined && { storyPointScale }),
       },
       update: {
         ...(defaultSprintDuration !== undefined && { defaultSprintDuration }),
@@ -111,6 +116,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         ...(doneColumnIds !== undefined && { doneColumnIds: doneColumnIds }),
         ...(defaultStartTime !== undefined && { defaultStartTime }),
         ...(defaultEndTime !== undefined && { defaultEndTime }),
+        ...(storyPointScale !== undefined && { storyPointScale }),
       },
     })
 
@@ -120,6 +126,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       doneColumnIds: settings.doneColumnIds,
       defaultStartTime: settings.defaultStartTime,
       defaultEndTime: settings.defaultEndTime,
+      storyPointScale: settings.storyPointScale,
     })
   } catch (error) {
     return handleApiError(error, 'update sprint settings')

@@ -6,6 +6,11 @@
 import { type BrandingSettings, DEFAULT_BRANDING } from '@/lib/branding'
 import { db } from '@/lib/db'
 import { logger } from '@/lib/logger'
+import {
+  DEFAULT_STORY_POINT_SCALE,
+  isValidStoryPointScale,
+  type StoryPointScale,
+} from '@/lib/story-points'
 
 export type { BrandingSettings } from '@/lib/branding'
 export { DEFAULT_BRANDING } from '@/lib/branding'
@@ -53,6 +58,7 @@ export interface SystemSettings {
   allowedDocumentTypes: string[]
   // Board settings
   showAddColumnButton: boolean
+  storyPointScale: StoryPointScale
   // Repository configuration
   canonicalRepoUrl: string | null
   repoHostingProvider: RepoHostingProvider | null
@@ -146,6 +152,9 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     ),
     // Board settings
     showAddColumnButton: settings.showAddColumnButton,
+    storyPointScale: isValidStoryPointScale(settings.storyPointScale)
+      ? settings.storyPointScale
+      : DEFAULT_STORY_POINT_SCALE,
     // Repository configuration
     canonicalRepoUrl: settings.canonicalRepoUrl,
     repoHostingProvider: settings.repoHostingProvider as RepoHostingProvider | null,

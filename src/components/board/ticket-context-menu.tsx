@@ -60,6 +60,7 @@ import {
   updateTicketWithActivity,
 } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { useStoryPointScale } from '@/hooks/use-story-points'
 import { pasteTickets } from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
 import { isCompletedColumn } from '@/lib/sprint-utils'
@@ -160,6 +161,9 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
 
   // Query client for invalidating sprint/ticket queries after sprint changes
   const queryClient = useQueryClient()
+
+  // Get the active story point scale for this project
+  const { values: storyPointValues, scale: storyPointScaleType } = useStoryPointScale(projectId)
 
   // Fetch sprints for add to sprint menu
   const { data: sprints = [] } = useProjectSprints(projectId)
@@ -1529,23 +1533,35 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
 
                   {submenu.id === 'points' && (
                     <>
-                      {[1, 2, 3, 4, 5].map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                          onClick={() => doPoints(p)}
-                        >
-                          <Hash className="h-4 w-4 text-green-400" />
-                          <span>
-                            <span className="inline-block w-2 text-right tabular-nums">{p}</span>{' '}
-                            point{p === 1 ? '' : 's'}
+                      <div className="px-3 py-2">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Hash className="h-3.5 w-3.5 text-green-400" />
+                          <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
+                            Story Points
                           </span>
-                          {ticket.storyPoints === p && !multi && (
-                            <Check className="size-4 text-zinc-400 ml-auto" />
-                          )}
-                        </button>
-                      ))}
+                        </div>
+                        <div
+                          className={`grid gap-1.5 ${storyPointScaleType === 'fibonacci' ? 'grid-cols-3' : 'grid-cols-5'}`}
+                        >
+                          {storyPointValues.map((p) => {
+                            const isSelected = ticket.storyPoints === p && !multi
+                            return (
+                              <button
+                                key={p}
+                                type="button"
+                                className={`flex items-center justify-center py-1.5 rounded text-sm font-medium tabular-nums transition-colors ${
+                                  isSelected
+                                    ? 'bg-green-500/20 text-green-300 ring-1 ring-green-500/40'
+                                    : 'bg-zinc-800/60 text-zinc-300 hover:bg-zinc-700/80 hover:text-zinc-100'
+                                }`}
+                                onClick={() => doPoints(p)}
+                              >
+                                {p}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
                       {!multi && (
                         <>
                           <div className="my-1 border-t border-zinc-800" />

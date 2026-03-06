@@ -34,6 +34,7 @@ const UpdateSettingsSchema = z.object({
 
   // Board settings
   showAddColumnButton: z.boolean().optional(),
+  storyPointScale: z.enum(['sequential', 'fibonacci']).optional(),
 
   // Email settings
   emailEnabled: z.boolean().optional(),
@@ -152,6 +153,9 @@ export async function PATCH(request: Request) {
     // Board settings
     if (updates.showAddColumnButton !== undefined) {
       updateData.showAddColumnButton = updates.showAddColumnButton
+    }
+    if (updates.storyPointScale !== undefined) {
+      updateData.storyPointScale = updates.storyPointScale
     }
 
     // Email settings
