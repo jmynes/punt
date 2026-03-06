@@ -7,10 +7,15 @@ import {
   CheckCircle2,
   CircleDot,
   GitBranch,
+  Link2,
+  Link2Off,
+  LockOpen,
   MessageSquare,
   Pencil,
   Plus,
+  ShieldAlert,
   Tag,
+  Trash2,
   Undo2,
   User,
 } from 'lucide-react'
@@ -48,6 +53,18 @@ interface UserMeta {
   username: string
   avatar?: string | null
   avatarColor?: string | null
+}
+
+interface LinkMeta {
+  ticketKey: string
+  ticketId: string
+  linkType: string
+}
+
+interface BlockerMeta {
+  ticketKey: string
+  ticketId: string
+  resolution?: string
 }
 
 /**
@@ -597,6 +614,74 @@ function ActionDescription({
     case 'deleted':
       return <span>deleted this ticket</span>
 
+    case 'linked': {
+      const linkMeta = tryParseJson<LinkMeta>(typeof newValue === 'string' ? newValue : null)
+      if (linkMeta) {
+        return (
+          <span>
+            linked as <em className="text-zinc-400">{linkMeta.linkType}</em>{' '}
+            <TicketKeyBadge ticketKey={linkMeta.ticketKey} />
+          </span>
+        )
+      }
+      return <span>linked a ticket</span>
+    }
+
+    case 'unlinked': {
+      const unlinkMeta = tryParseJson<LinkMeta>(typeof oldValue === 'string' ? oldValue : null)
+      if (unlinkMeta) {
+        return (
+          <span>
+            removed link to <TicketKeyBadge ticketKey={unlinkMeta.ticketKey} />{' '}
+            <span className="text-zinc-500">({unlinkMeta.linkType})</span>
+          </span>
+        )
+      }
+      return <span>removed a link</span>
+    }
+
+    case 'blocker_resolved': {
+      const blockerMeta = tryParseJson<BlockerMeta>(typeof newValue === 'string' ? newValue : null)
+      if (blockerMeta) {
+        return (
+          <span>
+            blocker <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> resolved
+            {blockerMeta.resolution && (
+              <span className="text-zinc-500"> ({blockerMeta.resolution})</span>
+            )}
+          </span>
+        )
+      }
+      return <span>a blocker was resolved</span>
+    }
+
+    case 'blocker_reopened': {
+      const blockerMeta = tryParseJson<BlockerMeta>(typeof newValue === 'string' ? newValue : null)
+      if (blockerMeta) {
+        return (
+          <span>
+            blocker <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> reopened
+          </span>
+        )
+      }
+      return <span>a blocker was reopened</span>
+    }
+
+    case 'blocker_deleted': {
+      const blockerMeta = tryParseJson<BlockerMeta>(typeof oldValue === 'string' ? oldValue : null)
+      if (blockerMeta) {
+        return (
+          <span>
+            blocker <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> deleted
+          </span>
+        )
+      }
+      return <span>a blocker was deleted</span>
+    }
+
+    case 'unblocked':
+      return <span>ticket is no longer blocked</span>
+
     default:
       return <span>{action}</span>
   }
@@ -611,6 +696,17 @@ function ValueBadge({ value }: { value: ActivityValue }) {
   return (
     <span className="font-medium text-zinc-200 bg-zinc-800/50 px-1 py-0.5 rounded text-xs">
       {displayValue}
+    </span>
+  )
+}
+
+/**
+ * Badge for displaying a ticket key (e.g., PUNT-22)
+ */
+function TicketKeyBadge({ ticketKey }: { ticketKey: string }) {
+  return (
+    <span className="font-mono font-medium text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded text-xs">
+      {ticketKey}
     </span>
   )
 }
@@ -759,6 +855,18 @@ function getActionIcon(action: string) {
       return <Tag className="h-3 w-3" />
     case 'resolution_changed':
       return <CircleDot className="h-3 w-3" />
+    case 'linked':
+      return <Link2 className="h-3 w-3" />
+    case 'unlinked':
+      return <Link2Off className="h-3 w-3" />
+    case 'blocker_resolved':
+      return <CheckCircle2 className="h-3 w-3" />
+    case 'blocker_reopened':
+      return <ShieldAlert className="h-3 w-3" />
+    case 'blocker_deleted':
+      return <Trash2 className="h-3 w-3" />
+    case 'unblocked':
+      return <LockOpen className="h-3 w-3" />
     default:
       return <Pencil className="h-3 w-3" />
   }
@@ -774,6 +882,17 @@ function getActionIconColor(action: string): string {
       return 'text-amber-400'
     case 'resolution_changed':
       return 'text-purple-400'
+    case 'linked':
+      return 'text-blue-400'
+    case 'unlinked':
+      return 'text-zinc-500'
+    case 'blocker_resolved':
+    case 'unblocked':
+      return 'text-green-500'
+    case 'blocker_reopened':
+      return 'text-orange-400'
+    case 'blocker_deleted':
+      return 'text-red-400'
     default:
       return 'text-zinc-400'
   }
