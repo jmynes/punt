@@ -1,14 +1,9 @@
 'use client'
 
-import { Bell, Bot, KeyRound, Palette, Settings, Sliders, Terminal, User } from 'lucide-react'
-import { useSearchParams } from 'next/navigation'
-import { useSession } from 'next-auth/react'
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Bell, Palette, Settings, Sliders } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useRef } from 'react'
 import { PageHeader } from '@/components/common'
-import { ClaudeChatTab } from '@/components/profile/claude-chat-tab'
-import { MCPTab } from '@/components/profile/mcp-tab'
-import { ProfileTab } from '@/components/profile/profile-tab'
-import { SecurityTab } from '@/components/profile/security-tab'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -18,30 +13,22 @@ import { ResponsiveTabs, type TabItem } from '@/components/ui/scrollable-tabs'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
-import { DEMO_USER, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSettingsStore } from '@/stores/settings-store'
 
-type PreferencesTab =
-  | 'appearance'
-  | 'claude-chat'
-  | 'general'
-  | 'mcp'
-  | 'notifications'
-  | 'profile'
-  | 'security'
+type PreferencesTab = 'appearance' | 'general' | 'notifications'
 
-const VALID_TABS: PreferencesTab[] = [
-  'general',
-  'appearance',
-  'claude-chat',
-  'mcp',
-  'notifications',
-  'profile',
-  'security',
-]
+const VALID_TABS: PreferencesTab[] = ['general', 'appearance', 'notifications']
+
+// Tabs that have moved to /account
+const ACCOUNT_TAB_REDIRECTS: Record<string, string> = {
+  profile: '/account/profile',
+  security: '/account/security',
+  'claude-chat': '/account/claude-chat',
+  mcp: '/account/mcp',
+}
 
 const TABS: TabItem[] = [
   {
@@ -57,49 +44,15 @@ const TABS: TabItem[] = [
     icon: <Palette className="h-4 w-4" />,
   },
   {
-    value: 'claude-chat',
-    label: 'Claude Chat',
-    href: '/preferences?tab=claude-chat',
-    icon: <Bot className="h-4 w-4" />,
-  },
-  {
-    value: 'mcp',
-    label: 'MCP',
-    href: '/preferences?tab=mcp',
-    icon: <Terminal className="h-4 w-4" />,
-  },
-  {
     value: 'notifications',
     label: 'Notifications',
     href: '/preferences?tab=notifications',
     icon: <Bell className="h-4 w-4" />,
   },
-  {
-    value: 'profile',
-    label: 'Profile',
-    href: '/preferences?tab=profile',
-    icon: <User className="h-4 w-4" />,
-  },
-  {
-    value: 'security',
-    label: 'Security',
-    href: '/preferences?tab=security',
-    icon: <KeyRound className="h-4 w-4" />,
-  },
 ]
 
 function isValidTab(tab: string | null): tab is PreferencesTab {
   return tab !== null && VALID_TABS.includes(tab as PreferencesTab)
-}
-
-// Stable user data type for profile tabs
-interface UserData {
-  id: string
-  name: string
-  email: string | null
-  avatar: string | null
-  avatarColor: string | null
-  isSystemAdmin: boolean
 }
 
 export default function PreferencesPage() {
@@ -111,76 +64,18 @@ export default function PreferencesPage() {
 }
 
 function PreferencesContent() {
-  const isDemo = isDemoMode()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab')
 
-  // Session management for profile tabs
-  const { data: session, update: updateSession } = isDemo
-    ? { data: null, update: async () => null }
-    : // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
-      useSession()
-
-  const [stableUser, setStableUser] = useState<UserData | null>(
-    isDemo
-      ? {
-          id: DEMO_USER.id,
-          name: DEMO_USER.name,
-          email: DEMO_USER.email,
-          avatar: DEMO_USER.avatar,
-          avatarColor: null,
-          isSystemAdmin: DEMO_USER.isSystemAdmin,
-        }
-      : null,
-  )
-
-  const isUpdatingRef = useRef(false)
-
+  // Redirect old account tabs to /account/*
   useEffect(() => {
-    if (isDemo) return
-    if (session?.user?.id && !isUpdatingRef.current) {
-      setStableUser({
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
-        avatar: session.user.avatar,
-        avatarColor: session.user.avatarColor,
-        isSystemAdmin: session.user.isSystemAdmin,
-      })
+    if (tabParam && tabParam in ACCOUNT_TAB_REDIRECTS) {
+      router.replace(ACCOUNT_TAB_REDIRECTS[tabParam])
     }
-  }, [
-    isDemo,
-    session?.user?.id,
-    session?.user?.name,
-    session?.user?.email,
-    session?.user?.avatar,
-    session?.user?.avatarColor,
-    session?.user?.isSystemAdmin,
-  ])
+  }, [tabParam, router])
 
-  // Debounced session update
-  const pendingUpdateRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const debouncedUpdateSession = useCallback(async () => {
-    if (isDemo) return
-    if (pendingUpdateRef.current) {
-      clearTimeout(pendingUpdateRef.current)
-    }
-    return new Promise<void>((resolve) => {
-      pendingUpdateRef.current = setTimeout(async () => {
-        isUpdatingRef.current = true
-        try {
-          await updateSession()
-        } finally {
-          setTimeout(() => {
-            isUpdatingRef.current = false
-          }, 100)
-          resolve()
-        }
-      }, 50)
-    })
-  }, [isDemo, updateSession])
-
-  const handleUserUpdate = useCallback((updates: Partial<UserData>) => {
-    setStableUser((prev) => (prev ? { ...prev, ...updates } : null))
-  }, [])
+  const activeTab: PreferencesTab = isValidTab(tabParam) ? tabParam : 'general'
 
   const {
     openSinglePastedTicket,
@@ -223,10 +118,6 @@ function PreferencesContent() {
 
   const projects = useProjectsStore((s) => s.projects)
 
-  const searchParams = useSearchParams()
-  const tabParam = searchParams.get('tab')
-  const activeTab: PreferencesTab = isValidTab(tabParam) ? tabParam : 'general'
-
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
   useTabCycleShortcut({
     tabs: VALID_TABS,
@@ -234,7 +125,6 @@ function PreferencesContent() {
   })
 
   const defaultMaxYear = new Date().getFullYear() + 5
-  const _currentMaxYear = ticketDateMaxYearMode === 'default' ? defaultMaxYear : ticketDateMaxYear
   const customInputRef = useRef<HTMLInputElement>(null)
 
   // Auto-focus input when switching to custom mode
@@ -473,18 +363,18 @@ function PreferencesContent() {
 
                 <div className="flex items-start justify-between space-x-4">
                   <div className="flex-1 space-y-1">
-                    <Label htmlFor="sidebar-profile" className="text-zinc-300">
-                      Profile tabs expanded
+                    <Label htmlFor="sidebar-account" className="text-zinc-300">
+                      Account tabs expanded
                     </Label>
                     <p className="text-sm text-zinc-500">
-                      Keep the profile tabs section expanded in the sidebar
+                      Keep the account tabs section expanded in the sidebar
                     </p>
                   </div>
                   <Switch
-                    id="sidebar-profile"
-                    checked={sidebarExpandedSections.profile ?? false}
+                    id="sidebar-account"
+                    checked={sidebarExpandedSections['section-account'] ?? false}
                     onCheckedChange={(checked) =>
-                      setSidebarSectionExpanded('profile', checked === true)
+                      setSidebarSectionExpanded('section-account', checked === true)
                     }
                     className="data-[state=checked]:bg-amber-600"
                   />
@@ -548,9 +438,6 @@ function PreferencesContent() {
             </Card>
           </div>
         )}
-
-        {/* Claude Chat Tab */}
-        {activeTab === 'claude-chat' && <ClaudeChatTab isDemo={isDemo} />}
 
         {/* General Tab */}
         {activeTab === 'general' && (
@@ -971,29 +858,6 @@ function PreferencesContent() {
               </CardContent>
             </Card>
           </div>
-        )}
-
-        {/* MCP Tab */}
-        {activeTab === 'mcp' && <MCPTab isDemo={isDemo} />}
-
-        {/* Profile Tab */}
-        {activeTab === 'profile' && stableUser && (
-          <ProfileTab
-            user={stableUser}
-            isDemo={isDemo}
-            onUserUpdate={handleUserUpdate}
-            onSessionUpdate={debouncedUpdateSession}
-          />
-        )}
-
-        {/* Security Tab */}
-        {activeTab === 'security' && stableUser && (
-          <SecurityTab
-            user={stableUser}
-            isDemo={isDemo}
-            onUserUpdate={handleUserUpdate}
-            onSessionUpdate={debouncedUpdateSession}
-          />
         )}
       </div>
     </div>

@@ -461,7 +461,7 @@ function NotConfiguredMessage({ onNavigate }: { onNavigate: () => void }) {
 
   const handleClick = () => {
     onNavigate()
-    router.push('/profile?tab=claude-chat')
+    router.push('/account/claude-chat')
   }
 
   return (

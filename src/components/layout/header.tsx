@@ -1,6 +1,6 @@
 'use client'
 
-import { LogOut, Shield, SlidersHorizontal, User } from 'lucide-react'
+import { LogOut, Shield, SlidersHorizontal, User, UserCircle } from 'lucide-react'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 import { AnimatedMenuIcon } from '@/components/ui/animated-menu-icon'
@@ -124,6 +124,15 @@ export function Header() {
                 <Link href={`/users/${currentUser.username}`}>
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                asChild
+                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+              >
+                <Link href="/account">
+                  <UserCircle className="mr-2 h-4 w-4" />
+                  <span>Account</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem

@@ -195,6 +195,12 @@ export function SidebarContent({
   const [editMode, setEditMode] = useState(false)
   const { sidebarExpandedSections, toggleSidebarSection, setSidebarSectionExpanded } =
     useSettingsStore()
+  // "Account" top-level section (defaults to expanded)
+  const accountExpanded = sidebarExpandedSections['section-account'] ?? true
+  const toggleAccountExpanded = useCallback(
+    () => toggleSidebarSection('section-account'),
+    [toggleSidebarSection],
+  )
   const preferencesExpanded = sidebarExpandedSections.preferences ?? false
   const togglePreferencesExpanded = useCallback(
     () => toggleSidebarSection('preferences'),
@@ -319,7 +325,91 @@ export function SidebarContent({
             </Link>
           )
         })}
-        {/* Preferences with profile + settings tabs */}
+        {/* Account section */}
+        <div className="pl-[9px]">
+          <div className="flex items-center">
+            <button
+              type="button"
+              className="h-9 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
+              onClick={toggleAccountExpanded}
+            >
+              {accountExpanded ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </button>
+            <Link href="/account" onClick={handleLinkClick} className="flex-1 min-w-0">
+              <Button
+                variant="ghost"
+                className={cn(
+                  'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 pl-1',
+                  pathname.startsWith('/account') && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <User className="h-4 w-4" />
+                Account
+              </Button>
+            </Link>
+          </div>
+          <CollapsibleSection expanded={accountExpanded}>
+            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+              <Link href="/account/profile" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/account/profile' && 'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <User className="h-3 w-3" />
+                  Profile
+                </Button>
+              </Link>
+              <Link href="/account/security" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/account/security' && 'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <KeyRound className="h-3 w-3" />
+                  Security
+                </Button>
+              </Link>
+              <Link href="/account/claude-chat" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/account/claude-chat' && 'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Bot className="h-3 w-3" />
+                  Claude Chat
+                </Button>
+              </Link>
+              <Link href="/account/mcp" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/account/mcp' && 'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Terminal className="h-3 w-3" />
+                  MCP
+                </Button>
+              </Link>
+            </div>
+          </CollapsibleSection>
+        </div>
+        {/* Preferences section */}
         <div className="pl-[9px]">
           <div className="flex items-center">
             <button
@@ -378,36 +468,6 @@ export function SidebarContent({
                   Appearance
                 </Button>
               </Link>
-              <Link href="/preferences?tab=claude-chat" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences' &&
-                      searchParams.get('tab') === 'claude-chat' &&
-                      'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Bot className="h-3 w-3" />
-                  Claude Chat
-                </Button>
-              </Link>
-              <Link href="/preferences?tab=mcp" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences' &&
-                      searchParams.get('tab') === 'mcp' &&
-                      'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Terminal className="h-3 w-3" />
-                  MCP
-                </Button>
-              </Link>
               <Link href="/preferences?tab=notifications" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
@@ -421,36 +481,6 @@ export function SidebarContent({
                 >
                   <Bell className="h-3 w-3" />
                   Notifications
-                </Button>
-              </Link>
-              <Link href="/preferences?tab=profile" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences' &&
-                      searchParams.get('tab') === 'profile' &&
-                      'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <User className="h-3 w-3" />
-                  Profile
-                </Button>
-              </Link>
-              <Link href="/preferences?tab=security" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences' &&
-                      searchParams.get('tab') === 'security' &&
-                      'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <KeyRound className="h-3 w-3" />
-                  Security
                 </Button>
               </Link>
             </div>

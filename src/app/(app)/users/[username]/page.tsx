@@ -1276,7 +1276,7 @@ function UserProfileContent() {
               </div>
               {user.isSelf && (
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/preferences?tab=profile">
+                  <Link href="/account/profile">
                     <Settings className="mr-2 h-4 w-4" />
                     Edit Profile
                   </Link>
