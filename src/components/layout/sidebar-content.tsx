@@ -264,6 +264,18 @@ export function SidebarContent({
 
   const isSimulationActive = !!currentSimulatingProject
 
+  // Scroll to active project when it changes (e.g. after creating a new project)
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!activeProjectId || !projectsExpanded) return
+    // Small delay to allow the DOM to update after project list re-renders
+    const timer = setTimeout(() => {
+      const el = sidebarRef.current?.querySelector(`[data-project-id="${activeProjectId}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [activeProjectId, projectsExpanded])
+
   // Intercept sidebar link clicks that would navigate away from the simulating project.
   // Uses capture phase so it fires before Next.js Link's navigation handler.
   const handleSidebarClickCapture = useCallback(
@@ -305,7 +317,7 @@ export function SidebarContent({
   }
 
   return (
-    <div className="px-3 py-4" onClickCapture={handleSidebarClickCapture}>
+    <div ref={sidebarRef} className="px-3 py-4" onClickCapture={handleSidebarClickCapture}>
       {/* Main navigation */}
       <div className={cn('space-y-1 transition-opacity', isSimulationActive && 'opacity-40')}>
         {mainNavItems.map((item) => {
@@ -758,7 +770,10 @@ export function SidebarContent({
                     onDeleteProject={onDeleteProject}
                     onLinkClick={onLinkClick}
                   >
-                    <div className={cn('transition-opacity', isDimmedProject && 'opacity-40')}>
+                    <div
+                      data-project-id={project.id}
+                      className={cn('transition-opacity', isDimmedProject && 'opacity-40')}
+                    >
                       <div className="relative flex items-center min-w-0">
                         <button
                           type="button"
