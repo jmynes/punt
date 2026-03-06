@@ -54,6 +54,7 @@ export interface ImportResult {
     attachments: number
     ticketSprintHistory: number
     invitations: number
+    agents: number
   }
   files: {
     attachmentsRestored: number
@@ -128,7 +129,7 @@ function parseBackupJson(
   const exportFile = result.data as AnyDatabaseExport
 
   // Check version compatibility
-  const COMPATIBLE_VERSIONS = ['1.0.0', '1.1.0', '1.2.0', EXPORT_VERSION]
+  const COMPATIBLE_VERSIONS = ['1.0.0', '1.1.0', '1.2.0', '1.3.0', EXPORT_VERSION]
   if (!COMPATIBLE_VERSIONS.includes(exportFile.version)) {
     return {
       success: false,
@@ -371,7 +372,19 @@ async function restoreFilesFromZip(
  * Deletes all data from the database in reverse FK order
  */
 async function wipeDatabase(tx: Parameters<Parameters<typeof db.$transaction>[0]>[0]) {
+  // Safely delete from tables that may not exist yet (added in later schema versions).
+  // Uses PL/pgSQL exception handling so a missing table doesn't abort the transaction.
+  const safeDeleteAll = (table: string) =>
+    tx.$executeRawUnsafe(`
+      DO $$ BEGIN
+        DELETE FROM "${table}";
+      EXCEPTION WHEN undefined_table THEN NULL;
+      END $$
+    `)
+
   // Delete in reverse FK order to avoid constraint violations
+  await safeDeleteAll('ChatMessage')
+  await safeDeleteAll('ChatSession')
   await tx.ticketSprintHistory.deleteMany()
   await tx.attachment.deleteMany()
   await tx.ticketActivity.deleteMany()
@@ -380,6 +393,7 @@ async function wipeDatabase(tx: Parameters<Parameters<typeof db.$transaction>[0]
   await tx.ticketWatcher.deleteMany()
   await tx.ticketLink.deleteMany()
   await tx.ticket.deleteMany()
+  await safeDeleteAll('Agent')
   await tx.projectSprintSettings.deleteMany()
   await tx.projectMember.deleteMany()
   await tx.sprint.deleteMany()
@@ -424,6 +438,7 @@ export async function importDatabase(
     attachments: 0,
     ticketSprintHistory: 0,
     invitations: 0,
+    agents: 0,
   }
 
   let files = {
@@ -486,50 +501,108 @@ export async function importDatabase(
   // Use a transaction with a long timeout (2 minutes) for large imports
   await db.$transaction(
     async (tx) => {
+      // Check which optional columns exist in the database to handle schema differences.
+      // This lets us safely import exports from newer/older versions without P2022 errors.
+      const columnCheck = await tx.$queryRaw<{ column_name: string }[]>`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name IN ('User', 'Project', 'Ticket', 'SystemSettings', 'ProjectSprintSettings')
+      `
+      const existingColumns = new Set(columnCheck.map((c) => c.column_name))
+
       // Step 1: Wipe existing data
       await wipeDatabase(tx)
 
       // Step 2: Import SystemSettings (upsert)
       if (dataToImport.systemSettings) {
-        const { defaultRolePermissions, ...settingsRest } = dataToImport.systemSettings
-        const settingsData = {
+        const {
+          defaultRolePermissions,
+          showAddColumnButton: ssShowAddCol,
+          canonicalRepoUrl,
+          repoHostingProvider,
+          forkRepoUrl,
+          defaultBranchTemplate,
+          defaultAgentGuidance,
+          defaultSprintStartTime,
+          defaultSprintEndTime,
+          ...settingsRest
+        } = dataToImport.systemSettings
+        const settingsData: Record<string, unknown> = {
           ...settingsRest,
           updatedAt: new Date(dataToImport.systemSettings.updatedAt),
           defaultRolePermissions: defaultRolePermissions
             ? (defaultRolePermissions as Prisma.InputJsonValue)
             : Prisma.DbNull,
         }
+        // Only include fields that exist in the current database schema
+        if (existingColumns.has('showAddColumnButton'))
+          settingsData.showAddColumnButton = ssShowAddCol
+        if (existingColumns.has('canonicalRepoUrl'))
+          settingsData.canonicalRepoUrl = canonicalRepoUrl
+        if (existingColumns.has('repoHostingProvider'))
+          settingsData.repoHostingProvider = repoHostingProvider
+        if (existingColumns.has('forkRepoUrl')) settingsData.forkRepoUrl = forkRepoUrl
+        if (existingColumns.has('defaultBranchTemplate'))
+          settingsData.defaultBranchTemplate = defaultBranchTemplate
+        if (existingColumns.has('defaultAgentGuidance'))
+          settingsData.defaultAgentGuidance = defaultAgentGuidance
+        if (existingColumns.has('defaultSprintStartTime'))
+          settingsData.defaultSprintStartTime = defaultSprintStartTime
+        if (existingColumns.has('defaultSprintEndTime'))
+          settingsData.defaultSprintEndTime = defaultSprintEndTime
+
+        type SettingsUpsertData = Parameters<typeof tx.systemSettings.upsert>[0]['create']
         await tx.systemSettings.upsert({
           where: { id: 'system-settings' },
-          create: settingsData,
-          update: settingsData,
+          create: settingsData as SettingsUpsertData,
+          update: settingsData as SettingsUpsertData,
         })
       }
 
       // Step 3: Import Users
       if (dataToImport.users.length > 0) {
         for (const user of dataToImport.users) {
-          // Strip legacy/extra fields from passthrough
+          // Strip legacy fields and extract Json/optional fields for special handling
           const {
             usernameLower: _ul,
             enabledMcpServers,
             totpRecoveryCodes,
+            mcpApiKeyEncrypted,
+            mcpApiKeyHint,
+            anthropicApiKey,
+            chatProvider,
+            claudeSessionEncrypted,
             ...userData
-          } = user as typeof user & { usernameLower?: string; enabledMcpServers?: unknown }
+          } = user as typeof user & { usernameLower?: string }
+          // Build data with conditionally-included fields for schema compatibility.
+          // Cast needed because Prisma types assume current schema, but DB may be older.
+          const createData: Record<string, unknown> = {
+            ...userData,
+            totpRecoveryCodes:
+              Array.isArray(totpRecoveryCodes) || typeof totpRecoveryCodes === 'string'
+                ? totpRecoveryCodes
+                : Prisma.DbNull,
+            createdAt: new Date(user.createdAt),
+            updatedAt: new Date(user.updatedAt),
+            lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt) : null,
+            passwordChangedAt: user.passwordChangedAt ? new Date(user.passwordChangedAt) : null,
+            emailVerified: user.emailVerified ? new Date(user.emailVerified) : null,
+          }
+          // Only include fields that exist in the current database schema
+          if (existingColumns.has('enabledMcpServers'))
+            createData.enabledMcpServers = enabledMcpServers ?? Prisma.DbNull
+          if (existingColumns.has('mcpApiKeyEncrypted'))
+            createData.mcpApiKeyEncrypted = mcpApiKeyEncrypted
+          if (existingColumns.has('mcpApiKeyHint')) createData.mcpApiKeyHint = mcpApiKeyHint
+          if (existingColumns.has('anthropicApiKey')) createData.anthropicApiKey = anthropicApiKey
+          if (existingColumns.has('chatProvider')) createData.chatProvider = chatProvider
+          if (existingColumns.has('claudeSessionEncrypted'))
+            createData.claudeSessionEncrypted = claudeSessionEncrypted
+
+          // Use select:{id:true} to prevent Prisma from generating a RETURNING clause
+          // that references columns which may not exist in the database yet.
           await tx.user.create({
-            data: {
-              ...userData,
-              enabledMcpServers: enabledMcpServers ?? Prisma.DbNull,
-              totpRecoveryCodes:
-                Array.isArray(totpRecoveryCodes) || typeof totpRecoveryCodes === 'string'
-                  ? totpRecoveryCodes
-                  : Prisma.DbNull,
-              createdAt: new Date(user.createdAt),
-              updatedAt: new Date(user.updatedAt),
-              lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt) : null,
-              passwordChangedAt: user.passwordChangedAt ? new Date(user.passwordChangedAt) : null,
-              emailVerified: user.emailVerified ? new Date(user.emailVerified) : null,
-            },
+            data: createData as Parameters<typeof tx.user.create>[0]['data'],
+            select: { id: true },
           })
         }
         counts.users = dataToImport.users.length
@@ -538,12 +611,49 @@ export async function importDatabase(
       // Step 4: Import Projects
       if (dataToImport.projects.length > 0) {
         for (const project of dataToImport.projects) {
+          const {
+            environmentBranches,
+            commitPatterns,
+            showAddColumnButton,
+            repositoryUrl,
+            repositoryProvider,
+            localPath,
+            defaultBranch,
+            branchTemplate,
+            agentGuidance,
+            monorepoPath,
+            webhookSecret,
+            ...projectData
+          } = project
+          const projCreateData: Record<string, unknown> = {
+            ...projectData,
+            createdAt: new Date(project.createdAt),
+            updatedAt: new Date(project.updatedAt),
+          }
+          // Only include fields that exist in the current database schema
+          if (existingColumns.has('showAddColumnButton'))
+            projCreateData.showAddColumnButton = showAddColumnButton
+          if (existingColumns.has('repositoryUrl')) projCreateData.repositoryUrl = repositoryUrl
+          if (existingColumns.has('repositoryProvider'))
+            projCreateData.repositoryProvider = repositoryProvider
+          if (existingColumns.has('localPath')) projCreateData.localPath = localPath
+          if (existingColumns.has('defaultBranch')) projCreateData.defaultBranch = defaultBranch
+          if (existingColumns.has('branchTemplate')) projCreateData.branchTemplate = branchTemplate
+          if (existingColumns.has('agentGuidance')) projCreateData.agentGuidance = agentGuidance
+          if (existingColumns.has('monorepoPath')) projCreateData.monorepoPath = monorepoPath
+          if (existingColumns.has('webhookSecret')) projCreateData.webhookSecret = webhookSecret
+          if (existingColumns.has('environmentBranches'))
+            projCreateData.environmentBranches = environmentBranches
+              ? (environmentBranches as Prisma.InputJsonValue)
+              : Prisma.DbNull
+          if (existingColumns.has('commitPatterns'))
+            projCreateData.commitPatterns = commitPatterns
+              ? (commitPatterns as Prisma.InputJsonValue)
+              : Prisma.DbNull
+
           await tx.project.create({
-            data: {
-              ...project,
-              createdAt: new Date(project.createdAt),
-              updatedAt: new Date(project.updatedAt),
-            },
+            data: projCreateData as Parameters<typeof tx.project.create>[0]['data'],
+            select: { id: true },
           })
         }
         counts.projects = dataToImport.projects.length
@@ -559,6 +669,7 @@ export async function importDatabase(
               createdAt: new Date(role.createdAt),
               updatedAt: new Date(role.updatedAt),
             },
+            select: { id: true },
           })
         }
         counts.roles = dataToImport.roles.length
@@ -567,7 +678,7 @@ export async function importDatabase(
       // Step 6: Import Columns
       if (dataToImport.columns.length > 0) {
         for (const column of dataToImport.columns) {
-          await tx.column.create({ data: column })
+          await tx.column.create({ data: column, select: { id: true } })
         }
         counts.columns = dataToImport.columns.length
       }
@@ -575,7 +686,7 @@ export async function importDatabase(
       // Step 7: Import Labels
       if (dataToImport.labels.length > 0) {
         for (const label of dataToImport.labels) {
-          await tx.label.create({ data: label })
+          await tx.label.create({ data: label, select: { id: true } })
         }
         counts.labels = dataToImport.labels.length
       }
@@ -593,6 +704,7 @@ export async function importDatabase(
               createdAt: new Date(sprint.createdAt),
               updatedAt: new Date(sprint.updatedAt),
             },
+            select: { id: true },
           })
         }
         counts.sprints = dataToImport.sprints.length
@@ -610,6 +722,7 @@ export async function importDatabase(
               createdAt: new Date(member.createdAt),
               updatedAt: new Date(member.updatedAt),
             },
+            select: { id: true },
           })
         }
         counts.projectMembers = dataToImport.projectMembers.length
@@ -618,13 +731,18 @@ export async function importDatabase(
       // Step 10: Import ProjectSprintSettings
       if (dataToImport.projectSprintSettings.length > 0) {
         for (const settings of dataToImport.projectSprintSettings) {
+          const { defaultStartTime, defaultEndTime, ...sprintSettingsData } = settings
+          const pssData: Record<string, unknown> = {
+            ...sprintSettingsData,
+            doneColumnIds: settings.doneColumnIds as Prisma.InputJsonValue,
+            createdAt: new Date(settings.createdAt),
+            updatedAt: new Date(settings.updatedAt),
+          }
+          if (existingColumns.has('defaultStartTime')) pssData.defaultStartTime = defaultStartTime
+          if (existingColumns.has('defaultEndTime')) pssData.defaultEndTime = defaultEndTime
           await tx.projectSprintSettings.create({
-            data: {
-              ...settings,
-              doneColumnIds: settings.doneColumnIds as Prisma.InputJsonValue,
-              createdAt: new Date(settings.createdAt),
-              updatedAt: new Date(settings.updatedAt),
-            },
+            data: pssData as Parameters<typeof tx.projectSprintSettings.create>[0]['data'],
+            select: { id: true },
           })
         }
         counts.projectSprintSettings = dataToImport.projectSprintSettings.length
@@ -636,7 +754,7 @@ export async function importDatabase(
       // parentId first, then update the parent references in a second pass.
       if (dataToImport.tickets.length > 0) {
         for (const ticket of dataToImport.tickets) {
-          const { labelIds, parentId, ...ticketData } = ticket
+          const { labelIds, parentId, createdByAgentId: _agentId, ...ticketData } = ticket
           await tx.ticket.create({
             data: {
               ...ticketData,
@@ -649,6 +767,7 @@ export async function importDatabase(
               createdAt: new Date(ticketData.createdAt),
               updatedAt: new Date(ticketData.updatedAt),
             },
+            select: { id: true },
           })
         }
         counts.tickets = dataToImport.tickets.length
@@ -659,6 +778,7 @@ export async function importDatabase(
             await tx.ticket.update({
               where: { id: ticket.id },
               data: { parentId: ticket.parentId },
+              select: { id: true },
             })
           }
         }
@@ -673,6 +793,7 @@ export async function importDatabase(
                   connect: ticket.labelIds.map((id) => ({ id })),
                 },
               },
+              select: { id: true },
             })
           }
         }
@@ -687,6 +808,7 @@ export async function importDatabase(
               linkType: link.linkType as LinkType,
               createdAt: new Date(link.createdAt),
             },
+            select: { id: true },
           })
         }
         counts.ticketLinks = dataToImport.ticketLinks.length
@@ -700,6 +822,7 @@ export async function importDatabase(
               ...watcher,
               createdAt: new Date(watcher.createdAt),
             },
+            select: { id: true },
           })
         }
         counts.ticketWatchers = dataToImport.ticketWatchers.length
@@ -714,6 +837,7 @@ export async function importDatabase(
               createdAt: new Date(comment.createdAt),
               updatedAt: new Date(comment.updatedAt),
             },
+            select: { id: true },
           })
         }
         counts.comments = dataToImport.comments.length
@@ -727,6 +851,7 @@ export async function importDatabase(
               ...edit,
               createdAt: new Date(edit.createdAt),
             },
+            select: { id: true },
           })
         }
         counts.ticketEdits = dataToImport.ticketEdits.length
@@ -741,6 +866,7 @@ export async function importDatabase(
               ...activity,
               createdAt: new Date(activity.createdAt),
             },
+            select: { id: true },
           })
         }
         counts.ticketActivities = ticketActivities.length
@@ -755,6 +881,7 @@ export async function importDatabase(
               ...attachment,
               createdAt: new Date(attachment.createdAt),
             },
+            select: { id: true },
           })
         }
         counts.attachments = dataToImport.attachments.length
@@ -771,6 +898,7 @@ export async function importDatabase(
               addedAt: new Date(history.addedAt),
               removedAt: history.removedAt ? new Date(history.removedAt) : null,
             },
+            select: { id: true },
           })
         }
         counts.ticketSprintHistory = dataToImport.ticketSprintHistory.length
@@ -787,9 +915,33 @@ export async function importDatabase(
               expiresAt: new Date(invitation.expiresAt),
               createdAt: new Date(invitation.createdAt),
             },
+            select: { id: true },
           })
         }
         counts.invitations = dataToImport.invitations.length
+      }
+      // Step 19: Import Agents (table may not exist in older database schemas)
+      const agents = dataToImport.agents ?? []
+      if (agents.length > 0) {
+        const agentTableExists = await tx.$queryRaw<{ exists: boolean }[]>`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = 'Agent'
+          ) as exists
+        `
+        if (agentTableExists[0]?.exists) {
+          for (const agent of agents) {
+            await tx.agent.create({
+              data: {
+                ...agent,
+                createdAt: new Date(agent.createdAt),
+                lastActiveAt: agent.lastActiveAt ? new Date(agent.lastActiveAt) : null,
+              },
+              select: { id: true },
+            })
+          }
+          counts.agents = agents.length
+        }
       }
     },
     {

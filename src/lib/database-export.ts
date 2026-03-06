@@ -83,6 +83,7 @@ export async function exportDatabase(options: ExportOptions = {}): Promise<Expor
     attachments,
     ticketSprintHistory,
     invitations,
+    agents,
   ] = await Promise.all([
     db.systemSettings.findUnique({ where: { id: 'system-settings' } }),
     db.user.findMany({
@@ -147,6 +148,9 @@ export async function exportDatabase(options: ExportOptions = {}): Promise<Expor
     }),
     db.invitation.findMany({
       where: projectFilter,
+      orderBy: { createdAt: 'asc' },
+    }),
+    db.agent.findMany({
       orderBy: { createdAt: 'asc' },
     }),
   ])
@@ -270,6 +274,11 @@ export async function exportDatabase(options: ExportOptions = {}): Promise<Expor
       ...inv,
       expiresAt: inv.expiresAt.toISOString(),
       createdAt: inv.createdAt.toISOString(),
+    })),
+    agents: agents.map((a) => ({
+      ...a,
+      createdAt: a.createdAt.toISOString(),
+      lastActiveAt: a.lastActiveAt?.toISOString() ?? null,
     })),
   } as ExportData
 }
