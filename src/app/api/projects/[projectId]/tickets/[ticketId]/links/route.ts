@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
+import { logTicketActivity } from '@/lib/audit'
 import { requireAuth, requireMembership, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { USER_SELECT_SUMMARY } from '@/lib/prisma-selects'
-import { INVERSE_LINK_TYPES, LINK_TYPES, type LinkType } from '@/types'
+import { INVERSE_LINK_TYPES, LINK_TYPE_LABELS, LINK_TYPES, type LinkType } from '@/types'
 
 const LINKED_TICKET_SELECT = {
   id: true,
@@ -117,7 +118,7 @@ export async function POST(
     // Verify source ticket exists and belongs to project
     const sourceTicket = await db.ticket.findFirst({
       where: { id: ticketId, projectId },
-      select: { id: true },
+      select: { id: true, number: true },
     })
 
     if (!sourceTicket) {
@@ -181,6 +182,33 @@ export async function POST(
           select: LINKED_TICKET_SELECT,
         },
       },
+    })
+
+    // Log activity on both tickets (fire-and-forget)
+    // Fetch project key for activity messages
+    const project = await db.project.findUnique({
+      where: { id: projectId },
+      select: { key: true },
+    })
+    const projKey = project?.key ?? projectKey
+    const sourceKey = `${projKey}-${sourceTicket.number}`
+    const targetKey = `${projKey}-${targetTicket.number}`
+    const linkLabel = LINK_TYPE_LABELS[linkType].toLowerCase()
+    const inverseLinkLabel = LINK_TYPE_LABELS[INVERSE_LINK_TYPES[linkType]].toLowerCase()
+
+    // On source ticket: "linked as <linkType> <targetKey>"
+    logTicketActivity(ticketId, user.id, 'linked', {
+      field: 'link',
+      newValue: JSON.stringify({
+        ticketKey: targetKey,
+        ticketId: targetTicketId,
+        linkType: linkLabel,
+      }),
+    })
+    // On target ticket: "linked as <inverseLinkType> <sourceKey>"
+    logTicketActivity(targetTicketId, user.id, 'linked', {
+      field: 'link',
+      newValue: JSON.stringify({ ticketKey: sourceKey, ticketId, linkType: inverseLinkLabel }),
     })
 
     // Emit SSE events for both tickets
