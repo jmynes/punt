@@ -23,7 +23,7 @@ function AccountProfileContent() {
       <PageHeader
         icon={UserCircle}
         category="Account"
-        title="Bio"
+        title="Avatar"
         description="Manage your name, avatar, and display preferences"
         variant="hero"
         accentColor="blue"

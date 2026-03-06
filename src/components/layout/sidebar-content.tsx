@@ -364,7 +364,7 @@ export function SidebarContent({
                   )}
                 >
                   <User className="h-3 w-3" />
-                  Bio
+                  Avatar
                 </Button>
               </Link>
               <Link href="/account/claude-chat" onClick={handleLinkClick}>
