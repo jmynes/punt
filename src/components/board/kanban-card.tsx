@@ -5,7 +5,6 @@ import { CSS } from '@dnd-kit/utilities'
 import { format, isPast, isToday } from 'date-fns'
 import {
   Ban,
-  Bot,
   Calendar,
   GitBranch,
   GripVertical,
@@ -14,6 +13,7 @@ import {
   User,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { AgentIdenticon } from '@/components/common'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { ResolutionBadge } from '@/components/common/resolution-badge'
@@ -245,7 +245,7 @@ export function KanbanCard({
             <div className="flex items-center gap-2">
               {ticket.createdByAgent && (
                 <span title={`Created via ${ticket.createdByAgent.name}`}>
-                  <Bot className="h-3.5 w-3.5 text-purple-400" />
+                  <AgentIdenticon identifier={ticket.createdByAgent.id} size={16} />
                 </span>
               )}
               {ticket.resolution && ticket.resolution !== 'Done' && (

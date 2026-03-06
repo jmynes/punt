@@ -1292,10 +1292,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     allowUnassigned={false}
                   />
                   {ticket.createdByAgent && (
-                    <div className="flex items-center gap-1.5 text-xs text-purple-400">
-                      <Bot className="h-3.5 w-3.5 shrink-0" />
-                      <span>
-                        via <span className="font-medium">{ticket.createdByAgent.name}</span>
+                    <div className="flex items-center gap-2 mt-1 h-8 px-2 rounded-md bg-zinc-800/50 border border-zinc-700/50">
+                      <AgentIdenticon identifier={ticket.createdByAgent.id} size={18} />
+                      <span className="text-xs text-zinc-400 truncate">
+                        via {ticket.createdByAgent.name}
                       </span>
                     </div>
                   )}
@@ -1313,19 +1313,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     showAssignToMe
                   />
                 </div>
-
-                {/* Agent attribution */}
-                {ticket.createdByAgent && (
-                  <div className="space-y-2">
-                    <Label className="text-zinc-400">Created by Agent</Label>
-                    <div className="flex items-center gap-2 h-9 px-3 rounded-md bg-zinc-900 border border-zinc-800">
-                      <AgentIdenticon identifier={ticket.createdByAgent.id} size={18} />
-                      <span className="text-sm text-zinc-300 truncate">
-                        {ticket.createdByAgent.name}
-                      </span>
-                    </div>
-                  </div>
-                )}
 
                 {/* Status */}
                 <div className="space-y-2">
