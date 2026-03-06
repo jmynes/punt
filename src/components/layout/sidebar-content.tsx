@@ -538,32 +538,28 @@ export function SidebarContent({
               </Link>
               {/* System Settings sub-section */}
               <div>
-                <div className="flex items-center">
-                  <button
-                    type="button"
-                    className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
-                    onClick={() => toggleSidebarSection('section-system-settings')}
-                  >
+                <button
+                  type="button"
+                  className="group flex items-center gap-1.5 w-full text-left select-none cursor-pointer"
+                  onClick={() => toggleSidebarSection('section-system-settings')}
+                >
+                  <span className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 rounded group-hover:bg-zinc-800/50">
                     {(sidebarExpandedSections['section-system-settings'] ?? false) ? (
-                      <ChevronDown className="h-3 w-3" />
+                      <ChevronDown className="h-3.5 w-3.5" />
                     ) : (
-                      <ChevronRight className="h-3 w-3" />
+                      <ChevronRight className="h-3.5 w-3.5" />
                     )}
-                  </button>
-                  <Link href="/admin/system" onClick={handleLinkClick} className="flex-1 min-w-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
-                        pathname.startsWith('/admin/system') && 'bg-zinc-800/50 text-zinc-100',
-                      )}
-                    >
-                      <Settings className="h-3.5 w-3.5" />
-                      System Settings
-                    </Button>
-                  </Link>
-                </div>
+                  </span>
+                  <Settings className="h-3.5 w-3.5 text-zinc-500 -ml-1" />
+                  <span
+                    className={cn(
+                      'text-sm text-zinc-400 hover:text-zinc-100',
+                      pathname.startsWith('/admin/system') && 'text-zinc-100',
+                    )}
+                  >
+                    System Settings
+                  </span>
+                </button>
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-system-settings'] ?? false}
                 >
@@ -638,32 +634,28 @@ export function SidebarContent({
               </div>
               {/* Project Defaults sub-section */}
               <div>
-                <div className="flex items-center">
-                  <button
-                    type="button"
-                    className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
-                    onClick={() => toggleSidebarSection('section-project-defaults')}
-                  >
+                <button
+                  type="button"
+                  className="group flex items-center gap-1.5 w-full text-left select-none cursor-pointer"
+                  onClick={() => toggleSidebarSection('section-project-defaults')}
+                >
+                  <span className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 rounded group-hover:bg-zinc-800/50">
                     {(sidebarExpandedSections['section-project-defaults'] ?? false) ? (
-                      <ChevronDown className="h-3 w-3" />
+                      <ChevronDown className="h-3.5 w-3.5" />
                     ) : (
-                      <ChevronRight className="h-3 w-3" />
+                      <ChevronRight className="h-3.5 w-3.5" />
                     )}
-                  </button>
-                  <Link href="/admin/defaults" onClick={handleLinkClick} className="flex-1 min-w-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
-                        pathname.startsWith('/admin/defaults') && 'bg-zinc-800/50 text-zinc-100',
-                      )}
-                    >
-                      <Layers className="h-3.5 w-3.5" />
-                      Project Defaults
-                    </Button>
-                  </Link>
-                </div>
+                  </span>
+                  <Layers className="h-3.5 w-3.5 text-zinc-500 -ml-1" />
+                  <span
+                    className={cn(
+                      'text-sm text-zinc-400 hover:text-zinc-100',
+                      pathname.startsWith('/admin/defaults') && 'text-zinc-100',
+                    )}
+                  >
+                    Project Defaults
+                  </span>
+                </button>
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-project-defaults'] ?? false}
                 >
