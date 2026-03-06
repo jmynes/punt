@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { badRequestError, handleApiError, notFoundError, validationError } from '@/lib/api-utils'
-import { computeTicketChanges, createActivityGroupId, logBatchChanges } from '@/lib/audit'
+import {
+  computeTicketChanges,
+  createActivityGroupId,
+  logBatchChanges,
+  logTicketActivity,
+} from '@/lib/audit'
 import {
   requireAuth,
   requireMembership,
@@ -528,6 +533,95 @@ export async function PATCH(
       activityIds = result.activityIds
     }
 
+    // Log blocker status transitions when resolution changes on a blocking ticket
+    const resolutionChanged =
+      dbUpdateData.resolution !== undefined && dbUpdateData.resolution !== existingTicket.resolution
+    if (resolutionChanged) {
+      const ticketKey = `${ticket.project.key}-${ticket.number}`
+      // Find tickets that this ticket blocks (outward "blocks" links)
+      const blocksLinks = await db.ticketLink.findMany({
+        where: { fromTicketId: ticketId, linkType: 'blocks' },
+        select: {
+          toTicketId: true,
+          toTicket: { select: { id: true } },
+        },
+      })
+      // Also find tickets where this ticket is the blocker via inward "is_blocked_by" links
+      const isBlockedByLinks = await db.ticketLink.findMany({
+        where: { toTicketId: ticketId, linkType: 'is_blocked_by' },
+        select: {
+          fromTicketId: true,
+          fromTicket: { select: { id: true } },
+        },
+      })
+
+      // Collect all blocked ticket IDs
+      const blockedTicketIds = [
+        ...blocksLinks.map((l) => l.toTicketId),
+        ...isBlockedByLinks.map((l) => l.fromTicketId),
+      ]
+
+      if (blockedTicketIds.length > 0) {
+        const newResolution = dbUpdateData.resolution as string | null
+
+        if (newResolution && !existingTicket.resolution) {
+          // Blocker resolved
+          for (const blockedId of blockedTicketIds) {
+            logTicketActivity(blockedId, user.id, 'blocker_resolved', {
+              field: 'blocker',
+              newValue: JSON.stringify({
+                ticketKey,
+                ticketId,
+                resolution: newResolution,
+              }),
+            })
+          }
+
+          // Check if this was the last active blocker for each blocked ticket
+          for (const blockedId of blockedTicketIds) {
+            // For "blocks" links TO the blocked ticket, the blocker is the fromTicket
+            // For "is_blocked_by" links FROM the blocked ticket, the blocker is the toTicket
+            const blockerLinksOutward = await db.ticketLink.findMany({
+              where: { toTicketId: blockedId, linkType: 'blocks' },
+              select: { fromTicketId: true },
+            })
+            const blockerLinksInward = await db.ticketLink.findMany({
+              where: { fromTicketId: blockedId, linkType: 'is_blocked_by' },
+              select: { toTicketId: true },
+            })
+
+            const allBlockerIds = [
+              ...blockerLinksOutward.map((l) => l.fromTicketId),
+              ...blockerLinksInward.map((l) => l.toTicketId),
+            ]
+
+            // Check if all blockers are now resolved
+            if (allBlockerIds.length > 0) {
+              const unresolvedBlockers = await db.ticket.count({
+                where: {
+                  id: { in: allBlockerIds },
+                  resolution: null,
+                },
+              })
+              if (unresolvedBlockers === 0) {
+                logTicketActivity(blockedId, user.id, 'unblocked', {
+                  field: 'blocker',
+                })
+              }
+            }
+          }
+        } else if (!newResolution && existingTicket.resolution) {
+          // Blocker reopened (resolution cleared)
+          for (const blockedId of blockedTicketIds) {
+            logTicketActivity(blockedId, user.id, 'blocker_reopened', {
+              field: 'blocker',
+              newValue: JSON.stringify({ ticketKey, ticketId }),
+            })
+          }
+        }
+      }
+    }
+
     // Emit real-time event for other clients
     // Use 'ticket.moved' if column changed, 'ticket.sprint_changed' if sprint changed, otherwise 'ticket.updated'
     // Include tabId from header so the originating tab can skip the event
@@ -579,7 +673,12 @@ export async function DELETE(
     // Check if ticket exists and belongs to project, get creator for permission check
     const ticket = await db.ticket.findFirst({
       where: { id: ticketId, projectId },
-      select: { id: true, creatorId: true },
+      select: {
+        id: true,
+        number: true,
+        creatorId: true,
+        project: { select: { key: true } },
+      },
     })
 
     if (!ticket) {
@@ -589,10 +688,70 @@ export async function DELETE(
     // Check ticket delete permission (own ticket or any ticket)
     await requireTicketPermission(user.id, projectId, ticket.creatorId, 'delete')
 
-    // Delete the ticket (cascades to watchers, comments, attachments, etc.)
+    // Before deletion, find tickets that this ticket blocks and log blocker_deleted
+    const ticketKey = `${ticket.project.key}-${ticket.number}`
+    const blocksLinks = await db.ticketLink.findMany({
+      where: { fromTicketId: ticketId, linkType: 'blocks' },
+      select: { toTicketId: true },
+    })
+    const isBlockedByLinks = await db.ticketLink.findMany({
+      where: { toTicketId: ticketId, linkType: 'is_blocked_by' },
+      select: { fromTicketId: true },
+    })
+    const blockedTicketIds = [
+      ...blocksLinks.map((l) => l.toTicketId),
+      ...isBlockedByLinks.map((l) => l.fromTicketId),
+    ]
+
+    // Delete the ticket (cascades to watchers, comments, attachments, links, etc.)
     await db.ticket.delete({
       where: { id: ticketId },
     })
+
+    // Log blocker_deleted on all previously blocked tickets (fire-and-forget)
+    for (const blockedId of blockedTicketIds) {
+      logTicketActivity(blockedId, user.id, 'blocker_deleted', {
+        field: 'blocker',
+        oldValue: JSON.stringify({ ticketKey, ticketId }),
+      })
+    }
+
+    // Check if any blocked ticket is now fully unblocked
+    for (const blockedId of blockedTicketIds) {
+      // After the blocking ticket is deleted, check remaining blockers
+      const remainingBlockersOutward = await db.ticketLink.findMany({
+        where: { toTicketId: blockedId, linkType: 'blocks' },
+        select: { fromTicketId: true },
+      })
+      const remainingBlockersInward = await db.ticketLink.findMany({
+        where: { fromTicketId: blockedId, linkType: 'is_blocked_by' },
+        select: { toTicketId: true },
+      })
+      const allRemainingBlockerIds = [
+        ...remainingBlockersOutward.map((l) => l.fromTicketId),
+        ...remainingBlockersInward.map((l) => l.toTicketId),
+      ]
+
+      if (allRemainingBlockerIds.length === 0) {
+        // No more blockers at all
+        logTicketActivity(blockedId, user.id, 'unblocked', {
+          field: 'blocker',
+        })
+      } else {
+        // Check if all remaining blockers are resolved
+        const unresolvedBlockers = await db.ticket.count({
+          where: {
+            id: { in: allRemainingBlockerIds },
+            resolution: null,
+          },
+        })
+        if (unresolvedBlockers === 0) {
+          logTicketActivity(blockedId, user.id, 'unblocked', {
+            field: 'blocker',
+          })
+        }
+      }
+    }
 
     // Emit real-time event for other clients
     // Include tabId from header so the originating tab can skip the event
