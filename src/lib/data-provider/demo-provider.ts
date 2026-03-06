@@ -445,6 +445,7 @@ export class DemoDataProvider implements DataProvider {
       doneColumnIds: [],
       defaultStartTime: '09:00',
       defaultEndTime: '17:00',
+      storyPointScale: null,
     }
   }
 
@@ -459,6 +460,7 @@ export class DemoDataProvider implements DataProvider {
       doneColumnIds: data.doneColumnIds ?? [],
       defaultStartTime: data.defaultStartTime ?? '09:00',
       defaultEndTime: data.defaultEndTime ?? '17:00',
+      storyPointScale: data.storyPointScale ?? null,
     }
   }
 

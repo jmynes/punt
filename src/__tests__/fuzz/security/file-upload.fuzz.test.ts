@@ -43,6 +43,7 @@ function createMockSettings(overrides: Partial<SystemSettings> = {}): SystemSett
       'text/csv',
     ],
     showAddColumnButton: true,
+    storyPointScale: 'sequential',
     canonicalRepoUrl: null,
     repoHostingProvider: null,
     forkRepoUrl: null,

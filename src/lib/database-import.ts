@@ -517,6 +517,7 @@ export async function importDatabase(
         const {
           defaultRolePermissions,
           showAddColumnButton: ssShowAddCol,
+          storyPointScale: ssStoryPointScale,
           canonicalRepoUrl,
           repoHostingProvider,
           forkRepoUrl,
@@ -536,6 +537,7 @@ export async function importDatabase(
         // Only include fields that exist in the current database schema
         if (existingColumns.has('showAddColumnButton'))
           settingsData.showAddColumnButton = ssShowAddCol
+        if (existingColumns.has('storyPointScale')) settingsData.storyPointScale = ssStoryPointScale
         if (existingColumns.has('canonicalRepoUrl'))
           settingsData.canonicalRepoUrl = canonicalRepoUrl
         if (existingColumns.has('repoHostingProvider'))
@@ -731,7 +733,12 @@ export async function importDatabase(
       // Step 10: Import ProjectSprintSettings
       if (dataToImport.projectSprintSettings.length > 0) {
         for (const settings of dataToImport.projectSprintSettings) {
-          const { defaultStartTime, defaultEndTime, ...sprintSettingsData } = settings
+          const {
+            defaultStartTime,
+            defaultEndTime,
+            storyPointScale: pssStoryPointScale,
+            ...sprintSettingsData
+          } = settings
           const pssData: Record<string, unknown> = {
             ...sprintSettingsData,
             doneColumnIds: settings.doneColumnIds as Prisma.InputJsonValue,
@@ -740,6 +747,8 @@ export async function importDatabase(
           }
           if (existingColumns.has('defaultStartTime')) pssData.defaultStartTime = defaultStartTime
           if (existingColumns.has('defaultEndTime')) pssData.defaultEndTime = defaultEndTime
+          if (existingColumns.has('storyPointScale'))
+            pssData.storyPointScale = pssStoryPointScale ?? null
           await tx.projectSprintSettings.create({
             data: pssData as Parameters<typeof tx.projectSprintSettings.create>[0]['data'],
             select: { id: true },
