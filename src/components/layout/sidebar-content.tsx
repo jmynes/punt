@@ -722,6 +722,7 @@ export function SidebarContent({
               className="h-5 w-5 text-zinc-500 hover:text-zinc-300"
               onClick={() => {
                 onSetCreateProjectOpen(true)
+                if (!projectsExpanded) setSidebarSectionExpanded('section-projects', true)
                 handleLinkClick()
               }}
             >
