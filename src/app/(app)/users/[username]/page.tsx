@@ -553,7 +553,7 @@ function ProjectsCard({
                         className="text-zinc-500 hover:text-zinc-200"
                         title="Edit project roles"
                       >
-                        <Link href={`/projects/${membership.project.key}/settings?tab=roles`}>
+                        <Link href={`/projects/${membership.project.key}/settings/roles`}>
                           <Settings className="h-4 w-4" />
                         </Link>
                       </Button>
@@ -735,7 +735,7 @@ function UserProfileContent() {
     }
     if (from === 'project-settings' && projectKey) {
       return {
-        href: `/projects/${projectKey}/settings?tab=${tab ?? 'members'}`,
+        href: `/projects/${projectKey}/settings/${tab ?? 'members'}`,
         label: 'Back to Project Settings',
       }
     }
@@ -1276,9 +1276,9 @@ function UserProfileContent() {
               </div>
               {user.isSelf && (
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/preferences?tab=profile">
+                  <Link href="/account/avatar">
                     <Settings className="mr-2 h-4 w-4" />
-                    Edit Profile
+                    Edit Avatar
                   </Link>
                 </Button>
               )}
