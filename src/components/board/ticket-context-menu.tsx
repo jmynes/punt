@@ -983,14 +983,17 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
         const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
         undoState.pushUpdate(
           projectId,
-          orderUpdates.map(({ ticketId, oldOrder, newOrder }) => {
-            const t = allTickets.find((t) => t.id === ticketId)!
-            return {
-              ticketId,
-              before: { ...t, order: oldOrder } as TicketWithRelations,
-              after: { ...t, order: newOrder } as TicketWithRelations,
-            }
-          }),
+          orderUpdates
+            .map(({ ticketId, oldOrder, newOrder }) => {
+              const t = allTickets.find((t) => t.id === ticketId)
+              if (!t) return null
+              return {
+                ticketId,
+                before: { ...t, order: oldOrder } as TicketWithRelations,
+                after: { ...t, order: newOrder } as TicketWithRelations,
+              }
+            })
+            .filter((entry): entry is NonNullable<typeof entry> => entry !== null),
         )
 
         ;(async () => {

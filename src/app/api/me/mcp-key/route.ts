@@ -231,12 +231,6 @@ export async function DELETE(request: Request) {
     const authError = await verifyReauth(currentUser.id, password, totpCode, isRecoveryCode)
     if (authError) return authError
 
-    // Get the current key hash before clearing it, to find the associated Agent
-    const user = await db.user.findUnique({
-      where: { id: currentUser.id },
-      select: { mcpApiKey: true },
-    })
-
     await db.$transaction(async (tx) => {
       // Clear agent attribution on tickets before deleting agents
       await tx.ticket.updateMany({
