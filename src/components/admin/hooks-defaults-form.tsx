@@ -55,6 +55,20 @@ const DEFAULT_COMMIT_PATTERNS: CommitPattern[] = [
   { id: '2', pattern: 'wip', action: 'in_progress', enabled: true },
 ]
 
+/** Check if current patterns match the built-in defaults (ignoring IDs). */
+function isMatchingDefaults(patterns: CommitPattern[]): boolean {
+  if (patterns.length !== DEFAULT_COMMIT_PATTERNS.length) return false
+  return patterns.every((p, i) => {
+    const d = DEFAULT_COMMIT_PATTERNS[i]
+    return (
+      p.pattern === d.pattern &&
+      p.action === d.action &&
+      p.enabled === d.enabled &&
+      JSON.stringify(p.keywords ?? []) === JSON.stringify(d.keywords ?? [])
+    )
+  })
+}
+
 function getActionConfig(action: CommitPatternAction) {
   return PATTERN_ACTIONS.find((a) => a.value === action) ?? PATTERN_ACTIONS[2]
 }
@@ -216,7 +230,7 @@ export function HooksDefaultsForm() {
                 Default commit patterns applied to new projects for webhook-based ticket automation.
               </CardDescription>
             </div>
-            {commitPatterns.length === 0 && (
+            {!isMatchingDefaults(commitPatterns) && (
               <Button
                 type="button"
                 variant="outline"
@@ -225,7 +239,7 @@ export function HooksDefaultsForm() {
                 disabled={isPending}
                 className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
               >
-                Load Defaults
+                {commitPatterns.length === 0 ? 'Load Defaults' : 'Reset to Defaults'}
               </Button>
             )}
           </div>
