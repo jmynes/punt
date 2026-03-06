@@ -619,7 +619,18 @@ function ActionDescription({
       if (linkMeta) {
         return (
           <span>
-            linked as <em className="text-zinc-400">{linkMeta.linkType}</em>{' '}
+            linked this ticket{' '}
+            {linkMeta.linkType === 'blocks'
+              ? 'as blocking'
+              : linkMeta.linkType === 'is blocked by'
+                ? 'as blocked by'
+                : linkMeta.linkType === 'relates to'
+                  ? 'as related to'
+                  : linkMeta.linkType === 'duplicates'
+                    ? 'as duplicate of'
+                    : linkMeta.linkType === 'is duplicated by'
+                      ? 'as duplicated by'
+                      : `as ${linkMeta.linkType}`}{' '}
             <TicketKeyBadge ticketKey={linkMeta.ticketKey} />
           </span>
         )
@@ -632,8 +643,19 @@ function ActionDescription({
       if (unlinkMeta) {
         return (
           <span>
-            removed link to <TicketKeyBadge ticketKey={unlinkMeta.ticketKey} />{' '}
-            <span className="text-zinc-500">({unlinkMeta.linkType})</span>
+            removed{' '}
+            {unlinkMeta.linkType === 'blocks'
+              ? 'blocking'
+              : unlinkMeta.linkType === 'is blocked by'
+                ? 'blocked by'
+                : unlinkMeta.linkType === 'relates to'
+                  ? 'related to'
+                  : unlinkMeta.linkType === 'duplicates'
+                    ? 'duplicate of'
+                    : unlinkMeta.linkType === 'is duplicated by'
+                      ? 'duplicated by'
+                      : unlinkMeta.linkType}{' '}
+            link to <TicketKeyBadge ticketKey={unlinkMeta.ticketKey} />
           </span>
         )
       }
