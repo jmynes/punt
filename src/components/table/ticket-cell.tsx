@@ -114,20 +114,26 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
     case 'reporter':
       return (
         <div className="flex items-center gap-2">
-          <Avatar className="h-5 w-5">
-            <AvatarImage src={ticket.creator.avatar || undefined} />
-            <AvatarFallback
-              className="text-[10px] text-white font-medium"
-              style={{
-                backgroundColor:
-                  ticket.creator?.avatarColor ||
-                  getAvatarColor(ticket.creator.id || ticket.creator.name),
-              }}
-            >
-              {getInitials(ticket.creator.name)}
-            </AvatarFallback>
-          </Avatar>
-          <span className="truncate text-sm">{ticket.creator.name}</span>
+          {ticket.creator ? (
+            <>
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={ticket.creator.avatar || undefined} />
+                <AvatarFallback
+                  className="text-[10px] text-white font-medium"
+                  style={{
+                    backgroundColor:
+                      ticket.creator.avatarColor ||
+                      getAvatarColor(ticket.creator.id || ticket.creator.name),
+                  }}
+                >
+                  {getInitials(ticket.creator.name)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="truncate text-sm">{ticket.creator.name}</span>
+            </>
+          ) : (
+            <span className="truncate text-sm text-zinc-500">Unknown</span>
+          )}
           {ticket.createdByAgent && (
             <span title={`via ${ticket.createdByAgent.name}`}>
               <AgentIdenticon

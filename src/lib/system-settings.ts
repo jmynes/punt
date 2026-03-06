@@ -66,6 +66,10 @@ export interface SystemSettings {
   // Agent configuration defaults
   defaultBranchTemplate: string
   defaultAgentGuidance: string | null
+  // Default project settings (applied to new projects on creation)
+  defaultCommitPatterns: unknown[] | null
+  defaultEnvironmentBranches: unknown[] | null
+  defaultWebhookEnabled: boolean
   // Default sprint times (system-wide defaults for new projects)
   defaultSprintStartTime: string // HH:mm format (e.g., "09:00")
   defaultSprintEndTime: string // HH:mm format (e.g., "17:00")
@@ -162,6 +166,14 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     // Agent configuration defaults
     defaultBranchTemplate: settings.defaultBranchTemplate,
     defaultAgentGuidance: settings.defaultAgentGuidance,
+    // Default project settings
+    defaultCommitPatterns: Array.isArray(settings.defaultCommitPatterns)
+      ? settings.defaultCommitPatterns
+      : null,
+    defaultEnvironmentBranches: Array.isArray(settings.defaultEnvironmentBranches)
+      ? settings.defaultEnvironmentBranches
+      : null,
+    defaultWebhookEnabled: settings.defaultWebhookEnabled,
     // Default sprint times
     defaultSprintStartTime: settings.defaultSprintStartTime,
     defaultSprintEndTime: settings.defaultSprintEndTime,

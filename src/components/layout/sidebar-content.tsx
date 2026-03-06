@@ -570,6 +570,19 @@ export function SidebarContent({
                 </div>
                 <CollapsibleSection expanded={adminSettingsExpanded}>
                   <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                    <Link href="/admin/settings/agents" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings/agents' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Bot className="h-3 w-3" />
+                        Agents
+                      </Button>
+                    </Link>
                     <Link href="/admin/settings/board" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -609,20 +622,6 @@ export function SidebarContent({
                         Database
                       </Button>
                     </Link>
-                    <Link href="/admin/settings/default-roles" onClick={handleLinkClick}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/default-roles' &&
-                            'bg-zinc-800/50 text-zinc-100',
-                        )}
-                      >
-                        <Shield className="h-3 w-3" />
-                        Default Roles
-                      </Button>
-                    </Link>
                     <Link href="/admin/settings/email" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -647,6 +646,46 @@ export function SidebarContent({
                       >
                         <Upload className="h-3 w-3" />
                         File Uploads
+                      </Button>
+                    </Link>
+                    <Link href="/admin/settings/hooks" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings/hooks' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Webhook className="h-3 w-3" />
+                        Hooks
+                      </Button>
+                    </Link>
+                    <Link href="/admin/settings/repository" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings/repository' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <GitBranch className="h-3 w-3" />
+                        Repository
+                      </Button>
+                    </Link>
+                    <Link href="/admin/settings/roles" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/settings/roles' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Shield className="h-3 w-3" />
+                        Roles
                       </Button>
                     </Link>
                     <Link href="/admin/settings/sprints" onClick={handleLinkClick}>
@@ -972,7 +1011,7 @@ function ProjectSettingsLink({
           </Button>
         </Link>
       </div>
-      <CollapsibleSection expanded={expanded}>
+      {expanded && (
         <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
           {canViewSettings && (
             <Link href={`/projects/${projectKey}/settings/general`} onClick={onClick}>
@@ -1103,7 +1142,7 @@ function ProjectSettingsLink({
             </Link>
           )}
         </div>
-      </CollapsibleSection>
+      )}
     </div>
   )
 }

@@ -12,6 +12,7 @@ import {
   Play,
   Plus,
   RefreshCw,
+  RotateCcw,
   SquareCheck,
   Trash2,
   Webhook,
@@ -283,6 +284,17 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
     setPatterns(DEFAULT_PATTERNS.map((p) => ({ ...p, id: crypto.randomUUID() })))
   }, [])
 
+  const resetPatternsToSystemDefaults = useCallback(() => {
+    if (!config?.systemDefaults?.commitPatterns) {
+      // No system defaults set - fall back to built-in defaults
+      setPatterns(DEFAULT_PATTERNS.map((p) => ({ ...p, id: crypto.randomUUID() })))
+      return
+    }
+    setPatterns(
+      config.systemDefaults.commitPatterns.map((p) => ({ ...p, id: crypto.randomUUID() })),
+    )
+  }, [config])
+
   const savePatterns = useCallback(async () => {
     await commitPatternsMutation.mutateAsync(patterns.length > 0 ? patterns : null)
     setSavedPatterns(patterns)
@@ -314,11 +326,26 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto space-y-6 pb-4">
-        <div>
-          <h3 className="text-lg font-medium text-zinc-100">Hooks</h3>
-          <p className="text-sm text-zinc-500">
-            Configure webhooks and commit patterns to automate ticket updates.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-zinc-100">Hooks</h3>
+            <p className="text-sm text-zinc-500">
+              Configure webhooks and commit patterns to automate ticket updates.
+            </p>
+          </div>
+          {canEditSettings && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={resetPatternsToSystemDefaults}
+              disabled={isDisabled}
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+              Reset to System Defaults
+            </Button>
+          )}
         </div>
 
         {/* GitHub Integration Card */}
