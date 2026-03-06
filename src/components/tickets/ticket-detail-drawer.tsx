@@ -100,6 +100,7 @@ import type {
   UploadedFileInfo,
 } from '@/types'
 import { ISSUE_TYPES, PRIORITIES, RESOLUTIONS } from '@/types'
+import { AgentIdenticon } from '../common/agent-identicon'
 import { InlineCodeText } from '../common/inline-code'
 import { PriorityBadge } from '../common/priority-badge'
 import { resolutionConfig } from '../common/resolution-badge'
@@ -1291,10 +1292,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     allowUnassigned={false}
                   />
                   {ticket.createdByAgent && (
-                    <div className="flex items-center gap-1.5 text-xs text-purple-400">
-                      <Bot className="h-3.5 w-3.5 shrink-0" />
-                      <span>
-                        via <span className="font-medium">{ticket.createdByAgent.name}</span>
+                    <div className="flex items-center gap-2 mt-1 h-8 px-2 rounded-md bg-zinc-800/50 border border-zinc-700/50">
+                      <AgentIdenticon identifier={ticket.createdByAgent.id} size={18} />
+                      <span className="text-xs text-zinc-400 truncate">
+                        via {ticket.createdByAgent.name}
                       </span>
                     </div>
                   )}

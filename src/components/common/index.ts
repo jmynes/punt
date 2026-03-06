@@ -1,3 +1,5 @@
+export type { IdenticonStyle } from './agent-identicon'
+export { AgentIdenticon } from './agent-identicon'
 export { EmptyState } from './empty-state'
 export { InlineCodeText } from './inline-code'
 export { LinkedText } from './linked-text'
