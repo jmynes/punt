@@ -495,7 +495,7 @@ export function SidebarContent({
               Admin
             </span>
           </button>
-          <CollapsibleSection expanded={adminExpanded}>
+          {adminExpanded && (
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
               <Link href="/admin" onClick={handleLinkClick}>
                 <Button
@@ -536,209 +536,222 @@ export function SidebarContent({
                   Agents
                 </Button>
               </Link>
+              {/* System Settings sub-section */}
+              <div>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
+                    onClick={() => toggleSidebarSection('section-system-settings')}
+                  >
+                    {(sidebarExpandedSections['section-system-settings'] ?? false) ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                  </button>
+                  <Link href="/admin/system" onClick={handleLinkClick} className="flex-1 min-w-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+                        pathname.startsWith('/admin/system') && 'bg-zinc-800/50 text-zinc-100',
+                      )}
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                      System Settings
+                    </Button>
+                  </Link>
+                </div>
+                <CollapsibleSection
+                  expanded={sidebarExpandedSections['section-system-settings'] ?? false}
+                >
+                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                    <Link href="/admin/system/branding" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/system/branding' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Palette className="h-3 w-3" />
+                        Branding
+                      </Button>
+                    </Link>
+                    <Link href="/admin/system/database" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/system/database' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Database className="h-3 w-3" />
+                        Database
+                      </Button>
+                    </Link>
+                    <Link href="/admin/system/email" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/system/email' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Mail className="h-3 w-3" />
+                        Email
+                      </Button>
+                    </Link>
+                    <Link href="/admin/system/uploads" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/system/uploads' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Upload className="h-3 w-3" />
+                        File Uploads
+                      </Button>
+                    </Link>
+                    <Link href="/admin/system/updates" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/system/updates' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        Updates
+                      </Button>
+                    </Link>
+                  </div>
+                </CollapsibleSection>
+              </div>
+              {/* Project Defaults sub-section */}
+              <div>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
+                    onClick={() => toggleSidebarSection('section-project-defaults')}
+                  >
+                    {(sidebarExpandedSections['section-project-defaults'] ?? false) ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                  </button>
+                  <Link href="/admin/defaults" onClick={handleLinkClick} className="flex-1 min-w-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+                        pathname.startsWith('/admin/defaults') && 'bg-zinc-800/50 text-zinc-100',
+                      )}
+                    >
+                      <Layers className="h-3.5 w-3.5" />
+                      Project Defaults
+                    </Button>
+                  </Link>
+                </div>
+                <CollapsibleSection
+                  expanded={sidebarExpandedSections['section-project-defaults'] ?? false}
+                >
+                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                    <Link href="/admin/defaults/agents" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/defaults/agents' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Bot className="h-3 w-3" />
+                        Agents
+                      </Button>
+                    </Link>
+                    <Link href="/admin/defaults/board" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/defaults/board' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Columns3 className="h-3 w-3" />
+                        Board
+                      </Button>
+                    </Link>
+                    <Link href="/admin/defaults/hooks" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/defaults/hooks' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Webhook className="h-3 w-3" />
+                        Hooks
+                      </Button>
+                    </Link>
+                    <Link href="/admin/defaults/repository" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/defaults/repository' &&
+                            'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <GitBranch className="h-3 w-3" />
+                        Repository
+                      </Button>
+                    </Link>
+                    <Link href="/admin/defaults/roles" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/defaults/roles' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Shield className="h-3 w-3" />
+                        Roles
+                      </Button>
+                    </Link>
+                    <Link href="/admin/defaults/sprints" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/defaults/sprints' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <CalendarClock className="h-3 w-3" />
+                        Sprints
+                      </Button>
+                    </Link>
+                  </div>
+                </CollapsibleSection>
+              </div>
             </div>
-          </CollapsibleSection>
-        </div>
-      )}
-
-      {/* System Settings section - only visible to system admins */}
-      {currentUser.isSystemAdmin && (
-        <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
-          <button
-            type="button"
-            className="group flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none cursor-pointer"
-            onClick={() => toggleSidebarSection('section-system-settings')}
-          >
-            <span className="h-8 w-8 -ml-2 shrink-0 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 rounded group-hover:bg-zinc-800/50">
-              {(sidebarExpandedSections['section-system-settings'] ?? false) ? (
-                <ChevronDown className="h-3.5 w-3.5" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5" />
-              )}
-            </span>
-            <Settings className="h-3.5 w-3.5 text-zinc-500 -ml-1" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              System Settings
-            </span>
-          </button>
-          <CollapsibleSection
-            expanded={sidebarExpandedSections['section-system-settings'] ?? false}
-          >
-            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-              <Link href="/admin/system/branding" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/system/branding' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Palette className="h-3.5 w-3.5" />
-                  Branding
-                </Button>
-              </Link>
-              <Link href="/admin/system/database" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/system/database' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Database className="h-3.5 w-3.5" />
-                  Database
-                </Button>
-              </Link>
-              <Link href="/admin/system/email" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/system/email' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Mail className="h-3.5 w-3.5" />
-                  Email
-                </Button>
-              </Link>
-              <Link href="/admin/system/uploads" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/system/uploads' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Upload className="h-3.5 w-3.5" />
-                  File Uploads
-                </Button>
-              </Link>
-              <Link href="/admin/system/updates" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/system/updates' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Updates
-                </Button>
-              </Link>
-            </div>
-          </CollapsibleSection>
-        </div>
-      )}
-
-      {/* Project Defaults section - only visible to system admins */}
-      {currentUser.isSystemAdmin && (
-        <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
-          <button
-            type="button"
-            className="group flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none cursor-pointer"
-            onClick={() => toggleSidebarSection('section-project-defaults')}
-          >
-            <span className="h-8 w-8 -ml-2 shrink-0 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 rounded group-hover:bg-zinc-800/50">
-              {(sidebarExpandedSections['section-project-defaults'] ?? false) ? (
-                <ChevronDown className="h-3.5 w-3.5" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5" />
-              )}
-            </span>
-            <Layers className="h-3.5 w-3.5 text-zinc-500 -ml-1" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Project Defaults
-            </span>
-          </button>
-          <CollapsibleSection
-            expanded={sidebarExpandedSections['section-project-defaults'] ?? false}
-          >
-            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-              <Link href="/admin/defaults/agents" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/defaults/agents' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Bot className="h-3.5 w-3.5" />
-                  Agents
-                </Button>
-              </Link>
-              <Link href="/admin/defaults/board" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/defaults/board' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Columns3 className="h-3.5 w-3.5" />
-                  Board
-                </Button>
-              </Link>
-              <Link href="/admin/defaults/hooks" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/defaults/hooks' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Webhook className="h-3.5 w-3.5" />
-                  Hooks
-                </Button>
-              </Link>
-              <Link href="/admin/defaults/repository" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/defaults/repository' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <GitBranch className="h-3.5 w-3.5" />
-                  Repository
-                </Button>
-              </Link>
-              <Link href="/admin/defaults/roles" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/defaults/roles' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Shield className="h-3.5 w-3.5" />
-                  Roles
-                </Button>
-              </Link>
-              <Link href="/admin/defaults/sprints" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                    pathname === '/admin/defaults/sprints' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <CalendarClock className="h-3.5 w-3.5" />
-                  Sprints
-                </Button>
-              </Link>
-            </div>
-          </CollapsibleSection>
+          )}
         </div>
       )}
 
