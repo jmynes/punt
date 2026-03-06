@@ -157,10 +157,15 @@ export async function POST(request: Request) {
     }
 
     await db.$transaction(async (tx) => {
-      // Deactivate any existing Agent records for this user
-      await tx.agent.updateMany({
-        where: { ownerId: currentUser.id, isActive: true },
-        data: { isActive: false },
+      // Clear agent attribution on tickets before deleting old agents
+      await tx.ticket.updateMany({
+        where: { createdByAgentId: { not: null }, createdByAgent: { ownerId: currentUser.id } },
+        data: { createdByAgentId: null },
+      })
+
+      // Delete any existing Agent records for this user
+      await tx.agent.deleteMany({
+        where: { ownerId: currentUser.id },
       })
 
       // Update the user's MCP key
