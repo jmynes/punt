@@ -3,6 +3,7 @@
 import { formatDistanceToNow } from 'date-fns'
 import {
   ArrowRight,
+  Ban,
   Bot,
   CheckCircle2,
   CircleDot,
@@ -620,17 +621,23 @@ function ActionDescription({
         return (
           <span>
             linked this ticket{' '}
-            {linkMeta.linkType === 'blocks'
-              ? 'as blocking'
-              : linkMeta.linkType === 'is blocked by'
-                ? 'as blocked by'
-                : linkMeta.linkType === 'relates to'
-                  ? 'as related to'
-                  : linkMeta.linkType === 'duplicates'
-                    ? 'as duplicate of'
-                    : linkMeta.linkType === 'is duplicated by'
-                      ? 'as duplicated by'
-                      : `as ${linkMeta.linkType}`}{' '}
+            {linkMeta.linkType === 'blocks' ? (
+              <>
+                as <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocking
+              </>
+            ) : linkMeta.linkType === 'is blocked by' ? (
+              <>
+                as <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocked by
+              </>
+            ) : linkMeta.linkType === 'relates to' ? (
+              'as related to'
+            ) : linkMeta.linkType === 'duplicates' ? (
+              'as duplicate of'
+            ) : linkMeta.linkType === 'is duplicated by' ? (
+              'as duplicated by'
+            ) : (
+              `as ${linkMeta.linkType}`
+            )}{' '}
             <TicketKeyBadge ticketKey={linkMeta.ticketKey} />
           </span>
         )
@@ -644,17 +651,23 @@ function ActionDescription({
         return (
           <span>
             removed{' '}
-            {unlinkMeta.linkType === 'blocks'
-              ? 'blocking'
-              : unlinkMeta.linkType === 'is blocked by'
-                ? 'blocked by'
-                : unlinkMeta.linkType === 'relates to'
-                  ? 'related to'
-                  : unlinkMeta.linkType === 'duplicates'
-                    ? 'duplicate of'
-                    : unlinkMeta.linkType === 'is duplicated by'
-                      ? 'duplicated by'
-                      : unlinkMeta.linkType}{' '}
+            {unlinkMeta.linkType === 'blocks' ? (
+              <>
+                <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocking
+              </>
+            ) : unlinkMeta.linkType === 'is blocked by' ? (
+              <>
+                <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocked by
+              </>
+            ) : unlinkMeta.linkType === 'relates to' ? (
+              'related to'
+            ) : unlinkMeta.linkType === 'duplicates' ? (
+              'duplicate of'
+            ) : unlinkMeta.linkType === 'is duplicated by' ? (
+              'duplicated by'
+            ) : (
+              unlinkMeta.linkType
+            )}{' '}
             link to <TicketKeyBadge ticketKey={unlinkMeta.ticketKey} />
           </span>
         )
@@ -667,7 +680,8 @@ function ActionDescription({
       if (blockerMeta) {
         return (
           <span>
-            blocker <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> resolved
+            <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocker{' '}
+            <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> resolved
             {blockerMeta.resolution && (
               <span className="text-zinc-500"> ({blockerMeta.resolution})</span>
             )}
@@ -682,7 +696,8 @@ function ActionDescription({
       if (blockerMeta) {
         return (
           <span>
-            blocker <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> reopened
+            <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocker{' '}
+            <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> reopened
           </span>
         )
       }
@@ -694,7 +709,8 @@ function ActionDescription({
       if (blockerMeta) {
         return (
           <span>
-            blocker <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> deleted
+            <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocker{' '}
+            <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> deleted
           </span>
         )
       }
