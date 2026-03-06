@@ -233,19 +233,15 @@ export async function DELETE(request: Request) {
     })
 
     await db.$transaction(async (tx) => {
-      // Deactivate the Agent associated with the current key
-      if (user?.mcpApiKey) {
-        await tx.agent.updateMany({
-          where: { apiKeyHash: user.mcpApiKey, ownerId: currentUser.id },
-          data: { isActive: false },
-        })
-      }
+      // Clear agent attribution on tickets before deleting agents
+      await tx.ticket.updateMany({
+        where: { createdByAgentId: { not: null }, createdByAgent: { ownerId: currentUser.id } },
+        data: { createdByAgentId: null },
+      })
 
-      // Also deactivate all active agents for this user as a safety net
-      // (handles edge cases where mcpApiKey is empty string or hash mismatch)
-      await tx.agent.updateMany({
-        where: { ownerId: currentUser.id, isActive: true },
-        data: { isActive: false },
+      // Delete all agent records for this user
+      await tx.agent.deleteMany({
+        where: { ownerId: currentUser.id },
       })
 
       // Clear the user's MCP key
