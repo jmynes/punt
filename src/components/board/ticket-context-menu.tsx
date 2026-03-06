@@ -1526,7 +1526,7 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
 
                   {submenu.id === 'points' && (
                     <>
-                      {[1, 2, 3, 4, 5].map((p) => (
+                      {[1, 2, 3, 5, 8, 13].map((p) => (
                         <button
                           key={p}
                           type="button"
@@ -1535,7 +1535,8 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
                         >
                           <Hash className="h-4 w-4 text-green-400" />
                           <span>
-                            {p} point{p === 1 ? '' : 's'}
+                            <span className="inline-block w-5 text-right tabular-nums">{p}</span>{' '}
+                            point{p === 1 ? '' : 's'}
                           </span>
                           {ticket.storyPoints === p && !multi && (
                             <Check className="size-4 text-zinc-400 ml-auto" />
