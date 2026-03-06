@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CodeBlock } from '@/components/ui/code-block'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { showToast } from '@/lib/toast'
+import { MyAgents } from './my-agents'
 import { ReauthDialog } from './reauth-dialog'
 
 interface MCPTabProps {
@@ -334,6 +335,8 @@ export function MCPTab({ isDemo }: MCPTabProps) {
           )}
         </CardContent>
       </Card>
+
+      <MyAgents />
 
       <Card className="border-zinc-800 bg-zinc-900/50">
         <CardHeader className="pb-4">
