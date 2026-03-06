@@ -591,13 +591,14 @@ export function SidebarContent({
                         Database
                       </Button>
                     </Link>
-                    <Link href="/admin/settings/roles" onClick={handleLinkClick}>
+                    <Link href="/admin/settings/default-roles" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/roles' && 'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/settings/default-roles' &&
+                            'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Shield className="h-3 w-3" />

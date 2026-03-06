@@ -156,6 +156,10 @@ export const TICKET_SELECT_FULL = {
           priority: true,
           columnId: true,
           resolution: true,
+          storyPoints: true,
+          assignee: {
+            select: USER_SELECT_SUMMARY,
+          },
         },
       },
     },
@@ -173,6 +177,10 @@ export const TICKET_SELECT_FULL = {
           priority: true,
           columnId: true,
           resolution: true,
+          storyPoints: true,
+          assignee: {
+            select: USER_SELECT_SUMMARY,
+          },
         },
       },
     },
@@ -206,32 +214,35 @@ export type TicketWatcher = {
 /**
  * Type for link relations as returned from Prisma.
  */
+type LinkedTicketFields = {
+  id: string
+  number: number
+  title: string
+  type: string
+  priority: string
+  columnId: string
+  resolution: string | null
+  storyPoints: number | null
+  assignee: {
+    id: string
+    username: string
+    name: string
+    email: string | null
+    avatar: string | null
+    avatarColor: string | null
+  } | null
+}
+
 type LinkedFromEntry = {
   id: string
   linkType: string
-  toTicket: {
-    id: string
-    number: number
-    title: string
-    type: string
-    priority: string
-    columnId: string
-    resolution: string | null
-  }
+  toTicket: LinkedTicketFields
 }
 
 type LinkedToEntry = {
   id: string
   linkType: string
-  fromTicket: {
-    id: string
-    number: number
-    title: string
-    type: string
-    priority: string
-    columnId: string
-    resolution: string | null
-  }
+  fromTicket: LinkedTicketFields
 }
 
 /**

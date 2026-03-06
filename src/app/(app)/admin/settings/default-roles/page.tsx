@@ -17,7 +17,7 @@ export default function AdminRolesSettingsPage() {
         accentColor="amber"
       />
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-auto">
-        <AdminSettingsTabs activeTab="roles" />
+        <AdminSettingsTabs activeTab="default-roles" />
         <RolePermissionsForm />
         <div className="h-8 flex-shrink-0" />
       </div>

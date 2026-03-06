@@ -352,8 +352,6 @@ export async function PATCH(
         where: { userId: existingUser.id },
         select: { id: true, projectId: true, role: { select: { name: true } } },
       })
-      const existingProjectIds = existingMemberships.map((m) => m.projectId)
-
       // Get all projects with their Admin role
       const allProjects = await db.project.findMany({
         select: {
