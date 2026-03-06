@@ -623,11 +623,11 @@ function ActionDescription({
             linked this ticket{' '}
             {linkMeta.linkType === 'blocks' ? (
               <>
-                as <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocking
+                as <Ban className="inline h-3 w-3 align-[-2px] text-red-400" /> blocking
               </>
             ) : linkMeta.linkType === 'is blocked by' ? (
               <>
-                as <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocked by
+                as <Ban className="inline h-3 w-3 align-[-2px] text-red-400" /> blocked by
               </>
             ) : linkMeta.linkType === 'relates to' ? (
               'as related to'
@@ -653,11 +653,11 @@ function ActionDescription({
             removed{' '}
             {unlinkMeta.linkType === 'blocks' ? (
               <>
-                <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocking
+                <Ban className="inline h-3 w-3 align-[-2px] text-red-400" /> blocking
               </>
             ) : unlinkMeta.linkType === 'is blocked by' ? (
               <>
-                <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocked by
+                <Ban className="inline h-3 w-3 align-[-2px] text-red-400" /> blocked by
               </>
             ) : unlinkMeta.linkType === 'relates to' ? (
               'related to'
@@ -680,7 +680,7 @@ function ActionDescription({
       if (blockerMeta) {
         return (
           <span>
-            <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocker{' '}
+            <Ban className="inline h-3 w-3 align-[-2px] text-red-400" /> blocker{' '}
             <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> resolved
             {blockerMeta.resolution && (
               <span className="text-zinc-500"> ({blockerMeta.resolution})</span>
@@ -696,7 +696,7 @@ function ActionDescription({
       if (blockerMeta) {
         return (
           <span>
-            <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocker{' '}
+            <Ban className="inline h-3 w-3 align-[-2px] text-red-400" /> blocker{' '}
             <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> reopened
           </span>
         )
@@ -709,7 +709,7 @@ function ActionDescription({
       if (blockerMeta) {
         return (
           <span>
-            <Ban className="inline h-3 w-3 align-text-bottom text-red-400" /> blocker{' '}
+            <Ban className="inline h-3 w-3 align-[-2px] text-red-400" /> blocker{' '}
             <TicketKeyBadge ticketKey={blockerMeta.ticketKey} /> deleted
           </span>
         )
