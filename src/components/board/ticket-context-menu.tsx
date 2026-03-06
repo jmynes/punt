@@ -1526,7 +1526,7 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
 
                   {submenu.id === 'points' && (
                     <>
-                      {[1, 2, 3, 5, 8, 13].map((p) => (
+                      {[1, 2, 3, 4, 5].map((p) => (
                         <button
                           key={p}
                           type="button"
