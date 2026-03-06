@@ -2,10 +2,12 @@
 
 import { Ban, Link2, Plus, X } from 'lucide-react'
 import { useState } from 'react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useDeleteTicketLink, useTicketLinks } from '@/hooks/queries/use-ticket-links'
+import { getAvatarColor, getInitials } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 import type { LinkType, TicketLinkSummary, TicketWithRelations } from '@/types'
 import { INVERSE_LINK_TYPES, LINK_TYPE_LABELS } from '@/types'
@@ -129,6 +131,28 @@ export function TicketLinkSection({ ticket, projectKey, projectId }: TicketLinkS
                         className="text-sm truncate text-zinc-300"
                       />
                     </button>
+                    {link.linkedTicket.storyPoints != null && (
+                      <span className="text-xs text-zinc-500 shrink-0">
+                        {link.linkedTicket.storyPoints}p
+                      </span>
+                    )}
+                    {link.linkedTicket.assignee && (
+                      <Avatar className="h-5 w-5 shrink-0">
+                        <AvatarImage src={link.linkedTicket.assignee.avatar || undefined} />
+                        <AvatarFallback
+                          className="text-[10px] text-white font-medium"
+                          style={{
+                            backgroundColor:
+                              link.linkedTicket.assignee.avatarColor ||
+                              getAvatarColor(
+                                link.linkedTicket.assignee.id || link.linkedTicket.assignee.name,
+                              ),
+                          }}
+                        >
+                          {getInitials(link.linkedTicket.assignee.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     {link.linkedTicket.resolution && (
                       <Badge
                         variant="outline"

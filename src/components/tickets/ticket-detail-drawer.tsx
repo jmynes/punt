@@ -1520,23 +1520,55 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   {childTickets.length > 0 && (
                     <div className="space-y-1">
                       {childTickets.map((child) => (
-                        <Button
+                        <div
                           key={child.id}
-                          variant="outline"
-                          className="w-full justify-start text-left h-auto py-2 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 hover:border-amber-500"
-                          onClick={() => {
-                            setActiveTicketId(child.id)
-                          }}
+                          className="group flex items-center gap-2 px-2 py-1.5 rounded bg-zinc-900/50 hover:bg-zinc-800/50"
                         >
-                          <div className="flex items-center gap-2 w-full">
-                            <TypeBadge type={child.type} size="sm" />
-                            <span className="font-mono text-zinc-500 shrink-0">
+                          <TypeBadge type={child.type} size="sm" />
+                          <button
+                            type="button"
+                            className="flex-1 flex items-center gap-2 text-left hover:text-amber-400 transition-colors min-w-0"
+                            onClick={() => {
+                              setActiveTicketId(child.id)
+                            }}
+                          >
+                            <span className="font-mono text-zinc-500 text-xs shrink-0">
                               {projectKey}-{child.number}
                             </span>
-                            <InlineCodeText text={child.title} className="truncate text-zinc-300" />
-                            <Link2 className="h-3.5 w-3.5 text-zinc-500 ml-auto shrink-0" />
-                          </div>
-                        </Button>
+                            <InlineCodeText
+                              text={child.title}
+                              className="text-sm truncate text-zinc-300"
+                            />
+                          </button>
+                          {child.storyPoints != null && (
+                            <span className="text-xs text-zinc-500 shrink-0">
+                              {child.storyPoints}p
+                            </span>
+                          )}
+                          {child.assignee && (
+                            <Avatar className="h-5 w-5 shrink-0">
+                              <AvatarImage src={child.assignee.avatar || undefined} />
+                              <AvatarFallback
+                                className="text-[10px] text-white font-medium"
+                                style={{
+                                  backgroundColor:
+                                    child.assignee.avatarColor ||
+                                    getAvatarColor(child.assignee.id || child.assignee.name),
+                                }}
+                              >
+                                {getInitials(child.assignee.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          {child.resolution && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs shrink-0 border-green-600 text-green-400"
+                            >
+                              Resolved
+                            </Badge>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}
