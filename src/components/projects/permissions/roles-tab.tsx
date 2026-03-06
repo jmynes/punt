@@ -25,6 +25,7 @@ import {
   Loader2,
   Minus,
   Plus,
+  RotateCcw,
   Shield,
   Square,
   Trash2,
@@ -78,6 +79,7 @@ import {
   useDeleteRole,
   useProjectRoles,
   useReorderRoles,
+  useResetRolesToDefaults,
   useUpdateRole,
 } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -113,6 +115,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
   const updateRole = useUpdateRole(projectId)
   const deleteRole = useDeleteRole(projectId)
   const reorderRoles = useReorderRoles(projectId)
+  const resetRolesToDefaults = useResetRolesToDefaults(projectId)
   const queryClient = useQueryClient()
 
   const {
@@ -206,6 +209,9 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
 
   // Compare roles dialog
   const [showCompareDialog, setShowCompareDialog] = useState(false)
+
+  // Reset to system defaults confirmation
+  const [showResetDefaultsDialog, setShowResetDefaultsDialog] = useState(false)
 
   // Multi-select state for role members
   const [memberSelectedIds, setMemberSelectedIds] = useState<Set<string>>(new Set())
@@ -1022,6 +1028,23 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     }
   }
 
+  // Reset all roles to system defaults
+  const handleResetToSystemDefaults = async () => {
+    try {
+      const updatedRoles = await resetRolesToDefaults.mutateAsync()
+      setShowResetDefaultsDialog(false)
+      setHasChanges(false)
+      setIsCreating(false)
+      // Select the first role and load its data
+      if (updatedRoles.length > 0) {
+        setSelectedRoleId(updatedRoles[0].id)
+        loadRoleData(updatedRoles[0])
+      }
+    } catch {
+      // Error handled by mutation
+    }
+  }
+
   // Build actions for each role item
   // biome-ignore lint/correctness/useExhaustiveDependencies: handleCloneRole is intentionally excluded to avoid unnecessary rerenders
   const getRoleActions = useCallback(
@@ -1117,6 +1140,17 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+            )}
+            {canManageRoles && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowResetDefaultsDialog(true)}
+                disabled={resetRolesToDefaults.isPending}
+                title="Reset to System Defaults"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
             )}
             {roles && roles.length >= 2 && (
               <Button
@@ -1821,6 +1855,36 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
           roles={roles}
         />
       )}
+
+      {/* Reset to system defaults confirmation dialog */}
+      <AlertDialog open={showResetDefaultsDialog} onOpenChange={setShowResetDefaultsDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Roles to System Defaults?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will update all built-in roles (Owner, Admin, Member) to match the system-wide
+              default configuration set by administrators. Custom roles without members will be
+              removed if they don&apos;t exist in the system defaults.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetToSystemDefaults}
+              disabled={resetRolesToDefaults.isPending}
+            >
+              {resetRolesToDefaults.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                'Reset to Defaults'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
