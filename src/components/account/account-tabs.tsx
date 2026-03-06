@@ -6,16 +6,16 @@ import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 
 const ACCOUNT_TABS: TabItem[] = [
   {
-    value: 'claude-chat',
-    label: 'Claude Chat',
-    href: '/account/claude-chat',
-    icon: <Bot className="h-4 w-4" />,
-  },
-  {
     value: 'profile',
-    label: 'Identity',
+    label: 'Bio',
     href: '/account/profile',
     icon: <User className="h-4 w-4" />,
+  },
+  {
+    value: 'claude-chat',
+    label: 'Chat',
+    href: '/account/claude-chat',
+    icon: <Bot className="h-4 w-4" />,
   },
   {
     value: 'mcp',
@@ -31,7 +31,7 @@ const ACCOUNT_TABS: TabItem[] = [
   },
 ]
 
-const TAB_ROUTES = ['/account/claude-chat', '/account/profile', '/account/mcp', '/account/security']
+const TAB_ROUTES = ['/account/profile', '/account/claude-chat', '/account/mcp', '/account/security']
 
 interface AccountTabsProps {
   activeTab: string

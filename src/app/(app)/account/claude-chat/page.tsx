@@ -23,7 +23,7 @@ function AccountClaudeChatContent() {
       <PageHeader
         icon={UserCircle}
         category="Account"
-        title="Claude Chat"
+        title="Chat"
         description="Configure your AI chat provider and API key"
         variant="hero"
         accentColor="blue"
