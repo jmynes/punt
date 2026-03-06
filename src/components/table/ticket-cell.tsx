@@ -128,10 +128,9 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
           </Avatar>
           <span className="truncate text-sm">{ticket.creator.name}</span>
           {ticket.createdByAgent && (
-            <Bot
-              className="h-3.5 w-3.5 shrink-0 text-purple-400"
-              title={`via ${ticket.createdByAgent.name}`}
-            />
+            <span title={`via ${ticket.createdByAgent.name}`}>
+              <Bot className="h-3.5 w-3.5 shrink-0 text-purple-400" />
+            </span>
           )}
         </div>
       )

@@ -244,10 +244,9 @@ export function KanbanCard({
             {/* Right side: Agent indicator + Resolution badge + Assignee */}
             <div className="flex items-center gap-2">
               {ticket.createdByAgent && (
-                <Bot
-                  className="h-3.5 w-3.5 text-purple-400"
-                  title={`Created via ${ticket.createdByAgent.name}`}
-                />
+                <span title={`Created via ${ticket.createdByAgent.name}`}>
+                  <Bot className="h-3.5 w-3.5 text-purple-400" />
+                </span>
               )}
               {ticket.resolution && ticket.resolution !== 'Done' && (
                 <ResolutionBadge resolution={ticket.resolution as Resolution} size="sm" />
