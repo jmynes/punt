@@ -1467,29 +1467,54 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
               {parentTicket && (
                 <div className="space-y-2">
                   <Label className="text-zinc-400">Parent</Label>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left h-auto py-2 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 hover:border-amber-500"
-                    onClick={() => {
-                      setActiveTicketId(parentTicket.id)
-                    }}
-                  >
-                    <div className="flex items-center gap-2 w-full">
-                      {parentTicket.type === 'epic' ? (
-                        <Zap className="h-4 w-4 text-purple-400 shrink-0" />
-                      ) : (
-                        <Lightbulb className="h-4 w-4 text-green-400 shrink-0" />
-                      )}
-                      <span className="font-mono text-zinc-500 shrink-0">
+                  <div className="group flex items-center gap-2 px-2 py-1.5 rounded bg-zinc-900/50 hover:bg-zinc-800/50">
+                    <TypeBadge type={parentTicket.type} size="sm" />
+                    <button
+                      type="button"
+                      className="flex-1 flex items-center gap-2 text-left hover:text-amber-400 transition-colors min-w-0"
+                      onClick={() => {
+                        setActiveTicketId(parentTicket.id)
+                      }}
+                    >
+                      <span className="font-mono text-zinc-500 text-xs shrink-0">
                         {projectKey}-{parentTicket.number}
                       </span>
                       <InlineCodeText
                         text={parentTicket.title}
-                        className="truncate text-zinc-300"
+                        className="text-sm truncate text-zinc-300"
                       />
-                      <Link2 className="h-3.5 w-3.5 text-zinc-500 ml-auto shrink-0" />
-                    </div>
-                  </Button>
+                    </button>
+                    {parentTicket.storyPoints != null && (
+                      <span className="text-xs text-zinc-500 shrink-0">
+                        {parentTicket.storyPoints}p
+                      </span>
+                    )}
+                    {parentTicket.assignee && (
+                      <Avatar className="h-5 w-5 shrink-0">
+                        <AvatarImage src={parentTicket.assignee.avatar || undefined} />
+                        <AvatarFallback
+                          className="text-[10px] text-white font-medium"
+                          style={{
+                            backgroundColor:
+                              parentTicket.assignee.avatarColor ||
+                              getAvatarColor(
+                                parentTicket.assignee.id || parentTicket.assignee.name,
+                              ),
+                          }}
+                        >
+                          {getInitials(parentTicket.assignee.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                    {parentTicket.resolution && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs shrink-0 border-green-600 text-green-400"
+                      >
+                        Resolved
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               )}
 

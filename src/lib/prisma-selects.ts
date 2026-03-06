@@ -227,7 +227,7 @@ type LinkedTicketFields = {
     id: string
     username: string
     name: string
-    email: string
+    email: string | null
     avatar: string | null
     avatarColor: string | null
   } | null
