@@ -7,7 +7,11 @@ const ACCOUNT_TAB_REDIRECTS: Record<string, string> = {
   mcp: '/account/mcp',
 }
 
-const PREFERENCE_TABS = new Set(['general', 'appearance', 'notifications'])
+const PREFERENCE_TAB_REDIRECTS: Record<string, string> = {
+  general: '/preferences/general',
+  appearance: '/preferences/appearance',
+  notifications: '/preferences/notifications',
+}
 
 export default async function ProfilePage({
   searchParams,
@@ -20,8 +24,8 @@ export default async function ProfilePage({
     redirect(ACCOUNT_TAB_REDIRECTS[tab])
   }
 
-  if (tab && PREFERENCE_TABS.has(tab)) {
-    redirect(`/preferences?tab=${tab}`)
+  if (tab && tab in PREFERENCE_TAB_REDIRECTS) {
+    redirect(PREFERENCE_TAB_REDIRECTS[tab])
   }
 
   redirect('/account/avatar')

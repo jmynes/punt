@@ -438,45 +438,39 @@ export function SidebarContent({
           </div>
           <CollapsibleSection expanded={preferencesExpanded}>
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-              <Link href="/preferences?tab=general" onClick={handleLinkClick}>
+              <Link href="/preferences/appearance" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences' &&
-                      (searchParams.get('tab') === 'general' || !searchParams.get('tab')) &&
-                      'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Sliders className="h-3 w-3" />
-                  General
-                </Button>
-              </Link>
-              <Link href="/preferences?tab=appearance" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences' &&
-                      searchParams.get('tab') === 'appearance' &&
-                      'bg-zinc-800/50 text-zinc-100',
+                    pathname === '/preferences/appearance' && 'bg-zinc-800/50 text-zinc-100',
                   )}
                 >
                   <Palette className="h-3 w-3" />
                   Appearance
                 </Button>
               </Link>
-              <Link href="/preferences?tab=notifications" onClick={handleLinkClick}>
+              <Link href="/preferences/general" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className={cn(
                     'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences' &&
-                      searchParams.get('tab') === 'notifications' &&
-                      'bg-zinc-800/50 text-zinc-100',
+                    pathname === '/preferences/general' && 'bg-zinc-800/50 text-zinc-100',
+                  )}
+                >
+                  <Sliders className="h-3 w-3" />
+                  General
+                </Button>
+              </Link>
+              <Link href="/preferences/notifications" onClick={handleLinkClick}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                    pathname === '/preferences/notifications' && 'bg-zinc-800/50 text-zinc-100',
                   )}
                 >
                   <Bell className="h-3 w-3" />
