@@ -1,7 +1,7 @@
 'use client'
 
 import { format, isBefore, isToday } from 'date-fns'
-import { Ban, Eye, User } from 'lucide-react'
+import { Ban, Bot, Eye, User } from 'lucide-react'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { ResolutionBadge } from '@/components/common/resolution-badge'
@@ -127,6 +127,12 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
             </AvatarFallback>
           </Avatar>
           <span className="truncate text-sm">{ticket.creator.name}</span>
+          {ticket.createdByAgent && (
+            <Bot
+              className="h-3.5 w-3.5 shrink-0 text-purple-400"
+              title={`via ${ticket.createdByAgent.name}`}
+            />
+          )}
         </div>
       )
 

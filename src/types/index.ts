@@ -252,6 +252,8 @@ export interface TicketWithRelations {
   isCarriedOver: boolean
   carriedFromSprintId: string | null
   carriedOverCount: number
+  createdByAgentId: string | null
+  createdByAgent: { id: string; name: string; ownerId: string } | null
   assignee: UserSummary | null
   creator: UserSummary
   sprint: SprintSummary | null

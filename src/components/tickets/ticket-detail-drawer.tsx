@@ -3,6 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
+  Bot,
   Bug,
   CheckSquare,
   ChevronDown,
@@ -1289,6 +1290,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     showAssignToMe
                     allowUnassigned={false}
                   />
+                  {ticket.createdByAgent && (
+                    <div className="flex items-center gap-1.5 text-xs text-purple-400">
+                      <Bot className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        via <span className="font-medium">{ticket.createdByAgent.name}</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Assignee */}
@@ -1822,7 +1831,13 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     onPendingCommentChange={setHasPendingComment}
                   />
                 ) : (
-                  <ActivityTimeline projectId={projectId} ticketId={ticket.id} />
+                  <ActivityTimeline
+                    projectId={projectId}
+                    ticketId={ticket.id}
+                    agentAttribution={
+                      ticket.createdByAgent ? { name: ticket.createdByAgent.name } : null
+                    }
+                  />
                 )}
               </div>
             </div>

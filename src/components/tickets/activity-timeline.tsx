@@ -101,12 +101,19 @@ function parseUserValue(value: ActivityValue): UserMeta | null {
   return { id: '', name: value, username: value }
 }
 
+/** Agent attribution info for "created" activity entries. */
+export interface AgentAttribution {
+  name: string
+}
+
 interface ActivityTimelineProps {
   projectId: string
   ticketId: string
+  /** Optional agent attribution to show on the "created" activity entry. */
+  agentAttribution?: AgentAttribution | null
 }
 
-export function ActivityTimeline({ projectId, ticketId }: ActivityTimelineProps) {
+export function ActivityTimeline({ projectId, ticketId, agentAttribution }: ActivityTimelineProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useTicketActivity(
     projectId,
     ticketId,
@@ -137,7 +144,11 @@ export function ActivityTimeline({ projectId, ticketId }: ActivityTimelineProps)
   return (
     <div className="space-y-1">
       {entries.map((entry) => (
-        <TimelineEntryRow key={`${entry.type}-${entry.id}`} entry={entry} />
+        <TimelineEntryRow
+          key={`${entry.type}-${entry.id}`}
+          entry={entry}
+          agentAttribution={agentAttribution}
+        />
       ))}
 
       {hasNextPage && (
@@ -157,18 +168,31 @@ export function ActivityTimeline({ projectId, ticketId }: ActivityTimelineProps)
   )
 }
 
-function TimelineEntryRow({ entry }: { entry: TimelineEntry }) {
+function TimelineEntryRow({
+  entry,
+  agentAttribution,
+}: {
+  entry: TimelineEntry
+  agentAttribution?: AgentAttribution | null
+}) {
   if (entry.type === 'comment') {
     return <CommentRow entry={entry} />
   }
   if (entry.type === 'activity_group') {
     return <ActivityGroupRow entry={entry} />
   }
-  return <ActivityRow entry={entry} />
+  return <ActivityRow entry={entry} agentAttribution={agentAttribution} />
 }
 
-function ActivityRow({ entry }: { entry: ActivityEntry }) {
+function ActivityRow({
+  entry,
+  agentAttribution,
+}: {
+  entry: ActivityEntry
+  agentAttribution?: AgentAttribution | null
+}) {
   const iconColor = getActionIconColor(entry.action)
+  const showAgent = entry.action === 'created' && agentAttribution
 
   return (
     <div className="flex gap-2.5 py-1.5 group">
@@ -183,7 +207,13 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-zinc-300 leading-snug">
-          <UserName user={entry.user} />{' '}
+          <UserName user={entry.user} />
+          {showAgent && (
+            <span className="text-purple-400">
+              {' '}
+              <Bot className="inline h-3.5 w-3.5 align-text-bottom" /> via {agentAttribution.name}
+            </span>
+          )}{' '}
           <ActionDescription
             action={entry.action}
             field={entry.field}
