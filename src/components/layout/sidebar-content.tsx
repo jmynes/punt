@@ -325,161 +325,143 @@ export function SidebarContent({
             </Link>
           )
         })}
-        {/* Account section */}
-        <div className="pl-[9px]">
-          <div className="flex items-center">
-            <button
-              type="button"
-              className="h-9 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
-              onClick={toggleAccountExpanded}
-            >
-              {accountExpanded ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-            </button>
-            <Link href="/account" onClick={handleLinkClick} className="flex-1 min-w-0">
+      </div>
+
+      {/* Account section */}
+      <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
+        <button
+          type="button"
+          className="flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none"
+          onClick={toggleAccountExpanded}
+        >
+          {accountExpanded ? (
+            <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
+          )}
+          <User className="h-3.5 w-3.5 text-zinc-500" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Account
+          </span>
+        </button>
+        <CollapsibleSection expanded={accountExpanded}>
+          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+            <Link href="/account/avatar" onClick={handleLinkClick}>
               <Button
                 variant="ghost"
+                size="sm"
                 className={cn(
-                  'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 pl-1',
-                  pathname.startsWith('/account') && 'bg-zinc-800/50 text-zinc-100',
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                  pathname === '/account/avatar' && 'bg-zinc-800/50 text-zinc-100',
                 )}
               >
-                <User className="h-4 w-4" />
-                Account
+                <User className="h-3.5 w-3.5" />
+                Avatar
+              </Button>
+            </Link>
+            <Link href="/account/chat" onClick={handleLinkClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                  pathname === '/account/chat' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Bot className="h-3.5 w-3.5" />
+                Chat
+              </Button>
+            </Link>
+            <Link href="/account/mcp" onClick={handleLinkClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                  pathname === '/account/mcp' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Terminal className="h-3.5 w-3.5" />
+                MCP
+              </Button>
+            </Link>
+            <Link href="/account/security" onClick={handleLinkClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                  pathname === '/account/security' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <KeyRound className="h-3.5 w-3.5" />
+                Security
               </Button>
             </Link>
           </div>
-          <CollapsibleSection expanded={accountExpanded}>
-            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-              <Link href="/account/avatar" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/account/avatar' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <User className="h-3 w-3" />
-                  Avatar
-                </Button>
-              </Link>
-              <Link href="/account/chat" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/account/chat' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Bot className="h-3 w-3" />
-                  Chat
-                </Button>
-              </Link>
-              <Link href="/account/mcp" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/account/mcp' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Terminal className="h-3 w-3" />
-                  MCP
-                </Button>
-              </Link>
-              <Link href="/account/security" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/account/security' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <KeyRound className="h-3 w-3" />
-                  Security
-                </Button>
-              </Link>
-            </div>
-          </CollapsibleSection>
-        </div>
-        {/* Preferences section */}
-        <div className="pl-[9px]">
-          <div className="flex items-center">
-            <button
-              type="button"
-              className="h-9 w-5 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none"
-              onClick={togglePreferencesExpanded}
-            >
-              {preferencesExpanded ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-            </button>
-            <Link href="/preferences" onClick={handleLinkClick} className="flex-1 min-w-0">
+        </CollapsibleSection>
+      </div>
+
+      {/* Preferences section */}
+      <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
+        <button
+          type="button"
+          className="flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none"
+          onClick={togglePreferencesExpanded}
+        >
+          {preferencesExpanded ? (
+            <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
+          )}
+          <SlidersHorizontal className="h-3.5 w-3.5 text-zinc-500" />
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Preferences
+          </span>
+        </button>
+        <CollapsibleSection expanded={preferencesExpanded}>
+          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+            <Link href="/preferences/general" onClick={handleLinkClick}>
               <Button
                 variant="ghost"
+                size="sm"
                 className={cn(
-                  'w-full justify-start gap-3 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 pl-1',
-                  pathname.startsWith('/preferences') && 'bg-zinc-800/50 text-zinc-100',
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                  pathname === '/preferences/general' && 'bg-zinc-800/50 text-zinc-100',
                 )}
               >
-                <SlidersHorizontal className="h-4 w-4" />
-                Preferences
+                <Sliders className="h-3.5 w-3.5" />
+                General
+              </Button>
+            </Link>
+            <Link href="/preferences/appearance" onClick={handleLinkClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                  pathname === '/preferences/appearance' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Palette className="h-3.5 w-3.5" />
+                Appearance
+              </Button>
+            </Link>
+            <Link href="/preferences/notifications" onClick={handleLinkClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                  pathname === '/preferences/notifications' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Bell className="h-3.5 w-3.5" />
+                Notifications
               </Button>
             </Link>
           </div>
-          <CollapsibleSection expanded={preferencesExpanded}>
-            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-              <Link href="/preferences/general" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences/general' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Sliders className="h-3 w-3" />
-                  General
-                </Button>
-              </Link>
-              <Link href="/preferences/appearance" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences/appearance' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Palette className="h-3 w-3" />
-                  Appearance
-                </Button>
-              </Link>
-              <Link href="/preferences/notifications" onClick={handleLinkClick}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                    pathname === '/preferences/notifications' && 'bg-zinc-800/50 text-zinc-100',
-                  )}
-                >
-                  <Bell className="h-3 w-3" />
-                  Notifications
-                </Button>
-              </Link>
-            </div>
-          </CollapsibleSection>
-        </div>
+        </CollapsibleSection>
       </div>
 
       {/* Admin section - only visible to system admins */}
@@ -487,7 +469,7 @@ export function SidebarContent({
         <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
           <button
             type="button"
-            className="flex items-center gap-1 px-3 mb-1 w-full text-left select-none"
+            className="flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none"
             onClick={toggleAdminExpanded}
           >
             {adminExpanded ? (
@@ -495,11 +477,12 @@ export function SidebarContent({
             ) : (
               <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
             )}
+            <Shield className="h-3.5 w-3.5 text-zinc-500" />
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Admin
             </span>
           </button>
-          {adminExpanded && (
+          <CollapsibleSection expanded={adminExpanded}>
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
               <Link href="/admin" onClick={handleLinkClick}>
                 <Button
@@ -677,7 +660,7 @@ export function SidebarContent({
                 </CollapsibleSection>
               </div>
             </div>
-          )}
+          </CollapsibleSection>
         </div>
       )}
 
@@ -686,7 +669,7 @@ export function SidebarContent({
         <div className="flex items-center justify-between px-3 mb-1">
           <button
             type="button"
-            className="flex items-center gap-1 select-none"
+            className="flex items-center gap-1.5 select-none"
             onClick={toggleProjectsExpanded}
           >
             {projectsExpanded ? (
@@ -694,6 +677,7 @@ export function SidebarContent({
             ) : (
               <ChevronRight className="h-3.5 w-3.5 text-zinc-500" />
             )}
+            <Layers className="h-3.5 w-3.5 text-zinc-500" />
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Projects
             </span>
@@ -728,7 +712,7 @@ export function SidebarContent({
           </div>
         </div>
 
-        {projectsExpanded && (
+        <CollapsibleSection expanded={projectsExpanded}>
           <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
             {isLoading ? (
               <>
@@ -887,7 +871,7 @@ export function SidebarContent({
               })
             )}
           </div>
-        )}
+        </CollapsibleSection>
       </div>
     </div>
   )
