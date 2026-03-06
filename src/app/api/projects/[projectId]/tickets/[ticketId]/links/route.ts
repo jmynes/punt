@@ -4,7 +4,22 @@ import { badRequestError, handleApiError, notFoundError, validationError } from 
 import { requireAuth, requireMembership, requireProjectByKey } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
+import { USER_SELECT_SUMMARY } from '@/lib/prisma-selects'
 import { INVERSE_LINK_TYPES, LINK_TYPES, type LinkType } from '@/types'
+
+const LINKED_TICKET_SELECT = {
+  id: true,
+  number: true,
+  title: true,
+  type: true,
+  priority: true,
+  columnId: true,
+  resolution: true,
+  storyPoints: true,
+  assignee: {
+    select: USER_SELECT_SUMMARY,
+  },
+} as const
 
 const createLinkSchema = z.object({
   linkType: z.enum(LINK_TYPES),
@@ -45,15 +60,7 @@ export async function GET(
           id: true,
           linkType: true,
           toTicket: {
-            select: {
-              id: true,
-              number: true,
-              title: true,
-              type: true,
-              priority: true,
-              columnId: true,
-              resolution: true,
-            },
+            select: LINKED_TICKET_SELECT,
           },
         },
       }),
@@ -63,15 +70,7 @@ export async function GET(
           id: true,
           linkType: true,
           fromTicket: {
-            select: {
-              id: true,
-              number: true,
-              title: true,
-              type: true,
-              priority: true,
-              columnId: true,
-              resolution: true,
-            },
+            select: LINKED_TICKET_SELECT,
           },
         },
       }),
@@ -142,15 +141,7 @@ export async function POST(
     // Verify target ticket exists and belongs to the same project
     const targetTicket = await db.ticket.findFirst({
       where: { id: targetTicketId, projectId },
-      select: {
-        id: true,
-        number: true,
-        title: true,
-        type: true,
-        priority: true,
-        columnId: true,
-        resolution: true,
-      },
+      select: LINKED_TICKET_SELECT,
     })
 
     if (!targetTicket) {
@@ -187,15 +178,7 @@ export async function POST(
         id: true,
         linkType: true,
         toTicket: {
-          select: {
-            id: true,
-            number: true,
-            title: true,
-            type: true,
-            priority: true,
-            columnId: true,
-            resolution: true,
-          },
+          select: LINKED_TICKET_SELECT,
         },
       },
     })

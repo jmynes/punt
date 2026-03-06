@@ -218,6 +218,8 @@ export interface TicketLinkSummary {
     priority: Priority
     columnId: string
     resolution: string | null
+    storyPoints: number | null
+    assignee: UserSummary | null
   }
   direction: 'outward' | 'inward'
 }
