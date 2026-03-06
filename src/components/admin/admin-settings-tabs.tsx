@@ -33,6 +33,12 @@ const ADMIN_SETTINGS_TABS: TabItem[] = [
     icon: <Database className="h-4 w-4" />,
   },
   {
+    value: 'default-roles',
+    label: 'Default Roles',
+    href: '/admin/settings/default-roles',
+    icon: <Shield className="h-4 w-4" />,
+  },
+  {
     value: 'email',
     label: 'Email',
     href: '/admin/settings/email',
@@ -43,12 +49,6 @@ const ADMIN_SETTINGS_TABS: TabItem[] = [
     label: 'File Uploads',
     href: '/admin/settings/uploads',
     icon: <Upload className="h-4 w-4" />,
-  },
-  {
-    value: 'roles',
-    label: 'Default Roles',
-    href: '/admin/settings/roles',
-    icon: <Shield className="h-4 w-4" />,
   },
   {
     value: 'sprints',
@@ -68,9 +68,9 @@ const TAB_ROUTES = [
   '/admin/settings/board',
   '/admin/settings/branding',
   '/admin/settings/database',
+  '/admin/settings/default-roles',
   '/admin/settings/email',
   '/admin/settings/uploads',
-  '/admin/settings/roles',
   '/admin/settings/sprints',
   '/admin/settings/updates',
 ]
