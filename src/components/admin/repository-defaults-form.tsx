@@ -71,6 +71,7 @@ export function RepositoryDefaultsForm() {
     environmentBranches: [],
   })
   const [branchTemplateError, setBranchTemplateError] = useState<string | null>(null)
+  const [duplicateEnvNames, setDuplicateEnvNames] = useState<Set<string>>(new Set())
   const branchInputRef = useRef<HTMLInputElement>(null)
 
   // Sync form state when settings load
@@ -94,6 +95,22 @@ export function RepositoryDefaultsForm() {
       setBranchTemplateError(null)
     }
   }, [formData.branchTemplate])
+
+  // Detect duplicate environment names
+  useEffect(() => {
+    const nameCounts = new Map<string, number>()
+    for (const b of formData.environmentBranches) {
+      const name = b.environment.trim().toLowerCase()
+      if (name) {
+        nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1)
+      }
+    }
+    const dupes = new Set<string>()
+    for (const [name, count] of nameCounts) {
+      if (count > 1) dupes.add(name)
+    }
+    setDuplicateEnvNames(dupes)
+  }, [formData.environmentBranches])
 
   // Check for changes
   const hasChanges =
@@ -206,7 +223,8 @@ export function RepositoryDefaultsForm() {
     }
   }, [formData.environmentBranches])
 
-  const isValid = !branchTemplateError
+  const hasDuplicateEnvNames = duplicateEnvNames.size > 0
+  const isValid = !branchTemplateError && !hasDuplicateEnvNames
   const isPending = updateSettings.isPending
 
   // Ctrl+S / Cmd+S keyboard shortcut to save
@@ -394,91 +412,100 @@ export function RepositoryDefaultsForm() {
             <div className="space-y-2">
               <ScrollArea className="max-h-[300px]">
                 <div className="space-y-2 pr-2">
-                  {formData.environmentBranches.map((branch) => (
-                    <div
-                      key={branch.id}
-                      className="group relative flex items-center gap-2 p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 hover:border-zinc-700/50 transition-all duration-150"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <Input
-                          value={branch.environment}
-                          onChange={(e) =>
-                            updateEnvironmentBranch(branch.id, 'environment', e.target.value)
-                          }
-                          placeholder="environment"
-                          disabled={isPending}
-                          className="h-9 pl-3 pr-3 bg-zinc-900/60 border-zinc-700/50 text-zinc-200 text-sm font-medium"
-                          style={
-                            branch.color
-                              ? { borderLeftColor: branch.color, borderLeftWidth: '3px' }
-                              : undefined
-                          }
-                        />
-                      </div>
+                  {formData.environmentBranches.map((branch) => {
+                    const isDuplicate =
+                      branch.environment.trim() &&
+                      duplicateEnvNames.has(branch.environment.trim().toLowerCase())
 
-                      <div className="flex-shrink-0 flex items-center justify-center w-8">
-                        <ArrowRight className="h-4 w-4 text-zinc-600" />
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="relative">
-                          <GitBranch className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
-                          <Input
-                            value={branch.branchName}
-                            onChange={(e) =>
-                              updateEnvironmentBranch(branch.id, 'branchName', e.target.value)
-                            }
-                            placeholder="branch"
-                            disabled={isPending}
-                            className="h-9 pl-8 pr-3 bg-zinc-900/60 border-zinc-700/50 text-zinc-200 placeholder:text-zinc-600 font-mono text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Color picker */}
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className="flex-shrink-0 p-1.5 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700/50 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-150"
-                            aria-label="Change color"
-                          >
-                            {branch.color ? (
-                              <div
-                                className="h-4 w-4 rounded-full border border-zinc-600"
-                                style={{ backgroundColor: branch.color }}
-                              />
-                            ) : (
-                              <Palette className="h-4 w-4" />
-                            )}
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          side="bottom"
-                          align="end"
-                          className="w-[280px] px-3 py-0 bg-zinc-900 border-zinc-700"
-                        >
-                          <ColorPickerBody
-                            activeColor={branch.color ?? DEFAULT_ENVIRONMENT_COLORS[0]}
-                            onColorChange={(color) =>
-                              updateEnvironmentBranch(branch.id, 'color', color)
-                            }
-                            extraPresets={DEFAULT_ENVIRONMENT_COLORS}
-                          />
-                        </PopoverContent>
-                      </Popover>
-
-                      <button
-                        type="button"
-                        onClick={() => removeEnvironmentBranch(branch.id)}
-                        disabled={isPending}
-                        className="flex-shrink-0 p-1.5 rounded-md text-zinc-600 hover:text-rose-400 hover:bg-rose-950/30 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-150"
-                        aria-label="Remove mapping"
+                    return (
+                      <div
+                        key={branch.id}
+                        className="group relative flex items-center gap-2 p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 hover:border-zinc-700/50 transition-all duration-150 min-w-0"
                       >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex-1 min-w-0">
+                          <Input
+                            value={branch.environment}
+                            onChange={(e) =>
+                              updateEnvironmentBranch(branch.id, 'environment', e.target.value)
+                            }
+                            placeholder="environment"
+                            disabled={isPending}
+                            className="h-9 pl-3 pr-3 bg-zinc-900/60 border-zinc-700/50 text-zinc-200 text-sm font-medium"
+                            style={
+                              branch.color
+                                ? { borderLeftColor: branch.color, borderLeftWidth: '3px' }
+                                : undefined
+                            }
+                          />
+                          {isDuplicate && (
+                            <p className="text-xs text-red-400 mt-1">Duplicate environment name</p>
+                          )}
+                        </div>
+
+                        <div className="flex-shrink-0 flex items-center justify-center w-8">
+                          <ArrowRight className="h-4 w-4 text-zinc-600" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="relative">
+                            <GitBranch className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
+                            <Input
+                              value={branch.branchName}
+                              onChange={(e) =>
+                                updateEnvironmentBranch(branch.id, 'branchName', e.target.value)
+                              }
+                              placeholder="branch"
+                              disabled={isPending}
+                              className="h-9 pl-8 pr-3 bg-zinc-900/60 border-zinc-700/50 text-zinc-200 placeholder:text-zinc-600 font-mono text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Color picker */}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex-shrink-0 p-1.5 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700/50 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-150"
+                              aria-label="Change color"
+                            >
+                              {branch.color ? (
+                                <div
+                                  className="h-4 w-4 rounded-full border border-zinc-600"
+                                  style={{ backgroundColor: branch.color }}
+                                />
+                              ) : (
+                                <Palette className="h-4 w-4" />
+                              )}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            side="bottom"
+                            align="end"
+                            className="w-[280px] px-3 py-0 bg-zinc-900 border-zinc-700"
+                          >
+                            <ColorPickerBody
+                              activeColor={branch.color ?? DEFAULT_ENVIRONMENT_COLORS[0]}
+                              onColorChange={(color) =>
+                                updateEnvironmentBranch(branch.id, 'color', color)
+                              }
+                              extraPresets={DEFAULT_ENVIRONMENT_COLORS}
+                            />
+                          </PopoverContent>
+                        </Popover>
+
+                        <button
+                          type="button"
+                          onClick={() => removeEnvironmentBranch(branch.id)}
+                          disabled={isPending}
+                          className="flex-shrink-0 p-1.5 rounded-md text-zinc-600 hover:text-rose-400 hover:bg-rose-950/30 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-150"
+                          aria-label="Remove mapping"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               </ScrollArea>
 

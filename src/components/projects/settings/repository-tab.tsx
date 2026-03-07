@@ -111,6 +111,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
   })
   const [hasChanges, setHasChanges] = useState(false)
   const [branchTemplateError, setBranchTemplateError] = useState<string | null>(null)
+  const [duplicateEnvNames, setDuplicateEnvNames] = useState<Set<string>>(new Set())
   const branchInputRef = useRef<HTMLInputElement>(null)
 
   // Template variables that can be inserted
@@ -220,6 +221,22 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
       setBranchTemplateError(null)
     }
   }, [formData.branchTemplate])
+
+  // Detect duplicate environment names
+  useEffect(() => {
+    const nameCounts = new Map<string, number>()
+    for (const b of formData.environmentBranches) {
+      const name = b.environment.trim().toLowerCase()
+      if (name) {
+        nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1)
+      }
+    }
+    const dupes = new Set<string>()
+    for (const [name, count] of nameCounts) {
+      if (count > 1) dupes.add(name)
+    }
+    setDuplicateEnvNames(dupes)
+  }, [formData.environmentBranches])
 
   const handleSave = useCallback(async () => {
     if (!canEditSettings) return
@@ -337,7 +354,8 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
 
   const isPending = updateRepository.isPending
   const isDisabled = !canEditSettings || isPending
-  const isValid = !branchTemplateError
+  const hasDuplicateEnvNames = duplicateEnvNames.size > 0
+  const isValid = !branchTemplateError && !hasDuplicateEnvNames
 
   // Ctrl+S / Cmd+S keyboard shortcut to save
   useCtrlSave({
@@ -544,11 +562,14 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                       const colors = getEnvironmentColor(branch.environment, branch.color)
                       const hasValues = branch.environment.trim() || branch.branchName.trim()
                       const hasCustomColor = Boolean(branch.color)
+                      const isDuplicate =
+                        branch.environment.trim() &&
+                        duplicateEnvNames.has(branch.environment.trim().toLowerCase())
 
                       return (
                         <div
                           key={branch.id}
-                          className="group relative flex items-center gap-2 p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 hover:border-zinc-700/50 transition-all duration-150"
+                          className="group relative flex items-center gap-2 p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 hover:border-zinc-700/50 transition-all duration-150 min-w-0"
                         >
                           {/* Environment input with color indicator */}
                           <div className="flex-1 min-w-0">
@@ -579,6 +600,11 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                                 />
                               )}
                             </div>
+                            {isDuplicate && (
+                              <p className="text-xs text-red-400 mt-1">
+                                Duplicate environment name
+                              </p>
+                            )}
                           </div>
 
                           {/* Arrow connector */}
