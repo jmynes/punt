@@ -580,9 +580,9 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                   Define patterns to trigger ticket actions from commit messages.
                 </CardDescription>
               </div>
-              {!isDisabled && hasWebhookSecret && (
+              {!isDisabled && (
                 <div className="flex items-center gap-2">
-                  {!isMatchingDefaults(patterns) && (
+                  {hasWebhookSecret && !isMatchingDefaults(patterns) && (
                     <Button
                       type="button"
                       variant="outline"
