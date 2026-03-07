@@ -35,7 +35,7 @@ import {
   Webhook,
 } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -191,6 +191,7 @@ export function SidebarContent({
   onLinkClick,
 }: SidebarContentProps) {
   const pathname = usePathname()
+  const router = useRouter()
 
   const [editMode, setEditMode] = useState(false)
   const { sidebarExpandedSections, toggleSidebarSection, setSidebarSectionExpanded } =
@@ -541,7 +542,15 @@ export function SidebarContent({
                 <button
                   type="button"
                   className="group flex items-center gap-1.5 w-full text-left select-none cursor-pointer"
-                  onClick={() => toggleSidebarSection('section-system-settings')}
+                  onClick={() => {
+                    if (!(sidebarExpandedSections['section-system-settings'] ?? false)) {
+                      setSidebarSectionExpanded('section-system-settings', true)
+                    } else {
+                      toggleSidebarSection('section-system-settings')
+                    }
+                    handleLinkClick()
+                    router.push('/admin/system/branding')
+                  }}
                 >
                   <span className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 rounded group-hover:bg-zinc-800/50">
                     {(sidebarExpandedSections['section-system-settings'] ?? false) ? (
@@ -637,7 +646,15 @@ export function SidebarContent({
                 <button
                   type="button"
                   className="group flex items-center gap-1.5 w-full text-left select-none cursor-pointer"
-                  onClick={() => toggleSidebarSection('section-project-defaults')}
+                  onClick={() => {
+                    if (!(sidebarExpandedSections['section-project-defaults'] ?? false)) {
+                      setSidebarSectionExpanded('section-project-defaults', true)
+                    } else {
+                      toggleSidebarSection('section-project-defaults')
+                    }
+                    handleLinkClick()
+                    router.push('/admin/defaults/agents')
+                  }}
                 >
                   <span className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300 rounded group-hover:bg-zinc-800/50">
                     {(sidebarExpandedSections['section-project-defaults'] ?? false) ? (
