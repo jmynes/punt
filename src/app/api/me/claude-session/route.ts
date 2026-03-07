@@ -10,7 +10,8 @@ import { requireAuth } from '@/lib/auth-helpers'
 import {
   decryptSession,
   encryptSession,
-  extractMcpServerNames,
+  extractMcpServerDetails,
+  type McpServerInfo,
   validateSessionCredentials,
 } from '@/lib/chat/encryption'
 import { db } from '@/lib/db'
@@ -111,11 +112,13 @@ export async function GET() {
 
     // Extract available MCP servers from credentials if present
     let availableMcpServers: string[] = []
+    let mcpServerDetails: McpServerInfo[] = []
     if (user?.claudeSessionEncrypted) {
       try {
         const decrypted = decryptSession(user.claudeSessionEncrypted)
         const credentials = JSON.parse(decrypted)
-        availableMcpServers = extractMcpServerNames(credentials)
+        mcpServerDetails = extractMcpServerDetails(credentials)
+        availableMcpServers = mcpServerDetails.map((s) => s.name)
       } catch {
         // Ignore decryption errors - credentials may be corrupted
       }
@@ -131,6 +134,7 @@ export async function GET() {
       provider: user?.chatProvider || 'anthropic',
       availableMcpServers,
       enabledMcpServers,
+      mcpServerDetails,
     })
   } catch (error) {
     if (error instanceof Error && error.message === 'Not authenticated') {
@@ -199,7 +203,8 @@ export async function POST(request: Request) {
     const encrypted = encryptSession(result.data.credentials)
 
     // Extract available MCP servers and enable all by default
-    const availableMcpServers = extractMcpServerNames(credentials as Record<string, unknown>)
+    const mcpServerDetails = extractMcpServerDetails(credentials as Record<string, unknown>)
+    const availableMcpServers = mcpServerDetails.map((s) => s.name)
 
     await db.user.update({
       where: { id: currentUser.id },
@@ -215,6 +220,7 @@ export async function POST(request: Request) {
       message: 'Claude session configured successfully',
       availableMcpServers,
       enabledMcpServers: availableMcpServers,
+      mcpServerDetails,
     })
   } catch (error) {
     if (error instanceof Error && error.message === 'Not authenticated') {

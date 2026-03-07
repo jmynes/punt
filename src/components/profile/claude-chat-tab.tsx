@@ -4,10 +4,13 @@ import {
   AlertTriangle,
   Bot,
   Check,
+  Clock,
   Eye,
   EyeOff,
   KeyRound,
   Plug,
+  RefreshCw,
+  ShieldAlert,
   Trash2,
   Upload,
 } from 'lucide-react'
@@ -21,6 +24,13 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { showToast } from '@/lib/toast'
+
+interface McpServerInfo {
+  name: string
+  key: string
+  tokenExpired: boolean
+  tokenExpiresAt: number | null
+}
 
 interface ClaudeChatTabProps {
   isDemo: boolean
@@ -54,6 +64,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
   // MCP servers state
   const [availableMcpServers, setAvailableMcpServers] = useState<string[]>([])
   const [enabledMcpServers, setEnabledMcpServers] = useState<string[]>([])
+  const [mcpServerDetails, setMcpServerDetails] = useState<McpServerInfo[]>([])
   const [pendingToggles, setPendingToggles] = useState<Set<string>>(new Set())
 
   useEffect(() => {
@@ -86,6 +97,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
           setHasClaudeSession(data.hasSession)
           setAvailableMcpServers(data.availableMcpServers || [])
           setEnabledMcpServers(data.enabledMcpServers || [])
+          setMcpServerDetails(data.mcpServerDetails || [])
           setProviderFetched(true)
         }
       } catch {
@@ -196,6 +208,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     setSessionInput('')
     setAvailableMcpServers(data.availableMcpServers || [])
     setEnabledMcpServers(data.enabledMcpServers || [])
+    setMcpServerDetails(data.mcpServerDetails || [])
     showToast.success('Claude session configured')
   }
 
@@ -215,6 +228,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     setChatProvider('anthropic')
     setAvailableMcpServers([])
     setEnabledMcpServers([])
+    setMcpServerDetails([])
     showToast.success('Claude session removed')
   }
 
@@ -454,59 +468,157 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
                   </div>
 
                   {/* Enabled MCP Servers Section */}
-                  {availableMcpServers.length > 0 && (
-                    <div className="space-y-3 pt-3 border-t border-zinc-800">
+                  <div className="space-y-3 pt-3 border-t border-zinc-800">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Plug className="h-4 w-4 text-cyan-500" />
                         <span className="text-sm font-medium text-zinc-300">
                           External MCP Servers
                         </span>
+                        {availableMcpServers.length > 0 && (
+                          <span className="text-xs px-1.5 py-0.5 bg-zinc-700/50 text-zinc-400 rounded">
+                            {enabledMcpServers.length}/{availableMcpServers.length} enabled
+                          </span>
+                        )}
                       </div>
-                      <p className="text-xs text-zinc-500">
-                        Your credentials include OAuth tokens for the following MCP servers. Enable
-                        the ones you want available during Claude Chat sessions.
-                      </p>
-                      <div className="space-y-2">
-                        {availableMcpServers.map((serverName) => {
-                          const isEnabled = enabledMcpServers.includes(serverName)
-                          return (
-                            <label
-                              key={serverName}
-                              htmlFor={`mcp-server-${serverName}`}
-                              className="flex items-center gap-3 px-3 py-2 rounded-lg border border-zinc-700 bg-zinc-800/30 hover:bg-zinc-800/50 transition-colors cursor-pointer"
-                            >
-                              <Checkbox
-                                id={`mcp-server-${serverName}`}
-                                checked={isEnabled}
-                                onCheckedChange={(checked) =>
-                                  handleToggleMcpServer(serverName, checked === true)
-                                }
-                                disabled={pendingToggles.has(serverName)}
-                                className="border-zinc-600 data-[state=checked]:bg-cyan-600 data-[state=checked]:border-cyan-600"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <span className="text-sm text-zinc-200 font-mono">
-                                  {serverName}
-                                </span>
-                              </div>
-                              {isEnabled && (
-                                <span className="text-xs px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded shrink-0">
-                                  Enabled
-                                </span>
-                              )}
-                            </label>
-                          )
-                        })}
+                    </div>
+
+                    {availableMcpServers.length > 0 ? (
+                      <>
+                        <p className="text-xs text-zinc-500">
+                          Your credentials include OAuth tokens for the following MCP servers.
+                          Enable the ones you want available during Claude Chat sessions. Disabled
+                          servers will not have their tokens passed to the Claude CLI.
+                        </p>
+
+                        {/* Warning for expired tokens */}
+                        {mcpServerDetails.some((s) => s.tokenExpired) && (
+                          <div className="flex items-start gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
+                            <ShieldAlert className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                            <div className="text-xs text-red-300">
+                              <p className="font-medium">Some OAuth tokens have expired</p>
+                              <p className="text-red-300/80 mt-0.5">
+                                Re-upload your credentials to refresh expired tokens, or
+                                re-authorize the affected servers in Claude CLI.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          {availableMcpServers.map((serverName) => {
+                            const isEnabled = enabledMcpServers.includes(serverName)
+                            const details = mcpServerDetails.find((s) => s.name === serverName)
+                            const isExpired = details?.tokenExpired ?? false
+
+                            return (
+                              <label
+                                key={serverName}
+                                htmlFor={`mcp-server-${serverName}`}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-colors cursor-pointer ${
+                                  isExpired
+                                    ? 'border-red-500/30 bg-red-500/5 hover:bg-red-500/10'
+                                    : isEnabled
+                                      ? 'border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10'
+                                      : 'border-zinc-700 bg-zinc-800/30 hover:bg-zinc-800/50'
+                                }`}
+                              >
+                                <Checkbox
+                                  id={`mcp-server-${serverName}`}
+                                  checked={isEnabled}
+                                  onCheckedChange={(checked) =>
+                                    handleToggleMcpServer(serverName, checked === true)
+                                  }
+                                  disabled={pendingToggles.has(serverName)}
+                                  className="border-zinc-600 data-[state=checked]:bg-cyan-600 data-[state=checked]:border-cyan-600"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-zinc-200 font-mono">
+                                      {serverName}
+                                    </span>
+                                    {/* Status indicator dot */}
+                                    <span
+                                      className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+                                        isExpired
+                                          ? 'bg-red-400'
+                                          : isEnabled
+                                            ? 'bg-emerald-400'
+                                            : 'bg-zinc-600'
+                                      }`}
+                                      title={
+                                        isExpired
+                                          ? 'Token expired'
+                                          : isEnabled
+                                            ? 'Enabled'
+                                            : 'Disabled'
+                                      }
+                                    />
+                                  </div>
+                                  {/* Token status details */}
+                                  {isExpired ? (
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                      <Clock className="h-3 w-3 text-red-400" />
+                                      <span className="text-xs text-red-400">
+                                        Token expired
+                                        {details?.tokenExpiresAt
+                                          ? ` on ${new Date(details.tokenExpiresAt).toLocaleDateString()}`
+                                          : ''}
+                                      </span>
+                                    </div>
+                                  ) : details?.tokenExpiresAt ? (
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                      <Clock className="h-3 w-3 text-zinc-500" />
+                                      <span className="text-xs text-zinc-500">
+                                        Token expires{' '}
+                                        {new Date(details.tokenExpiresAt).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                  ) : null}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {isExpired && (
+                                    <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 rounded">
+                                      Expired
+                                    </span>
+                                  )}
+                                  {isEnabled && !isExpired && (
+                                    <span className="text-xs px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded">
+                                      Enabled
+                                    </span>
+                                  )}
+                                  {pendingToggles.has(serverName) && (
+                                    <RefreshCw className="h-3.5 w-3.5 text-zinc-400 animate-spin" />
+                                  )}
+                                </div>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="px-3 py-4 text-center bg-zinc-800/30 rounded-lg border border-zinc-700/50">
+                        <Plug className="h-5 w-5 text-zinc-600 mx-auto mb-2" />
+                        <p className="text-xs text-zinc-500">
+                          No external MCP servers found in your credentials. Authorize MCP servers
+                          in Claude CLI (e.g. GitHub, Linear) and re-upload your credentials to
+                          manage them here.
+                        </p>
                       </div>
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-zinc-700/50 bg-zinc-800/20">
-                        <Plug className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    )}
+
+                    {/* Built-in PUNT server */}
+                    <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-zinc-700/50 bg-zinc-800/20">
+                      <Plug className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                      <div className="flex-1">
                         <span className="text-xs text-zinc-400">
                           <span className="font-mono text-amber-400">punt</span> — always enabled
                           (built-in)
                         </span>
                       </div>
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
                     </div>
-                  )}
+                  </div>
 
                   <Button
                     variant="ghost"

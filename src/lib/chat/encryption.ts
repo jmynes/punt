@@ -123,20 +123,105 @@ export interface ClaudeCredentials {
 }
 
 /**
+ * Filter credentials to only include OAuth tokens for the specified MCP servers.
+ * This ensures only user-enabled external servers are available when spawning Claude CLI.
+ */
+export function filterCredentialsMcpServers(
+  credentials: ClaudeCredentials,
+  enabledServers: string[],
+): ClaudeCredentials {
+  if (!credentials.mcpOAuth || typeof credentials.mcpOAuth !== 'object') {
+    return credentials
+  }
+
+  const enabledSet = new Set(enabledServers)
+  const filteredOAuth: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(credentials.mcpOAuth)) {
+    // Always keep plugin entries
+    if (key.startsWith('plugin:')) {
+      filteredOAuth[key] = value
+      continue
+    }
+    // Extract server name from "serverName|id" format
+    const serverName = key.split('|')[0]
+    if (enabledSet.has(serverName)) {
+      filteredOAuth[key] = value
+    }
+  }
+
+  return {
+    ...credentials,
+    mcpOAuth: filteredOAuth,
+  }
+}
+
+/**
+ * Details about an external MCP server discovered from credentials
+ */
+export interface McpServerInfo {
+  /** Friendly display name (e.g. "github", "linear") */
+  name: string
+  /** Raw key from mcpOAuth (e.g. "github|abc123") */
+  key: string
+  /** Whether the OAuth token has expired */
+  tokenExpired: boolean
+  /** Token expiry timestamp (ms since epoch), if available */
+  tokenExpiresAt: number | null
+}
+
+/**
  * Extract available MCP server names from credentials
  * MCP OAuth tokens are stored under the 'mcpOAuth' key (note capital O)
  */
 export function extractMcpServerNames(credentials: ClaudeCredentials): string[] {
+  return extractMcpServerDetails(credentials).map((s) => s.name)
+}
+
+/**
+ * Extract detailed MCP server info from credentials, including token status.
+ * MCP OAuth tokens are stored under the 'mcpOAuth' key (note capital O).
+ */
+export function extractMcpServerDetails(credentials: ClaudeCredentials): McpServerInfo[] {
   if (!credentials.mcpOAuth || typeof credentials.mcpOAuth !== 'object') {
     return []
   }
-  // Extract friendly server names, filtering out plugin variants and PUNT
-  return Object.keys(credentials.mcpOAuth)
-    .filter((key) => !key.startsWith('plugin:') && key !== 'punt')
-    .map((key) => {
-      // Keys are in format "serverName|id", extract just the server name
-      const serverName = key.split('|')[0]
-      return serverName
+
+  const seen = new Set<string>()
+  const servers: McpServerInfo[] = []
+
+  for (const key of Object.keys(credentials.mcpOAuth)) {
+    // Skip plugin variants and the built-in PUNT server
+    if (key.startsWith('plugin:') || key === 'punt') continue
+
+    // Keys are in format "serverName|id", extract just the server name
+    const serverName = key.split('|')[0]
+    if (seen.has(serverName)) continue
+    seen.add(serverName)
+
+    // Extract token expiry info if available
+    const tokenData = credentials.mcpOAuth[key]
+    let tokenExpiresAt: number | null = null
+    let tokenExpired = false
+
+    if (tokenData && typeof tokenData === 'object') {
+      const data = tokenData as Record<string, unknown>
+      if (typeof data.expiresAt === 'number') {
+        tokenExpiresAt = data.expiresAt
+        tokenExpired = data.expiresAt < Date.now()
+      } else if (typeof data.expires_at === 'number') {
+        tokenExpiresAt = data.expires_at
+        tokenExpired = data.expires_at < Date.now()
+      }
+    }
+
+    servers.push({
+      name: serverName,
+      key,
+      tokenExpired,
+      tokenExpiresAt,
     })
-    .filter((name, index, arr) => arr.indexOf(name) === index) // Dedupe
+  }
+
+  return servers
 }
