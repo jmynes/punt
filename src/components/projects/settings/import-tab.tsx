@@ -70,8 +70,8 @@ export function ImportTab({ projectId }: ImportTabProps) {
 
   // Get columns and sprints from stores
   const columns = useBoardStore((s) => s.getColumns(projectId))
-  const { getProjectByKey, getProjectById } = useProjectsStore()
-  const project = getProjectById(projectId) ?? getProjectByKey(projectId)
+  const { getProjectByKey, getProject } = useProjectsStore()
+  const project = getProject(projectId) ?? getProjectByKey(projectId)
   const projectKey = project?.key ?? projectId
 
   // Get sprints from the project data (use board store columns for column list)
