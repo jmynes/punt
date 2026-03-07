@@ -61,7 +61,9 @@ export const SystemSettingsSchema = z.object({
   // Agent configuration (global defaults)
   defaultBranchTemplate: z.string().optional(),
   defaultAgentGuidance: z.string().nullable().optional(),
-  // Default sprint times (system-wide defaults)
+  // Default sprint settings (system-wide defaults)
+  defaultSprintDuration: z.number().int().optional(),
+  defaultAutoCarryOver: z.boolean().optional(),
   defaultSprintStartTime: z.string().optional(),
   defaultSprintEndTime: z.string().optional(),
 })

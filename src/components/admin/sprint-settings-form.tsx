@@ -4,46 +4,77 @@ import { Loader2, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { TimeScroller } from '@/components/ui/time-scroller'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-system-settings'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
+
+interface FormData {
+  defaultSprintDuration: number
+  defaultAutoCarryOver: boolean
+  defaultSprintStartTime: string
+  defaultSprintEndTime: string
+}
 
 export function SprintSettingsForm() {
   const { data: settings, isLoading, error } = useSystemSettings()
   const updateSettings = useUpdateSystemSettings()
 
-  const [defaultSprintStartTime, setDefaultSprintStartTime] = useState('09:00')
-  const [defaultSprintEndTime, setDefaultSprintEndTime] = useState('17:00')
+  const [formData, setFormData] = useState<FormData>({
+    defaultSprintDuration: 14,
+    defaultAutoCarryOver: true,
+    defaultSprintStartTime: '09:00',
+    defaultSprintEndTime: '17:00',
+  })
 
   // Sync form state when settings are loaded
   useEffect(() => {
     if (settings) {
-      setDefaultSprintStartTime(settings.defaultSprintStartTime)
-      setDefaultSprintEndTime(settings.defaultSprintEndTime)
+      setFormData({
+        defaultSprintDuration: settings.defaultSprintDuration,
+        defaultAutoCarryOver: settings.defaultAutoCarryOver,
+        defaultSprintStartTime: settings.defaultSprintStartTime,
+        defaultSprintEndTime: settings.defaultSprintEndTime,
+      })
     }
   }, [settings])
 
   const hasChanges =
     settings &&
-    (defaultSprintStartTime !== settings.defaultSprintStartTime ||
-      defaultSprintEndTime !== settings.defaultSprintEndTime)
+    (formData.defaultSprintDuration !== settings.defaultSprintDuration ||
+      formData.defaultAutoCarryOver !== settings.defaultAutoCarryOver ||
+      formData.defaultSprintStartTime !== settings.defaultSprintStartTime ||
+      formData.defaultSprintEndTime !== settings.defaultSprintEndTime)
+
+  const isValid = formData.defaultSprintDuration >= 1 && formData.defaultSprintDuration <= 90
 
   const handleSave = () => {
-    updateSettings.mutate({ defaultSprintStartTime, defaultSprintEndTime })
+    if (!isValid) return
+    updateSettings.mutate({
+      defaultSprintDuration: formData.defaultSprintDuration,
+      defaultAutoCarryOver: formData.defaultAutoCarryOver,
+      defaultSprintStartTime: formData.defaultSprintStartTime,
+      defaultSprintEndTime: formData.defaultSprintEndTime,
+    })
   }
 
   const handleReset = () => {
     if (settings) {
-      setDefaultSprintStartTime(settings.defaultSprintStartTime)
-      setDefaultSprintEndTime(settings.defaultSprintEndTime)
+      setFormData({
+        defaultSprintDuration: settings.defaultSprintDuration,
+        defaultAutoCarryOver: settings.defaultAutoCarryOver,
+        defaultSprintStartTime: settings.defaultSprintStartTime,
+        defaultSprintEndTime: settings.defaultSprintEndTime,
+      })
     }
   }
 
   // Ctrl+S / Cmd+S keyboard shortcut to save
   useCtrlSave({
     onSave: handleSave,
-    enabled: !!hasChanges && !updateSettings.isPending,
+    enabled: !!hasChanges && isValid && !updateSettings.isPending,
   })
 
   if (isLoading) {
@@ -64,19 +95,47 @@ export function SprintSettingsForm() {
     <div className="space-y-6">
       <Card className="bg-zinc-900/50 border-zinc-800">
         <CardHeader>
-          <CardTitle className="text-base text-zinc-100">Default Sprint Times</CardTitle>
+          <CardTitle className="text-base text-zinc-100">Sprint Defaults</CardTitle>
           <CardDescription>
-            Configure system-wide default times for sprint start and end. New projects will inherit
-            these defaults, which can be overridden at the project level.
+            Configure system-wide default sprint settings. New projects will inherit these defaults,
+            which can be overridden at the project level.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Default Sprint Duration */}
+          <div className="space-y-2">
+            <Label htmlFor="sprint-duration" className="text-zinc-300">
+              Default Sprint Duration (days)
+            </Label>
+            <Input
+              id="sprint-duration"
+              type="number"
+              min={1}
+              max={90}
+              value={formData.defaultSprintDuration}
+              onChange={(e) => {
+                const value = Number.parseInt(e.target.value, 10)
+                if (!Number.isNaN(value)) {
+                  setFormData((prev) => ({ ...prev, defaultSprintDuration: value }))
+                }
+              }}
+              className="bg-zinc-900 border-zinc-700 text-zinc-100 w-32"
+              disabled={updateSettings.isPending}
+            />
+            <p className="text-xs text-zinc-500">
+              The number of days a sprint lasts by default (1-90). This is used as the initial
+              duration when creating new sprints.
+            </p>
+          </div>
+
           {/* Default Start Time */}
           <div className="space-y-2">
             <Label className="text-zinc-300">Default Sprint Start Time</Label>
             <TimeScroller
-              value={defaultSprintStartTime}
-              onChange={setDefaultSprintStartTime}
+              value={formData.defaultSprintStartTime}
+              onChange={(time) =>
+                setFormData((prev) => ({ ...prev, defaultSprintStartTime: time }))
+              }
               disabled={updateSettings.isPending}
             />
             <p className="text-xs text-zinc-500">
@@ -89,14 +148,32 @@ export function SprintSettingsForm() {
           <div className="space-y-2">
             <Label className="text-zinc-300">Default Sprint End Time</Label>
             <TimeScroller
-              value={defaultSprintEndTime}
-              onChange={setDefaultSprintEndTime}
+              value={formData.defaultSprintEndTime}
+              onChange={(time) => setFormData((prev) => ({ ...prev, defaultSprintEndTime: time }))}
               disabled={updateSettings.isPending}
             />
             <p className="text-xs text-zinc-500">
               The default time when sprints end (e.g., 17:00 for 5 PM). Sprints will be considered
               complete at this time on the end date.
             </p>
+          </div>
+
+          {/* Auto Carryover */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-zinc-300">Auto-carryover incomplete tickets</Label>
+              <p className="text-xs text-zinc-500">
+                Automatically move incomplete tickets to the next sprint when completing a sprint.
+                Projects inherit this default unless overridden.
+              </p>
+            </div>
+            <Switch
+              checked={formData.defaultAutoCarryOver}
+              onCheckedChange={(checked) =>
+                setFormData((prev) => ({ ...prev, defaultAutoCarryOver: checked }))
+              }
+              disabled={updateSettings.isPending}
+            />
           </div>
 
           {/* Save/Reset buttons */}
@@ -111,7 +188,7 @@ export function SprintSettingsForm() {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!hasChanges || updateSettings.isPending}
+              disabled={!hasChanges || !isValid || updateSettings.isPending}
               className="bg-amber-600 hover:bg-amber-700 text-white"
             >
               {updateSettings.isPending ? (

@@ -106,8 +106,8 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
 
   const handleResetToSystemDefaults = useCallback(() => {
     setFormData({
-      defaultSprintDuration: 14,
-      autoCarryOverIncomplete: true,
+      defaultSprintDuration: systemSettings?.defaultSprintDuration ?? 14,
+      autoCarryOverIncomplete: systemSettings?.defaultAutoCarryOver ?? true,
       defaultStartTime: systemSettings?.defaultSprintStartTime ?? '09:00',
       defaultEndTime: systemSettings?.defaultSprintEndTime ?? '17:00',
       storyPointScaleOption: 'inherit',
