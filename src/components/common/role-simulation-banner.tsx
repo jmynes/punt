@@ -183,11 +183,32 @@ export function RoleSimulationBanner() {
           <div className="flex items-center gap-2 text-sm text-violet-200">
             <Eye className="h-4 w-4 text-violet-400 flex-shrink-0" />
             <span>
-              Viewing as{' '}
-              <span className="font-semibold" style={{ color: simulation.role.color }}>
-                {simulation.role.name}
-              </span>{' '}
-              &mdash; UI reflects this role&apos;s permissions.
+              {simulation.memberName ? (
+                <>
+                  Viewing as{' '}
+                  <span className="font-semibold text-violet-100">{simulation.memberName}</span>
+                  {' ('}
+                  <span className="font-semibold" style={{ color: simulation.role.color }}>
+                    {simulation.role.name}
+                  </span>
+                  {')'}
+                  {simulation.memberOverrides && simulation.memberOverrides.length > 0 && (
+                    <span className="text-amber-400">
+                      {' '}
+                      +{simulation.memberOverrides.length} override
+                      {simulation.memberOverrides.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  Viewing as{' '}
+                  <span className="font-semibold" style={{ color: simulation.role.color }}>
+                    {simulation.role.name}
+                  </span>
+                </>
+              )}{' '}
+              &mdash; UI reflects this {simulation.memberName ? "member's" : "role's"} permissions.
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -255,9 +276,20 @@ export function RoleSimulationBanner() {
             <AlertDialogTitle className="text-zinc-100">Leave role simulation?</AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
               You&apos;re viewing as{' '}
-              <span className="font-semibold" style={{ color: simulation.role.color }}>
-                {simulation.role.name}
-              </span>
+              {simulation.memberName ? (
+                <>
+                  <span className="font-semibold text-zinc-200">{simulation.memberName}</span>
+                  {' ('}
+                  <span className="font-semibold" style={{ color: simulation.role.color }}>
+                    {simulation.role.name}
+                  </span>
+                  {')'}
+                </>
+              ) : (
+                <span className="font-semibold" style={{ color: simulation.role.color }}>
+                  {simulation.role.name}
+                </span>
+              )}
               . Navigating away from this project will end the simulation.
             </AlertDialogDescription>
           </AlertDialogHeader>

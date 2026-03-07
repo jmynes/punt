@@ -3,6 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import {
   CheckSquare,
+  Eye,
   Loader2,
   Minus,
   Search,
@@ -46,7 +47,7 @@ import {
 } from '@/hooks/queries/use-members'
 import { useProjectRoles } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
-import { useHasPermission, useIsSystemAdmin } from '@/hooks/use-permissions'
+import { useHasPermission, useIsSystemAdmin, useMyRealPermissions } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { isEditableTarget } from '@/lib/keyboard-utils'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -57,7 +58,8 @@ import {
   type MemberSnapshot,
   useAdminUndoStore,
 } from '@/stores/admin-undo-store'
-import type { ProjectMemberWithRole } from '@/types'
+import { useRoleSimulationStore } from '@/stores/role-simulation-store'
+import type { Permission, ProjectMemberWithRole } from '@/types'
 
 interface MembersTabProps {
   projectId: string
@@ -76,6 +78,41 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
     useAdminUndoStore()
 
   const canManageMembers = useHasPermission(projectId, PERMISSIONS.MEMBERS_MANAGE)
+
+  // Role simulation
+  const { startMemberSimulation } = useRoleSimulationStore()
+  const { data: realPermissions } = useMyRealPermissions(projectId)
+
+  // Determine if user can simulate members (needs admin or owner role)
+  const canSimulateMembers = useMemo(() => {
+    if (!realPermissions) return false
+    return realPermissions.isSystemAdmin || realPermissions.role.position <= 1
+  }, [realPermissions])
+
+  const handleViewAsMember = useCallback(
+    (member: ProjectMemberWithRole, rolePermissions: Permission[]) => {
+      const memberOverrides = Array.isArray(member.overrides)
+        ? (member.overrides as Permission[])
+        : []
+      startMemberSimulation(
+        projectId,
+        {
+          id: member.role.id,
+          name: member.role.name,
+          color: member.role.color,
+          description: member.role.description ?? null,
+          isDefault: member.role.isDefault,
+          position: member.role.position,
+        },
+        rolePermissions,
+        member.id,
+        member.user.name,
+        memberOverrides,
+      )
+      showToast.success(`Now viewing as ${member.user.name}. Press Esc to exit.`)
+    },
+    [projectId, startMemberSimulation],
+  )
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -608,6 +645,14 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
                   ? `/users/${currentMember.user.username}?from=project-settings&projectKey=${projectKey}&tab=members`
                   : undefined
               }
+              onViewAs={
+                canSimulateMembers
+                  ? () => {
+                      const roleData = roles?.find((r) => r.id === currentMember.roleId)
+                      handleViewAsMember(currentMember, roleData?.permissions ?? [])
+                    }
+                  : undefined
+              }
             />
             {otherMembers.length > 0 && (
               <div className="flex items-center gap-3 py-3">
@@ -637,6 +682,14 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
             profileUrl={
               isSystemAdmin
                 ? `/users/${member.user.username}?from=project-settings&projectKey=${projectKey}&tab=members`
+                : undefined
+            }
+            onViewAs={
+              canSimulateMembers
+                ? () => {
+                    const roleData = roles?.find((r) => r.id === member.roleId)
+                    handleViewAsMember(member, roleData?.permissions ?? [])
+                  }
                 : undefined
             }
           />
@@ -778,6 +831,7 @@ interface MemberCardProps {
   onSelect: (shiftKey: boolean) => void
   onRoleChange: (roleId: string) => void
   onRemove: () => void
+  onViewAs?: () => void
   profileUrl?: string
 }
 
@@ -791,6 +845,7 @@ function MemberCard({
   onSelect,
   onRoleChange,
   onRemove,
+  onViewAs,
   profileUrl,
 }: MemberCardProps) {
   const initials = member.user.name
@@ -928,6 +983,19 @@ function MemberCard({
             >
               {member.role.name}
             </Badge>
+          )}
+
+          {/* View as button */}
+          {onViewAs && !isCurrentUser && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-zinc-500 hover:text-violet-400 hover:bg-violet-900/20"
+              onClick={onViewAs}
+              title={`View as ${member.user.name}`}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
           )}
 
           {/* Remove button */}
