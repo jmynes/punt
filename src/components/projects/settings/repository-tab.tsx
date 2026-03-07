@@ -163,7 +163,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
         repositoryUrl: config.repositoryUrl || '',
         localPath: config.localPath || '',
         defaultBranch: config.defaultBranch || '',
-        branchTemplate: config.branchTemplate || '',
+        branchTemplate: config.branchTemplate || config.effectiveBranchTemplate || '',
         monorepoPath: config.monorepoPath || '',
         environmentBranches: Array.isArray(config.environmentBranches)
           ? config.environmentBranches
@@ -196,7 +196,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
       formData.repositoryUrl !== (config.repositoryUrl || '') ||
       formData.localPath !== (config.localPath || '') ||
       formData.defaultBranch !== (config.defaultBranch || '') ||
-      formData.branchTemplate !== (config.branchTemplate || '') ||
+      formData.branchTemplate !== (config.branchTemplate || config.effectiveBranchTemplate || '') ||
       formData.monorepoPath !== (config.monorepoPath || '') ||
       branchesChanged
 
@@ -233,7 +233,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
         repositoryUrl: config.repositoryUrl || '',
         localPath: config.localPath || '',
         defaultBranch: config.defaultBranch || '',
-        branchTemplate: config.branchTemplate || '',
+        branchTemplate: config.branchTemplate || config.effectiveBranchTemplate || '',
         monorepoPath: config.monorepoPath || '',
         environmentBranches: Array.isArray(config.environmentBranches)
           ? config.environmentBranches
@@ -248,8 +248,8 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
     const defaults = config.systemDefaults
     const newFormData = { ...formData }
 
-    // Reset branch template to system default (empty means "use system default")
-    newFormData.branchTemplate = ''
+    // Reset branch template to system default
+    newFormData.branchTemplate = defaults.branchTemplate || ''
 
     // Reset environment branches to system defaults
     if (defaults.environmentBranches && defaults.environmentBranches.length > 0) {
