@@ -75,15 +75,18 @@ export function isSprintActive(sprint: SprintSummary): boolean {
 
 /**
  * Calculate days remaining until sprint end.
+ * Compares calendar dates (ignoring time) so that "ends today" = 0.
  * Returns negative number if sprint is past end date.
  */
 export function getDaysRemaining(endDate: Date | null): number | null {
   if (!endDate) return null
 
   const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const end = new Date(endDate)
-  const diffMs = end.getTime() - now.getTime()
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+  const endStart = new Date(end.getFullYear(), end.getMonth(), end.getDate())
+  const diffMs = endStart.getTime() - todayStart.getTime()
+  return Math.round(diffMs / (1000 * 60 * 60 * 24))
 }
 
 /**
