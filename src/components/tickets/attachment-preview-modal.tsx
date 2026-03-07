@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { withBasePath } from '@/lib/base-path'
 import { cn } from '@/lib/utils'
 import type { UploadedFile } from './file-upload'
 
@@ -81,7 +82,7 @@ export function AttachmentPreviewModal({
   const handleDownload = useCallback(() => {
     if (!file) return
     const link = document.createElement('a')
-    link.href = file.url
+    link.href = withBasePath(file.url)
     link.download = file.originalName
     document.body.appendChild(link)
     link.click()
@@ -90,7 +91,7 @@ export function AttachmentPreviewModal({
 
   const handleOpenExternal = useCallback(() => {
     if (!file) return
-    window.open(file.url, '_blank')
+    window.open(withBasePath(file.url), '_blank')
   }, [file])
 
   const handlePrevious = useCallback(() => {
@@ -375,7 +376,7 @@ export function AttachmentPreviewModal({
               }}
             >
               <img
-                src={file.url}
+                src={withBasePath(file.url)}
                 alt={file.originalName}
                 className="max-h-[calc(90vh-60px)] max-w-full object-contain select-none"
                 draggable={false}
@@ -385,7 +386,12 @@ export function AttachmentPreviewModal({
 
           {/* Video preview */}
           {isVideo && (
-            <video src={file.url} controls autoPlay className="max-h-[calc(90vh-60px)] max-w-full">
+            <video
+              src={withBasePath(file.url)}
+              controls
+              autoPlay
+              className="max-h-[calc(90vh-60px)] max-w-full"
+            >
               <track kind="captions" />
             </video>
           )}
@@ -393,7 +399,7 @@ export function AttachmentPreviewModal({
           {/* PDF preview */}
           {isPdf && (
             <object
-              data={file.url}
+              data={withBasePath(file.url)}
               type="application/pdf"
               className="w-full h-full"
               title={file.originalName}

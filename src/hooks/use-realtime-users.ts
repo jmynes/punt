@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { brandingKeys } from '@/hooks/queries/use-branding'
 import { availableUserKeys, memberKeys } from '@/hooks/queries/use-members'
 import { getTabId } from '@/hooks/use-realtime'
+import { withBasePath } from '@/lib/base-path'
 import { isDemoMode } from '@/lib/demo'
 import type { BrandingEvent, MemberEvent, SettingsEvent, UserEvent } from '@/lib/events'
 
@@ -81,7 +82,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
     cleanup()
     setStatus('connecting')
 
-    const eventSource = new EventSource('/api/users/events')
+    const eventSource = new EventSource(withBasePath('/api/users/events'))
     eventSourceRef.current = eventSource
 
     eventSource.onopen = () => {

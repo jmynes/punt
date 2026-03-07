@@ -3,6 +3,9 @@ import type { NextAuthConfig } from 'next-auth'
 // Check if demo mode is enabled (build-time check, safe for edge runtime)
 const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
+// Base path for subpath deployments (e.g., "/punt")
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
+
 /**
  * Auth configuration for proxy (route protection)
  * This config is used by proxy.ts (runs on Node.js runtime in Next.js 16+)
@@ -64,12 +67,12 @@ export const authConfig: NextAuthConfig = {
 
       // Redirect logged-in users away from auth pages
       if (isLoggedIn && isOnAuthPage) {
-        return Response.redirect(new URL('/', nextUrl))
+        return Response.redirect(new URL(`${basePath}/`, nextUrl))
       }
 
       // Protect all other routes - redirect to login if not authenticated
       if (!isLoggedIn && !isOnAuthPage) {
-        const loginUrl = new URL('/login', nextUrl)
+        const loginUrl = new URL(`${basePath}/login`, nextUrl)
         loginUrl.searchParams.set('callbackUrl', nextUrl.pathname)
         return Response.redirect(loginUrl)
       }
