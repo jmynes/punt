@@ -96,7 +96,7 @@ function getEnvironmentColor(
 }
 
 export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
-  const { data: config, isLoading } = useRepositoryConfig(projectKey)
+  const { data: config, isLoading, refetch: refetchConfig } = useRepositoryConfig(projectKey)
   const updateRepository = useUpdateRepository(projectKey)
 
   const canEditSettings = useHasPermission(projectId, PERMISSIONS.PROJECT_SETTINGS)
@@ -159,15 +159,19 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
   // Update form when config loads
   useEffect(() => {
     if (config) {
+      const projectBranches = Array.isArray(config.environmentBranches)
+        ? config.environmentBranches
+        : []
+      const defaultBranches = Array.isArray(config.systemDefaults?.environmentBranches)
+        ? config.systemDefaults.environmentBranches
+        : []
       setFormData({
         repositoryUrl: config.repositoryUrl || '',
         localPath: config.localPath || '',
         defaultBranch: config.defaultBranch || '',
-        branchTemplate: config.branchTemplate || '',
+        branchTemplate: config.branchTemplate || config.effectiveBranchTemplate || '',
         monorepoPath: config.monorepoPath || '',
-        environmentBranches: Array.isArray(config.environmentBranches)
-          ? config.environmentBranches
-          : [],
+        environmentBranches: projectBranches.length > 0 ? projectBranches : defaultBranches,
       })
       setHasChanges(false)
     }
@@ -177,13 +181,17 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
   useEffect(() => {
     if (!config) return
 
-    const configBranches = Array.isArray(config.environmentBranches)
+    const projectBranches = Array.isArray(config.environmentBranches)
       ? config.environmentBranches
       : []
+    const defaultBranches = Array.isArray(config.systemDefaults?.environmentBranches)
+      ? config.systemDefaults.environmentBranches
+      : []
+    const effectiveBranches = projectBranches.length > 0 ? projectBranches : defaultBranches
     const branchesChanged =
-      formData.environmentBranches.length !== configBranches.length ||
+      formData.environmentBranches.length !== effectiveBranches.length ||
       formData.environmentBranches.some((b, i) => {
-        const orig = configBranches[i]
+        const orig = effectiveBranches[i]
         return (
           !orig ||
           b.environment !== orig.environment ||
@@ -196,7 +204,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
       formData.repositoryUrl !== (config.repositoryUrl || '') ||
       formData.localPath !== (config.localPath || '') ||
       formData.defaultBranch !== (config.defaultBranch || '') ||
-      formData.branchTemplate !== (config.branchTemplate || '') ||
+      formData.branchTemplate !== (config.branchTemplate || config.effectiveBranchTemplate || '') ||
       formData.monorepoPath !== (config.monorepoPath || '') ||
       branchesChanged
 
@@ -229,27 +237,33 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
 
   const handleReset = useCallback(() => {
     if (config) {
+      const projectBranches = Array.isArray(config.environmentBranches)
+        ? config.environmentBranches
+        : []
+      const defaultBranches = Array.isArray(config.systemDefaults?.environmentBranches)
+        ? config.systemDefaults.environmentBranches
+        : []
       setFormData({
         repositoryUrl: config.repositoryUrl || '',
         localPath: config.localPath || '',
         defaultBranch: config.defaultBranch || '',
-        branchTemplate: config.branchTemplate || '',
+        branchTemplate: config.branchTemplate || config.effectiveBranchTemplate || '',
         monorepoPath: config.monorepoPath || '',
-        environmentBranches: Array.isArray(config.environmentBranches)
-          ? config.environmentBranches
-          : [],
+        environmentBranches: projectBranches.length > 0 ? projectBranches : defaultBranches,
       })
     }
   }, [config])
 
-  const handleResetToSystemDefaults = useCallback(() => {
-    if (!config?.systemDefaults) return
+  const handleResetToSystemDefaults = useCallback(async () => {
+    // Refetch to get latest admin defaults (they may have changed since page load)
+    const { data: freshConfig } = await refetchConfig()
+    const defaults = freshConfig?.systemDefaults
+    if (!defaults) return
 
-    const defaults = config.systemDefaults
     const newFormData = { ...formData }
 
-    // Reset branch template to system default (empty means "use system default")
-    newFormData.branchTemplate = ''
+    // Reset branch template to system default
+    newFormData.branchTemplate = defaults.branchTemplate || ''
 
     // Reset environment branches to system defaults
     if (defaults.environmentBranches && defaults.environmentBranches.length > 0) {
@@ -262,7 +276,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
     }
 
     setFormData(newFormData)
-  }, [config, formData])
+  }, [refetchConfig, formData])
 
   // Environment branch handlers
   const addEnvironmentBranch = useCallback(() => {

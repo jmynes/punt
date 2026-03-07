@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2 } from 'lucide-react'
+import { Loader2, RotateCcw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -104,6 +104,16 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
     }
   }, [settings])
 
+  const handleResetToSystemDefaults = useCallback(() => {
+    setFormData({
+      defaultSprintDuration: 14,
+      autoCarryOverIncomplete: true,
+      defaultStartTime: systemSettings?.defaultSprintStartTime ?? '09:00',
+      defaultEndTime: systemSettings?.defaultSprintEndTime ?? '17:00',
+      storyPointScaleOption: 'inherit',
+    })
+  }, [systemSettings])
+
   const isValid = formData.defaultSprintDuration >= 1 && formData.defaultSprintDuration <= 90
   const isPending = updateSettings.isPending
   const isDisabled = !canEditSettings || isPending
@@ -123,9 +133,26 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium text-zinc-100">Sprint Settings</h3>
-        <p className="text-sm text-zinc-500">Configure default sprint behavior for this project.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium text-zinc-100">Sprint Settings</h3>
+          <p className="text-sm text-zinc-500">
+            Configure default sprint behavior for this project.
+          </p>
+        </div>
+        {canEditSettings && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleResetToSystemDefaults}
+            disabled={isDisabled}
+            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+          >
+            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+            Reset to System Defaults
+          </Button>
+        )}
       </div>
 
       {/* Sprint Defaults Card */}

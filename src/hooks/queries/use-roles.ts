@@ -189,6 +189,38 @@ export function useDeleteRole(projectId: string) {
 }
 
 /**
+ * Reset all project roles to system admin defaults
+ */
+export function useResetRolesToDefaults(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/projects/${projectId}/roles/reset-defaults`, {
+        method: 'POST',
+        headers: {
+          'X-Tab-Id': getTabId(),
+        },
+      })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to reset roles to defaults')
+      }
+      return res.json() as Promise<RoleWithPermissions[]>
+    },
+    onSuccess: (data) => {
+      showToast.success('Roles reset to system defaults')
+      queryClient.setQueryData(roleKeys.byProject(projectId), data)
+      // Also invalidate members since their role data might have changed
+      queryClient.invalidateQueries({ queryKey: ['members', 'project', projectId] })
+    },
+    onError: (err) => {
+      showToast.error(err.message)
+    },
+  })
+}
+
+/**
  * Reorder roles
  */
 export function useReorderRoles(projectId: string) {

@@ -20,7 +20,7 @@ interface AgentsTabProps {
 }
 
 export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
-  const { data: config, isLoading } = useRepositoryConfig(projectKey)
+  const { data: config, isLoading, refetch: refetchConfig } = useRepositoryConfig(projectKey)
   const updateRepository = useUpdateRepository(projectKey)
 
   const canEditSettings = useHasPermission(projectId, PERMISSIONS.PROJECT_SETTINGS)
@@ -57,11 +57,12 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
     }
   }, [config])
 
-  const handleResetToSystemDefaults = useCallback(() => {
-    if (!config?.systemDefaults) return
-    // Clear project-level guidance so the system default is used as fallback
-    setAgentGuidance('')
-  }, [config])
+  const handleResetToSystemDefaults = useCallback(async () => {
+    if (!canEditSettings) return
+    // Refetch to get latest admin defaults (they may have changed since page load)
+    const { data: freshConfig } = await refetchConfig()
+    setAgentGuidance(freshConfig?.systemDefaults?.agentGuidance || '')
+  }, [canEditSettings, refetchConfig])
 
   const handleCopyContext = useCallback(() => {
     const envBranchesText =
@@ -149,7 +150,9 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
               variant="outline"
               size="sm"
               onClick={handleResetToSystemDefaults}
-              disabled={isDisabled}
+              disabled={
+                isDisabled || agentGuidance === (config?.systemDefaults?.agentGuidance || '')
+              }
               className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
             >
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
