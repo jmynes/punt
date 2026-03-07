@@ -366,32 +366,35 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Webhook URL */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">Webhook URL</Label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-300 font-mono text-sm select-all">
-                  {typeof window !== 'undefined' ? window.location.origin : ''}/api/webhooks/github
-                </code>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const url = `${window.location.origin}/api/webhooks/github`
-                    navigator.clipboard.writeText(url)
-                    setCopiedUrl(true)
-                    setTimeout(() => setCopiedUrl(false), 2000)
-                  }}
-                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                >
-                  {copiedUrl ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
+            {/* Webhook URL - only shown after secret is generated */}
+            {hasWebhookSecret && (
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Webhook URL</Label>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 px-3 py-2 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-300 font-mono text-sm select-all">
+                    {typeof window !== 'undefined' ? window.location.origin : ''}
+                    /api/webhooks/github
+                  </code>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const url = `${window.location.origin}/api/webhooks/github`
+                      navigator.clipboard.writeText(url)
+                      setCopiedUrl(true)
+                      setTimeout(() => setCopiedUrl(false), 2000)
+                    }}
+                    className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                  >
+                    {copiedUrl ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-zinc-500">
+                  Add this URL as a webhook in your GitHub repository settings.
+                </p>
               </div>
-              <p className="text-xs text-zinc-500">
-                Add this URL as a webhook in your GitHub repository settings.
-              </p>
-            </div>
+            )}
 
             {/* Webhook Secret */}
             <div className="space-y-2">
