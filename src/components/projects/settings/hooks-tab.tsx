@@ -284,16 +284,22 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
     setPatterns(DEFAULT_PATTERNS.map((p) => ({ ...p, id: crypto.randomUUID() })))
   }, [])
 
+  const systemDefaultPatterns: CommitPattern[] = useMemo(
+    () =>
+      config?.systemDefaults?.commitPatterns && config.systemDefaults.commitPatterns.length > 0
+        ? config.systemDefaults.commitPatterns
+        : DEFAULT_PATTERNS,
+    [config],
+  )
+
+  const patternsMatchSystemDefaults = useMemo(
+    () => patternsMatch(patterns, systemDefaultPatterns),
+    [patterns, systemDefaultPatterns],
+  )
+
   const resetPatternsToSystemDefaults = useCallback(() => {
-    if (!config?.systemDefaults?.commitPatterns) {
-      // No system defaults set - fall back to built-in defaults
-      setPatterns(DEFAULT_PATTERNS.map((p) => ({ ...p, id: crypto.randomUUID() })))
-      return
-    }
-    setPatterns(
-      config.systemDefaults.commitPatterns.map((p) => ({ ...p, id: crypto.randomUUID() })),
-    )
-  }, [config])
+    setPatterns(systemDefaultPatterns.map((p) => ({ ...p, id: crypto.randomUUID() })))
+  }, [systemDefaultPatterns])
 
   const savePatterns = useCallback(async () => {
     await commitPatternsMutation.mutateAsync(patterns.length > 0 ? patterns : null)
@@ -339,7 +345,7 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
               variant="outline"
               size="sm"
               onClick={resetPatternsToSystemDefaults}
-              disabled={isDisabled}
+              disabled={isDisabled || patternsMatchSystemDefaults}
               className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
             >
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
