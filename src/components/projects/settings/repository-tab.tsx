@@ -96,7 +96,7 @@ function getEnvironmentColor(
 }
 
 export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
-  const { data: config, isLoading } = useRepositoryConfig(projectKey)
+  const { data: config, isLoading, refetch: refetchConfig } = useRepositoryConfig(projectKey)
   const updateRepository = useUpdateRepository(projectKey)
 
   const canEditSettings = useHasPermission(projectId, PERMISSIONS.PROJECT_SETTINGS)
@@ -254,10 +254,12 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
     }
   }, [config])
 
-  const handleResetToSystemDefaults = useCallback(() => {
-    if (!config?.systemDefaults) return
+  const handleResetToSystemDefaults = useCallback(async () => {
+    // Refetch to get latest admin defaults (they may have changed since page load)
+    const { data: freshConfig } = await refetchConfig()
+    const defaults = freshConfig?.systemDefaults
+    if (!defaults) return
 
-    const defaults = config.systemDefaults
     const newFormData = { ...formData }
 
     // Reset branch template to system default
@@ -274,7 +276,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
     }
 
     setFormData(newFormData)
-  }, [config, formData])
+  }, [refetchConfig, formData])
 
   // Environment branch handlers
   const addEnvironmentBranch = useCallback(() => {
