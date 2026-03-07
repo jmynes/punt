@@ -105,12 +105,15 @@ export async function DELETE(
     }
 
     // Disable 2FA and clear all TOTP data
+    // Also invalidate existing sessions by updating passwordChangedAt
     await db.user.update({
       where: { id: targetUser.id },
       data: {
         totpEnabled: false,
         totpSecret: null,
         totpRecoveryCodes: Prisma.DbNull,
+        totpLastUsedAt: null,
+        passwordChangedAt: new Date(),
       },
     })
 

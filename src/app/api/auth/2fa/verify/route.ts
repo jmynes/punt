@@ -6,6 +6,7 @@ import { verifyPassword } from '@/lib/password'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import {
   decryptTotpSecret,
+  isTotpReplay,
   markRecoveryCodeUsed,
   verifyRecoveryCode,
   verifyTotpToken,
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
         totpEnabled: true,
         totpSecret: true,
         totpRecoveryCodes: true,
+        totpLastUsedAt: true,
       },
     })
 
@@ -108,10 +110,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid verification code' }, { status: 401 })
     }
 
-    // Update last login timestamp
+    // Replay protection: reject if the same time window was already used
+    if (isTotpReplay(user.totpLastUsedAt)) {
+      return NextResponse.json({ error: 'Invalid verification code' }, { status: 401 })
+    }
+
+    // Update last login timestamp and TOTP replay marker
     await db.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: { lastLoginAt: new Date(), totpLastUsedAt: new Date() },
     })
 
     return NextResponse.json({ verified: true })

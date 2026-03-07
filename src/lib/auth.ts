@@ -7,6 +7,7 @@ import { verifyPassword } from '@/lib/password'
 import { checkRateLimit } from '@/lib/rate-limit'
 import {
   decryptTotpSecret,
+  isTotpReplay,
   markRecoveryCodeUsed,
   verifyRecoveryCode,
   verifyTotpToken,
@@ -108,13 +109,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (!isValid) {
               throw new Error('INVALID_2FA_CODE')
             }
+
+            // Replay protection: reject if the same time window was already used
+            if (isTotpReplay(user.totpLastUsedAt)) {
+              throw new Error('INVALID_2FA_CODE')
+            }
           }
         }
 
-        // Update last login timestamp
+        // Update last login timestamp (and TOTP replay marker if 2FA was verified)
         await db.user.update({
           where: { id: user.id },
-          data: { lastLoginAt: new Date() },
+          data: {
+            lastLoginAt: new Date(),
+            ...(user.totpEnabled && totpCode ? { totpLastUsedAt: new Date() } : {}),
+          },
         })
 
         return {

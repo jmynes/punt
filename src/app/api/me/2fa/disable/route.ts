@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { Prisma } from '@/generated/prisma'
-import { handleApiError, validationError } from '@/lib/api-utils'
+import { handleApiError, rateLimitExceeded, validationError } from '@/lib/api-utils'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { isDemoMode } from '@/lib/demo/demo-config'
 import { verifyPassword } from '@/lib/password'
+import { checkRateLimit } from '@/lib/rate-limit'
 import {
   decryptTotpSecret,
   markRecoveryCodeUsed,
@@ -28,6 +29,12 @@ export async function POST(request: Request) {
     }
 
     const currentUser = await requireAuth()
+
+    // Rate limit 2FA disable attempts
+    const rateLimit = await checkRateLimit(currentUser.id, 'me/2fa')
+    if (!rateLimit.allowed) {
+      return rateLimitExceeded(rateLimit)
+    }
 
     const body = await request.json()
     const parsed = disableSchema.safeParse(body)
@@ -93,12 +100,16 @@ export async function POST(request: Request) {
     }
 
     // Disable 2FA and clear all TOTP data
+    // Also update passwordChangedAt to invalidate all existing sessions,
+    // forcing re-authentication now that 2FA is no longer protecting the account
     await db.user.update({
       where: { id: currentUser.id },
       data: {
         totpEnabled: false,
         totpSecret: null,
         totpRecoveryCodes: Prisma.DbNull,
+        totpLastUsedAt: null,
+        passwordChangedAt: new Date(),
       },
     })
 

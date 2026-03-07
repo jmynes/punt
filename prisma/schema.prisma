@@ -95,6 +95,7 @@ model User {
   totpSecret        String?   // Encrypted TOTP secret key
   totpEnabled       Boolean   @default(false) // Whether 2FA is active
   totpRecoveryCodes Json?     // JSON array of hashed recovery codes
+  totpLastUsedAt    DateTime? // Last successful TOTP verification (replay protection)
 
   // MCP API access
   mcpApiKey          String? @unique // SHA-256 hash of API key for authentication

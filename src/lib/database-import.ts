@@ -587,6 +587,9 @@ export async function importDatabase(
             updatedAt: new Date(user.updatedAt),
             lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt) : null,
             passwordChangedAt: user.passwordChangedAt ? new Date(user.passwordChangedAt) : null,
+            totpLastUsedAt: (user as Record<string, unknown>).totpLastUsedAt
+              ? new Date((user as Record<string, unknown>).totpLastUsedAt as string)
+              : null,
             emailVerified: user.emailVerified ? new Date(user.emailVerified) : null,
           }
           // Only include fields that exist in the current database schema

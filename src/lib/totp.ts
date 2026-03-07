@@ -123,6 +123,22 @@ export function verifyTotpToken(token: string, secret: string): boolean {
 }
 
 /**
+ * Check if a TOTP code is being replayed within the same time window.
+ * TOTP codes are valid for a 30-second window; this prevents reuse within that window.
+ * Returns true if the code should be rejected (replay detected).
+ */
+export function isTotpReplay(lastUsedAt: Date | null | undefined): boolean {
+  if (!lastUsedAt) return false
+
+  // TOTP time step is 30 seconds, with epochTolerance of 30 seconds we accept
+  // codes from current window +/- 1 window = 90 seconds total.
+  // If the last successful verification was within 90 seconds, this could be a replay.
+  const TOTP_WINDOW_MS = 90 * 1000
+  const elapsed = Date.now() - lastUsedAt.getTime()
+  return elapsed < TOTP_WINDOW_MS
+}
+
+/**
  * Generate recovery codes.
  * Returns an array of 8 random recovery codes.
  */
