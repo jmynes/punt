@@ -57,11 +57,12 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
     }
   }, [config])
 
-  const handleResetToSystemDefaults = useCallback(() => {
-    if (!config?.systemDefaults) return
-    // Clear project-level guidance so the system default is used as fallback
+  const handleResetToSystemDefaults = useCallback(async () => {
+    if (!canEditSettings) return
+    // Clear project-level guidance and save immediately so the system default is used as fallback
+    updateRepository.mutate({ agentGuidance: null })
     setAgentGuidance('')
-  }, [config])
+  }, [canEditSettings, updateRepository])
 
   const handleCopyContext = useCallback(() => {
     const envBranchesText =
