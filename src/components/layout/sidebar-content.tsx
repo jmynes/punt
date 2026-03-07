@@ -212,11 +212,6 @@ export function SidebarContent({
     () => toggleSidebarSection('section-admin'),
     [toggleSidebarSection],
   )
-  const adminSettingsExpanded = sidebarExpandedSections.admin ?? false
-  const setAdminSettingsExpanded = useCallback(
-    (v: boolean) => useSettingsStore.getState().setSidebarSectionExpanded('admin', v),
-    [],
-  )
   // "Projects" top-level section (defaults to expanded)
   const projectsExpanded = sidebarExpandedSections['section-projects'] ?? true
   const toggleProjectsExpanded = useCallback(
@@ -541,133 +536,184 @@ export function SidebarContent({
                   Agents
                 </Button>
               </Link>
+              {/* System Settings sub-section */}
               <div>
                 <div className="flex items-center">
                   <button
                     type="button"
                     className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
-                    onClick={() => setAdminSettingsExpanded(!adminSettingsExpanded)}
+                    onClick={() => toggleSidebarSection('section-system-settings')}
                   >
-                    {adminSettingsExpanded ? (
-                      <ChevronDown className="h-3 w-3" />
+                    {(sidebarExpandedSections['section-system-settings'] ?? false) ? (
+                      <ChevronDown className="h-3.5 w-3.5" />
                     ) : (
-                      <ChevronRight className="h-3 w-3" />
+                      <ChevronRight className="h-3.5 w-3.5" />
                     )}
                   </button>
-                  <Link href="/admin/settings" onClick={handleLinkClick} className="flex-1 min-w-0">
+                  <Link href="/admin/system" onClick={handleLinkClick} className="flex-1 min-w-0">
                     <Button
                       variant="ghost"
                       size="sm"
                       className={cn(
                         'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
-                        pathname.startsWith('/admin/settings') && 'bg-zinc-800/50 text-zinc-100',
+                        pathname.startsWith('/admin/system') && 'bg-zinc-800/50 text-zinc-100',
                       )}
                     >
                       <Settings className="h-3.5 w-3.5" />
-                      Settings
+                      System Settings
                     </Button>
                   </Link>
                 </div>
-                <CollapsibleSection expanded={adminSettingsExpanded}>
+                <CollapsibleSection
+                  expanded={sidebarExpandedSections['section-system-settings'] ?? false}
+                >
                   <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
-                    <Link href="/admin/settings/agents" onClick={handleLinkClick}>
+                    <Link href="/admin/system/branding" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/agents' && 'bg-zinc-800/50 text-zinc-100',
-                        )}
-                      >
-                        <Bot className="h-3 w-3" />
-                        Agents
-                      </Button>
-                    </Link>
-                    <Link href="/admin/settings/board" onClick={handleLinkClick}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/board' && 'bg-zinc-800/50 text-zinc-100',
-                        )}
-                      >
-                        <Columns3 className="h-3 w-3" />
-                        Board
-                      </Button>
-                    </Link>
-                    <Link href="/admin/settings/branding" onClick={handleLinkClick}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/branding' && 'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/system/branding' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Palette className="h-3 w-3" />
                         Branding
                       </Button>
                     </Link>
-                    <Link href="/admin/settings/database" onClick={handleLinkClick}>
+                    <Link href="/admin/system/database" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/database' && 'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/system/database' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Database className="h-3 w-3" />
                         Database
                       </Button>
                     </Link>
-                    <Link href="/admin/settings/email" onClick={handleLinkClick}>
+                    <Link href="/admin/system/email" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/email' && 'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/system/email' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Mail className="h-3 w-3" />
                         Email
                       </Button>
                     </Link>
-                    <Link href="/admin/settings/uploads" onClick={handleLinkClick}>
+                    <Link href="/admin/system/uploads" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/uploads' && 'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/system/uploads' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Upload className="h-3 w-3" />
                         File Uploads
                       </Button>
                     </Link>
-                    <Link href="/admin/settings/hooks" onClick={handleLinkClick}>
+                    <Link href="/admin/system/updates" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/hooks' && 'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/system/updates' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        Updates
+                      </Button>
+                    </Link>
+                  </div>
+                </CollapsibleSection>
+              </div>
+              {/* Project Defaults sub-section */}
+              <div>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
+                    onClick={() => toggleSidebarSection('section-project-defaults')}
+                  >
+                    {(sidebarExpandedSections['section-project-defaults'] ?? false) ? (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                  <Link href="/admin/defaults" onClick={handleLinkClick} className="flex-1 min-w-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+                        pathname.startsWith('/admin/defaults') && 'bg-zinc-800/50 text-zinc-100',
+                      )}
+                    >
+                      <Layers className="h-3.5 w-3.5" />
+                      Project Defaults
+                    </Button>
+                  </Link>
+                </div>
+                <CollapsibleSection
+                  expanded={sidebarExpandedSections['section-project-defaults'] ?? false}
+                >
+                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                    <Link href="/admin/defaults/agents" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/defaults/agents' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Bot className="h-3 w-3" />
+                        Agents
+                      </Button>
+                    </Link>
+                    <Link href="/admin/defaults/board" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/defaults/board' && 'bg-zinc-800/50 text-zinc-100',
+                        )}
+                      >
+                        <Columns3 className="h-3 w-3" />
+                        Board
+                      </Button>
+                    </Link>
+                    <Link href="/admin/defaults/hooks" onClick={handleLinkClick}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          pathname === '/admin/defaults/hooks' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Webhook className="h-3 w-3" />
                         Hooks
                       </Button>
                     </Link>
-                    <Link href="/admin/settings/repository" onClick={handleLinkClick}>
+                    <Link href="/admin/defaults/repository" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/repository' &&
+                          pathname === '/admin/defaults/repository' &&
                             'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
@@ -675,43 +721,30 @@ export function SidebarContent({
                         Repository
                       </Button>
                     </Link>
-                    <Link href="/admin/settings/roles" onClick={handleLinkClick}>
+                    <Link href="/admin/defaults/roles" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/roles' && 'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/defaults/roles' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <Shield className="h-3 w-3" />
                         Roles
                       </Button>
                     </Link>
-                    <Link href="/admin/settings/sprints" onClick={handleLinkClick}>
+                    <Link href="/admin/defaults/sprints" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
                           'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/sprints' && 'bg-zinc-800/50 text-zinc-100',
+                          pathname === '/admin/defaults/sprints' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
                         <CalendarClock className="h-3 w-3" />
                         Sprints
-                      </Button>
-                    </Link>
-                    <Link href="/admin/settings/updates" onClick={handleLinkClick}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
-                          pathname === '/admin/settings/updates' && 'bg-zinc-800/50 text-zinc-100',
-                        )}
-                      >
-                        <RefreshCw className="h-3 w-3" />
-                        Updates
                       </Button>
                     </Link>
                   </div>
@@ -991,7 +1024,11 @@ function ProjectSettingsLink({
           className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
           onClick={onToggleExpanded}
         >
-          {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          {expanded ? (
+            <ChevronDown className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5" />
+          )}
         </button>
         <Link
           href={`/projects/${projectKey}/settings`}

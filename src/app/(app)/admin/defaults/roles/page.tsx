@@ -1,23 +1,23 @@
 'use client'
 
-import { Info, Settings } from 'lucide-react'
-import { AdminSettingsTabs } from '@/components/admin/admin-settings-tabs'
+import { Info, Layers } from 'lucide-react'
+import { AdminDefaultsTabs } from '@/components/admin/admin-defaults-tabs'
 import { RolePermissionsForm } from '@/components/admin/role-permissions-form'
 import { PageHeader } from '@/components/common'
 
-export default function AdminRolesSettingsPage() {
+export default function AdminRolesDefaultsPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <PageHeader
-        icon={Settings}
+        icon={Layers}
         category="Admin"
-        title="System Settings"
-        description="Configure uploads, branding, roles, and database options"
+        title="Project Defaults"
+        description="Configure default settings inherited by new projects"
         variant="hero"
         accentColor="amber"
       />
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-auto">
-        <AdminSettingsTabs activeTab="roles" />
+        <AdminDefaultsTabs activeTab="roles" />
         <div className="flex items-start gap-3 p-4 mb-6 rounded-lg bg-blue-950/30 border border-blue-900/50">
           <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-200/80">
