@@ -4,8 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { getTabId } from '@/hooks/use-realtime'
 import { apiFetch } from '@/lib/base-path'
-import type { CreateTicketInput, UpdateTicketInput } from '@/lib/data-provider'
 import { getDataProvider } from '@/lib/data-provider'
+import { toCreateTicketInput, toUpdateTicketInput } from '@/lib/ticket-mutations'
 import { showToast } from '@/lib/toast'
 import { useBoardStore } from '@/stores/board-store'
 import type {
@@ -124,22 +124,11 @@ export function useCreateTicket() {
   return useMutation({
     mutationFn: async ({ projectId, columnId, data }: CreateTicketMutationInput) => {
       const provider = getDataProvider(getTabId())
-      const input: CreateTicketInput = {
-        title: data.title,
-        description: data.description,
-        type: data.type,
-        priority: data.priority,
-        columnId,
-        storyPoints: data.storyPoints,
-        estimate: data.estimate,
-        startDate: data.startDate,
-        dueDate: data.dueDate,
-        assigneeId: data.assigneeId,
-        reporterId: data.reporterId,
-        sprintId: data.sprintId,
-        parentId: data.parentId,
-        labelIds: data.labelIds,
-      }
+      const input = toCreateTicketInput(columnId, {
+        ...data,
+        // Map reporterId to creatorId for the conversion function
+        creatorId: data.reporterId ?? undefined,
+      } as Partial<TicketWithRelations> & { title: string })
       return provider.createTicket(projectId, input)
     },
     onMutate: async ({ projectId, columnId, tempTicket }) => {
@@ -193,36 +182,7 @@ export function useUpdateTicket() {
   return useMutation({
     mutationFn: async ({ projectId, ticketId, updates }: UpdateTicketMutationInput) => {
       const provider = getDataProvider(getTabId())
-
-      // Convert TicketWithRelations updates to UpdateTicketInput format
-      const apiUpdates: UpdateTicketInput = {}
-
-      // Copy scalar fields
-      if ('title' in updates) apiUpdates.title = updates.title
-      if ('description' in updates) apiUpdates.description = updates.description
-      if ('type' in updates) apiUpdates.type = updates.type
-      if ('priority' in updates) apiUpdates.priority = updates.priority
-      if ('columnId' in updates) apiUpdates.columnId = updates.columnId
-      if ('order' in updates) apiUpdates.order = updates.order
-      if ('storyPoints' in updates) apiUpdates.storyPoints = updates.storyPoints
-      if ('estimate' in updates) apiUpdates.estimate = updates.estimate
-      if ('assigneeId' in updates) apiUpdates.assigneeId = updates.assigneeId
-      if ('creatorId' in updates) apiUpdates.reporterId = updates.creatorId // Map to API field name
-      if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
-      if ('parentId' in updates) apiUpdates.parentId = updates.parentId
-      if ('startDate' in updates) apiUpdates.startDate = updates.startDate
-      if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
-      if ('resolution' in updates) apiUpdates.resolution = updates.resolution
-      if ('resolvedAt' in updates) apiUpdates.resolvedAt = updates.resolvedAt
-      if ('environment' in updates) apiUpdates.environment = updates.environment
-      if ('affectedVersion' in updates) apiUpdates.affectedVersion = updates.affectedVersion
-      if ('fixVersion' in updates) apiUpdates.fixVersion = updates.fixVersion
-
-      // Convert labels to labelIds
-      if ('labels' in updates && updates.labels) {
-        apiUpdates.labelIds = updates.labels.map((l) => l.id)
-      }
-
+      const apiUpdates = toUpdateTicketInput(updates)
       return provider.updateTicket(projectId, ticketId, apiUpdates)
     },
     onMutate: async ({ projectId, ticketId, updates }) => {
@@ -388,28 +348,7 @@ export async function createTicketAPI(
   ticketData: Partial<TicketWithRelations> & { title: string },
 ): Promise<TicketWithRelations> {
   const provider = getDataProvider(getTabId())
-
-  const input: CreateTicketInput = {
-    title: ticketData.title,
-    description: ticketData.description ?? null,
-    type: ticketData.type ?? 'task',
-    priority: ticketData.priority ?? 'medium',
-    columnId,
-    assigneeId: ticketData.assigneeId ?? null,
-    reporterId: ticketData.creatorId ?? null,
-    sprintId: ticketData.sprintId ?? null,
-    parentId: ticketData.parentId ?? null,
-    storyPoints: ticketData.storyPoints ?? null,
-    estimate: ticketData.estimate ?? null,
-    resolution: ticketData.resolution ?? null,
-    resolvedAt: ticketData.resolvedAt ?? null,
-    startDate: ticketData.startDate ?? null,
-    dueDate: ticketData.dueDate ?? null,
-    labelIds: ticketData.labels?.map((l) => l.id) ?? [],
-    // For undo/restore operations - preserve original creation timestamp
-    createdAt: ticketData.createdAt ?? null,
-  }
-
+  const input = toCreateTicketInput(columnId, ticketData)
   return provider.createTicket(projectId, input)
 }
 
@@ -443,31 +382,7 @@ export async function updateTicketAPI(
   }
 
   const provider = getDataProvider(getTabId())
-
-  // Convert TicketWithRelations updates to UpdateTicketInput format
-  const apiUpdates: UpdateTicketInput = {}
-
-  if ('title' in updates) apiUpdates.title = updates.title
-  if ('description' in updates) apiUpdates.description = updates.description
-  if ('type' in updates) apiUpdates.type = updates.type
-  if ('priority' in updates) apiUpdates.priority = updates.priority
-  if ('columnId' in updates) apiUpdates.columnId = updates.columnId
-  if ('order' in updates) apiUpdates.order = updates.order
-  if ('storyPoints' in updates) apiUpdates.storyPoints = updates.storyPoints
-  if ('estimate' in updates) apiUpdates.estimate = updates.estimate
-  if ('assigneeId' in updates) apiUpdates.assigneeId = updates.assigneeId
-  if ('creatorId' in updates) apiUpdates.reporterId = updates.creatorId // Map to API field name
-  if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
-  if ('parentId' in updates) apiUpdates.parentId = updates.parentId
-  if ('startDate' in updates) apiUpdates.startDate = updates.startDate
-  if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
-  if ('resolution' in updates) apiUpdates.resolution = updates.resolution
-  if ('resolvedAt' in updates) apiUpdates.resolvedAt = updates.resolvedAt
-
-  if ('labels' in updates && updates.labels) {
-    apiUpdates.labelIds = updates.labels.map((l) => l.id)
-  }
-
+  const apiUpdates = toUpdateTicketInput(updates)
   return provider.updateTicket(projectId, ticketId, apiUpdates)
 }
 
@@ -502,29 +417,7 @@ export async function updateTicketWithActivity(
     return { ticket: { id: ticketId, ...updates } as TicketWithRelations }
   }
 
-  // Convert TicketWithRelations updates to UpdateTicketInput format
-  const apiUpdates: UpdateTicketInput = {}
-
-  if ('title' in updates) apiUpdates.title = updates.title
-  if ('description' in updates) apiUpdates.description = updates.description
-  if ('type' in updates) apiUpdates.type = updates.type
-  if ('priority' in updates) apiUpdates.priority = updates.priority
-  if ('columnId' in updates) apiUpdates.columnId = updates.columnId
-  if ('order' in updates) apiUpdates.order = updates.order
-  if ('storyPoints' in updates) apiUpdates.storyPoints = updates.storyPoints
-  if ('estimate' in updates) apiUpdates.estimate = updates.estimate
-  if ('assigneeId' in updates) apiUpdates.assigneeId = updates.assigneeId
-  if ('creatorId' in updates) apiUpdates.reporterId = updates.creatorId
-  if ('sprintId' in updates) apiUpdates.sprintId = updates.sprintId
-  if ('parentId' in updates) apiUpdates.parentId = updates.parentId
-  if ('startDate' in updates) apiUpdates.startDate = updates.startDate
-  if ('dueDate' in updates) apiUpdates.dueDate = updates.dueDate
-  if ('resolution' in updates) apiUpdates.resolution = updates.resolution
-  if ('resolvedAt' in updates) apiUpdates.resolvedAt = updates.resolvedAt
-
-  if ('labels' in updates && updates.labels) {
-    apiUpdates.labelIds = updates.labels.map((l) => l.id)
-  }
+  const apiUpdates = toUpdateTicketInput(updates)
 
   // Make direct fetch call to capture _activity from response
   const response = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}`, {

@@ -16,7 +16,16 @@ import {
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { TICKET_SELECT_FULL, transformTicket } from '@/lib/prisma-selects'
-import { isCompletedColumn } from '@/lib/sprint-utils'
+import {
+  getTicketUpdateEventType,
+  resolveResolutionColumnCoupling,
+  trackSprintChange,
+  validateColumnInProject,
+  validateMemberships,
+  validateParentTicket,
+  validateProjectMembership,
+  validateSprintAssignment,
+} from '@/lib/ticket-mutations-server'
 import { type IssueType, type Priority, RESOLUTIONS } from '@/types'
 
 const updateTicketSchema = z.object({
@@ -151,10 +160,7 @@ export async function PATCH(
 
     // If changing column, verify new column belongs to project
     if (updateData.columnId && updateData.columnId !== existingTicket.columnId) {
-      const column = await db.column.findFirst({
-        where: { id: updateData.columnId, projectId },
-      })
-
+      const column = await validateColumnInProject(updateData.columnId, projectId)
       if (!column) {
         return badRequestError('Column not found or does not belong to project')
       }
@@ -162,46 +168,9 @@ export async function PATCH(
 
     // Validate parentId: prevent self-referencing and circular parent chains
     if (updateData.parentId !== undefined && updateData.parentId !== null) {
-      // Prevent direct self-referencing
-      if (updateData.parentId === ticketId) {
-        return badRequestError('Cannot set parent: ticket cannot be its own parent')
-      }
-
-      // Prevent subtasks from having subtasks (max 1 level deep)
-      const proposedParent = await db.ticket.findFirst({
-        where: { id: updateData.parentId, projectId },
-        select: { type: true },
-      })
-      if (!proposedParent) {
-        return badRequestError('Parent ticket not found or does not belong to project')
-      }
-      if (proposedParent.type === 'subtask') {
-        return badRequestError('Subtasks cannot have subtasks')
-      }
-
-      // Walk up the parent chain from the proposed parent to detect cycles
-      const MAX_DEPTH = 50
-      let currentId: string | null = updateData.parentId
-      let depth = 0
-
-      while (currentId && depth < MAX_DEPTH) {
-        const parent: { parentId: string | null } | null = await db.ticket.findUnique({
-          where: { id: currentId },
-          select: { parentId: true },
-        })
-
-        if (!parent) break
-
-        if (parent.parentId === ticketId) {
-          return badRequestError('Cannot set parent: would create a circular reference')
-        }
-
-        currentId = parent.parentId
-        depth++
-      }
-
-      if (depth >= MAX_DEPTH) {
-        return badRequestError('Cannot set parent: parent chain exceeds maximum depth')
+      const parentError = await validateParentTicket(updateData.parentId, projectId, ticketId)
+      if (parentError) {
+        return badRequestError(parentError)
       }
     }
 
@@ -217,32 +186,23 @@ export async function PATCH(
 
     // Validate assigneeId is a project member (if provided and not null)
     if (updateData.assigneeId !== undefined && updateData.assigneeId !== null) {
-      const assigneeMembership = await db.projectMember.findUnique({
-        where: { userId_projectId: { userId: updateData.assigneeId, projectId } },
-      })
-      if (!assigneeMembership) {
+      const membership = await validateProjectMembership(updateData.assigneeId, projectId)
+      if (!membership) {
         return badRequestError('Assignee must be a project member')
       }
     }
 
     // Validate reporterId is a project member (if provided and not null)
     if (reporterId !== undefined && reporterId !== null) {
-      const reporterMembership = await db.projectMember.findUnique({
-        where: { userId_projectId: { userId: reporterId, projectId } },
-      })
-      if (!reporterMembership) {
+      const membership = await validateProjectMembership(reporterId, projectId)
+      if (!membership) {
         return badRequestError('Reporter must be a project member')
       }
     }
 
     // Validate all watcherIds are project members (if provided)
     if (watcherIds !== undefined && watcherIds.length > 0) {
-      const validMembers = await db.projectMember.findMany({
-        where: { projectId, userId: { in: watcherIds } },
-        select: { userId: true },
-      })
-      const validUserIds = new Set(validMembers.map((m) => m.userId))
-      const invalidWatchers = watcherIds.filter((id) => !validUserIds.has(id))
+      const invalidWatchers = await validateMemberships(watcherIds, projectId)
       if (invalidWatchers.length > 0) {
         return badRequestError('All watchers must be project members')
       }
@@ -272,59 +232,19 @@ export async function PATCH(
     }
 
     // Auto-couple resolution ↔ column status
-    if (dbUpdateData.columnId) {
-      const targetCol = await db.column.findUnique({
-        where: { id: dbUpdateData.columnId as string },
-        select: { name: true },
-      })
-      if (targetCol) {
-        if (
-          isCompletedColumn(targetCol.name) &&
-          !dbUpdateData.resolution &&
-          !existingTicket.resolution
-        ) {
-          // Moving to a "done" column → auto-set resolution to "Done"
-          dbUpdateData.resolution = 'Done'
-          // Use explicitly-provided resolvedAt (undo/redo) or current time
-          dbUpdateData.resolvedAt = dbUpdateData.resolvedAt ?? new Date()
-        } else if (
-          !isCompletedColumn(targetCol.name) &&
-          dbUpdateData.resolution === undefined &&
-          existingTicket.resolution
-        ) {
-          // Moving out of a "done" column to a non-done column → clear resolution
-          dbUpdateData.resolution = null
-          dbUpdateData.resolvedAt = null
-        }
-      }
-    }
+    const coupling = await resolveResolutionColumnCoupling({
+      targetColumnId: dbUpdateData.columnId as string | undefined,
+      existingResolution: existingTicket.resolution,
+      existingColumnName: existingTicket.column.name,
+      newResolution: dbUpdateData.resolution as string | null | undefined,
+      explicitResolvedAt: dbUpdateData.resolvedAt as Date | null | undefined,
+      projectId,
+    })
 
-    // Setting a resolution auto-moves ticket to first "done" column (if not already there)
-    if (dbUpdateData.resolution && !dbUpdateData.columnId) {
-      const currentColName = existingTicket.column.name
-      if (!isCompletedColumn(currentColName)) {
-        const allCols = await db.column.findMany({
-          where: { projectId },
-          orderBy: { order: 'asc' },
-          select: { id: true, name: true },
-        })
-        const doneColumn = allCols.find((c) => isCompletedColumn(c.name))
-        if (doneColumn) {
-          dbUpdateData.columnId = doneColumn.id
-        }
-      }
-    }
-
-    // Track resolvedAt when resolution is explicitly set or cleared
-    if (dbUpdateData.resolution !== undefined) {
-      if (dbUpdateData.resolution && !existingTicket.resolution) {
-        // Resolution being set (and wasn't set before) → set resolvedAt
-        dbUpdateData.resolvedAt = dbUpdateData.resolvedAt ?? new Date()
-      } else if (dbUpdateData.resolution === null && existingTicket.resolution) {
-        // Resolution being cleared → clear resolvedAt
-        dbUpdateData.resolvedAt = null
-      }
-    }
+    // Apply coupling results
+    if (coupling.resolution !== undefined) dbUpdateData.resolution = coupling.resolution
+    if (coupling.resolvedAt !== undefined) dbUpdateData.resolvedAt = coupling.resolvedAt
+    if (coupling.columnId !== undefined) dbUpdateData.columnId = coupling.columnId
 
     // Handle labels relation
     if (labelIds !== undefined) {
@@ -354,23 +274,17 @@ export async function PATCH(
       newSprintId !== null &&
       newSprintId !== existingTicket.sprintId
     ) {
-      const targetSprint = await db.sprint.findFirst({
-        where: { id: newSprintId as string, projectId },
-        select: { status: true },
-      })
-      if (targetSprint?.status === 'completed') {
-        // Check the effective resolution: use the update value if provided, otherwise the existing value
-        const effectiveResolution =
-          dbUpdateData.resolution !== undefined
-            ? dbUpdateData.resolution
-            : existingTicket.resolution
-        if (!effectiveResolution) {
-          return badRequestError(
-            'Cannot assign an unresolved ticket to a completed sprint. ' +
-              'To add a ticket to a completed sprint, it must have a resolution status ' +
-              "(e.g., Done, Won't Fix). Otherwise the ticket will be orphaned and not visible in active views.",
-          )
-        }
+      const effectiveResolution =
+        dbUpdateData.resolution !== undefined
+          ? (dbUpdateData.resolution as string | null)
+          : existingTicket.resolution
+      const sprintError = await validateSprintAssignment(
+        newSprintId as string,
+        projectId,
+        effectiveResolution,
+      )
+      if (sprintError) {
+        return badRequestError(sprintError)
       }
     }
 
@@ -394,38 +308,7 @@ export async function PATCH(
     }
 
     // Track sprint history when sprintId changes
-    if (newSprintId !== undefined && newSprintId !== existingTicket.sprintId) {
-      // Close existing history entry for old sprint
-      if (existingTicket.sprintId) {
-        await db.ticketSprintHistory.updateMany({
-          where: {
-            ticketId,
-            sprintId: existingTicket.sprintId,
-            exitStatus: null,
-          },
-          data: {
-            exitStatus: 'removed',
-            removedAt: new Date(),
-          },
-        })
-      }
-
-      // Create history entry for new sprint
-      if (newSprintId) {
-        const existing = await db.ticketSprintHistory.findUnique({
-          where: { ticketId_sprintId: { ticketId, sprintId: newSprintId } },
-        })
-        if (!existing) {
-          await db.ticketSprintHistory.create({
-            data: {
-              ticketId,
-              sprintId: newSprintId,
-              entryType: 'added',
-            },
-          })
-        }
-      }
-    }
+    await trackSprintChange(ticketId, existingTicket.sprintId, newSprintId)
 
     const ticket = await db.ticket
       .update({
@@ -623,21 +506,15 @@ export async function PATCH(
     }
 
     // Emit real-time event for other clients
-    // Use 'ticket.moved' if column changed, 'ticket.sprint_changed' if sprint changed, otherwise 'ticket.updated'
-    // Include tabId from header so the originating tab can skip the event
-    const columnChanged = dbUpdateData.columnId && dbUpdateData.columnId !== existingTicket.columnId
+    const columnChanged = !!(
+      dbUpdateData.columnId && dbUpdateData.columnId !== existingTicket.columnId
+    )
     const sprintChanged =
       updateData.sprintId !== undefined && updateData.sprintId !== existingTicket.sprintId
     const tabId = request.headers.get('X-Tab-Id') || undefined
 
-    const eventType = columnChanged
-      ? 'ticket.moved'
-      : sprintChanged
-        ? 'ticket.sprint_changed'
-        : 'ticket.updated'
-
     projectEvents.emitTicketEvent({
-      type: eventType,
+      type: getTicketUpdateEventType(columnChanged, sprintChanged),
       projectId,
       ticketId,
       userId: user.id,

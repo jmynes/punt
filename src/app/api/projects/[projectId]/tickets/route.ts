@@ -13,6 +13,13 @@ import { projectEvents } from '@/lib/events'
 import { PERMISSIONS } from '@/lib/permissions'
 import { TICKET_SELECT_FULL, transformTicket } from '@/lib/prisma-selects'
 import { isCompletedColumn } from '@/lib/sprint-utils'
+import {
+  validateColumnInProject,
+  validateMemberships,
+  validateParentTicket,
+  validateProjectMembership,
+  validateSprintAssignment,
+} from '@/lib/ticket-mutations-server'
 import { type IssueType, type Priority, RESOLUTIONS } from '@/types'
 
 const createTicketSchema = z.object({
@@ -133,56 +140,38 @@ export async function POST(
     const creatorId = reporterId ?? user.id
 
     // Verify column belongs to project
-    const column = await db.column.findFirst({
-      where: { id: ticketData.columnId, projectId },
-    })
-
+    const column = await validateColumnInProject(ticketData.columnId, projectId)
     if (!column) {
       return badRequestError('Column not found or does not belong to project')
     }
 
     // Validate reporterId is a project member (if provided)
     if (reporterId) {
-      const reporterMembership = await db.projectMember.findUnique({
-        where: { userId_projectId: { userId: reporterId, projectId } },
-      })
-      if (!reporterMembership) {
+      const membership = await validateProjectMembership(reporterId, projectId)
+      if (!membership) {
         return badRequestError('Reporter must be a project member')
       }
     }
 
     // Validate parentId: prevent subtasks from having subtasks (max 1 level deep)
     if (ticketData.parentId) {
-      const parentTicket = await db.ticket.findFirst({
-        where: { id: ticketData.parentId, projectId },
-        select: { type: true },
-      })
-      if (!parentTicket) {
-        return badRequestError('Parent ticket not found or does not belong to project')
-      }
-      if (parentTicket.type === 'subtask') {
-        return badRequestError('Subtasks cannot have subtasks')
+      const parentError = await validateParentTicket(ticketData.parentId, projectId)
+      if (parentError) {
+        return badRequestError(parentError)
       }
     }
 
     // Validate assigneeId is a project member (if provided)
     if (ticketData.assigneeId) {
-      const assigneeMembership = await db.projectMember.findUnique({
-        where: { userId_projectId: { userId: ticketData.assigneeId, projectId } },
-      })
-      if (!assigneeMembership) {
+      const membership = await validateProjectMembership(ticketData.assigneeId, projectId)
+      if (!membership) {
         return badRequestError('Assignee must be a project member')
       }
     }
 
     // Validate all watcherIds are project members (if provided)
     if (watcherIds.length > 0) {
-      const validMembers = await db.projectMember.findMany({
-        where: { projectId, userId: { in: watcherIds } },
-        select: { userId: true },
-      })
-      const validUserIds = new Set(validMembers.map((m) => m.userId))
-      const invalidWatchers = watcherIds.filter((id) => !validUserIds.has(id))
+      const invalidWatchers = await validateMemberships(watcherIds, projectId)
       if (invalidWatchers.length > 0) {
         return badRequestError('All watchers must be project members')
       }
@@ -190,16 +179,13 @@ export async function POST(
 
     // Validate: prevent assigning unresolved tickets to completed sprints
     if (ticketData.sprintId) {
-      const targetSprint = await db.sprint.findFirst({
-        where: { id: ticketData.sprintId, projectId },
-        select: { status: true },
-      })
-      if (targetSprint?.status === 'completed' && !ticketData.resolution) {
-        return badRequestError(
-          'Cannot assign an unresolved ticket to a completed sprint. ' +
-            'To add a ticket to a completed sprint, it must have a resolution status ' +
-            "(e.g., Done, Won't Fix). Otherwise the ticket will be orphaned and not visible in active views.",
-        )
+      const sprintError = await validateSprintAssignment(
+        ticketData.sprintId,
+        projectId,
+        ticketData.resolution ?? null,
+      )
+      if (sprintError) {
+        return badRequestError(sprintError)
       }
     }
 
@@ -340,10 +326,7 @@ export async function PATCH(
     const { ticketIds, toColumnId, newOrder } = parsed.data
 
     // Verify target column belongs to project
-    const targetColumn = await db.column.findFirst({
-      where: { id: toColumnId, projectId },
-    })
-
+    const targetColumn = await validateColumnInProject(toColumnId, projectId)
     if (!targetColumn) {
       return badRequestError('Target column not found or does not belong to project')
     }
