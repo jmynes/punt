@@ -1,24 +1,24 @@
 'use client'
 
 import { Settings } from 'lucide-react'
-import { AdminSettingsTabs } from '@/components/admin/admin-settings-tabs'
-import { HooksDefaultsForm } from '@/components/admin/hooks-defaults-form'
+import { AdminSystemTabs } from '@/components/admin/admin-system-tabs'
+import { SettingsForm } from '@/components/admin/settings-form'
 import { PageHeader } from '@/components/common'
 
-export default function AdminHooksSettingsPage() {
+export default function AdminUploadsSettingsPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <PageHeader
         icon={Settings}
         category="Admin"
         title="System Settings"
-        description="Configure uploads, branding, roles, and database options"
+        description="Configure branding, database, email, uploads, and updates"
         variant="hero"
         accentColor="amber"
       />
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-auto">
-        <AdminSettingsTabs activeTab="hooks" />
-        <HooksDefaultsForm />
+        <AdminSystemTabs activeTab="uploads" />
+        <SettingsForm />
         <div className="h-8 flex-shrink-0" />
       </div>
     </div>

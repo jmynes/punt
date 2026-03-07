@@ -1,24 +1,24 @@
 'use client'
 
 import { Settings } from 'lucide-react'
-import { AdminSettingsTabs } from '@/components/admin/admin-settings-tabs'
-import { SettingsForm } from '@/components/admin/settings-form'
+import { AdminSystemTabs } from '@/components/admin/admin-system-tabs'
+import { EmailSettingsForm } from '@/components/admin/email-settings-form'
 import { PageHeader } from '@/components/common'
 
-export default function AdminUploadsSettingsPage() {
+export default function AdminEmailSettingsPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <PageHeader
         icon={Settings}
         category="Admin"
         title="System Settings"
-        description="Configure uploads, branding, roles, and database options"
+        description="Configure branding, database, email, uploads, and updates"
         variant="hero"
         accentColor="amber"
       />
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 overflow-auto">
-        <AdminSettingsTabs activeTab="uploads" />
-        <SettingsForm />
+        <AdminSystemTabs activeTab="email" />
+        <EmailSettingsForm />
         <div className="h-8 flex-shrink-0" />
       </div>
     </div>

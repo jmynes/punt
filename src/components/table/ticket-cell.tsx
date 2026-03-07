@@ -1,7 +1,7 @@
 'use client'
 
 import { format, isBefore, isToday } from 'date-fns'
-import { Ban, Eye, User } from 'lucide-react'
+import { Ban, CircleCheck, Eye, User } from 'lucide-react'
 import { AgentIdenticon } from '@/components/common'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
@@ -51,12 +51,25 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
             </Badge>
           )}
           <InlineCodeText text={ticket.title} className="truncate font-medium" />
-          {ticket._count && ticket._count.subtasks > 0 && (
-            <Badge variant="outline" className="shrink-0 text-xs">
-              {ticket.subtasks?.filter((s) => s.resolution != null).length ?? 0}/
-              {ticket._count.subtasks} subtasks
-            </Badge>
-          )}
+          {ticket._count &&
+            ticket._count.subtasks > 0 &&
+            (() => {
+              const resolved = ticket.subtasks?.filter((s) => s.resolution != null).length ?? 0
+              const total = ticket._count.subtasks
+              const allDone = resolved === total
+              return (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'shrink-0 text-xs',
+                    allDone && 'border-emerald-700 text-emerald-400 bg-emerald-950/30',
+                  )}
+                >
+                  {allDone && <CircleCheck className="h-3 w-3 mr-0.5" />}
+                  {resolved}/{total} subtasks
+                </Badge>
+              )
+            })()}
         </div>
       )
     }
