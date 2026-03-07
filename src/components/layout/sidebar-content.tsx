@@ -1024,7 +1024,11 @@ function ProjectSettingsLink({
           className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
           onClick={onToggleExpanded}
         >
-          {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          {expanded ? (
+            <ChevronDown className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5" />
+          )}
         </button>
         <Link
           href={`/projects/${projectKey}/settings`}
