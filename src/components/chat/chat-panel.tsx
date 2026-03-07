@@ -294,7 +294,7 @@ export function ChatPanel() {
         const assistantMsg = currentMsgs.find((m) => m.id === assistantId)
         const hasRunningTools = assistantMsg?.toolCalls?.some((t) => t.status === 'running')
 
-        if (hasRunningTools) {
+        if (hasRunningTools && assistantMsg) {
           updateMessage(assistantId, {
             content: `Error: ${errorMessage}`,
             completedAt: new Date(),
