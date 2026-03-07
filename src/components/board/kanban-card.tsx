@@ -6,6 +6,7 @@ import { format, isPast, isToday } from 'date-fns'
 import {
   Ban,
   Calendar,
+  CircleCheck,
   GitBranch,
   GripVertical,
   MessageSquare,
@@ -97,6 +98,7 @@ export function KanbanCard({
   const attachmentCount = ticket._count?.attachments ?? 0
   const subtaskCount = ticket._count?.subtasks ?? 0
   const resolvedSubtaskCount = ticket.subtasks?.filter((s) => s.resolution != null).length ?? 0
+  const allSubtasksDone = subtaskCount > 0 && resolvedSubtaskCount === subtaskCount
   const isOverdue = ticket.dueDate && isPast(ticket.dueDate) && !isToday(ticket.dueDate)
   const isDueToday = ticket.dueDate && isToday(ticket.dueDate)
 
@@ -214,10 +216,17 @@ export function KanbanCard({
               <div className="flex items-center gap-2 text-zinc-600">
                 {subtaskCount > 0 && (
                   <div
-                    className="flex items-center gap-0.5"
+                    className={cn(
+                      'flex items-center gap-0.5',
+                      allSubtasksDone && 'text-emerald-500',
+                    )}
                     title={`${resolvedSubtaskCount}/${subtaskCount} subtask(s) resolved`}
                   >
-                    <GitBranch className="h-3 w-3" />
+                    {allSubtasksDone ? (
+                      <CircleCheck className="h-3 w-3" />
+                    ) : (
+                      <GitBranch className="h-3 w-3" />
+                    )}
                     <span className="text-[10px]">
                       {resolvedSubtaskCount}/{subtaskCount}
                     </span>
