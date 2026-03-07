@@ -148,6 +148,22 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     return roles.filter((role) => userIsAdmin || role.position >= userPosition)
   }, [roles, realPermissions])
 
+  // Check if current roles already match system defaults
+  const rolesMatchDefaults = useMemo(() => {
+    if (!roles) return true
+    const presetNames = Object.keys(ROLE_PRESETS) as DefaultRoleName[]
+    // Must have exactly the default roles (no custom roles)
+    if (roles.length !== presetNames.length) return false
+    // Every default role must exist with matching permissions
+    return presetNames.every((name) => {
+      const role = roles.find((r) => r.name === name && r.isDefault)
+      if (!role) return false
+      const expected = ROLE_PRESETS[name]
+      if (role.permissions.length !== expected.length) return false
+      return expected.every((p) => role.permissions.includes(p))
+    })
+  }, [roles])
+
   const handleStartSimulation = useCallback(
     (role: RoleWithPermissions) => {
       startSimulation(
@@ -1146,8 +1162,10 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowResetDefaultsDialog(true)}
-                disabled={resetRolesToDefaults.isPending}
-                title="Reset to System Defaults"
+                disabled={resetRolesToDefaults.isPending || rolesMatchDefaults}
+                title={
+                  rolesMatchDefaults ? 'Roles already match defaults' : 'Reset to System Defaults'
+                }
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
