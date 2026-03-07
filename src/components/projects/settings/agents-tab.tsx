@@ -57,12 +57,11 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
     }
   }, [config])
 
-  const handleResetToSystemDefaults = useCallback(async () => {
+  const handleResetToSystemDefaults = useCallback(() => {
     if (!canEditSettings) return
-    // Clear project-level guidance and save immediately so the system default is used as fallback
-    updateRepository.mutate({ agentGuidance: null })
-    setAgentGuidance('')
-  }, [canEditSettings, updateRepository])
+    // Reset to system default agent guidance from admin project defaults
+    setAgentGuidance(config?.systemDefaults?.agentGuidance || '')
+  }, [canEditSettings, config])
 
   const handleCopyContext = useCallback(() => {
     const envBranchesText =
@@ -150,7 +149,9 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
               variant="outline"
               size="sm"
               onClick={handleResetToSystemDefaults}
-              disabled={isDisabled}
+              disabled={
+                isDisabled || agentGuidance === (config?.systemDefaults?.agentGuidance || '')
+              }
               className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
             >
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
