@@ -764,7 +764,7 @@ export function RolePermissionsForm() {
                     size="sm"
                     onClick={handleSave}
                     disabled={updateMutation.isPending}
-                    className="bg-amber-600 hover:bg-amber-700"
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
                   >
                     {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     {isCreating ? 'Create & Save' : 'Save Changes'}
