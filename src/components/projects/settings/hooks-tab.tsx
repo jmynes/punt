@@ -182,7 +182,7 @@ function KeywordInput({
 }
 
 export function HooksTab({ projectId, projectKey }: HooksTabProps) {
-  const { data: config, isLoading } = useRepositoryConfig(projectKey)
+  const { data: config, isLoading, refetch: refetchConfig } = useRepositoryConfig(projectKey)
   const webhookSecret = useWebhookSecret(projectKey)
   const commitPatternsMutation = useCommitPatterns(projectKey)
 
@@ -297,9 +297,16 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
     [patterns, systemDefaultPatterns],
   )
 
-  const resetPatternsToSystemDefaults = useCallback(() => {
-    setPatterns(systemDefaultPatterns.map((p) => ({ ...p, id: crypto.randomUUID() })))
-  }, [systemDefaultPatterns])
+  const resetPatternsToSystemDefaults = useCallback(async () => {
+    // Refetch to get latest admin defaults (they may have changed since page load)
+    const { data: freshConfig } = await refetchConfig()
+    const freshDefaults =
+      freshConfig?.systemDefaults?.commitPatterns &&
+      freshConfig.systemDefaults.commitPatterns.length > 0
+        ? freshConfig.systemDefaults.commitPatterns
+        : DEFAULT_PATTERNS
+    setPatterns(freshDefaults.map((p) => ({ ...p, id: crypto.randomUUID() })))
+  }, [refetchConfig])
 
   const savePatterns = useCallback(async () => {
     await commitPatternsMutation.mutateAsync(patterns.length > 0 ? patterns : null)
@@ -339,19 +346,6 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
               Configure webhooks and commit patterns to automate ticket updates.
             </p>
           </div>
-          {canEditSettings && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={resetPatternsToSystemDefaults}
-              disabled={isDisabled || patternsMatchSystemDefaults}
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-            >
-              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-              Reset to System Defaults
-            </Button>
-          )}
         </div>
 
         {/* GitHub Integration Card */}
@@ -586,17 +580,32 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                   Define patterns to trigger ticket actions from commit messages.
                 </CardDescription>
               </div>
-              {!isDisabled && hasWebhookSecret && !isMatchingDefaults(patterns) && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={resetPatternsToDefaults}
-                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                >
-                  <Zap className="h-3.5 w-3.5 mr-1.5" />
-                  {patterns.length === 0 ? 'Load Defaults' : 'Reset to Defaults'}
-                </Button>
+              {!isDisabled && hasWebhookSecret && (
+                <div className="flex items-center gap-2">
+                  {!isMatchingDefaults(patterns) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={resetPatternsToDefaults}
+                      className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                    >
+                      <Zap className="h-3.5 w-3.5 mr-1.5" />
+                      {patterns.length === 0 ? 'Load Defaults' : 'Reset to Defaults'}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={resetPatternsToSystemDefaults}
+                    disabled={patternsMatchSystemDefaults}
+                    className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                    Reset to System Defaults
+                  </Button>
+                </div>
               )}
             </div>
           </CardHeader>

@@ -20,7 +20,7 @@ interface AgentsTabProps {
 }
 
 export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
-  const { data: config, isLoading } = useRepositoryConfig(projectKey)
+  const { data: config, isLoading, refetch: refetchConfig } = useRepositoryConfig(projectKey)
   const updateRepository = useUpdateRepository(projectKey)
 
   const canEditSettings = useHasPermission(projectId, PERMISSIONS.PROJECT_SETTINGS)
@@ -57,11 +57,12 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
     }
   }, [config])
 
-  const handleResetToSystemDefaults = useCallback(() => {
+  const handleResetToSystemDefaults = useCallback(async () => {
     if (!canEditSettings) return
-    // Reset to system default agent guidance from admin project defaults
-    setAgentGuidance(config?.systemDefaults?.agentGuidance || '')
-  }, [canEditSettings, config])
+    // Refetch to get latest admin defaults (they may have changed since page load)
+    const { data: freshConfig } = await refetchConfig()
+    setAgentGuidance(freshConfig?.systemDefaults?.agentGuidance || '')
+  }, [canEditSettings, refetchConfig])
 
   const handleCopyContext = useCallback(() => {
     const envBranchesText =
