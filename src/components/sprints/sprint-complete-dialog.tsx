@@ -34,7 +34,8 @@ interface SprintCompleteDialogProps {
 }
 
 export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
-  const { sprintCompleteOpen, sprintCompleteId, closeSprintComplete } = useUIStore()
+  const { sprintCompleteOpen, sprintCompleteId, closeSprintComplete, openSprintStart } =
+    useUIStore()
   const { clearDismissedPrompt } = useSprintStore()
   const { getColumns } = useBoardStore()
   const completeSprint = useCompleteSprint(projectId)
@@ -127,6 +128,20 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
           // Trigger celebration confetti
           triggerConfetti()
           handleClose()
+
+          // Prompt to start the next planning sprint after completing
+          // Prefer the target sprint (if tickets were moved to an existing one),
+          // otherwise pick the first available planning sprint
+          const nextSprintId =
+            action === 'close_to_next' && targetSprintId !== '__new__'
+              ? targetSprintId
+              : planningSprints[0]?.id
+          if (nextSprintId) {
+            // Delay so the complete dialog finishes its close animation first
+            setTimeout(() => {
+              openSprintStart(nextSprintId)
+            }, 350)
+          }
         },
       },
     )
@@ -139,6 +154,8 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
     clearDismissedPrompt,
     handleClose,
     triggerConfetti,
+    planningSprints,
+    openSprintStart,
   ])
 
   useCtrlSave({
