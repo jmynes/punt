@@ -126,7 +126,7 @@ export function LoginForm() {
 
       try {
         // First verify 2FA via API to get proper error messages
-        const verifyRes = await fetch('/api/auth/2fa/verify', {
+        const verifyRes = await apiFetch('/api/auth/2fa/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

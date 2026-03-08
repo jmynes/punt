@@ -778,7 +778,7 @@ export function UserList() {
         body.totpCode = resetPwTotpCode
       }
 
-      const res = await fetch(`/api/admin/users/${resetPwUsername}`, {
+      const res = await apiFetch(`/api/admin/users/${resetPwUsername}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1233,7 +1233,7 @@ export function UserList() {
                 <DropdownMenuItem
                   onClick={async () => {
                     try {
-                      const res = await fetch(`/api/admin/users/${user.username}/rate-limits`, {
+                      const res = await apiFetch(`/api/admin/users/${user.username}/rate-limits`, {
                         method: 'DELETE',
                       })
                       if (res.ok) {
@@ -1351,7 +1351,7 @@ export function UserList() {
               <DropdownMenuItem
                 onClick={async () => {
                   try {
-                    const res = await fetch('/api/admin/rate-limits', {
+                    const res = await apiFetch('/api/admin/rate-limits', {
                       method: 'DELETE',
                     })
                     if (res.ok) {

@@ -130,7 +130,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
 
           // If session was invalidated (e.g., admin reset password), sign out
           if (data.changes?.sessionInvalidated && session?.user?.id === data.userId) {
-            signOut({ callbackUrl: '/login' })
+            signOut({ callbackUrl: withBasePath('/login') })
             return
           }
 
