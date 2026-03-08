@@ -128,6 +128,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
           }
 
           // Update the admin users list cache directly instead of refetching
+          // Don't use exact: true since the query key has filter parameters
           queryClient.setQueriesData<
             Array<{
               id: string
@@ -136,7 +137,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
               name?: string
               totpEnabled?: boolean
             }>
-          >({ queryKey: ['admin', 'users'], exact: true }, (oldData) => {
+          >({ queryKey: ['admin', 'users'] }, (oldData) => {
             if (!oldData || !Array.isArray(oldData)) return oldData
             return oldData.map((user) => {
               if (user.id === data.userId && data.changes) {
