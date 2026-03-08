@@ -39,6 +39,7 @@ import {
   restoreAttachments,
   restoreCommentsAndLinks,
 } from '@/lib/actions/delete-tickets'
+import { apiFetch, withBasePath } from '@/lib/base-path'
 import { isEditableTarget } from '@/lib/keyboard-utils'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
@@ -947,7 +948,7 @@ export function KeyboardShortcuts() {
           ;(async () => {
             try {
               const tabId = getTabId()
-              await fetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
+              await apiFetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
                 method: 'PATCH',
                 headers: {
                   'Content-Type': 'application/json',
@@ -981,7 +982,7 @@ export function KeyboardShortcuts() {
             try {
               const tabId = getTabId()
               // Recreate column
-              const createRes = await fetch(`/api/projects/${entry.projectId}/columns`, {
+              const createRes = await apiFetch(`/api/projects/${entry.projectId}/columns`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -994,7 +995,7 @@ export function KeyboardShortcuts() {
 
               // Set icon and order if needed
               if (action.column.icon || newCol.order !== action.column.order) {
-                await fetch(`/api/projects/${entry.projectId}/columns/${newCol.id}`, {
+                await apiFetch(`/api/projects/${entry.projectId}/columns/${newCol.id}`, {
                   method: 'PATCH',
                   headers: {
                     'Content-Type': 'application/json',
@@ -1009,7 +1010,7 @@ export function KeyboardShortcuts() {
 
               // Move tickets back
               for (const ticket of action.column.tickets) {
-                await fetch(`/api/projects/${entry.projectId}/tickets/${ticket.id}`, {
+                await apiFetch(`/api/projects/${entry.projectId}/tickets/${ticket.id}`, {
                   method: 'PATCH',
                   headers: {
                     'Content-Type': 'application/json',
@@ -1531,7 +1532,7 @@ export function KeyboardShortcuts() {
           ;(async () => {
             try {
               const tabId = getTabId()
-              await fetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
+              await apiFetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
                 method: 'PATCH',
                 headers: {
                   'Content-Type': 'application/json',
@@ -1597,7 +1598,7 @@ export function KeyboardShortcuts() {
             try {
               const tabId = getTabId()
               const deleteUrl = new URL(
-                `/api/projects/${entry.projectId}/columns/${action.column.id}`,
+                withBasePath(`/api/projects/${entry.projectId}/columns/${action.column.id}`),
                 window.location.origin,
               )
               if (action.column.tickets.length > 0) {

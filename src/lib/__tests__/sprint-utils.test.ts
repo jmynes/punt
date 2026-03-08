@@ -344,11 +344,9 @@ describe('Sprint Utils', () => {
       expect(getDaysRemaining(endDate)).toBeLessThan(0)
     })
 
-    it('should return 0 or 1 for same day', () => {
-      const endDate = new Date('2024-06-15T23:59:59')
-      const result = getDaysRemaining(endDate)
-      expect(result).toBeGreaterThanOrEqual(0)
-      expect(result).toBeLessThanOrEqual(1)
+    it('should return 0 for same day regardless of time', () => {
+      expect(getDaysRemaining(new Date('2024-06-15T00:00:00'))).toBe(0)
+      expect(getDaysRemaining(new Date('2024-06-15T23:59:59'))).toBe(0)
     })
 
     it('should calculate correct days for week in future', () => {
@@ -371,13 +369,10 @@ describe('Sprint Utils', () => {
       expect(formatDaysRemaining(null)).toBe('No end date')
     })
 
-    it('should return "Ends today" for same day (within same second)', () => {
-      // getDaysRemaining uses Math.ceil, so any positive difference rounds to at least 1
-      // "Ends today" is returned only when days === 0, which requires end time to be
-      // within the same second or slightly in the past (but not yesterday)
-      // Set end date to be exactly at or slightly before current time
-      const endDate = new Date('2024-06-15T11:59:59')
-      expect(formatDaysRemaining(endDate)).toBe('Ends today')
+    it('should return "Ends today" for same day regardless of time', () => {
+      // Calendar-date comparison: any time on the same day should show "Ends today"
+      expect(formatDaysRemaining(new Date('2024-06-15T00:00:00'))).toBe('Ends today')
+      expect(formatDaysRemaining(new Date('2024-06-15T23:59:59'))).toBe('Ends today')
     })
 
     it('should return "1 day remaining" for tomorrow', () => {

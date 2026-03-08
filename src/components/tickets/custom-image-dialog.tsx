@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiFetch } from '@/lib/base-path'
 import { cn } from '@/lib/utils'
 
 export function CustomImageDialog() {
@@ -78,7 +79,7 @@ export function CustomImageDialog() {
       const formData = new FormData()
       formData.append('files', file)
 
-      const response = await fetch('/api/upload', {
+      const response = await apiFetch('/api/upload', {
         method: 'POST',
         body: formData,
       })

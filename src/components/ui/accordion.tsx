@@ -73,7 +73,7 @@ export function Accordion({
           type="button"
           variant="ghost"
           onClick={handleToggle}
-          className="w-full justify-between p-0 px-0 h-auto hover:bg-transparent [&:has(>svg)]:px-0"
+          className="w-full justify-between px-2 py-1 h-auto rounded-md hover:bg-zinc-800/50 transition-colors [&:has(>svg)]:px-2"
         >
           <span className="text-sm font-medium text-zinc-300">{title}</span>
           <ChevronDown

@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useLayoutEffect, useRef } from 'react'
+import { basePath } from '@/lib/base-path'
 
 export default function CatchAllPage() {
   const pathname = usePathname()
@@ -10,7 +11,9 @@ export default function CatchAllPage() {
 
   useLayoutEffect(() => {
     // Don't show toast if we're already on the home page (shouldn't happen, but safety check)
-    if (pathname === '/') return
+    // With basePath, pathname could be '/' or '/punt' (the basePath itself)
+    const isRootPath = pathname === '/' || pathname === basePath || pathname === `${basePath}/`
+    if (isRootPath) return
 
     // Only redirect once per unique invalid route
     if (shownToasts.current.has(pathname)) return

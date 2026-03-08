@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { handleApiError, notFoundError, validationError } from '@/lib/api-utils'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { projectEvents } from '@/lib/events'
 
 const updateAgentSchema = z.object({
   name: z.string().min(1, 'Name is required').max(50, 'Name must be 50 characters or less'),
@@ -50,6 +51,17 @@ export async function PATCH(
           select: { ticketsCreated: true },
         },
       },
+    })
+
+    // Emit agent updated event for real-time sync
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitAgentEvent({
+      type: 'agent.updated',
+      agentId,
+      userId: currentUser.id,
+      tabId,
+      timestamp: Date.now(),
+      changes: { name: parsed.data.name },
     })
 
     return NextResponse.json(updated)

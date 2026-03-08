@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 
@@ -105,7 +106,7 @@ export function ProfileTab({
     setProfileLoading(true)
 
     try {
-      const res = await fetch('/api/me', {
+      const res = await apiFetch('/api/me', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -169,7 +170,7 @@ export function ProfileTab({
       const formData = new FormData()
       formData.append('avatar', croppedFile)
 
-      const res = await fetch('/api/me/avatar', {
+      const res = await apiFetch('/api/me/avatar', {
         method: 'POST',
         headers: {
           'x-tab-id': getTabId(),
@@ -222,7 +223,7 @@ export function ProfileTab({
     onUserUpdate({ avatar: null })
 
     try {
-      const res = await fetch('/api/me/avatar', {
+      const res = await apiFetch('/api/me/avatar', {
         method: 'DELETE',
         headers: {
           'x-tab-id': getTabId(),
@@ -252,7 +253,7 @@ export function ProfileTab({
     onUserUpdate({ avatarColor: color })
 
     try {
-      const res = await fetch('/api/me', {
+      const res = await apiFetch('/api/me', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

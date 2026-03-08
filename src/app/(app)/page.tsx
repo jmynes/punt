@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useProjects } from '@/hooks/queries/use-projects'
+import { apiFetch } from '@/lib/base-path'
 import { demoStorage, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 import { useProjectsStore } from '@/stores/projects-store'
@@ -59,7 +60,7 @@ export default function DashboardPage() {
         return { openTickets, inProgress, completed }
       }
 
-      const res = await fetch('/api/dashboard/stats')
+      const res = await apiFetch('/api/dashboard/stats')
       if (!res.ok) {
         throw new Error('Failed to fetch dashboard stats')
       }

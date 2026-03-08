@@ -18,6 +18,7 @@ import { useProjectDetail } from '@/hooks/queries/use-projects'
 import { columnKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -85,7 +86,7 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
         ...(tabId && { 'X-Tab-Id': tabId }),
       }
 
-      const res = await fetch(`/api/projects/${projectKey}/columns`, {
+      const res = await apiFetch(`/api/projects/${projectKey}/columns`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ name: trimmedName }),

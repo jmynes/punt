@@ -69,14 +69,20 @@ Store MCP credentials in your user config directory:
       "url": "https://punt.example.com",
       "apiKey": "mcp_xxxxx..."
     },
+    "subpath": {
+      "url": "https://example.com/punt",
+      "apiKey": "mcp_yyyyy..."
+    },
     "local": {
       "url": "http://localhost:3000",
-      "apiKey": "mcp_yyyyy..."
+      "apiKey": "mcp_zzzzz..."
     }
   },
   "activeServer": "default"
 }
 ```
+
+> **Note:** If PUNT is deployed at a subpath (e.g., `NEXT_PUBLIC_BASE_PATH=/punt`), include the basePath in the URL (e.g., `https://example.com/punt`).
 
 This supports:
 - **Multiple PUNT servers**: Work, personal, local dev environments
