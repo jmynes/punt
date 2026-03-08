@@ -5,9 +5,10 @@ import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { brandingKeys } from '@/hooks/queries/use-branding'
 import { availableUserKeys, memberKeys } from '@/hooks/queries/use-members'
+import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
 import { isDemoMode } from '@/lib/demo'
-import type { BrandingEvent, MemberEvent, SettingsEvent, UserEvent } from '@/lib/events'
+import type { AgentEvent, BrandingEvent, MemberEvent, SettingsEvent, UserEvent } from '@/lib/events'
 
 // Reconnection config
 const INITIAL_RECONNECT_DELAY = 1000
@@ -21,7 +22,13 @@ interface ConnectedEvent {
   listenerId: string
 }
 
-type SSEEvent = UserEvent | BrandingEvent | SettingsEvent | MemberEvent | ConnectedEvent
+type SSEEvent =
+  | UserEvent
+  | BrandingEvent
+  | SettingsEvent
+  | MemberEvent
+  | AgentEvent
+  | ConnectedEvent
 
 /**
  * Hook for real-time user profile synchronization via Server-Sent Events
@@ -185,6 +192,12 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
           queryClient.invalidateQueries({ queryKey: availableUserKeys.byProject(data.projectId) })
           // Also invalidate roles to update member counts
           queryClient.invalidateQueries({ queryKey: ['roles', 'project', data.projectId] })
+        }
+
+        // Handle agent events (name updated)
+        if (data.type === 'agent.updated') {
+          // Invalidate all ticket queries to refresh agent name in ticket views
+          queryClient.invalidateQueries({ queryKey: ticketKeys.all })
         }
       } catch {
         // Ignore parse errors (could be keepalive comments)
