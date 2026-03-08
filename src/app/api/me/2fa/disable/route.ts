@@ -100,8 +100,6 @@ export async function POST(request: Request) {
     }
 
     // Disable 2FA and clear all TOTP data
-    // Also update passwordChangedAt to invalidate all existing sessions,
-    // forcing re-authentication now that 2FA is no longer protecting the account
     await db.user.update({
       where: { id: currentUser.id },
       data: {
@@ -109,7 +107,6 @@ export async function POST(request: Request) {
         totpSecret: null,
         totpRecoveryCodes: Prisma.DbNull,
         totpLastUsedAt: null,
-        passwordChangedAt: new Date(),
       },
     })
 
