@@ -119,40 +119,44 @@ export function UserSelect({
                     />
                   </CommandItem>
                 )}
-                {/* User options */}
-                {users.map((user) => (
-                  <CommandItem
-                    key={user.id}
-                    value={user.name}
-                    onSelect={() => {
-                      onChange(user.id)
-                      setOpen(false)
-                    }}
-                    className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
-                  >
-                    <Avatar className="mr-2 h-5 w-5">
-                      <AvatarImage src={user.avatar || undefined} />
-                      <AvatarFallback
-                        className="text-xs text-white font-medium"
-                        style={{
-                          backgroundColor: user.avatarColor || getAvatarColor(user.id || user.name),
-                        }}
-                      >
-                        {getInitials(user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>{user.name}</span>
-                    {user.id === currentUserId && (
-                      <span className="ml-1 text-xs text-zinc-500">(you)</span>
-                    )}
-                    <Check
-                      className={cn(
-                        'ml-auto h-4 w-4',
-                        value === user.id ? 'opacity-100' : 'opacity-0',
+                {/* User options - filter out current user when showAssignToMe is enabled */}
+                {users
+                  .filter((user) => !showAssignToMe || user.id !== currentUserId)
+                  .map((user) => (
+                    <CommandItem
+                      key={user.id}
+                      value={user.name}
+                      onSelect={() => {
+                        onChange(user.id)
+                        setOpen(false)
+                      }}
+                      className="cursor-pointer data-[selected=true]:bg-zinc-800 data-[selected=true]:text-zinc-100"
+                    >
+                      <Avatar className="mr-2 h-5 w-5">
+                        <AvatarImage src={user.avatar || undefined} />
+                        <AvatarFallback
+                          className="text-xs text-white font-medium"
+                          style={{
+                            backgroundColor:
+                              user.avatarColor || getAvatarColor(user.id || user.name),
+                          }}
+                        >
+                          {getInitials(user.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{user.name}</span>
+                      {/* Show (you) indicator when current user appears in list (i.e., showAssignToMe is false) */}
+                      {user.id === currentUserId && (
+                        <span className="ml-1 text-xs text-zinc-500">(you)</span>
                       )}
-                    />
-                  </CommandItem>
-                ))}
+                      <Check
+                        className={cn(
+                          'ml-auto h-4 w-4',
+                          value === user.id ? 'opacity-100' : 'opacity-0',
+                        )}
+                      />
+                    </CommandItem>
+                  ))}
               </CommandGroup>
             </CommandList>
           </Command>
