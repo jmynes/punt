@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { rateLimitExceeded } from '@/lib/api-utils'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
-import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { checkRateLimit, getClientIp, recordFailedAttempt } from '@/lib/rate-limit'
 
 const checkSchema = z.object({
   username: z.string().min(1),
@@ -16,6 +16,7 @@ const checkSchema = z.object({
  * Returns { requires2FA: boolean } after verifying credentials.
  *
  * Rate limiting strategy:
+ * - Only counts failed attempts (invalid credentials)
  * - Invalid usernames: IP-based (prevents enumeration from single source)
  * - Valid usernames: username-based (protects specific accounts, can't be bypassed by VPN)
  */
@@ -51,14 +52,19 @@ export async function POST(request: Request) {
     }
 
     if (!user?.passwordHash || !user.isActive) {
+      // Record failed attempt for invalid/inactive user
+      await recordFailedAttempt(rateLimitIdentifier, 'auth/login')
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
     const isValidPassword = await verifyPassword(password, user.passwordHash)
     if (!isValidPassword) {
+      // Record failed attempt for wrong password
+      await recordFailedAttempt(rateLimitIdentifier, 'auth/login')
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
+    // Success - don't record anything, rate limit cleared on actual login success
     return NextResponse.json({ requires2FA: user.totpEnabled })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

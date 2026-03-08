@@ -24,7 +24,7 @@ export const RATE_LIMITS: Record<string, RateLimitConfig> = {
 }
 
 /**
- * Check if a request is rate limited
+ * Check if a request is rate limited (does NOT increment counter)
  * Returns whether the request is allowed and how many attempts remain
  */
 export async function checkRateLimit(
@@ -44,16 +44,11 @@ export async function checkRateLimit(
     where: { identifier_endpoint: { identifier, endpoint } },
   })
 
-  // If no record or record is outside window, create/reset
+  // If no record or record is outside window, not rate limited
   if (!current || current.windowStart < windowStart) {
-    await db.rateLimit.upsert({
-      where: { identifier_endpoint: { identifier, endpoint } },
-      create: { identifier, endpoint, count: 1, windowStart: new Date() },
-      update: { count: 1, windowStart: new Date() },
-    })
     return {
       allowed: true,
-      remaining: config.limit - 1,
+      remaining: config.limit,
       resetAt: new Date(Date.now() + config.windowMs),
     }
   }
@@ -67,17 +62,51 @@ export async function checkRateLimit(
     }
   }
 
+  return {
+    allowed: true,
+    remaining: config.limit - current.count,
+    resetAt: new Date(current.windowStart.getTime() + config.windowMs),
+  }
+}
+
+/**
+ * Record a failed attempt for rate limiting
+ * Call this ONLY on failed attempts (wrong password, invalid 2FA, etc.)
+ */
+export async function recordFailedAttempt(identifier: string, endpoint: string): Promise<void> {
+  const config = RATE_LIMITS[endpoint] || { limit: 100, windowMs: 60 * 1000 }
+  const windowStart = new Date(Date.now() - config.windowMs)
+
+  // Find current rate limit record
+  const current = await db.rateLimit.findUnique({
+    where: { identifier_endpoint: { identifier, endpoint } },
+  })
+
+  // If no record or record is outside window, create new
+  if (!current || current.windowStart < windowStart) {
+    await db.rateLimit.upsert({
+      where: { identifier_endpoint: { identifier, endpoint } },
+      create: { identifier, endpoint, count: 1, windowStart: new Date() },
+      update: { count: 1, windowStart: new Date() },
+    })
+    return
+  }
+
   // Increment counter
   await db.rateLimit.update({
     where: { identifier_endpoint: { identifier, endpoint } },
     data: { count: { increment: 1 } },
   })
+}
 
-  return {
-    allowed: true,
-    remaining: config.limit - current.count - 1,
-    resetAt: new Date(current.windowStart.getTime() + config.windowMs),
-  }
+/**
+ * Clear rate limit counter on successful authentication
+ * Call this after successful login to reset the failed attempt counter
+ */
+export async function clearRateLimit(identifier: string, endpoint: string): Promise<void> {
+  await db.rateLimit.deleteMany({
+    where: { identifier, endpoint },
+  })
 }
 
 /**

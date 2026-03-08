@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { authConfig } from '@/lib/auth.config'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
+import { clearRateLimit } from '@/lib/rate-limit'
 import {
   decryptTotpSecret,
   isTotpReplay,
@@ -121,6 +122,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             ...(user.totpEnabled && totpCode ? { totpLastUsedAt: new Date() } : {}),
           },
         })
+
+        // Clear rate limits on successful login
+        await clearRateLimit(user.username, 'auth/login')
+        await clearRateLimit(user.username, 'auth/2fa')
 
         return {
           id: user.id,
