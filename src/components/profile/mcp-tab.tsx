@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CodeBlock } from '@/components/ui/code-block'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { apiFetch, basePath } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 import { MyAgents } from './my-agents'
 import { ReauthDialog } from './reauth-dialog'
@@ -85,7 +86,7 @@ export function MCPTab({ isDemo }: MCPTabProps) {
   const fetchMcpKeyStatus = useCallback(async () => {
     if (isDemo) return
     try {
-      const res = await fetch('/api/me/mcp-key')
+      const res = await apiFetch('/api/me/mcp-key')
       if (res.ok) {
         const data = (await res.json()) as { hasKey: boolean; keyHint: string | null }
         setMcpHasKey(data.hasKey)
@@ -116,7 +117,7 @@ export function MCPTab({ isDemo }: MCPTabProps) {
   ) => {
     setMcpKeyLoading(true)
     try {
-      const res = await fetch('/api/me/mcp-key', {
+      const res = await apiFetch('/api/me/mcp-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password, totpCode, isRecoveryCode }),
@@ -148,7 +149,7 @@ export function MCPTab({ isDemo }: MCPTabProps) {
   ) => {
     setMcpKeyLoading(true)
     try {
-      const res = await fetch('/api/me/mcp-key', {
+      const res = await apiFetch('/api/me/mcp-key', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password, totpCode, isRecoveryCode }),
@@ -460,7 +461,7 @@ export function MCPTab({ isDemo }: MCPTabProps) {
                             code={`{
   "servers": {
     "default": {
-      "url": "${window.location.origin}",
+      "url": "${window.location.origin}${basePath}",
       "apiKey": "YOUR_API_KEY_HERE"
     }
   },
@@ -483,7 +484,7 @@ export function MCPTab({ isDemo }: MCPTabProps) {
                             code={`{
   "servers": {
     "default": {
-      "url": "${window.location.origin}",
+      "url": "${window.location.origin}${basePath}",
       "apiKey": "YOUR_API_KEY_HERE"
     }
   },
@@ -506,7 +507,7 @@ export function MCPTab({ isDemo }: MCPTabProps) {
                             code={`{
   "servers": {
     "default": {
-      "url": "${window.location.origin}",
+      "url": "${window.location.origin}${basePath}",
       "apiKey": "YOUR_API_KEY_HERE"
     }
   },

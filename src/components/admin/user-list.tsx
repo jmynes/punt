@@ -73,6 +73,7 @@ import {
 } from '@/components/ui/select'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch, withBasePath } from '@/lib/base-path'
 import { demoStorage, isDemoMode } from '@/lib/demo'
 import { isEditableTarget } from '@/lib/keyboard-utils'
 import { showToast } from '@/lib/toast'
@@ -233,7 +234,7 @@ export function UserList() {
       }
 
       const queryString = buildQueryString()
-      const res = await fetch(`/api/admin/users?${queryString}`)
+      const res = await apiFetch(`/api/admin/users?${queryString}`)
       if (!res.ok) {
         throw new Error('Failed to fetch users')
       }
@@ -277,7 +278,7 @@ export function UserList() {
       if (confirmPassword) body.confirmPassword = confirmPassword
       if (totpCode) body.totpCode = totpCode
       if (isRecoveryCode) body.isRecoveryCode = isRecoveryCode
-      const res = await fetch(`/api/admin/users/${username}`, {
+      const res = await apiFetch(`/api/admin/users/${username}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
         body: JSON.stringify(body),
@@ -299,7 +300,7 @@ export function UserList() {
           ('isSystemAdmin' in updates && updates.isSystemAdmin === false)
         ) {
           signOut({ redirect: false }).then(() => {
-            window.location.href = '/login'
+            window.location.href = withBasePath('/login')
           })
           return
         }
@@ -381,7 +382,7 @@ export function UserList() {
       // If the user deleted/disabled themselves, sign them out
       if (deleteUsername === currentUser?.username) {
         signOut({ redirect: false }).then(() => {
-          window.location.href = '/login'
+          window.location.href = withBasePath('/login')
         })
         return
       }
@@ -419,7 +420,7 @@ export function UserList() {
 
       const results = await Promise.allSettled(
         usersToUpdate.map((user) =>
-          fetch(`/api/admin/users/${user.username}`, {
+          apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify(updates),
@@ -509,7 +510,7 @@ export function UserList() {
 
       const results = await Promise.allSettled(
         usersToDisable.map((user) =>
-          fetch(`/api/admin/users/${user.username}`, {
+          apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ isActive: false }),
@@ -572,7 +573,7 @@ export function UserList() {
 
       const results = await Promise.allSettled(
         usersToEnable.map((user) =>
-          fetch(`/api/admin/users/${user.username}`, {
+          apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ isActive: true }),
@@ -636,7 +637,7 @@ export function UserList() {
       password: string
     }) => {
       // First verify credentials
-      const verifyRes = await fetch('/api/auth/verify-credentials', {
+      const verifyRes = await apiFetch('/api/auth/verify-credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
         body: JSON.stringify({ email, password }),
@@ -650,7 +651,7 @@ export function UserList() {
       // Now delete users permanently
       const results = await Promise.allSettled(
         usernames.map((uname) =>
-          fetch(`/api/admin/users/${uname}?permanent=true`, {
+          apiFetch(`/api/admin/users/${uname}?permanent=true`, {
             method: 'DELETE',
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
@@ -717,7 +718,7 @@ export function UserList() {
         body.totpCode = reset2faTotpCode
       }
 
-      const res = await fetch(`/api/admin/users/${reset2faUsername}/2fa`, {
+      const res = await apiFetch(`/api/admin/users/${reset2faUsername}/2fa`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -777,7 +778,7 @@ export function UserList() {
         body.totpCode = resetPwTotpCode
       }
 
-      const res = await fetch(`/api/admin/users/${resetPwUsername}`, {
+      const res = await apiFetch(`/api/admin/users/${resetPwUsername}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -841,7 +842,7 @@ export function UserList() {
 
       await Promise.all(
         action.users.map((user) =>
-          fetch(`/api/admin/users/${user.username}`, {
+          apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ ...updates, skipReauth: true }),
@@ -898,7 +899,7 @@ export function UserList() {
 
       await Promise.all(
         action.users.map((user) =>
-          fetch(`/api/admin/users/${user.username}`, {
+          apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ ...updates, skipReauth: true }),
@@ -1232,7 +1233,7 @@ export function UserList() {
                 <DropdownMenuItem
                   onClick={async () => {
                     try {
-                      const res = await fetch(`/api/admin/users/${user.username}/rate-limits`, {
+                      const res = await apiFetch(`/api/admin/users/${user.username}/rate-limits`, {
                         method: 'DELETE',
                       })
                       if (res.ok) {
@@ -1350,7 +1351,7 @@ export function UserList() {
               <DropdownMenuItem
                 onClick={async () => {
                   try {
-                    const res = await fetch('/api/admin/rate-limits', {
+                    const res = await apiFetch('/api/admin/rate-limits', {
                       method: 'DELETE',
                     })
                     if (res.ok) {

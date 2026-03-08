@@ -6,6 +6,7 @@ import { activityKeys } from '@/hooks/queries/use-activity'
 import { roleKeys } from '@/hooks/queries/use-roles'
 import { sprintKeys } from '@/hooks/queries/use-sprints'
 import { labelKeys, ticketKeys } from '@/hooks/queries/use-tickets'
+import { withBasePath } from '@/lib/base-path'
 import { isDemoMode } from '@/lib/demo'
 import type { LabelEvent, RoleEvent, SprintEvent, TicketEvent } from '@/lib/events'
 
@@ -94,7 +95,7 @@ export function useRealtime(projectId: string, enabled = true): RealtimeStatus {
     cleanup()
     setStatus('connecting')
 
-    const eventSource = new EventSource(`/api/projects/${projectId}/events`)
+    const eventSource = new EventSource(withBasePath(`/api/projects/${projectId}/events`))
     eventSourceRef.current = eventSource
 
     eventSource.onopen = () => {

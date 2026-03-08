@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { signOut } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { projectKeys } from '@/hooks/queries/use-projects'
+import { withBasePath } from '@/lib/base-path'
 import { isDemoMode } from '@/lib/demo'
 import type { DatabaseEvent, ProjectEvent } from '@/lib/events'
 import { getTabId } from './use-realtime'
@@ -80,7 +81,7 @@ export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
     cleanup()
     setStatus('connecting')
 
-    const eventSource = new EventSource('/api/projects/events')
+    const eventSource = new EventSource(withBasePath('/api/projects/events'))
     eventSourceRef.current = eventSource
 
     eventSource.onopen = () => {
@@ -108,7 +109,7 @@ export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
           // If suppressed, the import dialog will handle sign-out after showing results
           if (!_suppressWipeSignOut) {
             signOut({ redirect: false }).then(() => {
-              window.location.href = '/login'
+              window.location.href = withBasePath('/login')
             })
           }
           return

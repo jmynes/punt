@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { demoStorage, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 import type { Permission, RoleWithPermissions } from '@/types'
@@ -43,7 +44,7 @@ export function useProjectRoles(projectId: string) {
         }))
       }
 
-      const res = await fetch(`/api/projects/${projectId}/roles`)
+      const res = await apiFetch(`/api/projects/${projectId}/roles`)
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to fetch roles')
@@ -62,7 +63,7 @@ export function useRole(projectId: string, roleId: string) {
   return useQuery<RoleWithPermissions>({
     queryKey: roleKeys.single(projectId, roleId),
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/roles/${roleId}`)
+      const res = await apiFetch(`/api/projects/${projectId}/roles/${roleId}`)
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to fetch role')
@@ -89,7 +90,7 @@ export function useCreateRole(projectId: string) {
 
   return useMutation({
     mutationFn: async (data: CreateRoleData) => {
-      const res = await fetch(`/api/projects/${projectId}/roles`, {
+      const res = await apiFetch(`/api/projects/${projectId}/roles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +130,7 @@ export function useUpdateRole(projectId: string) {
 
   return useMutation({
     mutationFn: async ({ roleId, ...data }: UpdateRoleData) => {
-      const res = await fetch(`/api/projects/${projectId}/roles/${roleId}`, {
+      const res = await apiFetch(`/api/projects/${projectId}/roles/${roleId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +167,7 @@ export function useDeleteRole(projectId: string) {
 
   return useMutation({
     mutationFn: async (roleId: string) => {
-      const res = await fetch(`/api/projects/${projectId}/roles/${roleId}`, {
+      const res = await apiFetch(`/api/projects/${projectId}/roles/${roleId}`, {
         method: 'DELETE',
         headers: {
           'X-Tab-Id': getTabId(),
@@ -196,7 +197,7 @@ export function useResetRolesToDefaults(projectId: string) {
 
   return useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/roles/reset-defaults`, {
+      const res = await apiFetch(`/api/projects/${projectId}/roles/reset-defaults`, {
         method: 'POST',
         headers: {
           'X-Tab-Id': getTabId(),
@@ -228,7 +229,7 @@ export function useReorderRoles(projectId: string) {
 
   return useMutation({
     mutationFn: async (roleIds: string[]) => {
-      const res = await fetch(`/api/projects/${projectId}/roles/reorder`, {
+      const res = await apiFetch(`/api/projects/${projectId}/roles/reorder`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

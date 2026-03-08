@@ -4,10 +4,10 @@ import { ArrowLeft, Eye, EyeOff, Loader2, Shield } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
-
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiFetch } from '@/lib/base-path'
 import { getSafeRedirectUrl } from '@/lib/url-validation'
 
 type LoginStep = 'credentials' | '2fa'
@@ -39,7 +39,7 @@ export function LoginForm() {
 
   // Redirect to /setup if no users exist (fresh install)
   useEffect(() => {
-    fetch('/api/auth/setup')
+    apiFetch('/api/auth/setup')
       .then((res) => res.json())
       .then((data) => {
         if (data.hasUsers === false) {
@@ -63,7 +63,7 @@ export function LoginForm() {
 
       try {
         // First check if 2FA is required (also validates credentials)
-        const checkRes = await fetch('/api/auth/check-2fa', {
+        const checkRes = await apiFetch('/api/auth/check-2fa', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -126,7 +126,7 @@ export function LoginForm() {
 
       try {
         // First verify 2FA via API to get proper error messages
-        const verifyRes = await fetch('/api/auth/2fa/verify', {
+        const verifyRes = await apiFetch('/api/auth/2fa/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

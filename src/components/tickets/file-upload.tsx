@@ -4,6 +4,7 @@ import { FileImage, FileText, FileVideo, Loader2, Upload, X } from 'lucide-react
 import { useCallback, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useUploadConfig } from '@/hooks/queries/use-attachments'
+import { apiFetch, withBasePath } from '@/lib/base-path'
 import { cn } from '@/lib/utils'
 
 export interface UploadedFile {
@@ -145,7 +146,7 @@ export function FileUpload({ value, onChange, maxFiles: maxFilesProp, disabled }
           formData.append('files', file)
         }
 
-        const response = await fetch('/api/upload', {
+        const response = await apiFetch('/api/upload', {
           method: 'POST',
           body: formData,
         })
@@ -266,7 +267,7 @@ export function FileUpload({ value, onChange, maxFiles: maxFilesProp, disabled }
                 {file.category === 'image' ? (
                   <div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-zinc-800">
                     <img
-                      src={file.url}
+                      src={withBasePath(file.url)}
                       alt={file.originalName}
                       className="h-full w-full object-cover"
                     />

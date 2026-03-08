@@ -7,6 +7,7 @@ import { brandingKeys } from '@/hooks/queries/use-branding'
 import { availableUserKeys, memberKeys } from '@/hooks/queries/use-members'
 import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
+import { withBasePath } from '@/lib/base-path'
 import { isDemoMode } from '@/lib/demo'
 import type { AgentEvent, BrandingEvent, MemberEvent, SettingsEvent, UserEvent } from '@/lib/events'
 
@@ -88,7 +89,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
     cleanup()
     setStatus('connecting')
 
-    const eventSource = new EventSource('/api/users/events')
+    const eventSource = new EventSource(withBasePath('/api/users/events'))
     eventSourceRef.current = eventSource
 
     eventSource.onopen = () => {
@@ -129,7 +130,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
 
           // If session was invalidated (e.g., admin reset password), sign out
           if (data.changes?.sessionInvalidated && session?.user?.id === data.userId) {
-            signOut({ callbackUrl: '/login' })
+            signOut({ callbackUrl: withBasePath('/login') })
             return
           }
 

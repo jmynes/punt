@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { useWipeProjects } from '@/hooks/queries/use-database-backup'
+import { withBasePath } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 
 interface DatabaseWipeProjectsDialogProps {
@@ -70,7 +71,7 @@ export function DatabaseWipeProjectsDialog({
     resetState()
     onOpenChange(false)
     // Reload to reflect changes
-    window.location.href = '/admin/system/database'
+    window.location.href = withBasePath('/admin/system/database')
   }
 
   return (

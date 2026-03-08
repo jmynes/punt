@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 import type { RepoProvider } from '@/types'
 
@@ -64,7 +65,7 @@ export function useRepositoryConfig(projectKey: string) {
   return useQuery<RepositoryConfig>({
     queryKey: repositoryKeys.detail(projectKey),
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectKey}/repository`, {
+      const res = await apiFetch(`/api/projects/${projectKey}/repository`, {
         headers: { 'X-Tab-Id': getTabId() },
       })
       if (!res.ok) {
@@ -100,7 +101,7 @@ export function useUpdateRepository(projectKey: string) {
 
   return useMutation({
     mutationFn: async (data: UpdateRepositoryInput) => {
-      const res = await fetch(`/api/projects/${projectKey}/repository`, {
+      const res = await apiFetch(`/api/projects/${projectKey}/repository`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -165,7 +166,7 @@ export function useCommitPatterns(projectKey: string) {
 
   return useMutation({
     mutationFn: async (patterns: CommitPattern[] | null) => {
-      const res = await fetch(`/api/projects/${projectKey}/repository`, {
+      const res = await apiFetch(`/api/projects/${projectKey}/repository`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -216,7 +217,7 @@ export function useWebhookSecret(projectKey: string) {
 
   return useMutation({
     mutationFn: async (action: 'generate' | 'clear') => {
-      const res = await fetch(`/api/projects/${projectKey}/repository`, {
+      const res = await apiFetch(`/api/projects/${projectKey}/repository`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
