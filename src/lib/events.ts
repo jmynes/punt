@@ -144,6 +144,7 @@ export interface UserEvent {
     isActive?: boolean
     mcpKeyUpdated?: boolean
     totpEnabled?: boolean
+    sessionInvalidated?: boolean // Forces client to sign out
   }
 }
 

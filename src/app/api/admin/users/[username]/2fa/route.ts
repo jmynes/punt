@@ -5,6 +5,7 @@ import { handleApiError, validationError } from '@/lib/api-utils'
 import { requireSystemAdmin } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { isDemoMode } from '@/lib/demo/demo-config'
+import { projectEvents } from '@/lib/events'
 import { verifyPassword } from '@/lib/password'
 import { decryptTotpSecret, verifyTotpToken } from '@/lib/totp'
 
@@ -114,6 +115,19 @@ export async function DELETE(
         totpRecoveryCodes: Prisma.DbNull,
         totpLastUsedAt: null,
         passwordChangedAt: new Date(),
+      },
+    })
+
+    // Emit SSE event to update admin UI and force target user to sign out
+    const tabId = request.headers.get('X-Tab-Id') || undefined
+    projectEvents.emitUserEvent({
+      type: 'user.updated',
+      userId: targetUser.id,
+      tabId,
+      timestamp: Date.now(),
+      changes: {
+        totpEnabled: false,
+        sessionInvalidated: true,
       },
     })
 

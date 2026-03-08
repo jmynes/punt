@@ -1,7 +1,7 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { brandingKeys } from '@/hooks/queries/use-branding'
 import { availableUserKeys, memberKeys } from '@/hooks/queries/use-members'
@@ -50,7 +50,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
   // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const queryClient = useQueryClient()
   // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
-  const { update: updateSession } = useSession()
+  const { data: session, update: updateSession } = useSession()
   const tabId = getTabId()
 
   // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
@@ -125,6 +125,12 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
           // Notify MCP tab of key changes via DOM event
           if (data.changes?.mcpKeyUpdated) {
             window.dispatchEvent(new CustomEvent('punt:mcp-key-updated'))
+          }
+
+          // If session was invalidated (e.g., admin reset password), sign out
+          if (data.changes?.sessionInvalidated && session?.user?.id === data.userId) {
+            signOut({ callbackUrl: '/login' })
+            return
           }
 
           // Update the admin users list cache directly instead of refetching
@@ -247,7 +253,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
         }
       }, delay)
     }
-  }, [tabId, queryClient, updateSession, cleanup])
+  }, [tabId, queryClient, updateSession, cleanup, session?.user?.id])
 
   // Effect to manage connection lifecycle
   // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant

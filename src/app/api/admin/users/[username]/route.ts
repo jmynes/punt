@@ -400,6 +400,8 @@ export async function PATCH(
         ...(updates.name && { name: updates.name }),
         ...(updates.isSystemAdmin !== undefined && { isSystemAdmin: updates.isSystemAdmin }),
         ...(updates.isActive !== undefined && { isActive: updates.isActive }),
+        // If password was changed, signal client to sign out
+        ...(passwordHash && { sessionInvalidated: true }),
       },
     })
 
