@@ -117,14 +117,7 @@ export async function POST(request: Request) {
     }
 
     // Replay protection: reject if the same time window was already used
-    console.log(
-      '[2FA VERIFY] Checking TOTP replay for user:',
-      normalizedUsername,
-      'totpLastUsedAt:',
-      user.totpLastUsedAt,
-    )
     if (isTotpReplay(user.totpLastUsedAt)) {
-      console.log('[2FA VERIFY] TOTP replay detected - rejecting')
       return NextResponse.json(
         { error: 'This code was already used. Please wait for a new code.' },
         { status: 401 },

@@ -325,13 +325,6 @@ export async function PATCH(
     // Update user
     // If password is being changed, also update passwordChangedAt to invalidate existing sessions
     // and clear totpLastUsedAt to prevent replay protection from blocking the new login
-    if (passwordHash) {
-      console.log(
-        '[ADMIN] Password reset for user:',
-        existingUser.username,
-        '- clearing totpLastUsedAt',
-      )
-    }
     const user = await db.user.update({
       where: { id: existingUser.id },
       data: {

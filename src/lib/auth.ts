@@ -4,7 +4,6 @@ import { z } from 'zod'
 import { authConfig } from '@/lib/auth.config'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
-import { checkRateLimit } from '@/lib/rate-limit'
 import {
   decryptTotpSecret,
   isTotpReplay,
@@ -75,11 +74,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             throw new Error('2FA_REQUIRED')
           }
 
-          // Rate limit TOTP attempts by username to prevent brute-force
-          const totpRateLimit = await checkRateLimit(normalizedUsername, 'auth/2fa')
-          if (!totpRateLimit.allowed) {
-            throw new Error('RATE_LIMITED')
-          }
+          // Rate limiting is handled by /api/auth/2fa/verify which is called before signIn
+          // This allows for proper JSON error responses instead of NextAuth's wrapped errors
 
           const useRecoveryCode = isRecoveryCode === 'true'
 
@@ -111,14 +107,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
 
             // Replay protection: reject if the same time window was already used
-            console.log(
-              '[AUTH] Checking TOTP replay for user:',
-              normalizedUsername,
-              'totpLastUsedAt:',
-              user.totpLastUsedAt,
-            )
             if (isTotpReplay(user.totpLastUsedAt)) {
-              console.log('[AUTH] TOTP replay detected - rejecting')
               throw new Error('2FA_CODE_ALREADY_USED')
             }
           }
