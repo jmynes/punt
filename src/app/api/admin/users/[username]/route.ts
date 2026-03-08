@@ -323,12 +323,13 @@ export async function PATCH(
     const becomingSystemAdmin = updates.isSystemAdmin === true && !existingUser.isSystemAdmin
 
     // Update user
+    // If password is being changed, also update passwordChangedAt to invalidate existing sessions
     const user = await db.user.update({
       where: { id: existingUser.id },
       data: {
         ...(updates.name && { name: updates.name }),
         ...(updates.email && { email: updates.email }),
-        ...(passwordHash && { passwordHash }),
+        ...(passwordHash && { passwordHash, passwordChangedAt: new Date() }),
         ...(updates.isSystemAdmin !== undefined && { isSystemAdmin: updates.isSystemAdmin }),
         ...(updates.isActive !== undefined && { isActive: updates.isActive }),
       },
