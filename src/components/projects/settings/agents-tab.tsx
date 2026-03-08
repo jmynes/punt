@@ -2,10 +2,10 @@
 
 import { Bot, Copy, Info, Loader2, RotateCcw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { GuidanceEditor } from '@/components/settings/guidance-editor'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRepositoryConfig, useUpdateRepository } from '@/hooks/queries/use-repository'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
@@ -173,7 +173,7 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Agent Guidance Textarea */}
+            {/* Agent Guidance Editor */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Label htmlFor="agent-guidance" className="text-zinc-300">
@@ -192,26 +192,9 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <Textarea
-                id="agent-guidance"
-                value={agentGuidance}
-                onChange={(e) => setAgentGuidance(e.target.value)}
-                placeholder={`Example:
-
-## Coding Conventions
-- Use TypeScript strict mode
-- Follow React 19 patterns
-- All components must have tests
-
-## Architecture
-- Use React Query for data fetching
-- State management with Zustand
-- Tailwind CSS for styling
-
-## Testing
-- Run \`pnpm test\` before committing
-- Coverage must stay above 80%`}
-                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 font-mono text-sm min-h-[300px] resize-y"
+              <GuidanceEditor
+                markdown={agentGuidance}
+                onChange={setAgentGuidance}
                 disabled={isDisabled}
               />
             </div>
