@@ -23,16 +23,13 @@ const verifySchema = z.object({
  * POST /api/auth/2fa/verify - Verify TOTP code during login
  * This is called after the initial password verification when the user has 2FA enabled.
  * Re-verifies credentials + TOTP code before returning user data for session creation.
+ *
+ * Rate limiting strategy:
+ * - Invalid usernames: IP-based (prevents enumeration from single source)
+ * - Valid usernames: username-based (protects specific accounts, can't be bypassed by VPN)
  */
 export async function POST(request: Request) {
   try {
-    // Rate limiting
-    const ip = getClientIp(request)
-    const rateLimit = await checkRateLimit(ip, 'auth/2fa')
-    if (!rateLimit.allowed) {
-      return rateLimitExceeded(rateLimit)
-    }
-
     const body = await request.json()
     const parsed = verifySchema.safeParse(body)
 
@@ -45,11 +42,12 @@ export async function POST(request: Request) {
     // Normalize username to NFC
     const normalizedUsername = username.normalize('NFC')
 
-    // Re-verify credentials (defense in depth)
+    // First check if user exists to determine rate limiting strategy
     const user = await db.user.findFirst({
       where: { username: { equals: normalizedUsername, mode: 'insensitive' } },
       select: {
         id: true,
+        username: true,
         passwordHash: true,
         isActive: true,
         totpEnabled: true,
@@ -58,6 +56,14 @@ export async function POST(request: Request) {
         totpLastUsedAt: true,
       },
     })
+
+    // Rate limit by username if user exists, otherwise by IP
+    // This prevents username enumeration while still protecting valid accounts
+    const rateLimitIdentifier = user ? user.username : getClientIp(request)
+    const rateLimit = await checkRateLimit(rateLimitIdentifier, 'auth/2fa')
+    if (!rateLimit.allowed) {
+      return rateLimitExceeded(rateLimit)
+    }
 
     if (!user?.passwordHash || !user.isActive) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
@@ -112,15 +118,14 @@ export async function POST(request: Request) {
 
     // Replay protection: reject if the same time window was already used
     if (isTotpReplay(user.totpLastUsedAt)) {
-      return NextResponse.json({ error: 'Invalid verification code' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'This code was already used. Please wait for a new code.' },
+        { status: 401 },
+      )
     }
 
-    // Update last login timestamp and TOTP replay marker
-    await db.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date(), totpLastUsedAt: new Date() },
-    })
-
+    // Don't update totpLastUsedAt here - let the signIn callback handle it
+    // This endpoint is just for pre-validation to get proper error messages
     return NextResponse.json({ verified: true })
   } catch (error) {
     return handleApiError(error, 'verify 2FA login')

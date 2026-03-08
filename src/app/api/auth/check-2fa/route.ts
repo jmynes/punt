@@ -14,15 +14,13 @@ const checkSchema = z.object({
  * POST /api/auth/check-2fa - Check if user has 2FA enabled
  * Also validates credentials so we don't reveal 2FA status to unauthenticated users.
  * Returns { requires2FA: boolean } after verifying credentials.
+ *
+ * Rate limiting strategy:
+ * - Invalid usernames: IP-based (prevents enumeration from single source)
+ * - Valid usernames: username-based (protects specific accounts, can't be bypassed by VPN)
  */
 export async function POST(request: Request) {
   try {
-    const ip = getClientIp(request)
-    const rateLimit = await checkRateLimit(ip, 'auth/login')
-    if (!rateLimit.allowed) {
-      return rateLimitExceeded(rateLimit)
-    }
-
     const body = await request.json()
     const parsed = checkSchema.safeParse(body)
 
@@ -33,14 +31,24 @@ export async function POST(request: Request) {
     const { username, password } = parsed.data
     const normalizedUsername = username.normalize('NFC')
 
+    // First check if user exists to determine rate limiting strategy
     const user = await db.user.findFirst({
       where: { username: { equals: normalizedUsername, mode: 'insensitive' } },
       select: {
+        username: true,
         passwordHash: true,
         isActive: true,
         totpEnabled: true,
       },
     })
+
+    // Rate limit by username if user exists, otherwise by IP
+    // This prevents username enumeration while still protecting valid accounts
+    const rateLimitIdentifier = user ? user.username : getClientIp(request)
+    const rateLimit = await checkRateLimit(rateLimitIdentifier, 'auth/login')
+    if (!rateLimit.allowed) {
+      return rateLimitExceeded(rateLimit)
+    }
 
     if (!user?.passwordHash || !user.isActive) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
