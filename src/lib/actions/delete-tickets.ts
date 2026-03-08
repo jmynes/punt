@@ -4,6 +4,7 @@
  */
 
 import type { QueryClient } from '@tanstack/react-query'
+import { apiFetch } from '@/lib/base-path'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -43,7 +44,7 @@ async function fetchCommentsForTicket(
   ticketId: string,
 ): Promise<CommentForRestore[]> {
   try {
-    const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`)
+    const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`)
     if (!res.ok) {
       return []
     }
@@ -73,7 +74,7 @@ async function fetchCommentsForTicket(
  */
 async function fetchLinksForTicket(projectId: string, ticketId: string): Promise<LinkForRestore[]> {
   try {
-    const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/links`)
+    const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/links`)
     if (!res.ok) return []
     const links = await res.json()
     return links.map(
@@ -184,7 +185,7 @@ export async function restoreAttachments(
   }
 
   try {
-    await fetch(`/api/projects/${projectId}/tickets/${serverTicketId}/attachments`, {
+    await apiFetch(`/api/projects/${projectId}/tickets/${serverTicketId}/attachments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -225,7 +226,7 @@ export async function restoreCommentsAndLinks(
   // Restore comments with original authors
   if (comments.length > 0) {
     try {
-      await fetch(`/api/projects/${projectId}/tickets/${serverTicketId}/comments/restore`, {
+      await apiFetch(`/api/projects/${projectId}/tickets/${serverTicketId}/comments/restore`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comments }),
@@ -238,7 +239,7 @@ export async function restoreCommentsAndLinks(
   // Restore links
   if (links.length > 0) {
     try {
-      await fetch(`/api/projects/${projectId}/tickets/${serverTicketId}/links/restore`, {
+      await apiFetch(`/api/projects/${projectId}/tickets/${serverTicketId}/links/restore`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ links }),
@@ -332,7 +333,7 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
   try {
     await Promise.all(
       tickets.map(({ ticket }) =>
-        fetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
+        apiFetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
           method: 'DELETE',
         }).then((res) => {
           if (!res.ok) throw new Error('Failed to delete ticket')

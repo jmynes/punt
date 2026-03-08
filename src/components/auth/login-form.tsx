@@ -4,10 +4,10 @@ import { ArrowLeft, Eye, EyeOff, Loader2, Shield } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
-
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiFetch } from '@/lib/base-path'
 import { getSafeRedirectUrl } from '@/lib/url-validation'
 
 type LoginStep = 'credentials' | '2fa'
@@ -39,7 +39,7 @@ export function LoginForm() {
 
   // Redirect to /setup if no users exist (fresh install)
   useEffect(() => {
-    fetch('/api/auth/setup')
+    apiFetch('/api/auth/setup')
       .then((res) => res.json())
       .then((data) => {
         if (data.hasUsers === false) {
@@ -63,7 +63,7 @@ export function LoginForm() {
 
       try {
         // First check if 2FA is required (also validates credentials)
-        const checkRes = await fetch('/api/auth/check-2fa', {
+        const checkRes = await apiFetch('/api/auth/check-2fa', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -125,6 +125,45 @@ export function LoginForm() {
       }
 
       try {
+        // First verify 2FA via API to get proper error messages
+        const verifyRes = await apiFetch('/api/auth/2fa/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: savedUsername,
+            password: savedPassword,
+            code: submittedCode,
+            isRecoveryCode: useRecoveryCode,
+          }),
+        })
+
+        if (!verifyRes.ok) {
+          const data = await verifyRes.json()
+
+          if (verifyRes.status === 429) {
+            setError(
+              'Too many verification attempts. For security, please wait 15 minutes before trying again.',
+            )
+          } else if (data.error?.includes('already used') || data.error?.includes('new code')) {
+            setError(
+              'This code was already used. Please wait for your authenticator app to generate a new code and try again.',
+            )
+          } else if (data.error?.includes('Invalid recovery code')) {
+            setError(
+              'Invalid recovery code. Make sure you are using an unused code and entering it correctly (format: XXXXX-XXXXX).',
+            )
+          } else {
+            setError(
+              useRecoveryCode
+                ? 'Invalid recovery code. Make sure you are using an unused code and entering it correctly (format: XXXXX-XXXXX).'
+                : 'Invalid verification code. Make sure the code matches what your authenticator app shows.',
+            )
+          }
+          setIsLoading(false)
+          return
+        }
+
+        // 2FA verified - now sign in (should succeed)
         const result = await signIn('credentials', {
           username: savedUsername,
           password: savedPassword,
@@ -134,17 +173,7 @@ export function LoginForm() {
         })
 
         if (result?.error) {
-          if (result.code === 'RATE_LIMITED' || result.error.includes('RATE_LIMITED')) {
-            setError(
-              'Too many verification attempts. For security, please wait 15 minutes before trying again.',
-            )
-          } else {
-            setError(
-              useRecoveryCode
-                ? 'Invalid recovery code. Make sure you are using an unused code and entering it correctly (format: XXXXX-XXXXX).'
-                : 'Invalid verification code. Make sure the code matches what your authenticator app shows.',
-            )
-          }
+          setError('An unexpected error occurred during sign in')
           setIsLoading(false)
           return
         }

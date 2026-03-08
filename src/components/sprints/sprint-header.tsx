@@ -334,15 +334,24 @@ export function SprintHeader({
           )}
 
           {/* Time remaining */}
-          <div
-            className={cn(
-              'hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
-              expired ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-400',
-            )}
-          >
-            <Clock className="h-3.5 w-3.5" />
-            <span>{daysText}</span>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  'hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default',
+                  expired ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-400',
+                )}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <span>{daysText}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {activeSprint.endDate
+                ? `Ends ${format(new Date(activeSprint.endDate), 'PPP')} at ${format(new Date(activeSprint.endDate), 'p')}`
+                : 'No end date set'}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Right: Progress and stats */}

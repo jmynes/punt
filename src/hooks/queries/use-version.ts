@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { UpdateCheckResult } from '@/app/api/version/check/route'
 import type { LocalVersionInfo } from '@/app/api/version/route'
+import { apiFetch } from '@/lib/base-path'
 import { isDemoMode } from '@/lib/demo'
 
 export const versionKeys = {
@@ -30,7 +31,7 @@ export function useLocalVersion() {
         return DEMO_LOCAL_VERSION
       }
 
-      const res = await fetch('/api/version')
+      const res = await apiFetch('/api/version')
       if (!res.ok) {
         throw new Error('Failed to fetch version info')
       }
@@ -71,7 +72,7 @@ export function useCheckForUpdates() {
         }
       }
 
-      const res = await fetch('/api/version/check')
+      const res = await apiFetch('/api/version/check')
       if (!res.ok) {
         const error = await res.json().catch(() => ({ error: 'Request failed' }))
         throw new Error(error.error || 'Failed to check for updates')

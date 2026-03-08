@@ -18,6 +18,7 @@ import { SidebarToggleIcon } from '@/components/ui/sidebar-toggle-icon'
 import { useBranding } from '@/hooks/queries/use-branding'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useIsMobile } from '@/hooks/use-media-query'
+import { withBasePath } from '@/lib/base-path'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 import { GlobalTicketSearch } from './ticket-search'
@@ -30,7 +31,7 @@ export function Header() {
 
   const handleLogout = async () => {
     await signOut({ redirect: false })
-    window.location.href = '/login'
+    window.location.href = withBasePath('/login')
   }
 
   return (
@@ -57,7 +58,7 @@ export function Header() {
       <div className="flex items-center gap-2 font-semibold select-none">
         {branding?.logoUrl ? (
           <img
-            src={branding.logoUrl}
+            src={withBasePath(branding.logoUrl)}
             alt={branding.appName}
             className="h-8 w-8 rounded-lg object-contain"
           />

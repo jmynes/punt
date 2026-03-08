@@ -4,10 +4,10 @@ import { Check, Eye, EyeOff, Loader2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { useState } from 'react'
-
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiFetch } from '@/lib/base-path'
 
 interface PasswordRequirement {
   label: string
@@ -71,7 +71,7 @@ export function RegisterForm() {
     setIsLoading(true)
 
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await apiFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, name, email: email || undefined, password }),

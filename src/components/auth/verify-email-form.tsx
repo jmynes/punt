@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { apiFetch } from '@/lib/base-path'
 
 type VerificationStatus = 'loading' | 'verifying' | 'success' | 'invalid' | 'expired' | 'error'
 
@@ -26,7 +27,9 @@ export function VerifyEmailForm() {
 
       // First validate the token
       try {
-        const validateRes = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+        const validateRes = await apiFetch(
+          `/api/auth/verify-email?token=${encodeURIComponent(token)}`,
+        )
         const validateData = await validateRes.json()
 
         if (!validateRes.ok) {
@@ -42,7 +45,7 @@ export function VerifyEmailForm() {
         setStatus('verifying')
 
         // Now complete the verification
-        const verifyRes = await fetch('/api/auth/verify-email', {
+        const verifyRes = await apiFetch('/api/auth/verify-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token }),
