@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { checkRateLimit, getClientIp, RATE_LIMITS } from '../rate-limit'
+import {
+  checkRateLimit,
+  clearRateLimit,
+  getClientIp,
+  RATE_LIMITS,
+  recordFailedAttempt,
+} from '../rate-limit'
 
 // Mock the database
 vi.mock('@/lib/db', () => ({
@@ -67,16 +73,15 @@ describe('checkRateLimit', () => {
     vi.clearAllMocks()
   })
 
-  it('should allow first request and create rate limit record', async () => {
+  it('should allow first request (no record exists)', async () => {
     mockDb.rateLimit.deleteMany.mockResolvedValue({ count: 0 })
     mockDb.rateLimit.findUnique.mockResolvedValue(null)
-    mockDb.rateLimit.upsert.mockResolvedValue({})
 
     const result = await checkRateLimit('127.0.0.1', 'auth/login')
 
     expect(result.allowed).toBe(true)
-    expect(result.remaining).toBe(9) // 10 - 1
-    expect(mockDb.rateLimit.upsert).toHaveBeenCalled()
+    expect(result.remaining).toBe(10) // Full limit available (check-only, no increment)
+    expect(mockDb.rateLimit.upsert).not.toHaveBeenCalled() // Should not modify
   })
 
   it('should allow requests within limit', async () => {
@@ -88,12 +93,12 @@ describe('checkRateLimit', () => {
       count: 5,
       windowStart,
     })
-    mockDb.rateLimit.update.mockResolvedValue({})
 
     const result = await checkRateLimit('127.0.0.1', 'auth/login')
 
     expect(result.allowed).toBe(true)
-    expect(result.remaining).toBe(4) // 10 - 5 - 1
+    expect(result.remaining).toBe(5) // 10 - 5 (check-only, no increment)
+    expect(mockDb.rateLimit.update).not.toHaveBeenCalled() // Should not modify
   })
 
   it('should deny requests exceeding limit', async () => {
@@ -112,7 +117,7 @@ describe('checkRateLimit', () => {
     expect(result.remaining).toBe(0)
   })
 
-  it('should reset count after window expires', async () => {
+  it('should allow after window expires', async () => {
     const expiredWindowStart = new Date(Date.now() - 20 * 60 * 1000) // 20 minutes ago
     mockDb.rateLimit.deleteMany.mockResolvedValue({ count: 0 })
     mockDb.rateLimit.findUnique.mockResolvedValue({
@@ -121,30 +126,26 @@ describe('checkRateLimit', () => {
       count: 10, // At limit
       windowStart: expiredWindowStart, // But window expired
     })
-    mockDb.rateLimit.upsert.mockResolvedValue({})
 
     const result = await checkRateLimit('127.0.0.1', 'auth/login')
 
     expect(result.allowed).toBe(true)
-    expect(result.remaining).toBe(9) // Reset to limit - 1
-    expect(mockDb.rateLimit.upsert).toHaveBeenCalled() // Should reset
+    expect(result.remaining).toBe(10) // Full limit available (window expired)
   })
 
   it('should use default rate limit for unknown endpoints', async () => {
     mockDb.rateLimit.deleteMany.mockResolvedValue({ count: 0 })
     mockDb.rateLimit.findUnique.mockResolvedValue(null)
-    mockDb.rateLimit.upsert.mockResolvedValue({})
 
     const result = await checkRateLimit('127.0.0.1', 'unknown/endpoint')
 
     expect(result.allowed).toBe(true)
-    expect(result.remaining).toBe(99) // Default is 100 - 1
+    expect(result.remaining).toBe(100) // Default limit
   })
 
   it('should clean up old rate limit entries', async () => {
     mockDb.rateLimit.deleteMany.mockResolvedValue({ count: 5 })
     mockDb.rateLimit.findUnique.mockResolvedValue(null)
-    mockDb.rateLimit.upsert.mockResolvedValue({})
 
     await checkRateLimit('127.0.0.1', 'auth/login')
 
@@ -168,6 +169,83 @@ describe('checkRateLimit', () => {
     expect(result.resetAt.getTime()).toBe(
       windowStart.getTime() + RATE_LIMITS['auth/login'].windowMs,
     )
+  })
+})
+
+describe('recordFailedAttempt', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should create new record on first failure', async () => {
+    mockDb.rateLimit.findUnique.mockResolvedValue(null)
+    mockDb.rateLimit.upsert.mockResolvedValue({})
+
+    await recordFailedAttempt('127.0.0.1', 'auth/login')
+
+    expect(mockDb.rateLimit.upsert).toHaveBeenCalledWith({
+      where: { identifier_endpoint: { identifier: '127.0.0.1', endpoint: 'auth/login' } },
+      create: {
+        identifier: '127.0.0.1',
+        endpoint: 'auth/login',
+        count: 1,
+        windowStart: expect.any(Date),
+      },
+      update: { count: 1, windowStart: expect.any(Date) },
+    })
+  })
+
+  it('should increment existing record', async () => {
+    const windowStart = new Date()
+    mockDb.rateLimit.findUnique.mockResolvedValue({
+      identifier: '127.0.0.1',
+      endpoint: 'auth/login',
+      count: 3,
+      windowStart,
+    })
+    mockDb.rateLimit.update.mockResolvedValue({})
+
+    await recordFailedAttempt('127.0.0.1', 'auth/login')
+
+    expect(mockDb.rateLimit.update).toHaveBeenCalledWith({
+      where: { identifier_endpoint: { identifier: '127.0.0.1', endpoint: 'auth/login' } },
+      data: { count: { increment: 1 } },
+    })
+  })
+
+  it('should reset window if expired', async () => {
+    const expiredWindowStart = new Date(Date.now() - 20 * 60 * 1000) // 20 minutes ago
+    mockDb.rateLimit.findUnique.mockResolvedValue({
+      identifier: '127.0.0.1',
+      endpoint: 'auth/login',
+      count: 5,
+      windowStart: expiredWindowStart,
+    })
+    mockDb.rateLimit.upsert.mockResolvedValue({})
+
+    await recordFailedAttempt('127.0.0.1', 'auth/login')
+
+    expect(mockDb.rateLimit.upsert).toHaveBeenCalledWith({
+      where: { identifier_endpoint: { identifier: '127.0.0.1', endpoint: 'auth/login' } },
+      create: expect.objectContaining({ count: 1 }),
+      update: expect.objectContaining({ count: 1 }),
+    })
+  })
+})
+
+describe('clearRateLimit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should delete rate limit record', async () => {
+    mockDb.rateLimit.deleteMany.mockResolvedValue({ count: 1 })
+
+    await clearRateLimit('testuser', 'auth/login')
+
+    expect(mockDb.rateLimit.deleteMany).toHaveBeenCalledWith({
+      where: { identifier: 'testuser', endpoint: 'auth/login' },
+    })
   })
 })
 
@@ -287,8 +365,9 @@ describe('Rate Limiting Security', () => {
     mockDb.rateLimit.findUnique.mockResolvedValue(null)
     mockDb.rateLimit.upsert.mockResolvedValue({})
 
-    await checkRateLimit('127.0.0.1', 'auth/login')
-    await checkRateLimit('127.0.0.1', 'auth/register')
+    // Record failures for different endpoints
+    await recordFailedAttempt('127.0.0.1', 'auth/login')
+    await recordFailedAttempt('127.0.0.1', 'auth/register')
 
     // Should have created two separate records
     expect(mockDb.rateLimit.upsert).toHaveBeenCalledTimes(2)
@@ -311,15 +390,14 @@ describe('Rate Limiting Security', () => {
     mockDb.rateLimit.findUnique.mockResolvedValue(null)
     mockDb.rateLimit.upsert.mockResolvedValue({})
 
-    await checkRateLimit('127.0.0.1', 'auth/login')
-    await checkRateLimit('192.168.1.1', 'auth/login')
+    await recordFailedAttempt('127.0.0.1', 'auth/login')
+    await recordFailedAttempt('192.168.1.1', 'auth/login')
 
     expect(mockDb.rateLimit.upsert).toHaveBeenCalledTimes(2)
   })
 
-  it('should increment count atomically', async () => {
+  it('should increment count atomically on failure', async () => {
     const windowStart = new Date()
-    mockDb.rateLimit.deleteMany.mockResolvedValue({ count: 0 })
     mockDb.rateLimit.findUnique.mockResolvedValue({
       identifier: '127.0.0.1',
       endpoint: 'auth/login',
@@ -328,11 +406,27 @@ describe('Rate Limiting Security', () => {
     })
     mockDb.rateLimit.update.mockResolvedValue({})
 
-    await checkRateLimit('127.0.0.1', 'auth/login')
+    await recordFailedAttempt('127.0.0.1', 'auth/login')
 
     expect(mockDb.rateLimit.update).toHaveBeenCalledWith({
       where: { identifier_endpoint: { identifier: '127.0.0.1', endpoint: 'auth/login' } },
       data: { count: { increment: 1 } },
     })
+  })
+
+  it('checkRateLimit should not modify records (check-only)', async () => {
+    const windowStart = new Date()
+    mockDb.rateLimit.deleteMany.mockResolvedValue({ count: 0 })
+    mockDb.rateLimit.findUnique.mockResolvedValue({
+      identifier: '127.0.0.1',
+      endpoint: 'auth/login',
+      count: 5,
+      windowStart,
+    })
+
+    await checkRateLimit('127.0.0.1', 'auth/login')
+
+    expect(mockDb.rateLimit.update).not.toHaveBeenCalled()
+    expect(mockDb.rateLimit.upsert).not.toHaveBeenCalled()
   })
 })

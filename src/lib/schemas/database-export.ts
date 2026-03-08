@@ -98,6 +98,7 @@ export const UserSchema = z.object({
     .union([z.string(), z.array(z.string()), z.record(z.string(), z.unknown())])
     .nullable()
     .optional(),
+  totpLastUsedAt: nullableDate.optional(),
 })
 
 export const ProjectSchema = z.object({

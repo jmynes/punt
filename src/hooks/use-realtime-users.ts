@@ -1,7 +1,7 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { brandingKeys } from '@/hooks/queries/use-branding'
 import { availableUserKeys, memberKeys } from '@/hooks/queries/use-members'
@@ -50,7 +50,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
   // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const queryClient = useQueryClient()
   // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
-  const { update: updateSession } = useSession()
+  const { data: session, update: updateSession } = useSession()
   const tabId = getTabId()
 
   // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
@@ -127,10 +127,23 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
             window.dispatchEvent(new CustomEvent('punt:mcp-key-updated'))
           }
 
+          // If session was invalidated (e.g., admin reset password), sign out
+          if (data.changes?.sessionInvalidated && session?.user?.id === data.userId) {
+            signOut({ callbackUrl: '/login' })
+            return
+          }
+
           // Update the admin users list cache directly instead of refetching
+          // Don't use exact: true since the query key has filter parameters
           queryClient.setQueriesData<
-            Array<{ id: string; isSystemAdmin?: boolean; isActive?: boolean; name?: string }>
-          >({ queryKey: ['admin', 'users'], exact: true }, (oldData) => {
+            Array<{
+              id: string
+              isSystemAdmin?: boolean
+              isActive?: boolean
+              name?: string
+              totpEnabled?: boolean
+            }>
+          >({ queryKey: ['admin', 'users'] }, (oldData) => {
             if (!oldData || !Array.isArray(oldData)) return oldData
             return oldData.map((user) => {
               if (user.id === data.userId && data.changes) {
@@ -141,6 +154,9 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
                   }),
                   ...(data.changes.isActive !== undefined && { isActive: data.changes.isActive }),
                   ...(data.changes.name !== undefined && { name: data.changes.name }),
+                  ...(data.changes.totpEnabled !== undefined && {
+                    totpEnabled: data.changes.totpEnabled,
+                  }),
                 }
               }
               return user
@@ -153,6 +169,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
             isSystemAdmin?: boolean
             isActive?: boolean
             name?: string
+            totpEnabled?: boolean
           }>(['admin', 'users', data.userId], (oldData) => {
             if (!oldData || !data.changes) return oldData
             return {
@@ -162,6 +179,9 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
               }),
               ...(data.changes.isActive !== undefined && { isActive: data.changes.isActive }),
               ...(data.changes.name !== undefined && { name: data.changes.name }),
+              ...(data.changes.totpEnabled !== undefined && {
+                totpEnabled: data.changes.totpEnabled,
+              }),
             }
           })
         }
@@ -233,7 +253,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
         }
       }, delay)
     }
-  }, [tabId, queryClient, updateSession, cleanup])
+  }, [tabId, queryClient, updateSession, cleanup, session?.user?.id])
 
   // Effect to manage connection lifecycle
   // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
