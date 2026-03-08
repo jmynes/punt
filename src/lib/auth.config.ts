@@ -80,8 +80,10 @@ export const authConfig: NextAuthConfig = {
       // Protect all other routes - redirect to login if not authenticated
       if (!isLoggedIn && !isOnAuthPage) {
         const loginUrl = new URL(`${basePath}/login`, nextUrl)
+        // Construct callbackUrl with pathname and query string
         // Use stripped pathname for callbackUrl to avoid double basePath after login
-        loginUrl.searchParams.set('callbackUrl', pathname)
+        const callbackUrl = nextUrl.search ? `${pathname}${nextUrl.search}` : pathname
+        loginUrl.searchParams.set('callbackUrl', callbackUrl)
         return Response.redirect(loginUrl)
       }
 
