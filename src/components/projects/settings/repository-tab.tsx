@@ -19,7 +19,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   type EnvironmentBranch,
@@ -574,7 +573,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
             ) : (
               /* Branch list */
               <div className="space-y-2">
-                <ScrollArea className="h-auto max-h-[400px]">
+                <div className="max-h-[300px] overflow-y-auto pr-1">
                   <div className="space-y-2 pr-2">
                     {formData.environmentBranches.map((branch) => {
                       const colors = getEnvironmentColor(branch.environment, branch.color)
@@ -702,7 +701,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                       )
                     })}
                   </div>
-                </ScrollArea>
+                </div>
 
                 {/* Add button */}
                 {!isDisabled && (
