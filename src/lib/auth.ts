@@ -111,8 +111,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
 
             // Replay protection: reject if the same time window was already used
+            console.log(
+              '[AUTH] Checking TOTP replay for user:',
+              normalizedUsername,
+              'totpLastUsedAt:',
+              user.totpLastUsedAt,
+            )
             if (isTotpReplay(user.totpLastUsedAt)) {
-              throw new Error('INVALID_2FA_CODE')
+              console.log('[AUTH] TOTP replay detected - rejecting')
+              throw new Error('2FA_CODE_ALREADY_USED')
             }
           }
         }

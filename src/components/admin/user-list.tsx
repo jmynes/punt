@@ -1229,6 +1229,31 @@ export function UserList() {
                   <Lock className="h-4 w-4 mr-2" />
                   Reset password
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`/api/admin/users/${user.username}/rate-limits`, {
+                        method: 'DELETE',
+                      })
+                      if (res.ok) {
+                        const data = await res.json()
+                        showToast.success(
+                          data.deleted > 0
+                            ? `Cleared ${data.deleted} rate limit${data.deleted === 1 ? '' : 's'} for ${user.name}`
+                            : `No rate limits to clear for ${user.name}`,
+                        )
+                      } else {
+                        showToast.error('Failed to reset rate limits')
+                      }
+                    } catch {
+                      showToast.error('Failed to reset rate limits')
+                    }
+                  }}
+                  className="text-zinc-400 focus:text-zinc-300 focus:bg-zinc-800"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Reset rate limits
+                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-zinc-800" />
                 <DropdownMenuItem
                   onClick={() => setDeleteUsername(user.username)}
@@ -1314,7 +1339,43 @@ export function UserList() {
         variant="hero"
         accentColor="blue"
       >
-        <CreateUserDialog />
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="border-zinc-700">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/admin/rate-limits', {
+                      method: 'DELETE',
+                    })
+                    if (res.ok) {
+                      const data = await res.json()
+                      showToast.success(
+                        data.deleted > 0
+                          ? `Cleared ${data.deleted} auth rate limit${data.deleted === 1 ? '' : 's'}`
+                          : 'No auth rate limits to clear',
+                      )
+                    } else {
+                      showToast.error('Failed to clear rate limits')
+                    }
+                  } catch {
+                    showToast.error('Failed to clear rate limits')
+                  }
+                }}
+                className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                Clear all auth rate limits
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <CreateUserDialog />
+        </div>
       </PageHeader>
 
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 pb-6">

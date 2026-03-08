@@ -124,18 +124,21 @@ export function verifyTotpToken(token: string, secret: string): boolean {
 
 /**
  * Check if a TOTP code is being replayed within the same time window.
- * TOTP codes are valid for a 30-second window; this prevents reuse within that window.
+ * TOTP codes change every 30 seconds. This prevents the same code from being
+ * used twice by checking if we're still in the same 30-second window.
  * Returns true if the code should be rejected (replay detected).
  */
 export function isTotpReplay(lastUsedAt: Date | null | undefined): boolean {
   if (!lastUsedAt) return false
 
-  // TOTP time step is 30 seconds, with epochTolerance of 30 seconds we accept
-  // codes from current window +/- 1 window = 90 seconds total.
-  // If the last successful verification was within 90 seconds, this could be a replay.
-  const TOTP_WINDOW_MS = 90 * 1000
-  const elapsed = Date.now() - lastUsedAt.getTime()
-  return elapsed < TOTP_WINDOW_MS
+  // TOTP time step is 30 seconds. Check if we're in the same window.
+  // We store the timestamp of the last successful verification.
+  // If the current time is in the same 30-second window, reject as replay.
+  const TOTP_STEP_MS = 30 * 1000
+  const lastWindow = Math.floor(lastUsedAt.getTime() / TOTP_STEP_MS)
+  const currentWindow = Math.floor(Date.now() / TOTP_STEP_MS)
+
+  return lastWindow === currentWindow
 }
 
 /**
