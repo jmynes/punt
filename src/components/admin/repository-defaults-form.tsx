@@ -72,6 +72,7 @@ export function RepositoryDefaultsForm() {
   })
   const [branchTemplateError, setBranchTemplateError] = useState<string | null>(null)
   const [duplicateEnvNames, setDuplicateEnvNames] = useState<Set<string>>(new Set())
+  const [duplicateBranchNames, setDuplicateBranchNames] = useState<Set<string>>(new Set())
   const branchInputRef = useRef<HTMLInputElement>(null)
 
   // Sync form state when settings load
@@ -110,6 +111,22 @@ export function RepositoryDefaultsForm() {
       if (count > 1) dupes.add(name)
     }
     setDuplicateEnvNames(dupes)
+  }, [formData.environmentBranches])
+
+  // Detect duplicate branch names
+  useEffect(() => {
+    const nameCounts = new Map<string, number>()
+    for (const b of formData.environmentBranches) {
+      const name = b.branchName.trim().toLowerCase()
+      if (name) {
+        nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1)
+      }
+    }
+    const dupes = new Set<string>()
+    for (const [name, count] of nameCounts) {
+      if (count > 1) dupes.add(name)
+    }
+    setDuplicateBranchNames(dupes)
   }, [formData.environmentBranches])
 
   // Check for changes
@@ -224,7 +241,8 @@ export function RepositoryDefaultsForm() {
   }, [formData.environmentBranches])
 
   const hasDuplicateEnvNames = duplicateEnvNames.size > 0
-  const isValid = !branchTemplateError && !hasDuplicateEnvNames
+  const hasDuplicateBranchNames = duplicateBranchNames.size > 0
+  const isValid = !branchTemplateError && !hasDuplicateEnvNames && !hasDuplicateBranchNames
   const isPending = updateSettings.isPending
 
   // Ctrl+S / Cmd+S keyboard shortcut to save
@@ -410,12 +428,15 @@ export function RepositoryDefaultsForm() {
             </div>
           ) : (
             <div className="space-y-2">
-              <ScrollArea className="max-h-[300px]">
+              <ScrollArea className="h-auto max-h-[400px]">
                 <div className="space-y-2 pr-2">
                   {formData.environmentBranches.map((branch) => {
-                    const isDuplicate =
+                    const isDuplicateEnv =
                       branch.environment.trim() &&
                       duplicateEnvNames.has(branch.environment.trim().toLowerCase())
+                    const isDuplicateBranch =
+                      branch.branchName.trim() &&
+                      duplicateBranchNames.has(branch.branchName.trim().toLowerCase())
 
                     return (
                       <div
@@ -437,7 +458,7 @@ export function RepositoryDefaultsForm() {
                                 : undefined
                             }
                           />
-                          {isDuplicate && (
+                          {isDuplicateEnv && (
                             <p className="text-xs text-red-400 mt-1">Duplicate environment name</p>
                           )}
                         </div>
@@ -459,6 +480,9 @@ export function RepositoryDefaultsForm() {
                               className="h-9 pl-8 pr-3 bg-zinc-900/60 border-zinc-700/50 text-zinc-200 placeholder:text-zinc-600 font-mono text-sm"
                             />
                           </div>
+                          {isDuplicateBranch && (
+                            <p className="text-xs text-red-400 mt-1">Duplicate branch name</p>
+                          )}
                         </div>
 
                         {/* Color picker */}
