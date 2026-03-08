@@ -143,6 +143,7 @@ export interface UserEvent {
     isSystemAdmin?: boolean
     isActive?: boolean
     mcpKeyUpdated?: boolean
+    totpEnabled?: boolean
   }
 }
 

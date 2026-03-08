@@ -4,6 +4,7 @@ import { handleApiError, rateLimitExceeded, validationError } from '@/lib/api-ut
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { isDemoMode } from '@/lib/demo/demo-config'
+import { projectEvents } from '@/lib/events'
 import { checkRateLimit } from '@/lib/rate-limit'
 import {
   decryptTotpSecret,
@@ -103,6 +104,14 @@ export async function POST(request: Request) {
         totpEnabled: true,
         totpRecoveryCodes: hashedCodes,
       },
+    })
+
+    // Emit SSE event for admin users list to update 2FA badge
+    projectEvents.emitUserEvent({
+      type: 'user.updated',
+      userId: currentUser.id,
+      timestamp: Date.now(),
+      changes: { totpEnabled: true },
     })
 
     return NextResponse.json({

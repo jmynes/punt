@@ -129,7 +129,13 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
 
           // Update the admin users list cache directly instead of refetching
           queryClient.setQueriesData<
-            Array<{ id: string; isSystemAdmin?: boolean; isActive?: boolean; name?: string }>
+            Array<{
+              id: string
+              isSystemAdmin?: boolean
+              isActive?: boolean
+              name?: string
+              totpEnabled?: boolean
+            }>
           >({ queryKey: ['admin', 'users'], exact: true }, (oldData) => {
             if (!oldData || !Array.isArray(oldData)) return oldData
             return oldData.map((user) => {
@@ -141,6 +147,9 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
                   }),
                   ...(data.changes.isActive !== undefined && { isActive: data.changes.isActive }),
                   ...(data.changes.name !== undefined && { name: data.changes.name }),
+                  ...(data.changes.totpEnabled !== undefined && {
+                    totpEnabled: data.changes.totpEnabled,
+                  }),
                 }
               }
               return user
@@ -153,6 +162,7 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
             isSystemAdmin?: boolean
             isActive?: boolean
             name?: string
+            totpEnabled?: boolean
           }>(['admin', 'users', data.userId], (oldData) => {
             if (!oldData || !data.changes) return oldData
             return {
@@ -162,6 +172,9 @@ export function useRealtimeUsers(enabled = true): RealtimeStatus {
               }),
               ...(data.changes.isActive !== undefined && { isActive: data.changes.isActive }),
               ...(data.changes.name !== undefined && { name: data.changes.name }),
+              ...(data.changes.totpEnabled !== undefined && {
+                totpEnabled: data.changes.totpEnabled,
+              }),
             }
           })
         }
