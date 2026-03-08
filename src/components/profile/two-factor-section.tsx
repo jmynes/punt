@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   ShieldOff,
 } from 'lucide-react'
+import { signOut } from 'next-auth/react'
 import { useCallback, useState } from 'react'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -173,9 +174,10 @@ ${codes.join('\n')}
       throw new Error(data.error ?? 'Failed to disable 2FA')
     }
 
-    setEnabled(false)
-    setRecoveryCodesRemaining(0)
-    showToast.success('Two-factor authentication has been disabled')
+    // Session was invalidated server-side (passwordChangedAt updated).
+    // Sign out client-side to force re-authentication.
+    showToast.success('Two-factor authentication has been disabled. Please sign in again.')
+    await signOut({ callbackUrl: '/login' })
   }
 
   // Regenerate recovery codes
