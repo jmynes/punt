@@ -46,6 +46,11 @@ export type SprintEventType =
 export type UserEventType = 'user.updated'
 
 /**
+ * Event types for agent operations
+ */
+export type AgentEventType = 'agent.updated'
+
+/**
  * Event types for branding operations
  */
 export type BrandingEventType = 'branding.updated'
@@ -138,6 +143,20 @@ export interface UserEvent {
     isSystemAdmin?: boolean
     isActive?: boolean
     mcpKeyUpdated?: boolean
+  }
+}
+
+/**
+ * Payload for agent events
+ */
+export interface AgentEvent {
+  type: AgentEventType
+  agentId: string
+  userId: string // Owner of the agent
+  tabId?: string // Optional tab ID for self-skip
+  timestamp: number
+  changes?: {
+    name?: string
   }
 }
 
@@ -330,6 +349,13 @@ class ProjectEventEmitter extends EventEmitter {
    * Emit a user profile event to all subscribers (global channel)
    */
   emitUserEvent(event: UserEvent) {
+    this.emit(USERS_GLOBAL_CHANNEL, event)
+  }
+
+  /**
+   * Emit an agent event to all subscribers (global channel)
+   */
+  emitAgentEvent(event: AgentEvent) {
     this.emit(USERS_GLOBAL_CHANNEL, event)
   }
 
