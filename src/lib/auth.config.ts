@@ -22,10 +22,17 @@ export const authConfig: NextAuthConfig = {
         return true
       }
 
+      // Get pathname, stripping basePath prefix if present
+      // Next.js includes basePath in nextUrl.pathname, so we need to strip it for route matching
+      const pathname =
+        basePath && nextUrl.pathname.startsWith(basePath)
+          ? nextUrl.pathname.slice(basePath.length) || '/'
+          : nextUrl.pathname
+
       // Allow requests with API key header through to API routes
       // Accepts both X-API-Key (git hooks) and X-MCP-API-Key (MCP)
       // Actual key validation happens in getMcpUser() via database lookup
-      if (nextUrl.pathname.startsWith('/api/')) {
+      if (pathname.startsWith('/api/')) {
         const apiKey = headers.get('X-API-Key') || headers.get('X-MCP-API-Key')
         if (apiKey) {
           return true
@@ -34,16 +41,16 @@ export const authConfig: NextAuthConfig = {
 
       const isLoggedIn = !!auth?.user
       const isOnAuthPage =
-        nextUrl.pathname === '/login' ||
-        nextUrl.pathname === '/register' ||
-        nextUrl.pathname === '/forgot-password' ||
-        nextUrl.pathname === '/reset-password' ||
-        nextUrl.pathname === '/verify-email' ||
-        nextUrl.pathname === '/setup'
-      const isOnAuthApi = nextUrl.pathname.startsWith('/api/auth')
-      const isOnInvite = nextUrl.pathname.startsWith('/invite')
-      const isOnBrandingApi = nextUrl.pathname === '/api/branding'
-      const isOnWebhooksApi = nextUrl.pathname.startsWith('/api/webhooks')
+        pathname === '/login' ||
+        pathname === '/register' ||
+        pathname === '/forgot-password' ||
+        pathname === '/reset-password' ||
+        pathname === '/verify-email' ||
+        pathname === '/setup'
+      const isOnAuthApi = pathname.startsWith('/api/auth')
+      const isOnInvite = pathname.startsWith('/invite')
+      const isOnBrandingApi = pathname === '/api/branding'
+      const isOnWebhooksApi = pathname.startsWith('/api/webhooks')
 
       // Allow auth API routes
       if (isOnAuthApi) {
