@@ -9,6 +9,7 @@ import { TicketDetailDrawer } from '@/components/tickets'
 import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { getProjectViewTabs, useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
 import { filterTickets } from '@/lib/filter-tickets'
@@ -216,6 +217,13 @@ export default function SprintPlanningPage() {
     () => allTickets.find((t) => t.id === activeTicketId) || null,
     [activeTicketId, allTickets],
   )
+
+  // Sprint completion detection (handles expired sprint prompts)
+  useSprintCompletion({
+    projectId,
+    tickets: allTickets,
+    columns,
+  })
 
   // Redirect to dashboard if project doesn't exist after loading
   useEffect(() => {
