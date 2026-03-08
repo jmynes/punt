@@ -583,7 +583,8 @@ Delete a column (moves tickets to another column).
 
 1. Ensure dependencies are installed: `cd mcp && pnpm install`
 2. Check the command path in your MCP config
-3. Verify PUNT is running at the configured `MCP_BASE_URL` (default: `http://localhost:3000`)
+3. Verify PUNT is running at the configured URL (default: `http://localhost:3000`)
+4. If using a subpath deployment (e.g., `NEXT_PUBLIC_BASE_PATH=/punt`), ensure your MCP credentials include the full URL with the basePath (e.g., `https://example.com/punt`)
 
 ### "Unauthorized" or "Invalid API key"
 

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import type { CreateTicketInput, UpdateTicketInput } from '@/lib/data-provider'
 import { getDataProvider } from '@/lib/data-provider'
 import { showToast } from '@/lib/toast'
@@ -322,7 +323,7 @@ export function useMoveTicket() {
       activity?: ActivityMetaResponse
     }> => {
       // Make direct fetch call to capture _activity from response
-      const response = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
+      const response = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -526,7 +527,7 @@ export async function updateTicketWithActivity(
   }
 
   // Make direct fetch call to capture _activity from response
-  const response = await fetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
+  const response = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -640,7 +641,7 @@ export function useMoveTickets() {
       activity?: BatchMoveActivityResponse
     }> => {
       // Make direct fetch call to capture _activity from response
-      const response = await fetch(`/api/projects/${projectId}/tickets`, {
+      const response = await apiFetch(`/api/projects/${projectId}/tickets`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -852,7 +853,7 @@ export function useTicketSprintHistory(projectId: string, ticketId: string | und
   return useQuery<SprintHistoryEntry[]>({
     queryKey: ticketKeys.sprintHistory(projectId, ticketId ?? ''),
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/sprint-history`)
+      const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/sprint-history`)
       if (!res.ok) {
         throw new Error('Failed to fetch sprint history')
       }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { apiFetch } from '@/lib/base-path'
 
 export interface EmailVerificationStatus {
   email: string | null
@@ -19,7 +20,7 @@ export function useEmailVerificationStatus() {
   return useQuery<EmailVerificationStatus>({
     queryKey: emailVerificationKeys.status,
     queryFn: async () => {
-      const res = await fetch('/api/me/verification-status')
+      const res = await apiFetch('/api/me/verification-status')
       if (!res.ok) {
         throw new Error('Failed to fetch verification status')
       }

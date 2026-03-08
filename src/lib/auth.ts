@@ -4,9 +4,10 @@ import { z } from 'zod'
 import { authConfig } from '@/lib/auth.config'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { clearRateLimit } from '@/lib/rate-limit'
 import {
   decryptTotpSecret,
+  isTotpReplay,
   markRecoveryCodeUsed,
   verifyRecoveryCode,
   verifyTotpToken,
@@ -74,11 +75,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             throw new Error('2FA_REQUIRED')
           }
 
-          // Rate limit TOTP attempts by username to prevent brute-force
-          const totpRateLimit = await checkRateLimit(normalizedUsername, 'auth/2fa')
-          if (!totpRateLimit.allowed) {
-            throw new Error('RATE_LIMITED')
-          }
+          // Rate limiting is handled by /api/auth/2fa/verify which is called before signIn
+          // This allows for proper JSON error responses instead of NextAuth's wrapped errors
 
           const useRecoveryCode = isRecoveryCode === 'true'
 
@@ -108,14 +106,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (!isValid) {
               throw new Error('INVALID_2FA_CODE')
             }
+
+            // Replay protection: reject if the same time window was already used
+            if (isTotpReplay(user.totpLastUsedAt)) {
+              throw new Error('2FA_CODE_ALREADY_USED')
+            }
           }
         }
 
-        // Update last login timestamp
+        // Update last login timestamp (and TOTP replay marker if 2FA was verified)
         await db.user.update({
           where: { id: user.id },
-          data: { lastLoginAt: new Date() },
+          data: {
+            lastLoginAt: new Date(),
+            ...(user.totpEnabled && totpCode ? { totpLastUsedAt: new Date() } : {}),
+          },
         })
+
+        // Clear rate limits on successful login
+        await clearRateLimit(user.username, 'auth/login')
+        await clearRateLimit(user.username, 'auth/2fa')
 
         return {
           id: user.id,

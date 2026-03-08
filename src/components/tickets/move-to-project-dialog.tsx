@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { useProjects } from '@/hooks/queries/use-projects'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 import { useBoardStore } from '@/stores/board-store'
 import type { TicketWithRelations } from '@/types'
@@ -51,7 +52,7 @@ export function MoveToProjectDialog({
     setIsMoving(true)
     try {
       const tabId = getTabId()
-      const res = await fetch(`/api/projects/${projectKey}/tickets/${ticket.id}/move`, {
+      const res = await apiFetch(`/api/projects/${projectKey}/tickets/${ticket.id}/move`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

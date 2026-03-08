@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 
 interface AgentData {
@@ -38,7 +39,7 @@ function AgentRow({ agent }: { agent: AgentData }) {
 
     setIsSaving(true)
     try {
-      const res = await fetch(`/api/me/agents/${agent.id}`, {
+      const res = await apiFetch(`/api/me/agents/${agent.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: trimmed }),
@@ -159,7 +160,7 @@ export function MyAgents() {
   const { data: agents, isLoading } = useQuery<AgentData[]>({
     queryKey: ['agents', 'me'],
     queryFn: async () => {
-      const res = await fetch('/api/me/agents')
+      const res = await apiFetch('/api/me/agents')
       if (!res.ok) throw new Error('Failed to fetch agents')
       return res.json()
     },

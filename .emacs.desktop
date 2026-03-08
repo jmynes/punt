@@ -1,0 +1,31 @@
+;; -*- mode: emacs-lisp; lexical-binding:t; coding: utf-8-emacs; -*-
+;; --------------------------------------------------------------------------
+;; Desktop File for Emacs
+;; --------------------------------------------------------------------------
+;; Created Sun Mar  8 01:13:56 2026
+;; Desktop file format version 208
+;; Emacs version 30.1
+
+;; Global section:
+(setq desktop-saved-frameset [frameset 1 (27053 8628 513828 618000) (desktop . "208") "user@claude-docker-gpu" nil nil ((((minibuffer . t) (tty-type . "xterm-256color") (tty . "/dev/tty") (display-type . color) (background-mode . dark) (scroll-bar-foreground) (scroll-bar-background) (background-color . "#2d3743") (foreground-color . "#e1e1e0") (height . 15) (width . 126) (modeline . t) (unsplittable) (menu-bar-lines . 1) (tab-bar-lines . 0) (frameset--id . "C9F3-6AA1-F108-0E8C") (frameset--mini t) (font . "tty")) ((min-height . 4) (min-width . 10) (min-height-ignore . 2) (min-width-ignore . 2) (min-height-safe . 1) (min-width-safe . 2) (min-pixel-height . 4) (min-pixel-width . 10) (min-pixel-height-ignore . 2) (min-pixel-width-ignore . 2) (min-pixel-height-safe . 1) (min-pixel-width-safe . 2)) leaf (pixel-width . 126) (pixel-height . 14) (total-width . 126) (total-height . 14) (normal-height . 1.0) (normal-width . 1.0) (buffer "credentials.json" (selected . t) (hscroll . 0) (fringes 0 0 nil nil) (margins nil) (scroll-bars nil 0 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 158) (start . 1)) (prev-buffers ("*scratch*" 1 1))))])
+(setq desktop-missing-file-warning nil)
+(setq tags-file-name nil)
+(setq tags-table-list nil)
+(setq search-ring nil)
+(setq regexp-search-ring nil)
+(setq register-alist nil)
+(setq file-name-history '("~/.config/punt/credentials.json"))
+
+;; Buffer section -- buffers listed in same order as in buffer list:
+(desktop-create-buffer 208
+  "/home/user/.config/punt/credentials.json"
+  "credentials.json"
+  'js-json-mode
+  '(font-lock-mode)
+  158
+  '(90 nil)
+  nil
+  nil
+  '((buffer-display-time 27053 8623 439059 354000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (90))))
+

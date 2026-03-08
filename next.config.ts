@@ -28,6 +28,9 @@ const gitInfo = getGitInfo()
 const version = getVersion()
 
 const nextConfig: NextConfig = {
+  // Support subpath deployments (e.g., example.com/punt/)
+  // Set NEXT_PUBLIC_BASE_PATH="/punt" to deploy under a subpath
+  ...(process.env.NEXT_PUBLIC_BASE_PATH && { basePath: process.env.NEXT_PUBLIC_BASE_PATH }),
   env: {
     NEXT_PUBLIC_APP_VERSION: version,
     NEXT_PUBLIC_GIT_COMMIT: gitInfo.commitHash,

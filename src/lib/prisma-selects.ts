@@ -120,6 +120,10 @@ export const TICKET_SELECT_FULL = {
   createdByAgent: {
     select: { id: true, name: true, ownerId: true },
   },
+  // Snapshot fields for historical record (persists even if agent is revoked)
+  createdByAgentIdSnapshot: true,
+  createdByAgentName: true,
+  createdByAgentOwnerName: true,
   sprint: {
     select: SPRINT_SELECT_SUMMARY,
   },

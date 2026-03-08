@@ -4,10 +4,10 @@ import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, XCircle } from 'lucide-r
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiFetch } from '@/lib/base-path'
 
 type TokenStatus = 'loading' | 'valid' | 'invalid' | 'expired' | 'used'
 
@@ -34,7 +34,9 @@ export function ResetPasswordForm() {
       }
 
       try {
-        const response = await fetch(`/api/auth/reset-password?token=${encodeURIComponent(token)}`)
+        const response = await apiFetch(
+          `/api/auth/reset-password?token=${encodeURIComponent(token)}`,
+        )
         const data = await response.json()
 
         if (!response.ok) {
@@ -70,7 +72,7 @@ export function ResetPasswordForm() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const response = await apiFetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password }),
