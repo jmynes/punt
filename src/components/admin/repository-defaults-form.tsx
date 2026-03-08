@@ -427,7 +427,7 @@ export function RepositoryDefaultsForm() {
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="max-h-[300px] overflow-y-auto pr-1">
+              <div className="max-h-[300px] overflow-y-auto overscroll-contain pr-1">
                 <div className="space-y-2 pr-2">
                   {formData.environmentBranches.map((branch) => {
                     const isDuplicateEnv =
