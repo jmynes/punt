@@ -211,6 +211,8 @@ export function CreateTicketDialog() {
       carriedOverCount: 0,
       createdByAgentId: null,
       createdByAgent: null,
+      createdByAgentName: null,
+      createdByAgentOwnerName: null,
       assignee: formData.assigneeId
         ? members.find((m) => m.id === formData.assigneeId) || null
         : null,

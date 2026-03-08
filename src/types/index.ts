@@ -258,6 +258,9 @@ export interface TicketWithRelations {
   // Agent attribution
   createdByAgentId: string | null
   createdByAgent: { id: string; name: string; ownerId: string } | null
+  // Snapshot fields for historical record (persists even if agent is revoked)
+  createdByAgentName: string | null
+  createdByAgentOwnerName: string | null
   assignee: UserSummary | null
   creator: UserSummary
   sprint: SprintSummary | null

@@ -252,9 +252,19 @@ export function KanbanCard({
 
             {/* Right side: Agent indicator + Resolution badge + Assignee */}
             <div className="flex items-center gap-2">
-              {ticket.createdByAgent && (
-                <span title={`Created via ${ticket.createdByAgent.name}`}>
-                  <AgentIdenticon identifier={ticket.createdByAgent.id} size={16} />
+              {/* Show agent indicator - prefer live agent data, fall back to snapshot */}
+              {(ticket.createdByAgent || ticket.createdByAgentName) && (
+                <span
+                  title={
+                    ticket.createdByAgent
+                      ? `Created via ${ticket.createdByAgent.name}`
+                      : `Created via ${ticket.createdByAgentName}${ticket.createdByAgentOwnerName ? ` (${ticket.createdByAgentOwnerName}'s agent)` : ''}`
+                  }
+                >
+                  <AgentIdenticon
+                    identifier={ticket.createdByAgentId ?? ticket.createdByAgentName ?? ''}
+                    size={16}
+                  />
                 </span>
               )}
               {ticket.resolution && ticket.resolution !== 'Done' && (

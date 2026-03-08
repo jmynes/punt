@@ -274,6 +274,8 @@ function createTicket(
     carriedOverCount: 0,
     createdByAgentId: null,
     createdByAgent: null,
+    createdByAgentName: null,
+    createdByAgentOwnerName: null,
     assignee: null,
     creator: DEMO_USER_SUMMARY,
     sprint: null,

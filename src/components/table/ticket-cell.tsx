@@ -147,10 +147,17 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
           ) : (
             <span className="truncate text-sm text-zinc-500">Unknown</span>
           )}
-          {ticket.createdByAgent && (
-            <span title={`via ${ticket.createdByAgent.name}`}>
+          {/* Show agent indicator - prefer live agent data, fall back to snapshot */}
+          {(ticket.createdByAgent || ticket.createdByAgentName) && (
+            <span
+              title={
+                ticket.createdByAgent
+                  ? `via ${ticket.createdByAgent.name}`
+                  : `via ${ticket.createdByAgentName}${ticket.createdByAgentOwnerName ? ` (${ticket.createdByAgentOwnerName}'s agent)` : ''}`
+              }
+            >
               <AgentIdenticon
-                identifier={ticket.createdByAgent.id}
+                identifier={ticket.createdByAgentId ?? ticket.createdByAgentName ?? ''}
                 size={16}
                 className="shrink-0"
               />
