@@ -1,13 +1,12 @@
 'use client'
 
 import {
-  BoldItalicUnderlineToggles,
+  CreateLink,
   codeBlockPlugin,
   codeMirrorPlugin,
   diffSourcePlugin,
   headingsPlugin,
   InsertThematicBreak,
-  ListsToggle,
   linkDialogPlugin,
   linkPlugin,
   listsPlugin,
@@ -22,7 +21,13 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@mdxeditor/editor/style.css'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { CustomBlockTypeSelect } from '@/components/tickets/custom-block-type-select'
 import { CustomDiffSourceToggleWrapper } from '@/components/tickets/custom-diff-source-toggle-wrapper'
+import { ResponsiveBoldItalicUnderlineToggle } from '@/components/tickets/responsive-bold-italic-underline-toggle'
+import { ResponsiveCodeToggle } from '@/components/tickets/responsive-code-toggle'
+import { ResponsiveListsToggle } from '@/components/tickets/responsive-lists-toggle'
+import { ResponsiveStrikeSupSubToggle } from '@/components/tickets/responsive-strike-sup-sub-toggle'
+import { ResponsiveUndoRedoToggle } from '@/components/tickets/responsive-undo-redo-toggle'
 
 interface GuidanceEditorProps {
   markdown: string
@@ -73,10 +78,16 @@ export const GuidanceEditor = React.memo(function GuidanceEditor({
   const toolbarContents = useCallback(
     () => (
       <CustomDiffSourceToggleWrapper options={['rich-text', 'source']}>
-        <BoldItalicUnderlineToggles />
+        <ResponsiveUndoRedoToggle />
         <Separator />
-        <ListsToggle />
+        <ResponsiveBoldItalicUnderlineToggle />
+        <ResponsiveStrikeSupSubToggle />
+        <ResponsiveCodeToggle />
         <Separator />
+        <ResponsiveListsToggle />
+        <CustomBlockTypeSelect />
+        <Separator />
+        <CreateLink />
         <InsertThematicBreak />
       </CustomDiffSourceToggleWrapper>
     ),
