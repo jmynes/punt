@@ -259,6 +259,7 @@ export interface TicketWithRelations {
   createdByAgentId: string | null
   createdByAgent: { id: string; name: string; ownerId: string } | null
   // Snapshot fields for historical record (persists even if agent is revoked)
+  createdByAgentIdSnapshot: string | null
   createdByAgentName: string | null
   createdByAgentOwnerName: string | null
   assignee: UserSummary | null

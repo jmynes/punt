@@ -157,7 +157,7 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
               }
             >
               <AgentIdenticon
-                identifier={ticket.createdByAgentId ?? ticket.createdByAgentName ?? ''}
+                identifier={ticket.createdByAgentIdSnapshot ?? ticket.createdByAgentName ?? ''}
                 size={16}
                 className="shrink-0"
               />

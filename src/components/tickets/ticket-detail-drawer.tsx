@@ -1294,7 +1294,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   {(ticket.createdByAgent || ticket.createdByAgentName) && (
                     <div className="flex items-center gap-2 mt-1 h-8 px-2 rounded-md bg-zinc-800/50 border border-zinc-700/50">
                       <AgentIdenticon
-                        identifier={ticket.createdByAgentId ?? ticket.createdByAgentName ?? ''}
+                        identifier={
+                          ticket.createdByAgentIdSnapshot ?? ticket.createdByAgentName ?? ''
+                        }
                         size={18}
                       />
                       <span className="text-xs text-zinc-400 truncate">

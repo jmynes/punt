@@ -1,8 +1,9 @@
 /**
  * Backfill agent snapshot fields for existing tickets
  *
- * This script populates createdByAgentName and createdByAgentOwnerName
- * for tickets that have a createdByAgentId but missing snapshot fields.
+ * This script populates createdByAgentIdSnapshot, createdByAgentName, and
+ * createdByAgentOwnerName for tickets that have a createdByAgentId but
+ * missing snapshot fields.
  *
  * Usage: pnpm tsx prisma/backfill-agent-snapshots.ts
  */
@@ -18,12 +19,17 @@ async function main() {
   const ticketsToUpdate = await prisma.ticket.findMany({
     where: {
       createdByAgentId: { not: null },
-      OR: [{ createdByAgentName: null }, { createdByAgentOwnerName: null }],
+      OR: [
+        { createdByAgentIdSnapshot: null },
+        { createdByAgentName: null },
+        { createdByAgentOwnerName: null },
+      ],
     },
     select: {
       id: true,
       number: true,
       createdByAgentId: true,
+      createdByAgentIdSnapshot: true,
       createdByAgentName: true,
       createdByAgentOwnerName: true,
       project: { select: { key: true } },
@@ -44,15 +50,25 @@ async function main() {
   console.log(`Found ${ticketsToUpdate.length} ticket(s) to backfill.\n`)
 
   let updated = 0
-  let skipped = 0
 
   for (const ticket of ticketsToUpdate) {
     const ticketKey = `${ticket.project.key}-${ticket.number}`
 
+    // Always backfill the ID snapshot from createdByAgentId (preserved even if agent deleted)
+    const idSnapshot = ticket.createdByAgentId
+
     if (!ticket.createdByAgent) {
-      // Agent no longer exists - can't backfill
-      console.log(`  ${ticketKey}: Agent deleted, cannot backfill`)
-      skipped++
+      // Agent no longer exists - can only backfill the ID snapshot
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: {
+          createdByAgentIdSnapshot: idSnapshot,
+        },
+      })
+      console.log(
+        `  ${ticketKey}: Set idSnapshot="${idSnapshot}" (agent deleted, name not available)`,
+      )
+      updated++
       continue
     }
 
@@ -62,16 +78,19 @@ async function main() {
     await prisma.ticket.update({
       where: { id: ticket.id },
       data: {
+        createdByAgentIdSnapshot: idSnapshot,
         createdByAgentName: agentName,
         createdByAgentOwnerName: ownerName,
       },
     })
 
-    console.log(`  ${ticketKey}: Set agentName="${agentName}", ownerName="${ownerName}"`)
+    console.log(
+      `  ${ticketKey}: Set idSnapshot="${idSnapshot}", agentName="${agentName}", ownerName="${ownerName}"`,
+    )
     updated++
   }
 
-  console.log(`\nBackfill complete: ${updated} updated, ${skipped} skipped (agent deleted)`)
+  console.log(`\nBackfill complete: ${updated} ticket(s) updated`)
 }
 
 main()

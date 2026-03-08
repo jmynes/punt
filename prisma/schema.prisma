@@ -421,8 +421,9 @@ model Ticket {
   createdByAgentId        String?
   createdByAgent          Agent?  @relation("AgentCreatedTickets", fields: [createdByAgentId], references: [id])
   // Snapshot fields for historical record (persists even if agent is revoked)
-  createdByAgentName      String? // Agent's display name at creation time
-  createdByAgentOwnerName String? // Agent owner's display name at creation time
+  createdByAgentIdSnapshot String? // Original agent ID (never cleared, used for stable identicon)
+  createdByAgentName       String? // Agent's display name at creation time
+  createdByAgentOwnerName  String? // Agent owner's display name at creation time
 
   // Activity
   comments    Comment[]

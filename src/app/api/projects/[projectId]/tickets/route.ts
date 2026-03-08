@@ -245,6 +245,7 @@ export async function POST(
           // Attribute to agent if this is an MCP request
           createdByAgentId: user.agentId ?? null,
           // Snapshot fields for historical record (persists even if agent is revoked)
+          createdByAgentIdSnapshot: user.agentId ?? null, // Original agent ID, never cleared
           createdByAgentName: agentSnapshot?.name ?? null,
           createdByAgentOwnerName: agentSnapshot?.ownerName ?? null,
           type: ticketData.type as IssueType,

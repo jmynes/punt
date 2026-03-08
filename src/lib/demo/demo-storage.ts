@@ -307,6 +307,7 @@ class DemoStorage {
       carriedOverCount: 0,
       createdByAgentId: null,
       createdByAgent: null,
+      createdByAgentIdSnapshot: null,
       createdByAgentName: null,
       createdByAgentOwnerName: null,
       assignee: data.assignee ?? null,

@@ -262,7 +262,7 @@ export function KanbanCard({
                   }
                 >
                   <AgentIdenticon
-                    identifier={ticket.createdByAgentId ?? ticket.createdByAgentName ?? ''}
+                    identifier={ticket.createdByAgentIdSnapshot ?? ticket.createdByAgentName ?? ''}
                     size={16}
                   />
                 </span>
