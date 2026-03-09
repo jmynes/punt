@@ -35,6 +35,7 @@ import {
 import { availableUserKeys, memberKeys, useAvailableUsers } from '@/hooks/queries/use-members'
 import { useProjectRoles } from '@/hooks/queries/use-roles'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor } from '@/lib/utils'
 import { type MemberSnapshot, useAdminUndoStore } from '@/stores/admin-undo-store'
@@ -126,7 +127,7 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
       // Add all members in parallel (direct API calls to avoid per-member toasts)
       const results = await Promise.all(
         pendingMembers.map(async (member) => {
-          const res = await fetch(`/api/projects/${projectId}/members`, {
+          const res = await apiFetch(`/api/projects/${projectId}/members`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

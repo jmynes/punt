@@ -51,6 +51,8 @@ All deployments need certain environment variables:
 | `AUTH_TRUST_HOST` | Trust proxy headers | `false` |
 | `TRUST_PROXY` | Trust X-Forwarded-For | `false` |
 | `NEXT_PUBLIC_DEMO_MODE` | Enable demo mode | `false` |
+| `NEXT_PUBLIC_BASE_PATH` | Subpath deployment (e.g., `/punt`) | `` (root) |
+| `NEXT_PUBLIC_APP_URL` | Public URL for email links | `http://localhost:3000` |
 
 ### Generating AUTH_SECRET
 

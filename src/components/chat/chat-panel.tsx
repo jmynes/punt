@@ -19,6 +19,7 @@ import {
   useRenameChatSession,
 } from '@/hooks/queries/use-chat-sessions'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { apiFetch } from '@/lib/base-path'
 import { getHelpText, type SlashCommand } from '@/lib/chat/commands'
 import { showToast } from '@/lib/toast'
 import { transformMetadataToToolCalls, useChatStore } from '@/stores/chat-store'
@@ -69,7 +70,7 @@ export function ChatPanel() {
   useEffect(() => {
     if (chatPanelOpen && isConfigured === null) {
       // First check provider and session status
-      fetch('/api/me/claude-session')
+      apiFetch('/api/me/claude-session')
         .then((res) => res.json())
         .then((data) => {
           const userProvider = data.provider || 'anthropic'
@@ -79,7 +80,7 @@ export function ChatPanel() {
             setIsConfigured(data.hasSession)
           } else {
             // Anthropic needs API key - check that endpoint
-            return fetch('/api/me/anthropic-key')
+            return apiFetch('/api/me/anthropic-key')
               .then((res) => res.json())
               .then((keyData) => setIsConfigured(keyData.hasKey))
           }
@@ -211,7 +212,7 @@ export function ChatPanel() {
           content: m.content,
         }))
 
-        const response = await fetch('/api/chat', {
+        const response = await apiFetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

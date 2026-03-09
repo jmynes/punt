@@ -219,6 +219,21 @@ export async function POST(
       })
       const nextOrder = (maxOrderResult._max.order ?? -1) + 1
 
+      // Look up agent info for snapshot fields if this is an MCP request
+      let agentSnapshot: { name: string; ownerName: string } | null = null
+      if (user.agentId) {
+        const agent = await tx.agent.findUnique({
+          where: { id: user.agentId },
+          select: { name: true, owner: { select: { name: true } } },
+        })
+        if (agent) {
+          agentSnapshot = {
+            name: agent.name,
+            ownerName: agent.owner.name ?? 'Unknown',
+          }
+        }
+      }
+
       // Create the ticket
       const newTicket = await tx.ticket.create({
         data: {
@@ -229,6 +244,10 @@ export async function POST(
           creatorId,
           // Attribute to agent if this is an MCP request
           createdByAgentId: user.agentId ?? null,
+          // Snapshot fields for historical record (persists even if agent is revoked)
+          createdByAgentIdSnapshot: user.agentId ?? null, // Original agent ID, never cleared
+          createdByAgentName: agentSnapshot?.name ?? null,
+          createdByAgentOwnerName: agentSnapshot?.ownerName ?? null,
           type: ticketData.type as IssueType,
           priority: ticketData.priority as Priority,
           // Set resolvedAt: use provided value (for restore), or current time if resolution exists

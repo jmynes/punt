@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch, withBasePath } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 
 interface UserData {
@@ -64,7 +65,7 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
     totpCode?: string,
     isRecoveryCode?: boolean,
   ) => {
-    const res = await fetch('/api/me/email', {
+    const res = await apiFetch('/api/me/email', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -99,7 +100,7 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
     totpCode?: string,
     isRecoveryCode?: boolean,
   ) => {
-    const res = await fetch('/api/me/password', {
+    const res = await apiFetch('/api/me/password', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ currentPassword: password, newPassword, totpCode, isRecoveryCode }),
@@ -125,7 +126,7 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
       throw new Error('Account deletion is not available in demo mode')
     }
 
-    const res = await fetch('/api/me/account', {
+    const res = await apiFetch('/api/me/account', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -144,7 +145,7 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
 
     showToast.success('Account deleted. Signing out...')
     await signOut({ redirect: false })
-    window.location.href = '/login'
+    window.location.href = withBasePath('/login')
   }
 
   return (

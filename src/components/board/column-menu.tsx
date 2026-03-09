@@ -50,6 +50,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { columnKeys, ticketKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch, withBasePath } from '@/lib/base-path'
 import { PERMISSIONS } from '@/lib/permissions'
 import {
   COLUMN_ICON_OPTIONS,
@@ -121,7 +122,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
         const targetColumn = allColumns[targetIndex]
         const newOrder = targetColumn.order
 
-        const res = await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
+        const res = await apiFetch(`/api/projects/${projectKey}/columns/${column.id}`, {
           method: 'PATCH',
           headers,
           body: JSON.stringify({ order: newOrder }),
@@ -133,7 +134,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
         }
 
         // Also update the swapped column's order
-        const res2 = await fetch(`/api/projects/${projectKey}/columns/${targetColumn.id}`, {
+        const res2 = await apiFetch(`/api/projects/${projectKey}/columns/${targetColumn.id}`, {
           method: 'PATCH',
           headers,
           body: JSON.stringify({ order: column.order }),
@@ -141,7 +142,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
 
         if (!res2.ok) {
           // Rollback first column to its original order
-          await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
+          await apiFetch(`/api/projects/${projectKey}/columns/${column.id}`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ order: column.order }),
@@ -219,7 +220,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       body.icon = iconValue
       body.color = colorValue
 
-      const res = await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
+      const res = await apiFetch(`/api/projects/${projectKey}/columns/${column.id}`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify(body),
@@ -304,7 +305,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       }
 
       const url = new URL(
-        `/api/projects/${projectKey}/columns/${column.id}`,
+        withBasePath(`/api/projects/${projectKey}/columns/${column.id}`),
         window.location.origin,
       )
       if (column.tickets.length > 0) {

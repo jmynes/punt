@@ -122,6 +122,8 @@ function parseUserValue(value: ActivityValue): UserMeta | null {
 /** Agent attribution info for "created" activity entries. */
 export interface AgentAttribution {
   name: string
+  /** Owner's name - only set when agent is revoked (from snapshot fields) */
+  ownerName?: string
 }
 
 interface ActivityTimelineProps {
@@ -230,6 +232,9 @@ function ActivityRow({
             <span className="text-purple-400">
               {' '}
               <Bot className="inline h-3.5 w-3.5 align-text-bottom" /> via {agentAttribution.name}
+              {agentAttribution.ownerName && (
+                <span className="text-zinc-500"> ({agentAttribution.ownerName}'s agent)</span>
+              )}
             </span>
           )}{' '}
           <ActionDescription
