@@ -19,7 +19,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   type EnvironmentBranch,
@@ -111,6 +110,8 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
   })
   const [hasChanges, setHasChanges] = useState(false)
   const [branchTemplateError, setBranchTemplateError] = useState<string | null>(null)
+  const [duplicateEnvNames, setDuplicateEnvNames] = useState<Set<string>>(new Set())
+  const [duplicateBranchNames, setDuplicateBranchNames] = useState<Set<string>>(new Set())
   const branchInputRef = useRef<HTMLInputElement>(null)
 
   // Template variables that can be inserted
@@ -220,6 +221,38 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
       setBranchTemplateError(null)
     }
   }, [formData.branchTemplate])
+
+  // Detect duplicate environment names
+  useEffect(() => {
+    const nameCounts = new Map<string, number>()
+    for (const b of formData.environmentBranches) {
+      const name = b.environment.trim().toLowerCase()
+      if (name) {
+        nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1)
+      }
+    }
+    const dupes = new Set<string>()
+    for (const [name, count] of nameCounts) {
+      if (count > 1) dupes.add(name)
+    }
+    setDuplicateEnvNames(dupes)
+  }, [formData.environmentBranches])
+
+  // Detect duplicate branch names
+  useEffect(() => {
+    const nameCounts = new Map<string, number>()
+    for (const b of formData.environmentBranches) {
+      const name = b.branchName.trim().toLowerCase()
+      if (name) {
+        nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1)
+      }
+    }
+    const dupes = new Set<string>()
+    for (const [name, count] of nameCounts) {
+      if (count > 1) dupes.add(name)
+    }
+    setDuplicateBranchNames(dupes)
+  }, [formData.environmentBranches])
 
   const handleSave = useCallback(async () => {
     if (!canEditSettings) return
@@ -337,7 +370,9 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
 
   const isPending = updateRepository.isPending
   const isDisabled = !canEditSettings || isPending
-  const isValid = !branchTemplateError
+  const hasDuplicateEnvNames = duplicateEnvNames.size > 0
+  const hasDuplicateBranchNames = duplicateBranchNames.size > 0
+  const isValid = !branchTemplateError && !hasDuplicateEnvNames && !hasDuplicateBranchNames
 
   // Ctrl+S / Cmd+S keyboard shortcut to save
   useCtrlSave({
@@ -538,17 +573,23 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
             ) : (
               /* Branch list */
               <div className="space-y-2">
-                <ScrollArea className="max-h-[300px]">
+                <div className="max-h-[300px] overflow-y-auto overscroll-contain pr-1">
                   <div className="space-y-2 pr-2">
                     {formData.environmentBranches.map((branch) => {
                       const colors = getEnvironmentColor(branch.environment, branch.color)
                       const hasValues = branch.environment.trim() || branch.branchName.trim()
                       const hasCustomColor = Boolean(branch.color)
+                      const isDuplicateEnv =
+                        branch.environment.trim() &&
+                        duplicateEnvNames.has(branch.environment.trim().toLowerCase())
+                      const isDuplicateBranch =
+                        branch.branchName.trim() &&
+                        duplicateBranchNames.has(branch.branchName.trim().toLowerCase())
 
                       return (
                         <div
                           key={branch.id}
-                          className="group relative flex items-center gap-2 p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 hover:border-zinc-700/50 transition-all duration-150"
+                          className="group relative flex items-center gap-2 p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 hover:border-zinc-700/50 transition-all duration-150 min-w-0"
                         >
                           {/* Environment input with color indicator */}
                           <div className="flex-1 min-w-0">
@@ -579,6 +620,11 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                                 />
                               )}
                             </div>
+                            {isDuplicateEnv && (
+                              <p className="text-xs text-red-400 mt-1">
+                                Duplicate environment name
+                              </p>
+                            )}
                           </div>
 
                           {/* Arrow connector */}
@@ -600,6 +646,9 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                                 className="h-9 pl-8 pr-3 bg-zinc-900/60 border-zinc-700/50 text-zinc-200 placeholder:text-zinc-600 font-mono text-sm"
                               />
                             </div>
+                            {isDuplicateBranch && (
+                              <p className="text-xs text-red-400 mt-1">Duplicate branch name</p>
+                            )}
                           </div>
 
                           {/* Color picker */}
@@ -652,7 +701,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
                       )
                     })}
                   </div>
-                </ScrollArea>
+                </div>
 
                 {/* Add button */}
                 {!isDisabled && (
