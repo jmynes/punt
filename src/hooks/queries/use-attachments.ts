@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 import type { AttachmentInfo } from '@/types'
 
@@ -28,7 +29,7 @@ export function useUploadConfig() {
   return useQuery<UploadConfig>({
     queryKey: ['upload-config'],
     queryFn: async () => {
-      const res = await fetch('/api/upload')
+      const res = await apiFetch('/api/upload')
       if (!res.ok) {
         throw new Error('Failed to fetch upload config')
       }
@@ -45,7 +46,7 @@ export function useTicketAttachments(projectId: string, ticketId: string) {
   return useQuery<AttachmentInfo[]>({
     queryKey: attachmentKeys.forTicket(projectId, ticketId),
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/attachments`)
+      const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/attachments`)
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to fetch attachments')
@@ -80,7 +81,7 @@ export function useAddAttachments() {
       ticketId: string
       attachments: AddAttachmentParams[]
     }) => {
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/attachments`, {
+      const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/attachments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

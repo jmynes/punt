@@ -323,12 +323,14 @@ export async function PATCH(
     const becomingSystemAdmin = updates.isSystemAdmin === true && !existingUser.isSystemAdmin
 
     // Update user
+    // If password is being changed, also update passwordChangedAt to invalidate existing sessions
+    // and clear totpLastUsedAt to prevent replay protection from blocking the new login
     const user = await db.user.update({
       where: { id: existingUser.id },
       data: {
         ...(updates.name && { name: updates.name }),
         ...(updates.email && { email: updates.email }),
-        ...(passwordHash && { passwordHash }),
+        ...(passwordHash && { passwordHash, passwordChangedAt: new Date(), totpLastUsedAt: null }),
         ...(updates.isSystemAdmin !== undefined && { isSystemAdmin: updates.isSystemAdmin }),
         ...(updates.isActive !== undefined && { isActive: updates.isActive }),
       },
@@ -399,6 +401,8 @@ export async function PATCH(
         ...(updates.name && { name: updates.name }),
         ...(updates.isSystemAdmin !== undefined && { isSystemAdmin: updates.isSystemAdmin }),
         ...(updates.isActive !== undefined && { isActive: updates.isActive }),
+        // If password was changed, signal client to sign out
+        ...(passwordHash && { sessionInvalidated: true }),
       },
     })
 

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiFetch } from '@/lib/base-path'
 import { isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 
@@ -59,7 +60,7 @@ export function CreateUserDialog() {
         return { demo: true }
       }
 
-      const res = await fetch('/api/admin/users', {
+      const res = await apiFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

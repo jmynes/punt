@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { handleApiError, validationError } from '@/lib/api-utils'
+import { handleApiError, rateLimitExceeded, validationError } from '@/lib/api-utils'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { isDemoMode } from '@/lib/demo/demo-config'
 import { verifyPassword } from '@/lib/password'
+import { checkRateLimit } from '@/lib/rate-limit'
 import {
   decryptTotpSecret,
   generateRecoveryCodes,
@@ -41,6 +42,12 @@ export async function POST(request: Request) {
     }
 
     const currentUser = await requireAuth()
+
+    // Rate limit recovery code regeneration attempts
+    const rateLimit = await checkRateLimit(currentUser.id, 'me/2fa')
+    if (!rateLimit.allowed) {
+      return rateLimitExceeded(rateLimit)
+    }
 
     const body = await request.json()
     const parsed = regenerateSchema.safeParse(body)

@@ -94,10 +94,13 @@ export async function isEmailFeatureEnabled(
 }
 
 /**
- * Get the application URL from environment
+ * Get the application URL from environment, including basePath if configured
  */
 export function getAppUrl(): string {
-  return process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const baseUrl =
+    process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+  return `${baseUrl}${basePath}`
 }
 
 /**

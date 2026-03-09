@@ -4,7 +4,6 @@ import { Check, Eye, EyeOff, Loader2, Upload, UserPlus, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +13,7 @@ import {
   fileToBase64,
   isZipContent,
 } from '@/hooks/queries/use-database-backup'
+import { apiFetch } from '@/lib/base-path'
 
 interface PasswordRequirement {
   label: string
@@ -33,7 +33,7 @@ export function SetupForm() {
 
   // Check if setup is needed
   useEffect(() => {
-    fetch('/api/auth/setup')
+    apiFetch('/api/auth/setup')
       .then((res) => res.json())
       .then((data) => {
         if (data.hasUsers) {
@@ -105,7 +105,7 @@ function CreateAdminForm() {
     setIsLoading(true)
 
     try {
-      const res = await fetch('/api/auth/setup', {
+      const res = await apiFetch('/api/auth/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, name, email: email || undefined, password }),
@@ -393,7 +393,7 @@ function ImportBackupForm() {
     setIsImporting(true)
 
     try {
-      const res = await fetch('/api/auth/setup/import', {
+      const res = await apiFetch('/api/auth/setup/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

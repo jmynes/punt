@@ -100,6 +100,7 @@ export const UserSchema = z.object({
     .union([z.string(), z.array(z.string()), z.record(z.string(), z.unknown())])
     .nullable()
     .optional(),
+  totpLastUsedAt: nullableDate.optional(),
 })
 
 export const ProjectSchema = z.object({
@@ -228,6 +229,10 @@ export const TicketSchema = z.object({
   parentId: z.string().nullable(),
   // Agent attribution (optional for backward compatibility)
   createdByAgentId: z.string().nullable().optional(),
+  // Snapshot fields for historical record (persists even if agent is revoked)
+  createdByAgentIdSnapshot: z.string().nullable().optional(),
+  createdByAgentName: z.string().nullable().optional(),
+  createdByAgentOwnerName: z.string().nullable().optional(),
   // Many-to-many label IDs (handled separately)
   labelIds: z.array(z.string()).optional(),
 })

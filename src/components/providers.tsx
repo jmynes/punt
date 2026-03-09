@@ -44,8 +44,11 @@ export function Providers({ children }: { children: ReactNode }) {
     )
   }
 
+  // Get basePath for subpath deployments (e.g., "/punt")
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+
   return (
-    <SessionProvider>
+    <SessionProvider basePath={basePath ? `${basePath}/api/auth` : undefined}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider delayDuration={300}>
           <RealtimeUsersProvider>{children}</RealtimeUsersProvider>

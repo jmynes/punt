@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { apiFetch } from '@/lib/base-path'
 import { DEMO_TEAM_SUMMARIES, DEMO_USER_SUMMARY, isDemoMode } from '@/lib/demo'
 import type { UserSummary } from '@/types'
 
@@ -86,7 +87,7 @@ export function useProjectMembers(projectId?: string): UserSummary[] {
   const { data } = useQuery({
     queryKey: ['project', projectId, 'members'],
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/members`)
+      const res = await apiFetch(`/api/projects/${projectId}/members`)
       if (!res.ok) {
         throw new Error('Failed to fetch project members')
       }

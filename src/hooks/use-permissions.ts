@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
+import { apiFetch } from '@/lib/base-path'
 import { DEMO_ROLE, isDemoMode } from '@/lib/demo'
 import { ALL_PERMISSIONS } from '@/lib/permissions/constants'
 import { useRoleSimulationStore } from '@/stores/role-simulation-store'
@@ -43,7 +44,7 @@ export function useMyPermissions(projectId: string) {
         }
       }
 
-      const res = await fetch(`/api/projects/${projectId}/my-permissions`)
+      const res = await apiFetch(`/api/projects/${projectId}/my-permissions`)
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to fetch permissions')
@@ -94,7 +95,7 @@ export function useMyRealPermissions(projectId: string) {
         }
       }
 
-      const res = await fetch(`/api/projects/${projectId}/my-permissions`)
+      const res = await apiFetch(`/api/projects/${projectId}/my-permissions`)
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to fetch permissions')
