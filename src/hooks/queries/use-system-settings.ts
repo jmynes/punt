@@ -71,7 +71,9 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
   defaultCommitPatterns: null,
   defaultEnvironmentBranches: null,
   defaultWebhookEnabled: false,
-  // Default sprint times
+  // Default sprint settings
+  defaultSprintDuration: 14,
+  defaultAutoCarryOver: true,
   defaultSprintStartTime: '09:00',
   defaultSprintEndTime: '17:00',
 }
@@ -147,7 +149,9 @@ export interface UpdateSystemSettingsParams {
   defaultEnvironmentBranches?: unknown[] | null
   defaultWebhookEnabled?: boolean
 
-  // Default sprint times
+  // Default sprint settings
+  defaultSprintDuration?: number
+  defaultAutoCarryOver?: boolean
   defaultSprintStartTime?: string
   defaultSprintEndTime?: string
 }

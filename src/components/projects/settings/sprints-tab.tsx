@@ -19,8 +19,6 @@ import {
   type StoryPointScale,
 } from '@/lib/story-points'
 
-type StoryPointScaleOption = 'inherit' | StoryPointScale
-
 interface SprintsTabProps {
   projectId: string
   projectKey: string
@@ -31,17 +29,7 @@ interface FormData {
   autoCarryOverIncomplete: boolean
   defaultStartTime: string
   defaultEndTime: string
-  storyPointScaleOption: StoryPointScaleOption
-}
-
-function toScaleOption(value: string | null | undefined): StoryPointScaleOption {
-  if (value === 'sequential' || value === 'fibonacci') return value
-  return 'inherit'
-}
-
-function fromScaleOption(option: StoryPointScaleOption): string | null {
-  if (option === 'inherit') return null
-  return option
+  storyPointScale: StoryPointScale
 }
 
 export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabProps) {
@@ -56,7 +44,7 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
     autoCarryOverIncomplete: true,
     defaultStartTime: '09:00',
     defaultEndTime: '17:00',
-    storyPointScaleOption: 'inherit',
+    storyPointScale: 'sequential',
   })
 
   // Sync form data with fetched settings
@@ -67,7 +55,7 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
         autoCarryOverIncomplete: settings.autoCarryOverIncomplete,
         defaultStartTime: settings.defaultStartTime,
         defaultEndTime: settings.defaultEndTime,
-        storyPointScaleOption: toScaleOption(settings.storyPointScale),
+        storyPointScale: (settings.storyPointScale as StoryPointScale) ?? 'sequential',
       })
     }
   }, [settings])
@@ -78,7 +66,7 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
       formData.autoCarryOverIncomplete !== settings.autoCarryOverIncomplete ||
       formData.defaultStartTime !== settings.defaultStartTime ||
       formData.defaultEndTime !== settings.defaultEndTime ||
-      fromScaleOption(formData.storyPointScaleOption) !== (settings.storyPointScale ?? null))
+      formData.storyPointScale !== (settings.storyPointScale ?? 'sequential'))
 
   const handleSave = useCallback(async () => {
     if (!canEditSettings || !hasChanges) return
@@ -88,7 +76,7 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
       autoCarryOverIncomplete: formData.autoCarryOverIncomplete,
       defaultStartTime: formData.defaultStartTime,
       defaultEndTime: formData.defaultEndTime,
-      storyPointScale: fromScaleOption(formData.storyPointScaleOption),
+      storyPointScale: formData.storyPointScale,
     })
   }, [canEditSettings, hasChanges, formData, updateSettings])
 
@@ -99,18 +87,18 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
         autoCarryOverIncomplete: settings.autoCarryOverIncomplete,
         defaultStartTime: settings.defaultStartTime,
         defaultEndTime: settings.defaultEndTime,
-        storyPointScaleOption: toScaleOption(settings.storyPointScale),
+        storyPointScale: (settings.storyPointScale as StoryPointScale) ?? 'sequential',
       })
     }
   }, [settings])
 
   const handleResetToSystemDefaults = useCallback(() => {
     setFormData({
-      defaultSprintDuration: 14,
-      autoCarryOverIncomplete: true,
+      defaultSprintDuration: systemSettings?.defaultSprintDuration ?? 14,
+      autoCarryOverIncomplete: systemSettings?.defaultAutoCarryOver ?? true,
       defaultStartTime: systemSettings?.defaultSprintStartTime ?? '09:00',
       defaultEndTime: systemSettings?.defaultSprintEndTime ?? '17:00',
-      storyPointScaleOption: 'inherit',
+      storyPointScale: systemSettings?.storyPointScale ?? 'sequential',
     })
   }, [systemSettings])
 
@@ -235,52 +223,13 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
           {/* Story Point Scale */}
           <div className="space-y-2 pt-2">
             <Label className="text-zinc-300">Story Point Scale</Label>
-            <p className="text-xs text-zinc-500">
-              Choose the point scale used for this project. Use &quot;Use global default&quot; to
-              follow the system-wide setting
-              {systemSettings
-                ? ` (currently ${STORY_POINT_SCALE_LABELS[systemSettings.storyPointScale]})`
-                : ''}
-              .
-            </p>
+            <p className="text-xs text-zinc-500">Choose the point scale used for this project.</p>
             <div className="flex flex-col gap-2 pt-1">
-              {/* Inherit option */}
-              <label
-                className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
-                  formData.storyPointScaleOption === 'inherit'
-                    ? 'border-amber-600/50 bg-amber-950/20'
-                    : 'border-zinc-800 hover:border-zinc-700'
-                } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <input
-                  type="radio"
-                  name="storyPointScale"
-                  value="inherit"
-                  checked={formData.storyPointScaleOption === 'inherit'}
-                  onChange={() =>
-                    setFormData((prev) => ({ ...prev, storyPointScaleOption: 'inherit' }))
-                  }
-                  disabled={isDisabled}
-                  className="mt-1 accent-amber-600"
-                />
-                <div>
-                  <p className="text-sm font-medium text-zinc-200">Use global default</p>
-                  <p className="text-xs text-zinc-500">
-                    Follow the system-wide setting configured by admins
-                    {systemSettings ? (
-                      <span className="font-mono ml-1">
-                        ({STORY_POINT_SCALES[systemSettings.storyPointScale].join(', ')})
-                      </span>
-                    ) : null}
-                  </p>
-                </div>
-              </label>
-              {/* Scale options */}
               {(Object.keys(STORY_POINT_SCALES) as StoryPointScale[]).map((scale) => (
                 <label
                   key={scale}
                   className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
-                    formData.storyPointScaleOption === scale
+                    formData.storyPointScale === scale
                       ? 'border-amber-600/50 bg-amber-950/20'
                       : 'border-zinc-800 hover:border-zinc-700'
                   } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -289,10 +238,8 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
                     type="radio"
                     name="storyPointScale"
                     value={scale}
-                    checked={formData.storyPointScaleOption === scale}
-                    onChange={() =>
-                      setFormData((prev) => ({ ...prev, storyPointScaleOption: scale }))
-                    }
+                    checked={formData.storyPointScale === scale}
+                    onChange={() => setFormData((prev) => ({ ...prev, storyPointScale: scale }))}
                     disabled={isDisabled}
                     className="mt-1 accent-amber-600"
                   />

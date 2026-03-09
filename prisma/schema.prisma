@@ -666,9 +666,11 @@ model SystemSettings {
   defaultEnvironmentBranches Json? // Default environment branch mappings (JSON array of EnvironmentBranch objects)
   defaultWebhookEnabled      Boolean @default(false) // Whether to auto-generate webhook secrets for new projects
 
-  // Default sprint times (system-wide defaults for new projects)
-  defaultSprintStartTime  String  @default("09:00") // HH:mm format
-  defaultSprintEndTime    String  @default("17:00") // HH:mm format
+  // Default sprint settings (system-wide defaults for new projects)
+  defaultSprintDuration       Int     @default(14)    // days (1-90)
+  defaultAutoCarryOver        Boolean @default(true)  // Auto-carryover incomplete tickets
+  defaultSprintStartTime      String  @default("09:00") // HH:mm format
+  defaultSprintEndTime        String  @default("17:00") // HH:mm format
 }
 
 // Password reset tokens (for forgot password flow)

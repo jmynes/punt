@@ -523,6 +523,8 @@ export async function importDatabase(
           forkRepoUrl,
           defaultBranchTemplate,
           defaultAgentGuidance,
+          defaultSprintDuration,
+          defaultAutoCarryOver,
           defaultSprintStartTime,
           defaultSprintEndTime,
           ...settingsRest
@@ -547,6 +549,10 @@ export async function importDatabase(
           settingsData.defaultBranchTemplate = defaultBranchTemplate
         if (existingColumns.has('defaultAgentGuidance'))
           settingsData.defaultAgentGuidance = defaultAgentGuidance
+        if (existingColumns.has('defaultSprintDuration'))
+          settingsData.defaultSprintDuration = defaultSprintDuration
+        if (existingColumns.has('defaultAutoCarryOver'))
+          settingsData.defaultAutoCarryOver = defaultAutoCarryOver
         if (existingColumns.has('defaultSprintStartTime'))
           settingsData.defaultSprintStartTime = defaultSprintStartTime
         if (existingColumns.has('defaultSprintEndTime'))
