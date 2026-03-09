@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useReopenSprint } from '@/hooks/queries/use-sprints'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
@@ -167,15 +168,23 @@ export function SprintCard({ sprint, projectId, ticketCount = 0, onDelete }: Spr
 
         {/* Time remaining for active sprint */}
         {isActive && sprint.endDate && (
-          <div
-            className={cn(
-              'flex items-center gap-2 text-sm',
-              expired ? 'text-orange-400' : 'text-zinc-400',
-            )}
-          >
-            <Clock className="h-4 w-4" />
-            <span>{formatDaysRemaining(sprint.endDate)}</span>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  'flex items-center gap-2 text-sm cursor-default',
+                  expired ? 'text-orange-400' : 'text-zinc-400',
+                )}
+              >
+                <Clock className="h-4 w-4" />
+                <span>{formatDaysRemaining(sprint.endDate)}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              Ends {format(new Date(sprint.endDate), 'PPP')} at{' '}
+              {format(new Date(sprint.endDate), 'p')}
+            </TooltipContent>
+          </Tooltip>
         )}
 
         {/* Metrics for active/completed sprints */}

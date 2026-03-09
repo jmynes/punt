@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 
 type SetupStep = 'idle' | 'qr' | 'verify' | 'codes' | 'complete'
@@ -48,7 +49,7 @@ export function TwoFactorSection({ isDemo }: TwoFactorSectionProps) {
   // Fetch 2FA status on mount
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/me/2fa/status')
+      const res = await apiFetch('/api/me/2fa/status')
       if (res.ok) {
         const data = await res.json()
         setEnabled(data.enabled)
@@ -70,7 +71,7 @@ export function TwoFactorSection({ isDemo }: TwoFactorSectionProps) {
   const handleStartSetup = async () => {
     setSetupLoading(true)
     try {
-      const res = await fetch('/api/me/2fa/setup', { method: 'POST' })
+      const res = await apiFetch('/api/me/2fa/setup', { method: 'POST' })
       const data = await res.json()
 
       if (!res.ok) {
@@ -93,7 +94,7 @@ export function TwoFactorSection({ isDemo }: TwoFactorSectionProps) {
     setSetupLoading(true)
 
     try {
-      const res = await fetch('/api/me/2fa/verify', {
+      const res = await apiFetch('/api/me/2fa/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: verifyCode }),
@@ -161,7 +162,7 @@ ${codes.join('\n')}
 
   // Disable 2FA
   const handleDisable = async (password: string, totpCode?: string, _isRecoveryCode?: boolean) => {
-    const res = await fetch('/api/me/2fa/disable', {
+    const res = await apiFetch('/api/me/2fa/disable', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password, totpCode: totpCode || '' }),
@@ -184,7 +185,7 @@ ${codes.join('\n')}
     totpCode?: string,
     _isRecoveryCode?: boolean,
   ) => {
-    const res = await fetch('/api/me/2fa/recovery-codes/regenerate', {
+    const res = await apiFetch('/api/me/2fa/recovery-codes/regenerate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password, totpCode: totpCode || '' }),

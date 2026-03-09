@@ -45,6 +45,7 @@ import {
 } from '@/hooks/queries/use-repository'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useHasPermission } from '@/hooks/use-permissions'
+import { basePath } from '@/lib/base-path'
 import { PERMISSIONS } from '@/lib/permissions'
 
 interface HooksTabProps {
@@ -366,7 +367,7 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                 <Label className="text-zinc-300">Webhook URL</Label>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 px-3 py-2 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-300 font-mono text-sm select-all">
-                    {typeof window !== 'undefined' ? window.location.origin : ''}
+                    {typeof window !== 'undefined' ? `${window.location.origin}${basePath}` : ''}
                     /api/webhooks/github
                   </code>
                   <Button
@@ -374,7 +375,7 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const url = `${window.location.origin}/api/webhooks/github`
+                      const url = `${window.location.origin}${basePath}/api/webhooks/github`
                       navigator.clipboard.writeText(url)
                       setCopiedUrl(true)
                       setTimeout(() => setCopiedUrl(false), 2000)

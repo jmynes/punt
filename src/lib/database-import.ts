@@ -523,6 +523,8 @@ export async function importDatabase(
           forkRepoUrl,
           defaultBranchTemplate,
           defaultAgentGuidance,
+          defaultSprintDuration,
+          defaultAutoCarryOver,
           defaultSprintStartTime,
           defaultSprintEndTime,
           ...settingsRest
@@ -547,6 +549,10 @@ export async function importDatabase(
           settingsData.defaultBranchTemplate = defaultBranchTemplate
         if (existingColumns.has('defaultAgentGuidance'))
           settingsData.defaultAgentGuidance = defaultAgentGuidance
+        if (existingColumns.has('defaultSprintDuration'))
+          settingsData.defaultSprintDuration = defaultSprintDuration
+        if (existingColumns.has('defaultAutoCarryOver'))
+          settingsData.defaultAutoCarryOver = defaultAutoCarryOver
         if (existingColumns.has('defaultSprintStartTime'))
           settingsData.defaultSprintStartTime = defaultSprintStartTime
         if (existingColumns.has('defaultSprintEndTime'))
@@ -587,6 +593,9 @@ export async function importDatabase(
             updatedAt: new Date(user.updatedAt),
             lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt) : null,
             passwordChangedAt: user.passwordChangedAt ? new Date(user.passwordChangedAt) : null,
+            totpLastUsedAt: (user as Record<string, unknown>).totpLastUsedAt
+              ? new Date((user as Record<string, unknown>).totpLastUsedAt as string)
+              : null,
             emailVerified: user.emailVerified ? new Date(user.emailVerified) : null,
           }
           // Only include fields that exist in the current database schema

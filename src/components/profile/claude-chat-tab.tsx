@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 
 interface McpServerInfo {
@@ -71,7 +72,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     if (isDemo || anthropicKeyFetched) return
     const fetchAnthropicKeyStatus = async () => {
       try {
-        const res = await fetch('/api/me/anthropic-key')
+        const res = await apiFetch('/api/me/anthropic-key')
         if (res.ok) {
           const data = await res.json()
           setAnthropicHasKey(data.hasKey)
@@ -90,7 +91,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     if (isDemo || providerFetched) return
     const fetchProvider = async () => {
       try {
-        const res = await fetch('/api/me/claude-session')
+        const res = await apiFetch('/api/me/claude-session')
         if (res.ok) {
           const data = await res.json()
           setChatProvider(data.provider || 'anthropic')
@@ -112,7 +113,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     totpCode?: string,
     isRecoveryCode?: boolean,
   ) => {
-    const res = await fetch('/api/me/anthropic-key', {
+    const res = await apiFetch('/api/me/anthropic-key', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiKey: anthropicKeyInput, password, totpCode, isRecoveryCode }),
@@ -131,7 +132,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     totpCode?: string,
     isRecoveryCode?: boolean,
   ) => {
-    const res = await fetch('/api/me/anthropic-key', {
+    const res = await apiFetch('/api/me/anthropic-key', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password, totpCode, isRecoveryCode }),
@@ -151,7 +152,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
         // Already has session, update provider on server
         setProviderLoading(true)
         try {
-          const res = await fetch('/api/me/claude-session', {
+          const res = await apiFetch('/api/me/claude-session', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ provider: value }),
@@ -175,7 +176,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     // Switching to anthropic - always update server
     setProviderLoading(true)
     try {
-      const res = await fetch('/api/me/claude-session', {
+      const res = await apiFetch('/api/me/claude-session', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider: value }),
@@ -196,7 +197,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     totpCode?: string,
     isRecoveryCode?: boolean,
   ) => {
-    const res = await fetch('/api/me/claude-session', {
+    const res = await apiFetch('/api/me/claude-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ credentials: sessionInput, password, totpCode, isRecoveryCode }),
@@ -217,7 +218,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
     totpCode?: string,
     isRecoveryCode?: boolean,
   ) => {
-    const res = await fetch('/api/me/claude-session', {
+    const res = await apiFetch('/api/me/claude-session', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password, totpCode, isRecoveryCode }),
@@ -240,7 +241,7 @@ export function ClaudeChatTab({ isDemo }: ClaudeChatTabProps) {
           ? [...enabledMcpServers, serverName]
           : enabledMcpServers.filter((s) => s !== serverName)
 
-        const res = await fetch('/api/me/claude-session', {
+        const res = await apiFetch('/api/me/claude-session', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ enabledMcpServers: newEnabled }),

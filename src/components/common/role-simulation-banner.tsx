@@ -19,16 +19,20 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Label } from '@/components/ui/label'
+import { useProjectMembers } from '@/hooks/queries/use-members'
 import { useProjectRoles } from '@/hooks/queries/use-roles'
+import { useCurrentUser } from '@/hooks/use-current-user'
 import { useMyRealPermissions } from '@/hooks/use-permissions'
 import { showToast } from '@/lib/toast'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useRoleSimulationStore } from '@/stores/role-simulation-store'
 import { useSettingsStore } from '@/stores/settings-store'
+import type { Permission } from '@/types'
 
 /**
  * Banner displayed when the user is simulating a different role.
@@ -50,8 +54,10 @@ export function RoleSimulationBanner() {
   const project = projectKey ? getProjectByKey(projectKey) : null
   const projectId = project?.id ?? null
 
+  const currentUser = useCurrentUser()
   const simulatedRoles = useRoleSimulationStore((s) => s.simulatedRoles)
   const startSimulation = useRoleSimulationStore((s) => s.startSimulation)
+  const startMemberSimulation = useRoleSimulationStore((s) => s.startMemberSimulation)
   const stopSimulation = useRoleSimulationStore((s) => s.stopSimulation)
   const stopAllSimulations = useRoleSimulationStore((s) => s.stopAllSimulations)
   const pendingNavigation = useRoleSimulationStore((s) => s.pendingNavigation)
@@ -65,8 +71,9 @@ export function RoleSimulationBanner() {
   // Local state for "don't ask again" checkbox
   const [dontAskAgain, setDontAskAgain] = useState(false)
 
-  // Fetch roles and real permissions for the role switcher
+  // Fetch roles, members, and real permissions for the switcher
   const { data: roles } = useProjectRoles(projectId ?? '')
+  const { data: members } = useProjectMembers(projectId ?? '')
   const { data: realPermissions } = useMyRealPermissions(projectId ?? '')
 
   // Determine which roles the user can simulate
@@ -76,6 +83,20 @@ export function RoleSimulationBanner() {
     const userIsAdmin = realPermissions.isSystemAdmin
     return roles.filter((role) => userIsAdmin || role.position >= userPosition)
   }, [roles, realPermissions])
+
+  // Build set of simulatable role IDs for filtering members
+  const simulatableRoleIds = useMemo(
+    () => new Set(simulatableRoles.map((r) => r.id)),
+    [simulatableRoles],
+  )
+
+  // Members that can be simulated (exclude self, filter by simulatable roles)
+  const simulatableMembers = useMemo(() => {
+    if (!members || !currentUser) return []
+    return members
+      .filter((m) => m.userId !== currentUser.id && simulatableRoleIds.has(m.roleId))
+      .sort((a, b) => a.user.name.localeCompare(b.user.name))
+  }, [members, currentUser, simulatableRoleIds])
 
   const handleExit = useCallback(() => {
     if (projectId) {
@@ -102,6 +123,33 @@ export function RoleSimulationBanner() {
     [projectId, startSimulation],
   )
 
+  const handleSwitchMember = useCallback(
+    (member: (typeof simulatableMembers)[0]) => {
+      if (!projectId || !roles) return
+      const roleData = roles.find((r) => r.id === member.roleId)
+      if (!roleData) return
+      const memberOverrides = Array.isArray(member.overrides)
+        ? (member.overrides as Permission[])
+        : []
+      startMemberSimulation(
+        projectId,
+        {
+          id: roleData.id,
+          name: roleData.name,
+          color: roleData.color,
+          description: roleData.description ?? null,
+          isDefault: roleData.isDefault,
+          position: roleData.position,
+        },
+        roleData.permissions,
+        member.id,
+        member.user.name,
+        memberOverrides,
+      )
+    },
+    [projectId, roles, startMemberSimulation],
+  )
+
   // Handlers for the navigation confirmation dialog
   const handleConfirmLeave = useCallback(() => {
     if (!pendingNavigation) return
@@ -109,6 +157,8 @@ export function RoleSimulationBanner() {
     if (dontAskAgain) {
       setWarnOnSimulationLeave(false)
     }
+    // Clear pending navigation explicitly (also cleared by stop* as side effect)
+    setPendingNavigation(null)
     if (projectId) {
       stopSimulation(projectId)
     } else {
@@ -122,6 +172,7 @@ export function RoleSimulationBanner() {
     projectId,
     stopSimulation,
     stopAllSimulations,
+    setPendingNavigation,
     setWarnOnSimulationLeave,
     router,
   ])
@@ -183,16 +234,98 @@ export function RoleSimulationBanner() {
           <div className="flex items-center gap-2 text-sm text-violet-200">
             <Eye className="h-4 w-4 text-violet-400 flex-shrink-0" />
             <span>
-              Viewing as{' '}
-              <span className="font-semibold" style={{ color: simulation.role.color }}>
-                {simulation.role.name}
-              </span>{' '}
-              &mdash; UI reflects this role&apos;s permissions.
+              {simulation.memberName ? (
+                <>
+                  Viewing as{' '}
+                  <span className="font-semibold text-violet-100">{simulation.memberName}</span>
+                  {' ('}
+                  <span className="font-semibold" style={{ color: simulation.role.color }}>
+                    {simulation.role.name}
+                  </span>
+                  {')'}
+                  {simulation.memberOverrides && simulation.memberOverrides.length > 0 && (
+                    <span className="text-amber-400">
+                      {' '}
+                      +{simulation.memberOverrides.length} override
+                      {simulation.memberOverrides.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  Viewing as{' '}
+                  <span className="font-semibold" style={{ color: simulation.role.color }}>
+                    {simulation.role.name}
+                  </span>
+                </>
+              )}{' '}
+              &mdash; UI reflects this {simulation.memberName ? "member's" : "role's"} permissions.
             </span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-violet-400 hidden sm:inline">Press Esc to exit</span>
-            {simulatableRoles.length > 1 && (
+            {simulation.memberName && simulatableMembers.length > 0 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-violet-200 hover:text-violet-100 hover:bg-violet-900/50 h-7 text-xs"
+                  >
+                    Switch
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[180px]">
+                  <DropdownMenuLabel className="text-xs text-zinc-500 font-normal">
+                    Members
+                  </DropdownMenuLabel>
+                  {simulatableMembers.map((member) => (
+                    <DropdownMenuItem
+                      key={member.id}
+                      onClick={() => handleSwitchMember(member)}
+                      disabled={member.id === simulation.memberId}
+                      className="flex items-center gap-2"
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: member.role.color }}
+                      />
+                      <span className="truncate">{member.user.name}</span>
+                      {member.id === simulation.memberId && (
+                        <span className="text-xs text-muted-foreground ml-auto">(current)</span>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                  {simulatableRoles.length > 1 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs text-zinc-500 font-normal">
+                        Roles only
+                      </DropdownMenuLabel>
+                      {simulatableRoles.map((role) => (
+                        <DropdownMenuItem
+                          key={role.id}
+                          onClick={() => handleSwitchRole(role)}
+                          className="flex items-center gap-2"
+                        >
+                          <span
+                            className="h-2 w-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: role.color }}
+                          />
+                          <span>{role.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleExit}>
+                    <X className="h-3 w-3 mr-2" />
+                    Exit simulation
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : simulatableRoles.length > 1 ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -229,7 +362,7 @@ export function RoleSimulationBanner() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
+            ) : null}
             <Button
               variant="ghost"
               size="sm"
@@ -255,9 +388,20 @@ export function RoleSimulationBanner() {
             <AlertDialogTitle className="text-zinc-100">Leave role simulation?</AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
               You&apos;re viewing as{' '}
-              <span className="font-semibold" style={{ color: simulation.role.color }}>
-                {simulation.role.name}
-              </span>
+              {simulation.memberName ? (
+                <>
+                  <span className="font-semibold text-zinc-200">{simulation.memberName}</span>
+                  {' ('}
+                  <span className="font-semibold" style={{ color: simulation.role.color }}>
+                    {simulation.role.name}
+                  </span>
+                  {')'}
+                </>
+              ) : (
+                <span className="font-semibold" style={{ color: simulation.role.color }}>
+                  {simulation.role.name}
+                </span>
+              )}
               . Navigating away from this project will end the simulation.
             </AlertDialogDescription>
           </AlertDialogHeader>

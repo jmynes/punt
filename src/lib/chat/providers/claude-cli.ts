@@ -41,8 +41,8 @@ const DISALLOWED_TOOLS = [
 // Maximum agentic turns before stopping
 const MAX_TURNS = 20
 
-// Timeout in milliseconds (3 minutes to allow for MCP server startup)
-const TIMEOUT_MS = 180000
+// Timeout in milliseconds (2 hours) — TODO: Replace with activity-based timeout (PUNT-332)
+const TIMEOUT_MS = 7200000
 
 interface StreamJsonEvent {
   type:

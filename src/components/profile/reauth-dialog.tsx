@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiFetch } from '@/lib/base-path'
 
 interface ReauthDialogProps {
   open: boolean
@@ -46,7 +47,7 @@ export function ReauthDialog({
   useEffect(() => {
     if (open) {
       setRequires2fa(null) // Reset to loading state
-      fetch('/api/me/2fa/status')
+      apiFetch('/api/me/2fa/status')
         .then((res) => res.json())
         .then((data) => {
           setRequires2fa(data.enabled ?? false)

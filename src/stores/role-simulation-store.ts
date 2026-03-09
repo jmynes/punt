@@ -4,6 +4,10 @@ import type { Permission, RoleSummary } from '@/types'
 interface SimulatedRole {
   role: RoleSummary
   permissions: Permission[]
+  // When simulating a specific member, these fields are populated
+  memberId?: string
+  memberName?: string
+  memberOverrides?: Permission[]
 }
 
 interface RoleSimulationState {
@@ -12,6 +16,16 @@ interface RoleSimulationState {
 
   // Start simulating a role for a project
   startSimulation: (projectId: string, role: RoleSummary, permissions: Permission[]) => void
+
+  // Start simulating a specific member for a project
+  startMemberSimulation: (
+    projectId: string,
+    role: RoleSummary,
+    rolePermissions: Permission[],
+    memberId: string,
+    memberName: string,
+    memberOverrides: Permission[],
+  ) => void
 
   // Stop simulating for a project
   stopSimulation: (projectId: string) => void
@@ -38,6 +52,27 @@ export const useRoleSimulationStore = create<RoleSimulationState>((set, get) => 
       simulatedRoles: {
         ...state.simulatedRoles,
         [projectId]: { role, permissions },
+      },
+    })),
+
+  startMemberSimulation: (
+    projectId,
+    role,
+    rolePermissions,
+    memberId,
+    memberName,
+    memberOverrides,
+  ) =>
+    set((state) => ({
+      simulatedRoles: {
+        ...state.simulatedRoles,
+        [projectId]: {
+          role,
+          permissions: rolePermissions,
+          memberId,
+          memberName,
+          memberOverrides,
+        },
       },
     })),
 

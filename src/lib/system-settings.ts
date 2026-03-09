@@ -70,7 +70,9 @@ export interface SystemSettings {
   defaultCommitPatterns: unknown[] | null
   defaultEnvironmentBranches: unknown[] | null
   defaultWebhookEnabled: boolean
-  // Default sprint times (system-wide defaults for new projects)
+  // Default sprint settings (system-wide defaults for new projects)
+  defaultSprintDuration: number // days (1-90)
+  defaultAutoCarryOver: boolean // Auto-carryover incomplete tickets
   defaultSprintStartTime: string // HH:mm format (e.g., "09:00")
   defaultSprintEndTime: string // HH:mm format (e.g., "17:00")
 }
@@ -174,7 +176,9 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       ? settings.defaultEnvironmentBranches
       : null,
     defaultWebhookEnabled: settings.defaultWebhookEnabled,
-    // Default sprint times
+    // Default sprint settings
+    defaultSprintDuration: settings.defaultSprintDuration,
+    defaultAutoCarryOver: settings.defaultAutoCarryOver,
     defaultSprintStartTime: settings.defaultSprintStartTime,
     defaultSprintEndTime: settings.defaultSprintEndTime,
   }

@@ -41,7 +41,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       where: { projectId },
     })
 
-    // Return default settings if none exist
+    // Return hardcoded defaults for legacy projects without settings.
+    // New projects get system defaults baked in at creation time.
     if (!settings) {
       settings = {
         id: '',

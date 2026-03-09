@@ -3,6 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import {
   CheckSquare,
+  Eye,
   Loader2,
   Minus,
   Search,
@@ -46,8 +47,9 @@ import {
 } from '@/hooks/queries/use-members'
 import { useProjectRoles } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
-import { useHasPermission, useIsSystemAdmin } from '@/hooks/use-permissions'
+import { useHasPermission, useIsSystemAdmin, useMyRealPermissions } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { isEditableTarget } from '@/lib/keyboard-utils'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showToast } from '@/lib/toast'
@@ -57,7 +59,8 @@ import {
   type MemberSnapshot,
   useAdminUndoStore,
 } from '@/stores/admin-undo-store'
-import type { ProjectMemberWithRole } from '@/types'
+import { useRoleSimulationStore } from '@/stores/role-simulation-store'
+import type { Permission, ProjectMemberWithRole } from '@/types'
 
 interface MembersTabProps {
   projectId: string
@@ -76,6 +79,39 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
     useAdminUndoStore()
 
   const canManageMembers = useHasPermission(projectId, PERMISSIONS.MEMBERS_MANAGE)
+
+  // Role simulation
+  const { startMemberSimulation } = useRoleSimulationStore()
+  const { data: realPermissions } = useMyRealPermissions(projectId)
+
+  // Any project member can simulate roles at or below their own level;
+  // the banner's role-switcher already filters which roles are available.
+  const canSimulateMembers = !!realPermissions
+
+  const handleViewAsMember = useCallback(
+    (member: ProjectMemberWithRole, rolePermissions: Permission[]) => {
+      const memberOverrides = Array.isArray(member.overrides)
+        ? (member.overrides as Permission[])
+        : []
+      startMemberSimulation(
+        projectId,
+        {
+          id: member.role.id,
+          name: member.role.name,
+          color: member.role.color,
+          description: member.role.description ?? null,
+          isDefault: member.role.isDefault,
+          position: member.role.position,
+        },
+        rolePermissions,
+        member.id,
+        member.user.name,
+        memberOverrides,
+      )
+      showToast.success(`Now viewing as ${member.user.name}. Press Esc to exit.`)
+    },
+    [projectId, startMemberSimulation],
+  )
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -197,7 +233,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
     }
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/members/${removingMember.id}`, {
+      const res = await apiFetch(`/api/projects/${projectId}/members/${removingMember.id}`, {
         method: 'DELETE',
         headers: { 'X-Tab-Id': getTabId() },
       })
@@ -244,7 +280,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
     try {
       await Promise.all(
         [...selectedIds].map(async (memberId) => {
-          const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+          const res = await apiFetch(`/api/projects/${projectId}/members/${memberId}`, {
             method: 'DELETE',
             headers: { 'X-Tab-Id': getTabId() },
           })
@@ -299,7 +335,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
     try {
       await Promise.all(
         [...selectedIds].map(async (memberId) => {
-          const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+          const res = await apiFetch(`/api/projects/${projectId}/members/${memberId}`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -348,7 +384,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
       try {
         await Promise.all(
           action.members.map(async (member) => {
-            const res = await fetch(`/api/projects/${projectId}/members`, {
+            const res = await apiFetch(`/api/projects/${projectId}/members`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -375,7 +411,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
           action.members.map(async (member) => {
             const current = currentMembers.find((m) => m.userId === member.userId)
             if (!current) return
-            const res = await fetch(`/api/projects/${projectId}/members/${current.id}`, {
+            const res = await apiFetch(`/api/projects/${projectId}/members/${current.id}`, {
               method: 'DELETE',
               headers: { 'X-Tab-Id': getTabId() },
             })
@@ -394,14 +430,17 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
       try {
         await Promise.all(
           action.members.map(async (member) => {
-            const res = await fetch(`/api/projects/${projectId}/members/${member.membershipId}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Tab-Id': getTabId(),
+            const res = await apiFetch(
+              `/api/projects/${projectId}/members/${member.membershipId}`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Tab-Id': getTabId(),
+                },
+                body: JSON.stringify({ roleId: member.previousRoleId }),
               },
-              body: JSON.stringify({ roleId: member.previousRoleId }),
-            })
+            )
             if (!res.ok) throw new Error('Failed to restore role')
           }),
         )
@@ -429,7 +468,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
           action.members.map(async (member) => {
             const current = currentMembers.find((m) => m.userId === member.userId)
             if (!current) return
-            const res = await fetch(`/api/projects/${projectId}/members/${current.id}`, {
+            const res = await apiFetch(`/api/projects/${projectId}/members/${current.id}`, {
               method: 'DELETE',
               headers: { 'X-Tab-Id': getTabId() },
             })
@@ -448,7 +487,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
       try {
         await Promise.all(
           action.members.map(async (member) => {
-            const res = await fetch(`/api/projects/${projectId}/members`, {
+            const res = await apiFetch(`/api/projects/${projectId}/members`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -471,14 +510,17 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
       try {
         await Promise.all(
           action.members.map(async (member) => {
-            const res = await fetch(`/api/projects/${projectId}/members/${member.membershipId}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Tab-Id': getTabId(),
+            const res = await apiFetch(
+              `/api/projects/${projectId}/members/${member.membershipId}`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Tab-Id': getTabId(),
+                },
+                body: JSON.stringify({ roleId: member.newRoleId }),
               },
-              body: JSON.stringify({ roleId: member.newRoleId }),
-            })
+            )
             if (!res.ok) throw new Error('Failed to update role')
           }),
         )
@@ -608,6 +650,14 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
                   ? `/users/${currentMember.user.username}?from=project-settings&projectKey=${projectKey}&tab=members`
                   : undefined
               }
+              onViewAs={
+                canSimulateMembers
+                  ? () => {
+                      const roleData = roles?.find((r) => r.id === currentMember.roleId)
+                      handleViewAsMember(currentMember, roleData?.permissions ?? [])
+                    }
+                  : undefined
+              }
             />
             {otherMembers.length > 0 && (
               <div className="flex items-center gap-3 py-3">
@@ -637,6 +687,14 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
             profileUrl={
               isSystemAdmin
                 ? `/users/${member.user.username}?from=project-settings&projectKey=${projectKey}&tab=members`
+                : undefined
+            }
+            onViewAs={
+              canSimulateMembers
+                ? () => {
+                    const roleData = roles?.find((r) => r.id === member.roleId)
+                    handleViewAsMember(member, roleData?.permissions ?? [])
+                  }
                 : undefined
             }
           />
@@ -778,6 +836,7 @@ interface MemberCardProps {
   onSelect: (shiftKey: boolean) => void
   onRoleChange: (roleId: string) => void
   onRemove: () => void
+  onViewAs?: () => void
   profileUrl?: string
 }
 
@@ -791,6 +850,7 @@ function MemberCard({
   onSelect,
   onRoleChange,
   onRemove,
+  onViewAs,
   profileUrl,
 }: MemberCardProps) {
   const initials = member.user.name
@@ -928,6 +988,20 @@ function MemberCard({
             >
               {member.role.name}
             </Badge>
+          )}
+
+          {/* View as button */}
+          {onViewAs && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-zinc-500 hover:text-violet-400 hover:bg-violet-900/20 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-500"
+              onClick={onViewAs}
+              disabled={isCurrentUser}
+              title={isCurrentUser ? 'Cannot simulate yourself' : `View as ${member.user.name}`}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
           )}
 
           {/* Remove button */}

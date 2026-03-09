@@ -269,6 +269,7 @@ Coverage target: 80% minimum, 90% for stores/API/utils. Database tests run in se
 | Module | Purpose |
 |--------|---------|
 | `src/lib/api-utils.ts` | API response helpers (`handleApiError`, `validationError`, `notFoundError`) |
+| `src/lib/base-path.ts` | Subpath deployment support: `withBasePath()`, `apiFetch()`, `assetUrl()` |
 | `src/lib/prisma-selects.ts` | Shared select clauses, `transformTicket()` |
 | `src/lib/sprint-utils.ts` | `generateNextSprintName()`, `isCompletedColumn()` |
 | `src/lib/system-settings.ts` | Upload config, branding settings |
@@ -350,6 +351,8 @@ Railway config in `railway.toml`. Node.js >= 20.9.0 required (enforced in `packa
 **Prerequisites:** PostgreSQL 16+. Set `DATABASE_URL` in `.env` to your PostgreSQL connection string.
 
 Demo mode env vars: `NEXT_PUBLIC_DEMO_MODE=true`, `AUTH_SECRET`, `AUTH_TRUST_HOST=true`
+
+**Subpath deployment:** Set `NEXT_PUBLIC_BASE_PATH=/punt` to serve at a subpath (e.g., `example.com/punt`). MCP credentials must include the full URL with basePath.
 
 ### Releasing
 

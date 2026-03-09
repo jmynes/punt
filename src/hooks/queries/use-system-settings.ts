@@ -1,6 +1,7 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { apiFetch } from '@/lib/base-path'
 import { isDemoMode } from '@/lib/demo'
 import type { EmailProviderType, EmailSettings } from '@/lib/email/types'
 import type { StoryPointScale } from '@/lib/story-points'
@@ -70,7 +71,9 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
   defaultCommitPatterns: null,
   defaultEnvironmentBranches: null,
   defaultWebhookEnabled: false,
-  // Default sprint times
+  // Default sprint settings
+  defaultSprintDuration: 14,
+  defaultAutoCarryOver: true,
   defaultSprintStartTime: '09:00',
   defaultSprintEndTime: '17:00',
 }
@@ -87,7 +90,7 @@ export function useSystemSettings() {
         return DEMO_SYSTEM_SETTINGS
       }
 
-      const res = await fetch('/api/admin/settings')
+      const res = await apiFetch('/api/admin/settings')
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to fetch system settings')
@@ -146,7 +149,9 @@ export interface UpdateSystemSettingsParams {
   defaultEnvironmentBranches?: unknown[] | null
   defaultWebhookEnabled?: boolean
 
-  // Default sprint times
+  // Default sprint settings
+  defaultSprintDuration?: number
+  defaultAutoCarryOver?: boolean
   defaultSprintStartTime?: string
   defaultSprintEndTime?: string
 }
@@ -165,7 +170,7 @@ export function useUpdateSystemSettings() {
         return { ...DEMO_SYSTEM_SETTINGS, ...data }
       }
 
-      const res = await fetch('/api/admin/settings', {
+      const res = await apiFetch('/api/admin/settings', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -235,7 +240,7 @@ export function useUploadLogo() {
       const formData = new FormData()
       formData.append('logo', file)
 
-      const res = await fetch('/api/admin/settings/logo', {
+      const res = await apiFetch('/api/admin/settings/logo', {
         method: 'POST',
         body: formData,
       })
@@ -286,7 +291,7 @@ export function useDeleteLogo() {
         return { success: false }
       }
 
-      const res = await fetch('/api/admin/settings/logo', {
+      const res = await apiFetch('/api/admin/settings/logo', {
         method: 'DELETE',
       })
       if (!res.ok) {
@@ -334,7 +339,7 @@ export function useSendTestEmail() {
         return { success: false }
       }
 
-      const res = await fetch('/api/admin/settings/email/test', {
+      const res = await apiFetch('/api/admin/settings/email/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
