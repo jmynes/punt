@@ -12,7 +12,6 @@ import { useCurrentUser } from './use-current-user'
 // Query keys for permissions
 export const permissionKeys = {
   myPermissions: (projectId: string) => ['permissions', 'my', projectId] as const,
-  myRealPermissions: (projectId: string) => ['permissions', 'my-real', projectId] as const,
 }
 
 interface MyPermissionsResponse {
@@ -55,13 +54,18 @@ export function useMyPermissions(projectId: string) {
     staleTime: 1000 * 60, // 1 minute
   })
 
-  // If simulating a role, override the query data with simulated permissions
+  // If simulating a role or member, override the query data with simulated permissions
   const data = useMemo(() => {
     if (simulatedRole && query.data) {
+      // When simulating a specific member, combine role permissions + member overrides
+      const effectivePermissions = simulatedRole.memberOverrides
+        ? [...new Set([...simulatedRole.permissions, ...simulatedRole.memberOverrides])]
+        : simulatedRole.permissions
+
       return {
-        permissions: simulatedRole.permissions,
+        permissions: effectivePermissions,
         role: simulatedRole.role,
-        overrides: [],
+        overrides: simulatedRole.memberOverrides ?? [],
         // Simulation disables system admin privileges to show true role behavior
         isSystemAdmin: false,
       }
@@ -77,14 +81,14 @@ export function useMyPermissions(projectId: string) {
 
 /**
  * Fetch the current user's real (non-simulated) permissions.
- * Used internally by the role simulation UI to determine
- * which roles the user is allowed to simulate.
+ * Reuses the same cache as useMyPermissions (the raw API data is identical),
+ * but returns it directly without applying simulation overrides.
  */
 export function useMyRealPermissions(projectId: string) {
   const user = useCurrentUser()
 
   return useQuery<MyPermissionsResponse>({
-    queryKey: permissionKeys.myRealPermissions(projectId),
+    queryKey: permissionKeys.myPermissions(projectId),
     queryFn: async () => {
       if (isDemoMode()) {
         return {
