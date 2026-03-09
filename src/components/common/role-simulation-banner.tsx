@@ -109,6 +109,8 @@ export function RoleSimulationBanner() {
     if (dontAskAgain) {
       setWarnOnSimulationLeave(false)
     }
+    // Clear pending navigation explicitly (also cleared by stop* as side effect)
+    setPendingNavigation(null)
     if (projectId) {
       stopSimulation(projectId)
     } else {
@@ -122,6 +124,7 @@ export function RoleSimulationBanner() {
     projectId,
     stopSimulation,
     stopAllSimulations,
+    setPendingNavigation,
     setWarnOnSimulationLeave,
     router,
   ])

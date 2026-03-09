@@ -83,11 +83,9 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
   const { startMemberSimulation } = useRoleSimulationStore()
   const { data: realPermissions } = useMyRealPermissions(projectId)
 
-  // Determine if user can simulate members (needs admin or owner role)
-  const canSimulateMembers = useMemo(() => {
-    if (!realPermissions) return false
-    return realPermissions.isSystemAdmin || realPermissions.role.position <= 1
-  }, [realPermissions])
+  // Any project member can simulate roles at or below their own level;
+  // the banner's role-switcher already filters which roles are available.
+  const canSimulateMembers = !!realPermissions
 
   const handleViewAsMember = useCallback(
     (member: ProjectMemberWithRole, rolePermissions: Permission[]) => {
