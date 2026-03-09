@@ -120,7 +120,8 @@ export function UserSelect({
                   </CommandItem>
                 )}
                 {/* User options - filter out current user when showAssignToMe is enabled */}
-                {users
+                {[...users]
+                  .sort((a, b) => a.name.localeCompare(b.name))
                   .filter((user) => !showAssignToMe || user.id !== currentUserId)
                   .map((user) => (
                     <CommandItem
