@@ -275,8 +275,42 @@ export function ChatPanel() {
         if (error instanceof Error && error.name === 'AbortError') {
           return
         }
-        const errorMessage = error instanceof Error ? error.message : 'An error occurred'
-        updateMessage(assistantId, { content: `Error: ${errorMessage}`, completedAt: new Date() })
+
+        // Detect timeout and network errors for user-friendly messaging (PUNT-331)
+        const isTimeoutOrNetwork =
+          error instanceof Error &&
+          (error.name === 'TimeoutError' ||
+            error.message.toLowerCase().includes('timeout') ||
+            error.message.toLowerCase().includes('network') ||
+            error.message.includes('Failed to fetch'))
+
+        const errorMessage = isTimeoutOrNetwork
+          ? 'The request timed out or a network error occurred. You can try again by resending your message, or check your connection and provider settings in Profile > Claude Chat.'
+          : error instanceof Error
+            ? error.message
+            : 'An error occurred'
+
+        // Mark any stuck "running" tool calls as failed (PUNT-330)
+        const currentMsgs = useChatStore.getState().messages
+        const assistantMsg = currentMsgs.find((m) => m.id === assistantId)
+        const hasRunningTools = assistantMsg?.toolCalls?.some((t) => t.status === 'running')
+
+        if (hasRunningTools && assistantMsg) {
+          updateMessage(assistantId, {
+            content: `Error: ${errorMessage}`,
+            completedAt: new Date(),
+            toolCalls: assistantMsg.toolCalls?.map((t) =>
+              t.status === 'running'
+                ? { ...t, status: 'completed' as const, success: false, result: 'Interrupted' }
+                : t,
+            ),
+          })
+        } else {
+          updateMessage(assistantId, {
+            content: `Error: ${errorMessage}`,
+            completedAt: new Date(),
+          })
+        }
       } finally {
         setIsLoading(false)
         abortControllerRef.current = null
