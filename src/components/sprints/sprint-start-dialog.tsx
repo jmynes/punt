@@ -39,7 +39,7 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
   const startSprint = useStartSprint(projectId)
   const updateSprint = useUpdateSprint(projectId)
   const { data: sprint } = useSprintDetail(projectId, sprintStartId ?? '')
-  const { data: activeSprint, isLoading: isActiveSprintLoading } = useActiveSprint(projectId)
+  const { data: activeSprint, isFetching: isActiveSprintFetching } = useActiveSprint(projectId)
   const { data: settings } = useSprintSettings(projectId)
 
   const [name, setName] = useState('')
@@ -169,8 +169,9 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
     handleClose,
   ])
 
-  // Only show warning after loading completes to prevent flash from stale cache
-  const hasActiveSprint = !isActiveSprintLoading && !!activeSprint
+  // Only show warning after fetch completes to prevent flash from stale cache
+  // Use isFetching (not isLoading) to catch background refetches too
+  const hasActiveSprint = !isActiveSprintFetching && !!activeSprint
 
   useCtrlSave({
     onSave: handleSubmit,
