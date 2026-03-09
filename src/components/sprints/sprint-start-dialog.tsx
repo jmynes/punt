@@ -39,7 +39,7 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
   const startSprint = useStartSprint(projectId)
   const updateSprint = useUpdateSprint(projectId)
   const { data: sprint } = useSprintDetail(projectId, sprintStartId ?? '')
-  const { data: activeSprint } = useActiveSprint(projectId)
+  const { data: activeSprint, isLoading: isActiveSprintLoading } = useActiveSprint(projectId)
   const { data: settings } = useSprintSettings(projectId)
 
   const [name, setName] = useState('')
@@ -169,7 +169,8 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
     handleClose,
   ])
 
-  const hasActiveSprint = !!activeSprint
+  // Only show warning after loading completes to prevent flash from stale cache
+  const hasActiveSprint = !isActiveSprintLoading && !!activeSprint
 
   useCtrlSave({
     onSave: handleSubmit,
