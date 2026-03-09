@@ -180,9 +180,20 @@ export function SprintSettingsForm() {
           {/* Story Point Scale */}
           <div className="space-y-2">
             <Label className="text-zinc-300">Story Point Scale</Label>
-            <div className="space-y-2">
+            <p className="text-xs text-zinc-500">
+              The default story point scale for new projects. Projects can override this in their
+              sprint settings.
+            </p>
+            <div className="flex flex-col gap-2 pt-1">
               {(Object.keys(STORY_POINT_SCALES) as StoryPointScale[]).map((scale) => (
-                <label key={scale} className="flex items-center gap-2 cursor-pointer">
+                <label
+                  key={scale}
+                  className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
+                    formData.storyPointScale === scale
+                      ? 'border-amber-600/50 bg-amber-950/20'
+                      : 'border-zinc-800 hover:border-zinc-700'
+                  } ${updateSettings.isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
                   <input
                     type="radio"
                     name="storyPointScale"
@@ -190,18 +201,19 @@ export function SprintSettingsForm() {
                     checked={formData.storyPointScale === scale}
                     onChange={() => setFormData((prev) => ({ ...prev, storyPointScale: scale }))}
                     disabled={updateSettings.isPending}
-                    className="text-amber-600"
+                    className="mt-1 accent-amber-600"
                   />
-                  <span className="text-sm text-zinc-300">
-                    {STORY_POINT_SCALE_LABELS[scale]} ({STORY_POINT_SCALES[scale].join(', ')})
-                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-200">
+                      {STORY_POINT_SCALE_LABELS[scale]}
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-0.5 font-mono">
+                      {STORY_POINT_SCALES[scale].join(', ')}
+                    </p>
+                  </div>
                 </label>
               ))}
             </div>
-            <p className="text-xs text-zinc-500">
-              The default story point scale for new projects. Projects can override this in their
-              sprint settings.
-            </p>
           </div>
 
           {/* Auto Carryover */}
