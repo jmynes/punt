@@ -986,13 +986,14 @@ function MemberCard({
           )}
 
           {/* View as button */}
-          {onViewAs && !isCurrentUser && (
+          {onViewAs && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-zinc-500 hover:text-violet-400 hover:bg-violet-900/20"
+              className="h-8 w-8 text-zinc-500 hover:text-violet-400 hover:bg-violet-900/20 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-500"
               onClick={onViewAs}
-              title={`View as ${member.user.name}`}
+              disabled={isCurrentUser}
+              title={isCurrentUser ? 'Cannot simulate yourself' : `View as ${member.user.name}`}
             >
               <Eye className="h-4 w-4" />
             </Button>
