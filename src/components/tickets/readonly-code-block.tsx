@@ -111,7 +111,7 @@ export function ReadOnlyCodeBlock({
 
   // Get display label for the language
   const displayLabel =
-    codeBlockLanguages[language] || codeBlockLanguages[''] || language || 'Plain Text'
+    (codeBlockLanguages as Record<string, string>)[language] || (codeBlockLanguages as Record<string, string>)[''] || language || 'Plain Text'
 
   return (
     <div className="border border-zinc-800 rounded-md bg-zinc-950 overflow-hidden">
