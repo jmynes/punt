@@ -9,7 +9,6 @@ import {
 } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { PERMISSIONS } from '@/lib/permissions'
-import { getSystemSettings } from '@/lib/system-settings'
 
 // Time format validation regex (HH:mm)
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/
@@ -42,17 +41,17 @@ export async function GET(_request: Request, { params }: RouteParams) {
       where: { projectId },
     })
 
-    // Return system defaults if no project-level settings exist
+    // Return hardcoded defaults for legacy projects without settings.
+    // New projects get system defaults baked in at creation time.
     if (!settings) {
-      const systemSettings = await getSystemSettings()
       settings = {
         id: '',
         projectId,
-        defaultSprintDuration: systemSettings.defaultSprintDuration,
-        autoCarryOverIncomplete: systemSettings.defaultAutoCarryOver,
+        defaultSprintDuration: 14,
+        autoCarryOverIncomplete: true,
         doneColumnIds: '[]',
-        defaultStartTime: systemSettings.defaultSprintStartTime,
-        defaultEndTime: systemSettings.defaultSprintEndTime,
+        defaultStartTime: '09:00',
+        defaultEndTime: '17:00',
         storyPointScale: null,
         createdAt: new Date(),
         updatedAt: new Date(),
