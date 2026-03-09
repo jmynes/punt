@@ -1448,7 +1448,7 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
                           <div className="my-1 border-t border-zinc-800" />
                         </>
                       )}
-                      {sortedMembers.map((m) => (
+                      {sortedMembers.filter((m) => !currentUser || m.id !== currentUser.id).map((m) => (
                         <button
                           key={m.id}
                           type="button"
