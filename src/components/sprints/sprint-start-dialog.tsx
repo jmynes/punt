@@ -12,12 +12,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   useActiveSprint,
   useSprintDetail,
   useSprintSettings,
   useStartSprint,
+  useUpdateSprint,
 } from '@/hooks/queries/use-sprints'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useUIStore } from '@/stores/ui-store'
@@ -34,18 +37,27 @@ interface SprintStartDialogProps {
 export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
   const { sprintStartOpen, sprintStartId, closeSprintStart } = useUIStore()
   const startSprint = useStartSprint(projectId)
+  const updateSprint = useUpdateSprint(projectId)
   const { data: sprint } = useSprintDetail(projectId, sprintStartId ?? '')
   const { data: activeSprint } = useActiveSprint(projectId)
   const { data: settings } = useSprintSettings(projectId)
 
+  const [name, setName] = useState('')
+  const [goal, setGoal] = useState('')
+  const [budget, setBudget] = useState('')
   const [startDateTime, setStartDateTime] = useState<Date | null>(null)
   const [endDateTime, setEndDateTime] = useState<Date | null>(null)
 
-  // Initialize dates and times when sprint loads or dialog opens
+  // Initialize form fields when sprint loads or dialog opens
   useEffect(() => {
     if (sprint && sprintStartOpen) {
       const defaultStartTime = settings?.defaultStartTime ?? '09:00'
       const defaultEndTime = settings?.defaultEndTime ?? '17:00'
+
+      // Populate editable fields
+      setName(sprint.name)
+      setGoal(sprint.goal || '')
+      setBudget(sprint.budget?.toString() || '')
 
       const start = sprint.startDate ? new Date(sprint.startDate) : new Date()
       // If time is midnight and not intentional, apply default
@@ -82,33 +94,92 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
   const handleClose = useCallback(() => {
     closeSprintStart()
     setTimeout(() => {
+      setName('')
+      setGoal('')
+      setBudget('')
       setStartDateTime(null)
       setEndDateTime(null)
     }, 200)
   }, [closeSprintStart])
 
-  const handleSubmit = useCallback(async () => {
-    if (!sprintStartId) return
+  // Check if sprint details have changed
+  const hasDetailChanges =
+    sprint &&
+    (name !== sprint.name ||
+      goal !== (sprint.goal || '') ||
+      budget !== (sprint.budget?.toString() || ''))
 
-    startSprint.mutate(
-      {
-        sprintId: sprintStartId,
-        startDate: startDateTime ?? undefined,
-        endDate: endDateTime ?? undefined,
-      },
-      {
-        onSuccess: () => {
-          handleClose()
+  const handleSubmit = useCallback(async () => {
+    if (!sprintStartId || !name.trim()) return
+
+    const budgetValue = budget.trim()
+    const parsedBudget = budgetValue ? Number.parseInt(budgetValue, 10) : null
+
+    // If details changed, update first then start
+    if (hasDetailChanges) {
+      updateSprint.mutate(
+        {
+          sprintId: sprintStartId,
+          name: name.trim(),
+          goal: goal.trim() || null,
+          budget: parsedBudget && !Number.isNaN(parsedBudget) ? parsedBudget : null,
         },
-      },
-    )
-  }, [sprintStartId, startDateTime, endDateTime, startSprint, handleClose])
+        {
+          onSuccess: () => {
+            startSprint.mutate(
+              {
+                sprintId: sprintStartId,
+                startDate: startDateTime ?? undefined,
+                endDate: endDateTime ?? undefined,
+              },
+              {
+                onSuccess: () => {
+                  handleClose()
+                },
+              },
+            )
+          },
+        },
+      )
+    } else {
+      // Just start the sprint
+      startSprint.mutate(
+        {
+          sprintId: sprintStartId,
+          startDate: startDateTime ?? undefined,
+          endDate: endDateTime ?? undefined,
+        },
+        {
+          onSuccess: () => {
+            handleClose()
+          },
+        },
+      )
+    }
+  }, [
+    sprintStartId,
+    name,
+    goal,
+    budget,
+    hasDetailChanges,
+    startDateTime,
+    endDateTime,
+    updateSprint,
+    startSprint,
+    handleClose,
+  ])
 
   const hasActiveSprint = !!activeSprint
 
   useCtrlSave({
     onSave: handleSubmit,
-    enabled: sprintStartOpen && !!sprintStartId && !hasActiveSprint && !startSprint.isPending,
+    enabled:
+      sprintStartOpen &&
+      !!sprintStartId &&
+      !hasActiveSprint &&
+      !startSprint.isPending &&
+      !updateSprint.isPending &&
+      !!name.trim(),
   })
 
   if (!sprintStartId) return null
@@ -139,13 +210,43 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
             </div>
           )}
 
-          {/* Sprint goal */}
-          {sprint?.goal && (
-            <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3">
-              <p className="text-xs text-zinc-500 mb-1">Sprint Goal</p>
-              <p className="text-sm text-zinc-300">&ldquo;{sprint.goal}&rdquo;</p>
-            </div>
-          )}
+          {/* Sprint Name */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Name</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Sprint name"
+              disabled={startSprint.isPending || updateSprint.isPending || hasActiveSprint}
+              className="bg-zinc-900 border-zinc-700 text-zinc-100"
+            />
+          </div>
+
+          {/* Sprint Goal */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Goal</Label>
+            <Textarea
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+              placeholder="What do you want to achieve in this sprint?"
+              disabled={startSprint.isPending || updateSprint.isPending || hasActiveSprint}
+              className="bg-zinc-900 border-zinc-700 text-zinc-100 min-h-[80px]"
+            />
+          </div>
+
+          {/* Sprint Budget/Capacity */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Capacity (story points)</Label>
+            <Input
+              type="number"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+              placeholder="Story points capacity"
+              min={0}
+              disabled={startSprint.isPending || updateSprint.isPending || hasActiveSprint}
+              className="bg-zinc-900 border-zinc-700 text-zinc-100"
+            />
+          </div>
 
           {/* Start Date & Time */}
           <div className="space-y-2">
@@ -153,7 +254,7 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
             <DateTimePicker
               value={startDateTime}
               onChange={setStartDateTime}
-              disabled={startSprint.isPending || hasActiveSprint}
+              disabled={startSprint.isPending || updateSprint.isPending || hasActiveSprint}
             />
           </div>
 
@@ -169,7 +270,7 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
                 startDay.setHours(0, 0, 0, 0)
                 return date < startDay
               }}
-              disabled={startSprint.isPending || hasActiveSprint}
+              disabled={startSprint.isPending || updateSprint.isPending || hasActiveSprint}
             />
           </div>
 
@@ -187,17 +288,24 @@ export function SprintStartDialog({ projectId }: SprintStartDialogProps) {
           <Button
             variant="outline"
             onClick={handleClose}
-            disabled={startSprint.isPending}
+            disabled={startSprint.isPending || updateSprint.isPending}
             className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={startSprint.isPending || hasActiveSprint}
+            disabled={
+              startSprint.isPending || updateSprint.isPending || hasActiveSprint || !name.trim()
+            }
             className="bg-green-600 hover:bg-green-700 text-white"
           >
-            {startSprint.isPending ? (
+            {updateSprint.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : startSprint.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Starting...

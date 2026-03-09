@@ -120,7 +120,7 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (result) => {
           // Clear dismissed prompt state so it doesn't stale-match the completed sprint
           if (sprintCompleteId) {
             clearDismissedPrompt(sprintCompleteId)
@@ -130,12 +130,13 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
           handleClose()
 
           // Prompt to start the next planning sprint after completing
-          // Prefer the target sprint (if tickets were moved to an existing one),
-          // otherwise pick the first available planning sprint
+          // Prefer the newly created/target sprint from the result,
+          // fall back to existing target or first planning sprint
           const nextSprintId =
-            action === 'close_to_next' && targetSprintId !== '__new__'
+            result.nextSprint?.id ??
+            (action === 'close_to_next' && targetSprintId !== '__new__'
               ? targetSprintId
-              : planningSprints[0]?.id
+              : planningSprints[0]?.id)
           if (nextSprintId) {
             // Delay so the complete dialog finishes its close animation first
             setTimeout(() => {
