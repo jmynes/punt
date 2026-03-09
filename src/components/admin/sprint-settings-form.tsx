@@ -10,12 +10,18 @@ import { Switch } from '@/components/ui/switch'
 import { TimeScroller } from '@/components/ui/time-scroller'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-system-settings'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
+import {
+  STORY_POINT_SCALE_LABELS,
+  STORY_POINT_SCALES,
+  type StoryPointScale,
+} from '@/lib/story-points'
 
 interface FormData {
   defaultSprintDuration: number | ''
   defaultAutoCarryOver: boolean
   defaultSprintStartTime: string
   defaultSprintEndTime: string
+  storyPointScale: StoryPointScale
 }
 
 export function SprintSettingsForm() {
@@ -27,6 +33,7 @@ export function SprintSettingsForm() {
     defaultAutoCarryOver: true,
     defaultSprintStartTime: '09:00',
     defaultSprintEndTime: '17:00',
+    storyPointScale: 'sequential',
   })
 
   // Sync form state when settings are loaded
@@ -37,6 +44,7 @@ export function SprintSettingsForm() {
         defaultAutoCarryOver: settings.defaultAutoCarryOver ?? true,
         defaultSprintStartTime: settings.defaultSprintStartTime ?? '09:00',
         defaultSprintEndTime: settings.defaultSprintEndTime ?? '17:00',
+        storyPointScale: settings.storyPointScale ?? 'sequential',
       })
     }
   }, [settings])
@@ -46,7 +54,8 @@ export function SprintSettingsForm() {
     (formData.defaultSprintDuration !== settings.defaultSprintDuration ||
       formData.defaultAutoCarryOver !== settings.defaultAutoCarryOver ||
       formData.defaultSprintStartTime !== settings.defaultSprintStartTime ||
-      formData.defaultSprintEndTime !== settings.defaultSprintEndTime)
+      formData.defaultSprintEndTime !== settings.defaultSprintEndTime ||
+      formData.storyPointScale !== settings.storyPointScale)
 
   const isValid =
     typeof formData.defaultSprintDuration === 'number' &&
@@ -60,6 +69,7 @@ export function SprintSettingsForm() {
       defaultAutoCarryOver: formData.defaultAutoCarryOver,
       defaultSprintStartTime: formData.defaultSprintStartTime,
       defaultSprintEndTime: formData.defaultSprintEndTime,
+      storyPointScale: formData.storyPointScale,
     })
   }
 
@@ -70,6 +80,7 @@ export function SprintSettingsForm() {
         defaultAutoCarryOver: settings.defaultAutoCarryOver,
         defaultSprintStartTime: settings.defaultSprintStartTime,
         defaultSprintEndTime: settings.defaultSprintEndTime,
+        storyPointScale: settings.storyPointScale ?? 'sequential',
       })
     }
   }
@@ -163,6 +174,33 @@ export function SprintSettingsForm() {
             <p className="text-xs text-zinc-500">
               The default time when sprints end (e.g., 17:00 for 5 PM). Sprints will be considered
               complete at this time on the end date.
+            </p>
+          </div>
+
+          {/* Story Point Scale */}
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Story Point Scale</Label>
+            <div className="space-y-2">
+              {(Object.keys(STORY_POINT_SCALES) as StoryPointScale[]).map((scale) => (
+                <label key={scale} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="storyPointScale"
+                    value={scale}
+                    checked={formData.storyPointScale === scale}
+                    onChange={() => setFormData((prev) => ({ ...prev, storyPointScale: scale }))}
+                    disabled={updateSettings.isPending}
+                    className="text-amber-600"
+                  />
+                  <span className="text-sm text-zinc-300">
+                    {STORY_POINT_SCALE_LABELS[scale]} ({STORY_POINT_SCALES[scale].join(', ')})
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-zinc-500">
+              The default story point scale for new projects. Projects can override this in their
+              sprint settings.
             </p>
           </div>
 
