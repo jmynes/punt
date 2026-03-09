@@ -12,7 +12,7 @@ import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 
 interface FormData {
-  defaultSprintDuration: number
+  defaultSprintDuration: number | ''
   defaultAutoCarryOver: boolean
   defaultSprintStartTime: string
   defaultSprintEndTime: string
@@ -33,10 +33,10 @@ export function SprintSettingsForm() {
   useEffect(() => {
     if (settings) {
       setFormData({
-        defaultSprintDuration: settings.defaultSprintDuration,
-        defaultAutoCarryOver: settings.defaultAutoCarryOver,
-        defaultSprintStartTime: settings.defaultSprintStartTime,
-        defaultSprintEndTime: settings.defaultSprintEndTime,
+        defaultSprintDuration: settings.defaultSprintDuration ?? 14,
+        defaultAutoCarryOver: settings.defaultAutoCarryOver ?? true,
+        defaultSprintStartTime: settings.defaultSprintStartTime ?? '09:00',
+        defaultSprintEndTime: settings.defaultSprintEndTime ?? '17:00',
       })
     }
   }, [settings])
@@ -48,7 +48,10 @@ export function SprintSettingsForm() {
       formData.defaultSprintStartTime !== settings.defaultSprintStartTime ||
       formData.defaultSprintEndTime !== settings.defaultSprintEndTime)
 
-  const isValid = formData.defaultSprintDuration >= 1 && formData.defaultSprintDuration <= 90
+  const isValid =
+    typeof formData.defaultSprintDuration === 'number' &&
+    formData.defaultSprintDuration >= 1 &&
+    formData.defaultSprintDuration <= 90
 
   const handleSave = () => {
     if (!isValid) return
@@ -112,9 +115,14 @@ export function SprintSettingsForm() {
               type="number"
               min={1}
               max={90}
-              value={formData.defaultSprintDuration}
+              value={formData.defaultSprintDuration ?? ''}
               onChange={(e) => {
-                const value = Number.parseInt(e.target.value, 10)
+                const raw = e.target.value
+                if (raw === '') {
+                  setFormData((prev) => ({ ...prev, defaultSprintDuration: '' }))
+                  return
+                }
+                const value = Number.parseInt(raw, 10)
                 if (!Number.isNaN(value)) {
                   setFormData((prev) => ({ ...prev, defaultSprintDuration: value }))
                 }
