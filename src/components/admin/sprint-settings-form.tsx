@@ -65,7 +65,7 @@ export function SprintSettingsForm() {
   const handleSave = () => {
     if (!isValid) return
     updateSettings.mutate({
-      defaultSprintDuration: formData.defaultSprintDuration,
+      defaultSprintDuration: formData.defaultSprintDuration as number,
       defaultAutoCarryOver: formData.defaultAutoCarryOver,
       defaultSprintStartTime: formData.defaultSprintStartTime,
       defaultSprintEndTime: formData.defaultSprintEndTime,
