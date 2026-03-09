@@ -1287,7 +1287,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     users={membersWithCurrentUser}
                     currentUserId={currentUser?.id}
                     placeholder="Select reporter"
-                    showAssignToMe
+                    showAssignToMe={false}
                     allowUnassigned={false}
                   />
                   {/* Show agent attribution - prefer live agent data, fall back to snapshot */}

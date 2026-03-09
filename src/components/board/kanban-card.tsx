@@ -124,7 +124,7 @@ export function KanbanCard({
         {...(isMounted ? attributes : {})}
         {...(isMounted ? listeners : {})}
         className={cn(
-          'group relative cursor-grab border-zinc-800 bg-zinc-900/80 p-3 transition-colors select-none active:cursor-grabbing',
+          'group relative cursor-grab border-zinc-800 bg-zinc-900/80 p-3 transition-colors select-none active:cursor-grabbing overflow-hidden',
           !selected && 'hover:border-zinc-700 hover:bg-zinc-900',
           isDragging && 'opacity-50 shadow-lg ring-2 ring-amber-500/50',
           selected &&
@@ -137,9 +137,9 @@ export function KanbanCard({
           <GripVertical className="h-4 w-4 text-zinc-600" />
         </div>
 
-        <div className="pl-4">
+        <div className="px-4 min-w-0">
           {/* Header row: Type, Key, Blocked, Priority */}
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 min-w-0">
             <TypeBadge type={ticket.type as IssueType} size="sm" />
             <span className="text-xs font-mono text-zinc-500">
               {projectKey}-{ticket.number}
@@ -156,7 +156,7 @@ export function KanbanCard({
           </div>
 
           {/* Title */}
-          <h4 className="text-sm font-medium text-zinc-200 mb-2 line-clamp-2">
+          <h4 className="text-sm font-medium text-zinc-200 mb-2 line-clamp-2 break-words">
             <InlineCodeText text={ticket.title} />
           </h4>
 
@@ -202,9 +202,9 @@ export function KanbanCard({
           )}
 
           {/* Footer */}
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/50">
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/50 min-w-0">
             {/* Left side: Story points and metadata */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               {/* Story points */}
               {ticket.storyPoints !== null && ticket.storyPoints !== undefined && (
                 <span className="text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
@@ -251,7 +251,7 @@ export function KanbanCard({
             </div>
 
             {/* Right side: Agent indicator + Resolution badge + Assignee */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
               {/* Show agent indicator - prefer live agent data, fall back to snapshot */}
               {(ticket.createdByAgent || ticket.createdByAgentName) && (
                 <span
