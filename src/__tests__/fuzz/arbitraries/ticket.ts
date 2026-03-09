@@ -121,6 +121,11 @@ export const ticketBase = fc.record({
   isCarriedOver: fc.boolean(),
   carriedOverCount: fc.nat({ max: 10 }),
   carriedFromSprintId: fc.option(fc.uuid(), { nil: null }),
+  createdByAgentId: fc.constant(null),
+  createdByAgent: fc.constant(null),
+  createdByAgentIdSnapshot: fc.constant(null),
+  createdByAgentName: fc.constant(null),
+  createdByAgentOwnerName: fc.constant(null),
   // Keep relation fields lightweight — board store tests don't need
   // fully populated nested objects, and complex arbitraries cause
   // timeout interruptions in fuzz runs.
@@ -177,6 +182,11 @@ export const maliciousTicket = fc.record({
   isCarriedOver: fc.boolean(),
   carriedOverCount: fc.nat({ max: 10 }),
   carriedFromSprintId: fc.option(fc.uuid(), { nil: null }),
+  createdByAgentId: fc.constant(null),
+  createdByAgent: fc.constant(null),
+  createdByAgentIdSnapshot: fc.constant(null),
+  createdByAgentName: fc.constant(null),
+  createdByAgentOwnerName: fc.constant(null),
   labels: fc.constant([] as LabelSummary[]),
   watchers: fc.constant([] as UserSummary[]),
   assignee: fc.constant(null),
