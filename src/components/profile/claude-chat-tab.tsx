@@ -24,14 +24,8 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { apiFetch } from '@/lib/base-path'
+import type { McpServerInfo } from '@/lib/chat/encryption'
 import { showToast } from '@/lib/toast'
-
-interface McpServerInfo {
-  name: string
-  key: string
-  tokenExpired: boolean
-  tokenExpiresAt: number | null
-}
 
 interface ClaudeChatTabProps {
   isDemo: boolean

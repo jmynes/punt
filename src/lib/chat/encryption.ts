@@ -199,19 +199,28 @@ export function extractMcpServerDetails(credentials: ClaudeCredentials): McpServ
     if (seen.has(serverName)) continue
     seen.add(serverName)
 
-    // Extract token expiry info if available
+    // Extract token expiry info if available.
+    // When multiple keys share a server name (e.g. "github|abc", "github|def"),
+    // we report the first key's expiry (insertion-order). filterCredentialsMcpServers
+    // passes all matching keys through, so this is a display-only approximation.
     const tokenData = credentials.mcpOAuth[key]
     let tokenExpiresAt: number | null = null
     let tokenExpired = false
 
     if (tokenData && typeof tokenData === 'object') {
       const data = tokenData as Record<string, unknown>
-      if (typeof data.expiresAt === 'number') {
-        tokenExpiresAt = data.expiresAt
-        tokenExpired = data.expiresAt < Date.now()
-      } else if (typeof data.expires_at === 'number') {
-        tokenExpiresAt = data.expires_at
-        tokenExpired = data.expires_at < Date.now()
+      const rawExpiry =
+        typeof data.expiresAt === 'number'
+          ? data.expiresAt
+          : typeof data.expires_at === 'number'
+            ? data.expires_at
+            : null
+
+      if (rawExpiry !== null) {
+        // OAuth tokens commonly use seconds; Claude CLI may use milliseconds.
+        // Heuristic: values < 1e12 are seconds (before year 33658 in ms, ~2001 in s).
+        tokenExpiresAt = rawExpiry < 1e12 ? rawExpiry * 1000 : rawExpiry
+        tokenExpired = tokenExpiresAt < Date.now()
       }
     }
 

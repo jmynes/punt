@@ -280,6 +280,14 @@ export class ClaudeCliProvider implements ChatProvider {
   }
 
   private processOutput(proc: ChildProcess, onEvent: (event: StreamEvent) => void): Promise<void> {
+    // Track running tools per invocation (not on the singleton instance)
+    // to prevent cross-user state corruption under concurrency.
+    const runningTools = new Set<string>()
+
+    const handleEvent = (event: StreamJsonEvent) => {
+      this.handleStreamEvent(event, onEvent, runningTools)
+    }
+
     return new Promise((resolve) => {
       let buffer = ''
       let timeoutHandle: NodeJS.Timeout
@@ -309,7 +317,7 @@ export class ClaudeCliProvider implements ChatProvider {
 
           try {
             const event = JSON.parse(line) as StreamJsonEvent
-            this.handleStreamEvent(event, onEvent)
+            handleEvent(event)
           } catch {
             // Non-JSON line, ignore
           }
@@ -333,7 +341,7 @@ export class ClaudeCliProvider implements ChatProvider {
         if (buffer.trim()) {
           try {
             const event = JSON.parse(buffer) as StreamJsonEvent
-            this.handleStreamEvent(event, onEvent)
+            handleEvent(event)
           } catch {
             // Ignore
           }
@@ -355,26 +363,27 @@ export class ClaudeCliProvider implements ChatProvider {
     })
   }
 
-  // Track running tools to mark them complete when we see user/assistant events
-  private runningTools: Set<string> = new Set()
-
-  private handleStreamEvent(event: StreamJsonEvent, onEvent: (event: StreamEvent) => void): void {
+  private handleStreamEvent(
+    event: StreamJsonEvent,
+    onEvent: (event: StreamEvent) => void,
+    runningTools: Set<string>,
+  ): void {
     switch (event.type) {
       case 'system':
         // Initialization event - clear tool tracking
-        this.runningTools.clear()
+        runningTools.clear()
         break
 
       case 'user':
         // User event contains tool results - mark all running tools as complete
-        for (const toolName of this.runningTools) {
+        for (const toolName of runningTools) {
           onEvent({
             type: 'tool_end',
             name: toolName,
             success: true,
           })
         }
-        this.runningTools.clear()
+        runningTools.clear()
         break
 
       case 'assistant':
@@ -384,7 +393,7 @@ export class ClaudeCliProvider implements ChatProvider {
             if (block.type === 'text' && block.text) {
               onEvent({ type: 'text', content: block.text })
             } else if (block.type === 'tool_use' && block.name) {
-              this.runningTools.add(block.name)
+              runningTools.add(block.name)
               onEvent({
                 type: 'tool_start',
                 name: block.name,
@@ -397,14 +406,14 @@ export class ClaudeCliProvider implements ChatProvider {
 
       case 'result':
         // Final result - mark any remaining tools as complete
-        for (const toolName of this.runningTools) {
+        for (const toolName of runningTools) {
           onEvent({
             type: 'tool_end',
             name: toolName,
             success: event.subtype === 'success',
           })
         }
-        this.runningTools.clear()
+        runningTools.clear()
         break
 
       case 'text':

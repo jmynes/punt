@@ -117,8 +117,10 @@ export async function GET() {
       try {
         const decrypted = decryptSession(user.claudeSessionEncrypted)
         const credentials = JSON.parse(decrypted)
-        mcpServerDetails = extractMcpServerDetails(credentials)
-        availableMcpServers = mcpServerDetails.map((s) => s.name)
+        if (validateSessionCredentials(credentials)) {
+          mcpServerDetails = extractMcpServerDetails(credentials)
+          availableMcpServers = mcpServerDetails.map((s) => s.name)
+        }
       } catch {
         // Ignore decryption errors - credentials may be corrupted
       }
@@ -316,6 +318,34 @@ export async function PATCH(request: Request) {
     if (enabledMcpServers !== undefined) {
       if (!Array.isArray(enabledMcpServers)) {
         return Response.json({ error: 'enabledMcpServers must be an array' }, { status: 400 })
+      }
+      // Validate entries are strings and exist in the user's credentials
+      if (!enabledMcpServers.every((s: unknown) => typeof s === 'string')) {
+        return Response.json(
+          { error: 'enabledMcpServers entries must be strings' },
+          { status: 400 },
+        )
+      }
+      const user = await db.user.findUnique({
+        where: { id: currentUser.id },
+        select: { claudeSessionEncrypted: true },
+      })
+      if (user?.claudeSessionEncrypted) {
+        try {
+          const decrypted = decryptSession(user.claudeSessionEncrypted)
+          const credentials = JSON.parse(decrypted)
+          const available = extractMcpServerDetails(credentials).map((s) => s.name)
+          const availableSet = new Set(available)
+          const invalid = (enabledMcpServers as string[]).filter((s) => !availableSet.has(s))
+          if (invalid.length > 0) {
+            return Response.json(
+              { error: `Unknown MCP servers: ${invalid.join(', ')}` },
+              { status: 400 },
+            )
+          }
+        } catch {
+          // Credentials corrupted — allow the update anyway
+        }
       }
       updateData.enabledMcpServers = enabledMcpServers
     }
