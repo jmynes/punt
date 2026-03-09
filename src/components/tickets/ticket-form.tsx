@@ -173,7 +173,7 @@ export function TicketForm({
             currentUserId={currentUser?.id}
             placeholder="Select reporter"
             disabled={disabled}
-            showAssignToMe
+            showAssignToMe={false}
             allowUnassigned={false}
           />
         </div>
