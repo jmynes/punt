@@ -223,6 +223,7 @@ export async function POST(request: Request) {
         autoCarryOverIncomplete: systemSettings.defaultAutoCarryOver,
         defaultStartTime: systemSettings.defaultSprintStartTime,
         defaultEndTime: systemSettings.defaultSprintEndTime,
+        storyPointScale: systemSettings.storyPointScale,
       },
     })
 

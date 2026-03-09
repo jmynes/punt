@@ -177,6 +177,24 @@ export function SprintSettingsForm() {
             </p>
           </div>
 
+          {/* Auto Carryover */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-zinc-300">Auto-carryover incomplete tickets</Label>
+              <p className="text-xs text-zinc-500">
+                Automatically move incomplete tickets to the next sprint when completing a sprint.
+                Projects inherit this default unless overridden.
+              </p>
+            </div>
+            <Switch
+              checked={formData.defaultAutoCarryOver}
+              onCheckedChange={(checked) =>
+                setFormData((prev) => ({ ...prev, defaultAutoCarryOver: checked }))
+              }
+              disabled={updateSettings.isPending}
+            />
+          </div>
+
           {/* Story Point Scale */}
           <div className="space-y-2">
             <Label className="text-zinc-300">Story Point Scale</Label>
@@ -214,24 +232,6 @@ export function SprintSettingsForm() {
                 </label>
               ))}
             </div>
-          </div>
-
-          {/* Auto Carryover */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-zinc-300">Auto-carryover incomplete tickets</Label>
-              <p className="text-xs text-zinc-500">
-                Automatically move incomplete tickets to the next sprint when completing a sprint.
-                Projects inherit this default unless overridden.
-              </p>
-            </div>
-            <Switch
-              checked={formData.defaultAutoCarryOver}
-              onCheckedChange={(checked) =>
-                setFormData((prev) => ({ ...prev, defaultAutoCarryOver: checked }))
-              }
-              disabled={updateSettings.isPending}
-            />
           </div>
 
           {/* Save/Reset buttons */}
