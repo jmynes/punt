@@ -28,6 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { withBasePath } from '@/lib/base-path'
 import { AttachmentPreviewModal } from './attachment-preview-modal'
 import type { UploadedFile } from './file-upload'
 
@@ -87,7 +88,7 @@ export function AttachmentList({
 
   const handleDownload = (file: UploadedFile) => {
     const link = document.createElement('a')
-    link.href = file.url
+    link.href = withBasePath(file.url)
     link.download = file.originalName
     document.body.appendChild(link)
     link.click()
@@ -95,7 +96,7 @@ export function AttachmentList({
   }
 
   const handleOpenExternal = (file: UploadedFile) => {
-    window.open(file.url, '_blank')
+    window.open(withBasePath(file.url), '_blank')
   }
 
   const handlePreview = (file: UploadedFile) => {
@@ -122,7 +123,7 @@ export function AttachmentList({
                 <div className="relative aspect-square overflow-hidden bg-zinc-900">
                   {file.category === 'image' ? (
                     <img
-                      src={file.url}
+                      src={withBasePath(file.url)}
                       alt={file.originalName}
                       className="h-full w-full cursor-pointer object-cover transition-transform duration-200 group-hover:scale-105"
                       onClick={() => handlePreview(file)}
@@ -133,7 +134,7 @@ export function AttachmentList({
                       className="relative h-full w-full cursor-pointer"
                       onClick={() => handlePreview(file)}
                     >
-                      <video src={file.url} className="h-full w-full object-cover">
+                      <video src={withBasePath(file.url)} className="h-full w-full object-cover">
                         <track kind="captions" />
                       </video>
                       <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -289,7 +290,7 @@ export function AttachmentList({
                   onClick={() => handlePreview(file)}
                 >
                   <img
-                    src={file.url}
+                    src={withBasePath(file.url)}
                     alt={file.originalName}
                     className="h-full w-full object-cover"
                   />
@@ -300,7 +301,7 @@ export function AttachmentList({
                   className="relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded bg-zinc-800"
                   onClick={() => handlePreview(file)}
                 >
-                  <video src={file.url} className="h-full w-full object-cover">
+                  <video src={withBasePath(file.url)} className="h-full w-full object-cover">
                     <track kind="captions" />
                   </video>
                   <div className="absolute inset-0 flex items-center justify-center bg-black/30">

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch, withBasePath } from '@/lib/base-path'
 import { demoStorage, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 import type { Permission, ProjectMemberWithRole } from '@/types'
@@ -56,7 +57,7 @@ export function useProjectMembers(projectId: string) {
         }))
       }
 
-      const res = await fetch(`/api/projects/${projectId}/members`)
+      const res = await apiFetch(`/api/projects/${projectId}/members`)
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to fetch members')
@@ -75,7 +76,7 @@ export function useMember(projectId: string, memberId: string) {
   return useQuery<MemberDetails>({
     queryKey: memberKeys.single(projectId, memberId),
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/members/${memberId}`)
+      const res = await apiFetch(`/api/projects/${projectId}/members/${memberId}`)
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to fetch member')
@@ -101,7 +102,7 @@ export function useUpdateMember(projectId: string) {
 
   return useMutation({
     mutationFn: async ({ memberId, ...data }: UpdateMemberData) => {
-      const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+      const res = await apiFetch(`/api/projects/${projectId}/members/${memberId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -138,7 +139,7 @@ export function useRemoveMember(projectId: string) {
 
   return useMutation({
     mutationFn: async (memberId: string) => {
-      const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+      const res = await apiFetch(`/api/projects/${projectId}/members/${memberId}`, {
         method: 'DELETE',
         headers: {
           'X-Tab-Id': getTabId(),
@@ -183,7 +184,7 @@ export function useAddMember(projectId: string) {
 
   return useMutation({
     mutationFn: async (data: AddMemberData) => {
-      const res = await fetch(`/api/projects/${projectId}/members`, {
+      const res = await apiFetch(`/api/projects/${projectId}/members`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -231,7 +232,10 @@ export function useAvailableUsers(projectId: string, search = '') {
         return []
       }
 
-      const url = new URL(`/api/projects/${projectId}/available-users`, window.location.origin)
+      const url = new URL(
+        withBasePath(`/api/projects/${projectId}/available-users`),
+        window.location.origin,
+      )
       if (search) {
         url.searchParams.set('search', search)
       }

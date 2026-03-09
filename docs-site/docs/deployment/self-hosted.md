@@ -257,6 +257,58 @@ sudo systemctl reload caddy
 
 Caddy automatically obtains and renews SSL certificates.
 
+### Subpath Deployment
+
+To serve PUNT at a subpath (e.g., `https://example.com/punt`), set the `NEXT_PUBLIC_BASE_PATH` environment variable:
+
+```env
+NEXT_PUBLIC_BASE_PATH=/punt
+NEXT_PUBLIC_APP_URL=https://example.com
+```
+
+Then configure your reverse proxy to route the subpath:
+
+**Nginx:**
+
+```nginx
+location /punt {
+    proxy_pass http://localhost:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
+
+    # SSE support
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 86400;
+}
+```
+
+**Caddy:**
+
+```caddy
+example.com {
+    handle_path /punt/* {
+        reverse_proxy localhost:3000
+    }
+}
+```
+
+:::note
+When using basePath, MCP credentials must include the full URL with the subpath:
+```json
+{
+  "url": "https://example.com/punt",
+  "apiKey": "mcp_xxxxx..."
+}
+```
+:::
+
 ## SSL/HTTPS
 
 ### Let's Encrypt with Certbot

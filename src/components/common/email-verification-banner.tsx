@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useEmailVerificationStatus } from '@/hooks/queries/use-email-verification'
+import { apiFetch } from '@/lib/base-path'
 import { isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 
@@ -47,7 +48,7 @@ function EmailVerificationBannerInner() {
   const handleResend = async () => {
     setIsSending(true)
     try {
-      const res = await fetch('/api/auth/send-verification', {
+      const res = await apiFetch('/api/auth/send-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),

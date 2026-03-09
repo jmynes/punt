@@ -2,10 +2,10 @@
 
 import { Bot, Info, Loader2, Save } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { GuidanceEditor } from '@/components/settings/guidance-editor'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/queries/use-system-settings'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
@@ -109,20 +109,9 @@ export function AgentsDefaultsForm() {
                 </TooltipContent>
               </Tooltip>
             </div>
-            <Textarea
-              id="agent-guidance"
-              value={agentGuidance}
-              onChange={(e) => setAgentGuidance(e.target.value)}
-              placeholder={`Example:
-
-## Coding Conventions
-- Use TypeScript strict mode
-- Follow React 19 patterns
-
-## Testing
-- Run tests before committing
-- Coverage must stay above 80%`}
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 font-mono text-sm min-h-[200px] resize-y"
+            <GuidanceEditor
+              markdown={agentGuidance}
+              onChange={setAgentGuidance}
               disabled={isPending}
             />
           </div>

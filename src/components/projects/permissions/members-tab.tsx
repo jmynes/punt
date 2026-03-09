@@ -49,6 +49,7 @@ import { useProjectRoles } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useHasPermission, useIsSystemAdmin, useMyRealPermissions } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { isEditableTarget } from '@/lib/keyboard-utils'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showToast } from '@/lib/toast'
@@ -232,7 +233,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
     }
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/members/${removingMember.id}`, {
+      const res = await apiFetch(`/api/projects/${projectId}/members/${removingMember.id}`, {
         method: 'DELETE',
         headers: { 'X-Tab-Id': getTabId() },
       })
@@ -279,7 +280,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
     try {
       await Promise.all(
         [...selectedIds].map(async (memberId) => {
-          const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+          const res = await apiFetch(`/api/projects/${projectId}/members/${memberId}`, {
             method: 'DELETE',
             headers: { 'X-Tab-Id': getTabId() },
           })
@@ -334,7 +335,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
     try {
       await Promise.all(
         [...selectedIds].map(async (memberId) => {
-          const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+          const res = await apiFetch(`/api/projects/${projectId}/members/${memberId}`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -383,7 +384,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
       try {
         await Promise.all(
           action.members.map(async (member) => {
-            const res = await fetch(`/api/projects/${projectId}/members`, {
+            const res = await apiFetch(`/api/projects/${projectId}/members`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -410,7 +411,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
           action.members.map(async (member) => {
             const current = currentMembers.find((m) => m.userId === member.userId)
             if (!current) return
-            const res = await fetch(`/api/projects/${projectId}/members/${current.id}`, {
+            const res = await apiFetch(`/api/projects/${projectId}/members/${current.id}`, {
               method: 'DELETE',
               headers: { 'X-Tab-Id': getTabId() },
             })
@@ -429,14 +430,17 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
       try {
         await Promise.all(
           action.members.map(async (member) => {
-            const res = await fetch(`/api/projects/${projectId}/members/${member.membershipId}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Tab-Id': getTabId(),
+            const res = await apiFetch(
+              `/api/projects/${projectId}/members/${member.membershipId}`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Tab-Id': getTabId(),
+                },
+                body: JSON.stringify({ roleId: member.previousRoleId }),
               },
-              body: JSON.stringify({ roleId: member.previousRoleId }),
-            })
+            )
             if (!res.ok) throw new Error('Failed to restore role')
           }),
         )
@@ -464,7 +468,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
           action.members.map(async (member) => {
             const current = currentMembers.find((m) => m.userId === member.userId)
             if (!current) return
-            const res = await fetch(`/api/projects/${projectId}/members/${current.id}`, {
+            const res = await apiFetch(`/api/projects/${projectId}/members/${current.id}`, {
               method: 'DELETE',
               headers: { 'X-Tab-Id': getTabId() },
             })
@@ -483,7 +487,7 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
       try {
         await Promise.all(
           action.members.map(async (member) => {
-            const res = await fetch(`/api/projects/${projectId}/members`, {
+            const res = await apiFetch(`/api/projects/${projectId}/members`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -506,14 +510,17 @@ export function MembersTab({ projectId, projectKey }: MembersTabProps) {
       try {
         await Promise.all(
           action.members.map(async (member) => {
-            const res = await fetch(`/api/projects/${projectId}/members/${member.membershipId}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Tab-Id': getTabId(),
+            const res = await apiFetch(
+              `/api/projects/${projectId}/members/${member.membershipId}`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Tab-Id': getTabId(),
+                },
+                body: JSON.stringify({ roleId: member.newRoleId }),
               },
-              body: JSON.stringify({ roleId: member.newRoleId }),
-            })
+            )
             if (!res.ok) throw new Error('Failed to update role')
           }),
         )
