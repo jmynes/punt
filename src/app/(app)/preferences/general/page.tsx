@@ -39,6 +39,8 @@ function GeneralContent() {
     setUse24HourTime,
     warnOnSimulationLeave,
     setWarnOnSimulationLeave,
+    defaultProjectView,
+    setDefaultProjectView,
   } = useSettingsStore()
 
   return (
@@ -56,6 +58,82 @@ function GeneralContent() {
         <PreferencesTabs activeTab="general" />
 
         <div className="space-y-6">
+          {/* Navigation */}
+          <Card className="border-zinc-800 bg-zinc-900/50">
+            <CardHeader>
+              <CardTitle className="text-zinc-100">Navigation</CardTitle>
+              <CardDescription className="text-zinc-500">
+                Configure default navigation behavior
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-zinc-300">Default project view</Label>
+                  <p className="text-sm text-zinc-500">
+                    Choose which view opens when clicking a project name in the sidebar
+                  </p>
+                </div>
+                <RadioGroup
+                  value={defaultProjectView}
+                  onValueChange={(value) =>
+                    setDefaultProjectView(value as 'board' | 'backlog' | 'sprints')
+                  }
+                  className="space-y-3"
+                >
+                  <div className="flex items-start space-x-2">
+                    <RadioGroupItem
+                      value="board"
+                      id="default-view-board"
+                      className="mt-0.5 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                    />
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="default-view-board"
+                        className="text-sm text-zinc-300 cursor-pointer font-normal"
+                      >
+                        Board
+                      </Label>
+                      <p className="text-xs text-zinc-500">Kanban board view with drag-and-drop</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <RadioGroupItem
+                      value="backlog"
+                      id="default-view-backlog"
+                      className="mt-0.5 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                    />
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="default-view-backlog"
+                        className="text-sm text-zinc-300 cursor-pointer font-normal"
+                      >
+                        Backlog
+                      </Label>
+                      <p className="text-xs text-zinc-500">Table view with filtering and sorting</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <RadioGroupItem
+                      value="sprints"
+                      id="default-view-sprints"
+                      className="mt-0.5 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                    />
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="default-view-sprints"
+                        className="text-sm text-zinc-300 cursor-pointer font-normal"
+                      >
+                        Sprints
+                      </Label>
+                      <p className="text-xs text-zinc-500">Sprint planning and management view</p>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Ticket Behavior */}
           <Card className="border-zinc-800 bg-zinc-900/50">
             <CardHeader>
