@@ -78,6 +78,10 @@ interface SettingsState {
   // Persist PQL/search across page navigation
   searchPersistence: 'never' | 'within-project' | 'always'
   setSearchPersistence: (value: 'never' | 'within-project' | 'always') => void
+
+  // Default project view when clicking a project in the sidebar
+  defaultProjectView: 'board' | 'backlog' | 'sprints'
+  setDefaultProjectView: (value: 'board' | 'backlog' | 'sprints') => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -185,6 +189,10 @@ export const useSettingsStore = create<SettingsState>()(
       // Persist PQL/search across pages (never by default - clears on page navigation)
       searchPersistence: 'never',
       setSearchPersistence: (value) => set({ searchPersistence: value }),
+
+      // Default project view (board by default - current behavior)
+      defaultProjectView: 'board',
+      setDefaultProjectView: (value) => set({ defaultProjectView: value }),
     }),
     {
       name: 'punt-settings',
