@@ -63,8 +63,10 @@ export function TicketTableRow({
       }
 
       // If this ticket is already selected and part of a multi-selection,
-      // don't change selection (allows dragging the group)
+      // collapse to single selection and open the ticket
       if (selected && useSelectionStore.getState().selectedTicketIds.size > 1) {
+        selectTicket(ticket.id)
+        setActiveTicketId(ticket.id)
         return
       }
 
