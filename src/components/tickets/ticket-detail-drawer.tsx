@@ -223,6 +223,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [showUnsavedChangesConfirm, setShowUnsavedChangesConfirm] = useState(false)
   const [_pendingClose, setPendingClose] = useState(false)
   const [rememberPreference, setRememberPreference] = useState(false)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
   const removeAllAttachmentsButtonRef = useRef<HTMLButtonElement>(null)
   const storyPointsInputRef = useRef<HTMLInputElement>(null)
@@ -341,6 +342,16 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setIsAttachmentsExpanded(!collapseAttachmentsByDefault)
     }
   }, [ticket, collapseAttachmentsByDefault])
+
+  // Scroll to top when navigating to a different ticket (e.g., clicking a linked ticket)
+  useEffect(() => {
+    if (ticket?.id && scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]')
+      if (viewport) {
+        viewport.scrollTop = 0
+      }
+    }
+  }, [ticket?.id])
 
   // Focus specific field when drawer opens with focus request
   useEffect(() => {
@@ -959,7 +970,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
           </SheetHeader>
 
           {/* Content */}
-          <ScrollArea className="flex-1 min-h-0">
+          <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0">
             <div className="space-y-6 p-6">
               {/* Title */}
               <div className="space-y-2">
