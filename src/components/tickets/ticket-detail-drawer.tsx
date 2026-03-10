@@ -228,6 +228,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const removeAllAttachmentsButtonRef = useRef<HTMLButtonElement>(null)
   const storyPointsInputRef = useRef<HTMLInputElement>(null)
   const commentsSectionRef = useRef<CommentsSectionRef>(null)
+  const scrollViewportRef = useRef<HTMLDivElement>(null)
   const [hasPendingComment, setHasPendingComment] = useState(false)
   const [activityView, setActivityView] = useState<'comments' | 'timeline'>('comments')
 
@@ -384,6 +385,16 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       return () => clearTimeout(timer)
     }
   }, [drawerFocusField, clearDrawerFocusField])
+
+  // Auto-focus scrollable area when drawer opens for keyboard scrolling
+  useEffect(() => {
+    if (ticket && !drawerFocusField) {
+      const timer = setTimeout(() => {
+        scrollViewportRef.current?.focus({ preventScroll: true })
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [ticket, drawerFocusField])
 
   // Handler for updating temp state (no immediate save)
   const handleChange = (field: string, value: unknown) => {
@@ -1000,7 +1011,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
           </SheetHeader>
 
           {/* Content */}
-          <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0">
+          <ScrollArea
+            ref={scrollAreaRef}
+            className="flex-1 min-h-0"
+            viewportRef={scrollViewportRef}
+            viewportProps={{ tabIndex: 0 }}
+          >
             <div className="space-y-6 p-6">
               {/* Title */}
               <div className="space-y-2">
