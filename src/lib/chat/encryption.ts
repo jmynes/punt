@@ -138,13 +138,11 @@ export function filterCredentialsMcpServers(
   const filteredOAuth: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(credentials.mcpOAuth)) {
-    // Always keep plugin entries
-    if (key.startsWith('plugin:')) {
-      filteredOAuth[key] = value
-      continue
-    }
-    // Extract server name from "serverName|id" format
-    const serverName = key.split('|')[0]
+    // Extract friendly server name, matching extractMcpServerDetails logic
+    const keyWithoutId = key.split('|')[0]
+    const serverName = keyWithoutId.startsWith('plugin:')
+      ? (keyWithoutId.split(':').pop() ?? keyWithoutId)
+      : keyWithoutId
     if (enabledSet.has(serverName)) {
       filteredOAuth[key] = value
     }
@@ -191,11 +189,16 @@ export function extractMcpServerDetails(credentials: ClaudeCredentials): McpServ
   const servers: McpServerInfo[] = []
 
   for (const key of Object.keys(credentials.mcpOAuth)) {
-    // Skip plugin variants and the built-in PUNT server
-    if (key.startsWith('plugin:') || key === 'punt') continue
+    // Skip the built-in PUNT server
+    if (key === 'punt') continue
 
-    // Keys are in format "serverName|id", extract just the server name
-    const serverName = key.split('|')[0]
+    // Extract friendly server name from key formats:
+    // - Regular: "serverName|id" → "serverName"
+    // - Plugin: "plugin:provider:name|id" → "name"
+    const keyWithoutId = key.split('|')[0]
+    const serverName = keyWithoutId.startsWith('plugin:')
+      ? (keyWithoutId.split(':').pop() ?? keyWithoutId)
+      : keyWithoutId
     if (seen.has(serverName)) continue
     seen.add(serverName)
 
