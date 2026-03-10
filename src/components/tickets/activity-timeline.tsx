@@ -817,8 +817,8 @@ const priorityIconMap: Record<
   { icon: React.ComponentType<{ className?: string }>; color: string }
 > = {
   lowest: { icon: ChevronsDown, color: 'text-zinc-400' },
-  low: { icon: ChevronDown, color: 'text-zinc-400' },
-  medium: { icon: ArrowUp, color: 'text-blue-400' },
+  low: { icon: ChevronDown, color: 'text-blue-400' },
+  medium: { icon: ArrowUp, color: 'text-yellow-400' },
   high: { icon: ChevronUp, color: 'text-amber-400' },
   highest: { icon: ChevronsUp, color: 'text-orange-400' },
   critical: { icon: Flame, color: 'text-red-400' },
