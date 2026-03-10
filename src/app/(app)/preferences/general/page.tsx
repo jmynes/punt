@@ -83,22 +83,6 @@ function GeneralContent() {
                 >
                   <div className="flex items-start space-x-2">
                     <RadioGroupItem
-                      value="board"
-                      id="default-view-board"
-                      className="mt-0.5 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                    />
-                    <div className="space-y-0.5">
-                      <Label
-                        htmlFor="default-view-board"
-                        className="text-sm text-zinc-300 cursor-pointer font-normal"
-                      >
-                        Board
-                      </Label>
-                      <p className="text-xs text-zinc-500">Kanban board view with drag-and-drop</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <RadioGroupItem
                       value="backlog"
                       id="default-view-backlog"
                       className="mt-0.5 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
@@ -111,6 +95,22 @@ function GeneralContent() {
                         Backlog
                       </Label>
                       <p className="text-xs text-zinc-500">Table view with filtering and sorting</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <RadioGroupItem
+                      value="board"
+                      id="default-view-board"
+                      className="mt-0.5 border-zinc-700 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                    />
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="default-view-board"
+                        className="text-sm text-zinc-300 cursor-pointer font-normal"
+                      >
+                        Board
+                      </Label>
+                      <p className="text-xs text-zinc-500">Kanban board view with drag-and-drop</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-2">
