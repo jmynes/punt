@@ -241,6 +241,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [editingField, setEditingField] = useState<string | null>(null)
   const [tempTitle, setTempTitle] = useState('')
   const [tempDescription, setTempDescription] = useState('')
+  // Tracks the baseline description after MDXEditor normalizes it on first render.
+  // MDXEditor may add/remove trailing newlines or whitespace when it parses and re-serializes
+  // markdown, causing tempDescription to differ from ticket.description even without user edits.
+  // This ref captures the first onChange value so hasUnsavedChanges compares against the
+  // editor-normalized value instead of the raw ticket description.
+  const descriptionBaselineRef = useRef<string | null>(null)
   const [tempType, setTempType] = useState<IssueType>('task')
   const [tempPriority, setTempPriority] = useState<Priority>('medium')
   const [tempAssigneeId, setTempAssigneeId] = useState<string | null>(null)
@@ -309,6 +315,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setEditingField(null)
       setTempTitle(ticket.title)
       setTempDescription(ticket.description || '')
+      descriptionBaselineRef.current = null // Reset baseline for new ticket
       setTempType(ticket.type)
       setTempPriority(ticket.priority)
       setTempAssigneeId(ticket.assigneeId)
@@ -484,7 +491,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     return (
       hasPendingComment ||
       tempTitle !== ticket.title ||
-      tempDescription !== (ticket.description || '') ||
+      tempDescription !== (descriptionBaselineRef.current ?? (ticket.description || '')) ||
       tempType !== ticket.type ||
       tempPriority !== ticket.priority ||
       tempAssigneeId !== ticket.assigneeId ||
@@ -547,7 +554,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     if (tempTitle.trim() && tempTitle !== ticket.title) {
       updates.title = tempTitle.trim()
     }
-    if (tempDescription !== (ticket.description || '')) {
+    if (tempDescription !== (descriptionBaselineRef.current ?? (ticket.description || ''))) {
       updates.description = tempDescription.trim() || null
     }
     if (tempType !== ticket.type) {
@@ -707,6 +714,15 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     [ticket, projectId, updateTicketMutation],
   )
 
+  // Wraps setTempDescription to capture the editor's initial normalized output
+  const handleDescriptionEditorChange = useCallback((value: string) => {
+    if (descriptionBaselineRef.current === null) {
+      // First onChange from MDXEditor after opening the editor — capture as baseline
+      descriptionBaselineRef.current = value
+    }
+    setTempDescription(value)
+  }, [])
+
   if (!ticket) return null
 
   const ticketKey = formatTicketId(ticket)
@@ -826,6 +842,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         break
       case 'description':
         setTempDescription(ticket.description || '')
+        descriptionBaselineRef.current = null // Reset baseline on cancel
         break
       case 'estimate':
         setTempEstimate(ticket.estimate || '')
@@ -839,6 +856,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     if (ticket) {
       setTempTitle(ticket.title)
       setTempDescription(ticket.description || '')
+      descriptionBaselineRef.current = null // Reset baseline on discard
       setTempType(ticket.type)
       setTempPriority(ticket.priority)
       setTempAssigneeId(ticket.assigneeId)
@@ -900,6 +918,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   }
 
   const startEditing = (field: string) => {
+    if (field === 'description') {
+      // Reset baseline so the first MDXEditor onChange captures the normalized value
+      descriptionBaselineRef.current = null
+    }
     setEditingField(field)
   }
 
@@ -1223,7 +1245,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <div className="space-y-2">
                     <DescriptionEditor
                       markdown={tempDescription}
-                      onChange={setTempDescription}
+                      onChange={handleDescriptionEditorChange}
                       placeholder="Add a more detailed description..."
                       tickets={columns.flatMap((col) => col.tickets)}
                       members={membersWithCurrentUser}
