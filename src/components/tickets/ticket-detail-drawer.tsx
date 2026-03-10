@@ -344,11 +344,17 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   }, [ticket, collapseAttachmentsByDefault])
 
   // Scroll to top when navigating to a different ticket (e.g., clicking a linked ticket)
+  const prevTicketIdRef = useRef<string | null>(null)
   useEffect(() => {
-    if (ticket?.id && scrollAreaRef.current) {
-      const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]')
-      if (viewport) {
-        viewport.scrollTop = 0
+    if (ticket?.id && ticket.id !== prevTicketIdRef.current) {
+      prevTicketIdRef.current = ticket.id
+      if (scrollAreaRef.current) {
+        const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]')
+        if (viewport) {
+          requestAnimationFrame(() => {
+            viewport.scrollTo({ top: 0, behavior: 'smooth' })
+          })
+        }
       }
     }
   }, [ticket?.id])
