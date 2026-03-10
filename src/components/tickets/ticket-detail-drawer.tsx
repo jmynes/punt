@@ -952,6 +952,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             // If auto-save is enabled, save and close
             if (autoSaveOnDrawerClose) {
               handleSave()
+              setEditingField(null)
               onClose()
             } else {
               // Otherwise, show confirmation dialog
@@ -961,6 +962,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             }
           } else {
             // No unsaved changes, close normally
+            setEditingField(null)
             onClose()
           }
         }
@@ -2183,6 +2185,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 setShowUnsavedChangesConfirm(false)
                 setPendingClose(false)
                 setRememberPreference(false)
+                setEditingField(null)
                 onClose()
               }}
               className="bg-red-600 hover:bg-red-700 text-white"
@@ -2199,6 +2202,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 setShowUnsavedChangesConfirm(false)
                 setPendingClose(false)
                 setRememberPreference(false)
+                setEditingField(null)
                 onClose()
               }}
               className="bg-amber-600 hover:bg-amber-500 text-white"
