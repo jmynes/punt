@@ -15,6 +15,7 @@ function ScrollArea({
   viewportRef?: React.Ref<HTMLDivElement>
   viewportProps?: React.ComponentProps<typeof ScrollAreaPrimitive.Viewport>
 }) {
+  const { className: viewportClassName, ...restViewportProps } = viewportProps ?? {}
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
@@ -24,11 +25,11 @@ function ScrollArea({
       <ScrollAreaPrimitive.Viewport
         ref={viewportRef}
         data-slot="scroll-area-viewport"
+        {...restViewportProps}
         className={cn(
           'size-full overflow-y-auto overflow-x-hidden rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 scroll-smooth motion-reduce:scroll-auto',
-          viewportProps?.className,
+          viewportClassName,
         )}
-        {...(viewportProps ? { ...viewportProps, className: undefined } : {})}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
