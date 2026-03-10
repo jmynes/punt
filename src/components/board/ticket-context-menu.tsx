@@ -73,6 +73,7 @@ import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useSprintStore } from '@/stores/sprint-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
@@ -770,6 +771,10 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushSprintMove(projectId, moves, fromLabel, 'Backlog')
 
+    // Clear selection after cross-table move (unless user prefers to keep it)
+    if (ticketsInSprint.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
+      selection.clearSelection()
+    }
     // Persist to API
     ;(async () => {
       try {
@@ -868,6 +873,10 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushSprintMove(projectId, moves, fromLabel, targetSprint.name)
 
+    // Clear selection after cross-table move (unless user prefers to keep it)
+    if (ticketsToAdd.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
+      selection.clearSelection()
+    }
     // Persist to API
     ;(async () => {
       try {
@@ -1159,6 +1168,11 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
         console.error('Failed to persist send-to-list-position:', err)
       }
     })()
+
+    // Clear selection after cross-table move (unless user prefers to keep it)
+    if (ticketsToMove.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
+      selection.clearSelection()
+    }
 
     setOpen(false)
     setSubmenu(null)

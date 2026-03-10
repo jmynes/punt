@@ -12,6 +12,12 @@ import { PERMISSIONS } from '@/lib/permissions'
 
 const createColumnSchema = z.object({
   name: z.string().min(1).max(50),
+  icon: z.string().max(50).nullable().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Invalid color format')
+    .nullable()
+    .optional(),
 })
 
 // Default columns to create for new projects
@@ -131,6 +137,8 @@ export async function POST(
         name: parsed.data.name,
         order: newOrder,
         projectId,
+        ...(parsed.data.icon !== undefined && { icon: parsed.data.icon }),
+        ...(parsed.data.color !== undefined && { color: parsed.data.color }),
       },
       select: {
         id: true,

@@ -64,7 +64,7 @@ export function SprintBacklogView({
   const { setSprintCreateOpen, openCreateTicketWithData } = useUIStore()
   const { updateTicket, getColumns } = useBoardStore()
   const statusColumns = getColumns(projectId)
-  const { selectedTicketIds } = useSelectionStore()
+  const { selectedTicketIds, clearSelection } = useSelectionStore()
   const {
     columns: backlogColumns,
     filterByType,
@@ -595,6 +595,11 @@ export function SprintBacklogView({
         targetSprintName,
       )
 
+      // Clear selection after cross-section move (unless user prefers to keep it)
+      if (draggedIds.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
+        clearSelection()
+      }
+
       // Persist to database
       Promise.all([
         ...originalSprintIds.map(({ ticketId, newOrder }) =>
@@ -630,6 +635,7 @@ export function SprintBacklogView({
       updateTicketSprintMutation,
       ticketsBySprint,
       dropPosition,
+      clearSelection,
     ],
   )
 

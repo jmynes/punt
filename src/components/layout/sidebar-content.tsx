@@ -112,6 +112,7 @@ function TruncatedProjectLink({
   onSetActiveProjectId: (id: string) => void
   handleLinkClick: () => void
 }) {
+  const defaultProjectView = useSettingsStore((s) => s.defaultProjectView)
   const nameRef = useRef<HTMLSpanElement>(null)
   const [isTruncated, setIsTruncated] = useState(false)
 
@@ -129,7 +130,7 @@ function TruncatedProjectLink({
     <Tooltip open={isTruncated ? undefined : false}>
       <TooltipTrigger asChild>
         <Link
-          href={`/projects/${project.key}/board`}
+          href={`/projects/${project.key}/${defaultProjectView}`}
           onClick={() => {
             onSetActiveProjectId(project.id)
             handleLinkClick()
