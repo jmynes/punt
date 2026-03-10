@@ -10,7 +10,8 @@ import { requireAuth } from '@/lib/auth-helpers'
 import {
   decryptSession,
   encryptSession,
-  extractMcpServerNames,
+  extractMcpServerDetails,
+  type McpServerInfo,
   validateSessionCredentials,
 } from '@/lib/chat/encryption'
 import { db } from '@/lib/db'
@@ -111,11 +112,15 @@ export async function GET() {
 
     // Extract available MCP servers from credentials if present
     let availableMcpServers: string[] = []
+    let mcpServerDetails: McpServerInfo[] = []
     if (user?.claudeSessionEncrypted) {
       try {
         const decrypted = decryptSession(user.claudeSessionEncrypted)
         const credentials = JSON.parse(decrypted)
-        availableMcpServers = extractMcpServerNames(credentials)
+        if (validateSessionCredentials(credentials)) {
+          mcpServerDetails = extractMcpServerDetails(credentials)
+          availableMcpServers = mcpServerDetails.map((s) => s.name)
+        }
       } catch {
         // Ignore decryption errors - credentials may be corrupted
       }
@@ -131,6 +136,7 @@ export async function GET() {
       provider: user?.chatProvider || 'anthropic',
       availableMcpServers,
       enabledMcpServers,
+      mcpServerDetails,
     })
   } catch (error) {
     if (error instanceof Error && error.message === 'Not authenticated') {
@@ -199,7 +205,8 @@ export async function POST(request: Request) {
     const encrypted = encryptSession(result.data.credentials)
 
     // Extract available MCP servers and enable all by default
-    const availableMcpServers = extractMcpServerNames(credentials as Record<string, unknown>)
+    const mcpServerDetails = extractMcpServerDetails(credentials as Record<string, unknown>)
+    const availableMcpServers = mcpServerDetails.map((s) => s.name)
 
     await db.user.update({
       where: { id: currentUser.id },
@@ -215,6 +222,7 @@ export async function POST(request: Request) {
       message: 'Claude session configured successfully',
       availableMcpServers,
       enabledMcpServers: availableMcpServers,
+      mcpServerDetails,
     })
   } catch (error) {
     if (error instanceof Error && error.message === 'Not authenticated') {
@@ -310,6 +318,34 @@ export async function PATCH(request: Request) {
     if (enabledMcpServers !== undefined) {
       if (!Array.isArray(enabledMcpServers)) {
         return Response.json({ error: 'enabledMcpServers must be an array' }, { status: 400 })
+      }
+      // Validate entries are strings and exist in the user's credentials
+      if (!enabledMcpServers.every((s: unknown) => typeof s === 'string')) {
+        return Response.json(
+          { error: 'enabledMcpServers entries must be strings' },
+          { status: 400 },
+        )
+      }
+      const user = await db.user.findUnique({
+        where: { id: currentUser.id },
+        select: { claudeSessionEncrypted: true },
+      })
+      if (user?.claudeSessionEncrypted) {
+        try {
+          const decrypted = decryptSession(user.claudeSessionEncrypted)
+          const credentials = JSON.parse(decrypted)
+          const available = extractMcpServerDetails(credentials).map((s) => s.name)
+          const availableSet = new Set(available)
+          const invalid = (enabledMcpServers as string[]).filter((s) => !availableSet.has(s))
+          if (invalid.length > 0) {
+            return Response.json(
+              { error: `Unknown MCP servers: ${invalid.join(', ')}` },
+              { status: 400 },
+            )
+          }
+        } catch {
+          // Credentials corrupted — allow the update anyway
+        }
       }
       updateData.enabledMcpServers = enabledMcpServers
     }

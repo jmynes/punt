@@ -11,6 +11,7 @@ import { join } from 'node:path'
 import {
   type ClaudeCredentials,
   decryptSession,
+  filterCredentialsMcpServers,
   validateSessionCredentials,
 } from '@/lib/chat/encryption'
 import { db } from '@/lib/db'
@@ -92,10 +93,10 @@ export class ClaudeCliProvider implements ChatProvider {
   async sendMessage(params: ChatProviderParams): Promise<void> {
     const { messages, userId, systemPrompt, onEvent } = params
 
-    // Get user's encrypted session and MCP key
+    // Get user's encrypted session, MCP key, and enabled external servers
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { claudeSessionEncrypted: true, mcpApiKeyEncrypted: true },
+      select: { claudeSessionEncrypted: true, mcpApiKeyEncrypted: true, enabledMcpServers: true },
     })
 
     if (!user?.claudeSessionEncrypted) {
@@ -142,6 +143,11 @@ export class ClaudeCliProvider implements ChatProvider {
     const sessionId = randomUUID()
     const tempDir = join(tmpdir(), `punt-chat-${sessionId}`)
 
+    // Get enabled external MCP server names
+    const enabledMcpServers: string[] = Array.isArray(user.enabledMcpServers)
+      ? (user.enabledMcpServers as string[])
+      : []
+
     try {
       await this.runClaude({
         tempDir,
@@ -149,6 +155,7 @@ export class ClaudeCliProvider implements ChatProvider {
         messages,
         systemPrompt,
         mcpApiKey,
+        enabledMcpServers,
         onEvent,
       })
     } finally {
@@ -167,18 +174,24 @@ export class ClaudeCliProvider implements ChatProvider {
     messages: Array<{ role: string; content: string }>
     systemPrompt: string
     mcpApiKey: string | null
+    enabledMcpServers: string[]
     onEvent: (event: StreamEvent) => void
   }): Promise<void> {
-    const { tempDir, credentials, messages, systemPrompt, mcpApiKey, onEvent } = params
+    const { tempDir, credentials, messages, systemPrompt, mcpApiKey, enabledMcpServers, onEvent } =
+      params
 
     // Set up temp directory with credentials (restrictive permissions for security)
     const claudeDir = join(tempDir, '.claude')
     await mkdir(claudeDir, { recursive: true, mode: 0o700 })
 
+    // Filter credentials to only include OAuth tokens for enabled external MCP servers.
+    // This ensures that disabled servers cannot be accessed during the chat session.
+    const filteredCredentials = filterCredentialsMcpServers(credentials, enabledMcpServers)
+
     // Write credentials file (note: Claude CLI uses .credentials.json with leading dot)
     // Use restrictive permissions (owner read/write only) since this contains auth tokens
     const credentialsPath = join(claudeDir, '.credentials.json')
-    await writeFile(credentialsPath, JSON.stringify(credentials), { mode: 0o600 })
+    await writeFile(credentialsPath, JSON.stringify(filteredCredentials), { mode: 0o600 })
 
     // Write MCP config (PUNT server only)
     const mcpConfig = {
@@ -267,6 +280,14 @@ export class ClaudeCliProvider implements ChatProvider {
   }
 
   private processOutput(proc: ChildProcess, onEvent: (event: StreamEvent) => void): Promise<void> {
+    // Track running tools per invocation (not on the singleton instance)
+    // to prevent cross-user state corruption under concurrency.
+    const runningTools = new Set<string>()
+
+    const handleEvent = (event: StreamJsonEvent) => {
+      this.handleStreamEvent(event, onEvent, runningTools)
+    }
+
     return new Promise((resolve) => {
       let buffer = ''
       let timeoutHandle: NodeJS.Timeout
@@ -296,7 +317,7 @@ export class ClaudeCliProvider implements ChatProvider {
 
           try {
             const event = JSON.parse(line) as StreamJsonEvent
-            this.handleStreamEvent(event, onEvent)
+            handleEvent(event)
           } catch {
             // Non-JSON line, ignore
           }
@@ -320,7 +341,7 @@ export class ClaudeCliProvider implements ChatProvider {
         if (buffer.trim()) {
           try {
             const event = JSON.parse(buffer) as StreamJsonEvent
-            this.handleStreamEvent(event, onEvent)
+            handleEvent(event)
           } catch {
             // Ignore
           }
@@ -342,26 +363,27 @@ export class ClaudeCliProvider implements ChatProvider {
     })
   }
 
-  // Track running tools to mark them complete when we see user/assistant events
-  private runningTools: Set<string> = new Set()
-
-  private handleStreamEvent(event: StreamJsonEvent, onEvent: (event: StreamEvent) => void): void {
+  private handleStreamEvent(
+    event: StreamJsonEvent,
+    onEvent: (event: StreamEvent) => void,
+    runningTools: Set<string>,
+  ): void {
     switch (event.type) {
       case 'system':
         // Initialization event - clear tool tracking
-        this.runningTools.clear()
+        runningTools.clear()
         break
 
       case 'user':
         // User event contains tool results - mark all running tools as complete
-        for (const toolName of this.runningTools) {
+        for (const toolName of runningTools) {
           onEvent({
             type: 'tool_end',
             name: toolName,
             success: true,
           })
         }
-        this.runningTools.clear()
+        runningTools.clear()
         break
 
       case 'assistant':
@@ -371,7 +393,7 @@ export class ClaudeCliProvider implements ChatProvider {
             if (block.type === 'text' && block.text) {
               onEvent({ type: 'text', content: block.text })
             } else if (block.type === 'tool_use' && block.name) {
-              this.runningTools.add(block.name)
+              runningTools.add(block.name)
               onEvent({
                 type: 'tool_start',
                 name: block.name,
@@ -384,14 +406,14 @@ export class ClaudeCliProvider implements ChatProvider {
 
       case 'result':
         // Final result - mark any remaining tools as complete
-        for (const toolName of this.runningTools) {
+        for (const toolName of runningTools) {
           onEvent({
             type: 'tool_end',
             name: toolName,
             success: event.subtype === 'success',
           })
         }
-        this.runningTools.clear()
+        runningTools.clear()
         break
 
       case 'text':
