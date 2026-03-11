@@ -93,6 +93,56 @@ export function useCreateTicketLink() {
   })
 }
 
+interface UpdateLinkInput {
+  projectId: string
+  ticketId: string
+  linkId: string
+  linkType: LinkType
+  targetTicketId: string
+}
+
+/**
+ * Update the link type of an existing ticket link
+ */
+export function useUpdateTicketLink() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ projectId, ticketId, linkId, linkType }: UpdateLinkInput) => {
+      const tabId = getTabId()
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(tabId && { 'X-Tab-Id': tabId }),
+      }
+
+      const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/links/${linkId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ linkType }),
+      })
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Request failed' }))
+        throw new Error(error.error || `HTTP ${res.status}`)
+      }
+
+      return res.json()
+    },
+    onSuccess: (_data, { projectId, ticketId, targetTicketId }) => {
+      // Invalidate queries for both tickets
+      queryClient.invalidateQueries({ queryKey: ticketLinkKeys.byTicket(projectId, ticketId) })
+      queryClient.invalidateQueries({
+        queryKey: ticketLinkKeys.byTicket(projectId, targetTicketId),
+      })
+      queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+      showToast.success('Link type updated')
+    },
+    onError: (err) => {
+      showToast.error(err.message)
+    },
+  })
+}
+
 interface DeleteLinkInput {
   projectId: string
   ticketId: string
