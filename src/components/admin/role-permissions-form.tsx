@@ -39,6 +39,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { LABEL_COLORS } from '@/lib/constants'
 import type { Permission } from '@/lib/permissions/constants'
 import {
@@ -133,7 +134,7 @@ export function RolePermissionsForm() {
   const { data, isLoading, error } = useQuery<RoleSettingsData>({
     queryKey: ['admin', 'settings', 'roles'],
     queryFn: async () => {
-      const res = await fetch('/api/admin/settings/roles')
+      const res = await apiFetch('/api/admin/settings/roles')
       if (!res.ok) throw new Error('Failed to fetch role settings')
       return res.json()
     },
@@ -141,7 +142,7 @@ export function RolePermissionsForm() {
 
   const updateMutation = useMutation({
     mutationFn: async (payload: { settings: RoleSettings; customRoles: CustomRole[] }) => {
-      const res = await fetch('/api/admin/settings/roles', {
+      const res = await apiFetch('/api/admin/settings/roles', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -168,7 +169,7 @@ export function RolePermissionsForm() {
 
   const resetMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/admin/settings/roles', {
+      const res = await apiFetch('/api/admin/settings/roles', {
         method: 'POST',
         headers: { 'X-Tab-Id': getTabId() },
       })
@@ -372,7 +373,7 @@ export function RolePermissionsForm() {
 
     try {
       // Persist immediately to the server
-      const res = await fetch('/api/admin/settings/roles', {
+      const res = await apiFetch('/api/admin/settings/roles', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -35,6 +35,7 @@ import {
   usePreviewDatabase,
 } from '@/hooks/queries/use-database-backup'
 import { suppressDatabaseWipeSignOut } from '@/hooks/use-realtime-projects'
+import { withBasePath } from '@/lib/base-path'
 import type { ImportResult } from '@/lib/database-import'
 
 interface DatabaseImportDialogProps {
@@ -182,7 +183,7 @@ export function DatabaseImportDialog({
       // Sign out to clear the session cookie and redirect to login
       // The imported database has different users, so current session is invalid
       signOut({ redirect: false }).then(() => {
-        window.location.href = '/login'
+        window.location.href = withBasePath('/login')
       })
       return
     }

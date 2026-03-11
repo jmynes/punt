@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { getDataProvider, type ProjectSummary as ProviderProjectSummary } from '@/lib/data-provider'
 import { showToast } from '@/lib/toast'
 import { type ProjectSummary, useProjectsStore } from '@/stores/projects-store'
@@ -33,7 +34,7 @@ export function useProjectDetail(projectKey: string) {
   return useQuery<ProjectDetail>({
     queryKey: projectKeys.detail(projectKey),
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectKey}`)
+      const res = await apiFetch(`/api/projects/${projectKey}`)
       if (!res.ok) {
         const error = await res.json().catch(() => ({ error: 'Failed to fetch project' }))
         throw new Error(error.error || 'Failed to fetch project')

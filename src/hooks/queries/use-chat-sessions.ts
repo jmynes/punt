@@ -1,6 +1,7 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 import type { ChatSessionSummary, ChatSessionWithMessages } from '@/types'
 
@@ -19,7 +20,7 @@ export function useChatSessions(projectId?: string) {
     queryKey: chatKeys.list(projectId),
     queryFn: async () => {
       const params = projectId ? `?projectId=${projectId}` : ''
-      const res = await fetch(`/api/chat/sessions${params}`)
+      const res = await apiFetch(`/api/chat/sessions${params}`)
       if (!res.ok) throw new Error('Failed to fetch sessions')
       return res.json()
     },
@@ -34,7 +35,7 @@ export function useChatSession(sessionId: string | null) {
   return useQuery<ChatSessionWithMessages>({
     queryKey: chatKeys.detail(sessionId || ''),
     queryFn: async () => {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`)
+      const res = await apiFetch(`/api/chat/sessions/${sessionId}`)
       if (!res.ok) throw new Error('Failed to fetch session')
       return res.json()
     },
@@ -51,7 +52,7 @@ export function useCreateChatSession() {
 
   return useMutation({
     mutationFn: async (data: { name?: string; projectId?: string }) => {
-      const res = await fetch('/api/chat/sessions', {
+      const res = await apiFetch('/api/chat/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -73,7 +74,7 @@ export function useRenameChatSession() {
 
   return useMutation({
     mutationFn: async ({ sessionId, name }: { sessionId: string; name: string }) => {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
+      const res = await apiFetch(`/api/chat/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
@@ -100,7 +101,7 @@ export function useDeleteChatSession() {
 
   return useMutation({
     mutationFn: async (sessionId: string) => {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
+      const res = await apiFetch(`/api/chat/sessions/${sessionId}`, {
         method: 'DELETE',
       })
       if (!res.ok) throw new Error('Failed to delete session')

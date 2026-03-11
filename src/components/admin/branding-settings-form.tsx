@@ -14,6 +14,7 @@ import {
   useUploadLogo,
 } from '@/hooks/queries/use-system-settings'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
+import { withBasePath } from '@/lib/base-path'
 import { DEFAULT_BRANDING } from '@/lib/branding'
 
 export function BrandingSettingsForm() {
@@ -159,7 +160,7 @@ export function BrandingSettingsForm() {
                 {settings?.logoUrl ? (
                   <div className="relative">
                     <img
-                      src={settings.logoUrl}
+                      src={withBasePath(settings.logoUrl)}
                       alt="Logo"
                       className="h-12 w-12 rounded-lg object-contain bg-zinc-800"
                     />

@@ -3,9 +3,10 @@ import { z } from 'zod'
 import { handleApiError, rateLimitExceeded, validationError } from '@/lib/api-utils'
 import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/password'
-import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { checkRateLimit, getClientIp, recordFailedAttempt } from '@/lib/rate-limit'
 import {
   decryptTotpSecret,
+  isTotpReplay,
   markRecoveryCodeUsed,
   verifyRecoveryCode,
   verifyTotpToken,
@@ -22,16 +23,15 @@ const verifySchema = z.object({
  * POST /api/auth/2fa/verify - Verify TOTP code during login
  * This is called after the initial password verification when the user has 2FA enabled.
  * Re-verifies credentials + TOTP code before returning user data for session creation.
+ *
+ * Rate limiting strategy:
+ * - Only counts failed attempts (invalid code, replay, etc.)
+ * - Invalid usernames: IP-based (prevents enumeration from single source)
+ * - Valid usernames: username-based (protects specific accounts, can't be bypassed by VPN)
+ * - Rate limit cleared on successful login (in auth.ts)
  */
 export async function POST(request: Request) {
   try {
-    // Rate limiting
-    const ip = getClientIp(request)
-    const rateLimit = await checkRateLimit(ip, 'auth/2fa')
-    if (!rateLimit.allowed) {
-      return rateLimitExceeded(rateLimit)
-    }
-
     const body = await request.json()
     const parsed = verifySchema.safeParse(body)
 
@@ -44,25 +44,37 @@ export async function POST(request: Request) {
     // Normalize username to NFC
     const normalizedUsername = username.normalize('NFC')
 
-    // Re-verify credentials (defense in depth)
+    // First check if user exists to determine rate limiting strategy
     const user = await db.user.findFirst({
       where: { username: { equals: normalizedUsername, mode: 'insensitive' } },
       select: {
         id: true,
+        username: true,
         passwordHash: true,
         isActive: true,
         totpEnabled: true,
         totpSecret: true,
         totpRecoveryCodes: true,
+        totpLastUsedAt: true,
       },
     })
 
+    // Rate limit by username if user exists, otherwise by IP
+    // This prevents username enumeration while still protecting valid accounts
+    const rateLimitIdentifier = user ? user.username : getClientIp(request)
+    const rateLimit = await checkRateLimit(rateLimitIdentifier, 'auth/2fa')
+    if (!rateLimit.allowed) {
+      return rateLimitExceeded(rateLimit)
+    }
+
     if (!user?.passwordHash || !user.isActive) {
+      await recordFailedAttempt(rateLimitIdentifier, 'auth/2fa')
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
     const isValidPassword = await verifyPassword(password, user.passwordHash)
     if (!isValidPassword) {
+      await recordFailedAttempt(user.username, 'auth/2fa')
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
@@ -81,6 +93,7 @@ export async function POST(request: Request) {
 
       const matchIndex = await verifyRecoveryCode(normalizedCode, user.totpRecoveryCodes)
       if (matchIndex === -1) {
+        await recordFailedAttempt(user.username, 'auth/2fa')
         return NextResponse.json({ error: 'Invalid recovery code' }, { status: 401 })
       }
 
@@ -97,6 +110,7 @@ export async function POST(request: Request) {
         data: { lastLoginAt: new Date() },
       })
 
+      // Success - rate limit will be cleared by auth.ts on actual signIn
       return NextResponse.json({ verified: true, usedRecoveryCode: true })
     }
 
@@ -105,15 +119,22 @@ export async function POST(request: Request) {
     const isValid = verifyTotpToken(code, secret)
 
     if (!isValid) {
+      await recordFailedAttempt(user.username, 'auth/2fa')
       return NextResponse.json({ error: 'Invalid verification code' }, { status: 401 })
     }
 
-    // Update last login timestamp
-    await db.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    })
+    // Replay protection: reject if the same time window was already used
+    if (isTotpReplay(user.totpLastUsedAt)) {
+      // Don't count replay as failed attempt - it's not a brute force attack
+      return NextResponse.json(
+        { error: 'This code was already used. Please wait for a new code.' },
+        { status: 401 },
+      )
+    }
 
+    // Don't update totpLastUsedAt here - let the signIn callback handle it
+    // This endpoint is just for pre-validation to get proper error messages
+    // Rate limit will be cleared by auth.ts on actual signIn
     return NextResponse.json({ verified: true })
   } catch (error) {
     return handleApiError(error, 'verify 2FA login')

@@ -863,6 +863,11 @@ export default function BacklogPage() {
         targetSprintName,
       )
 
+      // Clear selection after cross-section move (unless user prefers to keep it)
+      if (draggedIds.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
+        clearSelection()
+      }
+
       // Persist to database (moved tickets + reordered existing tickets)
       Promise.all([
         ...originalSprintIds.map(({ ticketId, newOrder }) =>

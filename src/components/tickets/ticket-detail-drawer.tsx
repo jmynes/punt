@@ -3,7 +3,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
-  Bot,
   Bug,
   CheckSquare,
   ChevronDown,
@@ -224,10 +223,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [showUnsavedChangesConfirm, setShowUnsavedChangesConfirm] = useState(false)
   const [_pendingClose, setPendingClose] = useState(false)
   const [rememberPreference, setRememberPreference] = useState(false)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
   const removeAllAttachmentsButtonRef = useRef<HTMLButtonElement>(null)
   const storyPointsInputRef = useRef<HTMLInputElement>(null)
   const commentsSectionRef = useRef<CommentsSectionRef>(null)
+  const scrollViewportRef = useRef<HTMLDivElement>(null)
   const [hasPendingComment, setHasPendingComment] = useState(false)
   const [activityView, setActivityView] = useState<'comments' | 'timeline'>('comments')
 
@@ -242,6 +243,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [editingField, setEditingField] = useState<string | null>(null)
   const [tempTitle, setTempTitle] = useState('')
   const [tempDescription, setTempDescription] = useState('')
+  // Tracks the baseline description after MDXEditor normalizes it on first render.
+  // MDXEditor may add/remove trailing newlines or whitespace when it parses and re-serializes
+  // markdown, causing tempDescription to differ from ticket.description even without user edits.
+  // This ref captures the first onChange value so hasUnsavedChanges compares against the
+  // editor-normalized value instead of the raw ticket description.
+  const descriptionBaselineRef = useRef<string | null>(null)
   const [tempType, setTempType] = useState<IssueType>('task')
   const [tempPriority, setTempPriority] = useState<Priority>('medium')
   const [tempAssigneeId, setTempAssigneeId] = useState<string | null>(null)
@@ -310,6 +317,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       setEditingField(null)
       setTempTitle(ticket.title)
       setTempDescription(ticket.description || '')
+      descriptionBaselineRef.current = null // Reset baseline for new ticket
       setTempType(ticket.type)
       setTempPriority(ticket.priority)
       setTempAssigneeId(ticket.assigneeId)
@@ -343,6 +351,22 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     }
   }, [ticket, collapseAttachmentsByDefault])
 
+  // Scroll to top when navigating to a different ticket (e.g., clicking a linked ticket)
+  const prevTicketIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (ticket?.id && ticket.id !== prevTicketIdRef.current) {
+      prevTicketIdRef.current = ticket.id
+      if (scrollAreaRef.current) {
+        const viewport = scrollAreaRef.current.querySelector('[data-slot="scroll-area-viewport"]')
+        if (viewport) {
+          requestAnimationFrame(() => {
+            viewport.scrollTo({ top: 0, behavior: 'smooth' })
+          })
+        }
+      }
+    }
+  }, [ticket?.id])
+
   // Focus specific field when drawer opens with focus request
   useEffect(() => {
     if (drawerFocusField === 'storyPoints') {
@@ -361,6 +385,16 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       return () => clearTimeout(timer)
     }
   }, [drawerFocusField, clearDrawerFocusField])
+
+  // Auto-focus scrollable area when drawer opens for keyboard scrolling
+  useEffect(() => {
+    if (ticket && !drawerFocusField) {
+      const timer = setTimeout(() => {
+        scrollViewportRef.current?.focus({ preventScroll: true })
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [ticket, drawerFocusField])
 
   // Handler for updating temp state (no immediate save)
   const handleChange = (field: string, value: unknown) => {
@@ -485,7 +519,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     return (
       hasPendingComment ||
       tempTitle !== ticket.title ||
-      tempDescription !== (ticket.description || '') ||
+      tempDescription !== (descriptionBaselineRef.current ?? (ticket.description || '')) ||
       tempType !== ticket.type ||
       tempPriority !== ticket.priority ||
       tempAssigneeId !== ticket.assigneeId ||
@@ -548,7 +582,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     if (tempTitle.trim() && tempTitle !== ticket.title) {
       updates.title = tempTitle.trim()
     }
-    if (tempDescription !== (ticket.description || '')) {
+    if (tempDescription !== (descriptionBaselineRef.current ?? (ticket.description || ''))) {
       updates.description = tempDescription.trim() || null
     }
     if (tempType !== ticket.type) {
@@ -708,6 +742,15 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     [ticket, projectId, updateTicketMutation],
   )
 
+  // Wraps setTempDescription to capture the editor's initial normalized output
+  const handleDescriptionEditorChange = useCallback((value: string) => {
+    if (descriptionBaselineRef.current === null) {
+      // First onChange from MDXEditor after opening the editor — capture as baseline
+      descriptionBaselineRef.current = value
+    }
+    setTempDescription(value)
+  }, [])
+
   if (!ticket) return null
 
   const ticketKey = formatTicketId(ticket)
@@ -827,6 +870,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         break
       case 'description':
         setTempDescription(ticket.description || '')
+        descriptionBaselineRef.current = null // Reset baseline on cancel
         break
       case 'estimate':
         setTempEstimate(ticket.estimate || '')
@@ -840,6 +884,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
     if (ticket) {
       setTempTitle(ticket.title)
       setTempDescription(ticket.description || '')
+      descriptionBaselineRef.current = null // Reset baseline on discard
       setTempType(ticket.type)
       setTempPriority(ticket.priority)
       setTempAssigneeId(ticket.assigneeId)
@@ -901,6 +946,10 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   }
 
   const startEditing = (field: string) => {
+    if (field === 'description') {
+      // Reset baseline so the first MDXEditor onChange captures the normalized value
+      descriptionBaselineRef.current = null
+    }
     setEditingField(field)
   }
 
@@ -914,6 +963,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             // If auto-save is enabled, save and close
             if (autoSaveOnDrawerClose) {
               handleSave()
+              setEditingField(null)
               onClose()
             } else {
               // Otherwise, show confirmation dialog
@@ -923,6 +973,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             }
           } else {
             // No unsaved changes, close normally
+            setEditingField(null)
             onClose()
           }
         }
@@ -960,7 +1011,12 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
           </SheetHeader>
 
           {/* Content */}
-          <ScrollArea className="flex-1 min-h-0">
+          <ScrollArea
+            ref={scrollAreaRef}
+            className="flex-1 min-h-0"
+            viewportRef={scrollViewportRef}
+            viewportProps={{ tabIndex: 0 }}
+          >
             <div className="space-y-6 p-6">
               {/* Title */}
               <div className="space-y-2">
@@ -1224,7 +1280,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                   <div className="space-y-2">
                     <DescriptionEditor
                       markdown={tempDescription}
-                      onChange={setTempDescription}
+                      onChange={handleDescriptionEditorChange}
                       placeholder="Add a more detailed description..."
                       tickets={columns.flatMap((col) => col.tickets)}
                       members={membersWithCurrentUser}
@@ -1288,14 +1344,26 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     users={membersWithCurrentUser}
                     currentUserId={currentUser?.id}
                     placeholder="Select reporter"
-                    showAssignToMe
+                    showAssignToMe={false}
                     allowUnassigned={false}
                   />
-                  {ticket.createdByAgent && (
+                  {/* Show agent attribution - prefer live agent data, fall back to snapshot */}
+                  {(ticket.createdByAgent || ticket.createdByAgentName) && (
                     <div className="flex items-center gap-2 mt-1 h-8 px-2 rounded-md bg-zinc-800/50 border border-zinc-700/50">
-                      <AgentIdenticon identifier={ticket.createdByAgent.id} size={18} />
+                      <AgentIdenticon
+                        identifier={
+                          ticket.createdByAgentIdSnapshot ?? ticket.createdByAgentName ?? ''
+                        }
+                        size={18}
+                      />
                       <span className="text-xs text-zinc-400 truncate">
-                        via {ticket.createdByAgent.name}
+                        via {ticket.createdByAgent?.name ?? ticket.createdByAgentName}
+                        {!ticket.createdByAgent && ticket.createdByAgentOwnerName && (
+                          <span className="text-zinc-500">
+                            {' '}
+                            ({ticket.createdByAgentOwnerName}'s agent)
+                          </span>
+                        )}
                       </span>
                     </div>
                   )}
@@ -1893,7 +1961,14 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                     projectId={projectId}
                     ticketId={ticket.id}
                     agentAttribution={
-                      ticket.createdByAgent ? { name: ticket.createdByAgent.name } : null
+                      ticket.createdByAgent
+                        ? { name: ticket.createdByAgent.name }
+                        : ticket.createdByAgentName
+                          ? {
+                              name: ticket.createdByAgentName,
+                              ownerName: ticket.createdByAgentOwnerName ?? undefined,
+                            }
+                          : null
                     }
                   />
                 )}
@@ -2126,6 +2201,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 setShowUnsavedChangesConfirm(false)
                 setPendingClose(false)
                 setRememberPreference(false)
+                setEditingField(null)
                 onClose()
               }}
               className="bg-red-600 hover:bg-red-700 text-white"
@@ -2142,6 +2218,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
                 setShowUnsavedChangesConfirm(false)
                 setPendingClose(false)
                 setRememberPreference(false)
+                setEditingField(null)
                 onClose()
               }}
               className="bg-amber-600 hover:bg-amber-500 text-white"

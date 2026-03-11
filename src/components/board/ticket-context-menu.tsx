@@ -73,6 +73,7 @@ import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
+import { useSettingsStore } from '@/stores/settings-store'
 import { useSprintStore } from '@/stores/sprint-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
@@ -770,6 +771,10 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushSprintMove(projectId, moves, fromLabel, 'Backlog')
 
+    // Clear selection after cross-table move (unless user prefers to keep it)
+    if (ticketsInSprint.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
+      selection.clearSelection()
+    }
     // Persist to API
     ;(async () => {
       try {
@@ -868,6 +873,10 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
     const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
     undoState.pushSprintMove(projectId, moves, fromLabel, targetSprint.name)
 
+    // Clear selection after cross-table move (unless user prefers to keep it)
+    if (ticketsToAdd.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
+      selection.clearSelection()
+    }
     // Persist to API
     ;(async () => {
       try {
@@ -1160,6 +1169,11 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
       }
     })()
 
+    // Clear selection after cross-table move (unless user prefers to keep it)
+    if (ticketsToMove.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
+      selection.clearSelection()
+    }
+
     setOpen(false)
     setSubmenu(null)
   }
@@ -1448,28 +1462,30 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
                           <div className="my-1 border-t border-zinc-800" />
                         </>
                       )}
-                      {sortedMembers.map((m) => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                          onClick={() => doAssign(m.id)}
-                        >
-                          <Avatar className="h-5 w-5">
-                            {m.avatar && <AvatarImage src={m.avatar} />}
-                            <AvatarFallback
-                              className="text-[10px] text-white font-medium"
-                              style={{ backgroundColor: m.avatarColor || getAvatarColor(m.id) }}
-                            >
-                              {getInitials(m.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{m.name}</span>
-                          {ticket.assigneeId === m.id && !multi && (
-                            <Check className="size-4 text-zinc-400 ml-auto" />
-                          )}
-                        </button>
-                      ))}
+                      {sortedMembers
+                        .filter((m) => !currentUser || m.id !== currentUser.id)
+                        .map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                            onClick={() => doAssign(m.id)}
+                          >
+                            <Avatar className="h-5 w-5">
+                              {m.avatar && <AvatarImage src={m.avatar} />}
+                              <AvatarFallback
+                                className="text-[10px] text-white font-medium"
+                                style={{ backgroundColor: m.avatarColor || getAvatarColor(m.id) }}
+                              >
+                                {getInitials(m.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{m.name}</span>
+                            {ticket.assigneeId === m.id && !multi && (
+                              <Check className="size-4 text-zinc-400 ml-auto" />
+                            )}
+                          </button>
+                        ))}
                       <div className="my-1 border-t border-zinc-800" />
                       <button
                         type="button"

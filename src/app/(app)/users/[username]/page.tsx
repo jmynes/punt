@@ -63,6 +63,7 @@ import {
 } from '@/components/ui/select'
 import { useCurrentUser, useIsSystemAdmin } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import { type MemberSnapshot, useAdminUndoStore } from '@/stores/admin-undo-store'
@@ -241,7 +242,7 @@ function AddToProjectDialog({
   const { data: availableProjects, isLoading: projectsLoading } = useQuery<AvailableProject[]>({
     queryKey: ['admin', 'user', username, 'available-projects'],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/users/${username}/available-projects`)
+      const res = await apiFetch(`/api/admin/users/${username}/available-projects`)
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error || 'Failed to fetch available projects')
@@ -285,7 +286,7 @@ function AddToProjectDialog({
 
     setIsSubmitting(true)
     try {
-      const res = await fetch(`/api/projects/${selectedProject.key}/members`, {
+      const res = await apiFetch(`/api/projects/${selectedProject.key}/members`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -707,7 +708,7 @@ function UserProfileContent() {
   } = useQuery<UserDetails>({
     queryKey: ['user', username],
     queryFn: async () => {
-      const res = await fetch(`/api/users/${username}`)
+      const res = await apiFetch(`/api/users/${username}`)
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error || 'Failed to fetch user')
@@ -759,7 +760,7 @@ function UserProfileContent() {
       roleName: string,
       isUndo = false,
     ) => {
-      const res = await fetch(`/api/projects/${projectId}/members/${membershipId}`, {
+      const res = await apiFetch(`/api/projects/${projectId}/members/${membershipId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -782,7 +783,7 @@ function UserProfileContent() {
   // Helper to add a member to a project
   const performAddMember = useCallback(
     async (projectId: string, userId: string, roleId: string) => {
-      const res = await fetch(`/api/projects/${projectId}/members`, {
+      const res = await apiFetch(`/api/projects/${projectId}/members`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -801,7 +802,7 @@ function UserProfileContent() {
 
   // Helper to remove a member from a project
   const performRemoveMember = useCallback(async (projectId: string, membershipId: string) => {
-    const res = await fetch(`/api/projects/${projectId}/members/${membershipId}`, {
+    const res = await apiFetch(`/api/projects/${projectId}/members/${membershipId}`, {
       method: 'DELETE',
       headers: { 'X-Tab-Id': getTabId() },
     })
@@ -957,7 +958,7 @@ function UserProfileContent() {
     )
 
     try {
-      const res = await fetch(`/api/admin/users/${username}`, {
+      const res = await apiFetch(`/api/admin/users/${username}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1011,7 +1012,7 @@ function UserProfileContent() {
     )
 
     try {
-      const res = await fetch(`/api/admin/users/${username}`, {
+      const res = await apiFetch(`/api/admin/users/${username}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1071,7 +1072,7 @@ function UserProfileContent() {
     })
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/members/${membershipId}`, {
+      const res = await apiFetch(`/api/projects/${projectId}/members/${membershipId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1137,10 +1138,13 @@ function UserProfileContent() {
     setRemovingMembership(null)
 
     try {
-      const res = await fetch(`/api/projects/${membership.project.key}/members/${membership.id}`, {
-        method: 'DELETE',
-        headers: { 'X-Tab-Id': getTabId() },
-      })
+      const res = await apiFetch(
+        `/api/projects/${membership.project.key}/members/${membership.id}`,
+        {
+          method: 'DELETE',
+          headers: { 'X-Tab-Id': getTabId() },
+        },
+      )
 
       if (!res.ok) {
         invalidateUserQueries()

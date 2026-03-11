@@ -95,6 +95,7 @@ model User {
   totpSecret        String?   // Encrypted TOTP secret key
   totpEnabled       Boolean   @default(false) // Whether 2FA is active
   totpRecoveryCodes Json?     // JSON array of hashed recovery codes
+  totpLastUsedAt    DateTime? // Last successful TOTP verification (replay protection)
 
   // MCP API access
   mcpApiKey          String? @unique // SHA-256 hash of API key for authentication
@@ -418,8 +419,12 @@ model Ticket {
   linkedTo    TicketLink[] @relation("LinkedTo")
 
   // Agent attribution
-  createdByAgentId String?
-  createdByAgent   Agent?  @relation("AgentCreatedTickets", fields: [createdByAgentId], references: [id])
+  createdByAgentId        String?
+  createdByAgent          Agent?  @relation("AgentCreatedTickets", fields: [createdByAgentId], references: [id])
+  // Snapshot fields for historical record (persists even if agent is revoked)
+  createdByAgentIdSnapshot String? // Original agent ID (never cleared, used for stable identicon)
+  createdByAgentName       String? // Agent's display name at creation time
+  createdByAgentOwnerName  String? // Agent owner's display name at creation time
 
   // Activity
   comments    Comment[]
@@ -661,9 +666,11 @@ model SystemSettings {
   defaultEnvironmentBranches Json? // Default environment branch mappings (JSON array of EnvironmentBranch objects)
   defaultWebhookEnabled      Boolean @default(false) // Whether to auto-generate webhook secrets for new projects
 
-  // Default sprint times (system-wide defaults for new projects)
-  defaultSprintStartTime  String  @default("09:00") // HH:mm format
-  defaultSprintEndTime    String  @default("17:00") // HH:mm format
+  // Default sprint settings (system-wide defaults for new projects)
+  defaultSprintDuration       Int     @default(14)    // days (1-90)
+  defaultAutoCarryOver        Boolean @default(true)  // Auto-carryover incomplete tickets
+  defaultSprintStartTime      String  @default("09:00") // HH:mm format
+  defaultSprintEndTime        String  @default("17:00") // HH:mm format
 }
 
 // Password reset tokens (for forgot password flow)

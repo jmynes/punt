@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { getDataProvider } from '@/lib/data-provider'
 import { demoStorage, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
@@ -69,7 +70,7 @@ export function useProjectLabelsWithCounts(projectId: string) {
       }
 
       const tabId = getTabId()
-      const res = await fetch(`/api/projects/${projectId}/labels?include_count=true`, {
+      const res = await apiFetch(`/api/projects/${projectId}/labels?include_count=true`, {
         headers: {
           'X-Tab-Id': tabId,
         },
@@ -185,7 +186,7 @@ export function useLabelTickets(projectId: string, labelId: string | null, enabl
       }
 
       const tabId = getTabId()
-      const res = await fetch(`/api/projects/${projectId}/labels/${labelId}`, {
+      const res = await apiFetch(`/api/projects/${projectId}/labels/${labelId}`, {
         headers: {
           'X-Tab-Id': tabId,
         },

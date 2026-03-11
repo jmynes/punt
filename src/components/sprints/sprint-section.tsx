@@ -344,26 +344,34 @@ export function SprintSection({
 
         {/* Time remaining for active sprint */}
         {isActive && sprint?.endDate && (
-          <div
-            className={cn(
-              'hidden sm:flex items-center gap-1.5 text-xs',
-              expired ? 'text-orange-400' : 'text-zinc-400',
-            )}
-          >
-            <Clock className="h-3.5 w-3.5" />
-            <span>{formatDaysRemaining(sprint.endDate)}</span>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  'hidden sm:flex items-center gap-1.5 text-xs cursor-default',
+                  expired ? 'text-orange-400' : 'text-zinc-400',
+                )}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <span>{formatDaysRemaining(sprint.endDate)}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              Ends {format(new Date(sprint.endDate), 'PPP')} at{' '}
+              {format(new Date(sprint.endDate), 'p')}
+            </TooltipContent>
+          </Tooltip>
         )}
 
         {/* Sprint goal tooltip */}
         {sprint?.goal && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="hidden lg:inline text-xs text-zinc-500 truncate max-w-[150px] italic">
+              <span className="hidden lg:inline text-xs text-zinc-500 truncate max-w-[150px] italic cursor-default">
                 &ldquo;{sprint.goal}&rdquo;
               </span>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-xs">
+            <TooltipContent side="top" className="max-w-xs">
               <p className="text-sm">{sprint.goal}</p>
             </TooltipContent>
           </Tooltip>

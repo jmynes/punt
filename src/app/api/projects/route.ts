@@ -215,6 +215,18 @@ export async function POST(request: Request) {
       },
     })
 
+    // Create sprint settings seeded from system defaults
+    await db.projectSprintSettings.create({
+      data: {
+        projectId: project.id,
+        defaultSprintDuration: systemSettings.defaultSprintDuration,
+        autoCarryOverIncomplete: systemSettings.defaultAutoCarryOver,
+        defaultStartTime: systemSettings.defaultSprintStartTime,
+        defaultEndTime: systemSettings.defaultSprintEndTime,
+        storyPointScale: systemSettings.storyPointScale,
+      },
+    })
+
     // Create default roles for the project
     const roleMap = await createDefaultRolesForProject(project.id)
     const ownerRoleId = roleMap.get(DEFAULT_ROLE_NAMES.OWNER)

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 import type { LinkType, TicketLinkSummary } from '@/types'
 import { ticketKeys } from './use-tickets'
@@ -29,7 +30,9 @@ export function useTicketLinks(
         ...(tabId && { 'X-Tab-Id': tabId }),
       }
 
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/links`, { headers })
+      const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/links`, {
+        headers,
+      })
       if (!res.ok) {
         const error = await res.json().catch(() => ({ error: 'Request failed' }))
         throw new Error(error.error || `HTTP ${res.status}`)
@@ -62,7 +65,7 @@ export function useCreateTicketLink() {
         ...(tabId && { 'X-Tab-Id': tabId }),
       }
 
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/links`, {
+      const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/links`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ linkType, targetTicketId }),
@@ -111,7 +114,7 @@ export function useDeleteTicketLink() {
         ...(tabId && { 'X-Tab-Id': tabId }),
       }
 
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/links/${linkId}`, {
+      const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/links/${linkId}`, {
         method: 'DELETE',
         headers,
       })

@@ -1,8 +1,9 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { Plus, X } from 'lucide-react'
+import { Plus, RotateCcw, X } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
+import { ColorPickerBody } from '@/components/tickets/label-select'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -18,9 +19,12 @@ import { useProjectDetail } from '@/hooks/queries/use-projects'
 import { columnKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { PERMISSIONS } from '@/lib/permissions'
+import { COLUMN_ICON_OPTIONS, getColumnIcon, resolveColumnColor } from '@/lib/status-icons'
 import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
+import { cn } from '@/lib/utils'
 import { useBoardStore } from '@/stores/board-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUndoStore } from '@/stores/undo-store'
@@ -44,6 +48,8 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [columnName, setColumnName] = useState('')
+  const [iconValue, setIconValue] = useState<string | null>(null)
+  const [colorValue, setColorValue] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -53,6 +59,8 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
   const serverEnabled = projectDetail?.effectiveShowAddColumnButton ?? true
   const handleOpenDialog = useCallback(() => {
     setColumnName('')
+    setIconValue(null)
+    setColorValue(null)
     setDialogOpen(true)
     setTimeout(() => inputRef.current?.focus(), 50)
   }, [])
@@ -85,10 +93,16 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
         ...(tabId && { 'X-Tab-Id': tabId }),
       }
 
-      const res = await fetch(`/api/projects/${projectKey}/columns`, {
+      const body: { name: string; icon?: string | null; color?: string | null } = {
+        name: trimmedName,
+      }
+      if (iconValue !== null) body.icon = iconValue
+      if (colorValue !== null) body.color = colorValue
+
+      const res = await apiFetch(`/api/projects/${projectKey}/columns`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ name: trimmedName }),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {
@@ -120,6 +134,8 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
 
       setDialogOpen(false)
       setColumnName('')
+      setIconValue(null)
+      setColorValue(null)
     } catch (error) {
       showToast.error('Failed to create column', {
         description: error instanceof Error ? error.message : 'An error occurred',
@@ -127,7 +143,16 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
     } finally {
       setIsCreating(false)
     }
-  }, [columnName, projectId, projectKey, getColumns, setColumns, queryClient])
+  }, [
+    columnName,
+    iconValue,
+    colorValue,
+    projectId,
+    projectKey,
+    getColumns,
+    setColumns,
+    queryClient,
+  ])
 
   // Don't render if user doesn't have permission or server has disabled the feature
   if (!canManageBoard || !serverEnabled) {
@@ -186,22 +211,113 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
               Add a new column to your board to organize tickets.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
-            <Input
-              ref={inputRef}
-              value={columnName}
-              onChange={(e) => setColumnName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  handleCreateColumn()
-                }
-              }}
-              placeholder="Column name (e.g., Testing, Blocked)"
-              maxLength={50}
-              className="bg-zinc-800 border-zinc-700 text-zinc-100"
-              disabled={isCreating}
-            />
+          <div className="space-y-3 py-2">
+            {(() => {
+              const preview = getColumnIcon(iconValue, columnName, colorValue)
+              const PreviewIcon = preview.icon
+              const isHex = preview.color.startsWith('#')
+              return (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center h-9 w-9 shrink-0 rounded-md bg-zinc-800 border border-zinc-700">
+                    <PreviewIcon
+                      className={cn('h-4 w-4', isHex ? undefined : preview.color)}
+                      style={isHex ? { color: preview.color } : undefined}
+                    />
+                  </div>
+                  <Input
+                    ref={inputRef}
+                    value={columnName}
+                    onChange={(e) => setColumnName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleCreateColumn()
+                      }
+                    }}
+                    placeholder="Column name (e.g., Testing, Blocked)"
+                    maxLength={50}
+                    className="bg-zinc-800 border-zinc-700 text-zinc-100"
+                    disabled={isCreating}
+                  />
+                </div>
+              )
+            })()}
+            <div>
+              <span className="text-sm font-medium text-zinc-300 mb-2 block">Icon</span>
+              <div className="grid grid-cols-7 gap-1">
+                {COLUMN_ICON_OPTIONS.map((opt) => {
+                  const Icon = opt.icon
+                  const isSelected = iconValue === opt.name
+                  const isHex = colorValue?.startsWith('#')
+                  const iconClass = isSelected ? (isHex ? undefined : opt.color) : 'text-zinc-400'
+                  const iconStyle =
+                    isSelected && isHex && colorValue ? { color: colorValue } : undefined
+                  return (
+                    <Tooltip key={opt.name}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => setIconValue(isSelected ? null : opt.name)}
+                          className={cn(
+                            'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+                            isSelected
+                              ? 'bg-amber-600/20 ring-1 ring-amber-500'
+                              : 'hover:bg-zinc-800',
+                          )}
+                          disabled={isCreating}
+                        >
+                          <Icon className={cn('h-4 w-4', iconClass)} style={iconStyle} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        {opt.name}
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">
+                {iconValue
+                  ? 'Click selected icon to clear'
+                  : 'No icon selected \u2014 auto-detected from name'}
+              </p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-zinc-300 mb-2 block">Color</span>
+              {colorValue ? (
+                <>
+                  <ColorPickerBody
+                    activeColor={colorValue}
+                    onColorChange={setColorValue}
+                    onApply={setColorValue}
+                    isDisabled={isCreating}
+                    projectId={projectId}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setColorValue(null)}
+                    disabled={isCreating}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800/50 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Reset to default color
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-zinc-500 mb-2">
+                    Using auto-detected color from icon. Pick a custom color:
+                  </p>
+                  <ColorPickerBody
+                    activeColor={resolveColumnColor(null, iconValue, columnName) ?? ''}
+                    onColorChange={setColorValue}
+                    onApply={setColorValue}
+                    isDisabled={isCreating}
+                    projectId={projectId}
+                  />
+                </>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button
