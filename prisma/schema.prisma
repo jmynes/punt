@@ -67,6 +67,8 @@ enum LinkType {
   relates_to
   duplicates
   is_duplicated_by
+  splits_from
+  split_to
 }
 
 // ============================================================================
