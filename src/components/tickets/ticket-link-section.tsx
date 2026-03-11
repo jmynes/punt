@@ -22,8 +22,10 @@ import {
   useTicketLinks,
   useUpdateTicketLink,
 } from '@/hooks/queries/use-ticket-links'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
 import type { LinkType, TicketLinkSummary, TicketWithRelations } from '@/types'
 import { INVERSE_LINK_TYPES, LINK_TYPE_LABELS, LINK_TYPES } from '@/types'
 import { InlineCodeText } from '../common/inline-code'
@@ -69,6 +71,7 @@ export function TicketLinkSection({ ticket, projectKey, projectId }: TicketLinkS
   const { setActiveTicketId } = useUIStore()
   const deleteLink = useDeleteTicketLink()
   const updateLink = useUpdateTicketLink()
+  const { pushLinkDelete } = useUndoStore()
 
   // Fetch links from API (or use ticket.links if available)
   const { data: fetchedLinks } = useTicketLinks(projectId, ticket.id, {
@@ -79,12 +82,37 @@ export function TicketLinkSection({ ticket, projectKey, projectId }: TicketLinkS
   const groupedLinks = groupLinksByType(links)
 
   const handleDeleteLink = (link: TicketLinkSummary) => {
-    deleteLink.mutate({
-      projectId,
-      ticketId: ticket.id,
-      linkId: link.id,
-      targetTicketId: link.linkedTicket.id,
-    })
+    const sourceTicketKey = `${projectKey}-${ticket.number}`
+    const targetTicketKey = `${projectKey}-${link.linkedTicket.number}`
+    const displayType = getDisplayLinkType(link)
+
+    deleteLink.mutate(
+      {
+        projectId,
+        ticketId: ticket.id,
+        linkId: link.id,
+        targetTicketId: link.linkedTicket.id,
+      },
+      {
+        onSuccess: () => {
+          pushLinkDelete(projectId, {
+            projectId,
+            ticketId: ticket.id,
+            ticketKey: sourceTicketKey,
+            linkId: link.id,
+            linkType: link.linkType,
+            targetTicketId: link.linkedTicket.id,
+            targetTicketKey,
+            direction: link.direction,
+          })
+
+          showUndoRedoToast('error', {
+            title: 'Link removed',
+            description: `${sourceTicketKey} ${LINK_TYPE_LABELS[displayType].toLowerCase()} ${targetTicketKey}`,
+          })
+        },
+      },
+    )
   }
 
   const handleChangeRelation = (link: TicketLinkSummary, newDisplayType: LinkType) => {
