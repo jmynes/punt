@@ -50,7 +50,7 @@ import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
-import { useUndoStore } from '@/stores/undo-store'
+import { type LinkAction, useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
 import { LINK_TYPE_LABELS } from '@/types'
 
@@ -1232,6 +1232,55 @@ export function KeyboardShortcuts() {
             description: `${action.link.ticketKey} ${LINK_TYPE_LABELS[action.link.linkType].toLowerCase()} ${action.link.targetTicketKey}`,
             duration: 3000,
           })
+        } else if (entry.action.type === 'bulkLinkCreate') {
+          // Undo bulk link create: delete all created links
+          const action = entry.action
+          undoStore.setProcessing(true)
+          undoStore.pushRedo(entry)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+                ...(tabId && { 'X-Tab-Id': tabId }),
+              }
+              await Promise.allSettled(
+                action.links.map((link) =>
+                  apiFetch(
+                    `/api/projects/${link.projectId}/tickets/${link.ticketId}/links/${link.linkId}`,
+                    { method: 'DELETE', headers },
+                  ),
+                ),
+              )
+              // Invalidate source ticket
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.links[0].projectId,
+                  action.links[0].ticketId,
+                ),
+              })
+              // Invalidate all target tickets
+              for (const link of action.links) {
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(link.projectId, link.targetTicketId),
+                })
+              }
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to undo bulk link create:', err)
+              showToast.error('Failed to undo link creation')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('error', {
+            title: `${action.links.length} link${action.links.length === 1 ? '' : 's'} removed`,
+            description: `Unlinked from ${action.links[0].ticketKey}`,
+            duration: 3000,
+          })
         } else if (entry.action.type === 'linkDelete') {
           // Undo link delete: re-create the link
           const action = entry.action
@@ -1345,6 +1394,7 @@ export function KeyboardShortcuts() {
           'attachmentAdd',
           'attachmentDelete',
           'linkCreate',
+          'bulkLinkCreate',
           'linkDelete',
           'linkUpdate',
         ]
@@ -1954,6 +2004,69 @@ export function KeyboardShortcuts() {
             description: `${action.link.ticketKey} ${LINK_TYPE_LABELS[action.link.linkType].toLowerCase()} ${action.link.targetTicketKey}`,
             duration: 3000,
           })
+        } else if (entry.action.type === 'bulkLinkCreate') {
+          // Redo bulk link create: re-create all links
+          const action = entry.action
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+                ...(tabId && { 'X-Tab-Id': tabId }),
+              }
+              const results = await Promise.allSettled(
+                action.links.map(async (link) => {
+                  const res = await apiFetch(
+                    `/api/projects/${link.projectId}/tickets/${link.ticketId}/links`,
+                    {
+                      method: 'POST',
+                      headers,
+                      body: JSON.stringify({
+                        linkType: link.linkType,
+                        targetTicketId: link.targetTicketId,
+                      }),
+                    },
+                  )
+                  if (!res.ok) throw new Error('Failed to re-create link')
+                  const newLink = await res.json()
+                  return { ...link, linkId: newLink.id }
+                }),
+              )
+              const updatedLinks = results
+                .filter((r): r is PromiseFulfilledResult<LinkAction> => r.status === 'fulfilled')
+                .map((r) => r.value)
+              if (updatedLinks.length > 0) {
+                redoStore.pushBulkLinkCreate(entry.projectId, updatedLinks, true)
+              }
+              // Invalidate source ticket
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.links[0].projectId,
+                  action.links[0].ticketId,
+                ),
+              })
+              for (const link of action.links) {
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(link.projectId, link.targetTicketId),
+                })
+              }
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to redo bulk link create:', err)
+              showToast.error('Failed to redo link creation')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: `${action.links.length} link${action.links.length === 1 ? '' : 's'} re-created`,
+            description: `Linked to ${action.links[0].ticketKey}`,
+            duration: 3000,
+          })
         } else if (entry.action.type === 'linkDelete') {
           // Redo link delete: re-delete the link
           const action = entry.action
@@ -2062,6 +2175,7 @@ export function KeyboardShortcuts() {
           'attachmentAdd',
           'attachmentDelete',
           'linkCreate',
+          'bulkLinkCreate',
           'linkDelete',
           'linkUpdate',
         ]
