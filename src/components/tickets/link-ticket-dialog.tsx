@@ -1,7 +1,8 @@
 'use client'
 
-import { Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Link2, Search } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,10 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useCreateTicketLink } from '@/hooks/queries/use-ticket-links'
+import { useCreateTicketLink, useUpdateTicketLink } from '@/hooks/queries/use-ticket-links'
 import { useBoardStore } from '@/stores/board-store'
 import type { LinkType, TicketLinkSummary, TicketWithRelations } from '@/types'
-import { LINK_TYPE_LABELS, LINK_TYPES } from '@/types'
+import { INVERSE_LINK_TYPES, LINK_TYPE_LABELS, LINK_TYPES } from '@/types'
 import { InlineCodeText } from '../common/inline-code'
 import { TypeBadge } from '../common/type-badge'
 
@@ -34,6 +35,16 @@ interface LinkTicketDialogProps {
   projectKey: string
   projectId: string
   existingLinks: TicketLinkSummary[]
+}
+
+/**
+ * Get the display link type for an existing link from the perspective of the source ticket.
+ */
+function getDisplayLinkType(link: TicketLinkSummary): LinkType {
+  if (link.direction === 'inward') {
+    return INVERSE_LINK_TYPES[link.linkType]
+  }
+  return link.linkType
 }
 
 export function LinkTicketDialog({
@@ -50,6 +61,7 @@ export function LinkTicketDialog({
 
   const { getColumns } = useBoardStore()
   const createLink = useCreateTicketLink()
+  const updateLink = useUpdateTicketLink()
 
   // Get all tickets from the board store
   const columns = getColumns(projectId)
@@ -57,23 +69,25 @@ export function LinkTicketDialog({
     return columns.flatMap((col) => col.tickets)
   }, [columns])
 
-  // Get IDs of already linked tickets
-  const linkedTicketIds = useMemo(() => {
-    const ids = new Set<string>()
-    ids.add(ticket.id) // Exclude the current ticket
-
+  // Build a map of linked ticket IDs to their existing link info
+  const existingLinkMap = useMemo(() => {
+    const map = new Map<string, TicketLinkSummary>()
     for (const link of existingLinks) {
-      ids.add(link.linkedTicket.id)
+      map.set(link.linkedTicket.id, link)
     }
+    return map
+  }, [existingLinks])
 
-    return ids
-  }, [ticket.id, existingLinks])
+  // Find the existing link for the currently selected ticket, if any
+  const existingLinkForSelected = selectedTicketId
+    ? (existingLinkMap.get(selectedTicketId) ?? null)
+    : null
 
-  // Filter tickets based on search and exclude already linked
+  // Filter tickets based on search — include already-linked tickets so users can change their type
   const filteredTickets = useMemo(() => {
     return allTickets.filter((t) => {
-      // Exclude current ticket and already linked tickets
-      if (linkedTicketIds.has(t.id)) return false
+      // Always exclude the current ticket
+      if (t.id === ticket.id) return false
 
       // Filter by search query
       if (searchQuery.trim()) {
@@ -84,29 +98,63 @@ export function LinkTicketDialog({
 
       return true
     })
-  }, [allTickets, linkedTicketIds, searchQuery, projectKey])
+  }, [allTickets, ticket.id, searchQuery, projectKey])
 
   const selectedTicket = filteredTickets.find((t) => t.id === selectedTicketId)
 
-  const handleCreateLink = () => {
+  // When selecting an already-linked ticket, pre-populate the link type
+  const handleSelectTicket = useCallback(
+    (ticketId: string) => {
+      setSelectedTicketId(ticketId)
+      const existingLink = existingLinkMap.get(ticketId)
+      if (existingLink) {
+        setLinkType(getDisplayLinkType(existingLink))
+      }
+    },
+    [existingLinkMap],
+  )
+
+  const handleSubmit = () => {
     if (!selectedTicketId) return
 
-    createLink.mutate(
-      {
-        projectId,
-        ticketId: ticket.id,
-        linkType,
-        targetTicketId: selectedTicketId,
-      },
-      {
-        onSuccess: () => {
-          onOpenChange(false)
-          setSearchQuery('')
-          setSelectedTicketId(null)
-          setLinkType('relates_to')
+    if (existingLinkForSelected) {
+      // Update existing link type
+      updateLink.mutate(
+        {
+          projectId,
+          ticketId: ticket.id,
+          linkId: existingLinkForSelected.id,
+          linkType,
+          targetTicketId: selectedTicketId,
         },
-      },
-    )
+        {
+          onSuccess: () => {
+            onOpenChange(false)
+            setSearchQuery('')
+            setSelectedTicketId(null)
+            setLinkType('relates_to')
+          },
+        },
+      )
+    } else {
+      // Create new link
+      createLink.mutate(
+        {
+          projectId,
+          ticketId: ticket.id,
+          linkType,
+          targetTicketId: selectedTicketId,
+        },
+        {
+          onSuccess: () => {
+            onOpenChange(false)
+            setSearchQuery('')
+            setSelectedTicketId(null)
+            setLinkType('relates_to')
+          },
+        },
+      )
+    }
   }
 
   const handleClose = () => {
@@ -115,6 +163,14 @@ export function LinkTicketDialog({
     setSelectedTicketId(null)
     setLinkType('relates_to')
   }
+
+  const isPending = createLink.isPending || updateLink.isPending
+  const isUpdating = !!existingLinkForSelected
+  // Disable submit if updating but link type hasn't changed
+  const existingDisplayType = existingLinkForSelected
+    ? getDisplayLinkType(existingLinkForSelected)
+    : null
+  const isUnchanged = isUpdating && linkType === existingDisplayType
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -135,11 +191,24 @@ export function LinkTicketDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-zinc-900 border-zinc-700">
-                {LINK_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {LINK_TYPE_LABELS[type]}
-                  </SelectItem>
-                ))}
+                {LINK_TYPES.map((type) => {
+                  const isCurrentType = existingDisplayType === type
+                  return (
+                    <SelectItem key={type} value={type}>
+                      <span className="flex items-center gap-2">
+                        {LINK_TYPE_LABELS[type]}
+                        {isCurrentType && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 border-amber-600 text-amber-400"
+                          >
+                            Current
+                          </Badge>
+                        )}
+                      </span>
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -166,26 +235,38 @@ export function LinkTicketDialog({
               </div>
             ) : (
               <div className="divide-y divide-zinc-800">
-                {filteredTickets.slice(0, 50).map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={`w-full min-w-0 flex items-center gap-2 p-2 text-left transition-colors ${
-                      selectedTicketId === t.id
-                        ? 'bg-amber-500/20 border-l-2 border-amber-500'
-                        : 'hover:bg-zinc-800/50'
-                    }`}
-                    onClick={() => setSelectedTicketId(t.id)}
-                  >
-                    <TypeBadge type={t.type} size="sm" />
-                    <span className="font-mono text-xs text-zinc-500 shrink-0">
-                      {projectKey}-{t.number}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm text-zinc-300">
-                      <InlineCodeText text={t.title} />
-                    </span>
-                  </button>
-                ))}
+                {filteredTickets.slice(0, 50).map((t) => {
+                  const existingLink = existingLinkMap.get(t.id)
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`w-full min-w-0 flex items-center gap-2 p-2 text-left transition-colors ${
+                        selectedTicketId === t.id
+                          ? 'bg-amber-500/20 border-l-2 border-amber-500'
+                          : 'hover:bg-zinc-800/50'
+                      }`}
+                      onClick={() => handleSelectTicket(t.id)}
+                    >
+                      <TypeBadge type={t.type} size="sm" />
+                      <span className="font-mono text-xs text-zinc-500 shrink-0">
+                        {projectKey}-{t.number}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm text-zinc-300">
+                        <InlineCodeText text={t.title} />
+                      </span>
+                      {existingLink && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0 shrink-0 border-zinc-600 text-zinc-400 flex items-center gap-1"
+                        >
+                          <Link2 className="h-2.5 w-2.5" />
+                          {LINK_TYPE_LABELS[getDisplayLinkType(existingLink)]}
+                        </Badge>
+                      )}
+                    </button>
+                  )
+                })}
                 {filteredTickets.length > 50 && (
                   <div className="p-2 text-center text-xs text-zinc-500">
                     Showing first 50 results. Refine your search for more specific results.
@@ -198,7 +279,9 @@ export function LinkTicketDialog({
           {/* Selected Ticket Preview */}
           {selectedTicket && (
             <div className="p-3 rounded bg-zinc-800/50 border border-zinc-700 min-w-0">
-              <div className="text-xs text-zinc-500 mb-1">Selected:</div>
+              <div className="text-xs text-zinc-500 mb-1">
+                {isUpdating ? 'Update existing link:' : 'Selected:'}
+              </div>
               <div className="flex items-center gap-2 min-w-0">
                 <TypeBadge type={selectedTicket.type} size="sm" />
                 <span className="font-mono text-sm text-zinc-400 shrink-0">
@@ -208,6 +291,12 @@ export function LinkTicketDialog({
                   {selectedTicket.title}
                 </span>
               </div>
+              {isUpdating && existingDisplayType && (
+                <div className="mt-1.5 text-xs text-zinc-500">
+                  Currently:{' '}
+                  <span className="text-amber-400">{LINK_TYPE_LABELS[existingDisplayType]}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -218,10 +307,16 @@ export function LinkTicketDialog({
           </Button>
           <Button
             variant="primary"
-            onClick={handleCreateLink}
-            disabled={!selectedTicketId || createLink.isPending}
+            onClick={handleSubmit}
+            disabled={!selectedTicketId || isPending || isUnchanged}
           >
-            {createLink.isPending ? 'Creating...' : 'Create Link'}
+            {isPending
+              ? isUpdating
+                ? 'Updating...'
+                : 'Creating...'
+              : isUpdating
+                ? 'Update Link'
+                : 'Create Link'}
           </Button>
         </DialogFooter>
       </DialogContent>
