@@ -81,7 +81,7 @@ export function LinkTicketDialog({
 
   const { getColumns } = useBoardStore()
   const createLinks = useCreateTicketLinks()
-  const { pushLinkCreate } = useUndoStore()
+  const { pushBulkLinkCreate } = useUndoStore()
 
   // Get all tickets from the board store
   const columns = getColumns(projectId)
@@ -244,19 +244,19 @@ export function LinkTicketDialog({
       },
       {
         onSuccess: ({ succeeded }) => {
-          // Push each created link to the undo stack
-          for (const link of succeeded) {
-            const targetKey = `${projectKey}-${link.linkedTicket.number}`
-            pushLinkCreate(projectId, {
+          // Push all created links as a single batch undo entry
+          if (succeeded.length > 0) {
+            const linkActions = succeeded.map((link) => ({
               projectId,
               ticketId: ticket.id,
               ticketKey: sourceTicketKey,
               linkId: link.id,
               linkType: link.linkType,
               targetTicketId: link.linkedTicket.id,
-              targetTicketKey: targetKey,
-              direction: 'outward',
-            })
+              targetTicketKey: `${projectKey}-${link.linkedTicket.number}`,
+              direction: 'outward' as const,
+            }))
+            pushBulkLinkCreate(projectId, linkActions)
           }
 
           const count = succeeded.length

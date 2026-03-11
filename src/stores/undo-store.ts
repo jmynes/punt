@@ -127,6 +127,10 @@ type UndoAction =
       link: LinkAction
     }
   | {
+      type: 'bulkLinkCreate'
+      links: LinkAction[]
+    }
+  | {
       type: 'linkDelete'
       link: LinkAction
     }
@@ -255,6 +259,9 @@ interface UndoState {
 
   // Add a link create action to the undo stack
   pushLinkCreate: (projectId: string, link: LinkAction, isRedo?: boolean) => void
+
+  // Add a bulk link create action to the undo stack (single Ctrl+Z undoes all)
+  pushBulkLinkCreate: (projectId: string, links: LinkAction[], isRedo?: boolean) => void
 
   // Add a link delete action to the undo stack
   pushLinkDelete: (projectId: string, link: LinkAction, isRedo?: boolean) => void
@@ -673,6 +680,27 @@ export const useUndoStore = create<UndoState>((set, get) => ({
         ...state.undoStack,
         {
           action: { type: 'linkCreate', link: { ...link } },
+          timestamp: Date.now(),
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushBulkLinkCreate: (projectId, links, isRedo = false) => {
+    console.debug(
+      `[SessionLog] Action: Bulk Link Create (${links.length}) ${isRedo ? '(Redo)' : ''}`,
+      {
+        projectId,
+        count: links.length,
+      },
+    )
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: { type: 'bulkLinkCreate', links: links.map((l) => ({ ...l })) },
           timestamp: Date.now(),
           projectId,
         },
