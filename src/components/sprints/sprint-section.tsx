@@ -37,13 +37,7 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { formatDaysRemaining, isCompletedColumn, isSprintExpired } from '@/lib/sprint-utils'
 import { sortTickets } from '@/lib/ticket-sort'
 import { cn } from '@/lib/utils'
-import {
-  type BacklogColumnId,
-  type SortConfig,
-  type SortDirection,
-  useBacklogStore,
-} from '@/stores/backlog-store'
-import { useSprintStore } from '@/stores/sprint-store'
+import { type BacklogColumnId, type SortConfig, useBacklogStore } from '@/stores/backlog-store'
 import { useUIStore } from '@/stores/ui-store'
 import type {
   ColumnWithTickets,
@@ -59,6 +53,8 @@ interface SprintSectionProps {
   projectId: string
   statusColumns: ColumnWithTickets[]
   defaultExpanded?: boolean
+  /** Whether the section can be collapsed (default: true). When false, content is always visible and no chevron is shown. */
+  collapsible?: boolean
   onCreateTicket?: (sprintId: string | null) => void
   onDelete?: (sprintId: string) => void
   /** Index where drop indicator should appear (null = not a drop target) */
@@ -88,6 +84,7 @@ export function SprintSection({
   projectId,
   statusColumns,
   defaultExpanded = true,
+  collapsible = true,
   onCreateTicket,
   onDelete,
   dropPosition = null,
@@ -100,46 +97,24 @@ export function SprintSection({
 }: SprintSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
-  const { columns } = useBacklogStore()
-  const { getSprintSort, setSprintSort } = useSprintStore()
+  const { columns, sort, toggleSort, setSort } = useBacklogStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
   const reopenSprintMutation = useReopenSprint(projectId)
-
-  // Sort state: persisted via sprint store (keyed by sprint ID or 'backlog')
-  const sectionId = sprint?.id ?? 'backlog'
-  const sort = getSprintSort(sectionId)
 
   const handleToggleSort = useCallback(
     (columnId: string) => {
       const column = columns.find((c) => c.id === columnId)
       if (!column?.sortable) return
-
-      const prev = getSprintSort(sectionId)
-      if (prev?.column === columnId) {
-        // Toggle direction or clear
-        if (prev.direction === 'asc') {
-          setSprintSort(sectionId, {
-            column: columnId as BacklogColumnId,
-            direction: 'desc' as SortDirection,
-          })
-        } else {
-          setSprintSort(sectionId, null)
-        }
-      } else {
-        setSprintSort(sectionId, {
-          column: columnId as BacklogColumnId,
-          direction: 'asc' as SortDirection,
-        })
-      }
+      toggleSort(columnId as BacklogColumnId)
     },
-    [columns, sectionId, getSprintSort, setSprintSort],
+    [columns, toggleSort],
   )
 
   const handleSetSort = useCallback(
     (newSort: SortConfig | null) => {
-      setSprintSort(sectionId, newSort)
+      setSort(newSort)
     },
-    [sectionId, setSprintSort],
+    [setSort],
   )
 
   // Sort tickets locally using the shared sort utility
@@ -260,24 +235,26 @@ export function SprintSection({
     >
       {/* Section Header */}
       <div
-        onClick={() => setExpanded(!expanded)}
+        onClick={collapsible ? () => setExpanded(!expanded) : undefined}
         className={cn(
-          'flex items-center gap-3 px-4 py-3 cursor-pointer select-none',
+          'flex items-center gap-3 px-4 py-3 select-none',
           'rounded-t-xl transition-colors',
-          'hover:bg-white/[0.02]',
+          collapsible && 'cursor-pointer hover:bg-white/[0.02]',
         )}
       >
-        {/* Expand/Collapse chevron */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            setExpanded(!expanded)
-          }}
-          className="text-zinc-500 hover:text-zinc-300 transition-colors"
-        >
-          {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-        </button>
+        {/* Expand/Collapse chevron (only when collapsible) */}
+        {collapsible && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setExpanded(!expanded)
+            }}
+            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+          </button>
+        )}
 
         {/* Sprint icon and name */}
         <div className="flex items-center gap-2 min-w-0">
@@ -553,7 +530,7 @@ export function SprintSection({
       </div>
 
       {/* Ticket table */}
-      {expanded && (
+      {(!collapsible || expanded) && (
         <div ref={setNodeRef} className={cn('pb-3', filteredCount === 0 && 'px-4 py-3')}>
           {filteredCount === 0 ? (
             <DropZone
