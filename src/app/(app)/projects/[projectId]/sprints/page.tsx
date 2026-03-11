@@ -304,6 +304,7 @@ export default function SprintPlanningPage() {
             projectId={projectId}
             projectKey={projectKey}
             tickets={allTickets}
+            filteredTickets={filteredTickets}
             showHeader={false}
           />
         </div>

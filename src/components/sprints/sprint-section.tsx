@@ -35,14 +35,9 @@ import { useBudgetAlert } from '@/hooks/use-budget-alert'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { formatDaysRemaining, isCompletedColumn, isSprintExpired } from '@/lib/sprint-utils'
+import { sortTickets } from '@/lib/ticket-sort'
 import { cn } from '@/lib/utils'
-import {
-  type BacklogColumnId,
-  type SortConfig,
-  type SortDirection,
-  useBacklogStore,
-} from '@/stores/backlog-store'
-import { useSprintStore } from '@/stores/sprint-store'
+import { type BacklogColumnId, type SortConfig, useBacklogStore } from '@/stores/backlog-store'
 import { useUIStore } from '@/stores/ui-store'
 import type {
   ColumnWithTickets,
@@ -58,6 +53,8 @@ interface SprintSectionProps {
   projectId: string
   statusColumns: ColumnWithTickets[]
   defaultExpanded?: boolean
+  /** Whether the section can be collapsed (default: true). When false, content is always visible and no chevron is shown. */
+  collapsible?: boolean
   onCreateTicket?: (sprintId: string | null) => void
   onDelete?: (sprintId: string) => void
   /** Index where drop indicator should appear (null = not a drop target) */
@@ -87,6 +84,7 @@ export function SprintSection({
   projectId,
   statusColumns,
   defaultExpanded = true,
+  collapsible = true,
   onCreateTicket,
   onDelete,
   dropPosition = null,
@@ -99,173 +97,31 @@ export function SprintSection({
 }: SprintSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
-  const { columns } = useBacklogStore()
-  const { getSprintSort, setSprintSort } = useSprintStore()
+  const { columns, sort, toggleSort, setSort } = useBacklogStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
   const reopenSprintMutation = useReopenSprint(projectId)
-
-  // Sort state: persisted via sprint store (keyed by sprint ID or 'backlog')
-  const sectionId = sprint?.id ?? 'backlog'
-  const sort = getSprintSort(sectionId)
 
   const handleToggleSort = useCallback(
     (columnId: string) => {
       const column = columns.find((c) => c.id === columnId)
       if (!column?.sortable) return
-
-      const prev = getSprintSort(sectionId)
-      if (prev?.column === columnId) {
-        // Toggle direction or clear
-        if (prev.direction === 'asc') {
-          setSprintSort(sectionId, {
-            column: columnId as BacklogColumnId,
-            direction: 'desc' as SortDirection,
-          })
-        } else {
-          setSprintSort(sectionId, null)
-        }
-      } else {
-        setSprintSort(sectionId, {
-          column: columnId as BacklogColumnId,
-          direction: 'asc' as SortDirection,
-        })
-      }
+      toggleSort(columnId as BacklogColumnId)
     },
-    [columns, sectionId, getSprintSort, setSprintSort],
+    [columns, toggleSort],
   )
 
   const handleSetSort = useCallback(
     (newSort: SortConfig | null) => {
-      setSprintSort(sectionId, newSort)
+      setSort(newSort)
     },
-    [sectionId, setSprintSort],
+    [setSort],
   )
 
-  // Get status name helper
-  const getStatusName = useCallback(
-    (columnId: string) => {
-      const col = statusColumns.find((c) => c.id === columnId)
-      return col?.name || 'Unknown'
-    },
-    [statusColumns],
+  // Sort tickets locally using the shared sort utility
+  const sortedTickets = useMemo(
+    () => sortTickets(tickets, sort, statusColumns),
+    [tickets, sort, statusColumns],
   )
-
-  // Sort tickets locally
-  const sortedTickets = useMemo(() => {
-    if (!sort) return tickets
-
-    const sorted = [...tickets]
-    sorted.sort((a, b) => {
-      let aVal: string | number | Date | null = null
-      let bVal: string | number | Date | null = null
-
-      switch (sort.column) {
-        case 'key':
-          aVal = a.number
-          bVal = b.number
-          break
-        case 'title':
-          aVal = a.title.toLowerCase()
-          bVal = b.title.toLowerCase()
-          break
-        case 'type':
-          aVal = a.type
-          bVal = b.type
-          break
-        case 'status':
-          aVal = getStatusName(a.columnId).toLowerCase()
-          bVal = getStatusName(b.columnId).toLowerCase()
-          break
-        case 'priority': {
-          const priorityOrder = ['critical', 'highest', 'high', 'medium', 'low', 'lowest']
-          aVal = priorityOrder.indexOf(a.priority)
-          bVal = priorityOrder.indexOf(b.priority)
-          break
-        }
-        case 'assignee':
-          aVal = a.assignee?.name.toLowerCase() || 'zzz'
-          bVal = b.assignee?.name.toLowerCase() || 'zzz'
-          break
-        case 'reporter':
-          aVal = a.creator.name.toLowerCase()
-          bVal = b.creator.name.toLowerCase()
-          break
-        case 'sprint':
-          aVal = a.sprint?.name.toLowerCase() || 'zzz'
-          bVal = b.sprint?.name.toLowerCase() || 'zzz'
-          break
-        case 'storyPoints':
-          aVal = a.storyPoints ?? -1
-          bVal = b.storyPoints ?? -1
-          break
-        case 'estimate':
-          aVal = a.estimate || ''
-          bVal = b.estimate || ''
-          break
-        case 'dueDate':
-          aVal = a.dueDate
-            ? (a.dueDate instanceof Date ? a.dueDate : new Date(a.dueDate)).getTime()
-            : Number.MAX_SAFE_INTEGER
-          bVal = b.dueDate
-            ? (b.dueDate instanceof Date ? b.dueDate : new Date(b.dueDate)).getTime()
-            : Number.MAX_SAFE_INTEGER
-          break
-        case 'created':
-          aVal = (a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt)).getTime()
-          bVal = (b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt)).getTime()
-          break
-        case 'updated':
-          aVal = (a.updatedAt instanceof Date ? a.updatedAt : new Date(a.updatedAt)).getTime()
-          bVal = (b.updatedAt instanceof Date ? b.updatedAt : new Date(b.updatedAt)).getTime()
-          break
-        case 'parent':
-          aVal = a.parentId || 'zzz'
-          bVal = b.parentId || 'zzz'
-          break
-        case 'labels':
-          aVal = a.labels
-            .map((l) => l.name)
-            .join(',')
-            .toLowerCase()
-          bVal = b.labels
-            .map((l) => l.name)
-            .join(',')
-            .toLowerCase()
-          break
-        case 'startDate':
-          aVal = a.startDate
-            ? (a.startDate instanceof Date ? a.startDate : new Date(a.startDate)).getTime()
-            : Number.MAX_SAFE_INTEGER
-          bVal = b.startDate
-            ? (b.startDate instanceof Date ? b.startDate : new Date(b.startDate)).getTime()
-            : Number.MAX_SAFE_INTEGER
-          break
-        case 'environment':
-          aVal = a.environment?.toLowerCase() || 'zzz'
-          bVal = b.environment?.toLowerCase() || 'zzz'
-          break
-        case 'affectedVersion':
-          aVal = a.affectedVersion?.toLowerCase() || 'zzz'
-          bVal = b.affectedVersion?.toLowerCase() || 'zzz'
-          break
-        case 'fixVersion':
-          aVal = a.fixVersion?.toLowerCase() || 'zzz'
-          bVal = b.fixVersion?.toLowerCase() || 'zzz'
-          break
-        case 'watchers':
-          aVal = a.watchers?.length ?? 0
-          bVal = b.watchers?.length ?? 0
-          break
-      }
-
-      if (aVal === null || bVal === null) return 0
-      if (aVal < bVal) return sort.direction === 'asc' ? -1 : 1
-      if (aVal > bVal) return sort.direction === 'asc' ? 1 : -1
-      return 0
-    })
-
-    return sorted
-  }, [tickets, sort, getStatusName])
 
   const isBacklog = !sprint
   const isPlanning = sprint?.status === 'planning'
@@ -379,24 +235,26 @@ export function SprintSection({
     >
       {/* Section Header */}
       <div
-        onClick={() => setExpanded(!expanded)}
+        onClick={collapsible ? () => setExpanded(!expanded) : undefined}
         className={cn(
-          'flex items-center gap-3 px-4 py-3 cursor-pointer select-none',
+          'flex items-center gap-3 px-4 py-3 select-none',
           'rounded-t-xl transition-colors',
-          'hover:bg-white/[0.02]',
+          collapsible && 'cursor-pointer hover:bg-white/[0.02]',
         )}
       >
-        {/* Expand/Collapse chevron */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            setExpanded(!expanded)
-          }}
-          className="text-zinc-500 hover:text-zinc-300 transition-colors"
-        >
-          {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-        </button>
+        {/* Expand/Collapse chevron (only when collapsible) */}
+        {collapsible && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setExpanded(!expanded)
+            }}
+            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+          </button>
+        )}
 
         {/* Sprint icon and name */}
         <div className="flex items-center gap-2 min-w-0">
@@ -672,7 +530,7 @@ export function SprintSection({
       </div>
 
       {/* Ticket table */}
-      {expanded && (
+      {(!collapsible || expanded) && (
         <div ref={setNodeRef} className={cn('pb-3', filteredCount === 0 && 'px-4 py-3')}>
           {filteredCount === 0 ? (
             <DropZone

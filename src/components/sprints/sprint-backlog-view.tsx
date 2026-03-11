@@ -22,9 +22,6 @@ import {
   useUpdateTicketSprint,
 } from '@/hooks/queries/use-sprints'
 import { updateTicketAPI } from '@/hooks/queries/use-tickets'
-import { filterTickets } from '@/lib/filter-tickets'
-import { evaluateQuery } from '@/lib/query-evaluator'
-import { parse, QueryParseError } from '@/lib/query-parser'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
@@ -43,6 +40,10 @@ interface SprintBacklogViewProps {
   projectId: string
   projectKey: string
   tickets: TicketWithRelations[]
+  /** Pre-filtered tickets. When provided, skips internal filtering. */
+  filteredTickets?: TicketWithRelations[]
+  /** Query parse error message (for header PQL input display) */
+  queryError?: string | null
   className?: string
   showHeader?: boolean
 }
@@ -55,6 +56,8 @@ export function SprintBacklogView({
   projectId,
   projectKey,
   tickets,
+  filteredTickets: externalFilteredTickets,
+  queryError = null,
   className,
   showHeader = true,
 }: SprintBacklogViewProps) {
@@ -67,18 +70,6 @@ export function SprintBacklogView({
   const { selectedTicketIds, clearSelection } = useSelectionStore()
   const {
     columns: backlogColumns,
-    filterByType,
-    filterByPriority,
-    filterByStatus,
-    filterByResolution,
-    filterByAssignee,
-    filterByLabels,
-    filterBySprint,
-    filterByPoints,
-    filterByDueDate,
-    filterByAttachments,
-    searchQuery,
-    showSubtasks,
     queryMode,
     setQueryMode,
     queryText,
@@ -98,13 +89,6 @@ export function SprintBacklogView({
       }
     }
   }, [persistTableSort, clearAllSprintSorts])
-
-  // Debounce query text to prevent per-keystroke evaluation
-  const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQueryText(queryText), 150)
-    return () => clearTimeout(timer)
-  }, [queryText])
 
   // Extract dynamic values for query autocomplete
   const dynamicValues = useMemo(() => {
@@ -130,63 +114,8 @@ export function SprintBacklogView({
     }
   }, [tickets, statusColumns, sprints])
 
-  // Query parse error for tooltip
-  const [queryError, setQueryError] = useState<string | null>(null)
-
-  // Apply filters from the shared backlog store (or PQL query)
-  const filteredTickets = useMemo(() => {
-    // PQL query mode
-    if (queryMode && debouncedQueryText.trim()) {
-      try {
-        const ast = parse(debouncedQueryText)
-        setQueryError(null)
-        return evaluateQuery(ast, tickets, statusColumns, projectKey)
-      } catch (err) {
-        if (err instanceof QueryParseError) {
-          setQueryError(err.message)
-        } else {
-          setQueryError('Invalid query')
-        }
-        return tickets
-      }
-    }
-
-    // Standard filter mode
-    setQueryError(null)
-    return filterTickets(tickets, {
-      searchQuery,
-      projectKey,
-      filterByType,
-      filterByPriority,
-      filterByStatus,
-      filterByResolution,
-      filterByAssignee,
-      filterByLabels,
-      filterBySprint,
-      filterByPoints,
-      filterByDueDate,
-      filterByAttachments,
-      showSubtasks,
-    })
-  }, [
-    queryMode,
-    debouncedQueryText,
-    tickets,
-    statusColumns,
-    projectKey,
-    searchQuery,
-    filterByType,
-    filterByPriority,
-    filterByStatus,
-    filterByResolution,
-    filterByAssignee,
-    filterByLabels,
-    filterBySprint,
-    filterByPoints,
-    filterByDueDate,
-    filterByAttachments,
-    showSubtasks,
-  ])
+  // Use externally provided filtered tickets or fall back to all tickets
+  const filteredTickets = externalFilteredTickets ?? tickets
 
   // Drag state
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
