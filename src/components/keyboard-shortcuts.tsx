@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { activityKeys } from '@/hooks/queries/use-activity'
 import { attachmentKeys } from '@/hooks/queries/use-attachments'
+import { ticketLinkKeys } from '@/hooks/queries/use-ticket-links'
 import {
   batchCreateTicketsAPI,
   batchDeleteTicketsAPI,
@@ -49,8 +50,9 @@ import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
-import { useUndoStore } from '@/stores/undo-store'
+import { type LinkAction, useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
+import { LINK_TYPE_LABELS } from '@/types'
 
 export function KeyboardShortcuts() {
   const queryClient = useQueryClient()
@@ -1186,16 +1188,215 @@ export function KeyboardShortcuts() {
             description: 'Backlog order restored',
             duration: 3000,
           })
+        } else if (entry.action.type === 'linkCreate') {
+          // Undo link create: delete the created link
+          const action = entry.action
+          undoStore.setProcessing(true)
+          undoStore.pushRedo(entry)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                },
+              )
+              if (!res.ok) throw new Error('Failed to delete link')
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to undo link create:', err)
+              showToast.error('Failed to undo link creation')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('error', {
+            title: 'Link removed',
+            description: `${action.link.ticketKey} ${LINK_TYPE_LABELS[action.link.linkType].toLowerCase()} ${action.link.targetTicketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'bulkLinkCreate') {
+          // Undo bulk link create: delete all created links
+          const action = entry.action
+          undoStore.setProcessing(true)
+          undoStore.pushRedo(entry)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+                ...(tabId && { 'X-Tab-Id': tabId }),
+              }
+              await Promise.allSettled(
+                action.links.map((link) =>
+                  apiFetch(
+                    `/api/projects/${link.projectId}/tickets/${link.ticketId}/links/${link.linkId}`,
+                    { method: 'DELETE', headers },
+                  ),
+                ),
+              )
+              // Invalidate source ticket
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.links[0].projectId,
+                  action.links[0].ticketId,
+                ),
+              })
+              // Invalidate all target tickets
+              for (const link of action.links) {
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(link.projectId, link.targetTicketId),
+                })
+              }
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to undo bulk link create:', err)
+              showToast.error('Failed to undo link creation')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('error', {
+            title: `${action.links.length} link${action.links.length === 1 ? '' : 's'} removed`,
+            description: `Unlinked from ${action.links[0].ticketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'linkDelete') {
+          // Undo link delete: re-create the link
+          const action = entry.action
+          undoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                  body: JSON.stringify({
+                    linkType: action.link.linkType,
+                    targetTicketId: action.link.targetTicketId,
+                  }),
+                },
+              )
+              if (!res.ok) throw new Error('Failed to re-create link')
+              const newLink = await res.json()
+              // Update the link ID in the undo entry for future redo
+              const updatedEntry = {
+                ...entry,
+                action: {
+                  ...action,
+                  link: { ...action.link, linkId: newLink.id },
+                },
+              }
+              undoStore.pushRedo(updatedEntry)
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to undo link delete:', err)
+              showToast.error('Failed to restore link')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Link restored',
+            description: `${action.link.ticketKey} ${LINK_TYPE_LABELS[action.link.linkType].toLowerCase()} ${action.link.targetTicketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'linkUpdate') {
+          // Undo link update: revert to previous link type
+          const action = entry.action
+          undoStore.setProcessing(true)
+          undoStore.pushRedo(entry)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                  body: JSON.stringify({ linkType: action.oldLinkType }),
+                },
+              )
+              if (!res.ok) throw new Error('Failed to revert link type')
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to undo link update:', err)
+              showToast.error('Failed to revert link type')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Link type reverted',
+            description: `${action.link.ticketKey}: ${LINK_TYPE_LABELS[action.oldLinkType]}`,
+            duration: 3000,
+          })
         }
 
         // Release processing lock for types that don't have their own async lock management
-        // (ticketCreate, columnRename, columnDelete, attachment* handlers manage their own lock)
+        // (ticketCreate, columnRename, columnDelete, attachment*, link* handlers manage their own lock)
         const selfManagedTypes = [
           'ticketCreate',
           'columnRename',
           'columnDelete',
           'attachmentAdd',
           'attachmentDelete',
+          'linkCreate',
+          'bulkLinkCreate',
+          'linkDelete',
+          'linkUpdate',
         ]
         if (!selfManagedTypes.includes(entry.action.type)) {
           undoStore.setProcessing(false)
@@ -1749,16 +1950,234 @@ export function KeyboardShortcuts() {
             description: 'Backlog order restored',
             duration: 3000,
           })
+        } else if (entry.action.type === 'linkCreate') {
+          // Redo link create: re-create the link
+          const action = entry.action
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                  body: JSON.stringify({
+                    linkType: action.link.linkType,
+                    targetTicketId: action.link.targetTicketId,
+                  }),
+                },
+              )
+              if (!res.ok) throw new Error('Failed to re-create link')
+              const newLink = await res.json()
+              // Push with updated link ID
+              redoStore.pushLinkCreate(
+                entry.projectId,
+                { ...action.link, linkId: newLink.id },
+                true,
+              )
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to redo link create:', err)
+              showToast.error('Failed to redo link creation')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Link re-created',
+            description: `${action.link.ticketKey} ${LINK_TYPE_LABELS[action.link.linkType].toLowerCase()} ${action.link.targetTicketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'bulkLinkCreate') {
+          // Redo bulk link create: re-create all links
+          const action = entry.action
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+                ...(tabId && { 'X-Tab-Id': tabId }),
+              }
+              const results = await Promise.allSettled(
+                action.links.map(async (link) => {
+                  const res = await apiFetch(
+                    `/api/projects/${link.projectId}/tickets/${link.ticketId}/links`,
+                    {
+                      method: 'POST',
+                      headers,
+                      body: JSON.stringify({
+                        linkType: link.linkType,
+                        targetTicketId: link.targetTicketId,
+                      }),
+                    },
+                  )
+                  if (!res.ok) throw new Error('Failed to re-create link')
+                  const newLink = await res.json()
+                  return { ...link, linkId: newLink.id }
+                }),
+              )
+              const updatedLinks = results
+                .filter((r): r is PromiseFulfilledResult<LinkAction> => r.status === 'fulfilled')
+                .map((r) => r.value)
+              if (updatedLinks.length > 0) {
+                redoStore.pushBulkLinkCreate(entry.projectId, updatedLinks, true)
+              }
+              // Invalidate source ticket
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.links[0].projectId,
+                  action.links[0].ticketId,
+                ),
+              })
+              for (const link of action.links) {
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(link.projectId, link.targetTicketId),
+                })
+              }
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to redo bulk link create:', err)
+              showToast.error('Failed to redo link creation')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: `${action.links.length} link${action.links.length === 1 ? '' : 's'} re-created`,
+            description: `Linked to ${action.links[0].ticketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'linkDelete') {
+          // Redo link delete: re-delete the link
+          const action = entry.action
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                },
+              )
+              if (!res.ok) throw new Error('Failed to re-delete link')
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to redo link delete:', err)
+              showToast.error('Failed to redo link deletion')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          redoStore.pushLinkDelete(entry.projectId, action.link, true)
+
+          showUndoRedoToast('error', {
+            title: 'Link removed',
+            description: `${action.link.ticketKey} ${LINK_TYPE_LABELS[action.link.linkType].toLowerCase()} ${action.link.targetTicketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'linkUpdate') {
+          // Redo link update: re-apply the new link type
+          const action = entry.action
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                  body: JSON.stringify({ linkType: action.newLinkType }),
+                },
+              )
+              if (!res.ok) throw new Error('Failed to re-apply link type')
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to redo link update:', err)
+              showToast.error('Failed to redo link type change')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          redoStore.pushLinkUpdate(
+            entry.projectId,
+            action.link,
+            action.oldLinkType,
+            action.newLinkType,
+            true,
+          )
+
+          showUndoRedoToast('success', {
+            title: 'Link type changed',
+            description: `${action.link.ticketKey}: ${LINK_TYPE_LABELS[action.newLinkType]}`,
+            duration: 3000,
+          })
         }
 
         // Release processing lock for types that don't have their own async lock management
-        // (ticketCreate, columnRename, columnDelete, attachment* handlers manage their own lock)
+        // (ticketCreate, columnRename, columnDelete, attachment*, link* handlers manage their own lock)
         const selfManagedTypes = [
           'ticketCreate',
           'columnRename',
           'columnDelete',
           'attachmentAdd',
           'attachmentDelete',
+          'linkCreate',
+          'bulkLinkCreate',
+          'linkDelete',
+          'linkUpdate',
         ]
         if (!selfManagedTypes.includes(entry.action.type)) {
           redoStore.setProcessing(false)

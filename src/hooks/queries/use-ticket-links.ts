@@ -85,7 +85,144 @@ export function useCreateTicketLink() {
         queryKey: ticketLinkKeys.byTicket(projectId, targetTicketId),
       })
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
-      showToast.success('Link created')
+    },
+    onError: (err) => {
+      showToast.error(err.message)
+    },
+  })
+}
+
+interface UpdateLinkInput {
+  projectId: string
+  ticketId: string
+  linkId: string
+  linkType: LinkType
+  targetTicketId: string
+}
+
+/**
+ * Update the link type of an existing ticket link
+ */
+export function useUpdateTicketLink() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ projectId, ticketId, linkId, linkType }: UpdateLinkInput) => {
+      const tabId = getTabId()
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(tabId && { 'X-Tab-Id': tabId }),
+      }
+
+      const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/links/${linkId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ linkType }),
+      })
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Request failed' }))
+        throw new Error(error.error || `HTTP ${res.status}`)
+      }
+
+      return res.json()
+    },
+    onSuccess: (_data, { projectId, ticketId, targetTicketId }) => {
+      // Invalidate queries for both tickets
+      queryClient.invalidateQueries({ queryKey: ticketLinkKeys.byTicket(projectId, ticketId) })
+      queryClient.invalidateQueries({
+        queryKey: ticketLinkKeys.byTicket(projectId, targetTicketId),
+      })
+      queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+      showToast.success('Link type updated')
+    },
+    onError: (err) => {
+      showToast.error(err.message)
+    },
+  })
+}
+
+interface CreateBulkLinksInput {
+  projectId: string
+  ticketId: string
+  links: { linkType: LinkType; targetTicketId: string }[]
+}
+
+interface BulkLinkResult {
+  succeeded: TicketLinkSummary[]
+  failed: { targetTicketId: string; error: string }[]
+}
+
+/**
+ * Create multiple ticket links in parallel.
+ * Uses Promise.allSettled so partial failures don't block successful ones.
+ */
+export function useCreateTicketLinks() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      ticketId,
+      links,
+    }: CreateBulkLinksInput): Promise<BulkLinkResult> => {
+      const tabId = getTabId()
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(tabId && { 'X-Tab-Id': tabId }),
+      }
+
+      const results = await Promise.allSettled(
+        links.map(async ({ linkType, targetTicketId }) => {
+          const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/links`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ linkType, targetTicketId }),
+          })
+
+          if (!res.ok) {
+            const error = await res.json().catch(() => ({ error: 'Request failed' }))
+            throw { targetTicketId, error: error.error || `HTTP ${res.status}` }
+          }
+
+          return (await res.json()) as TicketLinkSummary
+        }),
+      )
+
+      const succeeded: TicketLinkSummary[] = []
+      const failed: { targetTicketId: string; error: string }[] = []
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          succeeded.push(result.value)
+        } else {
+          const reason = result.reason as { targetTicketId: string; error: string }
+          failed.push(reason)
+        }
+      }
+
+      return { succeeded, failed }
+    },
+    onSuccess: ({ succeeded, failed }, { projectId, ticketId, links }) => {
+      // Invalidate source ticket links
+      queryClient.invalidateQueries({ queryKey: ticketLinkKeys.byTicket(projectId, ticketId) })
+      // Invalidate all target ticket links
+      for (const link of links) {
+        queryClient.invalidateQueries({
+          queryKey: ticketLinkKeys.byTicket(projectId, link.targetTicketId),
+        })
+      }
+      queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
+
+      if (succeeded.length > 0 && failed.length === 0) {
+        showToast.success(
+          succeeded.length === 1 ? 'Link created' : `${succeeded.length} links created`,
+        )
+      } else if (succeeded.length > 0 && failed.length > 0) {
+        showToast.warning(`${succeeded.length} link(s) created, ${failed.length} failed`)
+      } else if (failed.length > 0) {
+        showToast.error(`Failed to create ${failed.length} link(s)`)
+      }
     },
     onError: (err) => {
       showToast.error(err.message)
@@ -133,7 +270,6 @@ export function useDeleteTicketLink() {
         queryKey: ticketLinkKeys.byTicket(projectId, targetTicketId),
       })
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
-      showToast.success('Link removed')
     },
     onError: (err) => {
       showToast.error(err.message)

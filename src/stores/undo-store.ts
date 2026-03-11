@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { TicketRestoreData } from '@/lib/actions/types'
-import type { ColumnWithTickets, TicketWithRelations } from '@/types'
+import type { ColumnWithTickets, LinkType, TicketWithRelations } from '@/types'
 
 interface DeletedTicket {
   ticket: TicketWithRelations
@@ -45,6 +45,17 @@ interface AttachmentAction {
   ticketId: string
   ticketKey: string
   attachment: AttachmentInfo
+}
+
+export interface LinkAction {
+  projectId: string
+  ticketId: string
+  ticketKey: string
+  linkId: string
+  linkType: LinkType
+  targetTicketId: string
+  targetTicketKey: string
+  direction: 'outward' | 'inward'
 }
 
 /** Metadata for tracking activity entries for undo/redo cleanup */
@@ -110,6 +121,24 @@ type UndoAction =
       type: 'backlogReorder'
       beforeOrder: string[]
       afterOrder: string[]
+    }
+  | {
+      type: 'linkCreate'
+      link: LinkAction
+    }
+  | {
+      type: 'bulkLinkCreate'
+      links: LinkAction[]
+    }
+  | {
+      type: 'linkDelete'
+      link: LinkAction
+    }
+  | {
+      type: 'linkUpdate'
+      link: LinkAction
+      oldLinkType: LinkType
+      newLinkType: LinkType
     }
 
 interface UndoEntry {
@@ -225,6 +254,24 @@ interface UndoState {
     projectId: string,
     beforeOrder: string[],
     afterOrder: string[],
+    isRedo?: boolean,
+  ) => void
+
+  // Add a link create action to the undo stack
+  pushLinkCreate: (projectId: string, link: LinkAction, isRedo?: boolean) => void
+
+  // Add a bulk link create action to the undo stack (single Ctrl+Z undoes all)
+  pushBulkLinkCreate: (projectId: string, links: LinkAction[], isRedo?: boolean) => void
+
+  // Add a link delete action to the undo stack
+  pushLinkDelete: (projectId: string, link: LinkAction, isRedo?: boolean) => void
+
+  // Add a link update action to the undo stack
+  pushLinkUpdate: (
+    projectId: string,
+    link: LinkAction,
+    oldLinkType: LinkType,
+    newLinkType: LinkType,
     isRedo?: boolean,
   ) => void
 
@@ -614,6 +661,85 @@ export const useUndoStore = create<UndoState>((set, get) => ({
             beforeOrder: [...beforeOrder],
             afterOrder: [...afterOrder],
           },
+          timestamp: Date.now(),
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushLinkCreate: (projectId, link, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Link Create ${isRedo ? '(Redo)' : ''}`, {
+      linkId: link.linkId,
+      linkType: link.linkType,
+      projectId,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: { type: 'linkCreate', link: { ...link } },
+          timestamp: Date.now(),
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushBulkLinkCreate: (projectId, links, isRedo = false) => {
+    console.debug(
+      `[SessionLog] Action: Bulk Link Create (${links.length}) ${isRedo ? '(Redo)' : ''}`,
+      {
+        projectId,
+        count: links.length,
+      },
+    )
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: { type: 'bulkLinkCreate', links: links.map((l) => ({ ...l })) },
+          timestamp: Date.now(),
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushLinkDelete: (projectId, link, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Link Delete ${isRedo ? '(Redo)' : ''}`, {
+      linkId: link.linkId,
+      linkType: link.linkType,
+      projectId,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: { type: 'linkDelete', link: { ...link } },
+          timestamp: Date.now(),
+          projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushLinkUpdate: (projectId, link, oldLinkType, newLinkType, isRedo = false) => {
+    console.debug(`[SessionLog] Action: Link Update ${isRedo ? '(Redo)' : ''}`, {
+      linkId: link.linkId,
+      oldLinkType,
+      newLinkType,
+      projectId,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: { type: 'linkUpdate', link: { ...link }, oldLinkType, newLinkType },
           timestamp: Date.now(),
           projectId,
         },
