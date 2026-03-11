@@ -1204,7 +1204,15 @@ export function registerTicketTools(server: McpServer) {
       fromKey: z.string().describe('Source ticket key (e.g., PUNT-2)'),
       toKey: z.string().describe('Target ticket key (e.g., PUNT-5)'),
       linkType: z
-        .enum(['blocks', 'is_blocked_by', 'relates_to', 'duplicates', 'is_duplicated_by'])
+        .enum([
+          'blocks',
+          'is_blocked_by',
+          'relates_to',
+          'duplicates',
+          'is_duplicated_by',
+          'splits_from',
+          'split_to',
+        ])
         .describe('Type of link'),
     },
     async ({ fromKey, toKey, linkType }) => {
