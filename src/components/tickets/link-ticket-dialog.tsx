@@ -22,7 +22,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCreateTicketLink, useUpdateTicketLink } from '@/hooks/queries/use-ticket-links'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
+import { useUndoStore } from '@/stores/undo-store'
 import type { LinkType, TicketLinkSummary, TicketWithRelations } from '@/types'
 import { INVERSE_LINK_TYPES, LINK_TYPE_LABELS, LINK_TYPES } from '@/types'
 import { InlineCodeText } from '../common/inline-code'
@@ -62,6 +64,7 @@ export function LinkTicketDialog({
   const { getColumns } = useBoardStore()
   const createLink = useCreateTicketLink()
   const updateLink = useUpdateTicketLink()
+  const { pushLinkCreate } = useUndoStore()
 
   // Get all tickets from the board store
   const columns = getColumns(projectId)
@@ -115,7 +118,10 @@ export function LinkTicketDialog({
   )
 
   const handleSubmit = () => {
-    if (!selectedTicketId) return
+    if (!selectedTicketId || !selectedTicket) return
+
+    const targetTicketKey = `${projectKey}-${selectedTicket.number}`
+    const sourceTicketKey = `${projectKey}-${ticket.number}`
 
     if (existingLinkForSelected) {
       // Update existing link type
@@ -146,7 +152,23 @@ export function LinkTicketDialog({
           targetTicketId: selectedTicketId,
         },
         {
-          onSuccess: () => {
+          onSuccess: (data) => {
+            pushLinkCreate(projectId, {
+              projectId,
+              ticketId: ticket.id,
+              ticketKey: sourceTicketKey,
+              linkId: data.id,
+              linkType,
+              targetTicketId: selectedTicketId,
+              targetTicketKey,
+              direction: 'outward',
+            })
+
+            showUndoRedoToast('success', {
+              title: 'Link created',
+              description: `${sourceTicketKey} ${LINK_TYPE_LABELS[linkType].toLowerCase()} ${targetTicketKey}`,
+            })
+
             onOpenChange(false)
             setSearchQuery('')
             setSelectedTicketId(null)

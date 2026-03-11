@@ -85,7 +85,6 @@ export function useCreateTicketLink() {
         queryKey: ticketLinkKeys.byTicket(projectId, targetTicketId),
       })
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
-      showToast.success('Link created')
     },
     onError: (err) => {
       showToast.error(err.message)
@@ -183,7 +182,6 @@ export function useDeleteTicketLink() {
         queryKey: ticketLinkKeys.byTicket(projectId, targetTicketId),
       })
       queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(projectId) })
-      showToast.success('Link removed')
     },
     onError: (err) => {
       showToast.error(err.message)
