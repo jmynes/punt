@@ -27,7 +27,15 @@ const schemas = {
   InvitationRole: z.enum(['admin', 'member']),
   SprintEntryType: z.enum(['added', 'carried_over']),
   SprintExitStatus: z.enum(['completed', 'carried_over', 'removed']),
-  LinkType: z.enum(['blocks', 'is_blocked_by', 'relates_to', 'duplicates', 'is_duplicated_by']),
+  LinkType: z.enum([
+    'blocks',
+    'is_blocked_by',
+    'relates_to',
+    'duplicates',
+    'is_duplicated_by',
+    'splits_from',
+    'split_to',
+  ]),
 }
 
 // All valid values per enum for cross-enum testing
@@ -39,7 +47,15 @@ const allEnumValues: Record<string, readonly string[]> = {
   InvitationRole: ['admin', 'member'],
   SprintEntryType: ['added', 'carried_over'],
   SprintExitStatus: ['completed', 'carried_over', 'removed'],
-  LinkType: ['blocks', 'is_blocked_by', 'relates_to', 'duplicates', 'is_duplicated_by'],
+  LinkType: [
+    'blocks',
+    'is_blocked_by',
+    'relates_to',
+    'duplicates',
+    'is_duplicated_by',
+    'splits_from',
+    'split_to',
+  ],
 }
 
 // Collect every valid value across all enums for generating near-misses
