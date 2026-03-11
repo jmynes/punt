@@ -1,6 +1,5 @@
 'use client'
 
-import { useDroppable } from '@dnd-kit/core'
 import { format } from 'date-fns'
 import {
   AlertTriangle,
@@ -20,7 +19,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
-import { DropZone, type TableContext, TicketTable } from '@/components/table'
+import { TicketListSection } from '@/components/table'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -37,7 +36,7 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { formatDaysRemaining, isCompletedColumn, isSprintExpired } from '@/lib/sprint-utils'
 import { sortTickets } from '@/lib/ticket-sort'
 import { cn } from '@/lib/utils'
-import { type BacklogColumnId, type SortConfig, useBacklogStore } from '@/stores/backlog-store'
+import { useBacklogStore } from '@/stores/backlog-store'
 import { useUIStore } from '@/stores/ui-store'
 import type {
   ColumnWithTickets,
@@ -96,26 +95,11 @@ export function SprintSection({
   totalCompletedPoints,
 }: SprintSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
+  const [isOverSection, setIsOverSection] = useState(false)
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
-  const { columns, sort, toggleSort, setSort } = useBacklogStore()
+  const { sort, toggleSort, setSort, toggleColumnVisibility } = useBacklogStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
   const reopenSprintMutation = useReopenSprint(projectId)
-
-  const handleToggleSort = useCallback(
-    (columnId: string) => {
-      const column = columns.find((c) => c.id === columnId)
-      if (!column?.sortable) return
-      toggleSort(columnId as BacklogColumnId)
-    },
-    [columns, toggleSort],
-  )
-
-  const handleSetSort = useCallback(
-    (newSort: SortConfig | null) => {
-      setSort(newSort)
-    },
-    [setSort],
-  )
 
   // Sort tickets locally using the shared sort utility
   const sortedTickets = useMemo(
@@ -140,7 +124,6 @@ export function SprintSection({
   const visibleTickets = tickets.filter((t) => !draggingTicketIds.includes(t.id))
   const filteredPoints = visibleTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
   const filteredCount = visibleTickets.length
-  const draggingCount = draggingTicketIds.length
 
   // Calculate completion stats (done columns)
   const doneColumnIds = useMemo(
@@ -158,39 +141,7 @@ export function SprintSection({
     totalStoryPoints !== undefined &&
     (totalTicketCount !== filteredCount || totalStoryPoints !== filteredPoints)
 
-  // Droppable for the section
   const droppableId = sprint?.id ?? 'backlog'
-  const { setNodeRef, isOver } = useDroppable({
-    id: droppableId,
-    data: {
-      type: 'sprint-section',
-      sprintId: sprint?.id ?? null,
-    },
-  })
-
-  // Droppable zone at the end of the ticket list for "drop after last item"
-  const { setNodeRef: setEndDropRef } = useDroppable({
-    id: `${droppableId}-end`,
-    data: {
-      type: 'section-end',
-      sprintId: sprint?.id ?? null,
-    },
-  })
-
-  // Ticket IDs for sortable context - use sorted order
-  const ticketIds = sortedTickets.map((t) => t.id)
-
-  // Create table context for the unified TicketTable component
-  const tableContext: TableContext = useMemo(
-    () => ({
-      sectionId: sprint?.id ?? 'backlog',
-      sprintId: sprint?.id ?? null,
-      projectKey,
-      projectId,
-      statusColumns,
-    }),
-    [sprint?.id, projectKey, projectId, statusColumns],
-  )
 
   const handleStartSprint = useCallback(() => {
     if (sprint) openSprintStart(sprint.id)
@@ -227,8 +178,8 @@ export function SprintSection({
         isCompleted && 'border-zinc-700 bg-zinc-900/20 opacity-75',
         // Drop target styling - subtle glow when this section is a valid drop target
         dropPosition !== null && 'border-blue-500/40 ring-1 ring-blue-500/20',
-        // isOver is still useful for empty sections
-        isOver &&
+        // isOver is useful for empty sections (via callback from TicketListSection)
+        isOverSection &&
           filteredCount === 0 &&
           'border-blue-500/50 bg-blue-500/10 ring-2 ring-blue-500/20',
       )}
@@ -531,36 +482,34 @@ export function SprintSection({
 
       {/* Ticket table */}
       {(!collapsible || expanded) && (
-        <div ref={setNodeRef} className={cn('pb-3', filteredCount === 0 && 'px-4 py-3')}>
-          {filteredCount === 0 ? (
-            <DropZone
-              isActive={dropPosition !== null || isOver}
-              itemCount={draggingCount}
-              message={
-                isBacklog
-                  ? 'Drag tickets here to remove them from sprints'
-                  : 'Drag tickets here to add them to this sprint'
-              }
-            />
-          ) : (
-            <div className="relative">
-              <TicketTable
-                context={tableContext}
-                tickets={sortedTickets}
-                columns={columns}
-                allTicketIds={ticketIds}
-                draggingTicketIds={draggingTicketIds}
-                dropPosition={dropPosition}
-                showHeader={true}
-                sort={sort}
-                onToggleSort={handleToggleSort}
-                onSetSort={handleSetSort}
-              />
-              {/* Invisible droppable zone after the last ticket for "drop at end" */}
-              <div ref={setEndDropRef} className="h-2" />
-            </div>
-          )}
-        </div>
+        <TicketListSection
+          sectionId={sprint?.id ?? 'backlog'}
+          sprintId={sprint?.id ?? null}
+          projectKey={projectKey}
+          projectId={projectId}
+          statusColumns={statusColumns}
+          tickets={sortedTickets}
+          draggingTicketIds={draggingTicketIds}
+          dropPosition={dropPosition}
+          droppableId={droppableId}
+          droppableData={{ type: 'sprint-section', sprintId: sprint?.id ?? null }}
+          endDroppableId={`${droppableId}-end`}
+          endDroppableData={{ type: 'section-end', sprintId: sprint?.id ?? null }}
+          sort={sort}
+          onToggleSort={(id) => toggleSort(id as Parameters<typeof toggleSort>[0])}
+          onSetSort={setSort}
+          enableColumnReorder={true}
+          onHideColumn={(id) =>
+            toggleColumnVisibility(id as Parameters<typeof toggleColumnVisibility>[0])
+          }
+          emptyMessage={
+            isBacklog
+              ? 'Drag tickets here to remove them from sprints'
+              : 'Drag tickets here to add them to this sprint'
+          }
+          className="pb-3"
+          onIsOver={setIsOverSection}
+        />
       )}
     </div>
   )

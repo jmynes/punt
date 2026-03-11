@@ -8,19 +8,13 @@ import {
   type DragStartEvent,
   KeyboardSensor,
   PointerSensor,
-  useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import {
-  arrayMove,
-  horizontalListSortingStrategy,
-  SortableContext,
-  sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable'
+import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { Settings2, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { DropZone, type TableContext, TicketTable } from '@/components/table'
+import { TicketListSection } from '@/components/table'
 import { Button } from '@/components/ui/button'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -326,23 +320,6 @@ export function BacklogTable({
   // Get selection store
   const { selectedTicketIds, clearSelection, isSelected } = useSelectionStore()
 
-  // Droppable for backlog section (allows dropping at end of list or when empty)
-  const { setNodeRef: setBacklogDropRef, isOver: isOverBacklog } = useDroppable({
-    id: 'backlog',
-    data: {
-      type: 'sprint-section',
-      sprintId: null,
-    },
-  })
-
-  // Droppable zone at the end of the ticket list for "drop after last item"
-  const { setNodeRef: setEndDropRef } = useDroppable({
-    id: 'backlog-end',
-    data: {
-      type: 'backlog-end',
-    },
-  })
-
   // Handle drag start - track dragging tickets and clear selection if needed
   function handleDragStart(event: DragStartEvent) {
     const { active } = event
@@ -520,53 +497,9 @@ export function BacklogTable({
     }
   }
 
-  const ticketIds = filteredTickets.map((t) => t.id)
-
-  // Create table context for the unified TicketTable component
-  const tableContext: TableContext = useMemo(
-    () => ({
-      sectionId: 'backlog',
-      sprintId: null,
-      projectKey,
-      projectId,
-      statusColumns,
-    }),
-    [projectKey, projectId, statusColumns],
-  )
-
   // Determine active drag state for rendering
   const activeDraggingIds = useExternalDnd ? externalDraggingIds : draggingTicketIds
   const activeDropPosition = useExternalDnd ? externalDropPosition : dropPosition
-
-  // Handle sort toggle with proper type casting
-  const handleToggleSort = useCallback(
-    (columnId: string) => {
-      toggleSort(columnId as (typeof columns)[number]['id'])
-    },
-    [toggleSort],
-  )
-
-  // Table content (shared between internal and external DnD modes)
-  const tableContent = (
-    <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-      <TicketTable
-        context={tableContext}
-        tickets={filteredTickets}
-        columns={columns}
-        allTicketIds={ticketIds}
-        draggingTicketIds={activeDraggingIds}
-        dropPosition={activeDropPosition}
-        showHeader={true}
-        sort={sort}
-        onToggleSort={handleToggleSort}
-        onSetSort={setSort}
-        enableColumnReorder={true}
-        onHideColumn={(id) =>
-          toggleColumnVisibility(id as Parameters<typeof toggleColumnVisibility>[0])
-        }
-      />
-    </SortableContext>
-  )
 
   // Compute story points totals
   const filteredPoints = filteredTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
@@ -678,37 +611,68 @@ export function BacklogTable({
             node?.querySelector('[data-radix-scroll-area-viewport]') ?? null
         }}
       >
-        <div ref={setBacklogDropRef} className="flex min-h-full flex-col">
-          {useExternalDnd ? (
-            // When using external DnD, just render the sortable contexts (parent provides DndContext)
-            tableContent
-          ) : (
-            // When using internal DnD, wrap with our own DndContext
-            <DndContext
-              id="backlog-dnd"
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragEnd={handleDragEnd}
-            >
-              {tableContent}
-            </DndContext>
-          )}
-
-          {filteredTickets.length === 0 ? (
-            <div className="p-4">
-              <DropZone
-                isActive={isOverBacklog || externalDropPosition !== null}
-                itemCount={useExternalDnd ? externalDraggingIds.length : draggingTicketIds.length}
-                message="Drag tickets here to add them to the backlog"
-              />
-            </div>
-          ) : (
-            // Spacer to fill remaining space - droppable zone for "drop after last item"
-            <div ref={setEndDropRef} className="min-h-16 flex-1" />
-          )}
-        </div>
+        {useExternalDnd ? (
+          // When using external DnD, just render inside parent's DndContext
+          <TicketListSection
+            sectionId="backlog"
+            sprintId={null}
+            projectKey={projectKey}
+            projectId={projectId}
+            statusColumns={statusColumns}
+            tickets={filteredTickets}
+            draggingTicketIds={activeDraggingIds}
+            dropPosition={activeDropPosition}
+            droppableId="backlog"
+            droppableData={{ type: 'sprint-section', sprintId: null }}
+            endDroppableId="backlog-end"
+            endDroppableData={{ type: 'backlog-end' }}
+            sort={sort}
+            onToggleSort={(id) => toggleSort(id as Parameters<typeof toggleSort>[0])}
+            onSetSort={setSort}
+            enableColumnReorder={true}
+            onHideColumn={(id) =>
+              toggleColumnVisibility(id as Parameters<typeof toggleColumnVisibility>[0])
+            }
+            emptyMessage="Drag tickets here to add them to the backlog"
+            className="flex min-h-full flex-col"
+            endZoneClassName="min-h-16 flex-1"
+          />
+        ) : (
+          // When using internal DnD, wrap with our own DndContext
+          <DndContext
+            id="backlog-dnd"
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <TicketListSection
+              sectionId="backlog"
+              sprintId={null}
+              projectKey={projectKey}
+              projectId={projectId}
+              statusColumns={statusColumns}
+              tickets={filteredTickets}
+              draggingTicketIds={activeDraggingIds}
+              dropPosition={activeDropPosition}
+              droppableId="backlog"
+              droppableData={{ type: 'sprint-section', sprintId: null }}
+              endDroppableId="backlog-end"
+              endDroppableData={{ type: 'backlog-end' }}
+              sort={sort}
+              onToggleSort={(id) => toggleSort(id as Parameters<typeof toggleSort>[0])}
+              onSetSort={setSort}
+              enableColumnReorder={true}
+              onHideColumn={(id) =>
+                toggleColumnVisibility(id as Parameters<typeof toggleColumnVisibility>[0])
+              }
+              emptyMessage="Drag tickets here to add them to the backlog"
+              className="flex min-h-full flex-col"
+              endZoneClassName="min-h-16 flex-1"
+            />
+          </DndContext>
+        )}
 
         {activeDraggingIds.length === 0 && <ScrollBar orientation="horizontal" />}
       </ScrollArea>
