@@ -23,7 +23,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCreateTicketLinks } from '@/hooks/queries/use-ticket-links'
+import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
+import { useUndoStore } from '@/stores/undo-store'
 import type { LinkType, TicketLinkSummary, TicketWithRelations } from '@/types'
 import { INVERSE_LINK_TYPES, LINK_TYPE_LABELS, LINK_TYPES } from '@/types'
 import { InlineCodeText } from '../common/inline-code'
@@ -79,6 +81,7 @@ export function LinkTicketDialog({
 
   const { getColumns } = useBoardStore()
   const createLinks = useCreateTicketLinks()
+  const { pushLinkCreate } = useUndoStore()
 
   // Get all tickets from the board store
   const columns = getColumns(projectId)
@@ -226,17 +229,42 @@ export function LinkTicketDialog({
   const handleCreateLinks = () => {
     if (stagedTickets.length === 0) return
 
+    const sourceTicketKey = `${projectKey}-${ticket.number}`
+    // Capture staged tickets before close clears them
+    const staged = [...stagedTickets]
+
     createLinks.mutate(
       {
         projectId,
         ticketId: ticket.id,
-        links: stagedTickets.map((t) => ({
+        links: staged.map((t) => ({
           linkType: t.linkType,
           targetTicketId: t.id,
         })),
       },
       {
-        onSuccess: () => {
+        onSuccess: ({ succeeded }) => {
+          // Push each created link to the undo stack
+          for (const link of succeeded) {
+            const targetKey = `${projectKey}-${link.linkedTicket.number}`
+            pushLinkCreate(projectId, {
+              projectId,
+              ticketId: ticket.id,
+              ticketKey: sourceTicketKey,
+              linkId: link.id,
+              linkType: link.linkType,
+              targetTicketId: link.linkedTicket.id,
+              targetTicketKey: targetKey,
+              direction: 'outward',
+            })
+          }
+
+          const count = succeeded.length
+          showUndoRedoToast('success', {
+            title: `${count} link${count === 1 ? '' : 's'} created`,
+            description: `Linked to ${sourceTicketKey}`,
+          })
+
           handleClose()
         },
       },
