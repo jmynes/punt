@@ -138,7 +138,6 @@ export function UserList() {
 
   // Bulk delete confirmation state (requires credentials)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
-  const [deleteEmail, setDeleteEmail] = useState('')
   const [deletePassword, setDeletePassword] = useState('')
   const [showDeletePassword, setShowDeletePassword] = useState(false)
   const [deleteError, setDeleteError] = useState('')
@@ -423,7 +422,7 @@ export function UserList() {
           apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-            body: JSON.stringify(updates),
+            body: JSON.stringify({ ...updates, skipReauth: true }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -456,7 +455,7 @@ export function UserList() {
       }
 
       // Handle case where all users were already in the target state
-      if (succeeded === 0 && skipped > 0) {
+      if (succeeded === 0 && skipped > 0 && failed === 0) {
         const state =
           'isSystemAdmin' in updates
             ? updates.isSystemAdmin
@@ -513,7 +512,7 @@ export function UserList() {
           apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-            body: JSON.stringify({ isActive: false }),
+            body: JSON.stringify({ isActive: false, skipReauth: true }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -542,7 +541,7 @@ export function UserList() {
         )
       }
 
-      if (succeeded === 0 && skipped > 0) {
+      if (succeeded === 0 && skipped > 0 && failed === 0) {
         showToast.info(
           `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already disabled`,
         )
@@ -576,7 +575,7 @@ export function UserList() {
           apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-            body: JSON.stringify({ isActive: true }),
+            body: JSON.stringify({ isActive: true, skipReauth: true }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -605,7 +604,7 @@ export function UserList() {
         )
       }
 
-      if (succeeded === 0 && skipped > 0) {
+      if (succeeded === 0 && skipped > 0 && failed === 0) {
         showToast.info(
           `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already enabled`,
         )
@@ -627,20 +626,12 @@ export function UserList() {
 
   // Bulk permanent delete - requires credential verification
   const bulkPermanentDeleteUsers = useMutation({
-    mutationFn: async ({
-      usernames,
-      email,
-      password,
-    }: {
-      usernames: string[]
-      email: string
-      password: string
-    }) => {
+    mutationFn: async ({ usernames, password }: { usernames: string[]; password: string }) => {
       // First verify credentials
       const verifyRes = await apiFetch('/api/auth/verify-credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ password }),
       })
 
       if (!verifyRes.ok) {
@@ -653,6 +644,8 @@ export function UserList() {
         usernames.map((uname) =>
           apiFetch(`/api/admin/users/${uname}?permanent=true`, {
             method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
+            body: JSON.stringify({ confirmPassword: password }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -681,7 +674,6 @@ export function UserList() {
 
   const closeBulkDeleteDialog = () => {
     setBulkDeleteOpen(false)
-    setDeleteEmail('')
     setDeletePassword('')
     setShowDeletePassword(false)
     setDeleteError('')
@@ -945,6 +937,11 @@ export function UserList() {
     ? users?.find((u) => u.username === activeToggleUsername)
     : null
   const selectedUsers = users?.filter((u) => selectedIds.has(u.id)) || []
+  const allSelectedEnabled = selectedUsers.length > 0 && selectedUsers.every((u) => u.isActive)
+  const allSelectedDisabled = selectedUsers.length > 0 && selectedUsers.every((u) => !u.isActive)
+  const allSelectedAdmin = selectedUsers.length > 0 && selectedUsers.every((u) => u.isSystemAdmin)
+  const allSelectedNonAdmin =
+    selectedUsers.length > 0 && selectedUsers.every((u) => !u.isSystemAdmin)
 
   // Separate current user from other users
   const currentUserData = users?.find((u) => u.id === currentUser?.id)
@@ -1296,17 +1293,12 @@ export function UserList() {
   }
 
   const handleBulkDelete = () => {
-    if (!deleteEmail || !deletePassword) {
-      setDeleteError('Please enter your email and password')
-      return
-    }
-    if (deleteEmail !== currentUser?.email) {
-      setDeleteError('Email does not match your account')
+    if (!deletePassword) {
+      setDeleteError('Please enter your password')
       return
     }
     bulkPermanentDeleteUsers.mutate({
       usernames: selectedUsers.map((u) => u.username),
-      email: deleteEmail,
       password: deletePassword,
     })
   }
@@ -1647,6 +1639,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('makeAdmin')}
+                disabled={allSelectedAdmin}
                 className="text-zinc-300 hover:text-amber-400 hover:bg-amber-500/10"
               >
                 <Shield className="h-4 w-4 mr-1.5" />
@@ -1657,6 +1650,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('removeAdmin')}
+                disabled={allSelectedNonAdmin}
                 className="text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
               >
                 <ShieldOff className="h-4 w-4 mr-1.5" />
@@ -1669,6 +1663,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('enable')}
+                disabled={allSelectedEnabled}
                 className="text-zinc-300 hover:text-green-400 hover:bg-green-500/10"
               >
                 <UserCheck className="h-4 w-4 mr-1.5" />
@@ -1679,6 +1674,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('disable')}
+                disabled={allSelectedDisabled}
                 className="text-zinc-300 hover:text-red-400 hover:bg-red-500/10"
               >
                 <UserX className="h-4 w-4 mr-1.5" />
@@ -1714,7 +1710,18 @@ export function UserList() {
           open={!!deleteUsername}
           onOpenChange={(open) => !open && setDeleteUsername(null)}
         >
-          <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+          <AlertDialogContent
+            className="bg-zinc-900 border-zinc-800"
+            onOpenAutoFocus={(e) => {
+              e.preventDefault()
+              setTimeout(() => {
+                const btn = document.querySelector<HTMLButtonElement>(
+                  '[data-slot="alert-dialog-content"] [data-confirm-delete]',
+                )
+                btn?.focus()
+              }, 0)
+            }}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle className="text-zinc-100">
                 Delete User Permanently?
@@ -1731,6 +1738,7 @@ export function UserList() {
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
+                data-confirm-delete
                 onClick={(e) => {
                   e.preventDefault()
                   setShowDeleteReauthDialog(true)
@@ -1817,7 +1825,18 @@ export function UserList() {
 
         {/* Bulk action confirmation dialog */}
         <AlertDialog open={!!bulkAction} onOpenChange={(open) => !open && setBulkAction(null)}>
-          <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+          <AlertDialogContent
+            className="bg-zinc-900 border-zinc-800"
+            onOpenAutoFocus={(e) => {
+              e.preventDefault()
+              setTimeout(() => {
+                const btn = document.querySelector<HTMLButtonElement>(
+                  '[data-slot="alert-dialog-content"] [data-confirm-bulk]',
+                )
+                btn?.focus()
+              }, 0)
+            }}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle className="text-zinc-100">
                 {bulkAction === 'disable' && 'Disable Users'}
@@ -1847,6 +1866,7 @@ export function UserList() {
                 Cancel
               </AlertDialogCancel>
               <Button
+                data-confirm-bulk
                 onClick={confirmBulkAction}
                 className={
                   bulkAction === 'disable'
@@ -1890,28 +1910,14 @@ export function UserList() {
               </div>
             )}
 
-            <div className="space-y-4 py-2">
-              <p className="text-sm text-zinc-400">
-                To confirm deletion, enter your admin credentials:
-              </p>
-
-              <div className="space-y-2">
-                <Label htmlFor="delete-email" className="text-zinc-300">
-                  Your Email
-                </Label>
-                <Input
-                  id="delete-email"
-                  type="email"
-                  value={deleteEmail}
-                  onChange={(e) => {
-                    setDeleteEmail(e.target.value)
-                    setDeleteError('')
-                  }}
-                  placeholder={currentUser?.email || 'admin@example.com'}
-                  autoComplete="off"
-                  className="border-zinc-700 bg-zinc-800 text-zinc-100"
-                />
-              </div>
+            <form
+              className="space-y-4 py-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (!bulkPermanentDeleteUsers.isPending && deletePassword) handleBulkDelete()
+              }}
+            >
+              <p className="text-sm text-zinc-400">Enter your password to confirm deletion.</p>
 
               <div className="space-y-2">
                 <Label htmlFor="delete-password" className="text-zinc-300">
@@ -1951,31 +1957,32 @@ export function UserList() {
                   {deleteError}
                 </p>
               )}
-            </div>
 
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={closeBulkDeleteDialog}
-                className="text-zinc-300 hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleBulkDelete}
-                disabled={bulkPermanentDeleteUsers.isPending || !deleteEmail || !deletePassword}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                {bulkPermanentDeleteUsers.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete Permanently'
-                )}
-              </Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={closeBulkDeleteDialog}
+                  className="text-zinc-300 hover:bg-zinc-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={bulkPermanentDeleteUsers.isPending || !deletePassword}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {bulkPermanentDeleteUsers.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete Permanently'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
 
@@ -1996,7 +2003,18 @@ export function UserList() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
+            <form
+              className="space-y-4 py-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (
+                  !reset2faLoading &&
+                  reset2faPassword &&
+                  (currentUserData?.totpEnabled ? !!reset2faTotpCode : true)
+                )
+                  handleReset2fa()
+              }}
+            >
               <div className="flex items-start gap-3 p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
                 <Shield className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
@@ -2091,35 +2109,36 @@ export function UserList() {
                   {reset2faError}
                 </p>
               )}
-            </div>
 
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={closeReset2faDialog}
-                className="text-zinc-300 hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleReset2fa}
-                disabled={
-                  reset2faLoading ||
-                  !reset2faPassword ||
-                  (currentUserData?.totpEnabled ? !reset2faTotpCode : false)
-                }
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                {reset2faLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Resetting...
-                  </>
-                ) : (
-                  'Reset 2FA'
-                )}
-              </Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={closeReset2faDialog}
+                  className="text-zinc-300 hover:bg-zinc-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    reset2faLoading ||
+                    !reset2faPassword ||
+                    (currentUserData?.totpEnabled ? !reset2faTotpCode : false)
+                  }
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {reset2faLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    'Reset 2FA'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
 
@@ -2140,7 +2159,20 @@ export function UserList() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
+            <form
+              className="space-y-4 py-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (
+                  !resetPwLoading &&
+                  resetPwNewPassword &&
+                  resetPwAdminPassword &&
+                  (currentUserData?.totpEnabled ? !!resetPwTotpCode : true) &&
+                  passwordRequirements.every((req) => req.test(resetPwNewPassword))
+                )
+                  handleResetPassword()
+              }}
+            >
               <div className="flex items-start gap-3 p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
                 <Shield className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
@@ -2278,37 +2310,38 @@ export function UserList() {
                   {resetPwError}
                 </p>
               )}
-            </div>
 
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={closeResetPwDialog}
-                className="text-zinc-300 hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleResetPassword}
-                disabled={
-                  resetPwLoading ||
-                  !resetPwNewPassword ||
-                  !resetPwAdminPassword ||
-                  (currentUserData?.totpEnabled ? !resetPwTotpCode : false) ||
-                  !passwordRequirements.every((req) => req.test(resetPwNewPassword))
-                }
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                {resetPwLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Resetting...
-                  </>
-                ) : (
-                  'Reset Password'
-                )}
-              </Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={closeResetPwDialog}
+                  className="text-zinc-300 hover:bg-zinc-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    resetPwLoading ||
+                    !resetPwNewPassword ||
+                    !resetPwAdminPassword ||
+                    (currentUserData?.totpEnabled ? !resetPwTotpCode : false) ||
+                    !passwordRequirements.every((req) => req.test(resetPwNewPassword))
+                  }
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {resetPwLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    'Reset Password'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

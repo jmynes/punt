@@ -91,7 +91,15 @@ export function ReauthDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+      <AlertDialogContent
+        className="bg-zinc-900 border-zinc-800"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault()
+          setTimeout(() => {
+            document.getElementById('reauth-password')?.focus()
+          }, 0)
+        }}
+      >
         <form onSubmit={handleSubmit}>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">{title}</AlertDialogTitle>

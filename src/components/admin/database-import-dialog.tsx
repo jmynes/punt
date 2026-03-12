@@ -236,7 +236,16 @@ export function DatabaseImportDialog({
 
         {/* Step 1: Preview + Confirm */}
         {step === 'preview' && (
-          <>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (needsPassword && !preview) {
+                if (decryptionPassword && !previewMutation.isPending) handleRetryPreview()
+              } else if (preview && isConfirmValid) {
+                setShowReauthDialog(true)
+              }
+            }}
+          >
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Archive className="h-5 w-5 text-blue-400" />
@@ -409,30 +418,26 @@ export function DatabaseImportDialog({
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
+              <Button type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
               {needsPassword && !preview ? (
                 <Button
+                  type="submit"
                   variant="primary"
-                  onClick={handleRetryPreview}
                   disabled={!decryptionPassword || previewMutation.isPending}
                 >
                   {previewMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Decrypt & Preview
+                  Decrypt &amp; Preview
                 </Button>
               ) : (
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowReauthDialog(true)}
-                  disabled={!preview || !isConfirmValid}
-                >
+                <Button type="submit" variant="destructive" disabled={!preview || !isConfirmValid}>
                   <Trash2 className="h-4 w-4" />
                   Import and Replace All Data
                 </Button>
               )}
             </DialogFooter>
-          </>
+          </form>
         )}
 
         {/* Step 5: Importing */}
