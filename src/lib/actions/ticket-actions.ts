@@ -111,7 +111,7 @@ export async function moveTickets({
   const fromColumnName = fromColumn?.name ?? 'Unknown'
   const toColumnName = targetColumn.name
 
-  // 2. Optimistic store update (store handles resolution coupling internally for now)
+  // 2. Optimistic store update
   if (optimistic) {
     if (actuallyMoving.length === 1) {
       board.moveTicket(projectId, actuallyMoving[0].id, fromColumnId, toColumnId, insertIndex)
@@ -122,6 +122,31 @@ export async function moveTickets({
         toColumnId,
         insertIndex,
       )
+    }
+
+    // Resolution auto-coupling: moving to/from Done column sets/clears resolution
+    const targetIsDone = isCompletedColumn(targetColumn.name)
+    const resolutionUpdates: Array<{ ticketId: string; changes: Partial<TicketWithRelations> }> = []
+    for (const ticket of actuallyMoving) {
+      const sourceCol = columns.find((c) => c.id === ticket.columnId)
+      const sourceIsDone = sourceCol ? isCompletedColumn(sourceCol.name) : false
+      if (targetIsDone && !ticket.resolution) {
+        resolutionUpdates.push({
+          ticketId: ticket.id,
+          changes: { resolution: 'Done', resolvedAt: new Date() },
+        })
+      } else if (!targetIsDone && sourceIsDone && ticket.resolution) {
+        resolutionUpdates.push({
+          ticketId: ticket.id,
+          changes: { resolution: null, resolvedAt: null },
+        })
+      }
+    }
+    if (resolutionUpdates.length > 0) {
+      const updatedBoard = useBoardStore.getState()
+      for (const { ticketId, changes } of resolutionUpdates) {
+        updatedBoard.updateTicket(projectId, ticketId, changes)
+      }
     }
   }
 
