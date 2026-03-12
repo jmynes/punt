@@ -283,9 +283,10 @@ export class ClaudeCliProvider implements ChatProvider {
     // Track running tools per invocation (not on the singleton instance)
     // to prevent cross-user state corruption under concurrency.
     const runningTools = new Set<string>()
+    const textState = { hasEmittedText: false }
 
     const handleEvent = (event: StreamJsonEvent) => {
-      this.handleStreamEvent(event, onEvent, runningTools)
+      this.handleStreamEvent(event, onEvent, runningTools, textState)
     }
 
     return new Promise((resolve) => {
@@ -367,6 +368,7 @@ export class ClaudeCliProvider implements ChatProvider {
     event: StreamJsonEvent,
     onEvent: (event: StreamEvent) => void,
     runningTools: Set<string>,
+    textState: { hasEmittedText: boolean },
   ): void {
     switch (event.type) {
       case 'system':
@@ -391,7 +393,13 @@ export class ClaudeCliProvider implements ChatProvider {
         if (event.message?.content) {
           for (const block of event.message.content) {
             if (block.type === 'text' && block.text) {
+              // Add separator between text from different response turns
+              // to prevent sentences from running together
+              if (textState.hasEmittedText) {
+                onEvent({ type: 'text', content: '\n\n' })
+              }
               onEvent({ type: 'text', content: block.text })
+              textState.hasEmittedText = true
             } else if (block.type === 'tool_use' && block.name) {
               runningTools.add(block.name)
               onEvent({

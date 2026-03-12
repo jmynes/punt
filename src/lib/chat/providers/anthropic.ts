@@ -53,6 +53,7 @@ export class AnthropicProvider implements ChatProvider {
 
       // Run conversation loop (handles tool calls)
       let continueLoop = true
+      let hasEmittedText = false
 
       while (continueLoop) {
         const response = await anthropic.messages.create({
@@ -73,7 +74,13 @@ export class AnthropicProvider implements ChatProvider {
 
         for (const block of response.content) {
           if (block.type === 'text') {
+            // Add separator between text from different response turns
+            // to prevent sentences from running together
+            if (hasEmittedText) {
+              onEvent({ type: 'text', content: '\n\n' })
+            }
             onEvent({ type: 'text', content: block.text })
+            hasEmittedText = true
           } else if (block.type === 'tool_use') {
             hasToolUse = true
 
