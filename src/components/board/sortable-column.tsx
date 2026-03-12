@@ -46,7 +46,7 @@ export function SortableColumn({
   }
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} className="h-full">
       <KanbanColumn
         column={column}
         projectId={projectId}

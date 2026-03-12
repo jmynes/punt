@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  type CollisionDetection,
   closestCorners,
   DndContext,
   type DragEndEvent,
@@ -77,6 +78,19 @@ export function KanbanBoard({
       },
     }),
   )
+
+  // Custom collision detection: when dragging a column, only consider other columns as targets
+  const collisionDetection: CollisionDetection = useCallback((args) => {
+    const isColumnDrag = args.active.data.current?.type === 'sortable-column'
+    if (isColumnDrag) {
+      // Filter droppable containers to only other sortable columns
+      const columnContainers = args.droppableContainers.filter(
+        (container) => container.data.current?.type === 'sortable-column',
+      )
+      return closestCorners({ ...args, droppableContainers: columnContainers })
+    }
+    return closestCorners(args)
+  }, [])
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -369,7 +383,7 @@ export function KanbanBoard({
     <DndContext
       id="kanban-board-dnd"
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}

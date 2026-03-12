@@ -169,7 +169,7 @@ export function KanbanColumn({
   return (
     <div
       className={cn(
-        'flex w-72 flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-900/30 max-h-full min-h-0',
+        'flex w-72 flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-900/30 h-full max-h-full min-h-0',
         isOver && 'border-amber-500/50 bg-amber-500/5',
       )}
     >
