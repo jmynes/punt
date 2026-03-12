@@ -1149,7 +1149,7 @@ export default function BacklogPage() {
         {hasActiveSprints && (
           <div
             ref={sprintContainerRef}
-            className="flex-shrink-0 max-h-[350px] overflow-y-auto space-y-3 border-b border-zinc-800"
+            className="flex-shrink-0 max-h-[350px] overflow-y-auto p-4 lg:px-6 space-y-3 border-b border-zinc-800"
           >
             {/* Active Sprints */}
             {activeSprints.map((sprint) => (
@@ -1294,7 +1294,7 @@ export default function BacklogPage() {
           </div>
 
           {/* Backlog table via SprintSection */}
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0 px-4 lg:px-6">
             <SprintSection
               sprint={null}
               tickets={filteredBacklogTickets}
