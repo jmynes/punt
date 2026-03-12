@@ -46,7 +46,7 @@ export function TicketTable({
   }
 
   return (
-    <table className="w-full border-collapse table-fixed">
+    <table className="w-full border-collapse">
       {showHeader && (
         <TicketTableHeader
           columns={visibleColumns}
