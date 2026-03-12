@@ -1104,7 +1104,7 @@ export default function BacklogPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Page header */}
-      <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+      <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between 2xl:px-6">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-zinc-800">
             <List className="h-5 w-5 text-zinc-400" />
@@ -1131,7 +1131,7 @@ export default function BacklogPage() {
 
       {/* No active sprint banner */}
       {!hasActiveSprints && (
-        <div className="flex-shrink-0 px-4 py-4 lg:px-6 border-b border-zinc-800">
+        <div className="flex-shrink-0 px-4 py-4 2xl:px-6 border-b border-zinc-800">
           <SprintHeader projectId={projectId} />
         </div>
       )}
@@ -1149,7 +1149,7 @@ export default function BacklogPage() {
         {hasActiveSprints && (
           <div
             ref={sprintContainerRef}
-            className="flex-shrink-0 max-h-[350px] overflow-y-auto p-4 lg:px-6 space-y-3 border-b border-zinc-800"
+            className="flex-shrink-0 max-h-[350px] overflow-y-auto 2xl:px-6 py-4 space-y-3 border-b border-zinc-800"
           >
             {/* Active Sprints */}
             {activeSprints.map((sprint) => (
@@ -1294,7 +1294,7 @@ export default function BacklogPage() {
           </div>
 
           {/* Backlog table via SprintSection */}
-          <div className="flex-1 overflow-y-auto min-h-0 px-4 lg:px-6">
+          <div className="flex-1 overflow-y-auto min-h-0 2xl:px-6">
             <SprintSection
               sprint={null}
               tickets={filteredBacklogTickets}

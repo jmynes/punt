@@ -90,7 +90,7 @@ export const DEFAULT_COLUMNS: BacklogColumn[] = [
   { id: 'assignee', label: 'Assignee', width: 140, minWidth: 100, visible: true, sortable: true },
   { id: 'reporter', label: 'Reporter', width: 140, minWidth: 100, visible: false, sortable: true },
   { id: 'labels', label: 'Labels', width: 150, minWidth: 100, visible: false, sortable: false },
-  { id: 'sprint', label: 'Sprint', width: 120, minWidth: 100, visible: true, sortable: true },
+  { id: 'sprint', label: 'Sprint', width: 120, minWidth: 100, visible: false, sortable: true },
   {
     id: 'storyPoints',
     label: 'Points',
