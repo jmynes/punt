@@ -101,16 +101,25 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
   const canMoveLeft = columnIndex > 0
   const canMoveRight = columnIndex < allColumns.length - 1
 
-  // Handle adding a ticket to this column
   // Handle moving column left or right
   const handleMoveColumn = useCallback(
     async (direction: 'left' | 'right') => {
-      const currentIndex = allColumns.findIndex((c) => c.id === column.id)
+      const currentColumns = getColumns(projectId)
+      const currentIndex = currentColumns.findIndex((c) => c.id === column.id)
       const targetIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1
 
-      if (targetIndex < 0 || targetIndex >= allColumns.length) return
+      if (targetIndex < 0 || targetIndex >= currentColumns.length) return
 
       setMoveLoading(true)
+
+      // Optimistically swap in the store
+      const reorderedColumns = [...currentColumns]
+      const temp = reorderedColumns[currentIndex]
+      reorderedColumns[currentIndex] = { ...reorderedColumns[targetIndex], order: currentIndex }
+      reorderedColumns[targetIndex] = { ...temp, order: targetIndex }
+      reorderedColumns.sort((a, b) => a.order - b.order)
+      setColumns(projectId, reorderedColumns)
+
       try {
         const tabId = getTabId()
         const headers: HeadersInit = {
@@ -118,49 +127,16 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
           ...(tabId && { 'X-Tab-Id': tabId }),
         }
 
-        // The target order is the order of the column we're swapping with
-        const targetColumn = allColumns[targetIndex]
-        const newOrder = targetColumn.order
-
-        const res = await apiFetch(`/api/projects/${projectKey}/columns/${column.id}`, {
-          method: 'PATCH',
+        const res = await apiFetch(`/api/projects/${projectKey}/columns/reorder`, {
+          method: 'POST',
           headers,
-          body: JSON.stringify({ order: newOrder }),
+          body: JSON.stringify({ columnIds: reorderedColumns.map((c) => c.id) }),
         })
 
         if (!res.ok) {
           const error = await res.json().catch(() => ({ error: 'Failed to move column' }))
-          throw new Error(error.error || 'Failed to move column')
+          throw new Error(error.error ?? 'Failed to move column')
         }
-
-        // Also update the swapped column's order
-        const res2 = await apiFetch(`/api/projects/${projectKey}/columns/${targetColumn.id}`, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ order: column.order }),
-        })
-
-        if (!res2.ok) {
-          // Rollback first column to its original order
-          await apiFetch(`/api/projects/${projectKey}/columns/${column.id}`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({ order: column.order }),
-          }).catch(() => {})
-          const error = await res2.json().catch(() => ({ error: 'Failed to move column' }))
-          throw new Error(error.error || 'Failed to move column')
-        }
-
-        // Update the board store
-        const columns = getColumns(projectId)
-        const updatedColumns = [...columns]
-        // Swap the positions
-        const temp = updatedColumns[currentIndex]
-        updatedColumns[currentIndex] = { ...updatedColumns[targetIndex], order: column.order }
-        updatedColumns[targetIndex] = { ...temp, order: newOrder }
-        // Sort by order
-        updatedColumns.sort((a, b) => a.order - b.order)
-        setColumns(projectId, updatedColumns)
 
         // Invalidate column queries to refresh data
         queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
@@ -169,6 +145,8 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
           description: `"${column.name}" moved ${direction}`,
         })
       } catch (error) {
+        // Rollback on failure
+        setColumns(projectId, currentColumns)
         showToast.error('Failed to move column', {
           description: error instanceof Error ? error.message : 'An error occurred',
         })
@@ -176,7 +154,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
         setMoveLoading(false)
       }
     },
-    [allColumns, column, projectId, projectKey, getColumns, setColumns, queryClient],
+    [column, projectId, projectKey, getColumns, setColumns, queryClient],
   )
 
   // Initialize move target when delete dialog opens

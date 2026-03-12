@@ -11,14 +11,21 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import { arrayMove, horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable'
+import { useQueryClient } from '@tanstack/react-query'
 import { Layers } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { EmptyState } from '@/components/common/empty-state'
+import { columnKeys } from '@/hooks/queries/use-tickets'
+import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import {
   moveTickets as moveTicketsAction,
   reorderTickets as reorderTicketsAction,
 } from '@/lib/actions'
+import { apiFetch } from '@/lib/base-path'
+import { PERMISSIONS } from '@/lib/permissions'
+import { showToast } from '@/lib/toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
@@ -27,6 +34,7 @@ import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { AddColumnButton } from './add-column-button'
 import { KanbanCard } from './kanban-card'
 import { KanbanColumn } from './kanban-column'
+import { SortableColumn } from './sortable-column'
 
 interface KanbanBoardProps {
   projectKey: string
@@ -41,14 +49,17 @@ export function KanbanBoard({
   filteredColumns,
   activeSprintId = null,
 }: KanbanBoardProps) {
-  const { getColumns, _hasHydrated } = useBoardStore()
+  const queryClient = useQueryClient()
+  const { getColumns, setColumns, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen } = useUIStore()
+  const canManageBoard = useHasPermission(projectId, PERMISSIONS.BOARD_MANAGE)
 
   // Get unfiltered columns for drag/drop operations (need full data for snapshots)
   const columns = getColumns(projectId)
 
   // Drag state - only for visual feedback, no store updates during drag
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
+  const [activeColumn, setActiveColumn] = useState<ColumnWithTickets | null>(null)
   const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
   const [insertPosition, setInsertPosition] = useState<{
     columnId: string
@@ -70,7 +81,17 @@ export function KanbanBoard({
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       const { active } = event
-      if (active.data.current?.type !== 'ticket') return
+      const type = active.data.current?.type
+
+      // Column drag
+      if (type === 'sortable-column') {
+        const col = active.data.current?.column as ColumnWithTickets
+        setActiveColumn(col)
+        return
+      }
+
+      // Ticket drag
+      if (type !== 'ticket') return
 
       const ticket = active.data.current.ticket as TicketWithRelations
       setActiveTicket(ticket)
@@ -105,6 +126,10 @@ export function KanbanBoard({
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
       const { active, over } = event
+
+      // Skip drag-over logic for column drags (handled by SortableContext)
+      if (active.data.current?.type === 'sortable-column') return
+
       if (!over) {
         setInsertPosition(null)
         return
@@ -179,7 +204,58 @@ export function KanbanBoard({
   )
 
   const handleDragEnd = useCallback(
-    (_event: DragEndEvent) => {
+    async (event: DragEndEvent) => {
+      const { active, over } = event
+
+      // Handle column drag end
+      if (active.data.current?.type === 'sortable-column') {
+        setActiveColumn(null)
+
+        if (!over || active.id === over.id) return
+
+        const oldIndex = columns.findIndex((col) => col.id === active.id)
+        const newIndex = columns.findIndex((col) => col.id === over.id)
+
+        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return
+
+        // Optimistically reorder columns in the store
+        const reorderedColumns = arrayMove(columns, oldIndex, newIndex).map((col, i) => ({
+          ...col,
+          order: i,
+        }))
+        setColumns(projectId, reorderedColumns)
+
+        // Persist to server
+        try {
+          const tabId = getTabId()
+          const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+            ...(tabId && { 'X-Tab-Id': tabId }),
+          }
+
+          const res = await apiFetch(`/api/projects/${projectKey}/columns/reorder`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ columnIds: reorderedColumns.map((c) => c.id) }),
+          })
+
+          if (!res.ok) {
+            const error = await res.json().catch(() => ({ error: 'Failed to reorder columns' }))
+            throw new Error(error.error ?? 'Failed to reorder columns')
+          }
+
+          queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
+        } catch (error) {
+          // Rollback on failure
+          setColumns(projectId, columns)
+          showToast.error('Failed to reorder columns', {
+            description: error instanceof Error ? error.message : 'An error occurred',
+          })
+        }
+        return
+      }
+
+      // Handle ticket drag end
       const draggedIds = draggedIdsRef.current
       const snapshot = beforeDragSnapshot.current
 
@@ -257,7 +333,7 @@ export function KanbanBoard({
         useSelectionStore.getState().clearSelection()
       }
     },
-    [insertPosition, projectId],
+    [insertPosition, projectId, projectKey, columns, setColumns, queryClient],
   )
 
   // Show loading skeleton until Zustand hydrates from localStorage
@@ -287,6 +363,8 @@ export function KanbanBoard({
     )
   }
 
+  const columnIds = filteredColumns.map((c) => c.id)
+
   return (
     <DndContext
       id="kanban-board-dnd"
@@ -307,28 +385,48 @@ export function KanbanBoard({
           }}
         />
       ) : (
-        <div className="flex gap-4 h-full min-h-0 overflow-x-auto pb-4">
-          {filteredColumns.map((column) => (
-            <KanbanColumn
-              key={column.id}
-              column={column}
-              projectId={projectId}
-              projectKey={projectKey}
-              allColumns={columns}
-              dragSelectionIds={draggingTicketIds}
-              activeTicketId={activeTicket?.id || null}
-              activeDragTarget={
-                insertPosition?.columnId === column.id ? insertPosition.index : null
-              }
-              activeSprintId={activeSprintId}
-            />
-          ))}
-          <AddColumnButton projectId={projectId} projectKey={projectKey} />
-        </div>
+        <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
+          <div className="flex gap-4 h-full min-h-0 overflow-x-auto pb-4">
+            {filteredColumns.map((column) => (
+              <SortableColumn
+                key={column.id}
+                column={column}
+                projectId={projectId}
+                projectKey={projectKey}
+                allColumns={columns}
+                dragSelectionIds={draggingTicketIds}
+                activeTicketId={activeTicket?.id ?? null}
+                activeDragTarget={
+                  insertPosition?.columnId === column.id ? insertPosition.index : null
+                }
+                activeSprintId={activeSprintId}
+                isDraggingColumn={activeColumn?.id === column.id}
+                canDragColumns={canManageBoard === true}
+              />
+            ))}
+            <AddColumnButton projectId={projectId} projectKey={projectKey} />
+          </div>
+        </SortableContext>
       )}
 
       <DragOverlay dropAnimation={null}>
-        {activeTicket ? (
+        {activeColumn ? (
+          <div
+            className="w-72 opacity-90"
+            style={{
+              filter:
+                'drop-shadow(0 8px 16px rgba(0,0,0,0.3)) drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+            }}
+          >
+            <KanbanColumn
+              column={activeColumn}
+              projectId={projectId}
+              projectKey={projectKey}
+              allColumns={columns}
+              isOverlay
+            />
+          </div>
+        ) : activeTicket ? (
           draggingTicketIds.length > 1 ? (
             (() => {
               // Calculate how many background cards to show (max 3 behind the main card)
