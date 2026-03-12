@@ -9,6 +9,7 @@ import {
   DragOverlay,
   type DragStartEvent,
   PointerSensor,
+  rectIntersection,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -80,16 +81,31 @@ export function KanbanBoard({
     }),
   )
 
-  // Custom collision detection: when dragging a column, only consider other columns as targets
+  // Custom collision detection:
+  // - Column drags: only snap to other columns
+  // - Ticket drags: use closestCorners for columns/tickets, but rectIntersection
+  //   (any overlap) for the Add Column zone so it triggers earlier
   const collisionDetection: CollisionDetection = useCallback((args) => {
     const isColumnDrag = args.active.data.current?.type === 'sortable-column'
     if (isColumnDrag) {
-      // Filter droppable containers to only other sortable columns
       const columnContainers = args.droppableContainers.filter(
         (container) => container.data.current?.type === 'sortable-column',
       )
       return closestCorners({ ...args, droppableContainers: columnContainers })
     }
+
+    // Check if dragged item overlaps the Add Column zone (triggers on any overlap)
+    const addColumnContainers = args.droppableContainers.filter(
+      (container) => container.data.current?.type === 'add-column',
+    )
+    const addColumnCollisions = rectIntersection({
+      ...args,
+      droppableContainers: addColumnContainers,
+    })
+    if (addColumnCollisions.length > 0) {
+      return addColumnCollisions
+    }
+
     return closestCorners(args)
   }, [])
 
