@@ -175,8 +175,8 @@ export function TicketTableRow({
             <td
               key={column.id}
               style={{
-                width: column.id === 'title' ? undefined : column.width || undefined,
-                minWidth: column.id === 'title' ? undefined : column.minWidth,
+                width: column.width || undefined,
+                minWidth: column.minWidth,
               }}
               className="px-3 py-2"
             >
