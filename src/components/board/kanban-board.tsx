@@ -95,7 +95,16 @@ export function KanbanBoard({
       return closestCorners({ ...args, droppableContainers: columnContainers })
     }
 
-    // Try columns/tickets first (excludes add-column from closestCorners)
+    // Check if ticket overlaps the Add Column zone
+    const addColumnContainers = args.droppableContainers.filter(
+      (container) => container.data.current?.type === 'add-column',
+    )
+    const addColumnCollisions = rectIntersection({
+      ...args,
+      droppableContainers: addColumnContainers,
+    })
+
+    // Check columns/tickets (excludes add-column)
     const nonAddColumnContainers = args.droppableContainers.filter(
       (container) => container.data.current?.type !== 'add-column',
     )
@@ -103,15 +112,18 @@ export function KanbanBoard({
       ...args,
       droppableContainers: nonAddColumnContainers,
     })
-    if (columnCollisions.length > 0) {
-      return columnCollisions
+
+    // If overlapping add-column, check if the pointer is actually past the last column
+    // by comparing pointer position to the add-column rect
+    if (addColumnCollisions.length > 0 && args.pointerCoordinates) {
+      const addColumnContainer = addColumnContainers[0]
+      const addColumnRect = addColumnContainer?.rect.current
+      if (addColumnRect && args.pointerCoordinates.x >= addColumnRect.left) {
+        return addColumnCollisions
+      }
     }
 
-    // Fall back to Add Column zone (any overlap triggers it)
-    const addColumnContainers = args.droppableContainers.filter(
-      (container) => container.data.current?.type === 'add-column',
-    )
-    return rectIntersection({ ...args, droppableContainers: addColumnContainers })
+    return columnCollisions
   }, [])
 
   const handleDragStart = useCallback(
