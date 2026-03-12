@@ -72,6 +72,8 @@ interface SprintSectionProps {
   totalCompletedPoints?: number
   /** Whether to show the section header (default: true). When false, only the table is rendered. */
   showHeader?: boolean
+  /** Whether to wrap in a card (rounded border + background). Default: true. Set false for flush layout. */
+  showCard?: boolean
 }
 
 /**
@@ -96,6 +98,7 @@ export function SprintSection({
   totalCompletedCount,
   totalCompletedPoints,
   showHeader = true,
+  showCard = true,
 }: SprintSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [isOverSection, setIsOverSection] = useState(false)
@@ -173,16 +176,17 @@ export function SprintSection({
   return (
     <div
       className={cn(
-        'rounded-xl border transition-all duration-200',
-        isBacklog && 'border-zinc-800 bg-zinc-900/30',
-        isPlanning && 'border-blue-500/20 bg-blue-500/5',
-        isActive && !expired && 'border-emerald-500/30 bg-emerald-500/5',
-        isActive && expired && 'border-orange-500/30 bg-orange-500/5',
-        isCompleted && 'border-zinc-700 bg-zinc-900/20 opacity-75',
+        showCard && 'rounded-xl border transition-all duration-200',
+        showCard && isBacklog && 'border-zinc-800 bg-zinc-900/30',
+        showCard && isPlanning && 'border-blue-500/20 bg-blue-500/5',
+        showCard && isActive && !expired && 'border-emerald-500/30 bg-emerald-500/5',
+        showCard && isActive && expired && 'border-orange-500/30 bg-orange-500/5',
+        showCard && isCompleted && 'border-zinc-700 bg-zinc-900/20 opacity-75',
         // Drop target styling - subtle glow when this section is a valid drop target
-        dropPosition !== null && 'border-blue-500/40 ring-1 ring-blue-500/20',
+        showCard && dropPosition !== null && 'border-blue-500/40 ring-1 ring-blue-500/20',
         // isOver is useful for empty sections (via callback from TicketListSection)
-        isOverSection &&
+        showCard &&
+          isOverSection &&
           filteredCount === 0 &&
           'border-blue-500/50 bg-blue-500/10 ring-2 ring-blue-500/20',
       )}

@@ -98,8 +98,8 @@ function SortableHeaderCell({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    width: column.id === 'title' ? undefined : column.width || undefined,
-    minWidth: column.id === 'title' ? undefined : column.minWidth,
+    width: column.width || undefined,
+    minWidth: column.minWidth,
   }
 
   const headerContent = (
