@@ -494,54 +494,63 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
         }}
       >
         <AlertDialogContent className="bg-zinc-950 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-4 text-zinc-400">
-                <p>
-                  Are you sure you want to delete &quot;{project.name}&quot;? This action cannot be
-                  undone and will remove all associated tickets.
-                </p>
-                <div className="space-y-2">
-                  <p className="text-sm">
-                    To confirm, type <span className="font-mono text-red-400">{project.name}</span>{' '}
-                    below:
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (deleteConfirmText === project.name && !deleteProject.isPending)
+                handleDeleteConfirmed()
+            }}
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-4 text-zinc-400">
+                  <p>
+                    Are you sure you want to delete &quot;{project.name}&quot;? This action cannot
+                    be undone and will remove all associated tickets.
                   </p>
-                  <Input
-                    type="text"
-                    value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    placeholder={`Type ${project.name} to confirm`}
-                    className="bg-zinc-900 border-zinc-700 text-zinc-100"
-                    autoComplete="off"
-                    disabled={deleteProject.isPending}
-                  />
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      To confirm, type{' '}
+                      <span className="font-mono text-red-400">{project.name}</span> below:
+                    </p>
+                    <Input
+                      type="text"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder={`Type ${project.name} to confirm`}
+                      className="bg-zinc-900 border-zinc-700 text-zinc-100"
+                      autoComplete="off"
+                      disabled={deleteProject.isPending}
+                    />
+                  </div>
                 </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-              disabled={deleteProject.isPending}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <Button
-              onClick={handleDeleteConfirmed}
-              disabled={deleteProject.isPending || deleteConfirmText !== project.name}
-              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {deleteProject.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Project'
-              )}
-            </Button>
-          </AlertDialogFooter>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                type="button"
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                disabled={deleteProject.isPending}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <Button
+                type="submit"
+                disabled={deleteProject.isPending || deleteConfirmText !== project.name}
+                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleteProject.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Project'
+                )}
+              </Button>
+            </AlertDialogFooter>
+          </form>
         </AlertDialogContent>
       </AlertDialog>
 
