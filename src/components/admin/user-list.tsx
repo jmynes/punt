@@ -1723,7 +1723,18 @@ export function UserList() {
           open={!!deleteUsername}
           onOpenChange={(open) => !open && setDeleteUsername(null)}
         >
-          <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+          <AlertDialogContent
+            className="bg-zinc-900 border-zinc-800"
+            onOpenAutoFocus={(e) => {
+              e.preventDefault()
+              setTimeout(() => {
+                const btn = document.querySelector<HTMLButtonElement>(
+                  '[data-slot="alert-dialog-content"] [data-confirm-delete]',
+                )
+                btn?.focus()
+              }, 0)
+            }}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle className="text-zinc-100">
                 Delete User Permanently?
@@ -1740,6 +1751,7 @@ export function UserList() {
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
+                data-confirm-delete
                 onClick={(e) => {
                   e.preventDefault()
                   setShowDeleteReauthDialog(true)
@@ -1826,7 +1838,18 @@ export function UserList() {
 
         {/* Bulk action confirmation dialog */}
         <AlertDialog open={!!bulkAction} onOpenChange={(open) => !open && setBulkAction(null)}>
-          <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+          <AlertDialogContent
+            className="bg-zinc-900 border-zinc-800"
+            onOpenAutoFocus={(e) => {
+              e.preventDefault()
+              setTimeout(() => {
+                const btn = document.querySelector<HTMLButtonElement>(
+                  '[data-slot="alert-dialog-content"] [data-confirm-bulk]',
+                )
+                btn?.focus()
+              }, 0)
+            }}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle className="text-zinc-100">
                 {bulkAction === 'disable' && 'Disable Users'}
@@ -1856,6 +1879,7 @@ export function UserList() {
                 Cancel
               </AlertDialogCancel>
               <Button
+                data-confirm-bulk
                 onClick={confirmBulkAction}
                 className={
                   bulkAction === 'disable'
