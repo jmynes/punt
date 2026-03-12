@@ -66,6 +66,7 @@ export function KanbanBoard({
     columnId: string
     index: number
   } | null>(null)
+  const [addColumnPendingTicketIds, setAddColumnPendingTicketIds] = useState<string[]>([])
 
   // Refs for drag operation (no re-renders)
   const beforeDragSnapshot = useRef<ColumnWithTickets[] | null>(null)
@@ -269,6 +270,21 @@ export function KanbanBoard({
         return
       }
 
+      // Handle ticket dropped on "Add Column" zone
+      if (over?.data.current?.type === 'add-column') {
+        const draggedIds = draggedIdsRef.current
+        if (draggedIds.length > 0) {
+          setAddColumnPendingTicketIds([...draggedIds])
+        }
+        // Cleanup drag state
+        setActiveTicket(null)
+        setDraggingTicketIds([])
+        setInsertPosition(null)
+        beforeDragSnapshot.current = null
+        draggedIdsRef.current = []
+        return
+      }
+
       // Handle ticket drag end
       const draggedIds = draggedIdsRef.current
       const snapshot = beforeDragSnapshot.current
@@ -418,7 +434,12 @@ export function KanbanBoard({
                 canDragColumns={canManageBoard === true}
               />
             ))}
-            <AddColumnButton projectId={projectId} projectKey={projectKey} />
+            <AddColumnButton
+              projectId={projectId}
+              projectKey={projectKey}
+              pendingTicketIds={addColumnPendingTicketIds}
+              onPendingTicketsHandled={() => setAddColumnPendingTicketIds([])}
+            />
           </div>
         </SortableContext>
       )}
