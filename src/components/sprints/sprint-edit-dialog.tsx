@@ -159,111 +159,119 @@ export function SprintEditDialog({ projectId }: SprintEditDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Sprint Name */}
-          <div className="space-y-2">
-            <Label htmlFor="sprint-name" className="text-zinc-300">
-              Sprint Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="sprint-name"
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Sprint 1"
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              disabled={updateSprint.isPending}
-              autoFocus
-            />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (isValid && hasChanges && !updateSprint.isPending) handleSubmit()
+          }}
+        >
+          <div className="space-y-4 py-4">
+            {/* Sprint Name */}
+            <div className="space-y-2">
+              <Label htmlFor="sprint-name" className="text-zinc-300">
+                Sprint Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="sprint-name"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Sprint 1"
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+                disabled={updateSprint.isPending}
+                autoFocus
+              />
+            </div>
+
+            {/* Sprint Goal */}
+            <div className="space-y-2">
+              <Label htmlFor="sprint-goal" className="text-zinc-300">
+                Sprint Goal
+              </Label>
+              <Textarea
+                id="sprint-goal"
+                value={formData.goal}
+                onChange={(e) => setFormData((prev) => ({ ...prev, goal: e.target.value }))}
+                placeholder="What do you want to accomplish this sprint?"
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
+                rows={2}
+                disabled={updateSprint.isPending}
+              />
+            </div>
+
+            {/* Story Point Budget */}
+            <div className="space-y-2">
+              <Label htmlFor="sprint-budget" className="text-zinc-300">
+                Story Point Budget
+              </Label>
+              <Input
+                id="sprint-budget"
+                type="number"
+                min={1}
+                max={9999}
+                value={formData.budget}
+                onChange={(e) => setFormData((prev) => ({ ...prev, budget: e.target.value }))}
+                placeholder="Expected capacity (optional)"
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+                disabled={updateSprint.isPending}
+              />
+              <p className="text-xs text-zinc-500">
+                Set a target for how many story points to complete this sprint
+              </p>
+            </div>
+
+            {/* Start Date & Time */}
+            <div className="space-y-2">
+              <Label className="text-zinc-300">Start Date & Time</Label>
+              <DateTimePicker
+                value={formData.startDateTime}
+                onChange={(date) => setFormData((prev) => ({ ...prev, startDateTime: date }))}
+                disabled={updateSprint.isPending}
+              />
+            </div>
+
+            {/* End Date & Time */}
+            <div className="space-y-2">
+              <Label className="text-zinc-300">End Date & Time</Label>
+              <DateTimePicker
+                value={formData.endDateTime}
+                onChange={(date) => setFormData((prev) => ({ ...prev, endDateTime: date }))}
+                disabledDates={(date) => {
+                  if (!formData.startDateTime) return false
+                  const startDay = new Date(formData.startDateTime)
+                  startDay.setHours(0, 0, 0, 0)
+                  return date < startDay
+                }}
+                disabled={updateSprint.isPending}
+              />
+            </div>
           </div>
 
-          {/* Sprint Goal */}
-          <div className="space-y-2">
-            <Label htmlFor="sprint-goal" className="text-zinc-300">
-              Sprint Goal
-            </Label>
-            <Textarea
-              id="sprint-goal"
-              value={formData.goal}
-              onChange={(e) => setFormData((prev) => ({ ...prev, goal: e.target.value }))}
-              placeholder="What do you want to accomplish this sprint?"
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
-              rows={2}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
               disabled={updateSprint.isPending}
-            />
-          </div>
-
-          {/* Story Point Budget */}
-          <div className="space-y-2">
-            <Label htmlFor="sprint-budget" className="text-zinc-300">
-              Story Point Budget
-            </Label>
-            <Input
-              id="sprint-budget"
-              type="number"
-              min={1}
-              max={9999}
-              value={formData.budget}
-              onChange={(e) => setFormData((prev) => ({ ...prev, budget: e.target.value }))}
-              placeholder="Expected capacity (optional)"
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              disabled={updateSprint.isPending}
-            />
-            <p className="text-xs text-zinc-500">
-              Set a target for how many story points to complete this sprint
-            </p>
-          </div>
-
-          {/* Start Date & Time */}
-          <div className="space-y-2">
-            <Label className="text-zinc-300">Start Date & Time</Label>
-            <DateTimePicker
-              value={formData.startDateTime}
-              onChange={(date) => setFormData((prev) => ({ ...prev, startDateTime: date }))}
-              disabled={updateSprint.isPending}
-            />
-          </div>
-
-          {/* End Date & Time */}
-          <div className="space-y-2">
-            <Label className="text-zinc-300">End Date & Time</Label>
-            <DateTimePicker
-              value={formData.endDateTime}
-              onChange={(date) => setFormData((prev) => ({ ...prev, endDateTime: date }))}
-              disabledDates={(date) => {
-                if (!formData.startDateTime) return false
-                const startDay = new Date(formData.startDateTime)
-                startDay.setHours(0, 0, 0, 0)
-                return date < startDay
-              }}
-              disabled={updateSprint.isPending}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={updateSprint.isPending}
-            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="primary"
-            disabled={!isValid || !hasChanges || updateSprint.isPending}
-          >
-            {updateSprint.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Save Changes'
-            )}
-          </Button>
-        </DialogFooter>
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={!isValid || !hasChanges || updateSprint.isPending}
+            >
+              {updateSprint.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
