@@ -244,122 +244,131 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
           <CardTitle className="text-base text-zinc-100">Project Details</CardTitle>
           <CardDescription>Basic information about this project.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Project Name */}
-          <div className="space-y-2">
-            <Label htmlFor="project-name" className="text-zinc-300">
-              Project Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="project-name"
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="My Awesome Project"
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              disabled={isDisabled}
-            />
-          </div>
+        <CardContent>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (hasChanges && isValid && !isPending) handleSave()
+            }}
+            className="space-y-4"
+          >
+            {/* Project Name */}
+            <div className="space-y-2">
+              <Label htmlFor="project-name" className="text-zinc-300">
+                Project Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="project-name"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="My Awesome Project"
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+                disabled={isDisabled}
+              />
+            </div>
 
-          {/* Project Key */}
-          <div className="space-y-2">
-            <Label htmlFor="project-key" className="text-zinc-300">
-              Project Key <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="project-key"
-              value={formData.key}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
-                }))
-              }
-              maxLength={10}
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 uppercase"
-              disabled={isDisabled}
-            />
-            {keyChanged ? (
-              <div className="flex items-start gap-2 p-3 rounded-md bg-amber-950/30 border border-amber-900/50">
-                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-200/80">
-                  <p className="font-medium text-amber-400 mb-1">
-                    Changing the project key will rename all tickets
-                  </p>
-                  <p>
-                    {project.key}-123 → {formData.key}-123
-                  </p>
-                  <p className="mt-1 text-amber-200/60">
-                    External links and bookmarks to existing tickets will break.
-                  </p>
+            {/* Project Key */}
+            <div className="space-y-2">
+              <Label htmlFor="project-key" className="text-zinc-300">
+                Project Key <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="project-key"
+                value={formData.key}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                  }))
+                }
+                maxLength={10}
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 uppercase"
+                disabled={isDisabled}
+              />
+              {keyChanged ? (
+                <div className="flex items-start gap-2 p-3 rounded-md bg-amber-950/30 border border-amber-900/50">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-200/80">
+                    <p className="font-medium text-amber-400 mb-1">
+                      Changing the project key will rename all tickets
+                    </p>
+                    <p>
+                      {project.key}-123 → {formData.key}-123
+                    </p>
+                    <p className="mt-1 text-amber-200/60">
+                      External links and bookmarks to existing tickets will break.
+                    </p>
+                  </div>
                 </div>
+              ) : (
+                <p className="text-xs text-zinc-500">
+                  1-10 characters. Used in ticket IDs (e.g., {formData.key}-123)
+                </p>
+              )}
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="project-description" className="text-zinc-300">
+                Description
+              </Label>
+              <Textarea
+                id="project-description"
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Brief description of this project..."
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
+                rows={3}
+                disabled={isDisabled}
+              />
+            </div>
+
+            {/* Color */}
+            <div className="space-y-2">
+              <Label className="text-zinc-300">Project Color</Label>
+              <div className="flex flex-wrap gap-2">
+                {PROJECT_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, color }))}
+                    className={`h-8 w-8 rounded-md transition-all ${
+                      formData.color === color
+                        ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900'
+                        : 'hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    disabled={isDisabled}
+                  />
+                ))}
               </div>
-            ) : (
-              <p className="text-xs text-zinc-500">
-                1-10 characters. Used in ticket IDs (e.g., {formData.key}-123)
-              </p>
-            )}
-          </div>
+            </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="project-description" className="text-zinc-300">
-              Description
-            </Label>
-            <Textarea
-              id="project-description"
-              value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-              placeholder="Brief description of this project..."
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
-              rows={3}
-              disabled={isDisabled}
-            />
-          </div>
-
-          {/* Color */}
-          <div className="space-y-2">
-            <Label className="text-zinc-300">Project Color</Label>
-            <div className="flex flex-wrap gap-2">
-              {PROJECT_COLORS.map((color) => (
-                <button
-                  key={color}
+            {/* Save/Reset buttons */}
+            {canEditSettings && (
+              <div className="flex items-center justify-end gap-2 pt-4">
+                <Button
                   type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, color }))}
-                  className={`h-8 w-8 rounded-md transition-all ${
-                    formData.color === color
-                      ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900'
-                      : 'hover:scale-110'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  disabled={isDisabled}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Save/Reset buttons */}
-          {canEditSettings && (
-            <div className="flex items-center justify-end gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={handleReset}
-                disabled={!hasChanges || isPending}
-                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-              >
-                Reset
-              </Button>
-              <Button onClick={handleSave} disabled={!hasChanges || !isValid || isPending}>
-                {updateProject.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </Button>
-            </div>
-          )}
+                  variant="outline"
+                  onClick={handleReset}
+                  disabled={!hasChanges || isPending}
+                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                >
+                  Reset
+                </Button>
+                <Button type="submit" disabled={!hasChanges || !isValid || isPending}>
+                  {updateProject.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+              </div>
+            )}
+          </form>
         </CardContent>
       </Card>
 
