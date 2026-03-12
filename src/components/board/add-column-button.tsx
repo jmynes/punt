@@ -152,18 +152,32 @@ export function AddColumnButton({
         duration: 5000,
       })
 
-      useUndoStore.getState().pushColumnCreate(projectId, newColumn.id, trimmedName)
-
       // Move pending tickets to the newly created column
       if (pendingTicketIds && pendingTicketIds.length > 0) {
+        // Build moved ticket info for compound undo (one Ctrl+Z undoes both move + column create)
+        const allTickets = getColumns(projectId).flatMap((c) => c.tickets)
+        const movedTickets = pendingTicketIds
+          .map((id) => {
+            const ticket = allTickets.find((t) => t.id === id)
+            return ticket ? { ticketId: id, fromColumnId: ticket.columnId } : null
+          })
+          .filter((t): t is { ticketId: string; fromColumnId: string } => t != null)
+
+        useUndoStore
+          .getState()
+          .pushColumnCreate(projectId, newColumn.id, trimmedName, false, movedTickets)
+
         const tabId = getTabId()
         moveTicketsAction({
           projectId,
           ticketIds: pendingTicketIds,
           toColumnId: newColumn.id,
           tabId,
+          options: { undo: false }, // undo handled by compound columnCreate entry
         })
         onPendingTicketsHandled?.()
+      } else {
+        useUndoStore.getState().pushColumnCreate(projectId, newColumn.id, trimmedName)
       }
 
       setDialogOpen(false)
