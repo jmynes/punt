@@ -10,7 +10,7 @@ import { TicketTable } from './ticket-table'
 import type { TableContext, TicketListSectionProps } from './types'
 
 /**
- * Shared wrapper around TicketTable used by both BacklogTable and SprintSection.
+ * Shared wrapper around TicketTable used by SprintSection (and the backlog page).
  * Handles column config, TableContext, droppable zones, sort wiring, and empty states.
  */
 export function TicketListSection({

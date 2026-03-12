@@ -9,7 +9,7 @@ import type { TicketTableProps } from './types'
 
 /**
  * Unified ticket table component.
- * Used by both BacklogTable and SprintSection.
+ * Used by SprintSection (and the backlog page).
  * Handles rendering tickets in a table with drag-and-drop support.
  *
  * Note: This component does not include a DndContext - the parent must provide one.

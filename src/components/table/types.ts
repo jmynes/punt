@@ -123,7 +123,7 @@ export interface SortableHeaderCellProps {
 
 /**
  * Props for the TicketListSection component.
- * Shared wrapper around TicketTable used by both BacklogTable and SprintSection.
+ * Shared wrapper around TicketTable used by SprintSection (and the backlog page).
  */
 export interface TicketListSectionProps {
   /** Section identifier - sprint ID or 'backlog' */
