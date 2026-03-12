@@ -27,6 +27,7 @@ export function TicketTable({
   onSetSort,
   enableColumnReorder = false,
   onHideColumn,
+  reorderDisabled = false,
   overlayTicket,
 }: TicketTableProps) {
   const visibleColumns = useMemo(() => columns.filter((c) => c.visible), [columns])
@@ -76,6 +77,7 @@ export function TicketTable({
                 isBeingDragged={isBeingDragged}
                 showDropIndicator={showIndicator}
                 draggingCount={draggingTicketIds.length}
+                reorderDisabled={reorderDisabled}
               />
             )
           })}

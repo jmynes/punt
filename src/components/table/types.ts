@@ -51,6 +51,9 @@ export interface TicketTableProps {
   /** Callback to hide a column */
   onHideColumn?: (columnId: string) => void
 
+  /** Whether manual reorder is disabled (e.g., a column sort is active) */
+  reorderDisabled?: boolean
+
   // Overlay mode (for DragOverlay)
   /** If provided, renders a single ticket as overlay */
   overlayTicket?: TicketWithRelations | null
@@ -76,6 +79,8 @@ export interface TicketTableRowProps {
   draggingCount?: number
   /** Whether this is a drag overlay (standalone rendering) */
   isOverlay?: boolean
+  /** Whether manual reorder is disabled (e.g., a column sort is active) */
+  reorderDisabled?: boolean
 }
 
 /**
@@ -166,6 +171,9 @@ export interface TicketListSectionProps {
   enableColumnReorder?: boolean
   /** Callback to hide a column */
   onHideColumn?: (columnId: string) => void
+
+  /** Whether manual reorder is disabled (e.g., a column sort is active) */
+  reorderDisabled?: boolean
 
   // Layout
   /** Message shown in the empty drop zone */
