@@ -173,17 +173,16 @@ export function SprintSection({
   return (
     <div
       className={cn(
-        showHeader && 'rounded-xl border transition-all duration-200',
-        showHeader && isBacklog && 'border-zinc-800 bg-zinc-900/30',
-        showHeader && isPlanning && 'border-blue-500/20 bg-blue-500/5',
-        showHeader && isActive && !expired && 'border-emerald-500/30 bg-emerald-500/5',
-        showHeader && isActive && expired && 'border-orange-500/30 bg-orange-500/5',
-        showHeader && isCompleted && 'border-zinc-700 bg-zinc-900/20 opacity-75',
+        'rounded-xl border transition-all duration-200',
+        isBacklog && 'border-zinc-800 bg-zinc-900/30',
+        isPlanning && 'border-blue-500/20 bg-blue-500/5',
+        isActive && !expired && 'border-emerald-500/30 bg-emerald-500/5',
+        isActive && expired && 'border-orange-500/30 bg-orange-500/5',
+        isCompleted && 'border-zinc-700 bg-zinc-900/20 opacity-75',
         // Drop target styling - subtle glow when this section is a valid drop target
-        showHeader && dropPosition !== null && 'border-blue-500/40 ring-1 ring-blue-500/20',
+        dropPosition !== null && 'border-blue-500/40 ring-1 ring-blue-500/20',
         // isOver is useful for empty sections (via callback from TicketListSection)
-        showHeader &&
-          isOverSection &&
+        isOverSection &&
           filteredCount === 0 &&
           'border-blue-500/50 bg-blue-500/10 ring-2 ring-blue-500/20',
       )}
