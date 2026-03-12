@@ -744,6 +744,45 @@ export function KeyboardShortcuts() {
             description: `Moved back to ${action.fromSprintName}`,
             duration: 3000,
           })
+        } else if (entry.action.type === 'columnCreate') {
+          const action = entry.action
+          // Undo column create: delete the column
+          const boardStore = useBoardStore.getState()
+          const cols = boardStore.getColumns(entry.projectId)
+          boardStore.setColumns(
+            entry.projectId,
+            cols.filter((c) => c.id !== action.columnId),
+          )
+          undoStore.pushRedo(entry)
+
+          // Persist to server
+          undoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${entry.projectId}/columns/${action.columnId}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                },
+              )
+              if (!res.ok) throw new Error('Failed to delete column')
+              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+            } catch (err) {
+              console.error('Failed to undo column create:', err)
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Column creation undone',
+            description: `Removed "${action.columnName}"`,
+            duration: 3000,
+          })
         } else if (entry.action.type === 'columnRename') {
           const action = entry.action
           // Undo column rename: revert to old name/icon
@@ -1203,6 +1242,7 @@ export function KeyboardShortcuts() {
         // (ticketCreate, columnRename, columnDelete, attachment*, link* handlers manage their own lock)
         const selfManagedTypes = [
           'ticketCreate',
+          'columnCreate',
           'columnRename',
           'columnDelete',
           'attachmentAdd',
@@ -1529,6 +1569,44 @@ export function KeyboardShortcuts() {
             action.toSprintName,
             true,
           )
+        } else if (entry.action.type === 'columnCreate') {
+          const action = entry.action
+          // Redo column create: recreate column
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(`/api/projects/${entry.projectId}/columns`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(tabId && { 'X-Tab-Id': tabId }),
+                },
+                body: JSON.stringify({ name: action.columnName }),
+              })
+              if (!res.ok) throw new Error('Failed to recreate column')
+              const newCol = await res.json()
+
+              // Update board store
+              const bs = useBoardStore.getState()
+              const currentCols = bs.getColumns(entry.projectId)
+              bs.setColumns(entry.projectId, [...currentCols, { ...newCol, tickets: [] }])
+              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+
+              // Push to undo with new column ID
+              redoStore.pushColumnCreate(entry.projectId, newCol.id, action.columnName, true)
+            } catch (err) {
+              console.error('Failed to redo column create:', err)
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Column recreated',
+            description: `"${action.columnName}" added back`,
+            duration: getEffectiveDuration(5000),
+          })
         } else if (entry.action.type === 'columnRename') {
           const action = entry.action
           // Redo column rename: re-apply new name/icon
@@ -1984,6 +2062,7 @@ export function KeyboardShortcuts() {
         // (ticketCreate, columnRename, columnDelete, attachment*, link* handlers manage their own lock)
         const selfManagedTypes = [
           'ticketCreate',
+          'columnCreate',
           'columnRename',
           'columnDelete',
           'attachmentAdd',
