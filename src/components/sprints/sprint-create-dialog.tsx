@@ -124,118 +124,122 @@ export function SprintCreateDialog({ projectId }: SprintCreateDialogProps) {
   return (
     <Dialog open={sprintCreateOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800">
-        <DialogHeader>
-          <DialogTitle className="text-xl text-zinc-100">Create Sprint</DialogTitle>
-          <DialogDescription className="text-zinc-500">
-            Plan a new sprint for your project. Set a goal and timeline.
-          </DialogDescription>
-        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (isValid && !createSprint.isPending) handleSubmit()
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-xl text-zinc-100">Create Sprint</DialogTitle>
+            <DialogDescription className="text-zinc-500">
+              Plan a new sprint for your project. Set a goal and timeline.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Sprint Name */}
-          <div className="space-y-2">
-            <Label htmlFor="sprint-name" className="text-zinc-300">
-              Sprint Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="sprint-name"
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Sprint 1"
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              disabled={createSprint.isPending}
-              autoFocus
-            />
+          <div className="space-y-4 py-4">
+            {/* Sprint Name */}
+            <div className="space-y-2">
+              <Label htmlFor="sprint-name" className="text-zinc-300">
+                Sprint Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="sprint-name"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Sprint 1"
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+                disabled={createSprint.isPending}
+                autoFocus
+              />
+            </div>
+
+            {/* Sprint Goal */}
+            <div className="space-y-2">
+              <Label htmlFor="sprint-goal" className="text-zinc-300">
+                Sprint Goal
+              </Label>
+              <Textarea
+                id="sprint-goal"
+                value={formData.goal}
+                onChange={(e) => setFormData((prev) => ({ ...prev, goal: e.target.value }))}
+                placeholder="What do you want to accomplish this sprint?"
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
+                rows={2}
+                disabled={createSprint.isPending}
+              />
+            </div>
+
+            {/* Story Point Budget */}
+            <div className="space-y-2">
+              <Label htmlFor="sprint-budget" className="text-zinc-300">
+                Story Point Budget
+              </Label>
+              <Input
+                id="sprint-budget"
+                type="number"
+                min={1}
+                max={9999}
+                value={formData.budget}
+                onChange={(e) => setFormData((prev) => ({ ...prev, budget: e.target.value }))}
+                placeholder="Expected capacity (optional)"
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+                disabled={createSprint.isPending}
+              />
+              <p className="text-xs text-zinc-500">
+                Set a target for how many story points to complete this sprint
+              </p>
+            </div>
+
+            {/* Start Date & Time */}
+            <div className="space-y-2">
+              <Label className="text-zinc-300">Start Date & Time</Label>
+              <DateTimePicker
+                value={formData.startDateTime}
+                onChange={(date) => setFormData((prev) => ({ ...prev, startDateTime: date }))}
+                disabled={createSprint.isPending}
+              />
+            </div>
+
+            {/* End Date & Time */}
+            <div className="space-y-2">
+              <Label className="text-zinc-300">End Date & Time</Label>
+              <DateTimePicker
+                value={formData.endDateTime}
+                onChange={(date) => setFormData((prev) => ({ ...prev, endDateTime: date }))}
+                disabledDates={(date) => {
+                  if (!formData.startDateTime) return false
+                  const startDay = new Date(formData.startDateTime)
+                  startDay.setHours(0, 0, 0, 0)
+                  return date < startDay
+                }}
+                disabled={createSprint.isPending}
+              />
+            </div>
           </div>
 
-          {/* Sprint Goal */}
-          <div className="space-y-2">
-            <Label htmlFor="sprint-goal" className="text-zinc-300">
-              Sprint Goal
-            </Label>
-            <Textarea
-              id="sprint-goal"
-              value={formData.goal}
-              onChange={(e) => setFormData((prev) => ({ ...prev, goal: e.target.value }))}
-              placeholder="What do you want to accomplish this sprint?"
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
-              rows={2}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
               disabled={createSprint.isPending}
-            />
-          </div>
-
-          {/* Story Point Budget */}
-          <div className="space-y-2">
-            <Label htmlFor="sprint-budget" className="text-zinc-300">
-              Story Point Budget
-            </Label>
-            <Input
-              id="sprint-budget"
-              type="number"
-              min={1}
-              max={9999}
-              value={formData.budget}
-              onChange={(e) => setFormData((prev) => ({ ...prev, budget: e.target.value }))}
-              placeholder="Expected capacity (optional)"
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              disabled={createSprint.isPending}
-            />
-            <p className="text-xs text-zinc-500">
-              Set a target for how many story points to complete this sprint
-            </p>
-          </div>
-
-          {/* Start Date & Time */}
-          <div className="space-y-2">
-            <Label className="text-zinc-300">Start Date & Time</Label>
-            <DateTimePicker
-              value={formData.startDateTime}
-              onChange={(date) => setFormData((prev) => ({ ...prev, startDateTime: date }))}
-              disabled={createSprint.isPending}
-            />
-          </div>
-
-          {/* End Date & Time */}
-          <div className="space-y-2">
-            <Label className="text-zinc-300">End Date & Time</Label>
-            <DateTimePicker
-              value={formData.endDateTime}
-              onChange={(date) => setFormData((prev) => ({ ...prev, endDateTime: date }))}
-              disabledDates={(date) => {
-                if (!formData.startDateTime) return false
-                const startDay = new Date(formData.startDateTime)
-                startDay.setHours(0, 0, 0, 0)
-                return date < startDay
-              }}
-              disabled={createSprint.isPending}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={createSprint.isPending}
-            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="primary"
-            disabled={!isValid || createSprint.isPending}
-          >
-            {createSprint.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Create Sprint'
-            )}
-          </Button>
-        </DialogFooter>
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={!isValid || createSprint.isPending}>
+              {createSprint.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Sprint'
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )

@@ -205,119 +205,130 @@ export function EditProjectDialog() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            {/* Project Name */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-project-name" className="text-zinc-300">
-                Project Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="edit-project-name"
-                value={formData.name}
-                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="My Awesome Project"
-                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-                disabled={isPending}
-                autoFocus
-              />
-            </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (isValid && !isPending) handleSubmit()
+            }}
+          >
+            <div className="space-y-4 py-4">
+              {/* Project Name */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-project-name" className="text-zinc-300">
+                  Project Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="edit-project-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="My Awesome Project"
+                  className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+                  disabled={isPending}
+                  autoFocus
+                />
+              </div>
 
-            {/* Project Key */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-project-key" className="text-zinc-300">
-                Project Key <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="edit-project-key"
-                value={formData.key}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
-                  }))
-                }
-                maxLength={10}
-                className="bg-zinc-900 border-zinc-700 text-zinc-100 uppercase"
-                disabled={isPending}
-              />
-              {keyChanged ? (
-                <div className="flex items-start gap-2 p-3 rounded-md bg-amber-950/30 border border-amber-900/50">
-                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <div className="text-xs text-amber-200/80">
-                    <p className="font-medium text-amber-400 mb-1">
-                      Changing the project key will rename all tickets
-                    </p>
-                    <p>
-                      {originalKey}-123 → {formData.key}-123
-                    </p>
-                    <p className="mt-1 text-amber-200/60">
-                      External links and bookmarks to existing tickets will break.
-                    </p>
+              {/* Project Key */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-project-key" className="text-zinc-300">
+                  Project Key <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="edit-project-key"
+                  value={formData.key}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                    }))
+                  }
+                  maxLength={10}
+                  className="bg-zinc-900 border-zinc-700 text-zinc-100 uppercase"
+                  disabled={isPending}
+                />
+                {keyChanged ? (
+                  <div className="flex items-start gap-2 p-3 rounded-md bg-amber-950/30 border border-amber-900/50">
+                    <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-xs text-amber-200/80">
+                      <p className="font-medium text-amber-400 mb-1">
+                        Changing the project key will rename all tickets
+                      </p>
+                      <p>
+                        {originalKey}-123 → {formData.key}-123
+                      </p>
+                      <p className="mt-1 text-amber-200/60">
+                        External links and bookmarks to existing tickets will break.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <p className="text-xs text-zinc-500">
-                  1-10 characters. Used in ticket IDs (e.g., {formData.key}-123)
-                </p>
-              )}
+                ) : (
+                  <p className="text-xs text-zinc-500">
+                    1-10 characters. Used in ticket IDs (e.g., {formData.key}-123)
+                  </p>
+                )}
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-project-description" className="text-zinc-300">
+                  Description
+                </Label>
+                <Textarea
+                  id="edit-project-description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, description: e.target.value }))
+                  }
+                  placeholder="Brief description of this project..."
+                  className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
+                  rows={3}
+                  disabled={isPending}
+                />
+              </div>
+
+              {/* Color */}
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Project Color</Label>
+                <ColorPickerBody
+                  activeColor={formData.color}
+                  onColorChange={(color) => setFormData((prev) => ({ ...prev, color }))}
+                  isDisabled={isPending}
+                />
+              </div>
             </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-project-description" className="text-zinc-300">
-                Description
-              </Label>
-              <Textarea
-                id="edit-project-description"
-                value={formData.description}
-                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="Brief description of this project..."
-                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
-                rows={3}
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(true)}
                 disabled={isPending}
-              />
-            </div>
-
-            {/* Color */}
-            <div className="space-y-2">
-              <Label className="text-zinc-300">Project Color</Label>
-              <ColorPickerBody
-                activeColor={formData.color}
-                onColorChange={(color) => setFormData((prev) => ({ ...prev, color }))}
-                isDisabled={isPending}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={isPending}
-              className="border-red-900 text-red-500 hover:bg-red-950 hover:text-red-400 sm:mr-auto"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              disabled={isPending}
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} variant="primary" disabled={!isValid || isPending}>
-              {updateProject.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
-          </DialogFooter>
+                className="border-red-900 text-red-500 hover:bg-red-950 hover:text-red-400 sm:mr-auto"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={isPending}
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" disabled={!isValid || isPending}>
+                {updateProject.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -331,55 +342,81 @@ export function EditProjectDialog() {
           }
         }}
       >
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-4 text-zinc-400">
-                <p>
-                  Are you sure you want to delete &quot;{formData.name}&quot;? This action cannot be
-                  undone and will remove all associated tickets.
-                </p>
-                <div className="space-y-2">
-                  <p className="text-sm text-zinc-300">
-                    Type <span className="font-mono font-bold text-red-400">{formData.name}</span>{' '}
-                    to confirm:
+        <AlertDialogContent
+          className="bg-zinc-950 border-zinc-800"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault()
+            setTimeout(() => {
+              const input = document.querySelector<HTMLInputElement>(
+                '[data-slot="alert-dialog-content"] input[type="text"]',
+              )
+              input?.focus()
+            }, 0)
+          }}
+        >
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (deleteConfirmText === formData.name && !deleteProject.isPending)
+                handleDeleteConfirmed()
+            }}
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-4 text-zinc-400">
+                  <p>
+                    Are you sure you want to delete &quot;{formData.name}&quot;? This action cannot
+                    be undone and will remove all associated tickets.
                   </p>
-                  <Input
-                    type="text"
-                    value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    placeholder={`Type ${formData.name} to confirm`}
-                    className="bg-zinc-900 border-zinc-700 text-zinc-100"
-                    autoComplete="off"
-                    disabled={deleteProject.isPending}
-                  />
+                  <div className="space-y-2">
+                    <p className="text-sm text-zinc-300">
+                      Type <span className="font-mono font-bold text-red-400">{formData.name}</span>{' '}
+                      to confirm:
+                    </p>
+                    <Input
+                      type="text"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.stopPropagation()
+                        }
+                      }}
+                      placeholder={`Type ${formData.name} to confirm`}
+                      className="bg-zinc-900 border-zinc-700 text-zinc-100"
+                      autoComplete="off"
+                      disabled={deleteProject.isPending}
+                    />
+                  </div>
                 </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-              disabled={deleteProject.isPending}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <Button
-              onClick={handleDeleteConfirmed}
-              disabled={deleteProject.isPending || deleteConfirmText !== formData.name}
-              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {deleteProject.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Project'
-              )}
-            </Button>
-          </AlertDialogFooter>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                type="button"
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                disabled={deleteProject.isPending}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <Button
+                type="submit"
+                disabled={deleteProject.isPending || deleteConfirmText !== formData.name}
+                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleteProject.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Project'
+                )}
+              </Button>
+            </AlertDialogFooter>
+          </form>
         </AlertDialogContent>
       </AlertDialog>
 
