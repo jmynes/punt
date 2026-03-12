@@ -126,6 +126,7 @@ export function Sidebar() {
           }}
         >
           <form
+            className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault()
               if (deleteConfirmText === projectToDelete?.name && !deleteProject.isPending)

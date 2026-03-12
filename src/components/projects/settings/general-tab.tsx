@@ -516,6 +516,7 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
           }}
         >
           <form
+            className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault()
               if (deleteConfirmText === project.name && !deleteProject.isPending)
