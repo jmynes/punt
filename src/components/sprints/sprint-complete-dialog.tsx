@@ -178,7 +178,18 @@ export function SprintCompleteDialog({ projectId }: SprintCompleteDialogProps) {
         }
       }}
     >
-      <DialogContent className="sm:max-w-lg bg-zinc-950 border-zinc-800">
+      <DialogContent
+        className="sm:max-w-lg bg-zinc-950 border-zinc-800"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault()
+          setTimeout(() => {
+            const submitBtn = document.querySelector<HTMLButtonElement>(
+              '[data-slot="dialog-content"] button[type="submit"]',
+            )
+            submitBtn?.focus()
+          }, 0)
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl text-zinc-100">
             Complete Sprint: {sprint?.name ?? 'Sprint'}

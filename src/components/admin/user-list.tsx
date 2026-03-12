@@ -1890,7 +1890,14 @@ export function UserList() {
               </div>
             )}
 
-            <div className="space-y-4 py-2">
+            <form
+              className="space-y-4 py-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (!bulkPermanentDeleteUsers.isPending && deleteEmail && deletePassword)
+                  handleBulkDelete()
+              }}
+            >
               <p className="text-sm text-zinc-400">
                 To confirm deletion, enter your admin credentials:
               </p>
@@ -1951,31 +1958,32 @@ export function UserList() {
                   {deleteError}
                 </p>
               )}
-            </div>
 
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={closeBulkDeleteDialog}
-                className="text-zinc-300 hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleBulkDelete}
-                disabled={bulkPermanentDeleteUsers.isPending || !deleteEmail || !deletePassword}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                {bulkPermanentDeleteUsers.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete Permanently'
-                )}
-              </Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={closeBulkDeleteDialog}
+                  className="text-zinc-300 hover:bg-zinc-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={bulkPermanentDeleteUsers.isPending || !deleteEmail || !deletePassword}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {bulkPermanentDeleteUsers.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete Permanently'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
 
@@ -1996,7 +2004,18 @@ export function UserList() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
+            <form
+              className="space-y-4 py-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (
+                  !reset2faLoading &&
+                  reset2faPassword &&
+                  (currentUserData?.totpEnabled ? !!reset2faTotpCode : true)
+                )
+                  handleReset2fa()
+              }}
+            >
               <div className="flex items-start gap-3 p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
                 <Shield className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
@@ -2091,35 +2110,36 @@ export function UserList() {
                   {reset2faError}
                 </p>
               )}
-            </div>
 
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={closeReset2faDialog}
-                className="text-zinc-300 hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleReset2fa}
-                disabled={
-                  reset2faLoading ||
-                  !reset2faPassword ||
-                  (currentUserData?.totpEnabled ? !reset2faTotpCode : false)
-                }
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                {reset2faLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Resetting...
-                  </>
-                ) : (
-                  'Reset 2FA'
-                )}
-              </Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={closeReset2faDialog}
+                  className="text-zinc-300 hover:bg-zinc-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    reset2faLoading ||
+                    !reset2faPassword ||
+                    (currentUserData?.totpEnabled ? !reset2faTotpCode : false)
+                  }
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {reset2faLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    'Reset 2FA'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
 
@@ -2140,7 +2160,20 @@ export function UserList() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
+            <form
+              className="space-y-4 py-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (
+                  !resetPwLoading &&
+                  resetPwNewPassword &&
+                  resetPwAdminPassword &&
+                  (currentUserData?.totpEnabled ? !!resetPwTotpCode : true) &&
+                  passwordRequirements.every((req) => req.test(resetPwNewPassword))
+                )
+                  handleResetPassword()
+              }}
+            >
               <div className="flex items-start gap-3 p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
                 <Shield className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
@@ -2278,37 +2311,38 @@ export function UserList() {
                   {resetPwError}
                 </p>
               )}
-            </div>
 
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={closeResetPwDialog}
-                className="text-zinc-300 hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleResetPassword}
-                disabled={
-                  resetPwLoading ||
-                  !resetPwNewPassword ||
-                  !resetPwAdminPassword ||
-                  (currentUserData?.totpEnabled ? !resetPwTotpCode : false) ||
-                  !passwordRequirements.every((req) => req.test(resetPwNewPassword))
-                }
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                {resetPwLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Resetting...
-                  </>
-                ) : (
-                  'Reset Password'
-                )}
-              </Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={closeResetPwDialog}
+                  className="text-zinc-300 hover:bg-zinc-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    resetPwLoading ||
+                    !resetPwNewPassword ||
+                    !resetPwAdminPassword ||
+                    (currentUserData?.totpEnabled ? !resetPwTotpCode : false) ||
+                    !passwordRequirements.every((req) => req.test(resetPwNewPassword))
+                  }
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {resetPwLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    'Reset Password'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
