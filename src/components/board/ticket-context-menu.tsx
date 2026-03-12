@@ -17,6 +17,7 @@ import {
   Hash,
   Layers,
   Lightbulb,
+  Link2,
   List,
   Pencil,
   Plus,
@@ -41,6 +42,7 @@ import {
 import { createPortal } from 'react-dom'
 import { PriorityBadge } from '@/components/common/priority-badge'
 import { resolutionConfig } from '@/components/common/resolution-badge'
+import { LinkTicketDialog } from '@/components/tickets/link-ticket-dialog'
 import { MoveToProjectDialog } from '@/components/tickets/move-to-project-dialog'
 import {
   AlertDialog,
@@ -54,6 +56,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { sprintKeys, useProjectSprints } from '@/hooks/queries/use-sprints'
+import { useTicketLinks } from '@/hooks/queries/use-ticket-links'
 import { ticketKeys as ticketQueryKeys, updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
@@ -142,6 +145,7 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<TicketWithRelations[]>([])
   const [showMoveToProject, setShowMoveToProject] = useState(false)
+  const [showLinkDialog, setShowLinkDialog] = useState(false)
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
   // Track if component has mounted to avoid hydration mismatch
   const [isMounted, setIsMounted] = useState(false)
@@ -168,6 +172,10 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
 
   // Fetch sprints for add to sprint menu
   const { data: sprints = [] } = useProjectSprints(projectId)
+  // Fetch existing links only when the link dialog is open (lazy load)
+  const { data: existingLinks = [] } = useTicketLinks(projectId, ticket.id, {
+    enabled: showLinkDialog,
+  })
   const hasActiveSprint = useMemo(() => sprints.some((s) => s.status === 'active'), [sprints])
   const availableSprints = useMemo(() => {
     const activePlanningsprints = sprints.filter(
@@ -1177,6 +1185,18 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
               />
               {!multi && (
                 <MenuButton
+                  icon={<Link2 className="h-4 w-4" />}
+                  label="Link ticket..."
+                  onMouseEnter={closeSubmenu}
+                  onClick={() => {
+                    setShowLinkDialog(true)
+                    setOpen(false)
+                    setSubmenu(null)
+                  }}
+                />
+              )}
+              {!multi && (
+                <MenuButton
                   icon={<FolderOpen className="h-4 w-4" />}
                   label="Move to Project"
                   onMouseEnter={closeSubmenu}
@@ -1668,6 +1688,16 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
           ticket={ticket}
           projectKey={project?.key || ''}
           projectId={projectId}
+        />
+      )}
+      {isMounted && (
+        <LinkTicketDialog
+          open={showLinkDialog}
+          onOpenChange={setShowLinkDialog}
+          ticket={ticket}
+          projectKey={project?.key || ''}
+          projectId={projectId}
+          existingLinks={existingLinks}
         />
       )}
     </>
