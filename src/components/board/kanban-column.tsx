@@ -309,7 +309,7 @@ export function KanbanColumn({
               <div
                 ref={setEndDropRef}
                 className={cn(
-                  'min-h-[80px] flex-1 rounded-lg transition-colors',
+                  'min-h-[80px] flex-1 rounded-lg',
                   isDragging && 'min-h-[100px]',
                   isOverEnd &&
                     !showEndPlaceholder &&

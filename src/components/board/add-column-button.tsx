@@ -220,7 +220,7 @@ export function AddColumnButton({
       <div
         ref={setNodeRef}
         className={cn(
-          'relative flex w-72 flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-dashed bg-zinc-900/20 min-h-[200px] transition-colors group cursor-pointer',
+          'relative flex w-72 flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-dashed bg-zinc-900/20 min-h-[200px] group cursor-pointer',
           isOver
             ? 'border-amber-500 bg-amber-500/10'
             : 'border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/30',
