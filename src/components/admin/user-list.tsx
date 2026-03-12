@@ -644,6 +644,8 @@ export function UserList() {
         usernames.map((uname) =>
           apiFetch(`/api/admin/users/${uname}?permanent=true`, {
             method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
+            body: JSON.stringify({ confirmPassword: password }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
