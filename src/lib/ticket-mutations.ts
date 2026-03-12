@@ -1,8 +1,8 @@
 /**
  * Unified Ticket Mutation Service
  *
- * Consolidates duplicated ticket mutation logic used across:
- * - React Query hooks (useUpdateTicket, updateTicketAPI, updateTicketWithActivity)
+ * Consolidates ticket mutation logic used across:
+ * - Unified action layer (moveTickets, updateTickets, reorderTickets)
  * - API routes (create, update, delete, batch move)
  *
  * This module provides:
@@ -25,10 +25,9 @@ import type { IssueType, Priority, TicketWithRelations } from '@/types'
  * for the API. Handles field name mapping (e.g., creatorId -> reporterId)
  * and relation flattening (e.g., labels[] -> labelIds[]).
  *
- * This was previously duplicated in:
- * - useUpdateTicket (mutationFn)
- * - updateTicketAPI
- * - updateTicketWithActivity
+ * Used by:
+ * - updateTickets action (ticket-actions.ts)
+ * - updateTicketAPI (use-tickets.ts)
  */
 export function toUpdateTicketInput(updates: Partial<TicketWithRelations>): UpdateTicketInput {
   const apiUpdates: UpdateTicketInput = {}
