@@ -317,10 +317,10 @@ export function KanbanBoard({
         const draggedIds = draggedIdsRef.current
         if (draggedIds.length > 0) {
           setAddColumnPendingTicketIds([...draggedIds])
+          // Keep draggingTicketIds so tickets stay visually hidden while dialog is open
         }
-        // Cleanup drag state
+        // Cleanup drag state (but NOT draggingTicketIds)
         setActiveTicket(null)
-        setDraggingTicketIds([])
         setInsertPosition(null)
         beforeDragSnapshot.current = null
         draggedIdsRef.current = []
@@ -480,7 +480,10 @@ export function KanbanBoard({
               projectId={projectId}
               projectKey={projectKey}
               pendingTicketIds={addColumnPendingTicketIds}
-              onPendingTicketsHandled={() => setAddColumnPendingTicketIds([])}
+              onPendingTicketsHandled={() => {
+                setAddColumnPendingTicketIds([])
+                setDraggingTicketIds([])
+              }}
             />
           </div>
         </SortableContext>
