@@ -527,9 +527,20 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
                       type="text"
                       value={deleteConfirmText}
                       onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (
+                          e.key === 'Enter' &&
+                          deleteConfirmText === project.name &&
+                          !deleteProject.isPending
+                        ) {
+                          e.preventDefault()
+                          handleDeleteConfirmed()
+                        }
+                      }}
                       placeholder={`Type ${project.name} to confirm`}
                       className="bg-zinc-900 border-zinc-700 text-zinc-100"
                       autoComplete="off"
+                      autoFocus
                       disabled={deleteProject.isPending}
                     />
                   </div>
