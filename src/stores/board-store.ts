@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { logger } from '@/lib/logger'
-import { isCompletedColumn } from '@/lib/sprint-utils'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 
 // Column sort options
@@ -390,36 +389,19 @@ export const useBoardStore = create<BoardState>()(
       moveTicket: (projectId, ticketId, fromColumnId, toColumnId, newOrder) =>
         set((state) => {
           logger.debug('Moving ticket', { projectId, ticketId, fromColumnId, toColumnId, newOrder })
-          const _startTime = performance.now()
 
           const columns = state.getColumns(projectId)
 
-          // Look up the ticket and compute resolution change before mapping
           const sourceTicket = columns
             .find((c) => c.id === fromColumnId)
             ?.tickets.find((t) => t.id === ticketId)
-          const targetColumn = columns.find((c) => c.id === toColumnId)
-          const targetIsDone = targetColumn ? isCompletedColumn(targetColumn.name) : false
-          const newResolution = sourceTicket
-            ? targetIsDone && !sourceTicket.resolution
-              ? ('Done' as const)
-              : !targetIsDone && sourceTicket.resolution
-                ? null
-                : sourceTicket.resolution
-            : null
-          const resolutionChanged =
-            sourceTicket != null && newResolution !== sourceTicket.resolution
 
           const newColumns = columns.map((column) => {
             // Remove from source column
             if (column.id === fromColumnId) {
               return {
                 ...column,
-                tickets: column.tickets
-                  .filter((t) => t.id !== ticketId)
-                  .map((t) =>
-                    resolutionChanged ? propagateResolution(t, ticketId, newResolution) : t,
-                  ),
+                tickets: column.tickets.filter((t) => t.id !== ticketId),
               }
             }
 
@@ -431,29 +413,15 @@ export const useBoardStore = create<BoardState>()(
                 ...sourceTicket,
                 columnId: toColumnId,
                 order: newOrder,
-                resolution: newResolution,
-                ...(resolutionChanged ? { resolvedAt: newResolution ? new Date() : null } : {}),
               }
 
-              const newTickets = [
-                ...column.tickets.map((t) =>
-                  resolutionChanged ? propagateResolution(t, ticketId, newResolution) : t,
-                ),
-              ]
+              const newTickets = [...column.tickets]
               newTickets.splice(newOrder, 0, updatedTicket)
 
               // Reorder remaining tickets
               return {
                 ...column,
                 tickets: newTickets.map((t, idx) => ({ ...t, order: idx })),
-              }
-            }
-
-            // Propagate resolution to other columns
-            if (resolutionChanged) {
-              return {
-                ...column,
-                tickets: column.tickets.map((t) => propagateResolution(t, ticketId, newResolution)),
               }
             }
 
@@ -485,9 +453,6 @@ export const useBoardStore = create<BoardState>()(
             columnOrder: number
             ticketOrder: number
           }> = []
-          const targetColumn = columns.find((c) => c.id === toColumnId)
-          const targetIsDone = targetColumn ? isCompletedColumn(targetColumn.name) : false
-
           for (const column of columns) {
             for (const ticket of column.tickets) {
               if (ticketIds.includes(ticket.id)) {
@@ -496,9 +461,6 @@ export const useBoardStore = create<BoardState>()(
                   ticket: {
                     ...ticket,
                     columnId: toColumnId,
-                    // Auto-couple resolution
-                    ...(targetIsDone && !ticket.resolution ? { resolution: 'Done' as const } : {}),
-                    ...(!targetIsDone && ticket.resolution ? { resolution: null } : {}),
                   },
                   columnOrder: column.order,
                   ticketOrder: ticketIndex,
@@ -520,22 +482,9 @@ export const useBoardStore = create<BoardState>()(
 
           if (sortedTickets.length === 0) return state
 
-          // Collect tickets whose resolution changed for link propagation
-          const resolutionChanges = sortedTickets.filter((t) => {
-            const original = columns.flatMap((c) => c.tickets).find((orig) => orig.id === t.id)
-            return original && original.resolution !== t.resolution
-          })
-
           const newColumns = columns.map((column) => {
             // Remove selected tickets from any column they're in
-            let remainingTickets = column.tickets.filter((t) => !ticketIds.includes(t.id))
-
-            // Propagate resolution changes to linked tickets
-            for (const changed of resolutionChanges) {
-              remainingTickets = remainingTickets.map((t) =>
-                propagateResolution(t, changed.id, changed.resolution),
-              )
-            }
+            const remainingTickets = column.tickets.filter((t) => !ticketIds.includes(t.id))
 
             // Add to target column
             if (column.id === toColumnId) {
