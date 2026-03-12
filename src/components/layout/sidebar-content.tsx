@@ -366,7 +366,7 @@ export function SidebarContent({
                 )}
               >
                 <User className="h-3.5 w-3.5" />
-                Avatar
+                Account
               </Button>
             </Link>
             <Link href="/account/chat" onClick={handleLinkClick}>
@@ -382,17 +382,17 @@ export function SidebarContent({
                 Chat
               </Button>
             </Link>
-            <Link href="/account/mcp" onClick={handleLinkClick}>
+            <Link href="/account/agents" onClick={handleLinkClick}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                  pathname === '/account/mcp' && 'bg-zinc-800/50 text-zinc-100',
+                  pathname === '/account/agents' && 'bg-zinc-800/50 text-zinc-100',
                 )}
               >
                 <Terminal className="h-3.5 w-3.5" />
-                MCP
+                Agents
               </Button>
             </Link>
             <Link href="/account/security" onClick={handleLinkClick}>

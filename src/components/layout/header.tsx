@@ -124,7 +124,7 @@ export function Header() {
               >
                 <Link href={`/users/${currentUser.username}`}>
                   <User className="mr-2 h-4 w-4" />
-                  <span>View Profile</span>
+                  <span>Team Profile</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -133,7 +133,7 @@ export function Header() {
               >
                 <Link href="/account">
                   <UserCircle className="mr-2 h-4 w-4" />
-                  <span>Account</span>
+                  <span>My Account</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
