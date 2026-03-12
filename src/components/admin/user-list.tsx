@@ -945,6 +945,11 @@ export function UserList() {
     ? users?.find((u) => u.username === activeToggleUsername)
     : null
   const selectedUsers = users?.filter((u) => selectedIds.has(u.id)) || []
+  const allSelectedEnabled = selectedUsers.length > 0 && selectedUsers.every((u) => u.isActive)
+  const allSelectedDisabled = selectedUsers.length > 0 && selectedUsers.every((u) => !u.isActive)
+  const allSelectedAdmin = selectedUsers.length > 0 && selectedUsers.every((u) => u.isSystemAdmin)
+  const allSelectedNonAdmin =
+    selectedUsers.length > 0 && selectedUsers.every((u) => !u.isSystemAdmin)
 
   // Separate current user from other users
   const currentUserData = users?.find((u) => u.id === currentUser?.id)
@@ -1647,6 +1652,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('makeAdmin')}
+                disabled={allSelectedAdmin}
                 className="text-zinc-300 hover:text-amber-400 hover:bg-amber-500/10"
               >
                 <Shield className="h-4 w-4 mr-1.5" />
@@ -1657,6 +1663,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('removeAdmin')}
+                disabled={allSelectedNonAdmin}
                 className="text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
               >
                 <ShieldOff className="h-4 w-4 mr-1.5" />
@@ -1669,6 +1676,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('enable')}
+                disabled={allSelectedEnabled}
                 className="text-zinc-300 hover:text-green-400 hover:bg-green-500/10"
               >
                 <UserCheck className="h-4 w-4 mr-1.5" />
@@ -1679,6 +1687,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('disable')}
+                disabled={allSelectedDisabled}
                 className="text-zinc-300 hover:text-red-400 hover:bg-red-500/10"
               >
                 <UserX className="h-4 w-4 mr-1.5" />
