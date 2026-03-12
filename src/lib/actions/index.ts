@@ -22,4 +22,5 @@
 
 export * from './delete-tickets'
 export * from './paste-tickets'
+export * from './ticket-actions'
 export * from './types'
