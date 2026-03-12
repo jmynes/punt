@@ -55,16 +55,41 @@ export async function validateMemberships(userIds: string[], projectId: string):
 
 /**
  * Validate that a parent ticket exists, belongs to the project, and is not a subtask.
- * For updates, also checks for circular parent chains.
+ * Use this for ticket creation where circular reference detection is not needed.
  * Returns an error message string if invalid, null if valid.
  */
-export async function validateParentTicket(
+export async function validateParentForCreate(
   parentId: string,
   projectId: string,
-  currentTicketId?: string,
+): Promise<string | null> {
+  const parentTicket = await db.ticket.findFirst({
+    where: { id: parentId, projectId },
+    select: { type: true },
+  })
+
+  if (!parentTicket) {
+    return 'Parent ticket not found or does not belong to project'
+  }
+
+  if (parentTicket.type === 'subtask') {
+    return 'Subtasks cannot have subtasks'
+  }
+
+  return null
+}
+
+/**
+ * Validate that a parent ticket exists, belongs to the project, is not a subtask,
+ * and would not create a circular parent chain. Use this for ticket updates.
+ * Returns an error message string if invalid, null if valid.
+ */
+export async function validateParentForUpdate(
+  parentId: string,
+  projectId: string,
+  currentTicketId: string,
 ): Promise<string | null> {
   // Prevent direct self-referencing
-  if (currentTicketId && parentId === currentTicketId) {
+  if (parentId === currentTicketId) {
     return 'Cannot set parent: ticket cannot be its own parent'
   }
 
@@ -81,31 +106,29 @@ export async function validateParentTicket(
     return 'Subtasks cannot have subtasks'
   }
 
-  // For updates, walk up the parent chain to detect cycles
-  if (currentTicketId) {
-    const MAX_DEPTH = 50
-    let currentId: string | null = parentId
-    let depth = 0
+  // Walk up the parent chain to detect cycles
+  const MAX_DEPTH = 50
+  let currentId: string | null = parentId
+  let depth = 0
 
-    while (currentId && depth < MAX_DEPTH) {
-      const parent: { parentId: string | null } | null = await db.ticket.findUnique({
-        where: { id: currentId },
-        select: { parentId: true },
-      })
+  while (currentId && depth < MAX_DEPTH) {
+    const parent: { parentId: string | null } | null = await db.ticket.findUnique({
+      where: { id: currentId },
+      select: { parentId: true },
+    })
 
-      if (!parent) break
+    if (!parent) break
 
-      if (parent.parentId === currentTicketId) {
-        return 'Cannot set parent: would create a circular reference'
-      }
-
-      currentId = parent.parentId
-      depth++
+    if (parent.parentId === currentTicketId) {
+      return 'Cannot set parent: would create a circular reference'
     }
 
-    if (depth >= MAX_DEPTH) {
-      return 'Cannot set parent: parent chain exceeds maximum depth'
-    }
+    currentId = parent.parentId
+    depth++
+  }
+
+  if (depth >= MAX_DEPTH) {
+    return 'Cannot set parent: parent chain exceeds maximum depth'
   }
 
   return null
@@ -113,9 +136,10 @@ export async function validateParentTicket(
 
 /**
  * Validate that an unresolved ticket is not being assigned to a completed sprint.
+ * Note: silently passes if the sprint does not exist (existence is validated elsewhere).
  * Returns an error message string if invalid, null if valid.
  */
-export async function validateSprintAssignment(
+export async function validateSprintNotCompletedUnresolved(
   sprintId: string,
   projectId: string,
   effectiveResolution: string | null | undefined,
@@ -164,6 +188,7 @@ export interface ResolutionCouplingResult {
  * - PATCH /api/projects/[projectId]/tickets (batch move)
  *
  * @param params.targetColumnId - The column being moved to (if changing)
+ * @param params.targetColumnName - Pre-resolved target column name (skips DB lookup when provided with targetColumnId)
  * @param params.existingResolution - The ticket's current resolution
  * @param params.existingColumnName - The ticket's current column name
  * @param params.newResolution - The resolution being set (if changing), undefined if not changing
@@ -173,6 +198,7 @@ export interface ResolutionCouplingResult {
  */
 export async function resolveResolutionColumnCoupling(params: {
   targetColumnId?: string
+  targetColumnName?: string
   existingResolution: string | null
   existingColumnName: string
   newResolution?: string | null
@@ -181,6 +207,7 @@ export async function resolveResolutionColumnCoupling(params: {
 }): Promise<ResolutionCouplingResult> {
   const {
     targetColumnId,
+    targetColumnName,
     existingResolution,
     existingColumnName,
     newResolution,
@@ -192,13 +219,13 @@ export async function resolveResolutionColumnCoupling(params: {
 
   // Rule 1 & 2: Column change triggers resolution auto-coupling
   if (targetColumnId) {
-    const targetCol = await db.column.findUnique({
-      where: { id: targetColumnId },
-      select: { name: true },
-    })
+    // Use pre-resolved name if provided, otherwise look up from DB
+    const colName =
+      targetColumnName ??
+      (await db.column.findUnique({ where: { id: targetColumnId }, select: { name: true } }))?.name
 
-    if (targetCol) {
-      const targetIsDone = isCompletedColumn(targetCol.name)
+    if (colName) {
+      const targetIsDone = isCompletedColumn(colName)
 
       if (targetIsDone && newResolution === undefined && !existingResolution) {
         // Moving to done column with no resolution -> auto-set "Done"

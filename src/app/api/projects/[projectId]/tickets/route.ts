@@ -12,13 +12,13 @@ import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
 import { PERMISSIONS } from '@/lib/permissions'
 import { TICKET_SELECT_FULL, transformTicket } from '@/lib/prisma-selects'
-import { isCompletedColumn } from '@/lib/sprint-utils'
 import {
+  resolveResolutionColumnCoupling,
   validateColumnInProject,
   validateMemberships,
-  validateParentTicket,
+  validateParentForCreate,
   validateProjectMembership,
-  validateSprintAssignment,
+  validateSprintNotCompletedUnresolved,
 } from '@/lib/ticket-mutations-server'
 import { type IssueType, type Priority, RESOLUTIONS } from '@/types'
 
@@ -155,7 +155,7 @@ export async function POST(
 
     // Validate parentId: prevent subtasks from having subtasks (max 1 level deep)
     if (ticketData.parentId) {
-      const parentError = await validateParentTicket(ticketData.parentId, projectId)
+      const parentError = await validateParentForCreate(ticketData.parentId, projectId)
       if (parentError) {
         return badRequestError(parentError)
       }
@@ -179,7 +179,7 @@ export async function POST(
 
     // Validate: prevent assigning unresolved tickets to completed sprints
     if (ticketData.sprintId) {
-      const sprintError = await validateSprintAssignment(
+      const sprintError = await validateSprintNotCompletedUnresolved(
         ticketData.sprintId,
         projectId,
         ticketData.resolution ?? null,
@@ -349,9 +349,6 @@ export async function PATCH(
       return badRequestError('One or more tickets not found or do not belong to project')
     }
 
-    // Determine if target column is a "done" column for resolution auto-coupling
-    const targetIsDone = isCompletedColumn(targetColumn.name)
-
     // Update all tickets in a transaction
     const updatedTickets = await db.$transaction(async (tx) => {
       const results = []
@@ -362,19 +359,20 @@ export async function PATCH(
         const ticket = tickets.find((t) => t.id === ticketId)
         if (!ticket) continue
 
-        // Build update data with resolution auto-coupling
+        // Resolve resolution/column auto-coupling (pre-resolved column name avoids per-ticket DB lookup)
+        const coupling = await resolveResolutionColumnCoupling({
+          targetColumnId: toColumnId,
+          targetColumnName: targetColumn.name,
+          existingResolution: ticket.resolution,
+          existingColumnName: ticket.column.name,
+          projectId,
+        })
+
+        // Build update data
         const updateData: Record<string, unknown> = {
           columnId: toColumnId,
           order: currentOrder,
-        }
-
-        // Auto-couple resolution when moving to/from done column
-        if (targetIsDone && !ticket.resolution) {
-          updateData.resolution = 'Done'
-          updateData.resolvedAt = new Date()
-        } else if (!targetIsDone && ticket.resolution) {
-          updateData.resolution = null
-          updateData.resolvedAt = null
+          ...coupling,
         }
 
         const updated = await tx.ticket.update({

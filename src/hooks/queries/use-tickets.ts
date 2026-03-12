@@ -124,11 +124,7 @@ export function useCreateTicket() {
   return useMutation({
     mutationFn: async ({ projectId, columnId, data }: CreateTicketMutationInput) => {
       const provider = getDataProvider(getTabId())
-      const input = toCreateTicketInput(columnId, {
-        ...data,
-        // Map reporterId to creatorId for the conversion function
-        creatorId: data.reporterId ?? undefined,
-      } as Partial<TicketWithRelations> & { title: string })
+      const input = toCreateTicketInput(columnId, data)
       return provider.createTicket(projectId, input)
     },
     onMutate: async ({ projectId, columnId, tempTicket }) => {

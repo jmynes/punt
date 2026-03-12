@@ -14,7 +14,7 @@
  */
 
 import type { CreateTicketInput, UpdateTicketInput } from '@/lib/data-provider'
-import type { TicketWithRelations } from '@/types'
+import type { IssueType, Priority, TicketWithRelations } from '@/types'
 
 // =============================================================================
 // Client-side: Field mapping utilities
@@ -62,17 +62,36 @@ export function toUpdateTicketInput(updates: Partial<TicketWithRelations>): Upda
   return apiUpdates
 }
 
+/** Input accepted by toCreateTicketInput — covers both TicketFormData and TicketWithRelations shapes. */
+interface CreateTicketData {
+  title: string
+  description?: string | null
+  type?: IssueType | null
+  priority?: Priority | null
+  assigneeId?: string | null
+  reporterId?: string | null
+  creatorId?: string | null
+  sprintId?: string | null
+  parentId?: string | null
+  storyPoints?: number | null
+  estimate?: string | null
+  resolution?: string | null
+  resolvedAt?: Date | null
+  startDate?: Date | null
+  dueDate?: Date | null
+  labelIds?: string[]
+  labels?: { id: string }[]
+  createdAt?: Date | null
+}
+
 /**
- * Convert a partial TicketWithRelations object to CreateTicketInput format
- * for the API. Used by paste and undo/restore operations.
- *
- * This was previously duplicated in:
- * - createTicketAPI
- * - paste-tickets (createTicketData)
+ * Convert ticket data to CreateTicketInput format for the API.
+ * Accepts either TicketFormData (from create dialog) or
+ * Partial<TicketWithRelations> (from paste/undo/restore).
  */
 export function toCreateTicketInput(
   columnId: string,
-  ticketData: Partial<TicketWithRelations> & { title: string },
+  ticketData: CreateTicketData,
 ): CreateTicketInput {
   return {
     title: ticketData.title,
@@ -81,7 +100,7 @@ export function toCreateTicketInput(
     priority: ticketData.priority ?? 'medium',
     columnId,
     assigneeId: ticketData.assigneeId ?? null,
-    reporterId: ticketData.creatorId ?? null,
+    reporterId: ticketData.reporterId ?? ticketData.creatorId ?? null,
     sprintId: ticketData.sprintId ?? null,
     parentId: ticketData.parentId ?? null,
     storyPoints: ticketData.storyPoints ?? null,
@@ -90,26 +109,9 @@ export function toCreateTicketInput(
     resolvedAt: ticketData.resolvedAt ?? null,
     startDate: ticketData.startDate ?? null,
     dueDate: ticketData.dueDate ?? null,
-    labelIds: ticketData.labels?.map((l) => l.id) ?? [],
+    labelIds: ticketData.labelIds ?? ticketData.labels?.map((l) => l.id) ?? [],
     createdAt: ticketData.createdAt ?? null,
   }
 }
 
-// =============================================================================
-// Server-side helpers
-// =============================================================================
-//
-// Server-side validation, resolution coupling, sprint tracking, and SSE helpers
-// live in '@/lib/ticket-mutations-server' to avoid pulling '@/lib/db' into
-// client bundles. Import directly from that module in API routes:
-//
-//   import {
-//     validateColumnInProject,
-//     validateProjectMembership,
-//     validateMemberships,
-//     validateParentTicket,
-//     validateSprintAssignment,
-//     resolveResolutionColumnCoupling,
-//     trackSprintChange,
-//     getTicketUpdateEventType,
-//   } from '@/lib/ticket-mutations-server'
+// Server-side helpers: see '@/lib/ticket-mutations-server'

@@ -22,9 +22,9 @@ import {
   trackSprintChange,
   validateColumnInProject,
   validateMemberships,
-  validateParentTicket,
+  validateParentForUpdate,
   validateProjectMembership,
-  validateSprintAssignment,
+  validateSprintNotCompletedUnresolved,
 } from '@/lib/ticket-mutations-server'
 import { type IssueType, type Priority, RESOLUTIONS } from '@/types'
 
@@ -168,7 +168,7 @@ export async function PATCH(
 
     // Validate parentId: prevent self-referencing and circular parent chains
     if (updateData.parentId !== undefined && updateData.parentId !== null) {
-      const parentError = await validateParentTicket(updateData.parentId, projectId, ticketId)
+      const parentError = await validateParentForUpdate(updateData.parentId, projectId, ticketId)
       if (parentError) {
         return badRequestError(parentError)
       }
@@ -278,7 +278,7 @@ export async function PATCH(
         dbUpdateData.resolution !== undefined
           ? (dbUpdateData.resolution as string | null)
           : existingTicket.resolution
-      const sprintError = await validateSprintAssignment(
+      const sprintError = await validateSprintNotCompletedUnresolved(
         newSprintId as string,
         projectId,
         effectiveResolution,
