@@ -108,6 +108,7 @@ type UndoAction =
       type: 'columnCreate'
       columnId: string
       columnName: string
+      movedTickets?: Array<{ ticketId: string; fromColumnId: string }>
     }
   | {
       type: 'attachmentAdd'
@@ -237,6 +238,7 @@ interface UndoState {
     columnId: string,
     columnName: string,
     isRedo?: boolean,
+    movedTickets?: Array<{ ticketId: string; fromColumnId: string }>,
   ) => void
 
   // Add an attachment add action to the undo stack
@@ -584,11 +586,12 @@ export const useUndoStore = create<UndoState>((set, get) => ({
     }))
   },
 
-  pushColumnCreate: (projectId, columnId, columnName, isRedo = false) => {
+  pushColumnCreate: (projectId, columnId, columnName, isRedo = false, movedTickets) => {
     console.debug(`[SessionLog] Action: Column Create ${isRedo ? '(Redo)' : ''}`, {
       columnId,
       columnName,
       projectId,
+      movedTickets,
     })
     set((state) => ({
       undoStack: [
@@ -598,6 +601,7 @@ export const useUndoStore = create<UndoState>((set, get) => ({
             type: 'columnCreate',
             columnId,
             columnName,
+            ...(movedTickets && movedTickets.length > 0 ? { movedTickets } : {}),
           },
           timestamp: Date.now(),
           projectId,

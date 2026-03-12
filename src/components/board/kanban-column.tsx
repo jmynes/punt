@@ -2,7 +2,7 @@
 
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { ArrowUpDown, Check, Plus } from 'lucide-react'
+import { ArrowUpDown, Check, GripVertical, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -34,6 +34,8 @@ interface KanbanColumnProps {
   activeTicketId?: string | null
   activeDragTarget?: number | null
   activeSprintId?: string | null
+  columnDragHandleProps?: Record<string, unknown>
+  isOverlay?: boolean
 }
 
 export function KanbanColumn({
@@ -45,6 +47,8 @@ export function KanbanColumn({
   activeTicketId = null,
   activeDragTarget = null,
   activeSprintId = null,
+  columnDragHandleProps,
+  isOverlay = false,
 }: KanbanColumnProps) {
   const { openCreateTicketWithData, setSprintCreateOpen } = useUIStore()
   const { isColumnCollapsed, toggleColumnCollapsed, getColumnSort, setColumnSort } = useBoardStore()
@@ -96,6 +100,38 @@ export function KanbanColumn({
   const iconColorClass = isHexColor ? undefined : statusColor
   const iconColorStyle = isHexColor ? { color: statusColor } : undefined
 
+  // Overlay: simplified column for drag preview
+  if (isOverlay) {
+    return (
+      <div className="flex w-72 flex-shrink-0 flex-col rounded-lg border border-amber-500/50 bg-zinc-900/90 max-h-full min-h-0">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
+          <div className="flex items-center gap-2 select-none">
+            <StatusIcon
+              className={cn('h-4 w-4', iconColorClass)}
+              style={iconColorStyle}
+              aria-hidden
+            />
+            <h3 className="font-medium text-sm text-zinc-200">{column.name}</h3>
+            <span className="flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-zinc-800 text-xs text-zinc-400">
+              {column.tickets.length}
+            </span>
+          </div>
+        </div>
+        <div className="flex-1 p-2 min-h-[80px]">
+          {column.tickets.length > 0 ? (
+            <div className="text-xs text-zinc-500 text-center py-4">
+              {column.tickets.length} ticket{column.tickets.length === 1 ? '' : 's'}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-16 border-2 border-dashed border-zinc-800 rounded-lg">
+              <span className="text-xs text-zinc-600 select-none">Empty</span>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   // Collapsed column view
   if (collapsed) {
     return (
@@ -133,20 +169,29 @@ export function KanbanColumn({
   return (
     <div
       className={cn(
-        'flex w-72 flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-900/30 max-h-full min-h-0',
+        'flex w-72 flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-900/30 h-full max-h-full min-h-0',
         isOver && 'border-amber-500/50 bg-amber-500/5',
       )}
     >
       {/* Column header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
-        <div className="flex items-center gap-2 select-none">
+        <div className="flex items-center gap-2 select-none min-w-0">
+          {columnDragHandleProps && (
+            <button
+              type="button"
+              className="flex-shrink-0 cursor-grab active:cursor-grabbing text-zinc-600 hover:text-zinc-400 transition-colors -ml-1"
+              {...columnDragHandleProps}
+            >
+              <GripVertical className="h-3.5 w-3.5" />
+            </button>
+          )}
           <StatusIcon
-            className={cn('h-4 w-4', iconColorClass)}
+            className={cn('h-4 w-4 flex-shrink-0', iconColorClass)}
             style={iconColorStyle}
             aria-hidden
           />
-          <h3 className="font-medium text-sm text-zinc-200">{column.name}</h3>
-          <span className="flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-zinc-800 text-xs text-zinc-400">
+          <h3 className="font-medium text-sm text-zinc-200 truncate">{column.name}</h3>
+          <span className="flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-zinc-800 text-xs text-zinc-400 flex-shrink-0">
             {column.tickets.length}
           </span>
         </div>
@@ -253,33 +298,40 @@ export function KanbanColumn({
           </SortableContext>
 
           {/* Drop zone at bottom - droppable area for inserting at end */}
-          <div
-            ref={setEndDropRef}
-            className={cn(
-              'min-h-[80px] flex-1 rounded-lg transition-colors',
-              (dragSelectionIds.length > 0 || activeTicketId) && 'min-h-[100px]',
-              isOverEnd && 'bg-amber-500/10 border-2 border-dashed border-amber-500/50',
-            )}
-          >
-            {/* Show full-size placeholder at the end if target is beyond last ticket */}
-            {activeDragTarget !== null &&
-              activeDragTarget >=
-                sortedTickets.filter(
-                  (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
-                ).length &&
-              (dragSelectionIds.length > 0 || activeTicketId) && (
-                <div className="rounded-lg border-2 border-amber-500/50 border-dashed bg-amber-500/10 min-h-[120px] flex items-center justify-center pointer-events-none">
-                  <span className="text-xs text-amber-500/70">Drop here</span>
-                </div>
-              )}
+          {(() => {
+            const visibleCount = sortedTickets.filter(
+              (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
+            ).length
+            const isDragging = dragSelectionIds.length > 0 || activeTicketId
+            const showEndPlaceholder =
+              activeDragTarget !== null && activeDragTarget >= visibleCount && isDragging
+            return (
+              <div
+                ref={setEndDropRef}
+                className={cn(
+                  'min-h-[80px] flex-1 rounded-lg',
+                  isDragging && 'min-h-[100px]',
+                  isOverEnd &&
+                    !showEndPlaceholder &&
+                    'bg-amber-500/10 border-2 border-dashed border-amber-500/50',
+                )}
+              >
+                {/* Show full-size placeholder at the end if target is beyond last ticket */}
+                {showEndPlaceholder && (
+                  <div className="rounded-lg border-2 border-amber-500/50 border-dashed bg-amber-500/10 min-h-[120px] flex items-center justify-center pointer-events-none">
+                    <span className="text-xs text-amber-500/70">Drop here</span>
+                  </div>
+                )}
 
-            {/* Drop zone indicator when empty and not dragging */}
-            {sortedTickets.length === 0 && !activeTicketId && dragSelectionIds.length === 0 && (
-              <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-lg">
-                <span className="text-xs text-zinc-600 select-none">Drop tickets here</span>
+                {/* Drop zone indicator when empty and not dragging */}
+                {sortedTickets.length === 0 && !activeTicketId && dragSelectionIds.length === 0 && (
+                  <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-lg">
+                    <span className="text-xs text-zinc-600 select-none">Drop tickets here</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            )
+          })()}
         </div>
       </ScrollArea>
 

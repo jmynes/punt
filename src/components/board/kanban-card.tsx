@@ -61,9 +61,10 @@ export function KanbanCard({
   })
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    // Disable transitions during drag to prevent visual glitches when items are inserted
-    transition: isDragging ? 'none' : transition,
+    // Only apply transform to the actively dragged card, not to other cards
+    // that dnd-kit tries to shift out of the way (we handle insertion indicators ourselves)
+    transform: isDragging ? CSS.Transform.toString(transform) : undefined,
+    transition: isDragging ? 'none' : undefined,
   }
 
   const handleClick = (e: React.MouseEvent) => {

@@ -1,8 +1,9 @@
 'use client'
 
+import { useDroppable } from '@dnd-kit/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { Plus, RotateCcw, X } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,6 +20,7 @@ import { useProjectDetail } from '@/hooks/queries/use-projects'
 import { columnKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
+import { moveTickets as moveTicketsAction } from '@/lib/actions'
 import { apiFetch } from '@/lib/base-path'
 import { PERMISSIONS } from '@/lib/permissions'
 import { COLUMN_ICON_OPTIONS, getColumnIcon, resolveColumnColor } from '@/lib/status-icons'
@@ -33,9 +35,16 @@ import type { ColumnWithTickets } from '@/types'
 interface AddColumnButtonProps {
   projectId: string
   projectKey: string
+  pendingTicketIds?: string[]
+  onPendingTicketsHandled?: () => void
 }
 
-export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps) {
+export function AddColumnButton({
+  projectId,
+  projectKey,
+  pendingTicketIds,
+  onPendingTicketsHandled,
+}: AddColumnButtonProps) {
   const queryClient = useQueryClient()
   const { getColumns, setColumns } = useBoardStore()
   const canManageBoard = useHasPermission(projectId, PERMISSIONS.BOARD_MANAGE)
@@ -54,6 +63,19 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const isDismissed = dismissedProjects.includes(projectId)
+
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'add-column-drop',
+    data: { type: 'add-column' },
+  })
+
+  // Auto-open dialog when tickets are dropped on this zone
+  useEffect(() => {
+    if (pendingTicketIds && pendingTicketIds.length > 0) {
+      setDialogOpen(true)
+      setTimeout(() => inputRef.current?.focus(), 50)
+    }
+  }, [pendingTicketIds])
 
   // Resolve visibility: server setting + user preference
   const serverEnabled = projectDetail?.effectiveShowAddColumnButton ?? true
@@ -130,7 +152,33 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
         duration: 5000,
       })
 
-      useUndoStore.getState().pushColumnCreate(projectId, newColumn.id, trimmedName)
+      // Move pending tickets to the newly created column
+      if (pendingTicketIds && pendingTicketIds.length > 0) {
+        // Build moved ticket info for compound undo (one Ctrl+Z undoes both move + column create)
+        const allTickets = getColumns(projectId).flatMap((c) => c.tickets)
+        const movedTickets = pendingTicketIds
+          .map((id) => {
+            const ticket = allTickets.find((t) => t.id === id)
+            return ticket ? { ticketId: id, fromColumnId: ticket.columnId } : null
+          })
+          .filter((t): t is { ticketId: string; fromColumnId: string } => t != null)
+
+        useUndoStore
+          .getState()
+          .pushColumnCreate(projectId, newColumn.id, trimmedName, false, movedTickets)
+
+        const tabId = getTabId()
+        moveTicketsAction({
+          projectId,
+          ticketIds: pendingTicketIds,
+          toColumnId: newColumn.id,
+          tabId,
+          options: { undo: false }, // undo handled by compound columnCreate entry
+        })
+        onPendingTicketsHandled?.()
+      } else {
+        useUndoStore.getState().pushColumnCreate(projectId, newColumn.id, trimmedName)
+      }
 
       setDialogOpen(false)
       setColumnName('')
@@ -152,6 +200,8 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
     getColumns,
     setColumns,
     queryClient,
+    pendingTicketIds,
+    onPendingTicketsHandled,
   ])
 
   // Don't render if user doesn't have permission or server has disabled the feature
@@ -181,7 +231,16 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
 
   return (
     <>
-      <div className="relative flex w-72 flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-dashed border-zinc-800 bg-zinc-900/20 min-h-[200px] hover:border-zinc-700 hover:bg-zinc-900/30 transition-colors group">
+      <div
+        ref={setNodeRef}
+        className={cn(
+          'relative flex w-72 flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-dashed bg-zinc-900/20 min-h-[200px] group cursor-pointer',
+          isOver
+            ? 'border-amber-500 bg-amber-500/10'
+            : 'border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/30',
+        )}
+        onClick={handleOpenDialog}
+      >
         {/* Dismiss button */}
         <button
           type="button"
@@ -203,7 +262,13 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
       </div>
 
       {/* Create Column Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) onPendingTicketsHandled?.()
+        }}
+      >
         <DialogContent className="bg-zinc-900 border-zinc-700">
           <DialogHeader>
             <DialogTitle className="text-zinc-100">Create column</DialogTitle>

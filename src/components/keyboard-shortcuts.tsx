@@ -744,6 +744,86 @@ export function KeyboardShortcuts() {
             description: `Moved back to ${action.fromSprintName}`,
             duration: 3000,
           })
+        } else if (entry.action.type === 'columnCreate') {
+          const action = entry.action
+          // Undo column create: move tickets back (if any) and delete the column
+          const boardStore = useBoardStore.getState()
+          const cols = boardStore.getColumns(entry.projectId)
+
+          // Move tickets back to their original columns first
+          if (action.movedTickets && action.movedTickets.length > 0) {
+            const col = cols.find((c) => c.id === action.columnId)
+            const updatedCols = cols.map((c) => {
+              if (c.id === action.columnId) {
+                // Remove moved tickets from this column
+                const movedIds = new Set(action.movedTickets!.map((t) => t.ticketId))
+                return { ...c, tickets: c.tickets.filter((t) => !movedIds.has(t.id)) }
+              }
+              // Add tickets back to their original columns
+              const returningTickets = action.movedTickets!.filter((t) => t.fromColumnId === c.id)
+              if (returningTickets.length > 0 && col) {
+                const ticketsToReturn = returningTickets
+                  .map((rt) => col.tickets.find((t) => t.id === rt.ticketId))
+                  .filter((t): t is typeof t & {} => t != null)
+                  .map((t) => ({ ...t, columnId: c.id }))
+                return { ...c, tickets: [...c.tickets, ...ticketsToReturn] }
+              }
+              return c
+            })
+            boardStore.setColumns(
+              entry.projectId,
+              updatedCols.filter((c) => c.id !== action.columnId),
+            )
+          } else {
+            boardStore.setColumns(
+              entry.projectId,
+              cols.filter((c) => c.id !== action.columnId),
+            )
+          }
+          undoStore.pushRedo(entry)
+
+          // Persist to server
+          undoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              // Move tickets back first
+              if (action.movedTickets && action.movedTickets.length > 0) {
+                for (const moved of action.movedTickets) {
+                  await apiFetch(`/api/projects/${entry.projectId}/tickets/${moved.ticketId}`, {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
+                    body: JSON.stringify({ columnId: moved.fromColumnId }),
+                  })
+                }
+              }
+              // Then delete the column
+              const res = await apiFetch(
+                `/api/projects/${entry.projectId}/columns/${action.columnId}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                },
+              )
+              if (!res.ok) throw new Error('Failed to delete column')
+              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+            } catch (err) {
+              console.error('Failed to undo column create:', err)
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Column creation undone',
+            description: `Removed "${action.columnName}"`,
+            duration: 3000,
+          })
         } else if (entry.action.type === 'columnRename') {
           const action = entry.action
           // Undo column rename: revert to old name/icon
@@ -1203,6 +1283,7 @@ export function KeyboardShortcuts() {
         // (ticketCreate, columnRename, columnDelete, attachment*, link* handlers manage their own lock)
         const selfManagedTypes = [
           'ticketCreate',
+          'columnCreate',
           'columnRename',
           'columnDelete',
           'attachmentAdd',
@@ -1529,6 +1610,77 @@ export function KeyboardShortcuts() {
             action.toSprintName,
             true,
           )
+        } else if (entry.action.type === 'columnCreate') {
+          const action = entry.action
+          // Redo column create: recreate column and move tickets back into it
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(`/api/projects/${entry.projectId}/columns`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(tabId && { 'X-Tab-Id': tabId }),
+                },
+                body: JSON.stringify({ name: action.columnName }),
+              })
+              if (!res.ok) throw new Error('Failed to recreate column')
+              const newCol = await res.json()
+
+              // Update board store
+              const bs = useBoardStore.getState()
+              const currentCols = bs.getColumns(entry.projectId)
+              bs.setColumns(entry.projectId, [...currentCols, { ...newCol, tickets: [] }])
+
+              // Move tickets back into the recreated column
+              if (action.movedTickets && action.movedTickets.length > 0) {
+                for (const moved of action.movedTickets) {
+                  await apiFetch(`/api/projects/${entry.projectId}/tickets/${moved.ticketId}`, {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
+                    body: JSON.stringify({ columnId: newCol.id }),
+                  })
+                  // Optimistic: move ticket in store
+                  const updatedBs = useBoardStore.getState()
+                  updatedBs.moveTicket(
+                    entry.projectId,
+                    moved.ticketId,
+                    moved.fromColumnId,
+                    newCol.id,
+                    0,
+                  )
+                }
+              }
+
+              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+
+              // Push to undo with new column ID and moved ticket info
+              redoStore.pushColumnCreate(
+                entry.projectId,
+                newCol.id,
+                action.columnName,
+                true,
+                action.movedTickets?.map((t) => ({
+                  ticketId: t.ticketId,
+                  fromColumnId: t.fromColumnId,
+                })),
+              )
+            } catch (err) {
+              console.error('Failed to redo column create:', err)
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Column recreated',
+            description: `"${action.columnName}" added back`,
+            duration: getEffectiveDuration(5000),
+          })
         } else if (entry.action.type === 'columnRename') {
           const action = entry.action
           // Redo column rename: re-apply new name/icon
@@ -1984,6 +2136,7 @@ export function KeyboardShortcuts() {
         // (ticketCreate, columnRename, columnDelete, attachment*, link* handlers manage their own lock)
         const selfManagedTypes = [
           'ticketCreate',
+          'columnCreate',
           'columnRename',
           'columnDelete',
           'attachmentAdd',
