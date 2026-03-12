@@ -1,13 +1,13 @@
 'use client'
 
 import {
-  closestCorners,
   DndContext,
   type DragEndEvent,
   type DragOverEvent,
   DragOverlay,
   type DragStartEvent,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -608,7 +608,7 @@ export function SprintBacklogView({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}

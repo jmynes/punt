@@ -1,6 +1,5 @@
 'use client'
 
-import { useDroppable } from '@dnd-kit/core'
 import { format } from 'date-fns'
 import {
   AlertTriangle,
@@ -20,7 +19,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
-import { DropZone, type TableContext, TicketTable } from '@/components/table'
+import { TicketListSection } from '@/components/table'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -37,7 +36,7 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { formatDaysRemaining, isCompletedColumn, isSprintExpired } from '@/lib/sprint-utils'
 import { sortTickets } from '@/lib/ticket-sort'
 import { cn } from '@/lib/utils'
-import { type BacklogColumnId, type SortConfig, useBacklogStore } from '@/stores/backlog-store'
+import { useBacklogStore } from '@/stores/backlog-store'
 import { useUIStore } from '@/stores/ui-store'
 import type {
   ColumnWithTickets,
@@ -71,6 +70,10 @@ interface SprintSectionProps {
   totalCompletedCount?: number
   /** Total completed story points before filters */
   totalCompletedPoints?: number
+  /** Whether to show the section header (default: true). When false, only the table is rendered. */
+  showHeader?: boolean
+  /** Whether to wrap in a card (rounded border + background). Default: true. Set false for flush layout. */
+  showCard?: boolean
 }
 
 /**
@@ -94,28 +97,15 @@ export function SprintSection({
   totalStoryPoints,
   totalCompletedCount,
   totalCompletedPoints,
+  showHeader = true,
+  showCard = true,
 }: SprintSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
+  const [isOverSection, setIsOverSection] = useState(false)
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
-  const { columns, sort, toggleSort, setSort } = useBacklogStore()
+  const { sort, toggleSort, setSort, toggleColumnVisibility } = useBacklogStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
   const reopenSprintMutation = useReopenSprint(projectId)
-
-  const handleToggleSort = useCallback(
-    (columnId: string) => {
-      const column = columns.find((c) => c.id === columnId)
-      if (!column?.sortable) return
-      toggleSort(columnId as BacklogColumnId)
-    },
-    [columns, toggleSort],
-  )
-
-  const handleSetSort = useCallback(
-    (newSort: SortConfig | null) => {
-      setSort(newSort)
-    },
-    [setSort],
-  )
 
   // Sort tickets locally using the shared sort utility
   const sortedTickets = useMemo(
@@ -140,7 +130,6 @@ export function SprintSection({
   const visibleTickets = tickets.filter((t) => !draggingTicketIds.includes(t.id))
   const filteredPoints = visibleTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
   const filteredCount = visibleTickets.length
-  const draggingCount = draggingTicketIds.length
 
   // Calculate completion stats (done columns)
   const doneColumnIds = useMemo(
@@ -158,39 +147,7 @@ export function SprintSection({
     totalStoryPoints !== undefined &&
     (totalTicketCount !== filteredCount || totalStoryPoints !== filteredPoints)
 
-  // Droppable for the section
   const droppableId = sprint?.id ?? 'backlog'
-  const { setNodeRef, isOver } = useDroppable({
-    id: droppableId,
-    data: {
-      type: 'sprint-section',
-      sprintId: sprint?.id ?? null,
-    },
-  })
-
-  // Droppable zone at the end of the ticket list for "drop after last item"
-  const { setNodeRef: setEndDropRef } = useDroppable({
-    id: `${droppableId}-end`,
-    data: {
-      type: 'section-end',
-      sprintId: sprint?.id ?? null,
-    },
-  })
-
-  // Ticket IDs for sortable context - use sorted order
-  const ticketIds = sortedTickets.map((t) => t.id)
-
-  // Create table context for the unified TicketTable component
-  const tableContext: TableContext = useMemo(
-    () => ({
-      sectionId: sprint?.id ?? 'backlog',
-      sprintId: sprint?.id ?? null,
-      projectKey,
-      projectId,
-      statusColumns,
-    }),
-    [sprint?.id, projectKey, projectId, statusColumns],
-  )
 
   const handleStartSprint = useCallback(() => {
     if (sprint) openSprintStart(sprint.id)
@@ -219,348 +176,353 @@ export function SprintSection({
   return (
     <div
       className={cn(
-        'rounded-xl border transition-all duration-200',
-        isBacklog && 'border-zinc-800 bg-zinc-900/30',
-        isPlanning && 'border-blue-500/20 bg-blue-500/5',
-        isActive && !expired && 'border-emerald-500/30 bg-emerald-500/5',
-        isActive && expired && 'border-orange-500/30 bg-orange-500/5',
-        isCompleted && 'border-zinc-700 bg-zinc-900/20 opacity-75',
+        showCard && 'rounded-xl ring-1 ring-inset transition-all duration-200',
+        showCard && isBacklog && 'ring-zinc-800 bg-zinc-900/30',
+        showCard && isPlanning && 'ring-blue-500/20 bg-blue-500/5',
+        showCard && isActive && !expired && 'ring-emerald-500/30 bg-emerald-500/5',
+        showCard && isActive && expired && 'ring-orange-500/30 bg-orange-500/5',
+        showCard && isCompleted && 'ring-zinc-700 bg-zinc-900/20 opacity-75',
         // Drop target styling - subtle glow when this section is a valid drop target
-        dropPosition !== null && 'border-blue-500/40 ring-1 ring-blue-500/20',
-        // isOver is still useful for empty sections
-        isOver &&
+        showCard && dropPosition !== null && 'ring-blue-500/40 ring-2',
+        // isOver is useful for empty sections (via callback from TicketListSection)
+        showCard &&
+          isOverSection &&
           filteredCount === 0 &&
-          'border-blue-500/50 bg-blue-500/10 ring-2 ring-blue-500/20',
+          'ring-blue-500/50 bg-blue-500/10 ring-2',
       )}
     >
       {/* Section Header */}
-      <div
-        onClick={collapsible ? () => setExpanded(!expanded) : undefined}
-        className={cn(
-          'flex items-center gap-3 px-4 py-3 select-none',
-          'rounded-t-xl transition-colors',
-          collapsible && 'cursor-pointer hover:bg-white/[0.02]',
-        )}
-      >
-        {/* Expand/Collapse chevron (only when collapsible) */}
-        {collapsible && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              setExpanded(!expanded)
-            }}
-            className="text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
-            {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-          </button>
-        )}
-
-        {/* Sprint icon and name */}
-        <div className="flex items-center gap-2 min-w-0">
-          {isBacklog ? (
-            <div className="p-1.5 rounded-lg bg-zinc-800">
-              <Target className="h-4 w-4 text-zinc-400" />
-            </div>
-          ) : (
-            <div
-              className={cn(
-                'p-1.5 rounded-lg',
-                isPlanning && 'bg-blue-500/20',
-                isActive && !expired && 'bg-emerald-500/20',
-                isActive && expired && 'bg-orange-500/20',
-                isCompleted && 'bg-zinc-700',
-              )}
-            >
-              <Target
-                className={cn(
-                  'h-4 w-4',
-                  isPlanning && 'text-blue-400',
-                  isActive && !expired && 'text-emerald-400',
-                  isActive && expired && 'text-orange-400',
-                  isCompleted && 'text-zinc-400',
-                )}
-              />
-            </div>
+      {showHeader && (
+        <div
+          onClick={collapsible ? () => setExpanded(!expanded) : undefined}
+          className={cn(
+            'flex items-center gap-3 px-4 py-3 select-none',
+            'rounded-t-xl transition-colors',
+            collapsible && 'cursor-pointer hover:bg-white/[0.02]',
           )}
-          <h3
-            className={cn(
-              'font-semibold text-sm truncate',
-              isBacklog ? 'text-zinc-400' : 'text-zinc-100',
-            )}
-          >
-            {isBacklog ? 'Backlog' : sprint.name}
-          </h3>
-
-          {/* Status badge */}
-          {!isBacklog && (
-            <span
-              className={cn(
-                'px-2 py-0.5 text-[10px] font-medium rounded-full uppercase tracking-wide',
-                isPlanning && 'bg-blue-500/20 text-blue-400',
-                isActive && !expired && 'bg-emerald-500/20 text-emerald-400',
-                isActive && expired && 'bg-orange-500/20 text-orange-400',
-                isCompleted && 'bg-zinc-700 text-zinc-400',
-              )}
+        >
+          {/* Expand/Collapse chevron (only when collapsible) */}
+          {collapsible && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setExpanded(!expanded)
+              }}
+              className="text-zinc-500 hover:text-zinc-300 transition-colors"
             >
-              {isActive && expired ? 'Overdue' : sprint.status}
-            </span>
+              {expanded ? (
+                <ChevronDown className="h-5 w-5" />
+              ) : (
+                <ChevronRight className="h-5 w-5" />
+              )}
+            </button>
           )}
-        </div>
 
-        {/* Sprint dates */}
-        {sprint?.startDate && sprint.endDate && (
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500">
-            <CalendarDays className="h-3.5 w-3.5" />
-            <span>
-              {format(new Date(sprint.startDate), 'MMM d')} -{' '}
-              {format(new Date(sprint.endDate), 'MMM d')}
-            </span>
-          </div>
-        )}
-
-        {/* Time remaining for active sprint */}
-        {isActive && sprint?.endDate && (
-          <Tooltip>
-            <TooltipTrigger asChild>
+          {/* Sprint icon and name */}
+          <div className="flex items-center gap-2 min-w-0">
+            {isBacklog ? (
+              <div className="p-1.5 rounded-lg bg-zinc-800">
+                <Target className="h-4 w-4 text-zinc-400" />
+              </div>
+            ) : (
               <div
                 className={cn(
-                  'hidden sm:flex items-center gap-1.5 text-xs cursor-default',
-                  expired ? 'text-orange-400' : 'text-zinc-400',
+                  'p-1.5 rounded-lg',
+                  isPlanning && 'bg-blue-500/20',
+                  isActive && !expired && 'bg-emerald-500/20',
+                  isActive && expired && 'bg-orange-500/20',
+                  isCompleted && 'bg-zinc-700',
                 )}
               >
-                <Clock className="h-3.5 w-3.5" />
-                <span>{formatDaysRemaining(sprint.endDate)}</span>
+                <Target
+                  className={cn(
+                    'h-4 w-4',
+                    isPlanning && 'text-blue-400',
+                    isActive && !expired && 'text-emerald-400',
+                    isActive && expired && 'text-orange-400',
+                    isCompleted && 'text-zinc-400',
+                  )}
+                />
               </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              Ends {format(new Date(sprint.endDate), 'PPP')} at{' '}
-              {format(new Date(sprint.endDate), 'p')}
-            </TooltipContent>
-          </Tooltip>
-        )}
+            )}
+            <h3
+              className={cn(
+                'font-semibold text-sm truncate',
+                isBacklog ? 'text-zinc-400' : 'text-zinc-100',
+              )}
+            >
+              {isBacklog ? 'Backlog' : sprint.name}
+            </h3>
 
-        {/* Sprint goal tooltip */}
-        {sprint?.goal && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="hidden lg:inline text-xs text-zinc-500 truncate max-w-[150px] italic cursor-default">
-                &ldquo;{sprint.goal}&rdquo;
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-xs">
-              <p className="text-sm">{sprint.goal}</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Stats */}
-        {sprint ? (
-          <SprintProgressBars
-            completedCount={completedCount}
-            totalCount={filteredCount}
-            completedPoints={completedPoints}
-            totalPoints={filteredPoints}
-            unfilteredCompletedCount={totalCompletedCount ?? completedCount}
-            unfilteredTotalCount={totalTicketCount ?? filteredCount}
-            unfilteredCompletedPoints={totalCompletedPoints ?? completedPoints}
-            unfilteredTotalPoints={totalStoryPoints ?? filteredPoints}
-            isFiltered={isFiltered}
-            budget={sprint.budget}
-            sprintStatus={sprint.status as 'planning' | 'active' | 'completed'}
-            expired={expired}
-          />
-        ) : (
-          /* Backlog: simple text stats with filtered/total when filters active */
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
+            {/* Status badge */}
+            {!isBacklog && (
               <span
                 className={cn(
-                  'font-medium tabular-nums',
-                  filteredCount === 0 ? 'text-zinc-600' : 'text-zinc-300',
+                  'px-2 py-0.5 text-[10px] font-medium rounded-full uppercase tracking-wide',
+                  isPlanning && 'bg-blue-500/20 text-blue-400',
+                  isActive && !expired && 'bg-emerald-500/20 text-emerald-400',
+                  isActive && expired && 'bg-orange-500/20 text-orange-400',
+                  isCompleted && 'bg-zinc-700 text-zinc-400',
                 )}
               >
-                {filteredCount}
+                {isActive && expired ? 'Overdue' : sprint.status}
               </span>
-              {isFiltered && (
-                <>
-                  <span className="text-zinc-600">/</span>
-                  <span className="tabular-nums text-zinc-500">{totalTicketCount}</span>
-                </>
-              )}
-              <span className="text-zinc-600">
-                {(isFiltered ? totalTicketCount : filteredCount) === 1 ? 'issue' : 'issues'}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-zinc-400">
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span className="font-medium">{filteredPoints}</span>
-              {isFiltered && (
-                <>
-                  <span className="text-zinc-600">/</span>
-                  <span className="text-zinc-500">{totalStoryPoints}</span>
-                </>
-              )}
-              <span className="text-zinc-600">pts</span>
-            </div>
+            )}
           </div>
-        )}
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          {/* Create ticket button */}
-          {onCreateTicket && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => onCreateTicket(sprint?.id ?? null)}
-              className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+          {/* Sprint dates */}
+          {sprint?.startDate && sprint.endDate && (
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500">
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span>
+                {format(new Date(sprint.startDate), 'MMM d')} -{' '}
+                {format(new Date(sprint.endDate), 'MMM d')}
+              </span>
+            </div>
           )}
 
-          {/* Start Sprint button for planning sprints */}
-          {canManageSprints && isPlanning && filteredCount > 0 && (
-            <Button
-              size="sm"
-              onClick={handleStartSprint}
-              className="h-7 px-3 bg-green-600 hover:bg-green-700 text-white text-xs font-medium"
-            >
-              <Play className="h-3 w-3 mr-1" />
-              Start
-            </Button>
-          )}
-
-          {/* Complete Sprint button for expired active sprints */}
-          {canManageSprints && isActive && expired && (
-            <Button
-              size="sm"
-              onClick={handleCompleteSprint}
-              className="h-7 px-3 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium"
-            >
-              Complete
-            </Button>
-          )}
-
-          {/* Sprint menu - only show if user can manage sprints */}
-          {canManageSprints && !isBacklog && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+          {/* Time remaining for active sprint */}
+          {isActive && sprint?.endDate && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn(
+                    'hidden sm:flex items-center gap-1.5 text-xs cursor-default',
+                    expired ? 'text-orange-400' : 'text-zinc-400',
+                  )}
                 >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-700">
-                <DropdownMenuItem
-                  onClick={handleEditSprint}
-                  className="text-zinc-300 focus:bg-zinc-800"
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{formatDaysRemaining(sprint.endDate)}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                Ends {format(new Date(sprint.endDate), 'PPP')} at{' '}
+                {format(new Date(sprint.endDate), 'p')}
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* Sprint goal tooltip */}
+          {sprint?.goal && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="hidden lg:inline text-xs text-zinc-500 truncate max-w-[150px] italic cursor-default">
+                  &ldquo;{sprint.goal}&rdquo;
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-sm">{sprint.goal}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Stats */}
+          {sprint ? (
+            <SprintProgressBars
+              completedCount={completedCount}
+              totalCount={filteredCount}
+              completedPoints={completedPoints}
+              totalPoints={filteredPoints}
+              unfilteredCompletedCount={totalCompletedCount ?? completedCount}
+              unfilteredTotalCount={totalTicketCount ?? filteredCount}
+              unfilteredCompletedPoints={totalCompletedPoints ?? completedPoints}
+              unfilteredTotalPoints={totalStoryPoints ?? filteredPoints}
+              isFiltered={isFiltered}
+              budget={sprint.budget}
+              sprintStatus={sprint.status as 'planning' | 'active' | 'completed'}
+              expired={expired}
+            />
+          ) : (
+            /* Backlog: simple text stats with filtered/total when filters active */
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    'font-medium tabular-nums',
+                    filteredCount === 0 ? 'text-zinc-600' : 'text-zinc-300',
+                  )}
                 >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit Sprint
-                </DropdownMenuItem>
-
-                {isPlanning && (
-                  <DropdownMenuItem
-                    onClick={handleStartSprint}
-                    className="text-zinc-300 focus:bg-zinc-800"
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Start Sprint
-                  </DropdownMenuItem>
-                )}
-
-                {isActive && (
-                  <DropdownMenuItem
-                    onClick={handleCompleteSprint}
-                    className="text-zinc-300 focus:bg-zinc-800"
-                  >
-                    <Target className="h-4 w-4 mr-2" />
-                    Complete Sprint
-                  </DropdownMenuItem>
-                )}
-
-                {isCompleted && (
-                  <DropdownMenuItem
-                    onClick={handleReopenSprint}
-                    disabled={reopenSprintMutation.isPending}
-                    className="text-zinc-300 focus:bg-zinc-800"
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Reopen Sprint
-                  </DropdownMenuItem>
-                )}
-
-                {isPlanning && onDelete && (
+                  {filteredCount}
+                </span>
+                {isFiltered && (
                   <>
-                    <DropdownMenuSeparator className="bg-zinc-700" />
-                    <DropdownMenuItem
-                      onClick={handleDeleteSprint}
-                      className="text-red-400 focus:bg-red-900/20"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Sprint
-                    </DropdownMenuItem>
+                    <span className="text-zinc-600">/</span>
+                    <span className="tabular-nums text-zinc-500">{totalTicketCount}</span>
                   </>
                 )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <span className="text-zinc-600">
+                  {(isFiltered ? totalTicketCount : filteredCount) === 1 ? 'issue' : 'issues'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-zinc-400">
+                <TrendingUp className="h-3.5 w-3.5" />
+                <span className="font-medium">{filteredPoints}</span>
+                {isFiltered && (
+                  <>
+                    <span className="text-zinc-600">/</span>
+                    <span className="text-zinc-500">{totalStoryPoints}</span>
+                  </>
+                )}
+                <span className="text-zinc-600">pts</span>
+              </div>
+            </div>
           )}
 
-          {/* Create Sprint button for backlog (only when no active sprint) */}
-          {canManageSprints && isBacklog && !hasActiveSprint && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSprintCreateOpen(true)}
-              className="h-7 px-3 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Create Sprint
-            </Button>
-          )}
+          {/* Action buttons */}
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            {/* Create ticket button */}
+            {onCreateTicket && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onCreateTicket(sprint?.id ?? null)}
+                className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            )}
+
+            {/* Start Sprint button for planning sprints */}
+            {canManageSprints && isPlanning && filteredCount > 0 && (
+              <Button
+                size="sm"
+                onClick={handleStartSprint}
+                className="h-7 px-3 bg-green-600 hover:bg-green-700 text-white text-xs font-medium"
+              >
+                <Play className="h-3 w-3 mr-1" />
+                Start
+              </Button>
+            )}
+
+            {/* Complete Sprint button for expired active sprints */}
+            {canManageSprints && isActive && expired && (
+              <Button
+                size="sm"
+                onClick={handleCompleteSprint}
+                className="h-7 px-3 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium"
+              >
+                Complete
+              </Button>
+            )}
+
+            {/* Sprint menu - only show if user can manage sprints */}
+            {canManageSprints && !isBacklog && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-700">
+                  <DropdownMenuItem
+                    onClick={handleEditSprint}
+                    className="text-zinc-300 focus:bg-zinc-800"
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit Sprint
+                  </DropdownMenuItem>
+
+                  {isPlanning && (
+                    <DropdownMenuItem
+                      onClick={handleStartSprint}
+                      className="text-zinc-300 focus:bg-zinc-800"
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      Start Sprint
+                    </DropdownMenuItem>
+                  )}
+
+                  {isActive && (
+                    <DropdownMenuItem
+                      onClick={handleCompleteSprint}
+                      className="text-zinc-300 focus:bg-zinc-800"
+                    >
+                      <Target className="h-4 w-4 mr-2" />
+                      Complete Sprint
+                    </DropdownMenuItem>
+                  )}
+
+                  {isCompleted && (
+                    <DropdownMenuItem
+                      onClick={handleReopenSprint}
+                      disabled={reopenSprintMutation.isPending}
+                      className="text-zinc-300 focus:bg-zinc-800"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Reopen Sprint
+                    </DropdownMenuItem>
+                  )}
+
+                  {isPlanning && onDelete && (
+                    <>
+                      <DropdownMenuSeparator className="bg-zinc-700" />
+                      <DropdownMenuItem
+                        onClick={handleDeleteSprint}
+                        className="text-red-400 focus:bg-red-900/20"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Sprint
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* Create Sprint button for backlog (only when no active sprint) */}
+            {canManageSprints && isBacklog && !hasActiveSprint && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSprintCreateOpen(true)}
+                className="h-7 px-3 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Create Sprint
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Ticket table */}
       {(!collapsible || expanded) && (
-        <div ref={setNodeRef} className={cn('pb-3', filteredCount === 0 && 'px-4 py-3')}>
-          {filteredCount === 0 ? (
-            <DropZone
-              isActive={dropPosition !== null || isOver}
-              itemCount={draggingCount}
-              message={
-                isBacklog
-                  ? 'Drag tickets here to remove them from sprints'
-                  : 'Drag tickets here to add them to this sprint'
-              }
-            />
-          ) : (
-            <div className="relative">
-              <TicketTable
-                context={tableContext}
-                tickets={sortedTickets}
-                columns={columns}
-                allTicketIds={ticketIds}
-                draggingTicketIds={draggingTicketIds}
-                dropPosition={dropPosition}
-                showHeader={true}
-                sort={sort}
-                onToggleSort={handleToggleSort}
-                onSetSort={handleSetSort}
-              />
-              {/* Invisible droppable zone after the last ticket for "drop at end" */}
-              <div ref={setEndDropRef} className="h-2" />
-            </div>
-          )}
-        </div>
+        <TicketListSection
+          sectionId={sprint?.id ?? 'backlog'}
+          sprintId={sprint?.id ?? null}
+          projectKey={projectKey}
+          projectId={projectId}
+          statusColumns={statusColumns}
+          tickets={sortedTickets}
+          draggingTicketIds={draggingTicketIds}
+          dropPosition={dropPosition}
+          droppableId={droppableId}
+          droppableData={{ type: 'sprint-section', sprintId: sprint?.id ?? null }}
+          endDroppableId={`${droppableId}-end`}
+          endDroppableData={{ type: 'section-end', sprintId: sprint?.id ?? null }}
+          sort={sort}
+          onToggleSort={(id) => toggleSort(id as Parameters<typeof toggleSort>[0])}
+          onSetSort={setSort}
+          enableColumnReorder={true}
+          onHideColumn={(id) =>
+            toggleColumnVisibility(id as Parameters<typeof toggleColumnVisibility>[0])
+          }
+          emptyMessage={
+            isBacklog
+              ? 'Drag tickets here to remove them from sprints'
+              : 'Drag tickets here to add them to this sprint'
+          }
+          className="pb-3"
+          onIsOver={setIsOverSection}
+        />
       )}
     </div>
   )

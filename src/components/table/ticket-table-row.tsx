@@ -13,7 +13,7 @@ import type { TicketTableRowProps } from './types'
 
 /**
  * Unified table row for tickets.
- * Used by both BacklogTable and SprintSection.
+ * Used by SprintSection (and the backlog page).
  * Handles selection, drag-and-drop, and visual states.
  */
 export function TicketTableRow({
