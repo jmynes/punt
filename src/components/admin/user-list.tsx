@@ -138,7 +138,6 @@ export function UserList() {
 
   // Bulk delete confirmation state (requires credentials)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
-  const [deleteEmail, setDeleteEmail] = useState('')
   const [deletePassword, setDeletePassword] = useState('')
   const [showDeletePassword, setShowDeletePassword] = useState(false)
   const [deleteError, setDeleteError] = useState('')
@@ -627,20 +626,12 @@ export function UserList() {
 
   // Bulk permanent delete - requires credential verification
   const bulkPermanentDeleteUsers = useMutation({
-    mutationFn: async ({
-      usernames,
-      email,
-      password,
-    }: {
-      usernames: string[]
-      email: string
-      password: string
-    }) => {
+    mutationFn: async ({ usernames, password }: { usernames: string[]; password: string }) => {
       // First verify credentials
       const verifyRes = await apiFetch('/api/auth/verify-credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ password }),
       })
 
       if (!verifyRes.ok) {
@@ -681,7 +672,6 @@ export function UserList() {
 
   const closeBulkDeleteDialog = () => {
     setBulkDeleteOpen(false)
-    setDeleteEmail('')
     setDeletePassword('')
     setShowDeletePassword(false)
     setDeleteError('')
@@ -1301,17 +1291,12 @@ export function UserList() {
   }
 
   const handleBulkDelete = () => {
-    if (!deleteEmail || !deletePassword) {
-      setDeleteError('Please enter your email and password')
-      return
-    }
-    if (deleteEmail !== currentUser?.email) {
-      setDeleteError('Email does not match your account')
+    if (!deletePassword) {
+      setDeleteError('Please enter your password')
       return
     }
     bulkPermanentDeleteUsers.mutate({
       usernames: selectedUsers.map((u) => u.username),
-      email: deleteEmail,
       password: deletePassword,
     })
   }
@@ -1927,31 +1912,10 @@ export function UserList() {
               className="space-y-4 py-2"
               onSubmit={(e) => {
                 e.preventDefault()
-                if (!bulkPermanentDeleteUsers.isPending && deleteEmail && deletePassword)
-                  handleBulkDelete()
+                if (!bulkPermanentDeleteUsers.isPending && deletePassword) handleBulkDelete()
               }}
             >
-              <p className="text-sm text-zinc-400">
-                To confirm deletion, enter your admin credentials:
-              </p>
-
-              <div className="space-y-2">
-                <Label htmlFor="delete-email" className="text-zinc-300">
-                  Your Email
-                </Label>
-                <Input
-                  id="delete-email"
-                  type="email"
-                  value={deleteEmail}
-                  onChange={(e) => {
-                    setDeleteEmail(e.target.value)
-                    setDeleteError('')
-                  }}
-                  placeholder={currentUser?.email || 'admin@example.com'}
-                  autoComplete="off"
-                  className="border-zinc-700 bg-zinc-800 text-zinc-100"
-                />
-              </div>
+              <p className="text-sm text-zinc-400">Enter your password to confirm deletion.</p>
 
               <div className="space-y-2">
                 <Label htmlFor="delete-password" className="text-zinc-300">
@@ -2003,7 +1967,7 @@ export function UserList() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={bulkPermanentDeleteUsers.isPending || !deleteEmail || !deletePassword}
+                  disabled={bulkPermanentDeleteUsers.isPending || !deletePassword}
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   {bulkPermanentDeleteUsers.isPending ? (
