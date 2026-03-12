@@ -93,7 +93,7 @@ export function KanbanBoard({
       // Ticket drag
       if (type !== 'ticket') return
 
-      const ticket = active.data.current.ticket as TicketWithRelations
+      const ticket = active.data.current?.ticket as TicketWithRelations
       setActiveTicket(ticket)
 
       // Determine which tickets are being dragged
