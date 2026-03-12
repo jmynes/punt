@@ -70,6 +70,7 @@ export function SprintBacklogView({
   const { selectedTicketIds, clearSelection } = useSelectionStore()
   const {
     columns: backlogColumns,
+    sort,
     queryMode,
     setQueryMode,
     queryText,
@@ -353,10 +354,13 @@ export function SprintBacklogView({
       const ticketsChangingSprint = ticketsToMove.filter((t) => t.sprintId !== targetSprintId)
 
       // Case 1: Internal reordering within the same section
+      // Skip reorder when a column sort is active (sorted view takes precedence)
       if (
         ticketsChangingSprint.length === 0 &&
         (overData?.type === 'ticket' || overData?.type === 'section-end')
       ) {
+        if (sort !== null) return // Sort active, manual reorder disabled
+
         const sourceSprintId = ticketsToMove[0]?.sprintId ?? null
         const sectionKey = sourceSprintId ?? 'backlog'
         const sectionTickets = ticketsBySprint[sectionKey] ?? []
@@ -565,6 +569,7 @@ export function SprintBacklogView({
       ticketsBySprint,
       dropPosition,
       clearSelection,
+      sort,
     ],
   )
 
