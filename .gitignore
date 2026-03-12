@@ -57,3 +57,4 @@ next-env.d.ts
 tmp/
 .mcp.json~
 .emacs.desktop
+docs/superpowers/
