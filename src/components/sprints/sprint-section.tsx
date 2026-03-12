@@ -515,6 +515,7 @@ export function SprintSection({
           onHideColumn={(id) =>
             toggleColumnVisibility(id as Parameters<typeof toggleColumnVisibility>[0])
           }
+          reorderDisabled={sort !== null}
           emptyMessage={
             isBacklog
               ? 'Drag tickets here to remove them from sprints'

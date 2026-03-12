@@ -788,6 +788,9 @@ export default function BacklogPage() {
       const draggedIdSet = new Set(draggedIds)
 
       // Case A: Same-section reordering (within sprint or within backlog)
+      // Skip reorder when a column sort is active (sorted view takes precedence)
+      if (isSameSection && sort !== null) return
+
       if (isSameSection) {
         // Handle backlog reordering (uses local backlogOrder state)
         if (targetSectionKey === 'backlog') {
@@ -1066,6 +1069,7 @@ export default function BacklogPage() {
       clearSelection,
       dropPosition,
       updateTickets,
+      sort,
     ],
   )
 

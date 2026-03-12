@@ -31,6 +31,7 @@ export function TicketListSection({
   onSetSort,
   enableColumnReorder = false,
   onHideColumn,
+  reorderDisabled = false,
   emptyMessage = 'Drag tickets here',
   showHeader = true,
   className,
@@ -99,6 +100,7 @@ export function TicketListSection({
       onSetSort={onSetSort}
       enableColumnReorder={enableColumnReorder}
       onHideColumn={onHideColumn}
+      reorderDisabled={reorderDisabled}
     />
   )
 
