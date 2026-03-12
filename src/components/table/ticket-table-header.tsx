@@ -98,8 +98,8 @@ function SortableHeaderCell({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    width: column.width || undefined,
-    minWidth: column.minWidth,
+    width: column.id === 'title' ? undefined : column.width || undefined,
+    minWidth: column.id === 'title' ? undefined : column.minWidth,
   }
 
   const headerContent = (
@@ -244,8 +244,8 @@ function StaticHeaderCell({
         <ContextMenuTrigger asChild>
           <th
             style={{
-              width: column.width || undefined,
-              minWidth: column.minWidth,
+              width: column.id === 'title' ? undefined : column.width || undefined,
+              minWidth: column.id === 'title' ? undefined : column.minWidth,
             }}
             className={cn(
               'select-none whitespace-nowrap px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-zinc-400',
