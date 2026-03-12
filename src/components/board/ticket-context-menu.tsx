@@ -1169,6 +1169,18 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
                   }}
                 />
               )}
+              {!multi && (
+                <MenuButton
+                  icon={<Link2 className="h-4 w-4" />}
+                  label="Link ticket..."
+                  onMouseEnter={closeSubmenu}
+                  onClick={() => {
+                    setShowLinkDialog(true)
+                    setOpen(false)
+                    setSubmenu(null)
+                  }}
+                />
+              )}
               <MenuButton
                 icon={<ClipboardCopy className="h-4 w-4" />}
                 label="Copy"
@@ -1183,18 +1195,6 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
                 onMouseEnter={closeSubmenu}
                 onClick={doPaste}
               />
-              {!multi && (
-                <MenuButton
-                  icon={<Link2 className="h-4 w-4" />}
-                  label="Link ticket..."
-                  onMouseEnter={closeSubmenu}
-                  onClick={() => {
-                    setShowLinkDialog(true)
-                    setOpen(false)
-                    setSubmenu(null)
-                  }}
-                />
-              )}
               {!multi && (
                 <MenuButton
                   icon={<FolderOpen className="h-4 w-4" />}
