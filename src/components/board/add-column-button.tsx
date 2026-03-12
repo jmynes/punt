@@ -181,7 +181,10 @@ export function AddColumnButton({ projectId, projectKey }: AddColumnButtonProps)
 
   return (
     <>
-      <div className="relative flex w-72 flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-dashed border-zinc-800 bg-zinc-900/20 min-h-[200px] hover:border-zinc-700 hover:bg-zinc-900/30 transition-colors group">
+      <div
+        className="relative flex w-72 flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-dashed border-zinc-800 bg-zinc-900/20 min-h-[200px] hover:border-zinc-700 hover:bg-zinc-900/30 transition-colors group cursor-pointer"
+        onClick={handleOpenDialog}
+      >
         {/* Dismiss button */}
         <button
           type="button"
