@@ -502,7 +502,19 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
           }
         }}
       >
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+        <AlertDialogContent
+          className="bg-zinc-950 border-zinc-800"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault()
+            // Focus the confirmation input instead of the Cancel button
+            setTimeout(() => {
+              const input = document.querySelector<HTMLInputElement>(
+                '[data-slot="alert-dialog-content"] input[type="text"]',
+              )
+              input?.focus()
+            }, 0)
+          }}
+        >
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -528,19 +540,17 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
                       value={deleteConfirmText}
                       onChange={(e) => setDeleteConfirmText(e.target.value)}
                       onKeyDown={(e) => {
-                        if (
-                          e.key === 'Enter' &&
-                          deleteConfirmText === project.name &&
-                          !deleteProject.isPending
-                        ) {
-                          e.preventDefault()
-                          handleDeleteConfirmed()
+                        if (e.key === 'Enter') {
+                          e.stopPropagation()
+                          if (deleteConfirmText === project.name && !deleteProject.isPending) {
+                            e.preventDefault()
+                            handleDeleteConfirmed()
+                          }
                         }
                       }}
                       placeholder={`Type ${project.name} to confirm`}
                       className="bg-zinc-900 border-zinc-700 text-zinc-100"
                       autoComplete="off"
-                      autoFocus
                       disabled={deleteProject.isPending}
                     />
                   </div>
