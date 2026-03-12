@@ -83,8 +83,9 @@ export function KanbanBoard({
 
   // Custom collision detection:
   // - Column drags: only snap to other columns
-  // - Ticket drags: use closestCorners for columns/tickets, but rectIntersection
-  //   (any overlap) for the Add Column zone so it triggers earlier
+  // - Ticket drags: closestCorners for columns/tickets first, fall back to
+  //   rectIntersection for Add Column zone (so it only activates when the
+  //   ticket is past all real columns)
   const collisionDetection: CollisionDetection = useCallback((args) => {
     const isColumnDrag = args.active.data.current?.type === 'sortable-column'
     if (isColumnDrag) {
@@ -94,19 +95,23 @@ export function KanbanBoard({
       return closestCorners({ ...args, droppableContainers: columnContainers })
     }
 
-    // Check if dragged item overlaps the Add Column zone (triggers on any overlap)
+    // Try columns/tickets first (excludes add-column from closestCorners)
+    const nonAddColumnContainers = args.droppableContainers.filter(
+      (container) => container.data.current?.type !== 'add-column',
+    )
+    const columnCollisions = closestCorners({
+      ...args,
+      droppableContainers: nonAddColumnContainers,
+    })
+    if (columnCollisions.length > 0) {
+      return columnCollisions
+    }
+
+    // Fall back to Add Column zone (any overlap triggers it)
     const addColumnContainers = args.droppableContainers.filter(
       (container) => container.data.current?.type === 'add-column',
     )
-    const addColumnCollisions = rectIntersection({
-      ...args,
-      droppableContainers: addColumnContainers,
-    })
-    if (addColumnCollisions.length > 0) {
-      return addColumnCollisions
-    }
-
-    return closestCorners(args)
+    return rectIntersection({ ...args, droppableContainers: addColumnContainers })
   }, [])
 
   const handleDragStart = useCallback(
@@ -174,6 +179,12 @@ export function KanbanBoard({
       const snapshotColumns = beforeDragSnapshot.current
       if (!snapshotColumns) return
 
+      // Hovering over add-column zone — clear any column indicator
+      if (over.data.current?.type === 'add-column') {
+        setInsertPosition(null)
+        return
+      }
+
       // Find which column we're hovering over
       const isOverColumn = over.data.current?.type === 'column'
       const isOverColumnEnd = over.data.current?.type === 'column-end'
@@ -204,7 +215,10 @@ export function KanbanBoard({
         }
       }
 
-      if (!targetColumnId) return
+      if (!targetColumnId) {
+        setInsertPosition(null)
+        return
+      }
 
       const targetColumn = snapshotColumns.find((col) => col.id === targetColumnId)
       if (!targetColumn) return
