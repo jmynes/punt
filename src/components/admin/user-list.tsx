@@ -423,7 +423,7 @@ export function UserList() {
           apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-            body: JSON.stringify(updates),
+            body: JSON.stringify({ ...updates, skipReauth: true }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -456,7 +456,7 @@ export function UserList() {
       }
 
       // Handle case where all users were already in the target state
-      if (succeeded === 0 && skipped > 0) {
+      if (succeeded === 0 && skipped > 0 && failed === 0) {
         const state =
           'isSystemAdmin' in updates
             ? updates.isSystemAdmin
@@ -513,7 +513,7 @@ export function UserList() {
           apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-            body: JSON.stringify({ isActive: false }),
+            body: JSON.stringify({ isActive: false, skipReauth: true }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -542,7 +542,7 @@ export function UserList() {
         )
       }
 
-      if (succeeded === 0 && skipped > 0) {
+      if (succeeded === 0 && skipped > 0 && failed === 0) {
         showToast.info(
           `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already disabled`,
         )
@@ -576,7 +576,7 @@ export function UserList() {
           apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-            body: JSON.stringify({ isActive: true }),
+            body: JSON.stringify({ isActive: true, skipReauth: true }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -605,7 +605,7 @@ export function UserList() {
         )
       }
 
-      if (succeeded === 0 && skipped > 0) {
+      if (succeeded === 0 && skipped > 0 && failed === 0) {
         showToast.info(
           `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already enabled`,
         )
