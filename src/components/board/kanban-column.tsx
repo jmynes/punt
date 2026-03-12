@@ -298,33 +298,40 @@ export function KanbanColumn({
           </SortableContext>
 
           {/* Drop zone at bottom - droppable area for inserting at end */}
-          <div
-            ref={setEndDropRef}
-            className={cn(
-              'min-h-[80px] flex-1 rounded-lg transition-colors',
-              (dragSelectionIds.length > 0 || activeTicketId) && 'min-h-[100px]',
-              isOverEnd && 'bg-amber-500/10 border-2 border-dashed border-amber-500/50',
-            )}
-          >
-            {/* Show full-size placeholder at the end if target is beyond last ticket */}
-            {activeDragTarget !== null &&
-              activeDragTarget >=
-                sortedTickets.filter(
-                  (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
-                ).length &&
-              (dragSelectionIds.length > 0 || activeTicketId) && (
-                <div className="rounded-lg border-2 border-amber-500/50 border-dashed bg-amber-500/10 min-h-[120px] flex items-center justify-center pointer-events-none">
-                  <span className="text-xs text-amber-500/70">Drop here</span>
-                </div>
-              )}
+          {(() => {
+            const visibleCount = sortedTickets.filter(
+              (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
+            ).length
+            const isDragging = dragSelectionIds.length > 0 || activeTicketId
+            const showEndPlaceholder =
+              activeDragTarget !== null && activeDragTarget >= visibleCount && isDragging
+            return (
+              <div
+                ref={setEndDropRef}
+                className={cn(
+                  'min-h-[80px] flex-1 rounded-lg transition-colors',
+                  isDragging && 'min-h-[100px]',
+                  isOverEnd &&
+                    !showEndPlaceholder &&
+                    'bg-amber-500/10 border-2 border-dashed border-amber-500/50',
+                )}
+              >
+                {/* Show full-size placeholder at the end if target is beyond last ticket */}
+                {showEndPlaceholder && (
+                  <div className="rounded-lg border-2 border-amber-500/50 border-dashed bg-amber-500/10 min-h-[120px] flex items-center justify-center pointer-events-none">
+                    <span className="text-xs text-amber-500/70">Drop here</span>
+                  </div>
+                )}
 
-            {/* Drop zone indicator when empty and not dragging */}
-            {sortedTickets.length === 0 && !activeTicketId && dragSelectionIds.length === 0 && (
-              <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-lg">
-                <span className="text-xs text-zinc-600 select-none">Drop tickets here</span>
+                {/* Drop zone indicator when empty and not dragging */}
+                {sortedTickets.length === 0 && !activeTicketId && dragSelectionIds.length === 0 && (
+                  <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-lg">
+                    <span className="text-xs text-zinc-600 select-none">Drop tickets here</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            )
+          })()}
         </div>
       </ScrollArea>
 
