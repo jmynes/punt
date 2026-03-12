@@ -14,15 +14,15 @@ import {
 import { Layers } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { EmptyState } from '@/components/common/empty-state'
-import { useMoveTicket, useMoveTickets } from '@/hooks/queries/use-tickets'
-import { isCompletedColumn } from '@/lib/sprint-utils'
-import { getStatusIcon } from '@/lib/status-icons'
-import { showUndoRedoToast } from '@/lib/undo-toast'
+import { getTabId } from '@/hooks/use-realtime'
+import {
+  moveTickets as moveTicketsAction,
+  reorderTickets as reorderTicketsAction,
+} from '@/lib/actions'
 import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
-import { useUndoStore } from '@/stores/undo-store'
 import type { ColumnWithTickets, TicketWithRelations } from '@/types'
 import { AddColumnButton } from './add-column-button'
 import { KanbanCard } from './kanban-card'
@@ -41,13 +41,8 @@ export function KanbanBoard({
   filteredColumns,
   activeSprintId = null,
 }: KanbanBoardProps) {
-  const { getColumns, moveTicket, moveTickets, reorderTicket, reorderTickets, _hasHydrated } =
-    useBoardStore()
+  const { getColumns, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen } = useUIStore()
-
-  // API mutations
-  const moveTicketMutation = useMoveTicket()
-  const moveTicketsMutation = useMoveTickets()
 
   // Get unfiltered columns for drag/drop operations (need full data for snapshots)
   const columns = getColumns(projectId)
@@ -214,175 +209,39 @@ export function KanbanBoard({
       const targetColumnId = insertPosition.columnId
       const insertIndex = insertPosition.index
       const isSameColumn = sourceColumn.id === targetColumnId
-      const isSingleDrag = draggedIds.length === 1
+      const tabId = getTabId()
 
-      // Apply the move NOW (only on drop) - optimistic update
-      if (isSingleDrag) {
-        if (isSameColumn) {
-          reorderTicket(projectId, targetColumnId, draggedIds[0], insertIndex)
-        } else {
-          moveTicket(projectId, draggedIds[0], sourceColumn.id, targetColumnId, insertIndex)
-        }
-      } else {
+      // Delegate to unified action layer (handles optimistic update, resolution coupling,
+      // undo registration, toast, API persistence, and error rollback)
+      if (isSameColumn) {
         const allFromSameColumn = draggedIds.every((id) =>
           sourceColumn.tickets.some((t) => t.id === id),
         )
-        if (allFromSameColumn && isSameColumn) {
-          reorderTickets(projectId, targetColumnId, draggedIds, insertIndex)
-        } else {
-          moveTickets(projectId, draggedIds, targetColumnId, insertIndex)
-        }
-      }
-
-      // Auto-couple resolution/resolvedAt when moving to/from done columns
-      if (!isSameColumn) {
-        const currentColumns = useBoardStore.getState().getColumns(projectId)
-        const targetCol = currentColumns.find((col) => col.id === targetColumnId)
-        if (targetCol && isCompletedColumn(targetCol.name)) {
-          // Moving to done column → set resolution/resolvedAt for tickets that don't have one
-          for (const id of draggedIds) {
-            const t = targetCol.tickets.find((tk) => tk.id === id)
-            if (t && !t.resolution) {
-              useBoardStore
-                .getState()
-                .updateTicket(projectId, id, { resolution: 'Done', resolvedAt: new Date() })
-            }
-          }
-        } else if (targetCol) {
-          // Moving out of done column → clear resolution/resolvedAt
-          for (const id of draggedIds) {
-            const t = targetCol.tickets.find((tk) => tk.id === id)
-            if (t?.resolution) {
-              useBoardStore
-                .getState()
-                .updateTicket(projectId, id, { resolution: null, resolvedAt: null })
-            }
-          }
-        }
-      }
-
-      // Get after state for undo
-      const afterColumns = useBoardStore.getState().getColumns(projectId)
-      const afterSnapshot = afterColumns.map((col) => ({
-        ...col,
-        tickets: col.tickets.map((t) => ({ ...t })),
-      }))
-      // Check for cross-column moves for undo/notification
-      if (!isSameColumn) {
-        const fromName = sourceColumn.name
-        const toColumn = afterColumns.find((col) => col.id === targetColumnId)
-        const toName = toColumn?.name || 'Unknown'
-
-        const allTickets = afterColumns.flatMap((col) => col.tickets)
-        const ticketKeys = draggedIds
-          .map((id) => {
-            const ticket = allTickets.find((t) => t.id === id)
-            return ticket ? `${projectKey}-${ticket.number}` : id
-          })
-          .filter(Boolean)
-
-        const moves = draggedIds.map((id) => ({
-          ticketId: id,
-          fromColumnId: sourceColumn.id,
-          toColumnId: targetColumnId,
-        }))
-
-        const toastTitle =
-          moves.length === 1
-            ? `Ticket moved from ${fromName}`
-            : `${moves.length} tickets moved from ${fromName}`
-        const { icon: StatusIcon, color: statusColor } = getStatusIcon(toName)
-
-        const toastDescription =
-          moves.length === 1 ? (
-            <div className="flex items-center gap-1.5">
-              <span>{`${ticketKeys[0]} Moved to`}</span>
-              <StatusIcon className={`h-4 w-4 ${statusColor}`} aria-hidden />
-              <span>{toName}</span>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {ticketKeys.map((k) => (
-                <div key={k} className="flex items-center gap-1.5">
-                  <span>{`${k} Moved to`}</span>
-                  <StatusIcon className={`h-4 w-4 ${statusColor}`} aria-hidden />
-                  <span>{toName}</span>
-                </div>
-              ))}
-            </div>
-          )
-
-        showUndoRedoToast('success', {
-          title: toastTitle,
-          description: toastDescription,
-          duration: 5000,
-        })
-
-        useUndoStore
-          .getState()
-          .pushMove(projectId, moves, fromName, toName, snapshot, afterSnapshot)
-      } else {
-        // Same-column reorder - also register undo
-        const allTickets = afterColumns.flatMap((col) => col.tickets)
-        const ticketKeys = draggedIds
-          .map((id) => {
-            const ticket = allTickets.find((t) => t.id === id)
-            return ticket ? `${projectKey}-${ticket.number}` : id
-          })
-          .filter(Boolean)
-
-        const toastTitle =
-          draggedIds.length === 1 ? 'Ticket reordered' : `${draggedIds.length} tickets reordered`
-
-        const toastDescription =
-          draggedIds.length === 1
-            ? `${ticketKeys[0]} moved within ${sourceColumn.name}`
-            : `${ticketKeys.join(', ')} moved within ${sourceColumn.name}`
-
-        showUndoRedoToast('success', {
-          title: toastTitle,
-          description: toastDescription,
-          duration: 5000,
-        })
-
-        // Use fake moves since it's a reorder within the same column
-        const fakeMoves = draggedIds.map((id) => ({
-          ticketId: id,
-          fromColumnId: sourceColumn.id,
-          toColumnId: sourceColumn.id,
-        }))
-
-        useUndoStore
-          .getState()
-          .pushMove(
+        if (allFromSameColumn) {
+          reorderTicketsAction({
             projectId,
-            fakeMoves,
-            sourceColumn.name,
-            sourceColumn.name,
-            snapshot,
-            afterSnapshot,
-          )
-      }
-
-      // Persist to API (after optimistic update)
-      if (isSingleDrag) {
-        // Single ticket move/reorder
-        moveTicketMutation.mutate({
-          projectId,
-          ticketId: draggedIds[0],
-          fromColumnId: sourceColumn.id,
-          toColumnId: targetColumnId,
-          newOrder: insertIndex,
-          previousColumns: snapshot,
-        })
+            columnId: targetColumnId,
+            ticketIds: draggedIds,
+            targetIndex: insertIndex,
+            tabId,
+          })
+        } else {
+          // Mixed sources but dropping in same column — treat as move
+          moveTicketsAction({
+            projectId,
+            ticketIds: draggedIds,
+            toColumnId: targetColumnId,
+            toIndex: insertIndex,
+            tabId,
+          })
+        }
       } else {
-        // Multiple tickets move
-        moveTicketsMutation.mutate({
+        moveTicketsAction({
           projectId,
           ticketIds: draggedIds,
           toColumnId: targetColumnId,
-          newOrder: insertIndex,
-          previousColumns: snapshot,
+          toIndex: insertIndex,
+          tabId,
         })
       }
 
@@ -398,17 +257,7 @@ export function KanbanBoard({
         useSelectionStore.getState().clearSelection()
       }
     },
-    [
-      insertPosition,
-      moveTicket,
-      moveTickets,
-      projectId,
-      projectKey,
-      reorderTicket,
-      reorderTickets,
-      moveTicketMutation,
-      moveTicketsMutation,
-    ],
+    [insertPosition, projectId],
   )
 
   // Show loading skeleton until Zustand hydrates from localStorage

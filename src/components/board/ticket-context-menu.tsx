@@ -54,16 +54,16 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { sprintKeys, useProjectSprints } from '@/hooks/queries/use-sprints'
-import {
-  ticketKeys as ticketQueryKeys,
-  updateTicketAPI,
-  updateTicketWithActivity,
-} from '@/hooks/queries/use-tickets'
+import { ticketKeys as ticketQueryKeys, updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { useCurrentUser, useProjectMembers } from '@/hooks/use-current-user'
+import { getTabId } from '@/hooks/use-realtime'
 import { useStoryPointScale } from '@/hooks/use-story-points'
-import { pasteTickets } from '@/lib/actions'
+import {
+  moveTickets as moveTicketsAction,
+  pasteTickets,
+  updateTickets as updateTicketsAction,
+} from '@/lib/actions'
 import { deleteTickets } from '@/lib/actions/delete-tickets'
-import { isCompletedColumn } from '@/lib/sprint-utils'
 import { getColumnIcon, getStatusIcon } from '@/lib/status-icons'
 import { formatTicketIds } from '@/lib/ticket-format'
 import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
@@ -321,12 +321,6 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
   }
 
   const doSendTo = (toColumnId: string) => {
-    const column = columns.find((c: ColumnWithTickets) => c.id === toColumnId)
-    if (!column) return
-    const toOrder = column.tickets.length
-    const moveTickets = board.moveTickets || (() => {})
-    const moveTicket = board.moveTicket || (() => {})
-
     const movableIds = selectedIds.filter((id: string) => {
       const current = columns
         .flatMap((c: ColumnWithTickets) => c.tickets)
@@ -335,87 +329,13 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
     })
     if (movableIds.length === 0) return
 
-    const beforeColumns = columns.map((col: ColumnWithTickets) => ({
-      ...col,
-      tickets: col.tickets.map((t) => ({ ...t })),
-    }))
-
-    if (movableIds.length > 1) {
-      moveTickets(projectId, movableIds, toColumnId, toOrder)
-    } else {
-      const from = ticket.columnId
-      moveTicket(projectId, movableIds[0], from, toColumnId, toOrder)
-    }
-
-    const boardStateAfter = useBoardStore.getState ? useBoardStore.getState() : board
-    const afterColumns = boardStateAfter.getColumns(projectId).map((col: ColumnWithTickets) => ({
-      ...col,
-      tickets: col.tickets.map((t: TicketWithRelations) => ({ ...t })),
-    }))
-
-    const moves = movableIds.map((id: string) => ({
-      ticketId: id,
-      fromColumnId:
-        beforeColumns.find((c: ColumnWithTickets) => c.tickets.some((t) => t.id === id))?.id || '',
-      toColumnId: toColumnId,
-    }))
-    const fromColumnName =
-      moves.length === 1
-        ? beforeColumns.find((c: ColumnWithTickets) => c.id === moves[0].fromColumnId)?.name ||
-          'Source'
-        : 'Multiple'
-    const toColumnName = column.name
-
-    // Persist move to database
-    ;(async () => {
-      try {
-        for (const move of moves) {
-          await updateTicketAPI(projectId, move.ticketId, {
-            columnId: move.toColumnId,
-          })
-        }
-      } catch (err) {
-        console.error('Failed to persist move:', err)
-      }
-    })()
-
-    const ticketKeys = formatTicketIds(
-      afterColumns,
-      moves.map((m: { ticketId: string }) => m.ticketId),
-    )
-
-    const toastTitle =
-      moves.length === 1
-        ? `Ticket moved from ${fromColumnName}`
-        : `${moves.length} tickets moved from ${fromColumnName}`
-    const { icon: StatusIcon, color: statusColor } = getStatusIcon(toColumnName)
-    const toastDescription =
-      moves.length === 1 ? (
-        <div className="flex items-center gap-1.5">
-          <span>{`${ticketKeys[0]} Moved to`}</span>
-          <StatusIcon className={`h-4 w-4 ${statusColor}`} aria-hidden />
-          <span>{toColumnName}</span>
-        </div>
-      ) : (
-        <div className="space-y-1">
-          {ticketKeys.map((k) => (
-            <div key={k} className="flex items-center gap-1.5">
-              <span>{`${k} Moved to`}</span>
-              <StatusIcon className={`h-4 w-4 ${statusColor}`} aria-hidden />
-              <span>{toColumnName}</span>
-            </div>
-          ))}
-        </div>
-      )
-
-    showUndoRedoToast('success', {
-      title: toastTitle,
-      description: toastDescription,
-      duration: getEffectiveDuration(3000),
+    // Unified action handles: optimistic update, resolution coupling, undo, toast, batch API, rollback
+    moveTicketsAction({
+      projectId,
+      ticketIds: movableIds,
+      toColumnId,
+      tabId: getTabId(),
     })
-
-    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushMove(projectId, moves, fromColumnName, toColumnName, beforeColumns, afterColumns)
 
     setOpen(false)
     setSubmenu(null)
@@ -436,25 +356,22 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
   }
 
   const doPriority = (priority: TicketWithRelations['priority']) => {
-    const updateTicket = board.updateTicket || (() => {})
-    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
-      []
-    for (const id of selectedIds) {
-      const current = columns
-        .flatMap((c: ColumnWithTickets) => c.tickets)
-        .find((t: TicketWithRelations) => t.id === id)
-      if (!current || current.priority === priority) continue
-      const after = { ...current, priority }
-      updates.push({ ticketId: id, before: current, after })
-      updateTicket(projectId, id, { priority })
-    }
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const updates = selectedIds
+      .map((id: string) => {
+        const current = allTickets.find((t: TicketWithRelations) => t.id === id)
+        if (!current || current.priority === priority) return null
+        return { ticketId: id, changes: { priority } as Partial<TicketWithRelations> }
+      })
+      .filter(Boolean) as Array<{ ticketId: string; changes: Partial<TicketWithRelations> }>
     if (updates.length === 0) return
+
+    updateTicketsAction({ projectId, updates, tabId: getTabId() })
 
     const ticketKeys = formatTicketIds(
       columns,
       updates.map((u) => u.ticketId),
     )
-
     rawToast.success(
       updates.length === 1 ? 'Priority updated' : `${updates.length} priorities updated`,
       {
@@ -462,107 +379,55 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
         duration: getEffectiveDuration(3000),
       },
     )
-    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(projectId, updates)
-
-    // Persist to database
-    ;(async () => {
-      try {
-        for (const update of updates) {
-          await updateTicketWithActivity(projectId, update.ticketId, { priority })
-        }
-      } catch (err) {
-        console.error('Failed to persist priority update:', err)
-      }
-    })()
 
     setOpen(false)
     setSubmenu(null)
   }
 
   const doType = (type: IssueType) => {
-    const updateTicket = board.updateTicket || (() => {})
-    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
-      []
-    for (const id of selectedIds) {
-      const current = columns
-        .flatMap((c: ColumnWithTickets) => c.tickets)
-        .find((t: TicketWithRelations) => t.id === id)
-      if (!current || current.type === type) continue
-      const after = { ...current, type }
-      updates.push({ ticketId: id, before: current, after })
-      updateTicket(projectId, id, { type })
-    }
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const updates = selectedIds
+      .map((id: string) => {
+        const current = allTickets.find((t: TicketWithRelations) => t.id === id)
+        if (!current || current.type === type) return null
+        return { ticketId: id, changes: { type } as Partial<TicketWithRelations> }
+      })
+      .filter(Boolean) as Array<{ ticketId: string; changes: Partial<TicketWithRelations> }>
     if (updates.length === 0) return
+
+    updateTicketsAction({ projectId, updates, tabId: getTabId() })
 
     const ticketKeys = formatTicketIds(
       columns,
       updates.map((u) => u.ticketId),
     )
-
     rawToast.success(updates.length === 1 ? 'Type updated' : `${updates.length} types updated`, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: getEffectiveDuration(3000),
     })
-    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(projectId, updates)
-
-    // Persist to database
-    ;(async () => {
-      try {
-        for (const update of updates) {
-          await updateTicketWithActivity(projectId, update.ticketId, { type })
-        }
-      } catch (err) {
-        console.error('Failed to persist type update:', err)
-      }
-    })()
 
     setOpen(false)
     setSubmenu(null)
   }
 
   const doResolution = (resolution: Resolution | null) => {
-    const updateTicket = board.updateTicket || (() => {})
-    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
-      []
-
-    // Find the first done column for auto-coupling
-    const doneCol = columns.find((c: ColumnWithTickets) => isCompletedColumn(c.name))
-
-    for (const id of selectedIds) {
-      const current = columns
-        .flatMap((c: ColumnWithTickets) => c.tickets)
-        .find((t: TicketWithRelations) => t.id === id)
-      if (!current || current.resolution === resolution) continue
-
-      // Auto-couple: setting resolution moves to done column, clearing it moves out
-      const currentCol = columns.find((c: ColumnWithTickets) => c.id === current.columnId)
-      const needsMove = resolution && currentCol && !isCompletedColumn(currentCol.name) && doneCol
-      const needsClear = !resolution && currentCol && isCompletedColumn(currentCol.name)
-
-      const after: TicketWithRelations = {
-        ...current,
-        resolution,
-        // Sync resolvedAt: update timestamp on any resolution change, clear when unresolved
-        resolvedAt: resolution ? new Date() : null,
-        ...(needsMove && doneCol ? { columnId: doneCol.id } : {}),
-        ...(needsClear ? { resolution: null, resolvedAt: null } : {}),
-      }
-      updates.push({ ticketId: id, before: current, after })
-      updateTicket(projectId, id, {
-        resolution: after.resolution,
-        resolvedAt: after.resolvedAt,
-        ...(needsMove && doneCol ? { columnId: doneCol.id } : {}),
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const updates = selectedIds
+      .map((id: string) => {
+        const current = allTickets.find((t: TicketWithRelations) => t.id === id)
+        if (!current || current.resolution === resolution) return null
+        return { ticketId: id, changes: { resolution } as Partial<TicketWithRelations> }
       })
-    }
+      .filter(Boolean) as Array<{ ticketId: string; changes: Partial<TicketWithRelations> }>
     if (updates.length === 0) return
+
+    // Action handles resolution coupling: auto-move to done column, resolvedAt sync
+    updateTicketsAction({ projectId, updates, tabId: getTabId() })
 
     const ticketKeys = formatTicketIds(
       columns,
       updates.map((u) => u.ticketId),
     )
-
     const msg =
       updates.length === 1
         ? resolution
@@ -571,24 +436,10 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
         : resolution
           ? `${updates.length} tickets set to ${resolution}`
           : `Resolution cleared from ${updates.length} tickets`
-
     rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: getEffectiveDuration(3000),
     })
-    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(projectId, updates)
-
-    // Persist to database
-    ;(async () => {
-      try {
-        for (const update of updates) {
-          await updateTicketWithActivity(projectId, update.ticketId, { resolution })
-        }
-      } catch (err) {
-        console.error('Failed to persist resolution update:', err)
-      }
-    })()
 
     setOpen(false)
     setSubmenu(null)
@@ -596,31 +447,29 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
 
   const doAssign = (userId: string | null) => {
     const user = members.find((m) => m.id === userId) || null
-    const updateTicket = board.updateTicket || (() => {})
-    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
-      []
-    for (const id of selectedIds) {
-      const current = columns
-        .flatMap((c: ColumnWithTickets) => c.tickets)
-        .find((t: TicketWithRelations) => t.id === id)
-      if (!current) continue
-      const currentAssignee = current.assigneeId || null
-      if (currentAssignee === userId) continue
-      const after: TicketWithRelations = {
-        ...current,
-        assignee: user ?? null,
-        assigneeId: user?.id ?? null,
-      }
-      updates.push({ ticketId: id, before: current, after })
-      updateTicket(projectId, id, { assignee: user ?? null, assigneeId: user?.id ?? null })
-    }
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const updates = selectedIds
+      .map((id: string) => {
+        const current = allTickets.find((t: TicketWithRelations) => t.id === id)
+        if (!current) return null
+        if ((current.assigneeId || null) === userId) return null
+        return {
+          ticketId: id,
+          changes: {
+            assignee: user ?? null,
+            assigneeId: user?.id ?? null,
+          } as Partial<TicketWithRelations>,
+        }
+      })
+      .filter(Boolean) as Array<{ ticketId: string; changes: Partial<TicketWithRelations> }>
     if (updates.length === 0) return
+
+    updateTicketsAction({ projectId, updates, tabId: getTabId() })
 
     const ticketKeys = formatTicketIds(
       columns,
       updates.map((u) => u.ticketId),
     )
-
     const msg =
       updates.length === 1
         ? user
@@ -629,56 +478,33 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
         : user
           ? `Assigned ${updates.length} tickets to ${user.name}`
           : `Unassigned ${updates.length} tickets`
-
     rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: getEffectiveDuration(3000),
     })
-    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(projectId, updates)
-
-    // Persist to database
-    ;(async () => {
-      try {
-        for (const update of updates) {
-          await updateTicketWithActivity(projectId, update.ticketId, {
-            assigneeId: userId,
-          })
-        }
-      } catch (err) {
-        console.error('Failed to persist assignee update:', err)
-      }
-    })()
 
     setOpen(false)
     setSubmenu(null)
   }
 
   const doPoints = (points: number | null) => {
-    const updateTicket = board.updateTicket || (() => {})
-    const updates: { ticketId: string; before: TicketWithRelations; after: TicketWithRelations }[] =
-      []
-    for (const id of selectedIds) {
-      const current = columns
-        .flatMap((c: ColumnWithTickets) => c.tickets)
-        .find((t: TicketWithRelations) => t.id === id)
-      if (!current) continue
-      const currentPoints = current.storyPoints ?? null
-      if (currentPoints === points) continue
-      const after: TicketWithRelations = {
-        ...current,
-        storyPoints: points,
-      }
-      updates.push({ ticketId: id, before: current, after })
-      updateTicket(projectId, id, { storyPoints: points })
-    }
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    const updates = selectedIds
+      .map((id: string) => {
+        const current = allTickets.find((t: TicketWithRelations) => t.id === id)
+        if (!current) return null
+        if ((current.storyPoints ?? null) === points) return null
+        return { ticketId: id, changes: { storyPoints: points } as Partial<TicketWithRelations> }
+      })
+      .filter(Boolean) as Array<{ ticketId: string; changes: Partial<TicketWithRelations> }>
     if (updates.length === 0) return
+
+    updateTicketsAction({ projectId, updates, tabId: getTabId() })
 
     const ticketKeys = formatTicketIds(
       columns,
       updates.map((u) => u.ticketId),
     )
-
     const msg =
       updates.length === 1
         ? points !== null
@@ -687,26 +513,10 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
         : points !== null
           ? `Set ${updates.length} tickets to ${points} point${points === 1 ? '' : 's'}`
           : `Cleared points from ${updates.length} tickets`
-
     rawToast.success(msg, {
       description: updates.length === 1 ? ticketKeys[0] : ticketKeys.join(', '),
       duration: getEffectiveDuration(3000),
     })
-    const undoState = useUndoStore.getState ? useUndoStore.getState() : undoStore
-    undoState.pushUpdate(projectId, updates)
-
-    // Persist to database
-    ;(async () => {
-      try {
-        for (const update of updates) {
-          await updateTicketWithActivity(projectId, update.ticketId, {
-            storyPoints: points,
-          })
-        }
-      } catch (err) {
-        console.error('Failed to persist points update:', err)
-      }
-    })()
 
     setOpen(false)
     setSubmenu(null)
