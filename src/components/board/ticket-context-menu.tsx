@@ -172,10 +172,18 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
 
   // Fetch sprints for add to sprint menu
   const { data: sprints = [] } = useProjectSprints(projectId)
-  // Fetch existing links only when the link dialog is open (lazy load)
+  // Fetch existing links only when the link dialog is open (lazy load, single ticket only)
   const { data: existingLinks = [] } = useTicketLinks(projectId, ticket.id, {
-    enabled: showLinkDialog,
+    enabled: showLinkDialog && !multi,
   })
+  // Resolve selected IDs to full ticket objects for the link dialog
+  const selectedTicketsForLink = useMemo(() => {
+    if (!showLinkDialog) return []
+    const allTickets = columns.flatMap((c: ColumnWithTickets) => c.tickets)
+    return selectedIds
+      .map((id: string) => allTickets.find((t: TicketWithRelations) => t.id === id))
+      .filter(Boolean) as TicketWithRelations[]
+  }, [showLinkDialog, selectedIds, columns])
   const hasActiveSprint = useMemo(() => sprints.some((s) => s.status === 'active'), [sprints])
   const availableSprints = useMemo(() => {
     const activePlanningsprints = sprints.filter(
@@ -1692,10 +1700,9 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
         <LinkTicketDialog
           open={showLinkDialog}
           onOpenChange={setShowLinkDialog}
-          ticket={ticket}
-          projectKey={project?.key || ''}
+          {...(multi ? { tickets: selectedTicketsForLink } : { ticket, existingLinks })}
+          projectKey={project?.key ?? ''}
           projectId={projectId}
-          existingLinks={existingLinks}
         />
       )}
     </>
