@@ -321,45 +321,55 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
 
             <AlertDialog open={showDeleteAlertDialog} onOpenChange={setShowDeleteAlertDialog}>
               <AlertDialogContent className="bg-zinc-900 border-zinc-800">
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="text-zinc-100">
-                    Are you absolutely sure?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription className="text-zinc-400">
-                    This action cannot be undone. Your account will be permanently deactivated and
-                    you will lose access to all your data.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="deleteConfirmation" className="text-zinc-300">
-                      Type <span className="font-mono text-red-400">DELETE MY ACCOUNT</span> to
-                      confirm
-                    </Label>
-                    <Input
-                      id="deleteConfirmation"
-                      value={deleteConfirmation}
-                      onChange={(e) => setDeleteConfirmation(e.target.value)}
-                      placeholder="DELETE MY ACCOUNT"
-                      className="bg-zinc-900 border-zinc-700 font-mono"
-                    />
-                  </div>
-                </div>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-                    Cancel
-                  </AlertDialogCancel>
-                  <Button
-                    onClick={() => {
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (deleteConfirmation === 'DELETE MY ACCOUNT') {
                       setShowDeleteAlertDialog(false)
                       setShowDeleteReauthDialog(true)
-                    }}
-                    disabled={deleteConfirmation !== 'DELETE MY ACCOUNT'}
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    Delete Account
-                  </Button>
-                </AlertDialogFooter>
+                    }
+                  }}
+                >
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-zinc-100">
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-zinc-400">
+                      This action cannot be undone. Your account will be permanently deactivated and
+                      you will lose access to all your data.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="deleteConfirmation" className="text-zinc-300">
+                        Type <span className="font-mono text-red-400">DELETE MY ACCOUNT</span> to
+                        confirm
+                      </Label>
+                      <Input
+                        id="deleteConfirmation"
+                        value={deleteConfirmation}
+                        onChange={(e) => setDeleteConfirmation(e.target.value)}
+                        placeholder="DELETE MY ACCOUNT"
+                        className="bg-zinc-900 border-zinc-700 font-mono"
+                      />
+                    </div>
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel
+                      type="button"
+                      className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                    >
+                      Cancel
+                    </AlertDialogCancel>
+                    <Button
+                      type="submit"
+                      disabled={deleteConfirmation !== 'DELETE MY ACCOUNT'}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      Delete Account
+                    </Button>
+                  </AlertDialogFooter>
+                </form>
               </AlertDialogContent>
             </AlertDialog>
 

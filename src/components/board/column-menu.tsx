@@ -441,146 +441,155 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       {/* Edit Column Dialog (PUNT-72: uses Dialog for close button + click-outside dismiss) */}
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent className="bg-zinc-900 border-zinc-700">
-          <DialogHeader>
-            <DialogTitle className="text-zinc-100">Edit column</DialogTitle>
-            <DialogDescription className="text-zinc-400">
-              Update the name and icon for the &quot;{column.name}&quot; column.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {(() => {
-              const preview = getColumnIcon(iconValue, renameValue, colorValue)
-              const PreviewIcon = preview.icon
-              const isHex = preview.color.startsWith('#')
-              return (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center h-9 w-9 shrink-0 rounded-md bg-zinc-800 border border-zinc-700">
-                    <PreviewIcon
-                      className={cn('h-4 w-4', isHex ? undefined : preview.color)}
-                      style={isHex ? { color: preview.color } : undefined}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (
+                renameValue.trim() &&
+                !renameLoading &&
+                (renameValue.trim() !== column.name ||
+                  iconValue !== (column.icon ?? null) ||
+                  colorValue !== (column.color ?? null))
+              )
+                handleRename()
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-zinc-100">Edit column</DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                Update the name and icon for the &quot;{column.name}&quot; column.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              {(() => {
+                const preview = getColumnIcon(iconValue, renameValue, colorValue)
+                const PreviewIcon = preview.icon
+                const isHex = preview.color.startsWith('#')
+                return (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center h-9 w-9 shrink-0 rounded-md bg-zinc-800 border border-zinc-700">
+                      <PreviewIcon
+                        className={cn('h-4 w-4', isHex ? undefined : preview.color)}
+                        style={isHex ? { color: preview.color } : undefined}
+                      />
+                    </div>
+                    <Input
+                      ref={renameInputRef}
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      placeholder="Column name"
+                      maxLength={50}
+                      className="bg-zinc-800 border-zinc-700 text-zinc-100"
+                      disabled={renameLoading}
                     />
                   </div>
-                  <Input
-                    ref={renameInputRef}
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleRename()
-                      }
-                    }}
-                    placeholder="Column name"
-                    maxLength={50}
-                    className="bg-zinc-800 border-zinc-700 text-zinc-100"
-                    disabled={renameLoading}
-                  />
+                )
+              })()}
+              <div>
+                <span className="text-sm font-medium text-zinc-300 mb-2 block">Icon</span>
+                <div className="grid grid-cols-7 gap-1">
+                  {COLUMN_ICON_OPTIONS.map((opt) => {
+                    const Icon = opt.icon
+                    const isSelected = iconValue === opt.name
+                    // Show selected icon in the chosen custom color, or default
+                    const isHex = colorValue?.startsWith('#')
+                    const iconClass = isSelected ? (isHex ? undefined : opt.color) : 'text-zinc-400'
+                    const iconStyle =
+                      isSelected && isHex && colorValue ? { color: colorValue } : undefined
+                    return (
+                      <Tooltip key={opt.name}>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => setIconValue(isSelected ? null : opt.name)}
+                            className={cn(
+                              'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+                              isSelected
+                                ? 'bg-amber-600/20 ring-1 ring-amber-500'
+                                : 'hover:bg-zinc-800',
+                            )}
+                            disabled={renameLoading}
+                          >
+                            <Icon className={cn('h-4 w-4', iconClass)} style={iconStyle} />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          {opt.name}
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
                 </div>
-              )
-            })()}
-            <div>
-              <span className="text-sm font-medium text-zinc-300 mb-2 block">Icon</span>
-              <div className="grid grid-cols-7 gap-1">
-                {COLUMN_ICON_OPTIONS.map((opt) => {
-                  const Icon = opt.icon
-                  const isSelected = iconValue === opt.name
-                  // Show selected icon in the chosen custom color, or default
-                  const isHex = colorValue?.startsWith('#')
-                  const iconClass = isSelected ? (isHex ? undefined : opt.color) : 'text-zinc-400'
-                  const iconStyle =
-                    isSelected && isHex && colorValue ? { color: colorValue } : undefined
-                  return (
-                    <Tooltip key={opt.name}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => setIconValue(isSelected ? null : opt.name)}
-                          className={cn(
-                            'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
-                            isSelected
-                              ? 'bg-amber-600/20 ring-1 ring-amber-500'
-                              : 'hover:bg-zinc-800',
-                          )}
-                          disabled={renameLoading}
-                        >
-                          <Icon className={cn('h-4 w-4', iconClass)} style={iconStyle} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="text-xs">
-                        {opt.name}
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })}
+                <p className="text-xs text-zinc-500 mt-1">
+                  {iconValue
+                    ? 'Click selected icon to clear'
+                    : 'No icon selected \u2014 auto-detected from name'}
+                </p>
               </div>
-              <p className="text-xs text-zinc-500 mt-1">
-                {iconValue
-                  ? 'Click selected icon to clear'
-                  : 'No icon selected \u2014 auto-detected from name'}
-              </p>
+              <div>
+                <span className="text-sm font-medium text-zinc-300 mb-2 block">Color</span>
+                {colorValue ? (
+                  <>
+                    <ColorPickerBody
+                      activeColor={colorValue}
+                      onColorChange={setColorValue}
+                      onApply={setColorValue}
+                      isDisabled={renameLoading}
+                      projectId={projectId}
+                    />
+                    {/* PUNT-74: Ghost button style for reset */}
+                    <button
+                      type="button"
+                      onClick={() => setColorValue(null)}
+                      disabled={renameLoading}
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800/50 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Reset to default color
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-zinc-500 mb-2">
+                      Using auto-detected color from icon. Pick a custom color:
+                    </p>
+                    {/* PUNT-73: Resolve auto-detected color instead of hardcoding #3b82f6 */}
+                    <ColorPickerBody
+                      activeColor={resolveColumnColor(null, iconValue, renameValue) ?? ''}
+                      onColorChange={setColorValue}
+                      onApply={setColorValue}
+                      isDisabled={renameLoading}
+                      projectId={projectId}
+                    />
+                  </>
+                )}
+              </div>
             </div>
-            <div>
-              <span className="text-sm font-medium text-zinc-300 mb-2 block">Color</span>
-              {colorValue ? (
-                <>
-                  <ColorPickerBody
-                    activeColor={colorValue}
-                    onColorChange={setColorValue}
-                    onApply={setColorValue}
-                    isDisabled={renameLoading}
-                    projectId={projectId}
-                  />
-                  {/* PUNT-74: Ghost button style for reset */}
-                  <button
-                    type="button"
-                    onClick={() => setColorValue(null)}
-                    disabled={renameLoading}
-                    className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800/50 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    Reset to default color
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-xs text-zinc-500 mb-2">
-                    Using auto-detected color from icon. Pick a custom color:
-                  </p>
-                  {/* PUNT-73: Resolve auto-detected color instead of hardcoding #3b82f6 */}
-                  <ColorPickerBody
-                    activeColor={resolveColumnColor(null, iconValue, renameValue) ?? ''}
-                    onColorChange={setColorValue}
-                    onApply={setColorValue}
-                    isDisabled={renameLoading}
-                    projectId={projectId}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setRenameOpen(false)}
-              className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
-              disabled={renameLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleRename}
-              disabled={
-                renameLoading ||
-                !renameValue.trim() ||
-                (renameValue.trim() === column.name &&
-                  iconValue === (column.icon ?? null) &&
-                  colorValue === (column.color ?? null))
-              }
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              {renameLoading ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRenameOpen(false)}
+                className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
+                disabled={renameLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  renameLoading ||
+                  !renameValue.trim() ||
+                  (renameValue.trim() === column.name &&
+                    iconValue === (column.icon ?? null) &&
+                    colorValue === (column.color ?? null))
+                }
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {renameLoading ? 'Saving...' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
