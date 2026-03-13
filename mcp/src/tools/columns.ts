@@ -71,7 +71,7 @@ export function registerColumnTools(server: McpServer) {
     {
       projectKey: z.string().describe('Project key (e.g., PUNT)'),
       name: z.string().min(1).describe('Column name'),
-      position: z.number().optional().describe('Position (1-based). Defaults to end.'),
+      position: z.coerce.number().optional().describe('Position (1-based). Defaults to end.'),
     },
     async ({ projectKey, name, position }) => {
       const upperKey = projectKey.toUpperCase()
@@ -147,7 +147,7 @@ export function registerColumnTools(server: McpServer) {
     {
       projectKey: z.string().describe('Project key'),
       columnName: z.string().describe('Column name to move'),
-      position: z.number().min(1).describe('New position (1-based)'),
+      position: z.coerce.number().min(1).describe('New position (1-based)'),
     },
     async ({ projectKey, columnName, position }) => {
       const upperKey = projectKey.toUpperCase()
