@@ -12,16 +12,16 @@ const ACCOUNT_TABS: TabItem[] = [
     icon: <User className="h-4 w-4" />,
   },
   {
-    value: 'mcp',
-    label: 'MCP',
-    href: '/account/mcp',
-    icon: <Terminal className="h-4 w-4" />,
-  },
-  {
     value: 'chat',
     label: 'Chat',
     href: '/account/chat',
     icon: <MessageSquare className="h-4 w-4" />,
+  },
+  {
+    value: 'mcp',
+    label: 'MCP',
+    href: '/account/mcp',
+    icon: <Terminal className="h-4 w-4" />,
   },
   {
     value: 'security',
@@ -31,7 +31,7 @@ const ACCOUNT_TABS: TabItem[] = [
   },
 ]
 
-const TAB_ROUTES = ['/account/avatar', '/account/mcp', '/account/chat', '/account/security']
+const TAB_ROUTES = ['/account/avatar', '/account/chat', '/account/mcp', '/account/security']
 
 interface AccountTabsProps {
   activeTab: string

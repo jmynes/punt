@@ -370,19 +370,6 @@ export function SidebarContent({
                 Account
               </Button>
             </Link>
-            <Link href="/account/mcp" onClick={handleLinkClick}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                  pathname === '/account/mcp' && 'bg-zinc-800/50 text-zinc-100',
-                )}
-              >
-                <Terminal className="h-3.5 w-3.5" />
-                MCP
-              </Button>
-            </Link>
             <Link href="/account/chat" onClick={handleLinkClick}>
               <Button
                 variant="ghost"
@@ -394,6 +381,19 @@ export function SidebarContent({
               >
                 <MessageSquare className="h-3.5 w-3.5" />
                 Chat
+              </Button>
+            </Link>
+            <Link href="/account/mcp" onClick={handleLinkClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                  pathname === '/account/mcp' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <Terminal className="h-3.5 w-3.5" />
+                MCP
               </Button>
             </Link>
             <Link href="/account/security" onClick={handleLinkClick}>
