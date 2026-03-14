@@ -195,7 +195,7 @@ export function registerProjectTools(server: McpServer) {
     'list_projects',
     'List all projects',
     {
-      limit: z.number().min(1).max(100).default(20).describe('Max results to return'),
+      limit: z.coerce.number().min(1).max(100).default(20).describe('Max results to return'),
     },
     async ({ limit }) => {
       const result = await listProjects()
