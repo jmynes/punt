@@ -283,7 +283,7 @@ PUNT includes an MCP server for conversational ticket management. See `mcp/READM
 
 **Key points:**
 - Calls API endpoints (not direct Prisma) for real-time SSE updates
-- Per-user API keys via **Profile > MCP API Key** in web UI
+- Per-user API keys via **My Account > Agents** in web UI
 - 44 tools across tickets, projects, sprints, members, labels, columns, repository
 
 **Querying conventions:**

@@ -16,6 +16,7 @@ import {
   Layers,
   List,
   Mail,
+  MessageSquare,
   Palette,
   Pencil,
   Plus,
@@ -26,7 +27,6 @@ import {
   SlidersHorizontal,
   Tag,
   Target,
-  Terminal,
   Trash2,
   TrendingDown,
   Upload,
@@ -369,19 +369,6 @@ export function SidebarContent({
                 Account
               </Button>
             </Link>
-            <Link href="/account/chat" onClick={handleLinkClick}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
-                  pathname === '/account/chat' && 'bg-zinc-800/50 text-zinc-100',
-                )}
-              >
-                <Bot className="h-3.5 w-3.5" />
-                Chat
-              </Button>
-            </Link>
             <Link href="/account/agents" onClick={handleLinkClick}>
               <Button
                 variant="ghost"
@@ -391,8 +378,21 @@ export function SidebarContent({
                   pathname === '/account/agents' && 'bg-zinc-800/50 text-zinc-100',
                 )}
               >
-                <Terminal className="h-3.5 w-3.5" />
+                <Bot className="h-3.5 w-3.5" />
                 Agents
+              </Button>
+            </Link>
+            <Link href="/account/chat" onClick={handleLinkClick}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8',
+                  pathname === '/account/chat' && 'bg-zinc-800/50 text-zinc-100',
+                )}
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                Chat
               </Button>
             </Link>
             <Link href="/account/security" onClick={handleLinkClick}>
