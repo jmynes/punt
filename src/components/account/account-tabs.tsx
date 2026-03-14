@@ -1,6 +1,6 @@
 'use client'
 
-import { Bot, KeyRound, MessageSquare, User } from 'lucide-react'
+import { KeyRound, MessageSquare, Terminal, User } from 'lucide-react'
 import { ResponsiveTabs, type TabItem } from '@/components/ui/scrollable-tabs'
 import { useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 
@@ -12,10 +12,10 @@ const ACCOUNT_TABS: TabItem[] = [
     icon: <User className="h-4 w-4" />,
   },
   {
-    value: 'agents',
-    label: 'Agents',
-    href: '/account/agents',
-    icon: <Bot className="h-4 w-4" />,
+    value: 'mcp',
+    label: 'MCP',
+    href: '/account/mcp',
+    icon: <Terminal className="h-4 w-4" />,
   },
   {
     value: 'chat',
@@ -31,7 +31,7 @@ const ACCOUNT_TABS: TabItem[] = [
   },
 ]
 
-const TAB_ROUTES = ['/account/avatar', '/account/agents', '/account/chat', '/account/security']
+const TAB_ROUTES = ['/account/avatar', '/account/mcp', '/account/chat', '/account/security']
 
 interface AccountTabsProps {
   activeTab: string

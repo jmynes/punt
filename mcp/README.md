@@ -22,7 +22,7 @@ pnpm --dir mcp exec tsx src/index.ts
 
 ## Authentication
 
-1. Generate an API key in the PUNT web UI: **My Account > Agents**
+1. Generate an API key in the PUNT web UI: **My Account > MCP**
 2. Store the key in your credentials file (see [Credentials Configuration](#credentials-configuration))
 3. The MCP server sends the key via `X-MCP-API-Key` header
 4. API routes validate the key via `getMcpUser()` in `auth-helpers.ts`
