@@ -756,11 +756,12 @@ export function KeyboardShortcuts() {
             const updatedCols = cols.map((c) => {
               if (c.id === action.columnId) {
                 // Remove moved tickets from this column
-                const movedIds = new Set(action.movedTickets!.map((t) => t.ticketId))
+                const movedIds = new Set(action.movedTickets?.map((t) => t.ticketId))
                 return { ...c, tickets: c.tickets.filter((t) => !movedIds.has(t.id)) }
               }
               // Add tickets back to their original columns
-              const returningTickets = action.movedTickets!.filter((t) => t.fromColumnId === c.id)
+              const returningTickets =
+                action.movedTickets?.filter((t) => t.fromColumnId === c.id) ?? []
               if (returningTickets.length > 0 && col) {
                 const ticketsToReturn = returningTickets
                   .map((rt) => col.tickets.find((t) => t.id === rt.ticketId))
