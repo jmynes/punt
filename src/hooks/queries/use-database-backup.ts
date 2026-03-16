@@ -10,7 +10,7 @@ import type { ImportResult } from '@/lib/database-import'
 import { isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 
-export type { ExportSizeEstimate, ImportPreview, DatabaseStats }
+export type { DatabaseStats, ExportSizeEstimate, ImportPreview }
 
 /**
  * Get current database statistics
