@@ -229,7 +229,7 @@ export function ChatInput({
             'disabled:opacity-50 disabled:cursor-not-allowed',
           )}
         />
-        {isLoading ? (
+        {isLoading && (
           <Button
             onClick={onStop}
             size="icon"
@@ -238,16 +238,15 @@ export function ChatInput({
           >
             <SquareIcon className="h-4 w-4" />
           </Button>
-        ) : (
-          <Button
-            onClick={handleSubmit}
-            disabled={disabled || !value.trim()}
-            size="icon"
-            className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <SendIcon className="h-4 w-4" />
-          </Button>
         )}
+        <Button
+          onClick={handleSubmit}
+          disabled={disabled || !value.trim() || isLoading}
+          size="icon"
+          className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white"
+        >
+          <SendIcon className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   )
