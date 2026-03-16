@@ -207,18 +207,18 @@ function ContextMenuSubContent({
 
 export {
   ContextMenu,
-  ContextMenuTrigger,
-  ContextMenuPortal,
+  ContextMenuCheckboxItem,
   ContextMenuContent,
   ContextMenuGroup,
-  ContextMenuLabel,
   ContextMenuItem,
-  ContextMenuCheckboxItem,
+  ContextMenuLabel,
+  ContextMenuPortal,
   ContextMenuRadioGroup,
   ContextMenuRadioItem,
   ContextMenuSeparator,
   ContextMenuShortcut,
   ContextMenuSub,
-  ContextMenuSubTrigger,
   ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
 }

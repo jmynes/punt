@@ -318,8 +318,6 @@ export default function BacklogPage() {
     setQueryMode,
     sort,
     setSort,
-    toggleSort,
-    toggleColumnVisibility,
     setColumnConfigOpen,
     filterByType,
     filterByPriority,

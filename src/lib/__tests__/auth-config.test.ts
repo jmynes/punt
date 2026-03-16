@@ -42,7 +42,7 @@ describe('auth.config authorized callback', () => {
       const location = response.headers.get('location')
       expect(location).toBeTruthy()
 
-      const redirectUrl = new URL(location!, 'http://localhost:3000')
+      const redirectUrl = new URL(location as string, 'http://localhost:3000')
       expect(redirectUrl.pathname).toBe('/login')
       expect(redirectUrl.searchParams.get('callbackUrl')).toBe(
         '/projects/PUNT/backlog?ticket=PUNT-292',
@@ -70,7 +70,7 @@ describe('auth.config authorized callback', () => {
       expect(result).toBeInstanceOf(Response)
       const response = result as Response
       const location = response.headers.get('location')
-      const redirectUrl = new URL(location!, 'http://localhost:3000')
+      const redirectUrl = new URL(location as string, 'http://localhost:3000')
 
       expect(redirectUrl.searchParams.get('callbackUrl')).toBe(
         '/projects/PUNT/backlog?ticket=PUNT-292&view=detail&tab=comments',
@@ -96,7 +96,7 @@ describe('auth.config authorized callback', () => {
       expect(result).toBeInstanceOf(Response)
       const response = result as Response
       const location = response.headers.get('location')
-      const redirectUrl = new URL(location!, 'http://localhost:3000')
+      const redirectUrl = new URL(location as string, 'http://localhost:3000')
 
       expect(redirectUrl.searchParams.get('callbackUrl')).toBe('/projects/PUNT/backlog')
     })
@@ -122,7 +122,7 @@ describe('auth.config authorized callback', () => {
       expect(result).toBeInstanceOf(Response)
       const response = result as Response
       const location = response.headers.get('location')
-      const redirectUrl = new URL(location!, 'http://localhost:3000')
+      const redirectUrl = new URL(location as string, 'http://localhost:3000')
 
       expect(redirectUrl.searchParams.get('callbackUrl')).toBe('/docs?section=api')
     })
@@ -299,7 +299,7 @@ describe('auth.config with basePath', () => {
     expect(result).toBeInstanceOf(Response)
     const response = result as Response
     const location = response.headers.get('location')
-    const redirectUrl = new URL(location!, 'http://localhost:3000')
+    const redirectUrl = new URL(location as string, 'http://localhost:3000')
 
     // Should redirect to /punt/login
     expect(redirectUrl.pathname).toBe('/punt/login')

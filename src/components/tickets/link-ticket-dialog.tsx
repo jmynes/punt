@@ -238,7 +238,6 @@ export function LinkTicketDialog({
     }))
 
     // Create links from each source ticket to each staged target
-    let totalSucceeded = 0
     const allLinkActions: Parameters<typeof pushBulkLinkCreate>[1] = []
 
     for (const source of sourceTickets) {
@@ -251,7 +250,6 @@ export function LinkTicketDialog({
         })
 
         if (result.succeeded.length > 0) {
-          totalSucceeded += result.succeeded.length
           for (const link of result.succeeded) {
             allLinkActions.push({
               projectId,

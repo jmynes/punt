@@ -52,7 +52,7 @@ export function KanbanCard({
     setIsMounted(true)
   }, [])
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
     id: ticket.id,
     data: {
       type: 'ticket',
