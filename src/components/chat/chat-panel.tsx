@@ -329,6 +329,27 @@ export function ChatPanel() {
     ],
   )
 
+  const stopStreaming = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+    // Mark the last assistant message as completed with whatever content it has so far
+    const currentMsgs = useChatStore.getState().messages
+    const lastMsg = currentMsgs[currentMsgs.length - 1]
+    if (lastMsg?.role === 'assistant' && !lastMsg.completedAt) {
+      updateMessage(lastMsg.id, {
+        completedAt: new Date(),
+        toolCalls: lastMsg.toolCalls?.map((t) =>
+          t.status === 'running'
+            ? { ...t, status: 'completed' as const, success: false, result: 'Stopped' }
+            : t,
+        ),
+      })
+    }
+    setIsLoading(false)
+  }, [updateMessage])
+
   const clearChat = useCallback(() => {
     // Abort any in-progress request
     if (abortControllerRef.current) {
@@ -473,7 +494,9 @@ export function ChatPanel() {
           <ChatInput
             onSend={sendMessage}
             onCommand={handleCommand}
-            disabled={isLoading || isConfigured === null}
+            onStop={stopStreaming}
+            isLoading={isLoading}
+            disabled={isConfigured === null}
           />
         )}
       </SheetContent>

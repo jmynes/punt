@@ -1,6 +1,6 @@
 'use client'
 
-import { GripHorizontalIcon, SendIcon } from 'lucide-react'
+import { GripHorizontalIcon, SendIcon, SquareIcon } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { SlashCommandMenu } from '@/components/chat/slash-command-menu'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
 interface ChatInputProps {
   onSend: (message: string) => void
   onCommand: (command: SlashCommand, args?: string) => void
+  onStop?: () => void
+  isLoading?: boolean
   disabled?: boolean
   placeholder?: string
 }
@@ -21,6 +23,8 @@ const MAX_HEIGHT = 300
 export function ChatInput({
   onSend,
   onCommand,
+  onStop,
+  isLoading,
   disabled,
   placeholder = 'Ask me about your tickets...',
 }: ChatInputProps) {
@@ -140,7 +144,7 @@ export function ChatInput({
 
   const handleSubmit = () => {
     const trimmed = value.trim()
-    if (trimmed && !disabled) {
+    if (trimmed && !disabled && !isLoading) {
       // Check if it's a slash command
       const parsed = parseSlashCommand(trimmed)
       if (parsed.isCommand && parsed.command) {
@@ -225,14 +229,25 @@ export function ChatInput({
             'disabled:opacity-50 disabled:cursor-not-allowed',
           )}
         />
-        <Button
-          onClick={handleSubmit}
-          disabled={disabled || !value.trim()}
-          size="icon"
-          className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white"
-        >
-          <SendIcon className="h-4 w-4" />
-        </Button>
+        {isLoading ? (
+          <Button
+            onClick={onStop}
+            size="icon"
+            className="shrink-0 bg-red-600 hover:bg-red-700 text-white"
+            title="Stop generating"
+          >
+            <SquareIcon className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button
+            onClick={handleSubmit}
+            disabled={disabled || !value.trim()}
+            size="icon"
+            className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <SendIcon className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </div>
   )
