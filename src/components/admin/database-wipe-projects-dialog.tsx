@@ -124,7 +124,12 @@ export function DatabaseWipeProjectsDialog({
           )}
 
           {step === 'confirm' && (
-            <>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (confirmText === REQUIRED_CONFIRMATION) setShowReauthDialog(true)
+              }}
+            >
               <div className="space-y-3">
                 <p className="text-sm text-zinc-400">
                   To confirm, type{' '}
@@ -140,20 +145,20 @@ export function DatabaseWipeProjectsDialog({
                 />
               </div>
 
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setStep('warning')}>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button type="button" variant="outline" onClick={() => setStep('warning')}>
                   Back
                 </Button>
                 <Button
+                  type="submit"
                   variant="destructive"
-                  onClick={() => setShowReauthDialog(true)}
                   disabled={confirmText !== REQUIRED_CONFIRMATION}
                 >
                   <FolderX className="h-4 w-4" />
                   Wipe All Projects
                 </Button>
               </div>
-            </>
+            </form>
           )}
 
           {step === 'wiping' && (

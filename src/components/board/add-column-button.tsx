@@ -270,137 +270,139 @@ export function AddColumnButton({
         }}
       >
         <DialogContent className="bg-zinc-900 border-zinc-700">
-          <DialogHeader>
-            <DialogTitle className="text-zinc-100">Create column</DialogTitle>
-            <DialogDescription className="text-zinc-400">
-              Add a new column to your board to organize tickets.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {(() => {
-              const preview = getColumnIcon(iconValue, columnName, colorValue)
-              const PreviewIcon = preview.icon
-              const isHex = preview.color.startsWith('#')
-              return (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center h-9 w-9 shrink-0 rounded-md bg-zinc-800 border border-zinc-700">
-                    <PreviewIcon
-                      className={cn('h-4 w-4', isHex ? undefined : preview.color)}
-                      style={isHex ? { color: preview.color } : undefined}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (columnName.trim() && !isCreating) handleCreateColumn()
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-zinc-100">Create column</DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                Add a new column to your board to organize tickets.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              {(() => {
+                const preview = getColumnIcon(iconValue, columnName, colorValue)
+                const PreviewIcon = preview.icon
+                const isHex = preview.color.startsWith('#')
+                return (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center h-9 w-9 shrink-0 rounded-md bg-zinc-800 border border-zinc-700">
+                      <PreviewIcon
+                        className={cn('h-4 w-4', isHex ? undefined : preview.color)}
+                        style={isHex ? { color: preview.color } : undefined}
+                      />
+                    </div>
+                    <Input
+                      ref={inputRef}
+                      value={columnName}
+                      onChange={(e) => setColumnName(e.target.value)}
+                      placeholder="Column name (e.g., Testing, Blocked)"
+                      maxLength={50}
+                      className="bg-zinc-800 border-zinc-700 text-zinc-100"
+                      disabled={isCreating}
                     />
                   </div>
-                  <Input
-                    ref={inputRef}
-                    value={columnName}
-                    onChange={(e) => setColumnName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleCreateColumn()
-                      }
-                    }}
-                    placeholder="Column name (e.g., Testing, Blocked)"
-                    maxLength={50}
-                    className="bg-zinc-800 border-zinc-700 text-zinc-100"
-                    disabled={isCreating}
-                  />
+                )
+              })()}
+              <div>
+                <span className="text-sm font-medium text-zinc-300 mb-2 block">Icon</span>
+                <div className="grid grid-cols-7 gap-1">
+                  {COLUMN_ICON_OPTIONS.map((opt) => {
+                    const Icon = opt.icon
+                    const isSelected = iconValue === opt.name
+                    const isHex = colorValue?.startsWith('#')
+                    const iconClass = isSelected ? (isHex ? undefined : opt.color) : 'text-zinc-400'
+                    const iconStyle =
+                      isSelected && isHex && colorValue ? { color: colorValue } : undefined
+                    return (
+                      <Tooltip key={opt.name}>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => setIconValue(isSelected ? null : opt.name)}
+                            className={cn(
+                              'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+                              isSelected
+                                ? 'bg-amber-600/20 ring-1 ring-amber-500'
+                                : 'hover:bg-zinc-800',
+                            )}
+                            disabled={isCreating}
+                          >
+                            <Icon className={cn('h-4 w-4', iconClass)} style={iconStyle} />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          {opt.name}
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
                 </div>
-              )
-            })()}
-            <div>
-              <span className="text-sm font-medium text-zinc-300 mb-2 block">Icon</span>
-              <div className="grid grid-cols-7 gap-1">
-                {COLUMN_ICON_OPTIONS.map((opt) => {
-                  const Icon = opt.icon
-                  const isSelected = iconValue === opt.name
-                  const isHex = colorValue?.startsWith('#')
-                  const iconClass = isSelected ? (isHex ? undefined : opt.color) : 'text-zinc-400'
-                  const iconStyle =
-                    isSelected && isHex && colorValue ? { color: colorValue } : undefined
-                  return (
-                    <Tooltip key={opt.name}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => setIconValue(isSelected ? null : opt.name)}
-                          className={cn(
-                            'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
-                            isSelected
-                              ? 'bg-amber-600/20 ring-1 ring-amber-500'
-                              : 'hover:bg-zinc-800',
-                          )}
-                          disabled={isCreating}
-                        >
-                          <Icon className={cn('h-4 w-4', iconClass)} style={iconStyle} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="text-xs">
-                        {opt.name}
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })}
+                <p className="text-xs text-zinc-500 mt-1">
+                  {iconValue
+                    ? 'Click selected icon to clear'
+                    : 'No icon selected \u2014 auto-detected from name'}
+                </p>
               </div>
-              <p className="text-xs text-zinc-500 mt-1">
-                {iconValue
-                  ? 'Click selected icon to clear'
-                  : 'No icon selected \u2014 auto-detected from name'}
-              </p>
+              <div>
+                <span className="text-sm font-medium text-zinc-300 mb-2 block">Color</span>
+                {colorValue ? (
+                  <>
+                    <ColorPickerBody
+                      activeColor={colorValue}
+                      onColorChange={setColorValue}
+                      onApply={setColorValue}
+                      isDisabled={isCreating}
+                      projectId={projectId}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setColorValue(null)}
+                      disabled={isCreating}
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800/50 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Reset to default color
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-zinc-500 mb-2">
+                      Using auto-detected color from icon. Pick a custom color:
+                    </p>
+                    <ColorPickerBody
+                      activeColor={resolveColumnColor(null, iconValue, columnName) ?? ''}
+                      onColorChange={setColorValue}
+                      onApply={setColorValue}
+                      isDisabled={isCreating}
+                      projectId={projectId}
+                    />
+                  </>
+                )}
+              </div>
             </div>
-            <div>
-              <span className="text-sm font-medium text-zinc-300 mb-2 block">Color</span>
-              {colorValue ? (
-                <>
-                  <ColorPickerBody
-                    activeColor={colorValue}
-                    onColorChange={setColorValue}
-                    onApply={setColorValue}
-                    isDisabled={isCreating}
-                    projectId={projectId}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setColorValue(null)}
-                    disabled={isCreating}
-                    className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800/50 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    Reset to default color
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-xs text-zinc-500 mb-2">
-                    Using auto-detected color from icon. Pick a custom color:
-                  </p>
-                  <ColorPickerBody
-                    activeColor={resolveColumnColor(null, iconValue, columnName) ?? ''}
-                    onColorChange={setColorValue}
-                    onApply={setColorValue}
-                    isDisabled={isCreating}
-                    projectId={projectId}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
-              disabled={isCreating}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateColumn}
-              disabled={isCreating || !columnName.trim()}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              {isCreating ? 'Creating...' : 'Create'}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
+                disabled={isCreating}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isCreating || !columnName.trim()}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {isCreating ? 'Creating...' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>

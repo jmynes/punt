@@ -120,13 +120,18 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
           )}
 
           {step === 'credentials' && (
-            <>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (canProceedFromCredentials) setStep('confirm')
+              }}
+            >
               <p className="text-sm text-zinc-400">
                 Enter the username and password for the new admin account that will be created after
                 wiping.
               </p>
 
-              <div className="space-y-3">
+              <div className="space-y-3 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="wipe-username" className="text-zinc-300">
                     New Admin Username
@@ -178,23 +183,24 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setStep('warning')}>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button type="button" variant="outline" onClick={() => setStep('warning')}>
                   Back
                 </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => setStep('confirm')}
-                  disabled={!canProceedFromCredentials}
-                >
+                <Button type="submit" variant="destructive" disabled={!canProceedFromCredentials}>
                   Continue
                 </Button>
               </div>
-            </>
+            </form>
           )}
 
           {step === 'confirm' && (
-            <>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (confirmText === 'WIPE ALL DATA') setShowReauthDialog(true)
+              }}
+            >
               <div className="space-y-3">
                 <p className="text-sm text-zinc-400">
                   To confirm, type <span className="font-mono text-red-400">WIPE ALL DATA</span>{' '}
@@ -210,20 +216,20 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
                 />
               </div>
 
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setStep('credentials')}>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button type="button" variant="outline" onClick={() => setStep('credentials')}>
                   Back
                 </Button>
                 <Button
+                  type="submit"
                   variant="destructive"
-                  onClick={() => setShowReauthDialog(true)}
                   disabled={confirmText !== 'WIPE ALL DATA'}
                 >
                   <Trash2 className="h-4 w-4" />
                   Wipe Database
                 </Button>
               </div>
-            </>
+            </form>
           )}
 
           {step === 'wiping' && (

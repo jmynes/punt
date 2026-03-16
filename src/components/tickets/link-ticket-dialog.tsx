@@ -23,7 +23,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCreateTicketLinks } from '@/hooks/queries/use-ticket-links'
-import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { LinkType, TicketLinkSummary, TicketWithRelations } from '@/types'
@@ -49,30 +48,32 @@ interface PasteError {
 interface LinkTicketDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  ticket: TicketWithRelations
+  /** Single source ticket (from ticket detail view) */
+  ticket?: TicketWithRelations
+  /** Multiple source tickets (from multi-select context menu) */
+  tickets?: TicketWithRelations[]
   projectKey: string
   projectId: string
-  existingLinks: TicketLinkSummary[]
-}
-
-/**
- * Get the display link type for an existing link from the perspective of the source ticket.
- */
-function getDisplayLinkType(link: TicketLinkSummary): LinkType {
-  if (link.direction === 'inward') {
-    return INVERSE_LINK_TYPES[link.linkType]
-  }
-  return link.linkType
+  existingLinks?: TicketLinkSummary[]
 }
 
 export function LinkTicketDialog({
   open,
   onOpenChange,
   ticket,
+  tickets: ticketsProp,
   projectKey,
   projectId,
-  existingLinks,
+  existingLinks = [],
 }: LinkTicketDialogProps) {
+  // Normalize to array of source tickets
+  const sourceTickets = useMemo(
+    () => ticketsProp ?? (ticket ? [ticket] : []),
+    [ticketsProp, ticket],
+  )
+  const sourceIds = useMemo(() => new Set(sourceTickets.map((t) => t.id)), [sourceTickets])
+  const isMultiSource = sourceTickets.length > 1
+
   const [defaultLinkType, setDefaultLinkType] = useState<LinkType>('relates_to')
   const [searchQuery, setSearchQuery] = useState('')
   const [stagedTickets, setStagedTickets] = useState<StagedTicket[]>([])
@@ -114,10 +115,10 @@ export function LinkTicketDialog({
   // IDs of staged tickets for dedup
   const stagedIds = useMemo(() => new Set(stagedTickets.map((t) => t.id)), [stagedTickets])
 
-  // Filter tickets for dropdown: exclude self, already staged
+  // Filter tickets for dropdown: exclude source tickets, already staged
   const filteredTickets = useMemo(() => {
     return allTickets.filter((t) => {
-      if (t.id === ticket.id) return false
+      if (sourceIds.has(t.id)) return false
       if (stagedIds.has(t.id)) return false
 
       if (searchQuery.trim()) {
@@ -128,11 +129,11 @@ export function LinkTicketDialog({
 
       return true
     })
-  }, [allTickets, ticket.id, stagedIds, searchQuery, projectKey])
+  }, [allTickets, sourceIds, stagedIds, searchQuery, projectKey])
 
   const addTicketToStaging = useCallback(
     (t: TicketWithRelations) => {
-      if (t.id === ticket.id || stagedIds.has(t.id)) return
+      if (sourceIds.has(t.id) || stagedIds.has(t.id)) return
 
       setStagedTickets((prev) => [
         ...prev,
@@ -149,7 +150,7 @@ export function LinkTicketDialog({
       // Keep focus on search input for rapid multi-add
       searchInputRef.current?.focus()
     },
-    [ticket.id, stagedIds, defaultLinkType, existingLinkMap],
+    [sourceIds, stagedIds, defaultLinkType, existingLinkMap],
   )
 
   const removeFromStaging = useCallback((ticketId: string) => {
@@ -194,7 +195,7 @@ export function LinkTicketDialog({
           newErrors.push({ key, message: 'Not found' })
           continue
         }
-        if (found.id === ticket.id) {
+        if (sourceIds.has(found.id)) {
           newErrors.push({ key, message: 'Cannot link to self' })
           continue
         }
@@ -223,52 +224,55 @@ export function LinkTicketDialog({
       setSearchQuery('')
       searchInputRef.current?.focus()
     },
-    [projectKey, ticket.id, stagedTickets, ticketsByNumber, defaultLinkType, existingLinkMap],
+    [projectKey, sourceIds, stagedTickets, ticketsByNumber, defaultLinkType, existingLinkMap],
   )
 
-  const handleCreateLinks = () => {
-    if (stagedTickets.length === 0) return
+  const handleCreateLinks = async () => {
+    if (stagedTickets.length === 0 || sourceTickets.length === 0) return
 
-    const sourceTicketKey = `${projectKey}-${ticket.number}`
     // Capture staged tickets before close clears them
     const staged = [...stagedTickets]
+    const links = staged.map((t) => ({
+      linkType: t.linkType,
+      targetTicketId: t.id,
+    }))
 
-    createLinks.mutate(
-      {
-        projectId,
-        ticketId: ticket.id,
-        links: staged.map((t) => ({
-          linkType: t.linkType,
-          targetTicketId: t.id,
-        })),
-      },
-      {
-        onSuccess: ({ succeeded }) => {
-          // Push all created links as a single batch undo entry
-          if (succeeded.length > 0) {
-            const linkActions = succeeded.map((link) => ({
+    // Create links from each source ticket to each staged target
+    const allLinkActions: Parameters<typeof pushBulkLinkCreate>[1] = []
+
+    for (const source of sourceTickets) {
+      const sourceKey = `${projectKey}-${source.number}`
+      try {
+        const result = await createLinks.mutateAsync({
+          projectId,
+          ticketId: source.id,
+          links,
+        })
+
+        if (result.succeeded.length > 0) {
+          for (const link of result.succeeded) {
+            allLinkActions.push({
               projectId,
-              ticketId: ticket.id,
-              ticketKey: sourceTicketKey,
+              ticketId: source.id,
+              ticketKey: sourceKey,
               linkId: link.id,
               linkType: link.linkType,
               targetTicketId: link.linkedTicket.id,
               targetTicketKey: `${projectKey}-${link.linkedTicket.number}`,
               direction: 'outward' as const,
-            }))
-            pushBulkLinkCreate(projectId, linkActions)
+            })
           }
+        }
+      } catch {
+        // Individual source failures are handled by the hook's onError
+      }
+    }
 
-          const count = succeeded.length
-          showUndoRedoToast('success', {
-            title: `${count} link${count === 1 ? '' : 's'} created`,
-            description: `Linked to ${sourceTicketKey}`,
-          })
+    if (allLinkActions.length > 0) {
+      pushBulkLinkCreate(projectId, allLinkActions)
+    }
 
-          handleClose()
-        },
-      },
-    )
+    handleClose()
   }
 
   const handleClose = () => {
@@ -288,8 +292,9 @@ export function LinkTicketDialog({
             Link Tickets
           </DialogTitle>
           <DialogDescription className="text-zinc-400">
-            Link one or more tickets to {projectKey}-{ticket.number}. Paste comma-separated keys or
-            search to add.
+            {isMultiSource
+              ? `Link one or more tickets to ${sourceTickets.length} selected tickets. Paste comma-separated keys or search to add.`
+              : `Link one or more tickets to ${projectKey}-${sourceTickets[0]?.number}. Paste comma-separated keys or search to add.`}
           </DialogDescription>
         </DialogHeader>
 
