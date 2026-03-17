@@ -98,7 +98,7 @@ export function useCreateRole(projectId: string) {
           color: data.color,
           description: data.description ?? null,
           isDefault: false,
-          position: data.position ?? 999,
+          position: 999,
           permissions: data.permissions ?? [],
         }
         const current = queryClient.getQueryData<RoleWithPermissions[]>(
