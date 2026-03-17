@@ -94,15 +94,12 @@ export function useCreateRole(projectId: string) {
         // In demo mode, create a role in memory
         const newRole: RoleWithPermissions = {
           id: crypto.randomUUID(),
-          projectId,
           name: data.name,
           color: data.color,
           description: data.description ?? null,
           isDefault: false,
           position: data.position ?? 999,
           permissions: data.permissions ?? [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
         }
         const current = queryClient.getQueryData<RoleWithPermissions[]>(
           roleKeys.byProject(projectId),
@@ -158,9 +155,7 @@ export function useUpdateRole(projectId: string) {
         const current = queryClient.getQueryData<RoleWithPermissions[]>(
           roleKeys.byProject(projectId),
         )
-        const updatedRoles = (current ?? []).map((r) =>
-          r.id === roleId ? { ...r, ...data, updatedAt: new Date() } : r,
-        )
+        const updatedRoles = (current ?? []).map((r) => (r.id === roleId ? { ...r, ...data } : r))
         queryClient.setQueryData(roleKeys.byProject(projectId), updatedRoles)
         const updated = updatedRoles.find((r) => r.id === roleId)
         if (!updated) throw new Error('Role not found')
