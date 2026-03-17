@@ -1,9 +1,11 @@
 'use client'
 
 import { BotIcon, CheckCircleIcon, TimerIcon, WrenchIcon, XCircleIcon } from 'lucide-react'
+import Link from 'next/link'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { getTicketReferencePath } from '@/lib/ticket-references'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import type { UserSummary } from '@/types'
 
@@ -180,7 +182,7 @@ function formatToolName(name: string): string {
 function FormattedText({ text }: { text: string }) {
   let key = 0
 
-  // Process inline patterns: **bold**, __bold__, *italic*, _italic_, `code`
+  // Process inline patterns: **bold**, __bold__, *italic*, _italic_, `code`, @mentions, #tickets
   // Order matters: ** before *, __ before _
   // Recursively processes inner content for bold/italic (but not code spans)
   const processInline = (input: string): React.ReactNode[] => {
@@ -188,8 +190,9 @@ function FormattedText({ text }: { text: string }) {
     let lastIndex = 0
 
     // Combined regex for all inline patterns
-    // Order: **bold** | __bold__ | `code` | *italic* | _italic_
-    const combinedRegex = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\*[^*]+\*|_[^_]+_)/g
+    // Order: **bold** | __bold__ | `code` | @mention | #ticket or bare TICKET-KEY | *italic* | _italic_
+    const combinedRegex =
+      /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|@[a-zA-Z0-9][a-zA-Z0-9._-]*|#?[A-Z][A-Z0-9]+-\d+|\*[^*]+\*|_[^_]+_)/g
     const matches = Array.from(input.matchAll(combinedRegex))
 
     for (const match of matches) {
@@ -217,6 +220,26 @@ function FormattedText({ text }: { text: string }) {
           <code key={key++} className="bg-zinc-900 px-1 rounded text-xs text-amber-400">
             {matched.slice(1, -1)}
           </code>,
+        )
+      } else if (matched.startsWith('@')) {
+        // @mention - render as styled badge
+        result.push(
+          <span key={key++} className="font-semibold text-blue-400">
+            {matched}
+          </span>,
+        )
+      } else if (/^#?[A-Z][A-Z0-9]+-\d+$/.test(matched)) {
+        // #ticket reference or bare TICKET-KEY - render as clickable link
+        const ticketKey = matched.startsWith('#') ? matched.slice(1) : matched
+        const href = getTicketReferencePath(ticketKey)
+        result.push(
+          <Link
+            key={key++}
+            href={href}
+            className="font-semibold text-amber-400 hover:text-amber-300 hover:underline"
+          >
+            {matched}
+          </Link>,
         )
       } else if (matched.startsWith('*') && matched.endsWith('*')) {
         result.push(<em key={key++}>{processInline(matched.slice(1, -1))}</em>)

@@ -3,7 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { BotIcon, EyeOffIcon, KeyIcon, Loader2Icon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -18,11 +18,15 @@ import {
   useDeleteChatSession,
   useRenameChatSession,
 } from '@/hooks/queries/use-chat-sessions'
+import { useProjectMembers } from '@/hooks/queries/use-members'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { apiFetch } from '@/lib/base-path'
 import { getHelpText, type SlashCommand } from '@/lib/chat/commands'
+import { extractMentionedUsernames, extractReferencedTicketKeys } from '@/lib/chat/references'
 import { showToast } from '@/lib/toast'
+import { useBoardStore } from '@/stores/board-store'
 import { transformMetadataToToolCalls, useChatStore } from '@/stores/chat-store'
+import { useProjectsStore } from '@/stores/projects-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { ChatInput } from './chat-input'
@@ -40,7 +44,7 @@ interface StreamEvent {
 }
 
 export function ChatPanel() {
-  const { chatPanelOpen, setChatPanelOpen, chatContext } = useUIStore()
+  const { chatPanelOpen, setChatPanelOpen, chatContext, activeProjectId } = useUIStore()
   const showChatPanel = useSettingsStore((s) => s.showChatPanel)
   const setShowChatPanel = useSettingsStore((s) => s.setShowChatPanel)
   const {
@@ -60,6 +64,25 @@ export function ChatPanel() {
   const prevSessionIdRef = useRef<string | null>(null)
   const currentUser = useCurrentUser()
   const queryClient = useQueryClient()
+
+  // Get active project info for @mention and #ticket autocomplete
+  const projects = useProjectsStore((s) => s.projects)
+  const activeProject = useMemo(
+    () => projects.find((p) => p.id === activeProjectId),
+    [projects, activeProjectId],
+  )
+  const projectKey = activeProject?.key
+
+  // Fetch project members for @mention autocomplete
+  const { data: members } = useProjectMembers(activeProjectId ?? '')
+
+  // Get tickets from board store (already loaded for the active project)
+  const allTickets = useBoardStore((s) => {
+    if (!activeProjectId) return []
+    const columns = s.projects[activeProjectId]
+    if (!columns) return []
+    return columns.flatMap((col) => col.tickets)
+  })
 
   // React Query hooks for session operations
   const { data: sessionData } = useChatSession(currentSessionId)
@@ -212,12 +235,22 @@ export function ChatPanel() {
           content: m.content,
         }))
 
+        // Extract @mentions and #ticket references from the user message
+        const mentionedUsers = extractMentionedUsernames(content)
+        const referencedTickets = extractReferencedTicketKeys(content)
+
+        const enrichedContext = {
+          ...chatContext,
+          ...(mentionedUsers.length > 0 ? { mentionedUsers } : {}),
+          ...(referencedTickets.length > 0 ? { referencedTickets } : {}),
+        }
+
         const response = await apiFetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: apiMessages,
-            context: chatContext,
+            context: enrichedContext,
             sessionId: currentSessionId,
           }),
           signal: abortControllerRef.current.signal,
@@ -497,6 +530,9 @@ export function ChatPanel() {
             onStop={stopStreaming}
             isLoading={isLoading}
             disabled={isConfigured === null}
+            members={members}
+            tickets={allTickets}
+            projectKey={projectKey}
           />
         )}
       </SheetContent>
