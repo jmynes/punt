@@ -60,8 +60,8 @@ interface NavItem {
 const mainNavItems: NavItem[] = [{ title: 'Dashboard', href: '/', icon: Home }]
 
 // Animated collapsible container for smooth expand/collapse.
-// Uses ResizeObserver to track content size changes from nested
-// collapsible sections, so parent max-height stays accurate.
+// Animates the user's expand/collapse toggle. Child size changes
+// (from nested sections) are applied instantly to avoid stutter.
 function CollapsibleSection({
   expanded,
   children,
@@ -70,10 +70,12 @@ function CollapsibleSection({
   children: React.ReactNode
 }) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const outerRef = useRef<HTMLDivElement>(null)
   const heightRef = useRef<number>(0)
+  const prevExpandedRef = useRef(expanded)
   const [, forceRender] = useState(0)
 
-  // Sync measure before paint to avoid stutter on first expand
+  // Sync measure before paint
   useLayoutEffect(() => {
     const el = contentRef.current
     if (el) {
@@ -81,14 +83,29 @@ function CollapsibleSection({
     }
   })
 
-  // ResizeObserver for ongoing nested size changes
+  // Disable transition for child resizes, enable only for expand/collapse toggles
+  useLayoutEffect(() => {
+    const outer = outerRef.current
+    if (!outer) return
+
+    if (prevExpandedRef.current !== expanded) {
+      // User toggled — animate
+      outer.style.transitionDuration = '200ms'
+      prevExpandedRef.current = expanded
+    }
+  }, [expanded])
+
+  // ResizeObserver for nested size changes — apply instantly (no transition)
   useEffect(() => {
     const el = contentRef.current
-    if (!el) return
+    const outer = outerRef.current
+    if (!el || !outer) return
 
     const observer = new ResizeObserver(() => {
       const newHeight = el.scrollHeight
       if (newHeight !== heightRef.current) {
+        // Disable transition for child-driven resize
+        outer.style.transitionDuration = '0ms'
         heightRef.current = newHeight
         forceRender((n) => n + 1)
       }
@@ -99,8 +116,12 @@ function CollapsibleSection({
 
   return (
     <div
-      className="overflow-hidden transition-[max-height] duration-200 ease-in-out"
-      style={{ maxHeight: expanded ? `${heightRef.current}px` : '0px' }}
+      ref={outerRef}
+      className="overflow-hidden transition-[max-height] ease-in-out"
+      style={{
+        maxHeight: expanded ? `${heightRef.current}px` : '0px',
+        transitionDuration: '200ms',
+      }}
     >
       <div ref={contentRef}>{children}</div>
     </div>
