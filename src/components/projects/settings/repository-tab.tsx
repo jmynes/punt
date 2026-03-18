@@ -295,6 +295,12 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
 
     const newFormData = { ...formData }
 
+    // Reset repository connection fields (these are project-level only, no system defaults)
+    newFormData.repositoryUrl = ''
+    newFormData.localPath = ''
+    newFormData.defaultBranch = ''
+    newFormData.monorepoPath = ''
+
     // Reset branch template to system default
     newFormData.branchTemplate = defaults.branchTemplate || ''
 

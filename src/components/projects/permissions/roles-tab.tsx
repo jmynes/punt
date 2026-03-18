@@ -89,7 +89,13 @@ import { apiFetch } from '@/lib/base-path'
 import { LABEL_COLORS } from '@/lib/constants'
 import { isEditableTarget } from '@/lib/keyboard-utils'
 import { PERMISSIONS } from '@/lib/permissions'
-import { type DefaultRoleName, ROLE_POSITIONS, ROLE_PRESETS } from '@/lib/permissions/presets'
+import {
+  type DefaultRoleName,
+  ROLE_COLORS,
+  ROLE_DESCRIPTIONS,
+  ROLE_POSITIONS,
+  ROLE_PRESETS,
+} from '@/lib/permissions/presets'
 import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import {
@@ -239,16 +245,26 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     return entry ? (entry[0] as DefaultRoleName) : null
   }, [])
 
-  // Check if the selected role's permissions match the preset defaults
+  // Check if the selected role matches the preset defaults (name, color, description, permissions)
   const isAtDefaults = useMemo(() => {
     if (isCreating || !selectedRole?.isDefault) return true
     const presetName = getPresetNameByPosition(selectedRole.position)
     if (!presetName) return true
     const preset = ROLE_PRESETS[presetName]
-    return (
+    const presetColor = ROLE_COLORS[presetName]
+    const presetDescription = ROLE_DESCRIPTIONS[presetName]
+    const permissionsMatch =
       editPermissions.length === preset.length && preset.every((p) => editPermissions.includes(p))
+    return (
+      editName === presetName &&
+      editColor === presetColor &&
+      editDescription === presetDescription &&
+      permissionsMatch
     )
   }, [
+    editName,
+    editColor,
+    editDescription,
     editPermissions,
     selectedRole?.isDefault,
     selectedRole?.position,
@@ -998,6 +1014,29 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     }
   }
 
+  // Reset the selected role to its preset defaults (name, color, description, permissions)
+  const handleResetRoleToDefaults = useCallback(() => {
+    if (!selectedRole?.isDefault) return
+    const presetName = getPresetNameByPosition(selectedRole.position)
+    if (!presetName) return
+    const defaultName = presetName
+    const defaultColor = ROLE_COLORS[presetName]
+    const defaultDesc = ROLE_DESCRIPTIONS[presetName]
+    const defaultPerms = [...ROLE_PRESETS[presetName]]
+    setEditName(defaultName)
+    setEditColor(defaultColor)
+    setEditDescription(defaultDesc)
+    setEditPermissions(defaultPerms)
+    // Check if the defaults differ from the saved role
+    const nameChanged = defaultName !== selectedRole.name
+    const colorChanged = defaultColor !== selectedRole.color
+    const descChanged = defaultDesc !== (selectedRole.description || '')
+    const permsChanged =
+      defaultPerms.length !== selectedRole.permissions.length ||
+      defaultPerms.some((p) => !selectedRole.permissions.includes(p))
+    setHasChanges(nameChanged || colorChanged || descChanged || permsChanged)
+  }, [selectedRole, getPresetNameByPosition])
+
   // Clone a role
   const handleCloneRole = async (role: RoleWithPermissions) => {
     try {
@@ -1244,6 +1283,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
             }
             presetPermissions={presetPermissions}
             isAtDefaults={isAtDefaults}
+            onResetToDefaults={handleResetRoleToDefaults}
             showDiff={showDiff}
             originalPermissions={originalPermissions}
             onShowDiffChange={setShowDiff}
@@ -1879,6 +1919,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
             <AlertDialogAction
               onClick={handleResetToSystemDefaults}
               disabled={resetRolesToDefaults.isPending}
+              className="bg-red-600 hover:bg-red-500 text-white"
             >
               {resetRolesToDefaults.isPending ? (
                 <>

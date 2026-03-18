@@ -53,6 +53,8 @@ interface RoleEditorPanelProps {
   presetPermissions?: Permission[]
   /** Whether current permissions match the preset (hides Reset button when true) */
   isAtDefaults?: boolean
+  /** Callback to reset the entire role to defaults (name, color, description, permissions) */
+  onResetToDefaults?: () => void
 
   /** Enable diff highlighting in PermissionGrid */
   showDiff?: boolean
@@ -99,6 +101,7 @@ export function RoleEditorPanel({
   headerDescription,
   presetPermissions,
   isAtDefaults = true,
+  onResetToDefaults,
   showDiff = false,
   originalPermissions,
   onShowDiffChange,
@@ -234,7 +237,13 @@ export function RoleEditorPanel({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onPermissionsChange([...presetPermissions])}
+                        onClick={() => {
+                          if (onResetToDefaults) {
+                            onResetToDefaults()
+                          } else {
+                            onPermissionsChange([...presetPermissions])
+                          }
+                        }}
                         className="h-6 px-2 text-xs text-zinc-400 hover:text-zinc-200"
                       >
                         <RotateCcw className="mr-1 h-3 w-3" />

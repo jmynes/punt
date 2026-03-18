@@ -169,7 +169,18 @@ export function RolePermissionsForm() {
       }
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: (_responseData, variables) => {
+      // Eagerly update the query cache with the saved values so that Cancel
+      // immediately reverts to the last saved state (not stale/default values).
+      queryClient.setQueryData<RoleSettingsData>(['admin', 'settings', 'roles'], (old) =>
+        old
+          ? {
+              ...old,
+              roleSettings: variables.settings,
+              customRoles: variables.customRoles,
+            }
+          : old,
+      )
       if (!isDemoMode()) {
         queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
       }
@@ -285,14 +296,22 @@ export function RolePermissionsForm() {
     ? localSettings[selectedId as DefaultRoleName]
     : selectedCustomRole
 
-  // Check if the selected role's permissions match its preset defaults
+  // Check if the selected role matches its preset defaults (name, color, description, permissions)
   const selectedRoleAtDefaults = useMemo(() => {
     if (!isBuiltInRole) return true
     const current = localSettings[selectedId as DefaultRoleName]
-    const defaults = ROLE_PRESETS[selectedId as DefaultRoleName]
+    const presetName = selectedId as DefaultRoleName
+    const presetPerms = ROLE_PRESETS[presetName]
+    const presetColor = ROLE_COLORS[presetName]
+    const presetDescription = ROLE_DESCRIPTIONS[presetName]
+    const permissionsMatch =
+      current.permissions.length === presetPerms.length &&
+      presetPerms.every((p) => current.permissions.includes(p))
     return (
-      current.permissions.length === defaults.length &&
-      defaults.every((p) => current.permissions.includes(p))
+      current.name === presetName &&
+      current.color === presetColor &&
+      current.description === presetDescription &&
+      permissionsMatch
     )
   }, [localSettings, selectedId, isBuiltInRole])
 
@@ -330,6 +349,22 @@ export function RolePermissionsForm() {
 
   // Get preset permissions for the selected built-in role
   const presetPermissions = isBuiltInRole ? ROLE_PRESETS[selectedId as DefaultRoleName] : undefined
+
+  // Reset the selected built-in role to its preset defaults (name, color, description, permissions)
+  const handleResetRoleToDefaults = useCallback(() => {
+    if (!isBuiltInRole) return
+    const presetName = selectedId as DefaultRoleName
+    setLocalSettings((prev) => ({
+      ...prev,
+      [presetName]: {
+        ...prev[presetName],
+        name: presetName,
+        color: ROLE_COLORS[presetName],
+        description: ROLE_DESCRIPTIONS[presetName],
+        permissions: [...ROLE_PRESETS[presetName]],
+      },
+    }))
+  }, [selectedId, isBuiltInRole])
 
   const handleCloneRole = useCallback(
     (roleId: string) => {
@@ -568,15 +603,21 @@ export function RolePermissionsForm() {
       setIsCreating(false)
       setSelectedId('Owner')
     }
-    if (data?.roleSettings) {
-      setLocalSettings(data.roleSettings)
+    // Use the latest query cache data to ensure we revert to the last saved state
+    // (not hardcoded defaults). The `data` variable from useQuery might be stale
+    // if a save just completed and the refetch hasn't updated the render yet.
+    const cachedData = queryClient.getQueryData<RoleSettingsData>(['admin', 'settings', 'roles'])
+    const savedSettings = cachedData?.roleSettings ?? data?.roleSettings
+    if (savedSettings) {
+      setLocalSettings(savedSettings)
       const sorted = (['Owner', 'Admin', 'Member'] as DefaultRoleName[]).sort(
-        (a, b) => (data.roleSettings[a]?.position ?? 0) - (data.roleSettings[b]?.position ?? 0),
+        (a, b) => (savedSettings[a]?.position ?? 0) - (savedSettings[b]?.position ?? 0),
       )
       setRoleOrder(sorted)
     }
-    if (data?.customRoles) {
-      setCustomRoles(data.customRoles)
+    const savedCustomRoles = cachedData?.customRoles ?? data?.customRoles
+    if (savedCustomRoles) {
+      setCustomRoles(savedCustomRoles)
     } else {
       setCustomRoles([])
     }
@@ -672,6 +713,17 @@ export function RolePermissionsForm() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-zinc-400">Roles</h3>
           <div className="flex items-center gap-1">
+            {!isAtDefaults && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                disabled={resetMutation.isPending}
+                title="Reset to Defaults"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            )}
             {compareRoles.length >= 2 && (
               <Button
                 variant="ghost"
@@ -762,6 +814,7 @@ export function RolePermissionsForm() {
           }
           presetPermissions={presetPermissions}
           isAtDefaults={selectedRoleAtDefaults}
+          onResetToDefaults={handleResetRoleToDefaults}
           showDiff={showDiff}
           originalPermissions={originalPermissions}
           onShowDiffChange={setShowDiff}
