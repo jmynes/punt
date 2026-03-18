@@ -81,10 +81,10 @@ export function SessionSelector({ currentSessionId, onSelect, projectId }: Sessi
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0 ml-2"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 group-data-[selected=true]:opacity-100 shrink-0 ml-2 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 group-data-[selected=true]:text-zinc-300 group-data-[selected=true]:hover:text-red-400"
                       onClick={(e) => handleDelete(e, session)}
                     >
-                      <Trash2Icon className="h-3 w-3 text-red-400" />
+                      <Trash2Icon className="h-3 w-3" />
                     </Button>
                   </CommandItem>
                 ))}
