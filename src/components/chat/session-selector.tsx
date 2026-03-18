@@ -84,7 +84,7 @@ export function SessionSelector({ currentSessionId, onSelect, projectId }: Sessi
                       className="h-6 w-6 opacity-0 group-hover:opacity-100 group-data-[selected=true]:opacity-100 shrink-0 ml-2 bg-red-950/50 hover:bg-red-900/80 text-white border border-red-800/50 hover:border-red-700/70 rounded"
                       onClick={(e) => handleDelete(e, session)}
                     >
-                      <Trash2Icon className="h-3 w-3" />
+                      <Trash2Icon className="h-3 w-3 text-white" />
                     </Button>
                   </CommandItem>
                 ))}
