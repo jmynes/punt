@@ -300,15 +300,18 @@ export function SidebarContent({
 
   // Scroll to active project when it changes (e.g. after creating a new project)
   const sidebarRef = useRef<HTMLDivElement>(null)
+  const projectsExpandedRef = useRef(projectsExpanded)
+  projectsExpandedRef.current = projectsExpanded
+
   useEffect(() => {
-    if (!activeProjectId || !projectsExpanded) return
+    if (!activeProjectId || !projectsExpandedRef.current) return
     // Small delay to allow the DOM to update after project list re-renders
     const timer = setTimeout(() => {
       const el = sidebarRef.current?.querySelector(`[data-project-id="${activeProjectId}"]`)
       el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }, 100)
     return () => clearTimeout(timer)
-  }, [activeProjectId, projectsExpanded])
+  }, [activeProjectId])
 
   // Intercept sidebar link clicks that would navigate away from the simulating project.
   // Uses capture phase so it fires before Next.js Link's navigation handler.
