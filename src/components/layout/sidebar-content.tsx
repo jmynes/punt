@@ -496,7 +496,7 @@ export function SidebarContent({
               Admin
             </span>
           </button>
-          <CollapsibleSection expanded={adminExpanded}>
+          {adminExpanded && (
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
               <Link href="/admin" onClick={handleLinkClick}>
                 <Button
@@ -752,7 +752,7 @@ export function SidebarContent({
                 </CollapsibleSection>
               </div>
             </div>
-          </CollapsibleSection>
+          )}
         </div>
       )}
 
