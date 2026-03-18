@@ -336,7 +336,7 @@ export function SidebarContent({
       </div>
 
       {/* Account section */}
-      <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
+      <div className={cn('mt-3 transition-opacity', isSimulationActive && 'opacity-40')}>
         <button
           type="button"
           className="group flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none cursor-pointer"
@@ -355,7 +355,7 @@ export function SidebarContent({
           </span>
         </button>
         <CollapsibleSection expanded={accountExpanded}>
-          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
             <Link href="/account/avatar" onClick={handleLinkClick}>
               <Button
                 variant="ghost"
@@ -413,7 +413,7 @@ export function SidebarContent({
       </div>
 
       {/* Preferences section */}
-      <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
+      <div className={cn('mt-3 transition-opacity', isSimulationActive && 'opacity-40')}>
         <button
           type="button"
           className="group flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none cursor-pointer"
@@ -432,7 +432,7 @@ export function SidebarContent({
           </span>
         </button>
         <CollapsibleSection expanded={preferencesExpanded}>
-          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
             <Link href="/preferences/general" onClick={handleLinkClick}>
               <Button
                 variant="ghost"
@@ -478,7 +478,7 @@ export function SidebarContent({
 
       {/* Admin section - only visible to system admins */}
       {currentUser.isSystemAdmin && (
-        <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
+        <div className={cn('mt-3 transition-opacity', isSimulationActive && 'opacity-40')}>
           <button
             type="button"
             className="group flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none cursor-pointer"
@@ -496,8 +496,8 @@ export function SidebarContent({
               Admin
             </span>
           </button>
-          {adminExpanded && (
-            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+          <CollapsibleSection expanded={adminExpanded}>
+            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
               <Link href="/admin" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
@@ -568,7 +568,7 @@ export function SidebarContent({
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-system-settings'] ?? false}
                 >
-                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
                     <Link href="/admin/system/branding" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -668,7 +668,7 @@ export function SidebarContent({
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-project-defaults'] ?? false}
                 >
-                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
                     <Link href="/admin/defaults/agents" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -752,12 +752,12 @@ export function SidebarContent({
                 </CollapsibleSection>
               </div>
             </div>
-          )}
+          </CollapsibleSection>
         </div>
       )}
 
       {/* Projects section */}
-      <div className="mt-6">
+      <div className="mt-3">
         <div className="flex items-center justify-between px-3 mb-1">
           <button
             type="button"
@@ -817,7 +817,7 @@ export function SidebarContent({
         </div>
 
         <CollapsibleSection expanded={projectsExpanded}>
-          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
             {isLoading ? (
               <>
                 <Skeleton className="h-8 w-full bg-zinc-800" />
@@ -900,7 +900,7 @@ export function SidebarContent({
                       </div>
                       {/* Project sub-nav */}
                       {isExpanded && (
-                        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
                           <Link href={`/projects/${project.key}/backlog`} onClick={handleLinkClick}>
                             <Button
                               variant="ghost"
@@ -1050,7 +1050,7 @@ function ProjectSettingsLink({
         </Link>
       </div>
       {expanded && (
-        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
           {canViewSettings && (
             <Link href={`/projects/${projectKey}/settings/general`} onClick={onClick}>
               <Button
