@@ -90,6 +90,24 @@ export function useCreateRole(projectId: string) {
 
   return useMutation({
     mutationFn: async (data: CreateRoleData) => {
+      if (isDemoMode()) {
+        // In demo mode, create a role in memory
+        const newRole: RoleWithPermissions = {
+          id: crypto.randomUUID(),
+          name: data.name,
+          color: data.color,
+          description: data.description ?? null,
+          isDefault: false,
+          position: 999,
+          permissions: data.permissions ?? [],
+        }
+        const current = queryClient.getQueryData<RoleWithPermissions[]>(
+          roleKeys.byProject(projectId),
+        )
+        queryClient.setQueryData(roleKeys.byProject(projectId), [...(current ?? []), newRole])
+        return newRole
+      }
+
       const res = await apiFetch(`/api/projects/${projectId}/roles`, {
         method: 'POST',
         headers: {
@@ -106,7 +124,9 @@ export function useCreateRole(projectId: string) {
     },
     onSuccess: () => {
       showToast.success('Role created')
-      queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
+      if (!isDemoMode()) {
+        queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
+      }
     },
     onError: (err) => {
       showToast.error(err.message)
@@ -130,6 +150,18 @@ export function useUpdateRole(projectId: string) {
 
   return useMutation({
     mutationFn: async ({ roleId, ...data }: UpdateRoleData) => {
+      if (isDemoMode()) {
+        // In demo mode, update role in the query cache
+        const current = queryClient.getQueryData<RoleWithPermissions[]>(
+          roleKeys.byProject(projectId),
+        )
+        const updatedRoles = (current ?? []).map((r) => (r.id === roleId ? { ...r, ...data } : r))
+        queryClient.setQueryData(roleKeys.byProject(projectId), updatedRoles)
+        const updated = updatedRoles.find((r) => r.id === roleId)
+        if (!updated) throw new Error('Role not found')
+        return updated
+      }
+
       const res = await apiFetch(`/api/projects/${projectId}/roles/${roleId}`, {
         method: 'PATCH',
         headers: {
@@ -146,12 +178,13 @@ export function useUpdateRole(projectId: string) {
     },
     onSuccess: (_data, variables) => {
       showToast.success('Role updated')
-      queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
-      queryClient.invalidateQueries({
-        queryKey: roleKeys.single(projectId, variables.roleId),
-      })
-      // Also invalidate members since their role data might have changed
-      queryClient.invalidateQueries({ queryKey: ['members', 'project', projectId] })
+      if (!isDemoMode()) {
+        queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
+        queryClient.invalidateQueries({
+          queryKey: roleKeys.single(projectId, variables.roleId),
+        })
+        queryClient.invalidateQueries({ queryKey: ['members', 'project', projectId] })
+      }
     },
     onError: (err) => {
       showToast.error(err.message)
@@ -167,6 +200,18 @@ export function useDeleteRole(projectId: string) {
 
   return useMutation({
     mutationFn: async (roleId: string) => {
+      if (isDemoMode()) {
+        // In demo mode, remove role from the query cache
+        const current = queryClient.getQueryData<RoleWithPermissions[]>(
+          roleKeys.byProject(projectId),
+        )
+        queryClient.setQueryData(
+          roleKeys.byProject(projectId),
+          (current ?? []).filter((r) => r.id !== roleId),
+        )
+        return { success: true }
+      }
+
       const res = await apiFetch(`/api/projects/${projectId}/roles/${roleId}`, {
         method: 'DELETE',
         headers: {
@@ -181,7 +226,9 @@ export function useDeleteRole(projectId: string) {
     },
     onSuccess: () => {
       showToast.success('Role deleted')
-      queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
+      if (!isDemoMode()) {
+        queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
+      }
     },
     onError: (err) => {
       showToast.error(err.message)
@@ -197,6 +244,14 @@ export function useResetRolesToDefaults(projectId: string) {
 
   return useMutation({
     mutationFn: async () => {
+      if (isDemoMode()) {
+        // In demo mode, return the current roles (already have all permissions)
+        const currentRoles = queryClient.getQueryData<RoleWithPermissions[]>(
+          roleKeys.byProject(projectId),
+        )
+        return currentRoles ?? []
+      }
+
       const res = await apiFetch(`/api/projects/${projectId}/roles/reset-defaults`, {
         method: 'POST',
         headers: {
@@ -213,7 +268,9 @@ export function useResetRolesToDefaults(projectId: string) {
       showToast.success('Roles reset to system defaults')
       queryClient.setQueryData(roleKeys.byProject(projectId), data)
       // Also invalidate members since their role data might have changed
-      queryClient.invalidateQueries({ queryKey: ['members', 'project', projectId] })
+      if (!isDemoMode()) {
+        queryClient.invalidateQueries({ queryKey: ['members', 'project', projectId] })
+      }
     },
     onError: (err) => {
       showToast.error(err.message)
@@ -229,6 +286,21 @@ export function useReorderRoles(projectId: string) {
 
   return useMutation({
     mutationFn: async (roleIds: string[]) => {
+      if (isDemoMode()) {
+        // In demo mode, reorder roles in the query cache
+        const current = queryClient.getQueryData<RoleWithPermissions[]>(
+          roleKeys.byProject(projectId),
+        )
+        if (!current) return []
+        const reordered = roleIds
+          .map((id, index) => {
+            const role = current.find((r) => r.id === id)
+            return role ? { ...role, position: index } : null
+          })
+          .filter(Boolean) as RoleWithPermissions[]
+        return reordered
+      }
+
       const res = await apiFetch(`/api/projects/${projectId}/roles/reorder`, {
         method: 'POST',
         headers: {
@@ -250,7 +322,9 @@ export function useReorderRoles(projectId: string) {
     onError: (err) => {
       showToast.error(err.message)
       // Refetch to restore correct order
-      queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
+      if (!isDemoMode()) {
+        queryClient.invalidateQueries({ queryKey: roleKeys.byProject(projectId) })
+      }
     },
   })
 }
