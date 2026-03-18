@@ -177,11 +177,19 @@ export function SprintSection({
     <div
       className={cn(
         showCard && 'rounded-xl ring-1 ring-inset transition-all duration-200 overflow-clip',
-        showCard && isBacklog && 'ring-zinc-800 bg-zinc-900/30',
-        showCard && isPlanning && 'ring-blue-500/20 bg-blue-500/5',
-        showCard && isActive && !expired && 'ring-emerald-500/30 bg-emerald-500/5',
-        showCard && isActive && expired && 'ring-orange-500/30 bg-orange-500/5',
-        showCard && isCompleted && 'ring-zinc-700 bg-zinc-900/20 opacity-75',
+        showCard && isBacklog && 'ring-zinc-800 bg-zinc-900/30 [--table-header-bg:#1a1a1f]',
+        showCard && isPlanning && 'ring-blue-500/20 bg-blue-500/5 [--table-header-bg:#0c0c1a]',
+        showCard &&
+          isActive &&
+          !expired &&
+          'ring-emerald-500/30 bg-emerald-500/5 [--table-header-bg:#0c1a14]',
+        showCard &&
+          isActive &&
+          expired &&
+          'ring-orange-500/30 bg-orange-500/5 [--table-header-bg:#1a140c]',
+        showCard &&
+          isCompleted &&
+          'ring-zinc-700 bg-zinc-900/20 opacity-75 [--table-header-bg:#161618]',
         // Drop target styling - subtle glow when this section is a valid drop target
         showCard && dropPosition !== null && 'ring-blue-500/40 ring-2',
         // isOver is useful for empty sections (via callback from TicketListSection)
