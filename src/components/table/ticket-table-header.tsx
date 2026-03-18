@@ -335,8 +335,8 @@ export function TicketTableHeader({
       className="sticky top-0 z-10 text-left text-xs text-zinc-500 uppercase tracking-wider"
       style={{
         backgroundColor: 'var(--table-header-bg, rgb(9 9 11))',
-        borderLeft: '1px solid var(--table-header-border, transparent)',
-        borderRight: '1px solid var(--table-header-border, transparent)',
+        boxShadow:
+          'inset 1px 0 var(--table-header-border, transparent), inset -1px 0 var(--table-header-border, transparent)',
       }}
     >
       <tr className="border-b border-zinc-800">
