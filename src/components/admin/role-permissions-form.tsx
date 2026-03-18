@@ -41,7 +41,8 @@ import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { getTabId } from '@/hooks/use-realtime'
 import { apiFetch } from '@/lib/base-path'
 import { LABEL_COLORS } from '@/lib/constants'
-import type { Permission } from '@/lib/permissions/constants'
+import { isDemoMode } from '@/lib/demo'
+import { ALL_PERMISSIONS, type Permission } from '@/lib/permissions/constants'
 import {
   type DefaultRoleName,
   ROLE_COLORS,
@@ -134,6 +135,14 @@ export function RolePermissionsForm() {
   const { data, isLoading, error } = useQuery<RoleSettingsData>({
     queryKey: ['admin', 'settings', 'roles'],
     queryFn: async () => {
+      if (isDemoMode()) {
+        return {
+          roleSettings: getDefaultSettings(),
+          customRoles: [],
+          availablePermissions: [...ALL_PERMISSIONS],
+          roleNames: ['Owner', 'Admin', 'Member'] as DefaultRoleName[],
+        }
+      }
       const res = await apiFetch('/api/admin/settings/roles')
       if (!res.ok) throw new Error('Failed to fetch role settings')
       return res.json()
@@ -142,6 +151,10 @@ export function RolePermissionsForm() {
 
   const updateMutation = useMutation({
     mutationFn: async (payload: { settings: RoleSettings; customRoles: CustomRole[] }) => {
+      if (isDemoMode()) {
+        showToast.info('Role settings are read-only in demo mode')
+        return { roleSettings: payload.settings, customRoles: payload.customRoles }
+      }
       const res = await apiFetch('/api/admin/settings/roles', {
         method: 'PATCH',
         headers: {
@@ -157,7 +170,9 @@ export function RolePermissionsForm() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+      if (!isDemoMode()) {
+        queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+      }
       showToast.success('Role settings saved')
       setHasChanges(false)
       setIsCreating(false)
@@ -169,6 +184,15 @@ export function RolePermissionsForm() {
 
   const resetMutation = useMutation({
     mutationFn: async () => {
+      if (isDemoMode()) {
+        const defaults = getDefaultSettings()
+        return {
+          roleSettings: defaults,
+          customRoles: [],
+          availablePermissions: [...ALL_PERMISSIONS],
+          roleNames: ['Owner', 'Admin', 'Member'] as DefaultRoleName[],
+        }
+      }
       const res = await apiFetch('/api/admin/settings/roles', {
         method: 'POST',
         headers: { 'X-Tab-Id': getTabId() },
@@ -177,7 +201,9 @@ export function RolePermissionsForm() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+      if (!isDemoMode()) {
+        queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+      }
       showToast.success('Role settings reset to defaults')
       setHasChanges(false)
       setCustomRoles([])
@@ -372,25 +398,31 @@ export function RolePermissionsForm() {
     }
 
     try {
-      // Persist immediately to the server
-      const res = await apiFetch('/api/admin/settings/roles', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify({ ...localSettings, customRoles: newCustomRoles }),
-      })
+      if (isDemoMode()) {
+        // In demo mode, just update local state
+        setCustomRoles(newCustomRoles)
+        showToast.success(`Deleted "${roleName}"`)
+      } else {
+        // Persist immediately to the server
+        const res = await apiFetch('/api/admin/settings/roles', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tab-Id': getTabId(),
+          },
+          body: JSON.stringify({ ...localSettings, customRoles: newCustomRoles }),
+        })
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to delete role')
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(errorData.error || 'Failed to delete role')
+        }
+
+        // Wait for the query to refetch - this updates `data` which syncs to local state
+        // Don't manually update customRoles to avoid flash of "unsaved changes"
+        await queryClient.refetchQueries({ queryKey: ['admin', 'settings', 'roles'] })
+        showToast.success(`Deleted "${roleName}"`)
       }
-
-      // Wait for the query to refetch - this updates `data` which syncs to local state
-      // Don't manually update customRoles to avoid flash of "unsaved changes"
-      await queryClient.refetchQueries({ queryKey: ['admin', 'settings', 'roles'] })
-      showToast.success(`Deleted "${roleName}"`)
     } catch (err) {
       showToast.error(err instanceof Error ? err.message : 'Failed to delete role')
     } finally {
