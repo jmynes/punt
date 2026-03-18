@@ -115,7 +115,7 @@ export function TicketListSection({
           />
         </div>
       ) : (
-        <div className="relative">
+        <div>
           {enableColumnReorder ? (
             <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
               {table}
