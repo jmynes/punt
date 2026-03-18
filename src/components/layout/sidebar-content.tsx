@@ -757,7 +757,7 @@ export function SidebarContent({
       )}
 
       {/* Projects section */}
-      <div className="mt-3">
+      <div className="mt-3 pt-3 border-t border-zinc-800">
         <div className="flex items-center justify-between px-3 mb-1">
           <button
             type="button"
