@@ -258,8 +258,37 @@ function FormattedText({ text }: { text: string }) {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
-      // Match bullet points: lines starting with optional whitespace then "- " or "* "
-      const bulletMatch = line.match(/^(\s*)[-*]\s+(.*)/)
+
+      // Match headings: ### Heading, ## Heading, # Heading
+      const headingMatch = line.match(/^(#{1,3})\s+(.*)/)
+      if (headingMatch) {
+        flushBullets()
+        const level = headingMatch[1].length
+        const content = processInline(headingMatch[2])
+        if (level === 1) {
+          result.push(
+            <div key={key++} className="text-base font-bold mt-2 mb-1">
+              {content}
+            </div>,
+          )
+        } else if (level === 2) {
+          result.push(
+            <div key={key++} className="text-sm font-bold mt-2 mb-1">
+              {content}
+            </div>,
+          )
+        } else {
+          result.push(
+            <div key={key++} className="text-sm font-semibold mt-1.5 mb-0.5">
+              {content}
+            </div>,
+          )
+        }
+        continue
+      }
+
+      // Match bullet points: lines starting with optional whitespace then "- ", "* ", or "— "
+      const bulletMatch = line.match(/^(\s*)(?:[-*]|—)\s+(.*)/)
 
       if (bulletMatch) {
         bulletItems.push(processInline(bulletMatch[2]))

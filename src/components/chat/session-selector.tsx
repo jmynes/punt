@@ -78,14 +78,13 @@ export function SessionSelector({ currentSessionId, onSelect, projectId }: Sessi
                         {formatRelativeTime(session.updatedAt)} · {session.messageCount} messages
                       </span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0 ml-2"
+                    <button
+                      type="button"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 group-data-[selected=true]:opacity-100 shrink-0 ml-2 rounded transition-all duration-150 flex items-center justify-center bg-zinc-700/50 hover:bg-red-600 hover:scale-110 hover:shadow-[0_0_8px_rgba(239,68,68,0.3)]"
                       onClick={(e) => handleDelete(e, session)}
                     >
-                      <Trash2Icon className="h-3 w-3 text-red-400" />
-                    </Button>
+                      <Trash2Icon className="h-3 w-3 text-white" />
+                    </button>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -93,7 +92,7 @@ export function SessionSelector({ currentSessionId, onSelect, projectId }: Sessi
             <CommandSeparator />
             <CommandGroup>
               <CommandItem onSelect={() => handleSelect(null)} className="text-purple-400">
-                <PlusIcon className="h-4 w-4 mr-2" />
+                <PlusIcon className="h-4 w-4 mr-2 text-white" />
                 New conversation
               </CommandItem>
             </CommandGroup>
