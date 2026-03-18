@@ -84,12 +84,13 @@ export async function POST(request: Request) {
         select: { userId: true },
       })
       if (!session || session.userId !== currentUser.id) {
-        return new Response(JSON.stringify({ error: 'Invalid session' }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        })
+        // Session is invalid or belongs to another user — create a fresh one
+        // instead of returning 403 (handles stale sessionIds after credential updates)
+        sessionId = ''
       }
-    } else {
+    }
+
+    if (!sessionId) {
       // Create new session - get the last user message for the name
       const lastUserMessage = messages.filter((m) => m.role === 'user').pop()
       const sessionName = generateSessionName(lastUserMessage?.content || 'New conversation')
