@@ -59,7 +59,9 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [{ title: 'Dashboard', href: '/', icon: Home }]
 
-// Animated collapsible container for smooth expand/collapse
+// Animated collapsible container for smooth expand/collapse.
+// Uses ResizeObserver to track content size changes from nested
+// collapsible sections, so parent max-height stays accurate.
 function CollapsibleSection({
   expanded,
   children,
@@ -70,19 +72,17 @@ function CollapsibleSection({
   const contentRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState<number>(0)
 
-  // Measure content height whenever content or expansion state changes
-  const measureHeight = useCallback(() => {
-    if (contentRef.current) {
-      setHeight(contentRef.current.scrollHeight)
-    }
-  }, [])
-
   useEffect(() => {
-    measureHeight()
-  }, [measureHeight])
+    const el = contentRef.current
+    if (!el) return
 
-  // Re-measure on every render since children may have changed
-  useEffect(measureHeight)
+    const measure = () => setHeight(el.scrollHeight)
+    measure()
+
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <div
@@ -496,7 +496,7 @@ export function SidebarContent({
               Admin
             </span>
           </button>
-          {adminExpanded && (
+          <CollapsibleSection expanded={adminExpanded}>
             <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
               <Link href="/admin" onClick={handleLinkClick}>
                 <Button
@@ -752,7 +752,7 @@ export function SidebarContent({
                 </CollapsibleSection>
               </div>
             </div>
-          )}
+          </CollapsibleSection>
         </div>
       )}
 
@@ -899,7 +899,7 @@ export function SidebarContent({
                         )}
                       </div>
                       {/* Project sub-nav */}
-                      {isExpanded && (
+                      <CollapsibleSection expanded={isExpanded}>
                         <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
                           <Link href={`/projects/${project.key}/backlog`} onClick={handleLinkClick}>
                             <Button
@@ -969,7 +969,7 @@ export function SidebarContent({
                             onClick={handleLinkClick}
                           />
                         </div>
-                      )}
+                      </CollapsibleSection>
                     </div>
                   </ProjectContextMenu>
                 )
@@ -1049,7 +1049,7 @@ function ProjectSettingsLink({
           </Button>
         </Link>
       </div>
-      {expanded && (
+      <CollapsibleSection expanded={expanded}>
         <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
           {canViewSettings && (
             <Link href={`/projects/${projectKey}/settings/general`} onClick={onClick}>
@@ -1180,7 +1180,7 @@ function ProjectSettingsLink({
             </Link>
           )}
         </div>
-      )}
+      </CollapsibleSection>
     </div>
   )
 }
