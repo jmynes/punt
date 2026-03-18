@@ -36,7 +36,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -70,16 +70,29 @@ function CollapsibleSection({
   children: React.ReactNode
 }) {
   const contentRef = useRef<HTMLDivElement>(null)
-  const [height, setHeight] = useState<number>(0)
+  const heightRef = useRef<number>(0)
+  const [, forceRender] = useState(0)
 
+  // Sync measure before paint to avoid stutter on first expand
+  useLayoutEffect(() => {
+    const el = contentRef.current
+    if (el) {
+      heightRef.current = el.scrollHeight
+    }
+  })
+
+  // ResizeObserver for ongoing nested size changes
   useEffect(() => {
     const el = contentRef.current
     if (!el) return
 
-    const measure = () => setHeight(el.scrollHeight)
-    measure()
-
-    const observer = new ResizeObserver(measure)
+    const observer = new ResizeObserver(() => {
+      const newHeight = el.scrollHeight
+      if (newHeight !== heightRef.current) {
+        heightRef.current = newHeight
+        forceRender((n) => n + 1)
+      }
+    })
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
@@ -87,7 +100,7 @@ function CollapsibleSection({
   return (
     <div
       className="overflow-hidden transition-[max-height] duration-200 ease-in-out"
-      style={{ maxHeight: expanded ? `${height}px` : '0px' }}
+      style={{ maxHeight: expanded ? `${heightRef.current}px` : '0px' }}
     >
       <div ref={contentRef}>{children}</div>
     </div>
