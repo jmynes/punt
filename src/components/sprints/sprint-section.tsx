@@ -18,7 +18,7 @@ import {
   Trash2,
   TrendingUp,
 } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TicketListSection } from '@/components/table'
 import { Button } from '@/components/ui/button'
 import {
@@ -102,6 +102,18 @@ export function SprintSection({
 }: SprintSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [isOverSection, setIsOverSection] = useState(false)
+  const sectionHeaderRef = useRef<HTMLDivElement>(null)
+  const [sectionHeaderHeight, setSectionHeaderHeight] = useState(0)
+
+  useEffect(() => {
+    const el = sectionHeaderRef.current
+    if (!el) return
+    const measure = () => setSectionHeaderHeight(el.offsetHeight)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
   const { sort, toggleSort, setSort, toggleColumnVisibility } = useBacklogStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
@@ -175,6 +187,7 @@ export function SprintSection({
 
   return (
     <div
+      style={{ '--section-header-height': `${sectionHeaderHeight}px` } as React.CSSProperties}
       className={cn(
         showCard && 'rounded-xl ring-1 transition-all duration-200',
         showCard && isBacklog && 'ring-zinc-800 bg-zinc-900/30 [--table-header-bg:#1a1a1f]',
@@ -202,12 +215,15 @@ export function SprintSection({
       {/* Section Header */}
       {showHeader && (
         <div
+          ref={sectionHeaderRef}
           onClick={collapsible ? () => setExpanded(!expanded) : undefined}
           className={cn(
             'flex items-center gap-3 px-4 py-3 select-none',
             'rounded-t-xl transition-colors',
+            'sticky top-0 z-20',
             collapsible && 'cursor-pointer hover:bg-white/[0.02]',
           )}
+          style={{ backgroundColor: 'var(--table-header-bg, rgb(9 9 11))' }}
         >
           {/* Expand/Collapse chevron (only when collapsible) */}
           {collapsible && (

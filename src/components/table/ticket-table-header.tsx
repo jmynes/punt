@@ -332,10 +332,10 @@ export function TicketTableHeader({
 
   return (
     <thead
-      className="sticky top-0 z-10 text-left text-xs text-zinc-500 uppercase tracking-wider"
+      className="sticky z-10 text-left text-xs text-zinc-500 uppercase tracking-wider"
       style={{
         backgroundColor: 'var(--table-header-bg, rgb(9 9 11))',
-        boxShadow: '0 -8px 0 0 var(--table-header-bg, rgb(9 9 11))',
+        top: 'var(--section-header-height, 0px)',
       }}
     >
       <tr className="border-b border-zinc-800">
