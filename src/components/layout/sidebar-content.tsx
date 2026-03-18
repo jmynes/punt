@@ -108,6 +108,10 @@ function CollapsibleSection({
         outer.style.transitionDuration = '0ms'
         heightRef.current = newHeight
         forceRender((n) => n + 1)
+        // Restore transition for the next user toggle
+        requestAnimationFrame(() => {
+          outer.style.transitionDuration = '200ms'
+        })
       }
     })
     observer.observe(el)
