@@ -335,13 +335,7 @@ export function TicketTableHeader({
       className="sticky top-0 z-10 text-left text-xs text-zinc-500 uppercase tracking-wider"
       style={{ backgroundColor: 'var(--table-header-bg, rgb(9 9 11))' }}
     >
-      <tr
-        className="border-b border-zinc-800"
-        style={{
-          outline: '1px solid var(--table-header-border, transparent)',
-          outlineOffset: '-1px',
-        }}
-      >
+      <tr className="border-b border-zinc-800">
         {/* Empty cell for drag handle column */}
         <th className="w-8" />
         {columns.map((column) => (
