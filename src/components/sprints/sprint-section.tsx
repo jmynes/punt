@@ -177,19 +177,23 @@ export function SprintSection({
     <div
       className={cn(
         showCard && 'rounded-xl ring-1 ring-inset transition-all duration-200 overflow-clip',
-        showCard && isBacklog && 'ring-zinc-800 bg-zinc-900/30 [--table-header-bg:#1a1a1f]',
-        showCard && isPlanning && 'ring-blue-500/20 bg-blue-500/5 [--table-header-bg:#0c0c1a]',
+        showCard &&
+          isBacklog &&
+          'ring-zinc-800 bg-zinc-900/30 [--table-header-bg:#1a1a1f] [--table-header-border:rgb(39_39_42)]',
+        showCard &&
+          isPlanning &&
+          'ring-blue-500/20 bg-blue-500/5 [--table-header-bg:#0c0c1a] [--table-header-border:rgb(59_130_246_/_0.2)]',
         showCard &&
           isActive &&
           !expired &&
-          'ring-emerald-500/30 bg-emerald-500/5 [--table-header-bg:#0c1a14]',
+          'ring-emerald-500/30 bg-emerald-500/5 [--table-header-bg:#0c1a14] [--table-header-border:rgb(16_185_129_/_0.3)]',
         showCard &&
           isActive &&
           expired &&
-          'ring-orange-500/30 bg-orange-500/5 [--table-header-bg:#1a140c]',
+          'ring-orange-500/30 bg-orange-500/5 [--table-header-bg:#1a140c] [--table-header-border:rgb(249_115_22_/_0.3)]',
         showCard &&
           isCompleted &&
-          'ring-zinc-700 bg-zinc-900/20 opacity-75 [--table-header-bg:#161618]',
+          'ring-zinc-700 bg-zinc-900/20 opacity-75 [--table-header-bg:#161618] [--table-header-border:rgb(63_63_70)]',
         // Drop target styling - subtle glow when this section is a valid drop target
         showCard && dropPosition !== null && 'ring-blue-500/40 ring-2',
         // isOver is useful for empty sections (via callback from TicketListSection)
