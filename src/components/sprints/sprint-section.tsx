@@ -176,7 +176,7 @@ export function SprintSection({
   return (
     <div
       className={cn(
-        showCard && 'rounded-xl ring-1 transition-all duration-200 overflow-clip',
+        showCard && 'rounded-xl ring-1 transition-all duration-200',
         showCard && isBacklog && 'ring-zinc-800 bg-zinc-900/30 [--table-header-bg:#1a1a1f]',
         showCard && isPlanning && 'ring-blue-500/20 bg-blue-500/5 [--table-header-bg:#0c0c1a]',
         showCard &&
