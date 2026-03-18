@@ -87,10 +87,24 @@ export function DatabaseExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" showCloseButton={step !== 'exporting'}>
+      <DialogContent
+        className="sm:max-w-md"
+        showCloseButton={step !== 'exporting'}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault()
+          setTimeout(() => {
+            document.getElementById('export-continue-btn')?.focus()
+          }, 0)
+        }}
+      >
         {/* Step 1: Summary */}
         {step === 'summary' && (
-          <>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              setShowReauthDialog(true)
+            }}
+          >
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Archive className="h-5 w-5 text-blue-400" />
@@ -257,15 +271,15 @@ export function DatabaseExportDialog({
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
+              <Button type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button variant="primary" onClick={() => setShowReauthDialog(true)}>
+              <Button id="export-continue-btn" type="submit" variant="primary">
                 Continue
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </DialogFooter>
-          </>
+          </form>
         )}
 
         {/* Step 2: Exporting */}
