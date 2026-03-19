@@ -582,31 +582,17 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                 </CardDescription>
               </div>
               {!isDisabled && (
-                <div className="flex items-center gap-2">
-                  {hasWebhookSecret && !isMatchingDefaults(patterns) && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={resetPatternsToDefaults}
-                      className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                    >
-                      <Zap className="h-3.5 w-3.5 mr-1.5" />
-                      {patterns.length === 0 ? 'Load Defaults' : 'Reset to Defaults'}
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={resetPatternsToSystemDefaults}
-                    disabled={patternsMatchSystemDefaults}
-                    className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                    Reset to System Defaults
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={resetPatternsToSystemDefaults}
+                  disabled={patternsMatchSystemDefaults}
+                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                  Reset to System Defaults
+                </Button>
               )}
             </div>
           </CardHeader>
@@ -680,7 +666,13 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                                 {allKeywords.map((kw, idx) => (
                                   <span
                                     key={`${kw}-${idx}`}
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-700/60 border border-zinc-600/40 text-zinc-200 font-mono text-xs"
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-mono text-xs ${
+                                      pattern.action === 'close'
+                                        ? 'bg-emerald-950/40 border-emerald-800/40 text-emerald-200'
+                                        : pattern.action === 'in_progress'
+                                          ? 'bg-amber-950/40 border-amber-800/40 text-amber-200'
+                                          : 'bg-sky-950/40 border-sky-800/40 text-sky-200'
+                                    }`}
                                   >
                                     {kw}
                                     {!isDisabled && (
