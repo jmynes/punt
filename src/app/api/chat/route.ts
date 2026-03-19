@@ -23,6 +23,8 @@ const chatRequestSchema = z.object({
     .object({
       projectId: z.string().optional(),
       ticketKey: z.string().optional(),
+      mentionedUsers: z.array(z.string()).optional(),
+      referencedTickets: z.array(z.string()).optional(),
     })
     .optional(),
   sessionId: z.string().nullish(), // Allow null, undefined, or string
