@@ -80,6 +80,7 @@ import {
   useProjectRoles,
   useReorderRoles,
   useResetRolesToDefaults,
+  useRoleDefaults,
   useUpdateRole,
 } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -89,7 +90,13 @@ import { apiFetch } from '@/lib/base-path'
 import { LABEL_COLORS } from '@/lib/constants'
 import { isEditableTarget } from '@/lib/keyboard-utils'
 import { PERMISSIONS } from '@/lib/permissions'
-import { type DefaultRoleName, ROLE_POSITIONS, ROLE_PRESETS } from '@/lib/permissions/presets'
+import {
+  type DefaultRoleName,
+  ROLE_COLORS,
+  ROLE_DESCRIPTIONS,
+  ROLE_POSITIONS,
+  ROLE_PRESETS,
+} from '@/lib/permissions/presets'
 import { showToast } from '@/lib/toast'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import {
@@ -117,6 +124,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
   const deleteRole = useDeleteRole(projectId)
   const reorderRoles = useReorderRoles(projectId)
   const resetRolesToDefaults = useResetRolesToDefaults(projectId)
+  const { data: roleDefaults } = useRoleDefaults(projectId)
   const queryClient = useQueryClient()
 
   const {
@@ -148,6 +156,59 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     // System admins can simulate any role; otherwise, only roles at or below current position
     return roles.filter((role) => userIsAdmin || role.position >= userPosition)
   }, [roles, realPermissions])
+
+  // Check if all roles already match the system admin defaults
+  const allRolesAtDefaults = useMemo(() => {
+    if (!roles || !roleDefaults) return false
+
+    const { defaults, customRoles: defaultCustomRoles } = roleDefaults
+
+    // Check each built-in default role
+    for (const presetName of ['Owner', 'Admin', 'Member'] as const) {
+      const defaultConfig = defaults[presetName]
+      if (!defaultConfig) return false
+
+      // Find the matching role by position (same approach as the reset endpoint)
+      const role = roles.find((r) => r.isDefault && r.position === ROLE_POSITIONS[presetName])
+      if (!role) return false
+
+      // Compare name, color, description
+      if (role.name !== defaultConfig.name) return false
+      if (role.color !== defaultConfig.color) return false
+      if ((role.description ?? '') !== (defaultConfig.description ?? '')) return false
+
+      // Compare permissions (order-independent)
+      const rolePerms = [...role.permissions].sort()
+      const defaultPerms = [...defaultConfig.permissions].sort()
+      if (rolePerms.length !== defaultPerms.length) return false
+      if (rolePerms.some((p, i) => p !== defaultPerms[i])) return false
+    }
+
+    // Check custom roles: no extra custom roles should exist that aren't in defaults
+    const currentCustomRoles = roles.filter((r) => !r.isDefault)
+    const defaultCustomNames = new Set(
+      (defaultCustomRoles ?? []).map((r: { name: string }) => r.name),
+    )
+
+    // If there are custom roles not in the defaults, not at defaults
+    for (const customRole of currentCustomRoles) {
+      if (!defaultCustomNames.has(customRole.name)) return false
+    }
+
+    // Check that all default custom roles exist and match
+    for (const defaultCustom of defaultCustomRoles ?? []) {
+      const match = currentCustomRoles.find((r) => r.name === defaultCustom.name)
+      if (!match) return false
+      if (match.color !== defaultCustom.color) return false
+      if ((match.description ?? '') !== (defaultCustom.description ?? '')) return false
+      const matchPerms = [...match.permissions].sort()
+      const defPerms = [...defaultCustom.permissions].sort()
+      if (matchPerms.length !== defPerms.length) return false
+      if (matchPerms.some((p: string, i: number) => p !== defPerms[i])) return false
+    }
+
+    return true
+  }, [roles, roleDefaults])
 
   const handleStartSimulation = useCallback(
     (role: RoleWithPermissions) => {
@@ -207,6 +268,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
 
   // Delete confirmation
   const [deletingRole, setDeletingRole] = useState<RoleWithPermissions | null>(null)
+  const [resetSingleRole, setResetSingleRole] = useState<RoleWithPermissions | null>(null)
 
   // Compare roles dialog
   const [showCompareDialog, setShowCompareDialog] = useState(false)
@@ -239,21 +301,36 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     return entry ? (entry[0] as DefaultRoleName) : null
   }, [])
 
-  // Check if the selected role's permissions match the preset defaults
+  // Check if the selected role matches the preset defaults (name, color, description, permissions)
   const isAtDefaults = useMemo(() => {
     if (isCreating || !selectedRole?.isDefault) return true
     const presetName = getPresetNameByPosition(selectedRole.position)
     if (!presetName) return true
-    const preset = ROLE_PRESETS[presetName]
+    // Use admin defaults if available, fall back to hardcoded presets
+    const adminDefault = roleDefaults?.defaults?.[presetName]
+    const defaultName = adminDefault?.name ?? presetName
+    const defaultColor = adminDefault?.color ?? ROLE_COLORS[presetName]
+    const defaultDesc = adminDefault?.description ?? ROLE_DESCRIPTIONS[presetName]
+    const defaultPerms = adminDefault?.permissions ?? ROLE_PRESETS[presetName]
+    const permissionsMatch =
+      editPermissions.length === defaultPerms.length &&
+      defaultPerms.every((p: string) => editPermissions.includes(p as Permission))
     return (
-      editPermissions.length === preset.length && preset.every((p) => editPermissions.includes(p))
+      editName === defaultName &&
+      editColor === defaultColor &&
+      editDescription === defaultDesc &&
+      permissionsMatch
     )
   }, [
+    editName,
+    editColor,
+    editDescription,
     editPermissions,
     selectedRole?.isDefault,
     selectedRole?.position,
     isCreating,
     getPresetNameByPosition,
+    roleDefaults,
   ])
 
   // Get preset permissions for the selected role (for Reset to Defaults)
@@ -998,6 +1075,33 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     }
   }
 
+  // Reset the selected role to its preset defaults (name, color, description, permissions)
+  const handleResetRoleToDefaults = useCallback(() => {
+    if (!selectedRole?.isDefault) return
+    const presetName = getPresetNameByPosition(selectedRole.position)
+    if (!presetName) return
+    // Use admin defaults if available, fall back to hardcoded presets
+    const adminDefault = roleDefaults?.defaults?.[presetName]
+    const defaultName = adminDefault?.name ?? presetName
+    const defaultColor = adminDefault?.color ?? ROLE_COLORS[presetName]
+    const defaultDesc = adminDefault?.description ?? ROLE_DESCRIPTIONS[presetName]
+    const defaultPerms = adminDefault?.permissions
+      ? [...adminDefault.permissions]
+      : [...ROLE_PRESETS[presetName]]
+    setEditName(defaultName)
+    setEditColor(defaultColor)
+    setEditDescription(defaultDesc)
+    setEditPermissions(defaultPerms)
+    // Check if the defaults differ from the saved role
+    const nameChanged = defaultName !== selectedRole.name
+    const colorChanged = defaultColor !== selectedRole.color
+    const descChanged = defaultDesc !== (selectedRole.description || '')
+    const permsChanged =
+      defaultPerms.length !== selectedRole.permissions.length ||
+      defaultPerms.some((p) => !selectedRole.permissions.includes(p))
+    setHasChanges(nameChanged || colorChanged || descChanged || permsChanged)
+  }, [selectedRole, getPresetNameByPosition, roleDefaults])
+
   // Clone a role
   const handleCloneRole = async (role: RoleWithPermissions) => {
     try {
@@ -1052,28 +1156,95 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     }
   }
 
-  // Build actions for each role item
+  // Check if a specific role matches its admin default
+  const isRoleAtDefaults = useCallback(
+    (role: RoleWithPermissions) => {
+      if (!role.isDefault) return true
+      const presetName = getPresetNameByPosition(role.position)
+      if (!presetName) return true
+      const adminDefault = roleDefaults?.defaults?.[presetName]
+      const defaultName = adminDefault?.name ?? presetName
+      const defaultColor = adminDefault?.color ?? ROLE_COLORS[presetName]
+      const defaultDesc = adminDefault?.description ?? ROLE_DESCRIPTIONS[presetName]
+      const defaultPerms = adminDefault?.permissions ?? ROLE_PRESETS[presetName]
+      const permsMatch =
+        role.permissions.length === defaultPerms.length &&
+        defaultPerms.every((p: string) => role.permissions.includes(p as Permission))
+      return (
+        role.name === defaultName &&
+        role.color === defaultColor &&
+        (role.description ?? '') === (defaultDesc ?? '') &&
+        permsMatch
+      )
+    },
+    [getPresetNameByPosition, roleDefaults],
+  )
+
+  // Reset a specific role to its admin defaults and save immediately
+  const handleResetSingleRole = useCallback(
+    async (role: RoleWithPermissions) => {
+      if (!role.isDefault) return
+      const presetName = getPresetNameByPosition(role.position)
+      if (!presetName) return
+      const adminDefault = roleDefaults?.defaults?.[presetName]
+      const defaultName = adminDefault?.name ?? presetName
+      const defaultColor = adminDefault?.color ?? ROLE_COLORS[presetName]
+      const defaultDesc = adminDefault?.description ?? ROLE_DESCRIPTIONS[presetName]
+      const defaultPerms = adminDefault?.permissions ?? [...ROLE_PRESETS[presetName]]
+      await updateRole.mutateAsync({
+        roleId: role.id,
+        name: defaultName,
+        color: defaultColor,
+        description: defaultDesc,
+        permissions: defaultPerms,
+      })
+      // If this role is currently selected, update the edit state too
+      if (selectedRoleId === role.id) {
+        setEditName(defaultName)
+        setEditColor(defaultColor)
+        setEditDescription(defaultDesc)
+        setEditPermissions(defaultPerms as Permission[])
+        setHasChanges(false)
+      }
+    },
+    [getPresetNameByPosition, roleDefaults, updateRole, selectedRoleId],
+  )
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: handleCloneRole is intentionally excluded to avoid unnecessary rerenders
   const getRoleActions = useCallback(
     (role: RoleWithPermissions): RoleItemAction[] => {
       if (!canManageRoles) return []
-      return [
-        {
-          icon: Copy,
-          label: 'Clone',
-          onClick: () => handleCloneRole(role),
-          disabled: createRole.isPending,
-        },
-        {
-          icon: Trash2,
-          label: 'Delete',
-          onClick: () => setDeletingRole(role),
-          disabled: role.isDefault || (role.memberCount || 0) > 0,
-          variant: 'destructive' as const,
-        },
-      ]
+      const actions: RoleItemAction[] = []
+      if (role.isDefault && !isRoleAtDefaults(role)) {
+        actions.push({
+          icon: RotateCcw,
+          label: 'Reset to Defaults',
+          onClick: () => setResetSingleRole(role),
+          disabled: updateRole.isPending,
+        })
+      }
+      actions.push({
+        icon: Copy,
+        label: 'Clone',
+        onClick: () => handleCloneRole(role),
+        disabled: createRole.isPending,
+      })
+      actions.push({
+        icon: Trash2,
+        label: 'Delete',
+        onClick: () => setDeletingRole(role),
+        disabled: role.isDefault || (role.memberCount || 0) > 0,
+        variant: 'destructive' as const,
+      })
+      return actions
     },
-    [canManageRoles, createRole.isPending],
+    [
+      canManageRoles,
+      createRole.isPending,
+      updateRole.isPending,
+      isRoleAtDefaults,
+      handleResetSingleRole,
+    ],
   )
 
   // Map roles to EditorRole for the shared SortableRoleItem
@@ -1153,8 +1324,12 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowResetDefaultsDialog(true)}
-                disabled={resetRolesToDefaults.isPending}
-                title="Reset to System Defaults"
+                disabled={resetRolesToDefaults.isPending || allRolesAtDefaults}
+                title={
+                  allRolesAtDefaults
+                    ? 'Roles already match system defaults'
+                    : 'Reset to System Defaults'
+                }
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
@@ -1244,6 +1419,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
             }
             presetPermissions={presetPermissions}
             isAtDefaults={isAtDefaults}
+            onResetToDefaults={handleResetRoleToDefaults}
             showDiff={showDiff}
             originalPermissions={originalPermissions}
             onShowDiffChange={setShowDiff}
@@ -1681,6 +1857,17 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
                 <div className="flex-shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-t border-zinc-800 bg-zinc-900/80">
                   <p className="text-sm text-zinc-400">You have unsaved changes</p>
                   <div className="flex items-center gap-2">
+                    {selectedRole?.isDefault && !isAtDefaults && !isCreating && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleResetRoleToDefaults}
+                        className="text-zinc-400 hover:text-zinc-200"
+                      >
+                        <RotateCcw className="mr-1.5 h-3 w-3" />
+                        Reset to Defaults
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" onClick={handleCancel}>
                       Cancel
                     </Button>
@@ -1879,8 +2066,61 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
             <AlertDialogAction
               onClick={handleResetToSystemDefaults}
               disabled={resetRolesToDefaults.isPending}
+              className="bg-red-600 hover:bg-red-500 text-white"
             >
               {resetRolesToDefaults.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                'Reset to Defaults'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset single role to defaults confirmation dialog */}
+      <AlertDialog
+        open={!!resetSingleRole}
+        onOpenChange={(open) => !open && setResetSingleRole(null)}
+      >
+        <AlertDialogContent
+          onOpenAutoFocus={(e) => {
+            e.preventDefault()
+            setTimeout(() => {
+              ;(
+                (e.currentTarget as HTMLElement)?.querySelector(
+                  '[data-action]',
+                ) as HTMLButtonElement
+              )?.focus()
+            }, 0)
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Reset &quot;{resetSingleRole?.name}&quot; to Defaults?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will reset the role&apos;s name, color, description, and permissions to match the
+              system default configuration.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-action
+              onClick={async () => {
+                if (resetSingleRole) {
+                  await handleResetSingleRole(resetSingleRole)
+                  setResetSingleRole(null)
+                }
+              }}
+              disabled={updateRole.isPending}
+              className="bg-red-600 hover:bg-red-500 text-white"
+            >
+              {updateRole.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Resetting...

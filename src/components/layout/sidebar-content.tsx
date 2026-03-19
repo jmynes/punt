@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronRight,
   Columns3,
+  Compass,
   Database,
   Eye,
   GitBranch,
@@ -1103,7 +1104,7 @@ function ProjectSettingsLink({
                     'bg-zinc-800/50 text-zinc-100',
                 )}
               >
-                <Settings className="h-3 w-3" />
+                <Compass className="h-3 w-3" />
                 General
               </Button>
             </Link>

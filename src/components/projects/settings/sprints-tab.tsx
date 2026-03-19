@@ -92,6 +92,13 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
     }
   }, [settings])
 
+  const isAtSystemDefaults =
+    formData.defaultSprintDuration === (systemSettings?.defaultSprintDuration ?? 14) &&
+    formData.autoCarryOverIncomplete === (systemSettings?.defaultAutoCarryOver ?? true) &&
+    formData.defaultStartTime === (systemSettings?.defaultSprintStartTime ?? '09:00') &&
+    formData.defaultEndTime === (systemSettings?.defaultSprintEndTime ?? '17:00') &&
+    formData.storyPointScale === (systemSettings?.storyPointScale ?? 'sequential')
+
   const handleResetToSystemDefaults = useCallback(() => {
     setFormData({
       defaultSprintDuration: systemSettings?.defaultSprintDuration ?? 14,
@@ -134,7 +141,7 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
             variant="outline"
             size="sm"
             onClick={handleResetToSystemDefaults}
-            disabled={isDisabled}
+            disabled={isDisabled || isAtSystemDefaults}
             className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
           >
             <RotateCcw className="h-3.5 w-3.5 mr-1.5" />

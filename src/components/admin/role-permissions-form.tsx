@@ -119,6 +119,7 @@ export function RolePermissionsForm() {
   const [showDiff, setShowDiff] = useState(false)
   const [showCompareDialog, setShowCompareDialog] = useState(false)
   const [deletingRole, setDeletingRole] = useState<CustomRole | null>(null)
+  const [resetBuiltInRoleId, setResetBuiltInRoleId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Form state for creating new roles
@@ -169,7 +170,18 @@ export function RolePermissionsForm() {
       }
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: (_responseData, variables) => {
+      // Eagerly update the query cache with the saved values so that Cancel
+      // immediately reverts to the last saved state (not stale/default values).
+      queryClient.setQueryData<RoleSettingsData>(['admin', 'settings', 'roles'], (old) =>
+        old
+          ? {
+              ...old,
+              roleSettings: variables.settings,
+              customRoles: variables.customRoles,
+            }
+          : old,
+      )
       if (!isDemoMode()) {
         queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
       }
@@ -285,14 +297,22 @@ export function RolePermissionsForm() {
     ? localSettings[selectedId as DefaultRoleName]
     : selectedCustomRole
 
-  // Check if the selected role's permissions match its preset defaults
+  // Check if the selected role matches its preset defaults (name, color, description, permissions)
   const selectedRoleAtDefaults = useMemo(() => {
     if (!isBuiltInRole) return true
     const current = localSettings[selectedId as DefaultRoleName]
-    const defaults = ROLE_PRESETS[selectedId as DefaultRoleName]
+    const presetName = selectedId as DefaultRoleName
+    const presetPerms = ROLE_PRESETS[presetName]
+    const presetColor = ROLE_COLORS[presetName]
+    const presetDescription = ROLE_DESCRIPTIONS[presetName]
+    const permissionsMatch =
+      current.permissions.length === presetPerms.length &&
+      presetPerms.every((p) => current.permissions.includes(p))
     return (
-      current.permissions.length === defaults.length &&
-      defaults.every((p) => current.permissions.includes(p))
+      current.name === presetName &&
+      current.color === presetColor &&
+      current.description === presetDescription &&
+      permissionsMatch
     )
   }, [localSettings, selectedId, isBuiltInRole])
 
@@ -330,6 +350,22 @@ export function RolePermissionsForm() {
 
   // Get preset permissions for the selected built-in role
   const presetPermissions = isBuiltInRole ? ROLE_PRESETS[selectedId as DefaultRoleName] : undefined
+
+  // Reset the selected built-in role to its preset defaults (name, color, description, permissions)
+  const handleResetRoleToDefaults = useCallback(() => {
+    if (!isBuiltInRole) return
+    const presetName = selectedId as DefaultRoleName
+    setLocalSettings((prev) => ({
+      ...prev,
+      [presetName]: {
+        ...prev[presetName],
+        name: presetName,
+        color: ROLE_COLORS[presetName],
+        description: ROLE_DESCRIPTIONS[presetName],
+        permissions: [...ROLE_PRESETS[presetName]],
+      },
+    }))
+  }, [selectedId, isBuiltInRole])
 
   const handleCloneRole = useCallback(
     (roleId: string) => {
@@ -431,16 +467,60 @@ export function RolePermissionsForm() {
     }
   }, [deletingRole, customRoles, selectedId, roleOrder, localSettings, queryClient])
 
+  // Check if a specific built-in role matches its hardcoded preset
+  const isBuiltInRoleAtDefaults = useCallback(
+    (roleId: string) => {
+      if (!(roleId in localSettings)) return true
+      const current = localSettings[roleId as DefaultRoleName]
+      const presetName = roleId as DefaultRoleName
+      const presetPerms = ROLE_PRESETS[presetName]
+      const presetColor = ROLE_COLORS[presetName]
+      const presetDescription = ROLE_DESCRIPTIONS[presetName]
+      const permissionsMatch =
+        current.permissions.length === presetPerms.length &&
+        presetPerms.every((p) => current.permissions.includes(p))
+      return (
+        current.name === presetName &&
+        current.color === presetColor &&
+        current.description === presetDescription &&
+        permissionsMatch
+      )
+    },
+    [localSettings],
+  )
+
+  // Reset a built-in role to hardcoded preset defaults
+  const handleResetBuiltInRole = useCallback((roleId: string) => {
+    const presetName = roleId as DefaultRoleName
+    if (!(presetName in ROLE_PRESETS)) return
+    setLocalSettings((prev) => ({
+      ...prev,
+      [presetName]: {
+        ...prev[presetName],
+        name: presetName,
+        color: ROLE_COLORS[presetName],
+        description: ROLE_DESCRIPTIONS[presetName],
+        permissions: [...ROLE_PRESETS[presetName]],
+      },
+    }))
+  }, [])
+
   // Build actions for each role item
   const getRoleActions = useCallback(
     (roleId: string, isDefault: boolean): RoleItemAction[] => {
-      const actions: RoleItemAction[] = [
-        {
-          icon: Copy,
-          label: 'Clone',
-          onClick: () => handleCloneRole(roleId),
-        },
-      ]
+      const actions: RoleItemAction[] = []
+      if (isDefault && !isBuiltInRoleAtDefaults(roleId)) {
+        actions.push({
+          icon: RotateCcw,
+          label: 'Reset to Defaults',
+          onClick: () => setResetBuiltInRoleId(roleId),
+        })
+      }
+      actions.push({
+        icon: Copy,
+        label: 'Clone',
+        onClick: () => handleCloneRole(roleId),
+      })
       actions.push({
         icon: Trash2,
         label: 'Delete',
@@ -450,7 +530,7 @@ export function RolePermissionsForm() {
       })
       return actions
     },
-    [handleCloneRole, handleDeleteCustomRole],
+    [handleCloneRole, handleDeleteCustomRole, isBuiltInRoleAtDefaults],
   )
 
   const handleFieldChange = (field: string, value: string | Permission[]) => {
@@ -568,15 +648,21 @@ export function RolePermissionsForm() {
       setIsCreating(false)
       setSelectedId('Owner')
     }
-    if (data?.roleSettings) {
-      setLocalSettings(data.roleSettings)
+    // Use the latest query cache data to ensure we revert to the last saved state
+    // (not hardcoded defaults). The `data` variable from useQuery might be stale
+    // if a save just completed and the refetch hasn't updated the render yet.
+    const cachedData = queryClient.getQueryData<RoleSettingsData>(['admin', 'settings', 'roles'])
+    const savedSettings = cachedData?.roleSettings ?? data?.roleSettings
+    if (savedSettings) {
+      setLocalSettings(savedSettings)
       const sorted = (['Owner', 'Admin', 'Member'] as DefaultRoleName[]).sort(
-        (a, b) => (data.roleSettings[a]?.position ?? 0) - (data.roleSettings[b]?.position ?? 0),
+        (a, b) => (savedSettings[a]?.position ?? 0) - (savedSettings[b]?.position ?? 0),
       )
       setRoleOrder(sorted)
     }
-    if (data?.customRoles) {
-      setCustomRoles(data.customRoles)
+    const savedCustomRoles = cachedData?.customRoles ?? data?.customRoles
+    if (savedCustomRoles) {
+      setCustomRoles(savedCustomRoles)
     } else {
       setCustomRoles([])
     }
@@ -672,6 +758,17 @@ export function RolePermissionsForm() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-zinc-400">Roles</h3>
           <div className="flex items-center gap-1">
+            {!isAtDefaults && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                disabled={resetMutation.isPending}
+                title="Reset to Defaults"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            )}
             {compareRoles.length >= 2 && (
               <Button
                 variant="ghost"
@@ -762,6 +859,7 @@ export function RolePermissionsForm() {
           }
           presetPermissions={presetPermissions}
           isAtDefaults={selectedRoleAtDefaults}
+          onResetToDefaults={handleResetRoleToDefaults}
           showDiff={showDiff}
           originalPermissions={originalPermissions}
           onShowDiffChange={setShowDiff}
@@ -843,6 +941,53 @@ export function RolePermissionsForm() {
             >
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete Role
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset single built-in role to defaults confirmation dialog */}
+      <AlertDialog
+        open={!!resetBuiltInRoleId}
+        onOpenChange={(open) => !open && setResetBuiltInRoleId(null)}
+      >
+        <AlertDialogContent
+          className="bg-zinc-950 border-zinc-800"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault()
+            setTimeout(() => {
+              ;(
+                (e.currentTarget as HTMLElement)?.querySelector(
+                  '[data-action]',
+                ) as HTMLButtonElement
+              )?.focus()
+            }, 0)
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">
+              Reset &quot;{resetBuiltInRoleId}&quot; to Defaults?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              This will reset the role&apos;s name, color, description, and permissions to the
+              hardcoded system defaults. You&apos;ll need to save to apply the changes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-action
+              onClick={() => {
+                if (resetBuiltInRoleId) {
+                  handleResetBuiltInRole(resetBuiltInRoleId)
+                  setResetBuiltInRoleId(null)
+                }
+              }}
+              className="bg-red-600 hover:bg-red-500 text-white"
+            >
+              Reset to Defaults
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
