@@ -111,6 +111,7 @@ export function RolePermissionsForm() {
   const [showCompareDialog, setShowCompareDialog] = useState(false)
   const [deletingRole, setDeletingRole] = useState<CustomRole | null>(null)
   const [resetBuiltInRoleId, setResetBuiltInRoleId] = useState<string | null>(null)
+  const [showResetAllDialog, setShowResetAllDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Form state for creating new roles
@@ -753,9 +754,9 @@ export function RolePermissionsForm() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleReset}
+                onClick={() => setShowResetAllDialog(true)}
                 disabled={resetMutation.isPending}
-                title="Reset to Defaults"
+                title="Reset All to Defaults"
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
@@ -863,7 +864,7 @@ export function RolePermissionsForm() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleReset}
+                    onClick={() => setShowResetAllDialog(true)}
                     disabled={isAtDefaults || resetMutation.isPending}
                     className="border-zinc-700 text-zinc-400 hover:text-zinc-100"
                   >
@@ -953,6 +954,21 @@ export function RolePermissionsForm() {
           await updateMutation.mutateAsync({ settings: resetSettings, customRoles })
         }}
         loading={updateMutation.isPending}
+      />
+
+      {/* Reset all roles to defaults confirmation dialog */}
+      <ConfirmDialog
+        open={showResetAllDialog}
+        onOpenChange={setShowResetAllDialog}
+        title="Reset All Roles to Defaults?"
+        description="This will reset all built-in roles (Owner, Admin, Member) to their hardcoded system defaults and remove any custom roles. This action saves immediately."
+        confirmLabel="Reset All to Defaults"
+        actionVariant="destructive"
+        loading={resetMutation.isPending}
+        onConfirm={async () => {
+          await resetMutation.mutateAsync()
+          setShowResetAllDialog(false)
+        }}
       />
     </div>
   )
