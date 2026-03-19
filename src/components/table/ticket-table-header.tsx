@@ -331,8 +331,14 @@ export function TicketTableHeader({
   const HeaderCell = enableColumnReorder ? SortableHeaderCell : StaticHeaderCell
 
   return (
-    <thead className="text-left text-xs text-zinc-500 uppercase tracking-wider">
-      <tr className="border-b border-zinc-800/50">
+    <thead
+      className="sticky z-10 text-left text-xs text-zinc-500 uppercase tracking-wider"
+      style={{
+        backgroundColor: 'var(--table-header-bg, rgb(9 9 11))',
+        top: 'var(--section-header-height, 0px)',
+      }}
+    >
+      <tr className="border-b border-zinc-800">
         {/* Empty cell for drag handle column */}
         <th className="w-8" />
         {columns.map((column) => (
