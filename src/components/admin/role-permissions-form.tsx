@@ -930,15 +930,29 @@ export function RolePermissionsForm() {
         open={!!resetBuiltInRoleId}
         onOpenChange={(open) => !open && setResetBuiltInRoleId(null)}
         title={`Reset "${resetBuiltInRoleId}" to Defaults?`}
-        description="This will reset the role's name, color, description, and permissions to the hardcoded system defaults. You'll need to save to apply the changes."
+        description="This will reset the role's name, color, description, and permissions to the hardcoded system defaults and save immediately."
         confirmLabel="Reset to Defaults"
         actionVariant="destructive"
-        onConfirm={() => {
-          if (resetBuiltInRoleId) {
-            handleResetBuiltInRole(resetBuiltInRoleId)
-            setResetBuiltInRoleId(null)
+        onConfirm={async () => {
+          if (!resetBuiltInRoleId) return
+          const presetName = resetBuiltInRoleId as DefaultRoleName
+          if (!(presetName in ROLE_PRESETS)) return
+          // Compute the reset settings directly and save in one step
+          const resetSettings = {
+            ...localSettings,
+            [presetName]: {
+              ...localSettings[presetName],
+              name: presetName,
+              color: ROLE_COLORS[presetName],
+              description: ROLE_DESCRIPTIONS[presetName],
+              permissions: [...ROLE_PRESETS[presetName]],
+            },
           }
+          setLocalSettings(resetSettings)
+          setResetBuiltInRoleId(null)
+          await updateMutation.mutateAsync({ settings: resetSettings, customRoles })
         }}
+        loading={updateMutation.isPending}
       />
     </div>
   )

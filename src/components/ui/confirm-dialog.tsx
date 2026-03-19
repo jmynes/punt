@@ -89,7 +89,7 @@ export function ConfirmDialog({
         }}
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="grid gap-4">
           <AlertDialogHeader>
             <AlertDialogTitle>{title}</AlertDialogTitle>
             <AlertDialogDescription asChild={typeof description !== 'string'}>
@@ -97,7 +97,7 @@ export function ConfirmDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          {children && <div className="py-2">{children}</div>}
+          {children && <div>{children}</div>}
 
           <AlertDialogFooter>
             <AlertDialogCancel type="button" disabled={loading}>
