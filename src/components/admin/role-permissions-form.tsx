@@ -119,6 +119,7 @@ export function RolePermissionsForm() {
   const [showDiff, setShowDiff] = useState(false)
   const [showCompareDialog, setShowCompareDialog] = useState(false)
   const [deletingRole, setDeletingRole] = useState<CustomRole | null>(null)
+  const [resetBuiltInRoleId, setResetBuiltInRoleId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Form state for creating new roles
@@ -512,7 +513,7 @@ export function RolePermissionsForm() {
         actions.push({
           icon: RotateCcw,
           label: 'Reset to Defaults',
-          onClick: () => handleResetBuiltInRole(roleId),
+          onClick: () => setResetBuiltInRoleId(roleId),
         })
       }
       actions.push({
@@ -529,7 +530,7 @@ export function RolePermissionsForm() {
       })
       return actions
     },
-    [handleCloneRole, handleDeleteCustomRole, isBuiltInRoleAtDefaults, handleResetBuiltInRole],
+    [handleCloneRole, handleDeleteCustomRole, isBuiltInRoleAtDefaults],
   )
 
   const handleFieldChange = (field: string, value: string | Permission[]) => {
@@ -940,6 +941,49 @@ export function RolePermissionsForm() {
             >
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete Role
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset single built-in role to defaults confirmation dialog */}
+      <AlertDialog
+        open={!!resetBuiltInRoleId}
+        onOpenChange={(open) => !open && setResetBuiltInRoleId(null)}
+      >
+        <AlertDialogContent
+          className="bg-zinc-950 border-zinc-800"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault()
+            setTimeout(() => {
+              ;(e.currentTarget?.querySelector('[data-action]') as HTMLButtonElement)?.focus()
+            }, 0)
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">
+              Reset &quot;{resetBuiltInRoleId}&quot; to Defaults?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              This will reset the role&apos;s name, color, description, and permissions to the
+              hardcoded system defaults. You&apos;ll need to save to apply the changes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-action
+              onClick={() => {
+                if (resetBuiltInRoleId) {
+                  handleResetBuiltInRole(resetBuiltInRoleId)
+                  setResetBuiltInRoleId(null)
+                }
+              }}
+              className="bg-red-600 hover:bg-red-500 text-white"
+            >
+              Reset to Defaults
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

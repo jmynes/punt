@@ -268,6 +268,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
 
   // Delete confirmation
   const [deletingRole, setDeletingRole] = useState<RoleWithPermissions | null>(null)
+  const [resetSingleRole, setResetSingleRole] = useState<RoleWithPermissions | null>(null)
 
   // Compare roles dialog
   const [showCompareDialog, setShowCompareDialog] = useState(false)
@@ -1218,7 +1219,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
         actions.push({
           icon: RotateCcw,
           label: 'Reset to Defaults',
-          onClick: () => handleResetSingleRole(role),
+          onClick: () => setResetSingleRole(role),
           disabled: updateRole.isPending,
         })
       }
@@ -2068,6 +2069,54 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
               className="bg-red-600 hover:bg-red-500 text-white"
             >
               {resetRolesToDefaults.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                'Reset to Defaults'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset single role to defaults confirmation dialog */}
+      <AlertDialog
+        open={!!resetSingleRole}
+        onOpenChange={(open) => !open && setResetSingleRole(null)}
+      >
+        <AlertDialogContent
+          onOpenAutoFocus={(e) => {
+            e.preventDefault()
+            setTimeout(() => {
+              ;(e.currentTarget?.querySelector('[data-action]') as HTMLButtonElement)?.focus()
+            }, 0)
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Reset &quot;{resetSingleRole?.name}&quot; to Defaults?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will reset the role&apos;s name, color, description, and permissions to match the
+              system default configuration.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-action
+              onClick={async () => {
+                if (resetSingleRole) {
+                  await handleResetSingleRole(resetSingleRole)
+                  setResetSingleRole(null)
+                }
+              }}
+              disabled={updateRole.isPending}
+              className="bg-red-600 hover:bg-red-500 text-white"
+            >
+              {updateRole.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Resetting...
