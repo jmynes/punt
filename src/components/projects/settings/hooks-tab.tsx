@@ -47,6 +47,7 @@ import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { basePath } from '@/lib/base-path'
 import { PERMISSIONS } from '@/lib/permissions'
+import { cn } from '@/lib/utils'
 
 interface HooksTabProps {
   projectId: string
