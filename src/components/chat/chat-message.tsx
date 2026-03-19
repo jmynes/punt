@@ -222,11 +222,16 @@ function FormattedText({ text }: { text: string }) {
           </code>,
         )
       } else if (matched.startsWith('@')) {
-        // @mention - render as styled badge
+        // @mention - render as clickable styled badge
+        const username = matched.slice(1)
         result.push(
-          <span key={key++} className="font-semibold text-blue-400">
+          <Link
+            key={key++}
+            href={`/admin/users?search=${encodeURIComponent(username)}`}
+            className="font-semibold text-blue-400 hover:text-blue-300 hover:underline"
+          >
             {matched}
-          </span>,
+          </Link>,
         )
       } else if (/^#?[A-Z][A-Z0-9]+-\d+$/.test(matched)) {
         // #ticket reference or bare TICKET-KEY - render as clickable link
