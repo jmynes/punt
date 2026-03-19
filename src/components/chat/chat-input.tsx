@@ -1,6 +1,6 @@
 'use client'
 
-import { GripHorizontalIcon, SendIcon, SquareIcon } from 'lucide-react'
+import { AtSignIcon, GripHorizontalIcon, HashIcon, SendIcon, SquareIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type MentionItem, MentionMenu } from '@/components/chat/mention-menu'
 import { SlashCommandMenu } from '@/components/chat/slash-command-menu'
@@ -378,6 +378,62 @@ export function ChatInput({
       >
         <GripHorizontalIcon className="h-3 w-3 text-zinc-600" />
       </div>
+
+      {/* Quick mention buttons */}
+      {members?.length || tickets?.length ? (
+        <div className="flex items-center gap-1.5 px-4 pb-1.5">
+          {members && members.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                const textarea = textareaRef.current
+                if (!textarea) return
+                const pos = textarea.selectionStart ?? value.length
+                const before = value.slice(0, pos)
+                const after = value.slice(pos)
+                const newValue = `${before}@${after}`
+                setValue(newValue)
+                setTimeout(() => {
+                  textarea.focus()
+                  textarea.setSelectionRange(pos + 1, pos + 1)
+                  setMentionTrigger({ type: 'user', query: '', startPos: pos })
+                  setMentionSelectedIndex(0)
+                }, 0)
+              }}
+              disabled={disabled}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-zinc-700/50 bg-zinc-800/30 text-zinc-400 hover:text-blue-300 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all disabled:opacity-50"
+            >
+              <AtSignIcon className="h-3 w-3" />
+              Mention
+            </button>
+          )}
+          {tickets && tickets.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                const textarea = textareaRef.current
+                if (!textarea) return
+                const pos = textarea.selectionStart ?? value.length
+                const before = value.slice(0, pos)
+                const after = value.slice(pos)
+                const newValue = `${before}#${after}`
+                setValue(newValue)
+                setTimeout(() => {
+                  textarea.focus()
+                  textarea.setSelectionRange(pos + 1, pos + 1)
+                  setMentionTrigger({ type: 'ticket', query: '', startPos: pos })
+                  setMentionSelectedIndex(0)
+                }, 0)
+              }}
+              disabled={disabled}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-zinc-700/50 bg-zinc-800/30 text-zinc-400 hover:text-amber-300 hover:border-amber-500/30 hover:bg-amber-500/10 transition-all disabled:opacity-50"
+            >
+              <HashIcon className="h-3 w-3" />
+              Ticket
+            </button>
+          )}
+        </div>
+      ) : null}
 
       <div className="relative flex items-center gap-2 px-4 pb-4">
         <SlashCommandMenu
