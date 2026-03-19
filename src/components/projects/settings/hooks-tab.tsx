@@ -656,7 +656,11 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                           <div className="flex items-center gap-3">
                             {/* Action indicator */}
                             <div
-                              className={`w-1 self-stretch rounded-full ${actionConfig.accent.replace('text-', 'bg-')}`}
+                              className={cn('w-1 self-stretch rounded-full', {
+                                'bg-emerald-400': pattern.action === 'close',
+                                'bg-amber-400': pattern.action === 'in_progress',
+                                'bg-sky-400': pattern.action === 'reference',
+                              })}
                             />
 
                             {/* Keywords area */}
