@@ -77,12 +77,11 @@ export function ChatPanel() {
   const { data: members } = useProjectMembers(activeProjectId ?? '')
 
   // Get tickets from board store (already loaded for the active project)
-  const allTickets = useBoardStore((s) => {
-    if (!activeProjectId) return []
-    const columns = s.projects[activeProjectId]
-    if (!columns) return []
-    return columns.flatMap((col) => col.tickets)
-  })
+  const columns = useBoardStore((s) => (activeProjectId ? s.projects[activeProjectId] : undefined))
+  const allTickets = useMemo(
+    () => (columns ? columns.flatMap((col) => col.tickets) : []),
+    [columns],
+  )
 
   // React Query hooks for session operations
   const { data: sessionData } = useChatSession(currentSessionId)
