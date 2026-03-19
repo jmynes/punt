@@ -272,6 +272,30 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     getPresetNameByPosition,
   ])
 
+  // Check if ALL roles match their preset defaults (for the global reset button)
+  const allRolesAtDefaults = useMemo(() => {
+    if (!roles) return true
+    const defaultRoles = roles.filter((r) => r.isDefault)
+    const presetNames = Object.keys(ROLE_PRESETS) as DefaultRoleName[]
+    if (defaultRoles.length !== presetNames.length) return false
+    return defaultRoles.every((role) => {
+      const presetName = getPresetNameByPosition(role.position)
+      if (!presetName) return false
+      const preset = ROLE_PRESETS[presetName]
+      const presetColor = ROLE_COLORS[presetName]
+      const presetDescription = ROLE_DESCRIPTIONS[presetName]
+      const permissionsMatch =
+        role.permissions.length === preset.length &&
+        preset.every((p) => role.permissions.includes(p))
+      return (
+        role.name === presetName &&
+        role.color === presetColor &&
+        role.description === presetDescription &&
+        permissionsMatch
+      )
+    })
+  }, [roles, getPresetNameByPosition])
+
   // Get preset permissions for the selected role (for Reset to Defaults)
   const presetPermissions = useMemo(() => {
     if (!selectedRole?.isDefault) return undefined
@@ -1192,7 +1216,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowResetDefaultsDialog(true)}
-                disabled={resetRolesToDefaults.isPending}
+                disabled={resetRolesToDefaults.isPending || allRolesAtDefaults}
                 title="Reset to System Defaults"
               >
                 <RotateCcw className="h-4 w-4" />

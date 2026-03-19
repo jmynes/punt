@@ -12,7 +12,7 @@ import {
   Server,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -212,6 +212,34 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
     setHasChanges(changed)
   }, [formData, config])
 
+  // Check if current form matches system defaults (for disabling reset button)
+  const isAtSystemDefaults = useMemo(() => {
+    if (!config?.systemDefaults) return true
+    const defaults = config.systemDefaults
+    const defaultBranches = Array.isArray(defaults.environmentBranches)
+      ? defaults.environmentBranches
+      : []
+    const branchesMatch =
+      formData.environmentBranches.length === defaultBranches.length &&
+      formData.environmentBranches.every((b, i) => {
+        const d = defaultBranches[i]
+        return (
+          d &&
+          b.environment === d.environment &&
+          b.branchName === d.branchName &&
+          b.color === d.color
+        )
+      })
+    return (
+      !formData.repositoryUrl &&
+      !formData.localPath &&
+      !formData.defaultBranch &&
+      !formData.monorepoPath &&
+      formData.branchTemplate === (defaults.branchTemplate || '') &&
+      branchesMatch
+    )
+  }, [formData, config?.systemDefaults])
+
   // Validate branch template
   useEffect(() => {
     if (formData.branchTemplate) {
@@ -410,7 +438,7 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
               variant="outline"
               size="sm"
               onClick={handleResetToSystemDefaults}
-              disabled={isDisabled}
+              disabled={isDisabled || isAtSystemDefaults}
               className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
             >
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
