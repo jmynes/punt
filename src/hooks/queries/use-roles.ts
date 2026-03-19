@@ -12,6 +12,7 @@ export const roleKeys = {
   all: ['roles'] as const,
   byProject: (projectId: string) => ['roles', 'project', projectId] as const,
   single: (projectId: string, roleId: string) => ['roles', 'project', projectId, roleId] as const,
+  defaults: (projectId: string) => ['roles', 'defaults', projectId] as const,
 }
 
 /**
@@ -72,6 +73,28 @@ export function useRole(projectId: string, roleId: string) {
     },
     enabled: !!projectId && !!roleId,
     staleTime: 1000 * 60,
+  })
+}
+
+/**
+ * Fetch the system admin default role configuration for a project.
+ * Used to compare current roles against defaults (e.g. to disable "Reset to Defaults" button).
+ */
+export function useRoleDefaults(projectId: string) {
+  return useQuery({
+    queryKey: roleKeys.defaults(projectId),
+    queryFn: async () => {
+      if (isDemoMode()) {
+        // Demo mode: no admin defaults to fetch
+        return null
+      }
+
+      const res = await apiFetch(`/api/projects/${projectId}/roles/reset-defaults`)
+      if (!res.ok) throw new Error('Failed to fetch role defaults')
+      return res.json()
+    },
+    enabled: !!projectId && !isDemoMode(),
+    staleTime: 1000 * 60 * 5, // 5 minutes - admin defaults don't change often
   })
 }
 

@@ -80,6 +80,7 @@ import {
   useProjectRoles,
   useReorderRoles,
   useResetRolesToDefaults,
+  useRoleDefaults,
   useUpdateRole,
 } from '@/hooks/queries/use-roles'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -123,6 +124,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
   const deleteRole = useDeleteRole(projectId)
   const reorderRoles = useReorderRoles(projectId)
   const resetRolesToDefaults = useResetRolesToDefaults(projectId)
+  const { data: roleDefaults } = useRoleDefaults(projectId)
   const queryClient = useQueryClient()
 
   const {
@@ -154,6 +156,59 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     // System admins can simulate any role; otherwise, only roles at or below current position
     return roles.filter((role) => userIsAdmin || role.position >= userPosition)
   }, [roles, realPermissions])
+
+  // Check if all roles already match the system admin defaults
+  const allRolesAtDefaults = useMemo(() => {
+    if (!roles || !roleDefaults) return false
+
+    const { defaults, customRoles: defaultCustomRoles } = roleDefaults
+
+    // Check each built-in default role
+    for (const presetName of ['Owner', 'Admin', 'Member'] as const) {
+      const defaultConfig = defaults[presetName]
+      if (!defaultConfig) return false
+
+      // Find the matching role by position (same approach as the reset endpoint)
+      const role = roles.find((r) => r.isDefault && r.position === ROLE_POSITIONS[presetName])
+      if (!role) return false
+
+      // Compare name, color, description
+      if (role.name !== defaultConfig.name) return false
+      if (role.color !== defaultConfig.color) return false
+      if ((role.description ?? '') !== (defaultConfig.description ?? '')) return false
+
+      // Compare permissions (order-independent)
+      const rolePerms = [...role.permissions].sort()
+      const defaultPerms = [...defaultConfig.permissions].sort()
+      if (rolePerms.length !== defaultPerms.length) return false
+      if (rolePerms.some((p, i) => p !== defaultPerms[i])) return false
+    }
+
+    // Check custom roles: no extra custom roles should exist that aren't in defaults
+    const currentCustomRoles = roles.filter((r) => !r.isDefault)
+    const defaultCustomNames = new Set(
+      (defaultCustomRoles ?? []).map((r: { name: string }) => r.name),
+    )
+
+    // If there are custom roles not in the defaults, not at defaults
+    for (const customRole of currentCustomRoles) {
+      if (!defaultCustomNames.has(customRole.name)) return false
+    }
+
+    // Check that all default custom roles exist and match
+    for (const defaultCustom of defaultCustomRoles ?? []) {
+      const match = currentCustomRoles.find((r) => r.name === defaultCustom.name)
+      if (!match) return false
+      if (match.color !== defaultCustom.color) return false
+      if ((match.description ?? '') !== (defaultCustom.description ?? '')) return false
+      const matchPerms = [...match.permissions].sort()
+      const defPerms = [...defaultCustom.permissions].sort()
+      if (matchPerms.length !== defPerms.length) return false
+      if (matchPerms.some((p: string, i: number) => p !== defPerms[i])) return false
+    }
+
+    return true
+  }, [roles, roleDefaults])
 
   const handleStartSimulation = useCallback(
     (role: RoleWithPermissions) => {
@@ -1192,8 +1247,12 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowResetDefaultsDialog(true)}
-                disabled={resetRolesToDefaults.isPending}
-                title="Reset to System Defaults"
+                disabled={resetRolesToDefaults.isPending || allRolesAtDefaults}
+                title={
+                  allRolesAtDefaults
+                    ? 'Roles already match system defaults'
+                    : 'Reset to System Defaults'
+                }
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
