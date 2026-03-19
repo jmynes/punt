@@ -1151,7 +1151,7 @@ export default function BacklogPage() {
         {hasActiveSprints && (
           <div
             ref={sprintContainerRef}
-            className="flex-shrink-0 max-h-[350px] overflow-y-auto 2xl:px-6 py-4 space-y-3 border-b border-zinc-800"
+            className="flex-shrink-0 max-h-[350px] overflow-y-auto 2xl:px-6 pt-0 pb-4 space-y-3 border-b border-zinc-800"
           >
             {/* Active Sprints */}
             {activeSprints.map((sprint) => (
