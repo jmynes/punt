@@ -12,6 +12,7 @@ import {
   Eye,
   GitBranch,
   Home,
+  Info,
   KeyRound,
   Layers,
   List,
@@ -1103,7 +1104,7 @@ function ProjectSettingsLink({
                     'bg-zinc-800/50 text-zinc-100',
                 )}
               >
-                <Settings className="h-3 w-3" />
+                <Info className="h-3 w-3" />
                 General
               </Button>
             </Link>
