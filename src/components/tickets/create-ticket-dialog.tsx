@@ -1,8 +1,7 @@
 'use client'
 
-import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -332,16 +331,15 @@ export function CreateTicketDialog() {
           >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} variant="primary" disabled={!isValid || isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Create Ticket'
-            )}
-          </Button>
+          <LoadingButton
+            loading={isSubmitting}
+            loadingText="Creating..."
+            onClick={handleSubmit}
+            variant="primary"
+            disabled={!isValid}
+          >
+            Create Ticket
+          </LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

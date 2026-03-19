@@ -1,10 +1,10 @@
 'use client'
 
-import { Check, Eye, EyeOff, Loader2, X } from 'lucide-react'
+import { Check, Eye, EyeOff, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { apiFetch } from '@/lib/base-path'
@@ -288,21 +288,16 @@ export function RegisterForm() {
         </div>
 
         <div className="px-6 pb-6 pt-2">
-          <Button
+          <LoadingButton
             type="submit"
             variant="primary"
+            loading={isLoading}
+            loadingText="Creating account..."
+            disabled={!canSubmit}
             className="w-full h-11 font-medium tracking-wide"
-            disabled={isLoading || !canSubmit}
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating account...
-              </>
-            ) : (
-              'Create account'
-            )}
-          </Button>
+            Create account
+          </LoadingButton>
         </div>
       </form>
     </div>

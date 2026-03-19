@@ -24,7 +24,7 @@ import {
   type RoleItemAction,
   SortableRoleItem,
 } from '@/components/projects/permissions/sortable-role-item'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -481,22 +481,6 @@ export function RolePermissionsForm() {
     [localSettings],
   )
 
-  // Reset a built-in role to hardcoded preset defaults
-  const handleResetBuiltInRole = useCallback((roleId: string) => {
-    const presetName = roleId as DefaultRoleName
-    if (!(presetName in ROLE_PRESETS)) return
-    setLocalSettings((prev) => ({
-      ...prev,
-      [presetName]: {
-        ...prev[presetName],
-        name: presetName,
-        color: ROLE_COLORS[presetName],
-        description: ROLE_DESCRIPTIONS[presetName],
-        permissions: [...ROLE_PRESETS[presetName]],
-      },
-    }))
-  }, [])
-
   // Build actions for each role item
   const getRoleActions = useCallback(
     (roleId: string, isDefault: boolean): RoleItemAction[] => {
@@ -629,10 +613,6 @@ export function RolePermissionsForm() {
       rolesToSave = [...customRoles, newRole]
     }
     updateMutation.mutate({ settings: localSettings, customRoles: rolesToSave })
-  }
-
-  const handleReset = () => {
-    resetMutation.mutate()
   }
 
   const handleCancel = () => {
@@ -861,20 +841,17 @@ export function RolePermissionsForm() {
               <div className="flex-shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-t border-zinc-800 bg-zinc-900/80">
                 <p className="text-sm text-zinc-400">You have unsaved changes</p>
                 <div className="flex items-center gap-2">
-                  <Button
+                  <LoadingButton
                     variant="outline"
                     size="sm"
+                    loading={resetMutation.isPending}
                     onClick={() => setShowResetAllDialog(true)}
-                    disabled={isAtDefaults || resetMutation.isPending}
+                    disabled={isAtDefaults}
                     className="border-zinc-700 text-zinc-400 hover:text-zinc-100"
                   >
-                    {resetMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RotateCcw className="h-4 w-4" />
-                    )}
+                    <RotateCcw className="h-4 w-4" />
                     <span className="ml-2">Reset to Defaults</span>
-                  </Button>
+                  </LoadingButton>
                   <Button
                     variant="outline"
                     size="sm"
@@ -883,15 +860,14 @@ export function RolePermissionsForm() {
                   >
                     Cancel
                   </Button>
-                  <Button
+                  <LoadingButton
                     size="sm"
+                    loading={updateMutation.isPending}
                     onClick={handleSave}
-                    disabled={updateMutation.isPending}
                     className="bg-amber-600 hover:bg-amber-700 text-white"
                   >
-                    {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     {isCreating ? 'Create & Save' : 'Save Changes'}
-                  </Button>
+                  </LoadingButton>
                 </div>
               </div>
             ) : undefined

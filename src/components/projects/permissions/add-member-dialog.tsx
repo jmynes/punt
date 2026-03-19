@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronsUpDown, Loader2, UserPlus, Users, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import {
   Command,
   CommandEmpty,
@@ -396,23 +396,16 @@ export function AddMemberDialog({ projectId, trigger }: AddMemberDialogProps) {
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button
+          <LoadingButton
             variant="primary"
+            loading={isSubmitting}
+            loadingText="Adding..."
             onClick={handleSubmit}
-            disabled={pendingMembers.length === 0 || isSubmitting}
+            disabled={pendingMembers.length === 0}
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Adding...
-              </>
-            ) : (
-              <>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Add {pendingMembers.length || ''} Member{pendingMembers.length !== 1 ? 's' : ''}
-              </>
-            )}
-          </Button>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add {pendingMembers.length || ''} Member{pendingMembers.length !== 1 ? 's' : ''}
+          </LoadingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

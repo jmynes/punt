@@ -11,7 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
+import { LoadingButton } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { apiFetch } from '@/lib/base-path'
@@ -189,18 +189,18 @@ export function ReauthDialog({
             >
               Cancel
             </AlertDialogCancel>
-            <Button
+            <LoadingButton
               type="submit"
-              disabled={loading || !password || isLoadingStatus}
+              loading={loading}
+              disabled={!password || isLoadingStatus}
               className={
                 actionVariant === 'destructive'
                   ? 'bg-red-600 hover:bg-red-700 text-white'
                   : 'bg-amber-600 hover:bg-amber-700 text-white'
               }
             >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {actionLabel}
-            </Button>
+            </LoadingButton>
           </AlertDialogFooter>
         </form>
       </AlertDialogContent>

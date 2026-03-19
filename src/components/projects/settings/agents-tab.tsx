@@ -3,7 +3,7 @@
 import { Bot, Copy, Info, Loader2, RotateCcw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { GuidanceEditor } from '@/components/settings/guidance-editor'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -351,16 +351,15 @@ export function AgentsTab({ projectId, projectKey }: AgentsTabProps) {
             >
               Cancel
             </Button>
-            <Button variant="primary" size="sm" onClick={handleSave} disabled={isPending}>
-              {isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
+            <LoadingButton
+              variant="primary"
+              size="sm"
+              loading={isPending}
+              loadingText="Saving..."
+              onClick={handleSave}
+            >
+              Save Changes
+            </LoadingButton>
           </div>
         </div>
       )}

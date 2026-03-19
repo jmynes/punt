@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ColorPickerBody } from '@/components/tickets/label-select'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -949,21 +949,16 @@ export function RepositoryTab({ projectId, projectKey }: RepositoryTabProps) {
             >
               Cancel
             </Button>
-            <Button
+            <LoadingButton
               variant="primary"
               size="sm"
+              loading={isPending}
+              loadingText="Saving..."
               onClick={handleSave}
-              disabled={!isValid || isPending}
+              disabled={!isValid}
             >
-              {isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
+              Save Changes
+            </LoadingButton>
           </div>
         </div>
       )}

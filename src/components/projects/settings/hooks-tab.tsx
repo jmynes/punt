@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -903,21 +903,15 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
             >
               Cancel
             </Button>
-            <Button
+            <LoadingButton
               variant="primary"
               size="sm"
+              loading={commitPatternsMutation.isPending}
+              loadingText="Saving..."
               onClick={savePatterns}
-              disabled={commitPatternsMutation.isPending}
             >
-              {commitPatternsMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </Button>
+              Save Changes
+            </LoadingButton>
           </div>
         </div>
       )}

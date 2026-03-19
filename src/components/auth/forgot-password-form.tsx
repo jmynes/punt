@@ -1,9 +1,9 @@
 'use client'
 
-import { ArrowLeft, Loader2, Mail } from 'lucide-react'
+import { ArrowLeft, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { apiFetch } from '@/lib/base-path'
@@ -99,21 +99,15 @@ export function ForgotPasswordForm() {
         </div>
 
         <div className="px-6 pb-6 pt-2 space-y-3">
-          <Button
+          <LoadingButton
             type="submit"
             variant="primary"
+            loading={isLoading}
+            loadingText="Sending..."
             className="w-full h-11 font-medium tracking-wide"
-            disabled={isLoading}
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              'Send reset link'
-            )}
-          </Button>
+            Send reset link
+          </LoadingButton>
         </div>
       </form>
     </div>
