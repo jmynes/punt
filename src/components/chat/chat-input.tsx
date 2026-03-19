@@ -211,15 +211,16 @@ export function ChatInput({
     if (mentionTrigger.type === 'user' && members) {
       return members
         .filter((m) => {
-          const username = m.user.name?.toLowerCase() ?? ''
+          const name = m.user.name?.toLowerCase() ?? ''
+          const username = m.user.username?.toLowerCase() ?? ''
           const email = (m.user.email ?? '').toLowerCase()
-          return username.includes(query) || email.includes(query)
+          return name.includes(query) || username.includes(query) || email.includes(query)
         })
         .slice(0, 8)
         .map((m) => ({
-          value: m.user.name,
-          label: `@${m.user.name}`,
-          description: m.role.name,
+          value: m.user.username ?? m.user.name,
+          label: `@${m.user.username ?? m.user.name}`,
+          description: m.user.name,
           type: 'user' as const,
         }))
     }
