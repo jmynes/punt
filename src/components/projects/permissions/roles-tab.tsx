@@ -305,15 +305,19 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     if (isCreating || !selectedRole?.isDefault) return true
     const presetName = getPresetNameByPosition(selectedRole.position)
     if (!presetName) return true
-    const preset = ROLE_PRESETS[presetName]
-    const presetColor = ROLE_COLORS[presetName]
-    const presetDescription = ROLE_DESCRIPTIONS[presetName]
+    // Use admin defaults if available, fall back to hardcoded presets
+    const adminDefault = roleDefaults?.defaults?.[presetName]
+    const defaultName = adminDefault?.name ?? presetName
+    const defaultColor = adminDefault?.color ?? ROLE_COLORS[presetName]
+    const defaultDesc = adminDefault?.description ?? ROLE_DESCRIPTIONS[presetName]
+    const defaultPerms = adminDefault?.permissions ?? ROLE_PRESETS[presetName]
     const permissionsMatch =
-      editPermissions.length === preset.length && preset.every((p) => editPermissions.includes(p))
+      editPermissions.length === defaultPerms.length &&
+      defaultPerms.every((p: string) => editPermissions.includes(p as Permission))
     return (
-      editName === presetName &&
-      editColor === presetColor &&
-      editDescription === presetDescription &&
+      editName === defaultName &&
+      editColor === defaultColor &&
+      editDescription === defaultDesc &&
       permissionsMatch
     )
   }, [
@@ -325,6 +329,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     selectedRole?.position,
     isCreating,
     getPresetNameByPosition,
+    roleDefaults,
   ])
 
   // Get preset permissions for the selected role (for Reset to Defaults)
@@ -1074,10 +1079,14 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     if (!selectedRole?.isDefault) return
     const presetName = getPresetNameByPosition(selectedRole.position)
     if (!presetName) return
-    const defaultName = presetName
-    const defaultColor = ROLE_COLORS[presetName]
-    const defaultDesc = ROLE_DESCRIPTIONS[presetName]
-    const defaultPerms = [...ROLE_PRESETS[presetName]]
+    // Use admin defaults if available, fall back to hardcoded presets
+    const adminDefault = roleDefaults?.defaults?.[presetName]
+    const defaultName = adminDefault?.name ?? presetName
+    const defaultColor = adminDefault?.color ?? ROLE_COLORS[presetName]
+    const defaultDesc = adminDefault?.description ?? ROLE_DESCRIPTIONS[presetName]
+    const defaultPerms = adminDefault?.permissions
+      ? [...adminDefault.permissions]
+      : [...ROLE_PRESETS[presetName]]
     setEditName(defaultName)
     setEditColor(defaultColor)
     setEditDescription(defaultDesc)
@@ -1090,7 +1099,7 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
       defaultPerms.length !== selectedRole.permissions.length ||
       defaultPerms.some((p) => !selectedRole.permissions.includes(p))
     setHasChanges(nameChanged || colorChanged || descChanged || permsChanged)
-  }, [selectedRole, getPresetNameByPosition])
+  }, [selectedRole, getPresetNameByPosition, roleDefaults])
 
   // Clone a role
   const handleCloneRole = async (role: RoleWithPermissions) => {
@@ -1780,6 +1789,17 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
                 <div className="flex-shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-t border-zinc-800 bg-zinc-900/80">
                   <p className="text-sm text-zinc-400">You have unsaved changes</p>
                   <div className="flex items-center gap-2">
+                    {selectedRole?.isDefault && !isAtDefaults && !isCreating && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleResetRoleToDefaults}
+                        className="text-zinc-400 hover:text-zinc-200"
+                      >
+                        <RotateCcw className="mr-1.5 h-3 w-3" />
+                        Reset to Defaults
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" onClick={handleCancel}>
                       Cancel
                     </Button>
