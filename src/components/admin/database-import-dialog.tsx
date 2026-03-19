@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { TypeToConfirmInput } from '@/components/ui/type-to-confirm'
 import {
   type ImportDatabaseParams,
   type ImportPreview,
@@ -395,24 +396,14 @@ export function DatabaseImportDialog({
                   </div>
 
                   {/* Confirmation input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmText" className="text-zinc-300">
-                      Type <span className="font-mono text-red-400">{REQUIRED_CONFIRMATION}</span>{' '}
-                      to confirm
-                    </Label>
-                    <Input
-                      id="confirmText"
-                      type="text"
-                      value={confirmText}
-                      onChange={(e) => setConfirmText(e.target.value)}
-                      placeholder={REQUIRED_CONFIRMATION}
-                      className="bg-zinc-800 border-zinc-700 text-zinc-100 font-mono"
-                      autoComplete="off"
-                    />
-                    {confirmText && !isConfirmValid && (
-                      <p className="text-xs text-red-400">Text does not match</p>
-                    )}
-                  </div>
+                  <TypeToConfirmInput
+                    requiredText={REQUIRED_CONFIRMATION}
+                    value={confirmText}
+                    onChange={setConfirmText}
+                  />
+                  {confirmText && !isConfirmValid && (
+                    <p className="text-xs text-red-400">Text does not match</p>
+                  )}
                 </>
               )}
             </div>

@@ -274,7 +274,11 @@ export function SprintsTab({ projectId, projectKey: _projectKey }: SprintsTabPro
               >
                 Reset
               </Button>
-              <Button onClick={handleSave} disabled={!hasChanges || !isValid || isPending}>
+              <Button
+                variant="primary"
+                onClick={handleSave}
+                disabled={!hasChanges || !isValid || isPending}
+              >
                 {isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

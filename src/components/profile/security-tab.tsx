@@ -5,19 +5,12 @@ import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import { TwoFactorSection } from '@/components/profile/two-factor-section'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { TypeToConfirmInput } from '@/components/ui/type-to-confirm'
 import { getTabId } from '@/hooks/use-realtime'
 import { apiFetch, withBasePath } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
@@ -319,59 +312,26 @@ export function SecurityTab({ user, isDemo, onUserUpdate, onSessionUpdate }: Sec
               Delete Account
             </Button>
 
-            <AlertDialog open={showDeleteAlertDialog} onOpenChange={setShowDeleteAlertDialog}>
-              <AlertDialogContent className="bg-zinc-900 border-zinc-800">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    if (deleteConfirmation === 'DELETE MY ACCOUNT') {
-                      setShowDeleteAlertDialog(false)
-                      setShowDeleteReauthDialog(true)
-                    }
-                  }}
-                >
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="text-zinc-100">
-                      Are you absolutely sure?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="text-zinc-400">
-                      This action cannot be undone. Your account will be permanently deactivated and
-                      you will lose access to all your data.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="deleteConfirmation" className="text-zinc-300">
-                        Type <span className="font-mono text-red-400">DELETE MY ACCOUNT</span> to
-                        confirm
-                      </Label>
-                      <Input
-                        id="deleteConfirmation"
-                        value={deleteConfirmation}
-                        onChange={(e) => setDeleteConfirmation(e.target.value)}
-                        placeholder="DELETE MY ACCOUNT"
-                        className="bg-zinc-900 border-zinc-700 font-mono"
-                      />
-                    </div>
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel
-                      type="button"
-                      className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                    >
-                      Cancel
-                    </AlertDialogCancel>
-                    <Button
-                      type="submit"
-                      disabled={deleteConfirmation !== 'DELETE MY ACCOUNT'}
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      Delete Account
-                    </Button>
-                  </AlertDialogFooter>
-                </form>
-              </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmDialog
+              open={showDeleteAlertDialog}
+              onOpenChange={setShowDeleteAlertDialog}
+              title="Are you absolutely sure?"
+              description="This action cannot be undone. Your account will be permanently deactivated and you will lose access to all your data."
+              confirmLabel="Delete Account"
+              actionVariant="destructive"
+              disabled={deleteConfirmation !== 'DELETE MY ACCOUNT'}
+              onConfirm={() => {
+                setShowDeleteAlertDialog(false)
+                setShowDeleteReauthDialog(true)
+              }}
+            >
+              <TypeToConfirmInput
+                requiredText="DELETE MY ACCOUNT"
+                value={deleteConfirmation}
+                onChange={setDeleteConfirmation}
+                autoFocus
+              />
+            </ConfirmDialog>
 
             <ReauthDialog
               open={showDeleteReauthDialog}

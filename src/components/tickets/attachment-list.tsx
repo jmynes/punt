@@ -10,18 +10,9 @@ import {
   MoreHorizontal,
   Trash2,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,7 +64,6 @@ export function AttachmentList({
 }: AttachmentListProps) {
   const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null)
   const [fileToDelete, setFileToDelete] = useState<UploadedFile | null>(null)
-  const deleteButtonRef = useRef<HTMLButtonElement>(null)
 
   if (attachments.length === 0) {
     return null
@@ -236,36 +226,21 @@ export function AttachmentList({
         />
 
         {/* Delete Confirmation Dialog */}
-        <AlertDialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>
-          <AlertDialogContent
-            className="bg-zinc-900 border-zinc-800"
-            onOpenAutoFocus={(e) => {
-              e.preventDefault()
-              deleteButtonRef.current?.focus()
-            }}
-          >
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
-              <AlertDialogDescription className="text-zinc-400">
-                Are you sure you want to delete{' '}
-                <span className="font-medium text-zinc-200">{fileToDelete?.originalName}</span>?
-                This action can be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                ref={deleteButtonRef}
-                onClick={handleConfirmDelete}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDialog
+          open={!!fileToDelete}
+          onOpenChange={(open) => !open && setFileToDelete(null)}
+          title="Delete Attachment"
+          description={
+            <>
+              Are you sure you want to delete{' '}
+              <span className="font-medium text-zinc-200">{fileToDelete?.originalName}</span>? This
+              action can be undone.
+            </>
+          }
+          confirmLabel="Delete"
+          actionVariant="destructive"
+          onConfirm={handleConfirmDelete}
+        />
       </>
     )
   }
@@ -386,36 +361,21 @@ export function AttachmentList({
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>
-        <AlertDialogContent
-          className="bg-zinc-900 border-zinc-800"
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            deleteButtonRef.current?.focus()
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete{' '}
-              <span className="font-medium text-zinc-200">{fileToDelete?.originalName}</span>? This
-              action can be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              ref={deleteButtonRef}
-              onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!fileToDelete}
+        onOpenChange={(open) => !open && setFileToDelete(null)}
+        title="Delete Attachment"
+        description={
+          <>
+            Are you sure you want to delete{' '}
+            <span className="font-medium text-zinc-200">{fileToDelete?.originalName}</span>? This
+            action can be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        actionVariant="destructive"
+        onConfirm={handleConfirmDelete}
+      />
     </>
   )
 }

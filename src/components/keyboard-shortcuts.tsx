@@ -1,18 +1,9 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   Dialog,
   DialogContent,
@@ -74,18 +65,8 @@ export function KeyboardShortcuts() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [ticketsToDelete, setTicketsToDelete] = useState<TicketWithRelations[]>([])
-  const deleteButtonRef = useRef<HTMLButtonElement>(null)
   // Track the current attachment toast to dismiss it when a new one is shown
   const lastAttachmentToastRef = useRef<string | number | undefined>(undefined)
-
-  // Focus delete button when dialog opens
-  useEffect(() => {
-    if (showDeleteConfirm) {
-      setTimeout(() => {
-        deleteButtonRef.current?.focus()
-      }, 0)
-    }
-  }, [showDeleteConfirm])
 
   // Handle Ctrl+click to close modals/drawers (workaround for Radix not handling modifier clicks)
   useEffect(() => {
@@ -2169,43 +2150,27 @@ export function KeyboardShortcuts() {
 
   return (
     <>
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">
-              Delete {ticketsToDelete.length === 1 ? 'ticket' : `${ticketsToDelete.length} tickets`}
-              ?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              {ticketsToDelete.length === 1 ? (
-                <>
-                  Are you sure you want to delete{' '}
-                  <span className="font-semibold text-zinc-300">{ticketsToDelete[0]?.title}</span>?
-                </>
-              ) : (
-                <>
-                  Are you sure you want to delete these {ticketsToDelete.length} tickets? This
-                  action can be undone with Ctrl+Z.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
-              <X className="h-4 w-4 mr-1" />
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              ref={deleteButtonRef}
-              onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title={`Delete ${ticketsToDelete.length === 1 ? 'ticket' : `${ticketsToDelete.length} tickets`}?`}
+        description={
+          ticketsToDelete.length === 1 ? (
+            <>
+              Are you sure you want to delete{' '}
+              <span className="font-semibold text-zinc-300">{ticketsToDelete[0]?.title}</span>?
+            </>
+          ) : (
+            <>
+              Are you sure you want to delete these {ticketsToDelete.length} tickets? This action
+              can be undone with Ctrl+Z.
+            </>
+          )
+        }
+        confirmLabel="Delete"
+        actionVariant="destructive"
+        onConfirm={confirmDelete}
+      />
 
       <Dialog open={showShortcuts} onOpenChange={setShowShortcuts}>
         <DialogContent className="bg-zinc-950 border-zinc-800 max-w-2xl max-h-[80vh] overflow-y-auto">

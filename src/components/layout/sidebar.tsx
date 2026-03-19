@@ -1,20 +1,10 @@
 'use client'
 
-import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { TypeToConfirmInput } from '@/components/ui/type-to-confirm'
 import { useDeleteProject, useProjects } from '@/hooks/queries/use-projects'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useRealtimeProjects } from '@/hooks/use-realtime-projects'
@@ -104,7 +94,7 @@ export function Sidebar() {
       </aside>
 
       {/* Delete confirmation dialog */}
-      <AlertDialog
+      <ConfirmDialog
         open={!!deleteProjectId && !showDeleteReauth}
         onOpenChange={(open) => {
           if (!open) {
@@ -112,87 +102,22 @@ export function Sidebar() {
             setDeleteConfirmText('')
           }
         }}
+        title="Delete Project?"
+        description={`Are you sure you want to delete "${projectToDelete?.name}"? This action cannot be undone and will remove all associated tickets.`}
+        confirmLabel="Delete Project"
+        actionVariant="destructive"
+        loading={deleteProject.isPending}
+        disabled={deleteConfirmText !== projectToDelete?.name}
+        onConfirm={handleDeleteProject}
       >
-        <AlertDialogContent
-          className="bg-zinc-950 border-zinc-800"
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            setTimeout(() => {
-              const input = document.querySelector<HTMLInputElement>(
-                '[data-slot="alert-dialog-content"] input[type="text"]',
-              )
-              input?.focus()
-            }, 0)
-          }}
-        >
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (deleteConfirmText === projectToDelete?.name && !deleteProject.isPending)
-                handleDeleteProject()
-            }}
-          >
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
-              <AlertDialogDescription asChild>
-                <div className="space-y-4 text-zinc-400">
-                  <p>
-                    Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This action
-                    cannot be undone and will remove all associated tickets.
-                  </p>
-                  <div className="space-y-2">
-                    <p className="text-sm text-zinc-300">
-                      Type{' '}
-                      <span className="font-mono font-bold text-red-400">
-                        {projectToDelete?.name}
-                      </span>{' '}
-                      to confirm:
-                    </p>
-                    <Input
-                      type="text"
-                      value={deleteConfirmText}
-                      onChange={(e) => setDeleteConfirmText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.stopPropagation()
-                        }
-                      }}
-                      placeholder={`Type ${projectToDelete?.name} to confirm`}
-                      className="bg-zinc-900 border-zinc-700 text-zinc-100"
-                      autoComplete="off"
-                      disabled={deleteProject.isPending}
-                    />
-                  </div>
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel
-                type="button"
-                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                disabled={deleteProject.isPending}
-              >
-                Cancel
-              </AlertDialogCancel>
-              <Button
-                type="submit"
-                disabled={deleteProject.isPending || deleteConfirmText !== projectToDelete?.name}
-                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {deleteProject.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete Project'
-                )}
-              </Button>
-            </AlertDialogFooter>
-          </form>
-        </AlertDialogContent>
-      </AlertDialog>
+        <TypeToConfirmInput
+          requiredText={projectToDelete?.name ?? ''}
+          value={deleteConfirmText}
+          onChange={setDeleteConfirmText}
+          disabled={deleteProject.isPending}
+          autoFocus
+        />
+      </ConfirmDialog>
 
       {/* Password reauthentication dialog */}
       <ReauthDialog

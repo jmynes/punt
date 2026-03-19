@@ -3,18 +3,9 @@
 import { formatDistanceToNow } from 'date-fns'
 import { Bot, Check, Pencil, Trash2, X } from 'lucide-react'
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   type CommentInfo,
   useAddComment,
@@ -80,7 +71,6 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
     const [commentToDelete, setCommentToDelete] = useState<CommentInfo | null>(null)
     const textareaRef = useRef<TextareaWithAutocompleteRef>(null)
     const editTextareaRef = useRef<TextareaWithAutocompleteRef>(null)
-    const deleteButtonRef = useRef<HTMLButtonElement>(null)
 
     // Notify parent when pending comment state changes
     useEffect(() => {
@@ -345,37 +335,15 @@ export const CommentsSection = forwardRef<CommentsSectionRef, CommentsSectionPro
         </div>
 
         {/* Delete confirmation dialog */}
-        <AlertDialog
+        <ConfirmDialog
           open={!!commentToDelete}
           onOpenChange={(open) => !open && setCommentToDelete(null)}
-        >
-          <AlertDialogContent
-            className="bg-zinc-900 border-zinc-800"
-            onOpenAutoFocus={(e) => {
-              e.preventDefault()
-              deleteButtonRef.current?.focus()
-            }}
-          >
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Comment</AlertDialogTitle>
-              <AlertDialogDescription className="text-zinc-400">
-                Are you sure you want to delete this comment? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                ref={deleteButtonRef}
-                onClick={handleDeleteComment}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          title="Delete Comment"
+          description="Are you sure you want to delete this comment? This action cannot be undone."
+          confirmLabel="Delete"
+          actionVariant="destructive"
+          onConfirm={handleDeleteComment}
+        />
       </div>
     )
   },

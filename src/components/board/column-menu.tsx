@@ -12,17 +12,8 @@ import {
 } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { ColorPickerBody } from '@/components/tickets/label-select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   Dialog,
   DialogContent,
@@ -594,69 +585,55 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent className="bg-zinc-900 border-zinc-700">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Delete column</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete the &quot;{column.name}&quot; column?
-              {column.tickets.length > 0 && (
-                <>
-                  {' '}
-                  This column contains{' '}
-                  <span className="font-medium text-zinc-300">
-                    {column.tickets.length} ticket{column.tickets.length === 1 ? '' : 's'}
-                  </span>
-                  . Select a column to move them to.
-                </>
-              )}
-              {column.tickets.length === 0 && ' You can undo this with Ctrl+Z.'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          {column.tickets.length > 0 && otherColumns.length > 0 && (
-            <div className="py-2">
-              <label
-                htmlFor="move-to-column"
-                className="text-sm font-medium text-zinc-300 mb-2 block"
-              >
-                Move tickets to:
-              </label>
-              <Select value={moveToColumnId} onValueChange={setMoveToColumnId}>
-                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-zinc-100">
-                  <SelectValue placeholder="Select a column" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-700">
-                  {otherColumns.map((c) => (
-                    <SelectItem key={c.id} value={c.id} className="text-zinc-300 focus:bg-zinc-800">
-                      {c.name} ({c.tickets.length} ticket{c.tickets.length === 1 ? '' : 's'})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
-              disabled={deleteLoading}
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete column"
+        description={
+          <>
+            Are you sure you want to delete the &quot;{column.name}&quot; column?
+            {column.tickets.length > 0 && (
+              <>
+                {' '}
+                This column contains{' '}
+                <span className="font-medium text-zinc-300">
+                  {column.tickets.length} ticket{column.tickets.length === 1 ? '' : 's'}
+                </span>
+                . Select a column to move them to.
+              </>
+            )}
+            {column.tickets.length === 0 && ' You can undo this with Ctrl+Z.'}
+          </>
+        }
+        confirmLabel={deleteLoading ? 'Deleting...' : 'Delete column'}
+        actionVariant="destructive"
+        loading={deleteLoading}
+        disabled={column.tickets.length > 0 && !moveToColumnId}
+        onConfirm={handleDelete}
+      >
+        {column.tickets.length > 0 && otherColumns.length > 0 && (
+          <div>
+            <label
+              htmlFor="move-to-column"
+              className="text-sm font-medium text-zinc-300 mb-2 block"
             >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                handleDelete()
-              }}
-              disabled={deleteLoading || (column.tickets.length > 0 && !moveToColumnId)}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {deleteLoading ? 'Deleting...' : 'Delete column'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              Move tickets to:
+            </label>
+            <Select value={moveToColumnId} onValueChange={setMoveToColumnId}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-zinc-100">
+                <SelectValue placeholder="Select a column" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-700">
+                {otherColumns.map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="text-zinc-300 focus:bg-zinc-800">
+                    {c.name} ({c.tickets.length} ticket{c.tickets.length === 1 ? '' : 's'})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </ConfirmDialog>
     </>
   )
 }
