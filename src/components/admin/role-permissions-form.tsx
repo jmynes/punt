@@ -466,16 +466,60 @@ export function RolePermissionsForm() {
     }
   }, [deletingRole, customRoles, selectedId, roleOrder, localSettings, queryClient])
 
+  // Check if a specific built-in role matches its hardcoded preset
+  const isBuiltInRoleAtDefaults = useCallback(
+    (roleId: string) => {
+      if (!(roleId in localSettings)) return true
+      const current = localSettings[roleId as DefaultRoleName]
+      const presetName = roleId as DefaultRoleName
+      const presetPerms = ROLE_PRESETS[presetName]
+      const presetColor = ROLE_COLORS[presetName]
+      const presetDescription = ROLE_DESCRIPTIONS[presetName]
+      const permissionsMatch =
+        current.permissions.length === presetPerms.length &&
+        presetPerms.every((p) => current.permissions.includes(p))
+      return (
+        current.name === presetName &&
+        current.color === presetColor &&
+        current.description === presetDescription &&
+        permissionsMatch
+      )
+    },
+    [localSettings],
+  )
+
+  // Reset a built-in role to hardcoded preset defaults
+  const handleResetBuiltInRole = useCallback((roleId: string) => {
+    const presetName = roleId as DefaultRoleName
+    if (!(presetName in ROLE_PRESETS)) return
+    setLocalSettings((prev) => ({
+      ...prev,
+      [presetName]: {
+        ...prev[presetName],
+        name: presetName,
+        color: ROLE_COLORS[presetName],
+        description: ROLE_DESCRIPTIONS[presetName],
+        permissions: [...ROLE_PRESETS[presetName]],
+      },
+    }))
+  }, [])
+
   // Build actions for each role item
   const getRoleActions = useCallback(
     (roleId: string, isDefault: boolean): RoleItemAction[] => {
-      const actions: RoleItemAction[] = [
-        {
-          icon: Copy,
-          label: 'Clone',
-          onClick: () => handleCloneRole(roleId),
-        },
-      ]
+      const actions: RoleItemAction[] = []
+      if (isDefault && !isBuiltInRoleAtDefaults(roleId)) {
+        actions.push({
+          icon: RotateCcw,
+          label: 'Reset to Defaults',
+          onClick: () => handleResetBuiltInRole(roleId),
+        })
+      }
+      actions.push({
+        icon: Copy,
+        label: 'Clone',
+        onClick: () => handleCloneRole(roleId),
+      })
       actions.push({
         icon: Trash2,
         label: 'Delete',
@@ -485,7 +529,7 @@ export function RolePermissionsForm() {
       })
       return actions
     },
-    [handleCloneRole, handleDeleteCustomRole],
+    [handleCloneRole, handleDeleteCustomRole, isBuiltInRoleAtDefaults, handleResetBuiltInRole],
   )
 
   const handleFieldChange = (field: string, value: string | Permission[]) => {

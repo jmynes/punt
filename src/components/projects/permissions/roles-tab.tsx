@@ -1155,28 +1155,95 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
     }
   }
 
-  // Build actions for each role item
+  // Check if a specific role matches its admin default
+  const isRoleAtDefaults = useCallback(
+    (role: RoleWithPermissions) => {
+      if (!role.isDefault) return true
+      const presetName = getPresetNameByPosition(role.position)
+      if (!presetName) return true
+      const adminDefault = roleDefaults?.defaults?.[presetName]
+      const defaultName = adminDefault?.name ?? presetName
+      const defaultColor = adminDefault?.color ?? ROLE_COLORS[presetName]
+      const defaultDesc = adminDefault?.description ?? ROLE_DESCRIPTIONS[presetName]
+      const defaultPerms = adminDefault?.permissions ?? ROLE_PRESETS[presetName]
+      const permsMatch =
+        role.permissions.length === defaultPerms.length &&
+        defaultPerms.every((p: string) => role.permissions.includes(p as Permission))
+      return (
+        role.name === defaultName &&
+        role.color === defaultColor &&
+        (role.description ?? '') === (defaultDesc ?? '') &&
+        permsMatch
+      )
+    },
+    [getPresetNameByPosition, roleDefaults],
+  )
+
+  // Reset a specific role to its admin defaults and save immediately
+  const handleResetSingleRole = useCallback(
+    async (role: RoleWithPermissions) => {
+      if (!role.isDefault) return
+      const presetName = getPresetNameByPosition(role.position)
+      if (!presetName) return
+      const adminDefault = roleDefaults?.defaults?.[presetName]
+      const defaultName = adminDefault?.name ?? presetName
+      const defaultColor = adminDefault?.color ?? ROLE_COLORS[presetName]
+      const defaultDesc = adminDefault?.description ?? ROLE_DESCRIPTIONS[presetName]
+      const defaultPerms = adminDefault?.permissions ?? [...ROLE_PRESETS[presetName]]
+      await updateRole.mutateAsync({
+        roleId: role.id,
+        name: defaultName,
+        color: defaultColor,
+        description: defaultDesc,
+        permissions: defaultPerms,
+      })
+      // If this role is currently selected, update the edit state too
+      if (selectedRoleId === role.id) {
+        setEditName(defaultName)
+        setEditColor(defaultColor)
+        setEditDescription(defaultDesc)
+        setEditPermissions(defaultPerms as Permission[])
+        setHasChanges(false)
+      }
+    },
+    [getPresetNameByPosition, roleDefaults, updateRole, selectedRoleId],
+  )
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: handleCloneRole is intentionally excluded to avoid unnecessary rerenders
   const getRoleActions = useCallback(
     (role: RoleWithPermissions): RoleItemAction[] => {
       if (!canManageRoles) return []
-      return [
-        {
-          icon: Copy,
-          label: 'Clone',
-          onClick: () => handleCloneRole(role),
-          disabled: createRole.isPending,
-        },
-        {
-          icon: Trash2,
-          label: 'Delete',
-          onClick: () => setDeletingRole(role),
-          disabled: role.isDefault || (role.memberCount || 0) > 0,
-          variant: 'destructive' as const,
-        },
-      ]
+      const actions: RoleItemAction[] = []
+      if (role.isDefault && !isRoleAtDefaults(role)) {
+        actions.push({
+          icon: RotateCcw,
+          label: 'Reset to Defaults',
+          onClick: () => handleResetSingleRole(role),
+          disabled: updateRole.isPending,
+        })
+      }
+      actions.push({
+        icon: Copy,
+        label: 'Clone',
+        onClick: () => handleCloneRole(role),
+        disabled: createRole.isPending,
+      })
+      actions.push({
+        icon: Trash2,
+        label: 'Delete',
+        onClick: () => setDeletingRole(role),
+        disabled: role.isDefault || (role.memberCount || 0) > 0,
+        variant: 'destructive' as const,
+      })
+      return actions
     },
-    [canManageRoles, createRole.isPending],
+    [
+      canManageRoles,
+      createRole.isPending,
+      updateRole.isPending,
+      isRoleAtDefaults,
+      handleResetSingleRole,
+    ],
   )
 
   // Map roles to EditorRole for the shared SortableRoleItem
