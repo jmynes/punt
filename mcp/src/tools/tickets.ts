@@ -275,7 +275,7 @@ export function registerTicketTools(server: McpServer) {
         .string()
         .optional()
         .describe('Text search across title and description (case-insensitive)'),
-      limit: z.number().min(1).max(100).default(20).describe('Max results to return'),
+      limit: z.coerce.number().min(1).max(100).default(20).describe('Max results to return'),
     },
     async ({
       projectKey,
@@ -422,7 +422,7 @@ export function registerTicketTools(server: McpServer) {
         .string()
         .optional()
         .describe('Reporter (name, username, or email; defaults to authenticated user)'),
-      storyPoints: z.number().min(0).optional().describe('Story points'),
+      storyPoints: z.coerce.number().min(0).optional().describe('Story points'),
       estimate: z.string().optional().describe('Time estimate (e.g., "2h", "1d")'),
       startDate: z.string().optional().describe('Start date (ISO format: YYYY-MM-DD)'),
       dueDate: z.string().optional().describe('Due date (ISO format: YYYY-MM-DD)'),
@@ -635,7 +635,7 @@ export function registerTicketTools(server: McpServer) {
         .nullable()
         .optional()
         .describe('New assignee (name, username, or email; null to unassign)'),
-      storyPoints: z.number().min(0).nullable().optional().describe('New story points'),
+      storyPoints: z.coerce.number().min(0).nullable().optional().describe('New story points'),
       estimate: z.string().nullable().optional().describe('Time estimate'),
       startDate: z.string().nullable().optional().describe('Start date (null to clear)'),
       dueDate: z.string().nullable().optional().describe('Due date (null to clear)'),
@@ -1204,7 +1204,15 @@ export function registerTicketTools(server: McpServer) {
       fromKey: z.string().describe('Source ticket key (e.g., PUNT-2)'),
       toKey: z.string().describe('Target ticket key (e.g., PUNT-5)'),
       linkType: z
-        .enum(['blocks', 'is_blocked_by', 'relates_to', 'duplicates', 'is_duplicated_by'])
+        .enum([
+          'blocks',
+          'is_blocked_by',
+          'relates_to',
+          'duplicates',
+          'is_duplicated_by',
+          'splits_from',
+          'split_to',
+        ])
         .describe('Type of link'),
     },
     async ({ fromKey, toKey, linkType }) => {

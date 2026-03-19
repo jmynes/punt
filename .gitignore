@@ -51,7 +51,10 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+.claude/worktrees/
 .playwright-mcp/
 .mcp.json
 tmp/
 .mcp.json~
+.emacs.desktop
+docs/superpowers/

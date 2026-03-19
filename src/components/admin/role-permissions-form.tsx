@@ -24,23 +24,16 @@ import {
   type RoleItemAction,
   SortableRoleItem,
 } from '@/components/projects/permissions/sortable-role-item'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import { LABEL_COLORS } from '@/lib/constants'
-import type { Permission } from '@/lib/permissions/constants'
+import { isDemoMode } from '@/lib/demo'
+import { ALL_PERMISSIONS, type Permission } from '@/lib/permissions/constants'
 import {
   type DefaultRoleName,
   ROLE_COLORS,
@@ -117,6 +110,8 @@ export function RolePermissionsForm() {
   const [showDiff, setShowDiff] = useState(false)
   const [showCompareDialog, setShowCompareDialog] = useState(false)
   const [deletingRole, setDeletingRole] = useState<CustomRole | null>(null)
+  const [resetBuiltInRoleId, setResetBuiltInRoleId] = useState<string | null>(null)
+  const [showResetAllDialog, setShowResetAllDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Form state for creating new roles
@@ -133,7 +128,15 @@ export function RolePermissionsForm() {
   const { data, isLoading, error } = useQuery<RoleSettingsData>({
     queryKey: ['admin', 'settings', 'roles'],
     queryFn: async () => {
-      const res = await fetch('/api/admin/settings/roles')
+      if (isDemoMode()) {
+        return {
+          roleSettings: getDefaultSettings(),
+          customRoles: [],
+          availablePermissions: [...ALL_PERMISSIONS],
+          roleNames: ['Owner', 'Admin', 'Member'] as DefaultRoleName[],
+        }
+      }
+      const res = await apiFetch('/api/admin/settings/roles')
       if (!res.ok) throw new Error('Failed to fetch role settings')
       return res.json()
     },
@@ -141,7 +144,11 @@ export function RolePermissionsForm() {
 
   const updateMutation = useMutation({
     mutationFn: async (payload: { settings: RoleSettings; customRoles: CustomRole[] }) => {
-      const res = await fetch('/api/admin/settings/roles', {
+      if (isDemoMode()) {
+        showToast.info('Role settings are read-only in demo mode')
+        return { roleSettings: payload.settings, customRoles: payload.customRoles }
+      }
+      const res = await apiFetch('/api/admin/settings/roles', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -155,8 +162,21 @@ export function RolePermissionsForm() {
       }
       return res.json()
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+    onSuccess: (_responseData, variables) => {
+      // Eagerly update the query cache with the saved values so that Cancel
+      // immediately reverts to the last saved state (not stale/default values).
+      queryClient.setQueryData<RoleSettingsData>(['admin', 'settings', 'roles'], (old) =>
+        old
+          ? {
+              ...old,
+              roleSettings: variables.settings,
+              customRoles: variables.customRoles,
+            }
+          : old,
+      )
+      if (!isDemoMode()) {
+        queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+      }
       showToast.success('Role settings saved')
       setHasChanges(false)
       setIsCreating(false)
@@ -168,7 +188,16 @@ export function RolePermissionsForm() {
 
   const resetMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/admin/settings/roles', {
+      if (isDemoMode()) {
+        const defaults = getDefaultSettings()
+        return {
+          roleSettings: defaults,
+          customRoles: [],
+          availablePermissions: [...ALL_PERMISSIONS],
+          roleNames: ['Owner', 'Admin', 'Member'] as DefaultRoleName[],
+        }
+      }
+      const res = await apiFetch('/api/admin/settings/roles', {
         method: 'POST',
         headers: { 'X-Tab-Id': getTabId() },
       })
@@ -176,7 +205,9 @@ export function RolePermissionsForm() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+      if (!isDemoMode()) {
+        queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'roles'] })
+      }
       showToast.success('Role settings reset to defaults')
       setHasChanges(false)
       setCustomRoles([])
@@ -258,14 +289,22 @@ export function RolePermissionsForm() {
     ? localSettings[selectedId as DefaultRoleName]
     : selectedCustomRole
 
-  // Check if the selected role's permissions match its preset defaults
+  // Check if the selected role matches its preset defaults (name, color, description, permissions)
   const selectedRoleAtDefaults = useMemo(() => {
     if (!isBuiltInRole) return true
     const current = localSettings[selectedId as DefaultRoleName]
-    const defaults = ROLE_PRESETS[selectedId as DefaultRoleName]
+    const presetName = selectedId as DefaultRoleName
+    const presetPerms = ROLE_PRESETS[presetName]
+    const presetColor = ROLE_COLORS[presetName]
+    const presetDescription = ROLE_DESCRIPTIONS[presetName]
+    const permissionsMatch =
+      current.permissions.length === presetPerms.length &&
+      presetPerms.every((p) => current.permissions.includes(p))
     return (
-      current.permissions.length === defaults.length &&
-      defaults.every((p) => current.permissions.includes(p))
+      current.name === presetName &&
+      current.color === presetColor &&
+      current.description === presetDescription &&
+      permissionsMatch
     )
   }, [localSettings, selectedId, isBuiltInRole])
 
@@ -303,6 +342,22 @@ export function RolePermissionsForm() {
 
   // Get preset permissions for the selected built-in role
   const presetPermissions = isBuiltInRole ? ROLE_PRESETS[selectedId as DefaultRoleName] : undefined
+
+  // Reset the selected built-in role to its preset defaults (name, color, description, permissions)
+  const handleResetRoleToDefaults = useCallback(() => {
+    if (!isBuiltInRole) return
+    const presetName = selectedId as DefaultRoleName
+    setLocalSettings((prev) => ({
+      ...prev,
+      [presetName]: {
+        ...prev[presetName],
+        name: presetName,
+        color: ROLE_COLORS[presetName],
+        description: ROLE_DESCRIPTIONS[presetName],
+        permissions: [...ROLE_PRESETS[presetName]],
+      },
+    }))
+  }, [selectedId, isBuiltInRole])
 
   const handleCloneRole = useCallback(
     (roleId: string) => {
@@ -371,25 +426,31 @@ export function RolePermissionsForm() {
     }
 
     try {
-      // Persist immediately to the server
-      const res = await fetch('/api/admin/settings/roles', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tab-Id': getTabId(),
-        },
-        body: JSON.stringify({ ...localSettings, customRoles: newCustomRoles }),
-      })
+      if (isDemoMode()) {
+        // In demo mode, just update local state
+        setCustomRoles(newCustomRoles)
+        showToast.success(`Deleted "${roleName}"`)
+      } else {
+        // Persist immediately to the server
+        const res = await apiFetch('/api/admin/settings/roles', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tab-Id': getTabId(),
+          },
+          body: JSON.stringify({ ...localSettings, customRoles: newCustomRoles }),
+        })
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to delete role')
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(errorData.error || 'Failed to delete role')
+        }
+
+        // Wait for the query to refetch - this updates `data` which syncs to local state
+        // Don't manually update customRoles to avoid flash of "unsaved changes"
+        await queryClient.refetchQueries({ queryKey: ['admin', 'settings', 'roles'] })
+        showToast.success(`Deleted "${roleName}"`)
       }
-
-      // Wait for the query to refetch - this updates `data` which syncs to local state
-      // Don't manually update customRoles to avoid flash of "unsaved changes"
-      await queryClient.refetchQueries({ queryKey: ['admin', 'settings', 'roles'] })
-      showToast.success(`Deleted "${roleName}"`)
     } catch (err) {
       showToast.error(err instanceof Error ? err.message : 'Failed to delete role')
     } finally {
@@ -398,16 +459,60 @@ export function RolePermissionsForm() {
     }
   }, [deletingRole, customRoles, selectedId, roleOrder, localSettings, queryClient])
 
+  // Check if a specific built-in role matches its hardcoded preset
+  const isBuiltInRoleAtDefaults = useCallback(
+    (roleId: string) => {
+      if (!(roleId in localSettings)) return true
+      const current = localSettings[roleId as DefaultRoleName]
+      const presetName = roleId as DefaultRoleName
+      const presetPerms = ROLE_PRESETS[presetName]
+      const presetColor = ROLE_COLORS[presetName]
+      const presetDescription = ROLE_DESCRIPTIONS[presetName]
+      const permissionsMatch =
+        current.permissions.length === presetPerms.length &&
+        presetPerms.every((p) => current.permissions.includes(p))
+      return (
+        current.name === presetName &&
+        current.color === presetColor &&
+        current.description === presetDescription &&
+        permissionsMatch
+      )
+    },
+    [localSettings],
+  )
+
+  // Reset a built-in role to hardcoded preset defaults
+  const handleResetBuiltInRole = useCallback((roleId: string) => {
+    const presetName = roleId as DefaultRoleName
+    if (!(presetName in ROLE_PRESETS)) return
+    setLocalSettings((prev) => ({
+      ...prev,
+      [presetName]: {
+        ...prev[presetName],
+        name: presetName,
+        color: ROLE_COLORS[presetName],
+        description: ROLE_DESCRIPTIONS[presetName],
+        permissions: [...ROLE_PRESETS[presetName]],
+      },
+    }))
+  }, [])
+
   // Build actions for each role item
   const getRoleActions = useCallback(
     (roleId: string, isDefault: boolean): RoleItemAction[] => {
-      const actions: RoleItemAction[] = [
-        {
-          icon: Copy,
-          label: 'Clone',
-          onClick: () => handleCloneRole(roleId),
-        },
-      ]
+      const actions: RoleItemAction[] = []
+      if (isDefault && !isBuiltInRoleAtDefaults(roleId)) {
+        actions.push({
+          icon: RotateCcw,
+          label: 'Reset to Defaults',
+          onClick: () => setResetBuiltInRoleId(roleId),
+        })
+      }
+      actions.push({
+        icon: Copy,
+        label: 'Clone',
+        onClick: () => handleCloneRole(roleId),
+      })
       actions.push({
         icon: Trash2,
         label: 'Delete',
@@ -417,7 +522,7 @@ export function RolePermissionsForm() {
       })
       return actions
     },
-    [handleCloneRole, handleDeleteCustomRole],
+    [handleCloneRole, handleDeleteCustomRole, isBuiltInRoleAtDefaults],
   )
 
   const handleFieldChange = (field: string, value: string | Permission[]) => {
@@ -535,15 +640,21 @@ export function RolePermissionsForm() {
       setIsCreating(false)
       setSelectedId('Owner')
     }
-    if (data?.roleSettings) {
-      setLocalSettings(data.roleSettings)
+    // Use the latest query cache data to ensure we revert to the last saved state
+    // (not hardcoded defaults). The `data` variable from useQuery might be stale
+    // if a save just completed and the refetch hasn't updated the render yet.
+    const cachedData = queryClient.getQueryData<RoleSettingsData>(['admin', 'settings', 'roles'])
+    const savedSettings = cachedData?.roleSettings ?? data?.roleSettings
+    if (savedSettings) {
+      setLocalSettings(savedSettings)
       const sorted = (['Owner', 'Admin', 'Member'] as DefaultRoleName[]).sort(
-        (a, b) => (data.roleSettings[a]?.position ?? 0) - (data.roleSettings[b]?.position ?? 0),
+        (a, b) => (savedSettings[a]?.position ?? 0) - (savedSettings[b]?.position ?? 0),
       )
       setRoleOrder(sorted)
     }
-    if (data?.customRoles) {
-      setCustomRoles(data.customRoles)
+    const savedCustomRoles = cachedData?.customRoles ?? data?.customRoles
+    if (savedCustomRoles) {
+      setCustomRoles(savedCustomRoles)
     } else {
       setCustomRoles([])
     }
@@ -639,6 +750,17 @@ export function RolePermissionsForm() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-zinc-400">Roles</h3>
           <div className="flex items-center gap-1">
+            {!isAtDefaults && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowResetAllDialog(true)}
+                disabled={resetMutation.isPending}
+                title="Reset All to Defaults"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            )}
             {compareRoles.length >= 2 && (
               <Button
                 variant="ghost"
@@ -729,6 +851,7 @@ export function RolePermissionsForm() {
           }
           presetPermissions={presetPermissions}
           isAtDefaults={selectedRoleAtDefaults}
+          onResetToDefaults={handleResetRoleToDefaults}
           showDiff={showDiff}
           originalPermissions={originalPermissions}
           onShowDiffChange={setShowDiff}
@@ -741,7 +864,7 @@ export function RolePermissionsForm() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleReset}
+                    onClick={() => setShowResetAllDialog(true)}
                     disabled={isAtDefaults || resetMutation.isPending}
                     className="border-zinc-700 text-zinc-400 hover:text-zinc-100"
                   >
@@ -786,34 +909,67 @@ export function RolePermissionsForm() {
       )}
 
       {/* Delete role confirmation dialog */}
-      <AlertDialog open={!!deletingRole} onOpenChange={(open) => !open && setDeletingRole(null)}>
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Delete Role</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete the role{' '}
-              <span className="text-zinc-200 font-medium">"{deletingRole?.name}"</span>? This will
-              remove it from the default roles for new projects.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={isDeleting}
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteRole}
-              className="bg-red-600 hover:bg-red-500 text-white"
-              disabled={isDeleting}
-            >
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete Role
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deletingRole}
+        onOpenChange={(open) => !open && setDeletingRole(null)}
+        title="Delete Role"
+        description={
+          <>
+            Are you sure you want to delete the role{' '}
+            <span className="text-zinc-200 font-medium">"{deletingRole?.name}"</span>? This will
+            remove it from the default roles for new projects.
+          </>
+        }
+        confirmLabel="Delete Role"
+        actionVariant="destructive"
+        loading={isDeleting}
+        onConfirm={confirmDeleteRole}
+      />
+
+      {/* Reset single built-in role to defaults confirmation dialog */}
+      <ConfirmDialog
+        open={!!resetBuiltInRoleId}
+        onOpenChange={(open) => !open && setResetBuiltInRoleId(null)}
+        title={`Reset "${resetBuiltInRoleId}" to Defaults?`}
+        description="This will reset the role's name, color, description, and permissions to the hardcoded system defaults and save immediately."
+        confirmLabel="Reset to Defaults"
+        actionVariant="destructive"
+        onConfirm={async () => {
+          if (!resetBuiltInRoleId) return
+          const presetName = resetBuiltInRoleId as DefaultRoleName
+          if (!(presetName in ROLE_PRESETS)) return
+          // Compute the reset settings directly and save in one step
+          const resetSettings = {
+            ...localSettings,
+            [presetName]: {
+              ...localSettings[presetName],
+              name: presetName,
+              color: ROLE_COLORS[presetName],
+              description: ROLE_DESCRIPTIONS[presetName],
+              permissions: [...ROLE_PRESETS[presetName]],
+            },
+          }
+          setLocalSettings(resetSettings)
+          setResetBuiltInRoleId(null)
+          await updateMutation.mutateAsync({ settings: resetSettings, customRoles })
+        }}
+        loading={updateMutation.isPending}
+      />
+
+      {/* Reset all roles to defaults confirmation dialog */}
+      <ConfirmDialog
+        open={showResetAllDialog}
+        onOpenChange={setShowResetAllDialog}
+        title="Reset All Roles to Defaults?"
+        description="This will reset all built-in roles (Owner, Admin, Member) to their hardcoded system defaults and remove any custom roles. This action saves immediately."
+        confirmLabel="Reset All to Defaults"
+        actionVariant="destructive"
+        loading={resetMutation.isPending}
+        onConfirm={async () => {
+          await resetMutation.mutateAsync()
+          setShowResetAllDialog(false)
+        }}
+      />
     </div>
   )
 }

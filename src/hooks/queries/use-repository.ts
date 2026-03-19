@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 import type { RepoProvider } from '@/types'
 
@@ -58,13 +60,50 @@ export interface RepositoryConfig {
 }
 
 /**
+ * Build a demo RepositoryConfig for a given project key.
+ * In demo mode there is no backend, so we return sensible defaults.
+ */
+function getDemoRepositoryConfig(projectKey: string): RepositoryConfig {
+  const projects = demoStorage.getProjects()
+  const project = projects.find((p) => p.key === projectKey)
+
+  return {
+    projectId: project?.id ?? '',
+    projectKey,
+    projectName: project?.name ?? projectKey,
+    repositoryUrl: null,
+    repositoryProvider: null,
+    localPath: null,
+    defaultBranch: null,
+    branchTemplate: null,
+    agentGuidance: null,
+    monorepoPath: null,
+    environmentBranches: null,
+    commitPatterns: null,
+    hasWebhookSecret: false,
+    effectiveBranchTemplate: '{type}/{key}-{slug}',
+    effectiveAgentGuidance: null,
+    systemDefaults: {
+      branchTemplate: '{type}/{key}-{slug}',
+      agentGuidance: null,
+      environmentBranches: null,
+      commitPatterns: null,
+    },
+  }
+}
+
+/**
  * Fetch repository configuration for a project
  */
 export function useRepositoryConfig(projectKey: string) {
   return useQuery<RepositoryConfig>({
     queryKey: repositoryKeys.detail(projectKey),
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectKey}/repository`, {
+      if (isDemoMode()) {
+        return getDemoRepositoryConfig(projectKey)
+      }
+
+      const res = await apiFetch(`/api/projects/${projectKey}/repository`, {
         headers: { 'X-Tab-Id': getTabId() },
       })
       if (!res.ok) {
@@ -100,7 +139,22 @@ export function useUpdateRepository(projectKey: string) {
 
   return useMutation({
     mutationFn: async (data: UpdateRepositoryInput) => {
-      const res = await fetch(`/api/projects/${projectKey}/repository`, {
+      if (isDemoMode()) {
+        // In demo mode, merge the update into the current cached config
+        const current =
+          queryClient.getQueryData<RepositoryConfig>(repositoryKeys.detail(projectKey)) ??
+          getDemoRepositoryConfig(projectKey)
+        const updated: RepositoryConfig = {
+          ...current,
+          ...data,
+          effectiveBranchTemplate: data.branchTemplate ?? current.effectiveBranchTemplate,
+          effectiveAgentGuidance:
+            data.agentGuidance !== undefined ? data.agentGuidance : current.effectiveAgentGuidance,
+        }
+        return updated
+      }
+
+      const res = await apiFetch(`/api/projects/${projectKey}/repository`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -148,11 +202,21 @@ export function useUpdateRepository(projectKey: string) {
       }
       showToast.error(err.message)
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       showToast.success('Repository settings updated')
+      // In demo mode, set the returned data directly into the cache so the
+      // optimistic update isn't reverted by a refetch returning original defaults.
+      if (isDemoMode() && data) {
+        queryClient.setQueryData<RepositoryConfig>(repositoryKeys.detail(projectKey), data)
+      }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: repositoryKeys.detail(projectKey) })
+      // Skip invalidation in demo mode – there is no backend to refetch from,
+      // and the refetch would overwrite the optimistic/saved data with the
+      // original defaults from getDemoRepositoryConfig().
+      if (!isDemoMode()) {
+        queryClient.invalidateQueries({ queryKey: repositoryKeys.detail(projectKey) })
+      }
     },
   })
 }
@@ -165,7 +229,14 @@ export function useCommitPatterns(projectKey: string) {
 
   return useMutation({
     mutationFn: async (patterns: CommitPattern[] | null) => {
-      const res = await fetch(`/api/projects/${projectKey}/repository`, {
+      if (isDemoMode()) {
+        const current =
+          queryClient.getQueryData<RepositoryConfig>(repositoryKeys.detail(projectKey)) ??
+          getDemoRepositoryConfig(projectKey)
+        return { ...current, commitPatterns: patterns }
+      }
+
+      const res = await apiFetch(`/api/projects/${projectKey}/repository`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -198,11 +269,16 @@ export function useCommitPatterns(projectKey: string) {
       }
       showToast.error(err.message)
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       showToast.success('Commit patterns updated')
+      if (isDemoMode() && data) {
+        queryClient.setQueryData<RepositoryConfig>(repositoryKeys.detail(projectKey), data)
+      }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: repositoryKeys.detail(projectKey) })
+      if (!isDemoMode()) {
+        queryClient.invalidateQueries({ queryKey: repositoryKeys.detail(projectKey) })
+      }
     },
   })
 }
@@ -216,7 +292,21 @@ export function useWebhookSecret(projectKey: string) {
 
   return useMutation({
     mutationFn: async (action: 'generate' | 'clear') => {
-      const res = await fetch(`/api/projects/${projectKey}/repository`, {
+      if (isDemoMode()) {
+        const current =
+          queryClient.getQueryData<RepositoryConfig>(repositoryKeys.detail(projectKey)) ??
+          getDemoRepositoryConfig(projectKey)
+        if (action === 'generate') {
+          return {
+            ...current,
+            hasWebhookSecret: true,
+            webhookSecret: `demo-whsec-${crypto.randomUUID()}`,
+          }
+        }
+        return { ...current, hasWebhookSecret: false, webhookSecret: undefined }
+      }
+
+      const res = await apiFetch(`/api/projects/${projectKey}/repository`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 'use client'
 
 import { useBranding } from '@/hooks/queries/use-branding'
+import { withBasePath } from '@/lib/base-path'
 
 interface AuthBrandingProps {
   title?: string
@@ -18,7 +19,7 @@ export function AuthBranding({ title, subtitle = 'Sign in to your account' }: Au
       <div className="flex justify-center">
         {branding?.logoUrl ? (
           <img
-            src={branding.logoUrl}
+            src={withBasePath(branding.logoUrl)}
             alt={appName}
             className="h-16 w-16 rounded-xl object-contain"
           />

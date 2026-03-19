@@ -1,14 +1,16 @@
 'use client'
 
-import { Loader2, Target } from 'lucide-react'
+import { Loader2, Settings2, Target } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BacklogFilters } from '@/components/backlog'
+import { BacklogFilters, ColumnConfig } from '@/components/backlog'
 import { SprintBacklogView, SprintHeader } from '@/components/sprints'
 import { TicketDetailDrawer } from '@/components/tickets'
+import { Button } from '@/components/ui/button'
 import { useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useColumnsByProject, useTicketsByProject } from '@/hooks/queries/use-tickets'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { getProjectViewTabs, useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
 import { filterTickets } from '@/lib/filter-tickets'
@@ -100,6 +102,7 @@ export default function SprintPlanningPage() {
     queryText,
     setQueryText,
     setQueryMode,
+    setColumnConfigOpen,
   } = useBacklogStore()
 
   // Clear search state based on searchPersistence preference
@@ -217,6 +220,13 @@ export default function SprintPlanningPage() {
     [activeTicketId, allTickets],
   )
 
+  // Sprint completion detection (handles expired sprint prompts)
+  useSprintCompletion({
+    projectId,
+    tickets: allTickets,
+    columns,
+  })
+
   // Redirect to dashboard if project doesn't exist after loading
   useEffect(() => {
     if (!projectsLoading && !project) {
@@ -272,12 +282,23 @@ export default function SprintPlanningPage() {
 
       {/* Filter bar */}
       <div className="flex-shrink-0 border-b border-zinc-800 px-4 py-3 lg:px-6">
-        <BacklogFilters
-          projectId={projectId}
-          statusColumns={columns}
-          dynamicValues={dynamicValues}
-          queryError={queryError}
-        />
+        <div className="flex items-center justify-between gap-4">
+          <BacklogFilters
+            projectId={projectId}
+            statusColumns={columns}
+            dynamicValues={dynamicValues}
+            queryError={queryError}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setColumnConfigOpen(true)}
+            className="shrink-0"
+          >
+            <Settings2 className="mr-2 h-4 w-4" />
+            Columns
+          </Button>
+        </div>
       </div>
 
       {/* Scrollable content area */}
@@ -296,10 +317,14 @@ export default function SprintPlanningPage() {
             projectId={projectId}
             projectKey={projectKey}
             tickets={allTickets}
+            filteredTickets={filteredTickets}
             showHeader={false}
           />
         </div>
       </div>
+
+      {/* Column config sheet */}
+      <ColumnConfig />
 
       {/* Ticket detail drawer */}
       <TicketDetailDrawer

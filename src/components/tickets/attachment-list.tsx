@@ -10,24 +10,16 @@ import {
   MoreHorizontal,
   Trash2,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { withBasePath } from '@/lib/base-path'
 import { AttachmentPreviewModal } from './attachment-preview-modal'
 import type { UploadedFile } from './file-upload'
 
@@ -72,7 +64,6 @@ export function AttachmentList({
 }: AttachmentListProps) {
   const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null)
   const [fileToDelete, setFileToDelete] = useState<UploadedFile | null>(null)
-  const deleteButtonRef = useRef<HTMLButtonElement>(null)
 
   if (attachments.length === 0) {
     return null
@@ -87,7 +78,7 @@ export function AttachmentList({
 
   const handleDownload = (file: UploadedFile) => {
     const link = document.createElement('a')
-    link.href = file.url
+    link.href = withBasePath(file.url)
     link.download = file.originalName
     document.body.appendChild(link)
     link.click()
@@ -95,7 +86,7 @@ export function AttachmentList({
   }
 
   const handleOpenExternal = (file: UploadedFile) => {
-    window.open(file.url, '_blank')
+    window.open(withBasePath(file.url), '_blank')
   }
 
   const handlePreview = (file: UploadedFile) => {
@@ -122,7 +113,7 @@ export function AttachmentList({
                 <div className="relative aspect-square overflow-hidden bg-zinc-900">
                   {file.category === 'image' ? (
                     <img
-                      src={file.url}
+                      src={withBasePath(file.url)}
                       alt={file.originalName}
                       className="h-full w-full cursor-pointer object-cover transition-transform duration-200 group-hover:scale-105"
                       onClick={() => handlePreview(file)}
@@ -133,7 +124,7 @@ export function AttachmentList({
                       className="relative h-full w-full cursor-pointer"
                       onClick={() => handlePreview(file)}
                     >
-                      <video src={file.url} className="h-full w-full object-cover">
+                      <video src={withBasePath(file.url)} className="h-full w-full object-cover">
                         <track kind="captions" />
                       </video>
                       <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -235,36 +226,21 @@ export function AttachmentList({
         />
 
         {/* Delete Confirmation Dialog */}
-        <AlertDialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>
-          <AlertDialogContent
-            className="bg-zinc-900 border-zinc-800"
-            onOpenAutoFocus={(e) => {
-              e.preventDefault()
-              deleteButtonRef.current?.focus()
-            }}
-          >
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
-              <AlertDialogDescription className="text-zinc-400">
-                Are you sure you want to delete{' '}
-                <span className="font-medium text-zinc-200">{fileToDelete?.originalName}</span>?
-                This action can be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                ref={deleteButtonRef}
-                onClick={handleConfirmDelete}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDialog
+          open={!!fileToDelete}
+          onOpenChange={(open) => !open && setFileToDelete(null)}
+          title="Delete Attachment"
+          description={
+            <>
+              Are you sure you want to delete{' '}
+              <span className="font-medium text-zinc-200">{fileToDelete?.originalName}</span>? This
+              action can be undone.
+            </>
+          }
+          confirmLabel="Delete"
+          actionVariant="destructive"
+          onConfirm={handleConfirmDelete}
+        />
       </>
     )
   }
@@ -289,7 +265,7 @@ export function AttachmentList({
                   onClick={() => handlePreview(file)}
                 >
                   <img
-                    src={file.url}
+                    src={withBasePath(file.url)}
                     alt={file.originalName}
                     className="h-full w-full object-cover"
                   />
@@ -300,7 +276,7 @@ export function AttachmentList({
                   className="relative h-12 w-12 shrink-0 cursor-pointer overflow-hidden rounded bg-zinc-800"
                   onClick={() => handlePreview(file)}
                 >
-                  <video src={file.url} className="h-full w-full object-cover">
+                  <video src={withBasePath(file.url)} className="h-full w-full object-cover">
                     <track kind="captions" />
                   </video>
                   <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -385,36 +361,21 @@ export function AttachmentList({
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>
-        <AlertDialogContent
-          className="bg-zinc-900 border-zinc-800"
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            deleteButtonRef.current?.focus()
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete{' '}
-              <span className="font-medium text-zinc-200">{fileToDelete?.originalName}</span>? This
-              action can be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              ref={deleteButtonRef}
-              onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!fileToDelete}
+        onOpenChange={(open) => !open && setFileToDelete(null)}
+        title="Delete Attachment"
+        description={
+          <>
+            Are you sure you want to delete{' '}
+            <span className="font-medium text-zinc-200">{fileToDelete?.originalName}</span>? This
+            action can be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        actionVariant="destructive"
+        onConfirm={handleConfirmDelete}
+      />
     </>
   )
 }

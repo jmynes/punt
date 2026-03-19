@@ -11,8 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
+import { TypeToConfirmInput } from '@/components/ui/type-to-confirm'
 import { useWipeProjects } from '@/hooks/queries/use-database-backup'
+import { withBasePath } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 
 interface DatabaseWipeProjectsDialogProps {
@@ -70,7 +71,7 @@ export function DatabaseWipeProjectsDialog({
     resetState()
     onOpenChange(false)
     // Reload to reflect changes
-    window.location.href = '/admin/system/database'
+    window.location.href = withBasePath('/admin/system/database')
   }
 
   return (
@@ -123,36 +124,34 @@ export function DatabaseWipeProjectsDialog({
           )}
 
           {step === 'confirm' && (
-            <>
-              <div className="space-y-3">
-                <p className="text-sm text-zinc-400">
-                  To confirm, type{' '}
-                  <span className="font-mono text-amber-400">{REQUIRED_CONFIRMATION}</span> below:
-                </p>
-                <Input
-                  type="text"
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  placeholder={`Type ${REQUIRED_CONFIRMATION}`}
-                  className="bg-zinc-800 border-zinc-700 text-zinc-100 font-mono"
-                  autoComplete="off"
-                />
-              </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (confirmText === REQUIRED_CONFIRMATION) setShowReauthDialog(true)
+              }}
+            >
+              <TypeToConfirmInput
+                requiredText={REQUIRED_CONFIRMATION}
+                value={confirmText}
+                onChange={setConfirmText}
+                textColor="text-amber-400"
+                autoFocus
+              />
 
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setStep('warning')}>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button type="button" variant="outline" onClick={() => setStep('warning')}>
                   Back
                 </Button>
                 <Button
+                  type="submit"
                   variant="destructive"
-                  onClick={() => setShowReauthDialog(true)}
                   disabled={confirmText !== REQUIRED_CONFIRMATION}
                 >
                   <FolderX className="h-4 w-4" />
                   Wipe All Projects
                 </Button>
               </div>
-            </>
+            </form>
           )}
 
           {step === 'wiping' && (

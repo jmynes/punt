@@ -134,101 +134,105 @@ export function CreateProjectDialog() {
   return (
     <Dialog open={createProjectOpen} onOpenChange={setCreateProjectOpen}>
       <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-800">
-        <DialogHeader>
-          <DialogTitle className="text-xl text-zinc-100">Create New Project</DialogTitle>
-          <DialogDescription className="text-zinc-500">
-            Create a project to organize your work. You can add team members later.
-          </DialogDescription>
-        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (isValid && !createProject.isPending) handleSubmit()
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-xl text-zinc-100">Create New Project</DialogTitle>
+            <DialogDescription className="text-zinc-500">
+              Create a project to organize your work. You can add team members later.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Project Name */}
-          <div className="space-y-2">
-            <Label htmlFor="project-name" className="text-zinc-300">
-              Project Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="project-name"
-              value={formData.name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="My Awesome Project"
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+          <div className="space-y-4 py-4">
+            {/* Project Name */}
+            <div className="space-y-2">
+              <Label htmlFor="project-name" className="text-zinc-300">
+                Project Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="project-name"
+                value={formData.name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="My Awesome Project"
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+                disabled={createProject.isPending}
+                autoFocus
+              />
+            </div>
+
+            {/* Project Key */}
+            <div className="space-y-2">
+              <Label htmlFor="project-key" className="text-zinc-300">
+                Project Key <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="project-key"
+                value={formData.key}
+                onChange={(e) => handleKeyChange(e.target.value)}
+                placeholder="PROJ"
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 uppercase"
+                disabled={createProject.isPending}
+                maxLength={10}
+              />
+              <p className="text-xs text-zinc-500">
+                Used as a prefix for ticket IDs (e.g., {formData.key || 'PROJ'}-123)
+              </p>
+              {keyError && <p className="text-xs text-red-500">{keyError}</p>}
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="project-description" className="text-zinc-300">
+                Description
+              </Label>
+              <Textarea
+                id="project-description"
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Brief description of this project..."
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
+                rows={3}
+                disabled={createProject.isPending}
+              />
+            </div>
+
+            {/* Color */}
+            <div className="space-y-2">
+              <Label className="text-zinc-300">Project Color</Label>
+              <ColorPickerBody
+                activeColor={formData.color}
+                onColorChange={(color) => setFormData((prev) => ({ ...prev, color }))}
+                isDisabled={createProject.isPending}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
               disabled={createProject.isPending}
-              autoFocus
-            />
-          </div>
-
-          {/* Project Key */}
-          <div className="space-y-2">
-            <Label htmlFor="project-key" className="text-zinc-300">
-              Project Key <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="project-key"
-              value={formData.key}
-              onChange={(e) => handleKeyChange(e.target.value)}
-              placeholder="PROJ"
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 uppercase"
-              disabled={createProject.isPending}
-              maxLength={10}
-            />
-            <p className="text-xs text-zinc-500">
-              Used as a prefix for ticket IDs (e.g., {formData.key || 'PROJ'}-123)
-            </p>
-            {keyError && <p className="text-xs text-red-500">{keyError}</p>}
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="project-description" className="text-zinc-300">
-              Description
-            </Label>
-            <Textarea
-              id="project-description"
-              value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-              placeholder="Brief description of this project..."
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
-              rows={3}
-              disabled={createProject.isPending}
-            />
-          </div>
-
-          {/* Color */}
-          <div className="space-y-2">
-            <Label className="text-zinc-300">Project Color</Label>
-            <ColorPickerBody
-              activeColor={formData.color}
-              onColorChange={(color) => setFormData((prev) => ({ ...prev, color }))}
-              isDisabled={createProject.isPending}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={createProject.isPending}
-            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="primary"
-            disabled={!isValid || createProject.isPending}
-          >
-            {createProject.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Create Project'
-            )}
-          </Button>
-        </DialogFooter>
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={!isValid || createProject.isPending}>
+              {createProject.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Project'
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )

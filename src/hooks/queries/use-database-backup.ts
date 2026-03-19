@@ -5,11 +5,12 @@ import { signOut } from 'next-auth/react'
 import type { ExportSizeEstimate } from '@/app/api/admin/database/export/estimate/route'
 import type { ImportPreview } from '@/app/api/admin/database/preview/route'
 import type { DatabaseStats } from '@/app/api/admin/database/stats/route'
+import { apiFetch, withBasePath } from '@/lib/base-path'
 import type { ImportResult } from '@/lib/database-import'
 import { isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 
-export type { ExportSizeEstimate, ImportPreview, DatabaseStats }
+export type { DatabaseStats, ExportSizeEstimate, ImportPreview }
 
 /**
  * Get current database statistics
@@ -33,7 +34,7 @@ export function useDatabaseStats() {
         }
       }
 
-      const res = await fetch('/api/admin/database/stats')
+      const res = await apiFetch('/api/admin/database/stats')
       if (!res.ok) {
         throw new Error('Failed to fetch database stats')
       }
@@ -70,7 +71,7 @@ export function useExportEstimate() {
         }
       }
 
-      const res = await fetch('/api/admin/database/export/estimate')
+      const res = await apiFetch('/api/admin/database/export/estimate')
       if (!res.ok) {
         throw new Error('Failed to fetch export estimate')
       }
@@ -103,7 +104,7 @@ export function useExportDatabase() {
         return null
       }
 
-      const res = await fetch('/api/admin/database/export', {
+      const res = await apiFetch('/api/admin/database/export', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,7 +181,7 @@ export function usePreviewDatabase() {
         throw new Error('Demo mode')
       }
 
-      const res = await fetch('/api/admin/database/preview', {
+      const res = await apiFetch('/api/admin/database/preview', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -223,7 +224,7 @@ export function useImportDatabase() {
         throw new Error('Demo mode')
       }
 
-      const res = await fetch('/api/admin/database/import', {
+      const res = await apiFetch('/api/admin/database/import', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -322,7 +323,7 @@ export function useWipeProjects() {
         throw new Error('Demo mode')
       }
 
-      const res = await fetch('/api/admin/database/wipe-projects', {
+      const res = await apiFetch('/api/admin/database/wipe-projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -365,7 +366,7 @@ export function useWipeDatabase() {
         throw new Error('Demo mode')
       }
 
-      const res = await fetch('/api/admin/database/wipe', {
+      const res = await apiFetch('/api/admin/database/wipe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -385,7 +386,7 @@ export function useWipeDatabase() {
       // Sign out to clear the session cookie, then redirect to login
       setTimeout(() => {
         signOut({ redirect: false }).then(() => {
-          window.location.href = '/login'
+          window.location.href = withBasePath('/login')
         })
       }, 1500)
     },

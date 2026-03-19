@@ -9,7 +9,7 @@ import type { TicketTableProps } from './types'
 
 /**
  * Unified ticket table component.
- * Used by both BacklogTable and SprintSection.
+ * Used by SprintSection (and the backlog page).
  * Handles rendering tickets in a table with drag-and-drop support.
  *
  * Note: This component does not include a DndContext - the parent must provide one.
@@ -27,6 +27,7 @@ export function TicketTable({
   onSetSort,
   enableColumnReorder = false,
   onHideColumn,
+  reorderDisabled = false,
   overlayTicket,
 }: TicketTableProps) {
   const visibleColumns = useMemo(() => columns.filter((c) => c.visible), [columns])
@@ -46,7 +47,7 @@ export function TicketTable({
   }
 
   return (
-    <table className="w-full border-collapse">
+    <table className="w-full border-collapse table-fixed">
       {showHeader && (
         <TicketTableHeader
           columns={visibleColumns}
@@ -76,6 +77,7 @@ export function TicketTable({
                 isBeingDragged={isBeingDragged}
                 showDropIndicator={showIndicator}
                 draggingCount={draggingTicketIds.length}
+                reorderDisabled={reorderDisabled}
               />
             )
           })}

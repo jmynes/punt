@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronRight,
   Columns3,
+  Compass,
   Database,
   Eye,
   GitBranch,
@@ -36,7 +37,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -59,7 +60,9 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [{ title: 'Dashboard', href: '/', icon: Home }]
 
-// Animated collapsible container for smooth expand/collapse
+// Animated collapsible container for smooth expand/collapse.
+// Animates the user's expand/collapse toggle. Child size changes
+// (from nested sections) are applied instantly to avoid stutter.
 function CollapsibleSection({
   expanded,
   children,
@@ -68,26 +71,62 @@ function CollapsibleSection({
   children: React.ReactNode
 }) {
   const contentRef = useRef<HTMLDivElement>(null)
-  const [height, setHeight] = useState<number>(0)
+  const outerRef = useRef<HTMLDivElement>(null)
+  const heightRef = useRef<number>(0)
+  const prevExpandedRef = useRef(expanded)
+  const [, forceRender] = useState(0)
 
-  // Measure content height whenever content or expansion state changes
-  const measureHeight = useCallback(() => {
-    if (contentRef.current) {
-      setHeight(contentRef.current.scrollHeight)
+  // Sync measure before paint
+  useLayoutEffect(() => {
+    const el = contentRef.current
+    if (el) {
+      heightRef.current = el.scrollHeight
     }
-  }, [])
+  })
 
+  // Disable transition for child resizes, enable only for expand/collapse toggles
+  useLayoutEffect(() => {
+    const outer = outerRef.current
+    if (!outer) return
+
+    if (prevExpandedRef.current !== expanded) {
+      // User toggled — animate
+      outer.style.transitionDuration = '200ms'
+      prevExpandedRef.current = expanded
+    }
+  }, [expanded])
+
+  // ResizeObserver for nested size changes — apply instantly (no transition)
   useEffect(() => {
-    measureHeight()
-  }, [measureHeight])
+    const el = contentRef.current
+    const outer = outerRef.current
+    if (!el || !outer) return
 
-  // Re-measure on every render since children may have changed
-  useEffect(measureHeight)
+    const observer = new ResizeObserver(() => {
+      const newHeight = el.scrollHeight
+      if (newHeight !== heightRef.current) {
+        // Disable transition for child-driven resize
+        outer.style.transitionDuration = '0ms'
+        heightRef.current = newHeight
+        forceRender((n) => n + 1)
+        // Restore transition for the next user toggle
+        requestAnimationFrame(() => {
+          outer.style.transitionDuration = '200ms'
+        })
+      }
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <div
-      className="overflow-hidden transition-[max-height] duration-200 ease-in-out"
-      style={{ maxHeight: expanded ? `${height}px` : '0px' }}
+      ref={outerRef}
+      className="overflow-hidden transition-[max-height] ease-in-out"
+      style={{
+        maxHeight: expanded ? `${heightRef.current}px` : '0px',
+        transitionDuration: '200ms',
+      }}
     >
       <div ref={contentRef}>{children}</div>
     </div>
@@ -112,6 +151,7 @@ function TruncatedProjectLink({
   onSetActiveProjectId: (id: string) => void
   handleLinkClick: () => void
 }) {
+  const defaultProjectView = useSettingsStore((s) => s.defaultProjectView)
   const nameRef = useRef<HTMLSpanElement>(null)
   const [isTruncated, setIsTruncated] = useState(false)
 
@@ -129,7 +169,7 @@ function TruncatedProjectLink({
     <Tooltip open={isTruncated ? undefined : false}>
       <TooltipTrigger asChild>
         <Link
-          href={`/projects/${project.key}/board`}
+          href={`/projects/${project.key}/${defaultProjectView}`}
           onClick={() => {
             onSetActiveProjectId(project.id)
             handleLinkClick()
@@ -261,15 +301,18 @@ export function SidebarContent({
 
   // Scroll to active project when it changes (e.g. after creating a new project)
   const sidebarRef = useRef<HTMLDivElement>(null)
+  const projectsExpandedRef = useRef(projectsExpanded)
+  projectsExpandedRef.current = projectsExpanded
+
   useEffect(() => {
-    if (!activeProjectId || !projectsExpanded) return
+    if (!activeProjectId || !projectsExpandedRef.current) return
     // Small delay to allow the DOM to update after project list re-renders
     const timer = setTimeout(() => {
       const el = sidebarRef.current?.querySelector(`[data-project-id="${activeProjectId}"]`)
       el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }, 100)
     return () => clearTimeout(timer)
-  }, [activeProjectId, projectsExpanded])
+  }, [activeProjectId])
 
   // Intercept sidebar link clicks that would navigate away from the simulating project.
   // Uses capture phase so it fires before Next.js Link's navigation handler.
@@ -335,7 +378,7 @@ export function SidebarContent({
       </div>
 
       {/* Account section */}
-      <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
+      <div className={cn('mt-3 transition-opacity', isSimulationActive && 'opacity-40')}>
         <button
           type="button"
           className="group flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none cursor-pointer"
@@ -354,7 +397,7 @@ export function SidebarContent({
           </span>
         </button>
         <CollapsibleSection expanded={accountExpanded}>
-          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
             <Link href="/account/avatar" onClick={handleLinkClick}>
               <Button
                 variant="ghost"
@@ -412,7 +455,7 @@ export function SidebarContent({
       </div>
 
       {/* Preferences section */}
-      <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
+      <div className={cn('mt-3 transition-opacity', isSimulationActive && 'opacity-40')}>
         <button
           type="button"
           className="group flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none cursor-pointer"
@@ -431,7 +474,7 @@ export function SidebarContent({
           </span>
         </button>
         <CollapsibleSection expanded={preferencesExpanded}>
-          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
             <Link href="/preferences/general" onClick={handleLinkClick}>
               <Button
                 variant="ghost"
@@ -477,7 +520,7 @@ export function SidebarContent({
 
       {/* Admin section - only visible to system admins */}
       {currentUser.isSystemAdmin && (
-        <div className={cn('mt-6 transition-opacity', isSimulationActive && 'opacity-40')}>
+        <div className={cn('mt-3 transition-opacity', isSimulationActive && 'opacity-40')}>
           <button
             type="button"
             className="group flex items-center gap-1.5 px-3 mb-1 w-full text-left select-none cursor-pointer"
@@ -495,8 +538,8 @@ export function SidebarContent({
               Admin
             </span>
           </button>
-          {adminExpanded && (
-            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+          <CollapsibleSection expanded={adminExpanded}>
+            <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
               <Link href="/admin" onClick={handleLinkClick}>
                 <Button
                   variant="ghost"
@@ -567,7 +610,7 @@ export function SidebarContent({
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-system-settings'] ?? false}
                 >
-                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
                     <Link href="/admin/system/branding" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -667,7 +710,7 @@ export function SidebarContent({
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-project-defaults'] ?? false}
                 >
-                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
                     <Link href="/admin/defaults/agents" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -751,12 +794,12 @@ export function SidebarContent({
                 </CollapsibleSection>
               </div>
             </div>
-          )}
+          </CollapsibleSection>
         </div>
       )}
 
       {/* Projects section */}
-      <div className="mt-6">
+      <div className="mt-3 pt-3 border-t border-zinc-800">
         <div className="flex items-center justify-between px-3 mb-1">
           <button
             type="button"
@@ -816,7 +859,7 @@ export function SidebarContent({
         </div>
 
         <CollapsibleSection expanded={projectsExpanded}>
-          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+          <div className="ml-5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
             {isLoading ? (
               <>
                 <Skeleton className="h-8 w-full bg-zinc-800" />
@@ -898,8 +941,8 @@ export function SidebarContent({
                         )}
                       </div>
                       {/* Project sub-nav */}
-                      {isExpanded && (
-                        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+                      <CollapsibleSection expanded={isExpanded}>
+                        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
                           <Link href={`/projects/${project.key}/backlog`} onClick={handleLinkClick}>
                             <Button
                               variant="ghost"
@@ -968,7 +1011,7 @@ export function SidebarContent({
                             onClick={handleLinkClick}
                           />
                         </div>
-                      )}
+                      </CollapsibleSection>
                     </div>
                   </ProjectContextMenu>
                 )
@@ -1048,8 +1091,8 @@ function ProjectSettingsLink({
           </Button>
         </Link>
       </div>
-      {expanded && (
-        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 py-1">
+      <CollapsibleSection expanded={expanded}>
+        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
           {canViewSettings && (
             <Link href={`/projects/${projectKey}/settings/general`} onClick={onClick}>
               <Button
@@ -1061,7 +1104,7 @@ function ProjectSettingsLink({
                     'bg-zinc-800/50 text-zinc-100',
                 )}
               >
-                <Settings className="h-3 w-3" />
+                <Compass className="h-3 w-3" />
                 General
               </Button>
             </Link>
@@ -1179,7 +1222,7 @@ function ProjectSettingsLink({
             </Link>
           )}
         </div>
-      )}
+      </CollapsibleSection>
     </div>
   )
 }

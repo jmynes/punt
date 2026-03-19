@@ -115,7 +115,11 @@ export function SortableRoleItem({
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[140px]">
+          <DropdownMenuContent
+            align="end"
+            className="min-w-[140px]"
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
             {actions.map((action, idx) => (
               <span key={action.label}>
                 {idx > 0 &&

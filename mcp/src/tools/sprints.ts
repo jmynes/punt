@@ -216,7 +216,7 @@ export function registerSprintTools(server: McpServer) {
       goal: z.string().optional().describe('Sprint goal'),
       startDate: z.string().optional().describe('Start date (ISO: YYYY-MM-DD)'),
       endDate: z.string().optional().describe('End date (ISO: YYYY-MM-DD)'),
-      budget: z.number().min(0).optional().describe('Story points capacity'),
+      budget: z.coerce.number().min(0).optional().describe('Story points capacity'),
     },
     async ({ projectKey, name, goal, startDate, endDate, budget }) => {
       const result = await createSprint(projectKey, {
@@ -246,7 +246,7 @@ export function registerSprintTools(server: McpServer) {
       goal: z.string().nullable().optional().describe('New goal (null to clear)'),
       startDate: z.string().nullable().optional().describe('New start date'),
       endDate: z.string().nullable().optional().describe('New end date'),
-      budget: z.number().min(0).nullable().optional().describe('New capacity'),
+      budget: z.coerce.number().min(0).nullable().optional().describe('New capacity'),
     },
     async ({ projectKey, sprintName, name, goal, startDate, endDate, budget }) => {
       const listResult = await listSprints(projectKey)

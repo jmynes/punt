@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiFetch } from '@/lib/base-path'
 
 interface ReauthDialogProps {
   open: boolean
@@ -46,7 +47,7 @@ export function ReauthDialog({
   useEffect(() => {
     if (open) {
       setRequires2fa(null) // Reset to loading state
-      fetch('/api/me/2fa/status')
+      apiFetch('/api/me/2fa/status')
         .then((res) => res.json())
         .then((data) => {
           setRequires2fa(data.enabled ?? false)
@@ -90,7 +91,15 @@ export function ReauthDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+      <AlertDialogContent
+        className="bg-zinc-900 border-zinc-800"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault()
+          setTimeout(() => {
+            document.getElementById('reauth-password')?.focus()
+          }, 0)
+        }}
+      >
         <form onSubmit={handleSubmit}>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-zinc-100">{title}</AlertDialogTitle>

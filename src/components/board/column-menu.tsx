@@ -12,17 +12,8 @@ import {
 } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { ColorPickerBody } from '@/components/tickets/label-select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   Dialog,
   DialogContent,
@@ -50,6 +41,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { columnKeys, ticketKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch, withBasePath } from '@/lib/base-path'
 import { PERMISSIONS } from '@/lib/permissions'
 import {
   COLUMN_ICON_OPTIONS,
@@ -100,16 +92,25 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
   const canMoveLeft = columnIndex > 0
   const canMoveRight = columnIndex < allColumns.length - 1
 
-  // Handle adding a ticket to this column
   // Handle moving column left or right
   const handleMoveColumn = useCallback(
     async (direction: 'left' | 'right') => {
-      const currentIndex = allColumns.findIndex((c) => c.id === column.id)
+      const currentColumns = getColumns(projectId)
+      const currentIndex = currentColumns.findIndex((c) => c.id === column.id)
       const targetIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1
 
-      if (targetIndex < 0 || targetIndex >= allColumns.length) return
+      if (targetIndex < 0 || targetIndex >= currentColumns.length) return
 
       setMoveLoading(true)
+
+      // Optimistically swap in the store
+      const reorderedColumns = [...currentColumns]
+      const temp = reorderedColumns[currentIndex]
+      reorderedColumns[currentIndex] = { ...reorderedColumns[targetIndex], order: currentIndex }
+      reorderedColumns[targetIndex] = { ...temp, order: targetIndex }
+      reorderedColumns.sort((a, b) => a.order - b.order)
+      setColumns(projectId, reorderedColumns)
+
       try {
         const tabId = getTabId()
         const headers: HeadersInit = {
@@ -117,49 +118,16 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
           ...(tabId && { 'X-Tab-Id': tabId }),
         }
 
-        // The target order is the order of the column we're swapping with
-        const targetColumn = allColumns[targetIndex]
-        const newOrder = targetColumn.order
-
-        const res = await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
-          method: 'PATCH',
+        const res = await apiFetch(`/api/projects/${projectKey}/columns/reorder`, {
+          method: 'POST',
           headers,
-          body: JSON.stringify({ order: newOrder }),
+          body: JSON.stringify({ columnIds: reorderedColumns.map((c) => c.id) }),
         })
 
         if (!res.ok) {
           const error = await res.json().catch(() => ({ error: 'Failed to move column' }))
-          throw new Error(error.error || 'Failed to move column')
+          throw new Error(error.error ?? 'Failed to move column')
         }
-
-        // Also update the swapped column's order
-        const res2 = await fetch(`/api/projects/${projectKey}/columns/${targetColumn.id}`, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ order: column.order }),
-        })
-
-        if (!res2.ok) {
-          // Rollback first column to its original order
-          await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({ order: column.order }),
-          }).catch(() => {})
-          const error = await res2.json().catch(() => ({ error: 'Failed to move column' }))
-          throw new Error(error.error || 'Failed to move column')
-        }
-
-        // Update the board store
-        const columns = getColumns(projectId)
-        const updatedColumns = [...columns]
-        // Swap the positions
-        const temp = updatedColumns[currentIndex]
-        updatedColumns[currentIndex] = { ...updatedColumns[targetIndex], order: column.order }
-        updatedColumns[targetIndex] = { ...temp, order: newOrder }
-        // Sort by order
-        updatedColumns.sort((a, b) => a.order - b.order)
-        setColumns(projectId, updatedColumns)
 
         // Invalidate column queries to refresh data
         queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
@@ -168,6 +136,8 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
           description: `"${column.name}" moved ${direction}`,
         })
       } catch (error) {
+        // Rollback on failure
+        setColumns(projectId, currentColumns)
         showToast.error('Failed to move column', {
           description: error instanceof Error ? error.message : 'An error occurred',
         })
@@ -175,7 +145,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
         setMoveLoading(false)
       }
     },
-    [allColumns, column, projectId, projectKey, getColumns, setColumns, queryClient],
+    [column, projectId, projectKey, getColumns, setColumns, queryClient],
   )
 
   // Initialize move target when delete dialog opens
@@ -219,7 +189,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       body.icon = iconValue
       body.color = colorValue
 
-      const res = await fetch(`/api/projects/${projectKey}/columns/${column.id}`, {
+      const res = await apiFetch(`/api/projects/${projectKey}/columns/${column.id}`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify(body),
@@ -304,7 +274,7 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       }
 
       const url = new URL(
-        `/api/projects/${projectKey}/columns/${column.id}`,
+        withBasePath(`/api/projects/${projectKey}/columns/${column.id}`),
         window.location.origin,
       )
       if (column.tickets.length > 0) {
@@ -462,213 +432,208 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       {/* Edit Column Dialog (PUNT-72: uses Dialog for close button + click-outside dismiss) */}
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent className="bg-zinc-900 border-zinc-700">
-          <DialogHeader>
-            <DialogTitle className="text-zinc-100">Edit column</DialogTitle>
-            <DialogDescription className="text-zinc-400">
-              Update the name and icon for the &quot;{column.name}&quot; column.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {(() => {
-              const preview = getColumnIcon(iconValue, renameValue, colorValue)
-              const PreviewIcon = preview.icon
-              const isHex = preview.color.startsWith('#')
-              return (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center h-9 w-9 shrink-0 rounded-md bg-zinc-800 border border-zinc-700">
-                    <PreviewIcon
-                      className={cn('h-4 w-4', isHex ? undefined : preview.color)}
-                      style={isHex ? { color: preview.color } : undefined}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (
+                renameValue.trim() &&
+                !renameLoading &&
+                (renameValue.trim() !== column.name ||
+                  iconValue !== (column.icon ?? null) ||
+                  colorValue !== (column.color ?? null))
+              )
+                handleRename()
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-zinc-100">Edit column</DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                Update the name and icon for the &quot;{column.name}&quot; column.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              {(() => {
+                const preview = getColumnIcon(iconValue, renameValue, colorValue)
+                const PreviewIcon = preview.icon
+                const isHex = preview.color.startsWith('#')
+                return (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center h-9 w-9 shrink-0 rounded-md bg-zinc-800 border border-zinc-700">
+                      <PreviewIcon
+                        className={cn('h-4 w-4', isHex ? undefined : preview.color)}
+                        style={isHex ? { color: preview.color } : undefined}
+                      />
+                    </div>
+                    <Input
+                      ref={renameInputRef}
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      placeholder="Column name"
+                      maxLength={50}
+                      className="bg-zinc-800 border-zinc-700 text-zinc-100"
+                      disabled={renameLoading}
                     />
                   </div>
-                  <Input
-                    ref={renameInputRef}
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleRename()
-                      }
-                    }}
-                    placeholder="Column name"
-                    maxLength={50}
-                    className="bg-zinc-800 border-zinc-700 text-zinc-100"
-                    disabled={renameLoading}
-                  />
+                )
+              })()}
+              <div>
+                <span className="text-sm font-medium text-zinc-300 mb-2 block">Icon</span>
+                <div className="grid grid-cols-7 gap-1">
+                  {COLUMN_ICON_OPTIONS.map((opt) => {
+                    const Icon = opt.icon
+                    const isSelected = iconValue === opt.name
+                    // Show selected icon in the chosen custom color, or default
+                    const isHex = colorValue?.startsWith('#')
+                    const iconClass = isSelected ? (isHex ? undefined : opt.color) : 'text-zinc-400'
+                    const iconStyle =
+                      isSelected && isHex && colorValue ? { color: colorValue } : undefined
+                    return (
+                      <Tooltip key={opt.name}>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => setIconValue(isSelected ? null : opt.name)}
+                            className={cn(
+                              'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
+                              isSelected
+                                ? 'bg-amber-600/20 ring-1 ring-amber-500'
+                                : 'hover:bg-zinc-800',
+                            )}
+                            disabled={renameLoading}
+                          >
+                            <Icon className={cn('h-4 w-4', iconClass)} style={iconStyle} />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          {opt.name}
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
                 </div>
-              )
-            })()}
-            <div>
-              <span className="text-sm font-medium text-zinc-300 mb-2 block">Icon</span>
-              <div className="grid grid-cols-7 gap-1">
-                {COLUMN_ICON_OPTIONS.map((opt) => {
-                  const Icon = opt.icon
-                  const isSelected = iconValue === opt.name
-                  // Show selected icon in the chosen custom color, or default
-                  const isHex = colorValue?.startsWith('#')
-                  const iconClass = isSelected ? (isHex ? undefined : opt.color) : 'text-zinc-400'
-                  const iconStyle =
-                    isSelected && isHex && colorValue ? { color: colorValue } : undefined
-                  return (
-                    <Tooltip key={opt.name}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => setIconValue(isSelected ? null : opt.name)}
-                          className={cn(
-                            'flex items-center justify-center h-8 w-8 rounded-md transition-colors',
-                            isSelected
-                              ? 'bg-amber-600/20 ring-1 ring-amber-500'
-                              : 'hover:bg-zinc-800',
-                          )}
-                          disabled={renameLoading}
-                        >
-                          <Icon className={cn('h-4 w-4', iconClass)} style={iconStyle} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="text-xs">
-                        {opt.name}
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })}
+                <p className="text-xs text-zinc-500 mt-1">
+                  {iconValue
+                    ? 'Click selected icon to clear'
+                    : 'No icon selected \u2014 auto-detected from name'}
+                </p>
               </div>
-              <p className="text-xs text-zinc-500 mt-1">
-                {iconValue
-                  ? 'Click selected icon to clear'
-                  : 'No icon selected \u2014 auto-detected from name'}
-              </p>
+              <div>
+                <span className="text-sm font-medium text-zinc-300 mb-2 block">Color</span>
+                {colorValue ? (
+                  <>
+                    <ColorPickerBody
+                      activeColor={colorValue}
+                      onColorChange={setColorValue}
+                      onApply={setColorValue}
+                      isDisabled={renameLoading}
+                      projectId={projectId}
+                    />
+                    {/* PUNT-74: Ghost button style for reset */}
+                    <button
+                      type="button"
+                      onClick={() => setColorValue(null)}
+                      disabled={renameLoading}
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800/50 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Reset to default color
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-zinc-500 mb-2">
+                      Using auto-detected color from icon. Pick a custom color:
+                    </p>
+                    {/* PUNT-73: Resolve auto-detected color instead of hardcoding #3b82f6 */}
+                    <ColorPickerBody
+                      activeColor={resolveColumnColor(null, iconValue, renameValue) ?? ''}
+                      onColorChange={setColorValue}
+                      onApply={setColorValue}
+                      isDisabled={renameLoading}
+                      projectId={projectId}
+                    />
+                  </>
+                )}
+              </div>
             </div>
-            <div>
-              <span className="text-sm font-medium text-zinc-300 mb-2 block">Color</span>
-              {colorValue ? (
-                <>
-                  <ColorPickerBody
-                    activeColor={colorValue}
-                    onColorChange={setColorValue}
-                    onApply={setColorValue}
-                    isDisabled={renameLoading}
-                    projectId={projectId}
-                  />
-                  {/* PUNT-74: Ghost button style for reset */}
-                  <button
-                    type="button"
-                    onClick={() => setColorValue(null)}
-                    disabled={renameLoading}
-                    className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800/50 px-2.5 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    Reset to default color
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-xs text-zinc-500 mb-2">
-                    Using auto-detected color from icon. Pick a custom color:
-                  </p>
-                  {/* PUNT-73: Resolve auto-detected color instead of hardcoding #3b82f6 */}
-                  <ColorPickerBody
-                    activeColor={resolveColumnColor(null, iconValue, renameValue) ?? ''}
-                    onColorChange={setColorValue}
-                    onApply={setColorValue}
-                    isDisabled={renameLoading}
-                    projectId={projectId}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setRenameOpen(false)}
-              className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
-              disabled={renameLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleRename}
-              disabled={
-                renameLoading ||
-                !renameValue.trim() ||
-                (renameValue.trim() === column.name &&
-                  iconValue === (column.icon ?? null) &&
-                  colorValue === (column.color ?? null))
-              }
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              {renameLoading ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRenameOpen(false)}
+                className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
+                disabled={renameLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  renameLoading ||
+                  !renameValue.trim() ||
+                  (renameValue.trim() === column.name &&
+                    iconValue === (column.icon ?? null) &&
+                    colorValue === (column.color ?? null))
+                }
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {renameLoading ? 'Saving...' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent className="bg-zinc-900 border-zinc-700">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Delete column</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete the &quot;{column.name}&quot; column?
-              {column.tickets.length > 0 && (
-                <>
-                  {' '}
-                  This column contains{' '}
-                  <span className="font-medium text-zinc-300">
-                    {column.tickets.length} ticket{column.tickets.length === 1 ? '' : 's'}
-                  </span>
-                  . Select a column to move them to.
-                </>
-              )}
-              {column.tickets.length === 0 && ' You can undo this with Ctrl+Z.'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          {column.tickets.length > 0 && otherColumns.length > 0 && (
-            <div className="py-2">
-              <label
-                htmlFor="move-to-column"
-                className="text-sm font-medium text-zinc-300 mb-2 block"
-              >
-                Move tickets to:
-              </label>
-              <Select value={moveToColumnId} onValueChange={setMoveToColumnId}>
-                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-zinc-100">
-                  <SelectValue placeholder="Select a column" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-700">
-                  {otherColumns.map((c) => (
-                    <SelectItem key={c.id} value={c.id} className="text-zinc-300 focus:bg-zinc-800">
-                      {c.name} ({c.tickets.length} ticket{c.tickets.length === 1 ? '' : 's'})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100"
-              disabled={deleteLoading}
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete column"
+        description={
+          <>
+            Are you sure you want to delete the &quot;{column.name}&quot; column?
+            {column.tickets.length > 0 && (
+              <>
+                {' '}
+                This column contains{' '}
+                <span className="font-medium text-zinc-300">
+                  {column.tickets.length} ticket{column.tickets.length === 1 ? '' : 's'}
+                </span>
+                . Select a column to move them to.
+              </>
+            )}
+            {column.tickets.length === 0 && ' You can undo this with Ctrl+Z.'}
+          </>
+        }
+        confirmLabel={deleteLoading ? 'Deleting...' : 'Delete column'}
+        actionVariant="destructive"
+        loading={deleteLoading}
+        disabled={column.tickets.length > 0 && !moveToColumnId}
+        onConfirm={handleDelete}
+      >
+        {column.tickets.length > 0 && otherColumns.length > 0 && (
+          <div>
+            <label
+              htmlFor="move-to-column"
+              className="text-sm font-medium text-zinc-300 mb-2 block"
             >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                handleDelete()
-              }}
-              disabled={deleteLoading || (column.tickets.length > 0 && !moveToColumnId)}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {deleteLoading ? 'Deleting...' : 'Delete column'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              Move tickets to:
+            </label>
+            <Select value={moveToColumnId} onValueChange={setMoveToColumnId}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-zinc-100">
+                <SelectValue placeholder="Select a column" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-700">
+                {otherColumns.map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="text-zinc-300 focus:bg-zinc-800">
+                    {c.name} ({c.tickets.length} ticket{c.tickets.length === 1 ? '' : 's'})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </ConfirmDialog>
     </>
   )
 }

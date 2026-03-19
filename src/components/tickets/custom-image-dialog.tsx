@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiFetch } from '@/lib/base-path'
 import { cn } from '@/lib/utils'
 
 export function CustomImageDialog() {
@@ -78,7 +79,7 @@ export function CustomImageDialog() {
       const formData = new FormData()
       formData.append('files', file)
 
-      const response = await fetch('/api/upload', {
+      const response = await apiFetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
@@ -147,150 +148,158 @@ export function CustomImageDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Upload Section */}
-          <div className="space-y-2">
-            <Label htmlFor="image-upload" className="text-zinc-300">
-              Upload Image
-            </Label>
-            <div
-              onClick={() => !isUploading && fileInputRef.current?.click()}
-              onKeyDown={(e) => {
-                if ((e.key === 'Enter' || e.key === ' ') && !isUploading) {
-                  e.preventDefault()
-                  fileInputRef.current?.click()
-                }
-              }}
-              role="button"
-              tabIndex={0}
-              className={cn(
-                'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors cursor-pointer',
-                isUploading
-                  ? 'border-amber-500 bg-amber-500/10 cursor-wait'
-                  : 'border-zinc-700 bg-zinc-800/50 hover:border-amber-500 hover:bg-amber-500/5',
-              )}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                disabled={isUploading}
-                className="sr-only"
-                id="image-upload"
-              />
-              {isUploading ? (
-                <>
-                  <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-                  <p className="mt-2 text-sm text-zinc-400">Uploading...</p>
-                </>
-              ) : (
-                <>
-                  <Upload className="h-8 w-8 text-zinc-500" />
-                  <p className="mt-2 text-sm text-zinc-400">
-                    Click to upload or{' '}
-                    <span className="text-amber-500 hover:text-amber-400">browse</span>
-                  </p>
-                  <p className="mt-1 text-xs text-zinc-500">PNG, JPG, GIF up to 10MB</p>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-zinc-700" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-zinc-900 px-2 text-zinc-500">Or</span>
-            </div>
-          </div>
-
-          {/* URL Input */}
-          <div className="space-y-2">
-            <Label htmlFor="image-url" className="text-zinc-300">
-              Image URL
-            </Label>
-            <div className="relative">
-              <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-              <Input
-                id="image-url"
-                type="url"
-                value={src}
-                onChange={(e) => setSrc(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-                className="pl-9 bg-zinc-800 border-zinc-700 text-zinc-100 focus:border-amber-500"
-              />
-            </div>
-          </div>
-
-          {/* Alt Text */}
-          <div className="space-y-2">
-            <Label htmlFor="image-alt" className="text-zinc-300">
-              Alt Text <span className="text-zinc-500 text-xs">(optional)</span>
-            </Label>
-            <Input
-              id="image-alt"
-              type="text"
-              value={alt}
-              onChange={(e) => setAlt(e.target.value)}
-              placeholder="Describe the image for accessibility"
-              className="bg-zinc-800 border-zinc-700 text-zinc-100 focus:border-amber-500"
-            />
-          </div>
-
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="image-title" className="text-zinc-300">
-              Title <span className="text-zinc-500 text-xs">(optional)</span>
-            </Label>
-            <Input
-              id="image-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Image title"
-              className="bg-zinc-800 border-zinc-700 text-zinc-100 focus:border-amber-500"
-            />
-          </div>
-
-          {/* Error Message */}
-          {uploadError && (
-            <div className="rounded-md bg-red-900/20 border border-red-800/50 p-3">
-              <p className="text-sm text-red-400">{uploadError}</p>
-            </div>
-          )}
-
-          {/* Preview */}
-          {src && !uploadError && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (src.trim() && !isUploading) handleSubmit()
+          }}
+        >
+          <div className="space-y-4 py-4">
+            {/* Upload Section */}
             <div className="space-y-2">
-              <Label className="text-zinc-300">Preview</Label>
-              <div className="rounded-lg border border-zinc-700 bg-zinc-800 p-4 flex items-center justify-center">
-                <img
-                  src={src}
-                  alt={alt || 'Preview'}
-                  className="max-h-48 max-w-full rounded object-contain"
-                  onError={() => setUploadError('Invalid image URL')}
+              <Label htmlFor="image-upload" className="text-zinc-300">
+                Upload Image
+              </Label>
+              <div
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if ((e.key === 'Enter' || e.key === ' ') && !isUploading) {
+                    e.preventDefault()
+                    fileInputRef.current?.click()
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                className={cn(
+                  'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors cursor-pointer',
+                  isUploading
+                    ? 'border-amber-500 bg-amber-500/10 cursor-wait'
+                    : 'border-zinc-700 bg-zinc-800/50 hover:border-amber-500 hover:bg-amber-500/5',
+                )}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  disabled={isUploading}
+                  className="sr-only"
+                  id="image-upload"
+                />
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                    <p className="mt-2 text-sm text-zinc-400">Uploading...</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-8 w-8 text-zinc-500" />
+                    <p className="mt-2 text-sm text-zinc-400">
+                      Click to upload or{' '}
+                      <span className="text-amber-500 hover:text-amber-400">browse</span>
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">PNG, JPG, GIF up to 10MB</p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-zinc-700" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-zinc-900 px-2 text-zinc-500">Or</span>
+              </div>
+            </div>
+
+            {/* URL Input */}
+            <div className="space-y-2">
+              <Label htmlFor="image-url" className="text-zinc-300">
+                Image URL
+              </Label>
+              <div className="relative">
+                <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                <Input
+                  id="image-url"
+                  type="url"
+                  value={src}
+                  onChange={(e) => setSrc(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="pl-9 bg-zinc-800 border-zinc-700 text-zinc-100 focus:border-amber-500"
                 />
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-          >
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} variant="primary" disabled={!src.trim() || isUploading}>
-            {isEditing ? 'Update' : 'Insert'}
-          </Button>
-        </div>
+            {/* Alt Text */}
+            <div className="space-y-2">
+              <Label htmlFor="image-alt" className="text-zinc-300">
+                Alt Text <span className="text-zinc-500 text-xs">(optional)</span>
+              </Label>
+              <Input
+                id="image-alt"
+                type="text"
+                value={alt}
+                onChange={(e) => setAlt(e.target.value)}
+                placeholder="Describe the image for accessibility"
+                className="bg-zinc-800 border-zinc-700 text-zinc-100 focus:border-amber-500"
+              />
+            </div>
+
+            {/* Title */}
+            <div className="space-y-2">
+              <Label htmlFor="image-title" className="text-zinc-300">
+                Title <span className="text-zinc-500 text-xs">(optional)</span>
+              </Label>
+              <Input
+                id="image-title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Image title"
+                className="bg-zinc-800 border-zinc-700 text-zinc-100 focus:border-amber-500"
+              />
+            </div>
+
+            {/* Error Message */}
+            {uploadError && (
+              <div className="rounded-md bg-red-900/20 border border-red-800/50 p-3">
+                <p className="text-sm text-red-400">{uploadError}</p>
+              </div>
+            )}
+
+            {/* Preview */}
+            {src && !uploadError && (
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Preview</Label>
+                <div className="rounded-lg border border-zinc-700 bg-zinc-800 p-4 flex items-center justify-center">
+                  <img
+                    src={src}
+                    alt={alt || 'Preview'}
+                    className="max-h-48 max-w-full rounded object-contain"
+                    onError={() => setUploadError('Invalid image URL')}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={!src.trim() || isUploading}>
+              {isEditing ? 'Update' : 'Insert'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   )

@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { TypeToConfirmInput } from '@/components/ui/type-to-confirm'
 import {
   type ImportDatabaseParams,
   type ImportPreview,
@@ -35,6 +36,7 @@ import {
   usePreviewDatabase,
 } from '@/hooks/queries/use-database-backup'
 import { suppressDatabaseWipeSignOut } from '@/hooks/use-realtime-projects'
+import { withBasePath } from '@/lib/base-path'
 import type { ImportResult } from '@/lib/database-import'
 
 interface DatabaseImportDialogProps {
@@ -182,7 +184,7 @@ export function DatabaseImportDialog({
       // Sign out to clear the session cookie and redirect to login
       // The imported database has different users, so current session is invalid
       signOut({ redirect: false }).then(() => {
-        window.location.href = '/login'
+        window.location.href = withBasePath('/login')
       })
       return
     }
@@ -235,7 +237,16 @@ export function DatabaseImportDialog({
 
         {/* Step 1: Preview + Confirm */}
         {step === 'preview' && (
-          <>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (needsPassword && !preview) {
+                if (decryptionPassword && !previewMutation.isPending) handleRetryPreview()
+              } else if (preview && isConfirmValid) {
+                setShowReauthDialog(true)
+              }
+            }}
+          >
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Archive className="h-5 w-5 text-blue-400" />
@@ -385,53 +396,39 @@ export function DatabaseImportDialog({
                   </div>
 
                   {/* Confirmation input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmText" className="text-zinc-300">
-                      Type <span className="font-mono text-red-400">{REQUIRED_CONFIRMATION}</span>{' '}
-                      to confirm
-                    </Label>
-                    <Input
-                      id="confirmText"
-                      type="text"
-                      value={confirmText}
-                      onChange={(e) => setConfirmText(e.target.value)}
-                      placeholder={REQUIRED_CONFIRMATION}
-                      className="bg-zinc-800 border-zinc-700 text-zinc-100 font-mono"
-                      autoComplete="off"
-                    />
-                    {confirmText && !isConfirmValid && (
-                      <p className="text-xs text-red-400">Text does not match</p>
-                    )}
-                  </div>
+                  <TypeToConfirmInput
+                    requiredText={REQUIRED_CONFIRMATION}
+                    value={confirmText}
+                    onChange={setConfirmText}
+                  />
+                  {confirmText && !isConfirmValid && (
+                    <p className="text-xs text-red-400">Text does not match</p>
+                  )}
                 </>
               )}
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={handleClose}>
+              <Button type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
               {needsPassword && !preview ? (
                 <Button
+                  type="submit"
                   variant="primary"
-                  onClick={handleRetryPreview}
                   disabled={!decryptionPassword || previewMutation.isPending}
                 >
                   {previewMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Decrypt & Preview
+                  Decrypt &amp; Preview
                 </Button>
               ) : (
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowReauthDialog(true)}
-                  disabled={!preview || !isConfirmValid}
-                >
+                <Button type="submit" variant="destructive" disabled={!preview || !isConfirmValid}>
                   <Trash2 className="h-4 w-4" />
                   Import and Replace All Data
                 </Button>
               )}
             </DialogFooter>
-          </>
+          </form>
         )}
 
         {/* Step 5: Importing */}

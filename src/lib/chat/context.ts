@@ -8,6 +8,8 @@ import { db } from '@/lib/db'
 interface ChatContext {
   projectId?: string
   ticketKey?: string
+  mentionedUsers?: string[]
+  referencedTickets?: string[]
 }
 
 interface ProjectContext {
@@ -95,6 +97,67 @@ Key capabilities:
     }
   }
 
+  // Add context for @mentioned users
+  if (context.mentionedUsers && context.mentionedUsers.length > 0) {
+    const userContexts = await Promise.all(
+      context.mentionedUsers.map((username) => getMentionedUserContext(username)),
+    )
+    const validContexts = userContexts.filter((ctx): ctx is NonNullable<typeof ctx> => ctx !== null)
+    if (validContexts.length > 0) {
+      parts.push('')
+      parts.push('## Referenced Users (@mentions)')
+      parts.push(
+        'The user mentioned these team members in their message. Here is context about each:',
+      )
+      for (const userCtx of validContexts) {
+        parts.push('')
+        parts.push(`### @${userCtx.username}`)
+        parts.push(`Name: ${userCtx.name}`)
+        if (userCtx.email) parts.push(`Email: ${userCtx.email}`)
+        if (userCtx.role) parts.push(`Role: ${userCtx.role}`)
+        if (userCtx.assignedTicketCount > 0) {
+          parts.push(`Assigned tickets: ${userCtx.assignedTicketCount}`)
+        }
+        if (userCtx.assignedTickets.length > 0) {
+          parts.push(
+            `Recent assigned tickets: ${userCtx.assignedTickets.map((t) => `${t.key} (${t.title})`).join(', ')}`,
+          )
+        }
+      }
+    }
+  }
+
+  // Add context for #referenced tickets
+  if (context.referencedTickets && context.referencedTickets.length > 0) {
+    const ticketContexts = await Promise.all(
+      context.referencedTickets.map((key) => getTicketContext(key)),
+    )
+    const validTickets = ticketContexts.filter(
+      (ctx): ctx is NonNullable<typeof ctx> => ctx !== null,
+    )
+    if (validTickets.length > 0) {
+      parts.push('')
+      parts.push('## Referenced Tickets (#tags)')
+      parts.push('The user referenced these tickets in their message. Here is context about each:')
+      for (const ticketCtx of validTickets) {
+        parts.push('')
+        parts.push(`### ${ticketCtx.key}: ${ticketCtx.title}`)
+        parts.push(
+          `Type: ${ticketCtx.type}, Priority: ${ticketCtx.priority}, Status: ${ticketCtx.status}`,
+        )
+        if (ticketCtx.assignee) parts.push(`Assignee: ${ticketCtx.assignee}`)
+        if (ticketCtx.sprint) parts.push(`Sprint: ${ticketCtx.sprint}`)
+        if (ticketCtx.storyPoints !== null) parts.push(`Story points: ${ticketCtx.storyPoints}`)
+        if (ticketCtx.labels.length > 0) parts.push(`Labels: ${ticketCtx.labels.join(', ')}`)
+        if (ticketCtx.description) {
+          parts.push(
+            `Description: ${ticketCtx.description.slice(0, 500)}${ticketCtx.description.length > 500 ? '...' : ''}`,
+          )
+        }
+      }
+    }
+  }
+
   return parts.join('\n')
 }
 
@@ -135,6 +198,67 @@ async function getProjectContext(projectId: string): Promise<ProjectContext | nu
       activeSprint: project.sprints[0]?.name ?? null,
       memberCount: project._count.members,
       ticketCount: project._count.tickets,
+    }
+  } catch {
+    return null
+  }
+}
+
+interface MentionedUserContext {
+  username: string
+  name: string
+  email: string | null
+  role: string | null
+  assignedTicketCount: number
+  assignedTickets: Array<{ key: string; title: string }>
+}
+
+async function getMentionedUserContext(username: string): Promise<MentionedUserContext | null> {
+  try {
+    const user = await db.user.findFirst({
+      where: {
+        name: { equals: username, mode: 'insensitive' },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        email: true,
+        assignedTickets: {
+          where: {
+            resolution: null, // Only open tickets
+          },
+          select: {
+            number: true,
+            title: true,
+            project: { select: { key: true } },
+          },
+          orderBy: { updatedAt: 'desc' },
+          take: 10,
+        },
+        _count: {
+          select: {
+            assignedTickets: {
+              where: { resolution: null },
+            },
+          },
+        },
+      },
+    })
+
+    if (!user) return null
+
+    return {
+      username: user.name,
+      name: user.name,
+      email: user.email,
+      role: null, // Role is project-specific, not available here
+      assignedTicketCount: user._count.assignedTickets,
+      assignedTickets: user.assignedTickets.map((t) => ({
+        key: `${t.project.key}-${t.number}`,
+        title: t.title,
+      })),
     }
   } catch {
     return null

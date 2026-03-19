@@ -51,6 +51,9 @@ export interface TicketTableProps {
   /** Callback to hide a column */
   onHideColumn?: (columnId: string) => void
 
+  /** Whether manual reorder is disabled (e.g., a column sort is active) */
+  reorderDisabled?: boolean
+
   // Overlay mode (for DragOverlay)
   /** If provided, renders a single ticket as overlay */
   overlayTicket?: TicketWithRelations | null
@@ -76,6 +79,8 @@ export interface TicketTableRowProps {
   draggingCount?: number
   /** Whether this is a drag overlay (standalone rendering) */
   isOverlay?: boolean
+  /** Whether manual reorder is disabled (e.g., a column sort is active) */
+  reorderDisabled?: boolean
 }
 
 /**
@@ -119,6 +124,70 @@ export interface SortableHeaderCellProps {
   onToggleSort?: (columnId: string) => void
   onSetSort?: (sort: SortConfig | null) => void
   onHideColumn?: (columnId: string) => void
+}
+
+/**
+ * Props for the TicketListSection component.
+ * Shared wrapper around TicketTable used by SprintSection (and the backlog page).
+ */
+export interface TicketListSectionProps {
+  /** Section identifier - sprint ID or 'backlog' */
+  sectionId: string
+  /** Sprint ID if this is a sprint section, null for backlog */
+  sprintId: string | null
+  /** Project key for ticket display */
+  projectKey: string
+  /** Project ID for API calls */
+  projectId: string
+  /** Board columns for status name lookup */
+  statusColumns: ColumnWithTickets[]
+  /** Pre-sorted, pre-filtered tickets to display */
+  tickets: TicketWithRelations[]
+
+  // DnD
+  /** IDs of tickets currently being dragged */
+  draggingTicketIds?: string[]
+  /** Insert index for drop indicator (null = no drop target) */
+  dropPosition?: number | null
+  /** Droppable zone ID for this section */
+  droppableId: string
+  /** Data for the section droppable */
+  droppableData: Record<string, unknown>
+  /** Droppable zone ID for the end of the section */
+  endDroppableId: string
+  /** Data for the end-of-section droppable */
+  endDroppableData: Record<string, unknown>
+
+  // Sort
+  /** Current sort configuration */
+  sort: SortConfig | null
+  /** Callback when a sortable column header is clicked */
+  onToggleSort: (columnId: string) => void
+  /** Callback to explicitly set sort, or null to clear */
+  onSetSort: (sort: SortConfig | null) => void
+
+  // Column features (optional — backlog enables, sprint doesn't)
+  /** Whether columns can be reordered via drag-and-drop */
+  enableColumnReorder?: boolean
+  /** Callback to hide a column */
+  onHideColumn?: (columnId: string) => void
+
+  /** Whether manual reorder is disabled (e.g., a column sort is active) */
+  reorderDisabled?: boolean
+
+  // Layout
+  /** Message shown in the empty drop zone */
+  emptyMessage?: string
+  /** Whether to show the table header row */
+  showHeader?: boolean
+  /** Custom class name for the container div */
+  className?: string
+  /** Custom class name for the end-of-list drop zone */
+  endZoneClassName?: string
+
+  // Callbacks
+  /** Called when isOver state changes for the section droppable */
+  onIsOver?: (isOver: boolean) => void
 }
 
 export type { BacklogColumn, SortConfig, SortDirection }

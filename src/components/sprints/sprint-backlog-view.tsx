@@ -1,13 +1,13 @@
 'use client'
 
 import {
-  closestCorners,
   DndContext,
   type DragEndEvent,
   type DragOverEvent,
   DragOverlay,
   type DragStartEvent,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -22,9 +22,6 @@ import {
   useUpdateTicketSprint,
 } from '@/hooks/queries/use-sprints'
 import { updateTicketAPI } from '@/hooks/queries/use-tickets'
-import { filterTickets } from '@/lib/filter-tickets'
-import { evaluateQuery } from '@/lib/query-evaluator'
-import { parse, QueryParseError } from '@/lib/query-parser'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
@@ -43,6 +40,10 @@ interface SprintBacklogViewProps {
   projectId: string
   projectKey: string
   tickets: TicketWithRelations[]
+  /** Pre-filtered tickets. When provided, skips internal filtering. */
+  filteredTickets?: TicketWithRelations[]
+  /** Query parse error message (for header PQL input display) */
+  queryError?: string | null
   className?: string
   showHeader?: boolean
 }
@@ -55,6 +56,8 @@ export function SprintBacklogView({
   projectId,
   projectKey,
   tickets,
+  filteredTickets: externalFilteredTickets,
+  queryError = null,
   className,
   showHeader = true,
 }: SprintBacklogViewProps) {
@@ -64,21 +67,10 @@ export function SprintBacklogView({
   const { setSprintCreateOpen, openCreateTicketWithData } = useUIStore()
   const { updateTicket, getColumns } = useBoardStore()
   const statusColumns = getColumns(projectId)
-  const { selectedTicketIds } = useSelectionStore()
+  const { selectedTicketIds, clearSelection } = useSelectionStore()
   const {
     columns: backlogColumns,
-    filterByType,
-    filterByPriority,
-    filterByStatus,
-    filterByResolution,
-    filterByAssignee,
-    filterByLabels,
-    filterBySprint,
-    filterByPoints,
-    filterByDueDate,
-    filterByAttachments,
-    searchQuery,
-    showSubtasks,
+    sort,
     queryMode,
     setQueryMode,
     queryText,
@@ -98,13 +90,6 @@ export function SprintBacklogView({
       }
     }
   }, [persistTableSort, clearAllSprintSorts])
-
-  // Debounce query text to prevent per-keystroke evaluation
-  const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQueryText(queryText), 150)
-    return () => clearTimeout(timer)
-  }, [queryText])
 
   // Extract dynamic values for query autocomplete
   const dynamicValues = useMemo(() => {
@@ -130,63 +115,8 @@ export function SprintBacklogView({
     }
   }, [tickets, statusColumns, sprints])
 
-  // Query parse error for tooltip
-  const [queryError, setQueryError] = useState<string | null>(null)
-
-  // Apply filters from the shared backlog store (or PQL query)
-  const filteredTickets = useMemo(() => {
-    // PQL query mode
-    if (queryMode && debouncedQueryText.trim()) {
-      try {
-        const ast = parse(debouncedQueryText)
-        setQueryError(null)
-        return evaluateQuery(ast, tickets, statusColumns, projectKey)
-      } catch (err) {
-        if (err instanceof QueryParseError) {
-          setQueryError(err.message)
-        } else {
-          setQueryError('Invalid query')
-        }
-        return tickets
-      }
-    }
-
-    // Standard filter mode
-    setQueryError(null)
-    return filterTickets(tickets, {
-      searchQuery,
-      projectKey,
-      filterByType,
-      filterByPriority,
-      filterByStatus,
-      filterByResolution,
-      filterByAssignee,
-      filterByLabels,
-      filterBySprint,
-      filterByPoints,
-      filterByDueDate,
-      filterByAttachments,
-      showSubtasks,
-    })
-  }, [
-    queryMode,
-    debouncedQueryText,
-    tickets,
-    statusColumns,
-    projectKey,
-    searchQuery,
-    filterByType,
-    filterByPriority,
-    filterByStatus,
-    filterByResolution,
-    filterByAssignee,
-    filterByLabels,
-    filterBySprint,
-    filterByPoints,
-    filterByDueDate,
-    filterByAttachments,
-    showSubtasks,
-  ])
+  // Use externally provided filtered tickets or fall back to all tickets
+  const filteredTickets = externalFilteredTickets ?? tickets
 
   // Drag state
   const [activeTicket, setActiveTicket] = useState<TicketWithRelations | null>(null)
@@ -424,10 +354,13 @@ export function SprintBacklogView({
       const ticketsChangingSprint = ticketsToMove.filter((t) => t.sprintId !== targetSprintId)
 
       // Case 1: Internal reordering within the same section
+      // Skip reorder when a column sort is active (sorted view takes precedence)
       if (
         ticketsChangingSprint.length === 0 &&
         (overData?.type === 'ticket' || overData?.type === 'section-end')
       ) {
+        if (sort !== null) return // Sort active, manual reorder disabled
+
         const sourceSprintId = ticketsToMove[0]?.sprintId ?? null
         const sectionKey = sourceSprintId ?? 'backlog'
         const sectionTickets = ticketsBySprint[sectionKey] ?? []
@@ -595,6 +528,11 @@ export function SprintBacklogView({
         targetSprintName,
       )
 
+      // Clear selection after cross-section move (unless user prefers to keep it)
+      if (draggedIds.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
+        clearSelection()
+      }
+
       // Persist to database
       Promise.all([
         ...originalSprintIds.map(({ ticketId, newOrder }) =>
@@ -630,6 +568,8 @@ export function SprintBacklogView({
       updateTicketSprintMutation,
       ticketsBySprint,
       dropPosition,
+      clearSelection,
+      sort,
     ],
   )
 
@@ -673,7 +613,7 @@ export function SprintBacklogView({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}

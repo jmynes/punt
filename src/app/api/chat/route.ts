@@ -23,6 +23,8 @@ const chatRequestSchema = z.object({
     .object({
       projectId: z.string().optional(),
       ticketKey: z.string().optional(),
+      mentionedUsers: z.array(z.string()).optional(),
+      referencedTickets: z.array(z.string()).optional(),
     })
     .optional(),
   sessionId: z.string().nullish(), // Allow null, undefined, or string
@@ -84,12 +86,13 @@ export async function POST(request: Request) {
         select: { userId: true },
       })
       if (!session || session.userId !== currentUser.id) {
-        return new Response(JSON.stringify({ error: 'Invalid session' }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        })
+        // Session is invalid or belongs to another user — create a fresh one
+        // instead of returning 403 (handles stale sessionIds after credential updates)
+        sessionId = ''
       }
-    } else {
+    }
+
+    if (!sessionId) {
       // Create new session - get the last user message for the name
       const lastUserMessage = messages.filter((m) => m.role === 'user').pop()
       const sessionName = generateSessionName(lastUserMessage?.content || 'New conversation')

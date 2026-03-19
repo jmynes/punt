@@ -4,21 +4,14 @@ import { AlertTriangle, Loader2, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
+import { TypeToConfirmInput } from '@/components/ui/type-to-confirm'
 import { useDeleteProject, useProjectDetail, useUpdateProject } from '@/hooks/queries/use-projects'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { useHasPermission } from '@/hooks/use-permissions'
@@ -244,122 +237,131 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
           <CardTitle className="text-base text-zinc-100">Project Details</CardTitle>
           <CardDescription>Basic information about this project.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Project Name */}
-          <div className="space-y-2">
-            <Label htmlFor="project-name" className="text-zinc-300">
-              Project Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="project-name"
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="My Awesome Project"
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
-              disabled={isDisabled}
-            />
-          </div>
+        <CardContent>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (hasChanges && isValid && !isPending) handleSave()
+            }}
+            className="space-y-4"
+          >
+            {/* Project Name */}
+            <div className="space-y-2">
+              <Label htmlFor="project-name" className="text-zinc-300">
+                Project Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="project-name"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="My Awesome Project"
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600"
+                disabled={isDisabled}
+              />
+            </div>
 
-          {/* Project Key */}
-          <div className="space-y-2">
-            <Label htmlFor="project-key" className="text-zinc-300">
-              Project Key <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="project-key"
-              value={formData.key}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
-                }))
-              }
-              maxLength={10}
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 uppercase"
-              disabled={isDisabled}
-            />
-            {keyChanged ? (
-              <div className="flex items-start gap-2 p-3 rounded-md bg-amber-950/30 border border-amber-900/50">
-                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-200/80">
-                  <p className="font-medium text-amber-400 mb-1">
-                    Changing the project key will rename all tickets
-                  </p>
-                  <p>
-                    {project.key}-123 → {formData.key}-123
-                  </p>
-                  <p className="mt-1 text-amber-200/60">
-                    External links and bookmarks to existing tickets will break.
-                  </p>
+            {/* Project Key */}
+            <div className="space-y-2">
+              <Label htmlFor="project-key" className="text-zinc-300">
+                Project Key <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="project-key"
+                value={formData.key}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                  }))
+                }
+                maxLength={10}
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 uppercase"
+                disabled={isDisabled}
+              />
+              {keyChanged ? (
+                <div className="flex items-start gap-2 p-3 rounded-md bg-amber-950/30 border border-amber-900/50">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-200/80">
+                    <p className="font-medium text-amber-400 mb-1">
+                      Changing the project key will rename all tickets
+                    </p>
+                    <p>
+                      {project.key}-123 → {formData.key}-123
+                    </p>
+                    <p className="mt-1 text-amber-200/60">
+                      External links and bookmarks to existing tickets will break.
+                    </p>
+                  </div>
                 </div>
+              ) : (
+                <p className="text-xs text-zinc-500">
+                  1-10 characters. Used in ticket IDs (e.g., {formData.key}-123)
+                </p>
+              )}
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="project-description" className="text-zinc-300">
+                Description
+              </Label>
+              <Textarea
+                id="project-description"
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Brief description of this project..."
+                className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
+                rows={3}
+                disabled={isDisabled}
+              />
+            </div>
+
+            {/* Color */}
+            <div className="space-y-2">
+              <Label className="text-zinc-300">Project Color</Label>
+              <div className="flex flex-wrap gap-2">
+                {PROJECT_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, color }))}
+                    className={`h-8 w-8 rounded-md transition-all ${
+                      formData.color === color
+                        ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900'
+                        : 'hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    disabled={isDisabled}
+                  />
+                ))}
               </div>
-            ) : (
-              <p className="text-xs text-zinc-500">
-                1-10 characters. Used in ticket IDs (e.g., {formData.key}-123)
-              </p>
-            )}
-          </div>
+            </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="project-description" className="text-zinc-300">
-              Description
-            </Label>
-            <Textarea
-              id="project-description"
-              value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-              placeholder="Brief description of this project..."
-              className="bg-zinc-900 border-zinc-700 text-zinc-100 placeholder:text-zinc-600 resize-none"
-              rows={3}
-              disabled={isDisabled}
-            />
-          </div>
-
-          {/* Color */}
-          <div className="space-y-2">
-            <Label className="text-zinc-300">Project Color</Label>
-            <div className="flex flex-wrap gap-2">
-              {PROJECT_COLORS.map((color) => (
-                <button
-                  key={color}
+            {/* Save/Reset buttons */}
+            {canEditSettings && (
+              <div className="flex items-center justify-end gap-2 pt-4">
+                <Button
                   type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, color }))}
-                  className={`h-8 w-8 rounded-md transition-all ${
-                    formData.color === color
-                      ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900'
-                      : 'hover:scale-110'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  disabled={isDisabled}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Save/Reset buttons */}
-          {canEditSettings && (
-            <div className="flex items-center justify-end gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={handleReset}
-                disabled={!hasChanges || isPending}
-                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-              >
-                Reset
-              </Button>
-              <Button onClick={handleSave} disabled={!hasChanges || !isValid || isPending}>
-                {updateProject.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </Button>
-            </div>
-          )}
+                  variant="outline"
+                  onClick={handleReset}
+                  disabled={!hasChanges || isPending}
+                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                >
+                  Reset
+                </Button>
+                <Button type="submit" disabled={!hasChanges || !isValid || isPending}>
+                  {updateProject.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+              </div>
+            )}
+          </form>
         </CardContent>
       </Card>
 
@@ -484,7 +486,7 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
       )}
 
       {/* Delete confirmation dialog */}
-      <AlertDialog
+      <ConfirmDialog
         open={showDeleteConfirm}
         onOpenChange={(open) => {
           setShowDeleteConfirm(open)
@@ -492,58 +494,22 @@ export function GeneralTab({ projectId, project }: GeneralTabProps) {
             setDeleteConfirmText('')
           }
         }}
+        title="Delete Project?"
+        description={`Are you sure you want to delete "${project.name}"? This action cannot be undone and will remove all associated tickets.`}
+        confirmLabel="Delete Project"
+        actionVariant="destructive"
+        loading={deleteProject.isPending}
+        disabled={deleteConfirmText !== project.name}
+        onConfirm={handleDeleteConfirmed}
       >
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Delete Project?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-4 text-zinc-400">
-                <p>
-                  Are you sure you want to delete &quot;{project.name}&quot;? This action cannot be
-                  undone and will remove all associated tickets.
-                </p>
-                <div className="space-y-2">
-                  <p className="text-sm">
-                    To confirm, type <span className="font-mono text-red-400">{project.name}</span>{' '}
-                    below:
-                  </p>
-                  <Input
-                    type="text"
-                    value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    placeholder={`Type ${project.name} to confirm`}
-                    className="bg-zinc-900 border-zinc-700 text-zinc-100"
-                    autoComplete="off"
-                    disabled={deleteProject.isPending}
-                  />
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-              disabled={deleteProject.isPending}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <Button
-              onClick={handleDeleteConfirmed}
-              disabled={deleteProject.isPending || deleteConfirmText !== project.name}
-              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {deleteProject.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Project'
-              )}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <TypeToConfirmInput
+          requiredText={project.name}
+          value={deleteConfirmText}
+          onChange={setDeleteConfirmText}
+          disabled={deleteProject.isPending}
+          autoFocus
+        />
+      </ConfirmDialog>
 
       {/* Password reauthentication dialog */}
       <ReauthDialog

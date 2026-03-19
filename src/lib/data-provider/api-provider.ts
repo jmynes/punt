@@ -5,6 +5,7 @@
  * Used in production mode.
  */
 
+import { withBasePath } from '@/lib/base-path'
 import type { ColumnWithTickets, LabelSummary, SprintSummary, TicketWithRelations } from '@/types'
 import type {
   BrandingSettings,
@@ -45,7 +46,7 @@ export class APIDataProvider implements DataProvider {
       ...options?.headers,
     }
 
-    const res = await fetch(url, { ...options, headers })
+    const res = await fetch(withBasePath(url), { ...options, headers })
     if (!res.ok) {
       const error = await res.json().catch(() => ({ error: 'Request failed' }))
       throw new Error(error.error || `HTTP ${res.status}`)

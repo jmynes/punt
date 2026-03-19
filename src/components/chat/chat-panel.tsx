@@ -3,7 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { BotIcon, EyeOffIcon, KeyIcon, Loader2Icon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -18,10 +18,15 @@ import {
   useDeleteChatSession,
   useRenameChatSession,
 } from '@/hooks/queries/use-chat-sessions'
+import { useProjectMembers } from '@/hooks/queries/use-members'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { apiFetch } from '@/lib/base-path'
 import { getHelpText, type SlashCommand } from '@/lib/chat/commands'
+import { extractMentionedUsernames, extractReferencedTicketKeys } from '@/lib/chat/references'
 import { showToast } from '@/lib/toast'
+import { useBoardStore } from '@/stores/board-store'
 import { transformMetadataToToolCalls, useChatStore } from '@/stores/chat-store'
+import { useProjectsStore } from '@/stores/projects-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
 import { ChatInput } from './chat-input'
@@ -39,7 +44,7 @@ interface StreamEvent {
 }
 
 export function ChatPanel() {
-  const { chatPanelOpen, setChatPanelOpen, chatContext } = useUIStore()
+  const { chatPanelOpen, setChatPanelOpen, chatContext, activeProjectId } = useUIStore()
   const showChatPanel = useSettingsStore((s) => s.showChatPanel)
   const setShowChatPanel = useSettingsStore((s) => s.setShowChatPanel)
   const {
@@ -60,6 +65,24 @@ export function ChatPanel() {
   const currentUser = useCurrentUser()
   const queryClient = useQueryClient()
 
+  // Get active project info for @mention and #ticket autocomplete
+  const projects = useProjectsStore((s) => s.projects)
+  const activeProject = useMemo(
+    () => projects.find((p) => p.id === activeProjectId),
+    [projects, activeProjectId],
+  )
+  const projectKey = activeProject?.key
+
+  // Fetch project members for @mention autocomplete
+  const { data: members } = useProjectMembers(activeProjectId ?? '')
+
+  // Get tickets from board store (already loaded for the active project)
+  const columns = useBoardStore((s) => (activeProjectId ? s.projects[activeProjectId] : undefined))
+  const allTickets = useMemo(
+    () => (columns ? columns.flatMap((col) => col.tickets) : []),
+    [columns],
+  )
+
   // React Query hooks for session operations
   const { data: sessionData } = useChatSession(currentSessionId)
   const renameSession = useRenameChatSession()
@@ -69,7 +92,7 @@ export function ChatPanel() {
   useEffect(() => {
     if (chatPanelOpen && isConfigured === null) {
       // First check provider and session status
-      fetch('/api/me/claude-session')
+      apiFetch('/api/me/claude-session')
         .then((res) => res.json())
         .then((data) => {
           const userProvider = data.provider || 'anthropic'
@@ -79,7 +102,7 @@ export function ChatPanel() {
             setIsConfigured(data.hasSession)
           } else {
             // Anthropic needs API key - check that endpoint
-            return fetch('/api/me/anthropic-key')
+            return apiFetch('/api/me/anthropic-key')
               .then((res) => res.json())
               .then((keyData) => setIsConfigured(keyData.hasKey))
           }
@@ -211,12 +234,22 @@ export function ChatPanel() {
           content: m.content,
         }))
 
-        const response = await fetch('/api/chat', {
+        // Extract @mentions and #ticket references from the user message
+        const mentionedUsers = extractMentionedUsernames(content)
+        const referencedTickets = extractReferencedTicketKeys(content)
+
+        const enrichedContext = {
+          ...chatContext,
+          ...(mentionedUsers.length > 0 ? { mentionedUsers } : {}),
+          ...(referencedTickets.length > 0 ? { referencedTickets } : {}),
+        }
+
+        const response = await apiFetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: apiMessages,
-            context: chatContext,
+            context: enrichedContext,
             sessionId: currentSessionId,
           }),
           signal: abortControllerRef.current.signal,
@@ -274,8 +307,42 @@ export function ChatPanel() {
         if (error instanceof Error && error.name === 'AbortError') {
           return
         }
-        const errorMessage = error instanceof Error ? error.message : 'An error occurred'
-        updateMessage(assistantId, { content: `Error: ${errorMessage}`, completedAt: new Date() })
+
+        // Detect timeout and network errors for user-friendly messaging (PUNT-331)
+        const isTimeoutOrNetwork =
+          error instanceof Error &&
+          (error.name === 'TimeoutError' ||
+            error.message.toLowerCase().includes('timeout') ||
+            error.message.toLowerCase().includes('network') ||
+            error.message.includes('Failed to fetch'))
+
+        const errorMessage = isTimeoutOrNetwork
+          ? 'The request timed out or a network error occurred. You can try again by resending your message, or check your connection and provider settings in Profile > Claude Chat.'
+          : error instanceof Error
+            ? error.message
+            : 'An error occurred'
+
+        // Mark any stuck "running" tool calls as failed (PUNT-330)
+        const currentMsgs = useChatStore.getState().messages
+        const assistantMsg = currentMsgs.find((m) => m.id === assistantId)
+        const hasRunningTools = assistantMsg?.toolCalls?.some((t) => t.status === 'running')
+
+        if (hasRunningTools && assistantMsg) {
+          updateMessage(assistantId, {
+            content: `Error: ${errorMessage}`,
+            completedAt: new Date(),
+            toolCalls: assistantMsg.toolCalls?.map((t) =>
+              t.status === 'running'
+                ? { ...t, status: 'completed' as const, success: false, result: 'Interrupted' }
+                : t,
+            ),
+          })
+        } else {
+          updateMessage(assistantId, {
+            content: `Error: ${errorMessage}`,
+            completedAt: new Date(),
+          })
+        }
       } finally {
         setIsLoading(false)
         abortControllerRef.current = null
@@ -293,6 +360,27 @@ export function ChatPanel() {
       queryClient,
     ],
   )
+
+  const stopStreaming = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+    // Mark the last assistant message as completed with whatever content it has so far
+    const currentMsgs = useChatStore.getState().messages
+    const lastMsg = currentMsgs[currentMsgs.length - 1]
+    if (lastMsg?.role === 'assistant' && !lastMsg.completedAt) {
+      updateMessage(lastMsg.id, {
+        completedAt: new Date(),
+        toolCalls: lastMsg.toolCalls?.map((t) =>
+          t.status === 'running'
+            ? { ...t, status: 'completed' as const, success: false, result: 'Stopped' }
+            : t,
+        ),
+      })
+    }
+    setIsLoading(false)
+  }, [updateMessage])
 
   const clearChat = useCallback(() => {
     // Abort any in-progress request
@@ -438,7 +526,12 @@ export function ChatPanel() {
           <ChatInput
             onSend={sendMessage}
             onCommand={handleCommand}
-            disabled={isLoading || isConfigured === null}
+            onStop={stopStreaming}
+            isLoading={isLoading}
+            disabled={isConfigured === null}
+            members={members}
+            tickets={allTickets}
+            projectKey={projectKey}
           />
         )}
       </SheetContent>

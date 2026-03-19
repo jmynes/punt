@@ -15,14 +15,15 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { List, Loader2, Plus } from 'lucide-react'
+import { List, Loader2, Plus, Settings2, TrendingUp } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BacklogTable, ColumnConfig, FilterConfig } from '@/components/backlog'
+import { BacklogFilters, ColumnConfig, FilterConfig } from '@/components/backlog'
 import { SprintHeader, SprintSection } from '@/components/sprints'
 import { TicketTableRow } from '@/components/table'
 import { TicketDetailDrawer } from '@/components/tickets'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useProjectSprints, useUpdateTicketSprint } from '@/hooks/queries/use-sprints'
 import {
   updateTicketAPI,
@@ -34,7 +35,11 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useSprintCompletion } from '@/hooks/use-sprint-completion'
 import { getProjectViewTabs, useTabCycleShortcut } from '@/hooks/use-tab-cycle-shortcut'
 import { useTicketUrlSync } from '@/hooks/use-ticket-url-sync'
+import { filterTickets } from '@/lib/filter-tickets'
 import { PERMISSIONS } from '@/lib/permissions'
+import { evaluateQuery } from '@/lib/query-evaluator'
+import { parse, QueryParseError } from '@/lib/query-parser'
+import { sortTickets } from '@/lib/ticket-sort'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
@@ -311,6 +316,23 @@ export default function BacklogPage() {
     setSearchQuery,
     setQueryText,
     setQueryMode,
+    sort,
+    setSort,
+    setColumnConfigOpen,
+    filterByType,
+    filterByPriority,
+    filterByStatus,
+    filterByResolution,
+    filterByAssignee,
+    filterByLabels,
+    filterBySprint,
+    filterByPoints,
+    filterByDueDate,
+    filterByAttachments,
+    searchQuery,
+    showSubtasks,
+    queryMode,
+    queryText,
   } = useBacklogStore()
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
@@ -456,6 +478,135 @@ export default function BacklogPage() {
 
     return groups
   }, [allTickets, sprints])
+
+  // Sort persistence reset
+  const persistTableSort = useSettingsStore((s) => s.persistTableSort)
+  const sortResetRef = useRef(false)
+  useEffect(() => {
+    if (!sortResetRef.current) {
+      sortResetRef.current = true
+      if (!persistTableSort) {
+        setSort({ column: 'key', direction: 'desc' })
+      }
+    }
+  }, [persistTableSort, setSort])
+
+  // Debounce query text
+  const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQueryText(queryText), 150)
+    return () => clearTimeout(timer)
+  }, [queryText])
+
+  // Query error for display
+  const queryError = useMemo(() => {
+    if (!queryMode || !debouncedQueryText.trim()) return null
+    try {
+      parse(debouncedQueryText)
+      return null
+    } catch (err) {
+      return err instanceof QueryParseError ? err.message : 'Invalid query'
+    }
+  }, [queryMode, debouncedQueryText])
+
+  // Dynamic values for filter autocomplete
+  const dynamicValues = useMemo(() => {
+    const statusNames = columns.map((c) => c.name)
+    const userSet = new Set<string>()
+    const labelSet = new Set<string>()
+    for (const ticket of allTickets) {
+      if (ticket.assignee?.name) userSet.add(ticket.assignee.name)
+      if (ticket.creator?.name) userSet.add(ticket.creator.name)
+      for (const label of ticket.labels) labelSet.add(label.name)
+    }
+    const sprintNames = sprints?.map((s) => s.name).sort() ?? []
+    return {
+      statusNames,
+      assigneeNames: Array.from(userSet).sort(),
+      sprintNames,
+      labelNames: Array.from(labelSet).sort(),
+    }
+  }, [allTickets, columns, sprints])
+
+  // Apply backlog order
+  const applyBacklogOrder = useCallback((ticketList: TicketWithRelations[], order: string[]) => {
+    if (order.length === 0) return ticketList
+    const orderSet = new Set(order)
+    const ordered = order
+      .map((id) => ticketList.find((t) => t.id === id))
+      .filter(Boolean) as TicketWithRelations[]
+    const remaining = ticketList.filter((t) => !orderSet.has(t.id))
+    return [...ordered, ...remaining]
+  }, [])
+
+  // Filter and sort backlog tickets
+  const filteredBacklogTickets = useMemo(() => {
+    const rawBacklog = ticketsBySprint.backlog ?? []
+    const projectOrder = backlogOrder[projectId] || []
+    const orderedBacklog = applyBacklogOrder(rawBacklog, projectOrder)
+
+    let result: TicketWithRelations[]
+    if (queryMode && debouncedQueryText.trim()) {
+      try {
+        const ast = parse(debouncedQueryText)
+        result = evaluateQuery(ast, orderedBacklog, columns, projectKey)
+        if (!showSubtasks) result = result.filter((t) => t.type !== 'subtask')
+      } catch {
+        result = [...orderedBacklog]
+        if (!showSubtasks) result = result.filter((t) => t.type !== 'subtask')
+      }
+    } else {
+      result = filterTickets(orderedBacklog, {
+        searchQuery,
+        projectKey,
+        filterByType,
+        filterByPriority,
+        filterByStatus,
+        filterByResolution,
+        filterByAssignee,
+        filterByLabels,
+        filterBySprint,
+        filterByPoints,
+        filterByDueDate,
+        filterByAttachments,
+        showSubtasks,
+      })
+    }
+
+    if (sort) {
+      result = sortTickets(result, sort, columns)
+    }
+
+    return result
+  }, [
+    ticketsBySprint,
+    backlogOrder,
+    projectId,
+    applyBacklogOrder,
+    queryMode,
+    debouncedQueryText,
+    columns,
+    projectKey,
+    searchQuery,
+    filterByType,
+    filterByPriority,
+    filterByStatus,
+    filterByResolution,
+    filterByAssignee,
+    filterByLabels,
+    filterBySprint,
+    filterByPoints,
+    filterByDueDate,
+    filterByAttachments,
+    showSubtasks,
+    sort,
+  ])
+
+  // Backlog summary stats
+  const backlogTickets = ticketsBySprint.backlog ?? []
+  const filteredPoints = filteredBacklogTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
+  const totalBacklogPoints = backlogTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
+  const isBacklogFiltered = filteredBacklogTickets.length !== backlogTickets.length
 
   // Find the selected ticket
   const selectedTicket = useMemo(
@@ -635,6 +786,9 @@ export default function BacklogPage() {
       const draggedIdSet = new Set(draggedIds)
 
       // Case A: Same-section reordering (within sprint or within backlog)
+      // Skip reorder when a column sort is active (sorted view takes precedence)
+      if (isSameSection && sort !== null) return
+
       if (isSameSection) {
         // Handle backlog reordering (uses local backlogOrder state)
         if (targetSectionKey === 'backlog') {
@@ -863,6 +1017,11 @@ export default function BacklogPage() {
         targetSprintName,
       )
 
+      // Clear selection after cross-section move (unless user prefers to keep it)
+      if (draggedIds.length > 1 && !useSettingsStore.getState().keepSelectionAfterAction) {
+        clearSelection()
+      }
+
       // Persist to database (moved tickets + reordered existing tickets)
       Promise.all([
         ...originalSprintIds.map(({ ticketId, newOrder }) =>
@@ -908,6 +1067,7 @@ export default function BacklogPage() {
       clearSelection,
       dropPosition,
       updateTickets,
+      sort,
     ],
   )
 
@@ -946,7 +1106,7 @@ export default function BacklogPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Page header */}
-      <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+      <div className="flex-shrink-0 flex flex-col gap-4 border-b border-zinc-800 px-4 py-4 lg:flex-row lg:items-center lg:justify-between 2xl:px-6">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-zinc-800">
             <List className="h-5 w-5 text-zinc-400" />
@@ -973,7 +1133,7 @@ export default function BacklogPage() {
 
       {/* No active sprint banner */}
       {!hasActiveSprints && (
-        <div className="flex-shrink-0 px-4 py-4 lg:px-6 border-b border-zinc-800">
+        <div className="flex-shrink-0 px-4 py-4 2xl:px-6 border-b border-zinc-800">
           <SprintHeader projectId={projectId} />
         </div>
       )}
@@ -991,7 +1151,7 @@ export default function BacklogPage() {
         {hasActiveSprints && (
           <div
             ref={sprintContainerRef}
-            className="flex-shrink-0 max-h-[350px] overflow-y-auto p-4 lg:px-6 space-y-3 border-b border-zinc-800"
+            className="flex-shrink-0 max-h-[350px] overflow-y-auto 2xl:px-6 pt-0 pb-4 space-y-3 border-b border-zinc-800"
           >
             {/* Active Sprints */}
             {activeSprints.map((sprint) => (
@@ -1029,17 +1189,127 @@ export default function BacklogPage() {
           </div>
         )}
 
-        {/* Backlog table with filters and columns */}
-        <div className="flex-1 overflow-hidden min-h-0">
-          <BacklogTable
-            tickets={ticketsBySprint.backlog ?? []}
-            columns={columns}
-            projectKey={projectKey}
-            projectId={projectId}
-            useExternalDnd={true}
-            externalDraggingIds={draggingTicketIds}
-            dropPosition={dropPosition?.sectionId === 'backlog' ? dropPosition.insertIndex : null}
-          />
+        {/* Backlog section with filters */}
+        <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
+          {/* Filter toolbar */}
+          <div className="flex flex-col border-b border-zinc-800">
+            <div className="flex items-center justify-between gap-4 px-4 py-3">
+              <BacklogFilters
+                projectId={projectId}
+                statusColumns={columns}
+                dynamicValues={dynamicValues}
+                queryError={queryError}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setColumnConfigOpen(true)}
+                className="shrink-0"
+              >
+                <Settings2 className="mr-2 h-4 w-4" />
+                Columns
+              </Button>
+            </div>
+          </div>
+
+          {/* Summary header */}
+          <div className="flex shrink-0 items-center justify-end gap-4 border-b border-zinc-800 px-4 py-2 text-sm">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-default text-zinc-400">
+                  {isBacklogFiltered ? (
+                    <>
+                      <span className="font-medium tabular-nums text-zinc-200">
+                        {filteredBacklogTickets.length}
+                      </span>
+                      <span className="text-zinc-600"> / </span>
+                      <span className="tabular-nums text-zinc-500">{backlogTickets.length}</span>{' '}
+                      {backlogTickets.length === 1 ? 'issue' : 'issues'}
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-medium tabular-nums text-zinc-200">
+                        {backlogTickets.length}
+                      </span>{' '}
+                      <span className="text-zinc-500">
+                        {backlogTickets.length === 1 ? 'issue' : 'issues'}
+                      </span>
+                    </>
+                  )}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+                {isBacklogFiltered ? (
+                  <div className="space-y-1">
+                    <p className="text-xs text-zinc-100">
+                      Showing {filteredBacklogTickets.length} of {backlogTickets.length} issues
+                    </p>
+                    <p className="text-xs text-zinc-400">Filters are active</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-100">
+                    {backlogTickets.length} {backlogTickets.length === 1 ? 'issue' : 'issues'} in
+                    backlog
+                  </p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex cursor-default items-center gap-1.5 text-zinc-400">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  {isBacklogFiltered ? (
+                    <>
+                      <span className="font-medium tabular-nums text-zinc-200">
+                        {filteredPoints}
+                      </span>
+                      <span className="text-zinc-600"> / </span>
+                      <span className="tabular-nums text-zinc-500">{totalBacklogPoints}</span>
+                      <span className="text-zinc-600"> pts</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-medium tabular-nums text-zinc-200">
+                        {totalBacklogPoints}
+                      </span>
+                      <span className="text-zinc-500"> pts</span>
+                    </>
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+                {isBacklogFiltered ? (
+                  <div className="space-y-1">
+                    <p className="text-xs text-zinc-100">
+                      Showing {filteredPoints} of {totalBacklogPoints} story points
+                    </p>
+                    <p className="text-xs text-zinc-400">Filters are active</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-100">
+                    {totalBacklogPoints} story points in backlog
+                  </p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* Backlog table via SprintSection */}
+          <div className="flex-1 overflow-y-auto min-h-0 2xl:px-6">
+            <SprintSection
+              sprint={null}
+              tickets={filteredBacklogTickets}
+              projectKey={projectKey}
+              projectId={projectId}
+              statusColumns={columns}
+              collapsible={false}
+              showHeader={false}
+              showCard={false}
+              draggingTicketIds={draggingTicketIds}
+              dropPosition={dropPosition?.sectionId === 'backlog' ? dropPosition.insertIndex : null}
+            />
+          </div>
         </div>
 
         {/* Drag overlay */}

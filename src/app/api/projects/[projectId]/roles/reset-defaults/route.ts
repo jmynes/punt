@@ -122,6 +122,41 @@ function parseAdminRoleSettings(value: unknown): {
 }
 
 /**
+ * GET /api/projects/[projectId]/roles/reset-defaults
+ * Returns the system admin default role configuration without applying it.
+ * Used by the client to compare current roles against defaults.
+ */
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ projectId: string }> },
+) {
+  try {
+    const user = await requireAuth()
+    const { projectId: projectKey } = await params
+    const projectId = await requireProjectByKey(projectKey)
+
+    await requirePermission(user.id, projectId, PERMISSIONS.MEMBERS_ADMIN)
+
+    // Fetch admin default role settings
+    const systemSettings = await db.systemSettings.findUnique({
+      where: { id: 'system-settings' },
+      select: { defaultRolePermissions: true },
+    })
+
+    const { defaults, customRoles } = systemSettings?.defaultRolePermissions
+      ? parseAdminRoleSettings(systemSettings.defaultRolePermissions)
+      : { defaults: getHardcodedDefaults(), customRoles: [] }
+
+    // Owner always has all permissions
+    defaults.Owner.permissions = [...ALL_PERMISSIONS]
+
+    return NextResponse.json({ defaults, customRoles })
+  } catch (error) {
+    return handleApiError(error, 'fetch role defaults')
+  }
+}
+
+/**
  * POST /api/projects/[projectId]/roles/reset-defaults
  * Reset project roles to match system admin defaults.
  * Updates the 3 built-in default roles and syncs custom default roles.

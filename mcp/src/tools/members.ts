@@ -234,7 +234,7 @@ export function registerMemberTools(server: McpServer) {
     'list_users',
     'List all users in the system',
     {
-      limit: z.number().min(1).max(100).default(50).describe('Max results'),
+      limit: z.coerce.number().min(1).max(100).default(50).describe('Max results'),
     },
     async ({ limit }) => {
       const users = await db.user.findMany({

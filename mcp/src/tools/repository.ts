@@ -205,7 +205,7 @@ export function registerRepositoryTools(server: McpServer) {
     'Generate a branch name for a specific ticket using the project branch template.',
     {
       projectKey: z.string().describe('Project key (e.g., PUNT)'),
-      ticketNumber: z.number().describe('Ticket number'),
+      ticketNumber: z.coerce.number().describe('Ticket number'),
     },
     async ({ projectKey, ticketNumber }) => {
       // Get repository configuration

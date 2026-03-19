@@ -24,6 +24,7 @@ import {
 } from '@/lib/markdown-checklist'
 import { linkifyMentions, linkifyTicketReferences } from '@/lib/ticket-references'
 import { DraggableChecklist } from './draggable-checklist'
+import { ReadOnlyCodeBlock } from './readonly-code-block'
 
 interface MarkdownViewerProps {
   markdown: string
@@ -108,7 +109,17 @@ export const MarkdownViewer = React.memo(function MarkdownViewer({
       imagePlugin(),
       tablePlugin(),
       thematicBreakPlugin(),
-      codeBlockPlugin({ defaultCodeBlockLanguage: 'text' }),
+      codeBlockPlugin({
+        defaultCodeBlockLanguage: 'text',
+        codeBlockEditorDescriptors: [
+          {
+            // Use custom read-only code block with static language badge
+            match: () => true,
+            priority: 1,
+            Editor: ReadOnlyCodeBlock,
+          },
+        ],
+      }),
       codeMirrorPlugin({
         codeBlockLanguages: {
           '': 'Plain Text',

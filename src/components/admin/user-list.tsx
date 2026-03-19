@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
   ArrowUpDown,
+  Check,
   CheckSquare,
   Eye,
   EyeOff,
@@ -72,6 +73,7 @@ import {
 } from '@/components/ui/select'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch, withBasePath } from '@/lib/base-path'
 import { demoStorage, isDemoMode } from '@/lib/demo'
 import { isEditableTarget } from '@/lib/keyboard-utils'
 import { showToast } from '@/lib/toast'
@@ -107,6 +109,19 @@ const sortLabels: Record<SortField, string> = {
   createdAt: 'Date Created',
 }
 
+// Password requirements for new password validation
+interface PasswordRequirement {
+  label: string
+  test: (password: string) => boolean
+}
+
+const passwordRequirements: PasswordRequirement[] = [
+  { label: 'At least 12 characters', test: (p) => p.length >= 12 },
+  { label: 'One uppercase letter', test: (p) => /[A-Z]/.test(p) },
+  { label: 'One lowercase letter', test: (p) => /[a-z]/.test(p) },
+  { label: 'One number', test: (p) => /[0-9]/.test(p) },
+]
+
 export function UserList() {
   const queryClient = useQueryClient()
   const currentUser = useCurrentUser()
@@ -123,7 +138,6 @@ export function UserList() {
 
   // Bulk delete confirmation state (requires credentials)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
-  const [deleteEmail, setDeleteEmail] = useState('')
   const [deletePassword, setDeletePassword] = useState('')
   const [showDeletePassword, setShowDeletePassword] = useState(false)
   const [deleteError, setDeleteError] = useState('')
@@ -135,6 +149,16 @@ export function UserList() {
   const [reset2faTotpCode, setReset2faTotpCode] = useState('')
   const [reset2faError, setReset2faError] = useState('')
   const [reset2faLoading, setReset2faLoading] = useState(false)
+
+  // Reset password confirmation state
+  const [resetPwUsername, setResetPwUsername] = useState<string | null>(null)
+  const [resetPwNewPassword, setResetPwNewPassword] = useState('')
+  const [showResetPwNewPassword, setShowResetPwNewPassword] = useState(false)
+  const [resetPwAdminPassword, setResetPwAdminPassword] = useState('')
+  const [showResetPwAdminPassword, setShowResetPwAdminPassword] = useState(false)
+  const [resetPwTotpCode, setResetPwTotpCode] = useState('')
+  const [resetPwError, setResetPwError] = useState('')
+  const [resetPwLoading, setResetPwLoading] = useState(false)
 
   // Undo store
   const {
@@ -209,7 +233,7 @@ export function UserList() {
       }
 
       const queryString = buildQueryString()
-      const res = await fetch(`/api/admin/users?${queryString}`)
+      const res = await apiFetch(`/api/admin/users?${queryString}`)
       if (!res.ok) {
         throw new Error('Failed to fetch users')
       }
@@ -253,7 +277,7 @@ export function UserList() {
       if (confirmPassword) body.confirmPassword = confirmPassword
       if (totpCode) body.totpCode = totpCode
       if (isRecoveryCode) body.isRecoveryCode = isRecoveryCode
-      const res = await fetch(`/api/admin/users/${username}`, {
+      const res = await apiFetch(`/api/admin/users/${username}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
         body: JSON.stringify(body),
@@ -275,7 +299,7 @@ export function UserList() {
           ('isSystemAdmin' in updates && updates.isSystemAdmin === false)
         ) {
           signOut({ redirect: false }).then(() => {
-            window.location.href = '/login'
+            window.location.href = withBasePath('/login')
           })
           return
         }
@@ -357,7 +381,7 @@ export function UserList() {
       // If the user deleted/disabled themselves, sign them out
       if (deleteUsername === currentUser?.username) {
         signOut({ redirect: false }).then(() => {
-          window.location.href = '/login'
+          window.location.href = withBasePath('/login')
         })
         return
       }
@@ -395,10 +419,10 @@ export function UserList() {
 
       const results = await Promise.allSettled(
         usersToUpdate.map((user) =>
-          fetch(`/api/admin/users/${user.username}`, {
+          apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-            body: JSON.stringify(updates),
+            body: JSON.stringify({ ...updates, skipReauth: true }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -431,7 +455,7 @@ export function UserList() {
       }
 
       // Handle case where all users were already in the target state
-      if (succeeded === 0 && skipped > 0) {
+      if (succeeded === 0 && skipped > 0 && failed === 0) {
         const state =
           'isSystemAdmin' in updates
             ? updates.isSystemAdmin
@@ -485,10 +509,10 @@ export function UserList() {
 
       const results = await Promise.allSettled(
         usersToDisable.map((user) =>
-          fetch(`/api/admin/users/${user.username}`, {
+          apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-            body: JSON.stringify({ isActive: false }),
+            body: JSON.stringify({ isActive: false, skipReauth: true }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -517,7 +541,7 @@ export function UserList() {
         )
       }
 
-      if (succeeded === 0 && skipped > 0) {
+      if (succeeded === 0 && skipped > 0 && failed === 0) {
         showToast.info(
           `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already disabled`,
         )
@@ -548,10 +572,10 @@ export function UserList() {
 
       const results = await Promise.allSettled(
         usersToEnable.map((user) =>
-          fetch(`/api/admin/users/${user.username}`, {
+          apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-            body: JSON.stringify({ isActive: true }),
+            body: JSON.stringify({ isActive: true, skipReauth: true }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -580,7 +604,7 @@ export function UserList() {
         )
       }
 
-      if (succeeded === 0 && skipped > 0) {
+      if (succeeded === 0 && skipped > 0 && failed === 0) {
         showToast.info(
           `All ${skipped} selected user${skipped !== 1 ? 's were' : ' was'} already enabled`,
         )
@@ -602,20 +626,12 @@ export function UserList() {
 
   // Bulk permanent delete - requires credential verification
   const bulkPermanentDeleteUsers = useMutation({
-    mutationFn: async ({
-      usernames,
-      email,
-      password,
-    }: {
-      usernames: string[]
-      email: string
-      password: string
-    }) => {
+    mutationFn: async ({ usernames, password }: { usernames: string[]; password: string }) => {
       // First verify credentials
-      const verifyRes = await fetch('/api/auth/verify-credentials', {
+      const verifyRes = await apiFetch('/api/auth/verify-credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ password }),
       })
 
       if (!verifyRes.ok) {
@@ -626,8 +642,10 @@ export function UserList() {
       // Now delete users permanently
       const results = await Promise.allSettled(
         usernames.map((uname) =>
-          fetch(`/api/admin/users/${uname}?permanent=true`, {
+          apiFetch(`/api/admin/users/${uname}?permanent=true`, {
             method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
+            body: JSON.stringify({ confirmPassword: password }),
           }).then((res) => {
             if (!res.ok) throw new Error('Failed')
             return res.json()
@@ -656,7 +674,6 @@ export function UserList() {
 
   const closeBulkDeleteDialog = () => {
     setBulkDeleteOpen(false)
-    setDeleteEmail('')
     setDeletePassword('')
     setShowDeletePassword(false)
     setDeleteError('')
@@ -693,7 +710,7 @@ export function UserList() {
         body.totpCode = reset2faTotpCode
       }
 
-      const res = await fetch(`/api/admin/users/${reset2faUsername}/2fa`, {
+      const res = await apiFetch(`/api/admin/users/${reset2faUsername}/2fa`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -717,6 +734,63 @@ export function UserList() {
       setReset2faError(error instanceof Error ? error.message : 'Failed to reset 2FA')
     } finally {
       setReset2faLoading(false)
+    }
+  }
+
+  const closeResetPwDialog = () => {
+    setResetPwUsername(null)
+    setResetPwNewPassword('')
+    setShowResetPwNewPassword(false)
+    setResetPwAdminPassword('')
+    setShowResetPwAdminPassword(false)
+    setResetPwTotpCode('')
+    setResetPwError('')
+    setResetPwLoading(false)
+  }
+
+  const handleResetPassword = async () => {
+    if (!resetPwUsername || !resetPwNewPassword || !resetPwAdminPassword) {
+      setResetPwError('New password and your password are required')
+      return
+    }
+
+    setResetPwLoading(true)
+    setResetPwError('')
+
+    try {
+      const body: {
+        password: string
+        confirmPassword: string
+        totpCode?: string
+      } = {
+        password: resetPwNewPassword,
+        confirmPassword: resetPwAdminPassword,
+      }
+      if (resetPwTotpCode) {
+        body.totpCode = resetPwTotpCode
+      }
+
+      const res = await apiFetch(`/api/admin/users/${resetPwUsername}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tab-id': getTabId(),
+        },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error ?? 'Failed to reset password')
+      }
+
+      const targetUser = users?.find((u) => u.username === resetPwUsername)
+      showToast.success(`Password reset for ${targetUser?.name ?? resetPwUsername}`)
+      closeResetPwDialog()
+    } catch (error) {
+      setResetPwError(error instanceof Error ? error.message : 'Failed to reset password')
+    } finally {
+      setResetPwLoading(false)
     }
   }
 
@@ -760,7 +834,7 @@ export function UserList() {
 
       await Promise.all(
         action.users.map((user) =>
-          fetch(`/api/admin/users/${user.username}`, {
+          apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ ...updates, skipReauth: true }),
@@ -817,7 +891,7 @@ export function UserList() {
 
       await Promise.all(
         action.users.map((user) =>
-          fetch(`/api/admin/users/${user.username}`, {
+          apiFetch(`/api/admin/users/${user.username}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
             body: JSON.stringify({ ...updates, skipReauth: true }),
@@ -863,6 +937,11 @@ export function UserList() {
     ? users?.find((u) => u.username === activeToggleUsername)
     : null
   const selectedUsers = users?.filter((u) => selectedIds.has(u.id)) || []
+  const allSelectedEnabled = selectedUsers.length > 0 && selectedUsers.every((u) => u.isActive)
+  const allSelectedDisabled = selectedUsers.length > 0 && selectedUsers.every((u) => !u.isActive)
+  const allSelectedAdmin = selectedUsers.length > 0 && selectedUsers.every((u) => u.isSystemAdmin)
+  const allSelectedNonAdmin =
+    selectedUsers.length > 0 && selectedUsers.every((u) => !u.isSystemAdmin)
 
   // Separate current user from other users
   const currentUserData = users?.find((u) => u.id === currentUser?.id)
@@ -1139,6 +1218,42 @@ export function UserList() {
                 )}
                 <DropdownMenuSeparator className="bg-zinc-800" />
                 <DropdownMenuItem
+                  onClick={() => {
+                    setResetPwError('')
+                    setResetPwUsername(user.username)
+                  }}
+                  className="text-amber-400 focus:text-amber-300 focus:bg-zinc-800"
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  Reset password
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try {
+                      const res = await apiFetch(`/api/admin/users/${user.username}/rate-limits`, {
+                        method: 'DELETE',
+                      })
+                      if (res.ok) {
+                        const data = await res.json()
+                        showToast.success(
+                          data.deleted > 0
+                            ? `Cleared ${data.deleted} rate limit${data.deleted === 1 ? '' : 's'} for ${user.name}`
+                            : `No rate limits to clear for ${user.name}`,
+                        )
+                      } else {
+                        showToast.error('Failed to reset rate limits')
+                      }
+                    } catch {
+                      showToast.error('Failed to reset rate limits')
+                    }
+                  }}
+                  className="text-zinc-400 focus:text-zinc-300 focus:bg-zinc-800"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Reset rate limits
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-zinc-800" />
+                <DropdownMenuItem
                   onClick={() => setDeleteUsername(user.username)}
                   className="text-red-400 focus:text-red-300 focus:bg-zinc-800"
                 >
@@ -1178,17 +1293,12 @@ export function UserList() {
   }
 
   const handleBulkDelete = () => {
-    if (!deleteEmail || !deletePassword) {
-      setDeleteError('Please enter your email and password')
-      return
-    }
-    if (deleteEmail !== currentUser?.email) {
-      setDeleteError('Email does not match your account')
+    if (!deletePassword) {
+      setDeleteError('Please enter your password')
       return
     }
     bulkPermanentDeleteUsers.mutate({
       usernames: selectedUsers.map((u) => u.username),
-      email: deleteEmail,
       password: deletePassword,
     })
   }
@@ -1222,7 +1332,43 @@ export function UserList() {
         variant="hero"
         accentColor="blue"
       >
-        <CreateUserDialog />
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="border-zinc-700">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    const res = await apiFetch('/api/admin/rate-limits', {
+                      method: 'DELETE',
+                    })
+                    if (res.ok) {
+                      const data = await res.json()
+                      showToast.success(
+                        data.deleted > 0
+                          ? `Cleared ${data.deleted} auth rate limit${data.deleted === 1 ? '' : 's'}`
+                          : 'No auth rate limits to clear',
+                      )
+                    } else {
+                      showToast.error('Failed to clear rate limits')
+                    }
+                  } catch {
+                    showToast.error('Failed to clear rate limits')
+                  }
+                }}
+                className="text-zinc-300 focus:text-zinc-100 focus:bg-zinc-800"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                Clear all auth rate limits
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <CreateUserDialog />
+        </div>
       </PageHeader>
 
       <div className="flex-1 flex flex-col min-h-0 mx-auto w-full max-w-4xl px-6 pb-6">
@@ -1493,6 +1639,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('makeAdmin')}
+                disabled={allSelectedAdmin}
                 className="text-zinc-300 hover:text-amber-400 hover:bg-amber-500/10"
               >
                 <Shield className="h-4 w-4 mr-1.5" />
@@ -1503,6 +1650,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('removeAdmin')}
+                disabled={allSelectedNonAdmin}
                 className="text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
               >
                 <ShieldOff className="h-4 w-4 mr-1.5" />
@@ -1515,6 +1663,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('enable')}
+                disabled={allSelectedEnabled}
                 className="text-zinc-300 hover:text-green-400 hover:bg-green-500/10"
               >
                 <UserCheck className="h-4 w-4 mr-1.5" />
@@ -1525,6 +1674,7 @@ export function UserList() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleBulkAction('disable')}
+                disabled={allSelectedDisabled}
                 className="text-zinc-300 hover:text-red-400 hover:bg-red-500/10"
               >
                 <UserX className="h-4 w-4 mr-1.5" />
@@ -1560,7 +1710,18 @@ export function UserList() {
           open={!!deleteUsername}
           onOpenChange={(open) => !open && setDeleteUsername(null)}
         >
-          <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+          <AlertDialogContent
+            className="bg-zinc-900 border-zinc-800"
+            onOpenAutoFocus={(e) => {
+              e.preventDefault()
+              setTimeout(() => {
+                const btn = document.querySelector<HTMLButtonElement>(
+                  '[data-slot="alert-dialog-content"] [data-confirm-delete]',
+                )
+                btn?.focus()
+              }, 0)
+            }}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle className="text-zinc-100">
                 Delete User Permanently?
@@ -1577,6 +1738,7 @@ export function UserList() {
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
+                data-confirm-delete
                 onClick={(e) => {
                   e.preventDefault()
                   setShowDeleteReauthDialog(true)
@@ -1663,7 +1825,18 @@ export function UserList() {
 
         {/* Bulk action confirmation dialog */}
         <AlertDialog open={!!bulkAction} onOpenChange={(open) => !open && setBulkAction(null)}>
-          <AlertDialogContent className="bg-zinc-900 border-zinc-800">
+          <AlertDialogContent
+            className="bg-zinc-900 border-zinc-800"
+            onOpenAutoFocus={(e) => {
+              e.preventDefault()
+              setTimeout(() => {
+                const btn = document.querySelector<HTMLButtonElement>(
+                  '[data-slot="alert-dialog-content"] [data-confirm-bulk]',
+                )
+                btn?.focus()
+              }, 0)
+            }}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle className="text-zinc-100">
                 {bulkAction === 'disable' && 'Disable Users'}
@@ -1693,6 +1866,7 @@ export function UserList() {
                 Cancel
               </AlertDialogCancel>
               <Button
+                data-confirm-bulk
                 onClick={confirmBulkAction}
                 className={
                   bulkAction === 'disable'
@@ -1736,28 +1910,14 @@ export function UserList() {
               </div>
             )}
 
-            <div className="space-y-4 py-2">
-              <p className="text-sm text-zinc-400">
-                To confirm deletion, enter your admin credentials:
-              </p>
-
-              <div className="space-y-2">
-                <Label htmlFor="delete-email" className="text-zinc-300">
-                  Your Email
-                </Label>
-                <Input
-                  id="delete-email"
-                  type="email"
-                  value={deleteEmail}
-                  onChange={(e) => {
-                    setDeleteEmail(e.target.value)
-                    setDeleteError('')
-                  }}
-                  placeholder={currentUser?.email || 'admin@example.com'}
-                  autoComplete="off"
-                  className="border-zinc-700 bg-zinc-800 text-zinc-100"
-                />
-              </div>
+            <form
+              className="space-y-4 py-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (!bulkPermanentDeleteUsers.isPending && deletePassword) handleBulkDelete()
+              }}
+            >
+              <p className="text-sm text-zinc-400">Enter your password to confirm deletion.</p>
 
               <div className="space-y-2">
                 <Label htmlFor="delete-password" className="text-zinc-300">
@@ -1797,31 +1957,32 @@ export function UserList() {
                   {deleteError}
                 </p>
               )}
-            </div>
 
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={closeBulkDeleteDialog}
-                className="text-zinc-300 hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleBulkDelete}
-                disabled={bulkPermanentDeleteUsers.isPending || !deleteEmail || !deletePassword}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                {bulkPermanentDeleteUsers.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete Permanently'
-                )}
-              </Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={closeBulkDeleteDialog}
+                  className="text-zinc-300 hover:bg-zinc-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={bulkPermanentDeleteUsers.isPending || !deletePassword}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {bulkPermanentDeleteUsers.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete Permanently'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
 
@@ -1842,7 +2003,18 @@ export function UserList() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
+            <form
+              className="space-y-4 py-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (
+                  !reset2faLoading &&
+                  reset2faPassword &&
+                  (currentUserData?.totpEnabled ? !!reset2faTotpCode : true)
+                )
+                  handleReset2fa()
+              }}
+            >
               <div className="flex items-start gap-3 p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
                 <Shield className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
@@ -1937,35 +2109,239 @@ export function UserList() {
                   {reset2faError}
                 </p>
               )}
-            </div>
 
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={closeReset2faDialog}
-                className="text-zinc-300 hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleReset2fa}
-                disabled={
-                  reset2faLoading ||
-                  !reset2faPassword ||
-                  (currentUserData?.totpEnabled ? !reset2faTotpCode : false)
-                }
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                {reset2faLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Resetting...
-                  </>
-                ) : (
-                  'Reset 2FA'
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={closeReset2faDialog}
+                  className="text-zinc-300 hover:bg-zinc-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    reset2faLoading ||
+                    !reset2faPassword ||
+                    (currentUserData?.totpEnabled ? !reset2faTotpCode : false)
+                  }
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {reset2faLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    'Reset 2FA'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reset Password confirmation dialog */}
+        <Dialog open={!!resetPwUsername} onOpenChange={(open) => !open && closeResetPwDialog()}>
+          <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-zinc-100 flex items-center gap-2">
+                <Lock className="h-5 w-5 text-amber-500" />
+                Reset Password
+              </DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                Set a new password for{' '}
+                <strong className="text-zinc-200">
+                  {users?.find((u) => u.username === resetPwUsername)?.name ?? resetPwUsername}
+                </strong>
+                . They will be signed out immediately.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form
+              className="space-y-4 py-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (
+                  !resetPwLoading &&
+                  resetPwNewPassword &&
+                  resetPwAdminPassword &&
+                  (currentUserData?.totpEnabled ? !!resetPwTotpCode : true) &&
+                  passwordRequirements.every((req) => req.test(resetPwNewPassword))
+                )
+                  handleResetPassword()
+              }}
+            >
+              <div className="flex items-start gap-3 p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
+                <Shield className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-400">Identity Verification Required</p>
+                  <p className="text-amber-300/80 mt-1">
+                    Enter the new password and your password
+                    {currentUserData?.totpEnabled ? ' with 2FA code ' : ' '}
+                    to authorize this action.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reset-pw-new" className="text-zinc-300">
+                  New Password{' '}
+                  <span className="text-zinc-500">
+                    (for{' '}
+                    {users?.find((u) => u.username === resetPwUsername)?.name ?? resetPwUsername})
+                  </span>
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <Input
+                    id="reset-pw-new"
+                    type={showResetPwNewPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={resetPwNewPassword}
+                    onChange={(e) => {
+                      setResetPwNewPassword(e.target.value)
+                      setResetPwError('')
+                    }}
+                    placeholder="Enter new password"
+                    className="bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPwNewPassword(!showResetPwNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  >
+                    {showResetPwNewPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {/* Password requirements checklist */}
+                {resetPwNewPassword && (
+                  <div className="space-y-1 pt-1">
+                    {passwordRequirements.map((req) => {
+                      const met = req.test(resetPwNewPassword)
+                      return (
+                        <div
+                          key={req.label}
+                          className={`flex items-center gap-2 text-xs ${met ? 'text-green-400' : 'text-zinc-500'}`}
+                        >
+                          <Check className={`h-3 w-3 ${met ? 'opacity-100' : 'opacity-30'}`} />
+                          <span>{req.label}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 )}
-              </Button>
-            </DialogFooter>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reset-pw-admin" className="text-zinc-300">
+                  Your Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <Input
+                    id="reset-pw-admin"
+                    type={showResetPwAdminPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={resetPwAdminPassword}
+                    onChange={(e) => {
+                      setResetPwAdminPassword(e.target.value)
+                      setResetPwError('')
+                    }}
+                    placeholder="Enter your password"
+                    className="bg-zinc-800 border-zinc-700 text-zinc-100 pl-10 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPwAdminPassword(!showResetPwAdminPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  >
+                    {showResetPwAdminPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {currentUserData?.totpEnabled && (
+                <div className="space-y-2">
+                  <Label htmlFor="reset-pw-totp-code" className="text-zinc-300">
+                    Your 2FA Code
+                  </Label>
+                  <Input
+                    id="reset-pw-totp-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    value={resetPwTotpCode}
+                    onChange={(e) => {
+                      setResetPwTotpCode(e.target.value.replace(/\D/g, ''))
+                      setResetPwError('')
+                    }}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === 'Enter' &&
+                        resetPwNewPassword &&
+                        resetPwAdminPassword &&
+                        resetPwTotpCode &&
+                        !resetPwLoading
+                      ) {
+                        e.preventDefault()
+                        handleResetPassword()
+                      }
+                    }}
+                    placeholder="Enter 6-digit code"
+                    className="bg-zinc-800 border-zinc-700 text-zinc-100"
+                  />
+                </div>
+              )}
+
+              {resetPwError && (
+                <p className="text-sm text-red-400 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  {resetPwError}
+                </p>
+              )}
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={closeResetPwDialog}
+                  className="text-zinc-300 hover:bg-zinc-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    resetPwLoading ||
+                    !resetPwNewPassword ||
+                    !resetPwAdminPassword ||
+                    (currentUserData?.totpEnabled ? !resetPwTotpCode : false) ||
+                    !passwordRequirements.every((req) => req.test(resetPwNewPassword))
+                  }
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {resetPwLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    'Reset Password'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>

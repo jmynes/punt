@@ -3,6 +3,7 @@
 import { Avatar as AvatarPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
+import { withBasePath } from '@/lib/base-path'
 import { cn } from '@/lib/utils'
 
 function Avatar({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Root>) {
@@ -15,11 +16,19 @@ function Avatar({ className, ...props }: React.ComponentProps<typeof AvatarPrimi
   )
 }
 
-function AvatarImage({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+function AvatarImage({
+  className,
+  src,
+  ...props
+}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+  // Prepend basePath to relative URLs (e.g., /uploads/avatars/...)
+  const resolvedSrc =
+    src && typeof src === 'string' && src.startsWith('/') ? withBasePath(src) : src
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
       className={cn('aspect-square size-full', className)}
+      src={resolvedSrc}
       {...props}
     />
   )
@@ -38,4 +47,4 @@ function AvatarFallback({
   )
 }
 
-export { Avatar, AvatarImage, AvatarFallback }
+export { Avatar, AvatarFallback, AvatarImage }

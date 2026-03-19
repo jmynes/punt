@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { apiFetch } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 
@@ -181,7 +182,7 @@ export function AgentList() {
   } = useQuery<Agent[]>({
     queryKey: ['admin', 'agents'],
     queryFn: async () => {
-      const res = await fetch('/api/admin/agents')
+      const res = await apiFetch('/api/admin/agents')
       if (!res.ok) {
         throw new Error('Failed to fetch agents')
       }
@@ -197,7 +198,7 @@ export function AgentList() {
       agentId: string
       updates: { name?: string; isActive?: boolean }
     }) => {
-      const res = await fetch(`/api/admin/agents/${agentId}`, {
+      const res = await apiFetch(`/api/admin/agents/${agentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
@@ -224,7 +225,7 @@ export function AgentList() {
 
   const deleteAgent = useMutation({
     mutationFn: async (agentId: string) => {
-      const res = await fetch(`/api/admin/agents/${agentId}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/admin/agents/${agentId}`, { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error ?? 'Failed to delete agent')

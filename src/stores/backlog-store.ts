@@ -76,7 +76,7 @@ export interface BacklogColumn {
 export const DEFAULT_COLUMNS: BacklogColumn[] = [
   { id: 'type', label: 'Type', width: 40, minWidth: 40, visible: true, sortable: true },
   { id: 'key', label: 'Key', width: 100, minWidth: 80, visible: true, sortable: true },
-  { id: 'title', label: 'Summary', width: 300, minWidth: 200, visible: true, sortable: true },
+  { id: 'title', label: 'Summary', width: 80, minWidth: 80, visible: true, sortable: true },
   { id: 'status', label: 'Status', width: 120, minWidth: 100, visible: true, sortable: true },
   { id: 'priority', label: 'Priority', width: 100, minWidth: 80, visible: true, sortable: true },
   {
@@ -90,7 +90,7 @@ export const DEFAULT_COLUMNS: BacklogColumn[] = [
   { id: 'assignee', label: 'Assignee', width: 140, minWidth: 100, visible: true, sortable: true },
   { id: 'reporter', label: 'Reporter', width: 140, minWidth: 100, visible: false, sortable: true },
   { id: 'labels', label: 'Labels', width: 150, minWidth: 100, visible: false, sortable: false },
-  { id: 'sprint', label: 'Sprint', width: 120, minWidth: 100, visible: true, sortable: true },
+  { id: 'sprint', label: 'Sprint', width: 120, minWidth: 100, visible: false, sortable: true },
   {
     id: 'storyPoints',
     label: 'Points',

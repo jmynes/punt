@@ -1,4 +1,5 @@
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import type { ActivityMeta } from '@/stores/undo-store'
 
 /**
@@ -26,7 +27,7 @@ export async function deleteActivityEntries(
   }
 
   try {
-    await fetch(`/api/projects/${projectKey}/tickets/${ticketId}/activity/batch-delete`, {
+    await apiFetch(`/api/projects/${projectKey}/tickets/${ticketId}/activity/batch-delete`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

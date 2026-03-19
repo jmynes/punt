@@ -58,6 +58,8 @@ export const LINK_TYPES = [
   'relates_to',
   'duplicates',
   'is_duplicated_by',
+  'splits_from',
+  'split_to',
 ] as const
 export type LinkType = (typeof LINK_TYPES)[number]
 
@@ -68,6 +70,8 @@ export const LINK_TYPE_LABELS: Record<LinkType, string> = {
   relates_to: 'Relates to',
   duplicates: 'Duplicates',
   is_duplicated_by: 'Is duplicated by',
+  splits_from: 'Splits from',
+  split_to: 'Split to',
 }
 
 // Inverse link types for bidirectional display
@@ -77,6 +81,8 @@ export const INVERSE_LINK_TYPES: Record<LinkType, LinkType> = {
   relates_to: 'relates_to',
   duplicates: 'is_duplicated_by',
   is_duplicated_by: 'duplicates',
+  splits_from: 'split_to',
+  split_to: 'splits_from',
 }
 
 // Resolution values for closed/done tickets
@@ -258,6 +264,10 @@ export interface TicketWithRelations {
   // Agent attribution
   createdByAgentId: string | null
   createdByAgent: { id: string; name: string; ownerId: string } | null
+  // Snapshot fields for historical record (persists even if agent is revoked)
+  createdByAgentIdSnapshot: string | null
+  createdByAgentName: string | null
+  createdByAgentOwnerName: string | null
   assignee: UserSummary | null
   creator: UserSummary
   sprint: SprintSummary | null

@@ -3,10 +3,16 @@
 import { formatDistanceToNow } from 'date-fns'
 import {
   ArrowRight,
+  ArrowUp,
   Ban,
   Bot,
   CheckCircle2,
+  ChevronDown,
+  ChevronsDown,
+  ChevronsUp,
+  ChevronUp,
   CircleDot,
+  Flame,
   GitBranch,
   Link2,
   Link2Off,
@@ -122,6 +128,8 @@ function parseUserValue(value: ActivityValue): UserMeta | null {
 /** Agent attribution info for "created" activity entries. */
 export interface AgentAttribution {
   name: string
+  /** Owner's name - only set when agent is revoked (from snapshot fields) */
+  ownerName?: string
 }
 
 interface ActivityTimelineProps {
@@ -230,6 +238,9 @@ function ActivityRow({
             <span className="text-purple-400">
               {' '}
               <Bot className="inline h-3.5 w-3.5 align-text-bottom" /> via {agentAttribution.name}
+              {agentAttribution.ownerName && (
+                <span className="text-zinc-500"> ({agentAttribution.ownerName}'s agent)</span>
+              )}
             </span>
           )}{' '}
           <ActionDescription
@@ -799,7 +810,22 @@ function UserBadge({ user }: { user: UserMeta | null }) {
 }
 
 /**
- * Badge for displaying priority with color coding
+ * Icon and color config for each priority level, matching the priority-select component.
+ */
+const priorityIconMap: Record<
+  string,
+  { icon: React.ComponentType<{ className?: string }>; color: string }
+> = {
+  lowest: { icon: ChevronsDown, color: 'text-zinc-400' },
+  low: { icon: ChevronDown, color: 'text-blue-400' },
+  medium: { icon: ArrowUp, color: 'text-yellow-400' },
+  high: { icon: ChevronUp, color: 'text-amber-400' },
+  highest: { icon: ChevronsUp, color: 'text-orange-400' },
+  critical: { icon: Flame, color: 'text-red-400' },
+}
+
+/**
+ * Badge for displaying priority with icon and color coding
  */
 function PriorityBadge({ value }: { value: ActivityValue }) {
   if (!value || value === 'null') return <span className="text-zinc-500">none</span>
@@ -817,9 +843,17 @@ function PriorityBadge({ value }: { value: ActivityValue }) {
   }
 
   const colorClass = colorMap[strValue.toLowerCase()] ?? 'text-zinc-400 bg-zinc-800/50'
+  const iconConfig = priorityIconMap[strValue.toLowerCase()]
+  const PriorityIcon = iconConfig?.icon
 
   return (
-    <span className={cn('font-medium px-1.5 py-0.5 rounded text-xs border', colorClass)}>
+    <span
+      className={cn(
+        'inline-flex items-center gap-0.5 font-medium px-1.5 py-0.5 rounded text-xs border',
+        colorClass,
+      )}
+    >
+      {PriorityIcon && <PriorityIcon className={cn('h-3 w-3', iconConfig.color)} />}
       {strValue}
     </span>
   )

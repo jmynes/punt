@@ -90,7 +90,9 @@ const UpdateSettingsSchema = z.object({
     .nullable(),
   defaultWebhookEnabled: z.boolean().optional(),
 
-  // Default sprint times (system-wide defaults for new projects)
+  // Default sprint settings (system-wide defaults for new projects)
+  defaultSprintDuration: z.number().int().min(1).max(90).optional(),
+  defaultAutoCarryOver: z.boolean().optional(),
   defaultSprintStartTime: z
     .string()
     .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format (HH:mm)')
@@ -258,7 +260,13 @@ export async function PATCH(request: Request) {
       updateData.defaultWebhookEnabled = updates.defaultWebhookEnabled
     }
 
-    // Default sprint times
+    // Default sprint settings
+    if (updates.defaultSprintDuration !== undefined) {
+      updateData.defaultSprintDuration = updates.defaultSprintDuration
+    }
+    if (updates.defaultAutoCarryOver !== undefined) {
+      updateData.defaultAutoCarryOver = updates.defaultAutoCarryOver
+    }
     if (updates.defaultSprintStartTime !== undefined) {
       updateData.defaultSprintStartTime = updates.defaultSprintStartTime
     }

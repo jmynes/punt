@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
+import { apiFetch } from '@/lib/base-path'
 import type { UserSummary } from '@/lib/data-provider'
 import { showToast } from '@/lib/toast'
 
@@ -30,7 +31,7 @@ export function useTicketComments(projectId: string, ticketId: string) {
   return useQuery<CommentInfo[]>({
     queryKey: commentKeys.forTicket(projectId, ticketId),
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`)
+      const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`)
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to fetch comments')
@@ -58,7 +59,7 @@ export function useAddComment() {
       ticketKey: string
       content: string
     }) => {
-      const res = await fetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`, {
+      const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

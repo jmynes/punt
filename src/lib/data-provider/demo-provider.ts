@@ -441,7 +441,7 @@ export class DemoDataProvider implements DataProvider {
     // Return default sprint settings for demo mode
     return {
       defaultSprintDuration: 14,
-      autoCarryOverIncomplete: false,
+      autoCarryOverIncomplete: true,
       doneColumnIds: [],
       defaultStartTime: '09:00',
       defaultEndTime: '17:00',

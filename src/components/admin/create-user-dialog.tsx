@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { apiFetch } from '@/lib/base-path'
 import { isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 
@@ -59,7 +60,7 @@ export function CreateUserDialog() {
         return { demo: true }
       }
 
-      const res = await fetch('/api/admin/users', {
+      const res = await apiFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -135,8 +136,17 @@ export function CreateUserDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Using div instead of form to prevent browser password manager detection */}
-        <div className="space-y-4 py-4">
+        {/* Using div instead of form to prevent browser password manager detection.
+            onKeyDown handles Enter key submission instead. */}
+        <div
+          className="space-y-4 py-4"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && canCreate && !(e.target as HTMLElement).closest('button')) {
+              e.preventDefault()
+              setShowReauthDialog(true)
+            }
+          }}
+        >
           <div className="space-y-2">
             <Label htmlFor="create-user-username" className="text-zinc-300">
               Username<span className="text-amber-500 ml-1">*</span>

@@ -1,18 +1,9 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   Dialog,
   DialogContent,
@@ -22,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { activityKeys } from '@/hooks/queries/use-activity'
 import { attachmentKeys } from '@/hooks/queries/use-attachments'
+import { ticketLinkKeys } from '@/hooks/queries/use-ticket-links'
 import {
   batchCreateTicketsAPI,
   batchDeleteTicketsAPI,
@@ -32,13 +24,18 @@ import {
   updateTicketAPI,
 } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
-import { pasteTickets } from '@/lib/actions'
+import {
+  moveTickets as moveTicketsAction,
+  pasteTickets,
+  reorderTickets as reorderTicketsAction,
+} from '@/lib/actions'
 import { deleteActivityEntries } from '@/lib/actions/activity-utils'
 import {
   deleteTickets,
   restoreAttachments,
   restoreCommentsAndLinks,
 } from '@/lib/actions/delete-tickets'
+import { apiFetch, withBasePath } from '@/lib/base-path'
 import { isEditableTarget } from '@/lib/keyboard-utils'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
@@ -48,8 +45,9 @@ import { useBoardStore } from '@/stores/board-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
 import { useUIStore } from '@/stores/ui-store'
-import { useUndoStore } from '@/stores/undo-store'
+import { type LinkAction, useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
+import { LINK_TYPE_LABELS } from '@/types'
 
 export function KeyboardShortcuts() {
   const queryClient = useQueryClient()
@@ -67,18 +65,8 @@ export function KeyboardShortcuts() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [ticketsToDelete, setTicketsToDelete] = useState<TicketWithRelations[]>([])
-  const deleteButtonRef = useRef<HTMLButtonElement>(null)
   // Track the current attachment toast to dismiss it when a new one is shown
   const lastAttachmentToastRef = useRef<string | number | undefined>(undefined)
-
-  // Focus delete button when dialog opens
-  useEffect(() => {
-    if (showDeleteConfirm) {
-      setTimeout(() => {
-        deleteButtonRef.current?.focus()
-      }, 0)
-    }
-  }, [showDeleteConfirm])
 
   // Handle Ctrl+click to close modals/drawers (workaround for Radix not handling modifier clicks)
   useEffect(() => {
@@ -193,7 +181,6 @@ export function KeyboardShortcuts() {
       if (selectedTicketIds.size > 0 && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault()
 
-        // Get all selected ticket IDs
         const selectedIds = useSelectionStore.getState().getSelectedIds()
         if (selectedIds.length === 0) return
 
@@ -208,23 +195,12 @@ export function KeyboardShortcuts() {
           for (let i = 0; i < column.tickets.length; i++) {
             const ticket = column.tickets[i]
             if (selectedIds.includes(ticket.id)) {
-              selectedTicketsWithColumns.push({
-                ticket,
-                columnId: column.id,
-                currentIndex: i,
-              })
+              selectedTicketsWithColumns.push({ ticket, columnId: column.id, currentIndex: i })
             }
           }
         }
 
         if (selectedTicketsWithColumns.length === 0) return
-
-        // Store original column state for undo
-        const boardStore = useBoardStore.getState()
-        const originalColumns = boardStore.getColumns(projectId).map((col) => ({
-          ...col,
-          tickets: col.tickets.map((t) => ({ ...t })),
-        }))
 
         // Group tickets by column
         const ticketsByColumn = new Map<string, typeof selectedTicketsWithColumns>()
@@ -234,73 +210,43 @@ export function KeyboardShortcuts() {
           ticketsByColumn.set(item.columnId, existing)
         }
 
-        // Track if any reorder actually happened
+        const tabId = getTabId()
         let reorderHappened = false
         const reorderedTicketIds: string[] = []
 
-        // Move tickets in each column
+        // Reorder tickets in each column via unified action
         for (const [columnId, columnTickets] of ticketsByColumn.entries()) {
           const column = columns.find((c) => c.id === columnId)
           if (!column) continue
 
-          // Sort tickets by their current index to preserve relative order
           columnTickets.sort((a, b) => a.currentIndex - b.currentIndex)
-
           const ticketIds = columnTickets.map((item) => item.ticket.id)
           const firstTicketIndex = columnTickets[0].currentIndex
           const lastTicketIndex = columnTickets[columnTickets.length - 1].currentIndex
 
-          const { reorderTicket, reorderTickets } = boardStore
-
+          let targetIndex: number | null = null
           if (e.key === 'ArrowUp') {
-            // Move up: move to position before the first selected ticket
-            if (firstTicketIndex === 0) {
-              // Already at top, can't move up
-              continue
-            }
+            if (firstTicketIndex === 0) continue
+            targetIndex = firstTicketIndex - 1
+          } else {
+            if (lastTicketIndex >= column.tickets.length - 1) continue
+            targetIndex = ticketIds.length === 1 ? lastTicketIndex + 1 : lastTicketIndex + 2
+          }
 
+          if (targetIndex !== null) {
             reorderHappened = true
             reorderedTicketIds.push(...ticketIds)
-
-            if (ticketIds.length === 1) {
-              // Single ticket: move up by 1 position
-              reorderTicket(projectId, columnId, ticketIds[0], firstTicketIndex - 1)
-            } else {
-              // Multiple tickets: move the group up by 1 position
-              reorderTickets(projectId, columnId, ticketIds, firstTicketIndex - 1)
-            }
-          } else if (e.key === 'ArrowDown') {
-            // Move down: move to position after the last selected ticket
-            if (lastTicketIndex >= column.tickets.length - 1) {
-              // Already at bottom, can't move down
-              continue
-            }
-
-            reorderHappened = true
-            reorderedTicketIds.push(...ticketIds)
-
-            if (ticketIds.length === 1) {
-              // Single ticket: move down by 1 position
-              reorderTicket(projectId, columnId, ticketIds[0], lastTicketIndex + 1)
-            } else {
-              // Multiple tickets: move the group down by 1 position
-              reorderTickets(projectId, columnId, ticketIds, lastTicketIndex + 2)
-            }
+            // Action handles: optimistic update, undo registration, API persistence, error rollback
+            reorderTicketsAction({ projectId, columnId, ticketIds, targetIndex, tabId })
           }
         }
 
-        // If reorder happened, register undo
+        // Show toast (action's toast is off by default for reorder)
         if (reorderHappened) {
-          const afterColumns = useBoardStore
+          const allTickets = useBoardStore
             .getState()
             .getColumns(projectId)
-            .map((col) => ({
-              ...col,
-              tickets: col.tickets.map((t) => ({ ...t })),
-            }))
-
-          // Look up ticket keys for toast
-          const allTickets = afterColumns.flatMap((col) => col.tickets)
+            .flatMap((col) => col.tickets)
           const ticketKeys = reorderedTicketIds
             .map((id) => {
               const ticket = allTickets.find((t) => t.id === id)
@@ -309,7 +255,6 @@ export function KeyboardShortcuts() {
             .filter(Boolean)
 
           const direction = e.key === 'ArrowUp' ? 'up' : 'down'
-
           showUndoRedoToast('success', {
             title:
               reorderedTicketIds.length === 1
@@ -321,25 +266,6 @@ export function KeyboardShortcuts() {
                 : `${ticketKeys.join(', ')} moved ${direction}`,
             duration: getEffectiveDuration(5000),
           })
-
-          // Push to undo stack using move action (reorder is conceptually a move within same column)
-          // We use fake "moves" since it's actually a reorder, but the column state restoration works
-          const fakeMoves = reorderedTicketIds.map((ticketId) => ({
-            ticketId,
-            fromColumnId: selectedTicketsWithColumns[0].columnId,
-            toColumnId: selectedTicketsWithColumns[0].columnId,
-          }))
-
-          useUndoStore
-            .getState()
-            .pushMove(
-              projectId,
-              fakeMoves,
-              'same position',
-              'same position',
-              originalColumns,
-              afterColumns,
-            )
         }
 
         return
@@ -349,12 +275,11 @@ export function KeyboardShortcuts() {
       if (selectedTicketIds.size > 0 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         e.preventDefault()
 
-        // Get all selected ticket IDs
         const selectionStore = useSelectionStore.getState()
         const selectedIds = selectionStore.getSelectedIds()
         if (selectedIds.length === 0) return
 
-        // Find all selected tickets and their columns
+        // Find all selected tickets and their columns, tracking origin for position restoration
         const selectedTicketsWithColumns: Array<{
           ticket: TicketWithRelations
           columnId: string
@@ -365,29 +290,16 @@ export function KeyboardShortcuts() {
           for (let i = 0; i < column.tickets.length; i++) {
             const ticket = column.tickets[i]
             if (selectedIds.includes(ticket.id)) {
-              // Track origin if not already tracked
               const origin = selectionStore.getTicketOrigin(ticket.id)
               if (!origin) {
                 selectionStore.setTicketOrigin(ticket.id, { columnId: column.id, position: i })
               }
-
-              selectedTicketsWithColumns.push({
-                ticket,
-                columnId: column.id,
-                currentIndex: i,
-              })
+              selectedTicketsWithColumns.push({ ticket, columnId: column.id, currentIndex: i })
             }
           }
         }
 
         if (selectedTicketsWithColumns.length === 0) return
-
-        // Store original column state for undo
-        const boardStore = useBoardStore.getState()
-        const originalColumns = boardStore.getColumns(projectId).map((col) => ({
-          ...col,
-          tickets: col.tickets.map((t) => ({ ...t })),
-        }))
 
         // Group tickets by column
         const ticketsByColumn = new Map<string, typeof selectedTicketsWithColumns>()
@@ -397,160 +309,46 @@ export function KeyboardShortcuts() {
           ticketsByColumn.set(item.columnId, existing)
         }
 
-        const moves: Array<{ ticketId: string; fromColumnId: string; toColumnId: string }> = []
+        const tabId = getTabId()
 
-        // Move tickets in each column
+        // Move tickets in each column via unified action
         for (const [columnId, columnTickets] of ticketsByColumn.entries()) {
           const column = columns.find((c) => c.id === columnId)
           if (!column) continue
 
-          // Sort tickets by their current index to preserve relative order
           columnTickets.sort((a, b) => a.currentIndex - b.currentIndex)
-
           const ticketIds = columnTickets.map((item) => item.ticket.id)
           const sortedColumns = [...columns].sort((a, b) => a.order - b.order)
           const currentColumnIndex = sortedColumns.findIndex((c) => c.id === columnId)
 
-          if (e.key === 'ArrowLeft') {
-            // Move left: move to the previous column
-            if (currentColumnIndex === 0) {
-              // Already at leftmost column, can't move left
-              continue
-            }
+          const direction = e.key === 'ArrowLeft' ? -1 : 1
+          const targetColumnIndex = currentColumnIndex + direction
+          if (targetColumnIndex < 0 || targetColumnIndex >= sortedColumns.length) continue
 
-            const targetColumn = sortedColumns[currentColumnIndex - 1]
+          const targetColumn = sortedColumns[targetColumnIndex]
 
-            // Check if all tickets have this as their origin column
-            const allHaveOriginInTarget = ticketIds.every((id) => {
-              const origin = selectionStore.getTicketOrigin(id)
-              return origin?.columnId === targetColumn.id
-            })
-
-            let targetPosition: number
-            if (allHaveOriginInTarget && ticketIds.length > 0) {
-              // All tickets originated from target column - restore to the first ticket's original position
-              // (they'll be placed together as a group at that position)
-              const firstTicketOrigin = selectionStore.getTicketOrigin(ticketIds[0])
-              targetPosition = firstTicketOrigin?.position ?? targetColumn.tickets.length
-            } else {
-              // Default to bottom when moving left (unless all tickets are returning to origin)
-              targetPosition = targetColumn.tickets.length
-            }
-
-            const { moveTicket, moveTickets } = boardStore
-
-            if (ticketIds.length === 1) {
-              moveTicket(projectId, ticketIds[0], columnId, targetColumn.id, targetPosition)
-              moves.push({
-                ticketId: ticketIds[0],
-                fromColumnId: columnId,
-                toColumnId: targetColumn.id,
-              })
-            } else {
-              moveTickets(projectId, ticketIds, targetColumn.id, targetPosition)
-              for (const ticketId of ticketIds) {
-                moves.push({ ticketId, fromColumnId: columnId, toColumnId: targetColumn.id })
-              }
-            }
-          } else if (e.key === 'ArrowRight') {
-            // Move right: move to the next column
-            if (currentColumnIndex >= sortedColumns.length - 1) {
-              // Already at rightmost column, can't move right
-              continue
-            }
-
-            const targetColumn = sortedColumns[currentColumnIndex + 1]
-
-            // Check if all tickets have this as their origin column
-            const allHaveOriginInTarget = ticketIds.every((id) => {
-              const origin = selectionStore.getTicketOrigin(id)
-              return origin?.columnId === targetColumn.id
-            })
-
-            let targetPosition: number
-            if (allHaveOriginInTarget && ticketIds.length > 0) {
-              // All tickets originated from target column - restore to the first ticket's original position
-              // (they'll be placed together as a group at that position)
-              const firstTicketOrigin = selectionStore.getTicketOrigin(ticketIds[0])
-              targetPosition = firstTicketOrigin?.position ?? targetColumn.tickets.length
-            } else {
-              // Default to bottom when moving right (unless all tickets are returning to origin)
-              targetPosition = targetColumn.tickets.length
-            }
-
-            const { moveTicket, moveTickets } = boardStore
-
-            if (ticketIds.length === 1) {
-              moveTicket(projectId, ticketIds[0], columnId, targetColumn.id, targetPosition)
-              moves.push({
-                ticketId: ticketIds[0],
-                fromColumnId: columnId,
-                toColumnId: targetColumn.id,
-              })
-            } else {
-              moveTickets(projectId, ticketIds, targetColumn.id, targetPosition)
-              for (const ticketId of ticketIds) {
-                moves.push({ ticketId, fromColumnId: columnId, toColumnId: targetColumn.id })
-              }
-            }
-          }
-        }
-
-        // If there were moves, create undo entry and persist to database
-        if (moves.length > 0) {
-          const fromColumn = columns.find((c) => c.id === moves[0].fromColumnId)
-          const toColumn = columns.find((c) => c.id === moves[0].toColumnId)
-          const fromName = fromColumn?.name || 'Unknown'
-          const toName = toColumn?.name || 'Unknown'
-
-          // Get current state after move for undo
-          const afterColumns = boardStore.getColumns(projectId).map((col) => ({
-            ...col,
-            tickets: col.tickets.map((t) => ({ ...t })),
-          }))
-
-          // Look up ticket IDs from columns for toast
-          const allTickets = afterColumns.flatMap((col) => col.tickets)
-          const ticketKeys = moves
-            .map((move) => {
-              const ticket = allTickets.find((t) => t.id === move.ticketId)
-              return ticket ? formatTicketId(ticket) : move.ticketId
-            })
-            .filter(Boolean)
-
-          // Persist to database
-          ;(async () => {
-            try {
-              for (const move of moves) {
-                // Find the ticket's new position in the target column
-                const targetCol = afterColumns.find((c) => c.id === move.toColumnId)
-                const newOrder = targetCol?.tickets.findIndex((t) => t.id === move.ticketId) ?? 0
-                await updateTicketAPI(projectId, move.ticketId, {
-                  columnId: move.toColumnId,
-                  order: newOrder,
-                })
-              }
-            } catch (err) {
-              console.error('Failed to persist arrow key move:', err)
-              // Rollback on error
-              boardStore.setColumns(projectId, originalColumns)
-              showToast.error('Failed to move ticket(s)')
-            }
-          })()
-
-          showUndoRedoToast('success', {
-            title: moves.length === 1 ? 'Ticket moved' : `${moves.length} tickets moved`,
-            description:
-              moves.length === 1
-                ? `${ticketKeys[0]} moved to ${toName}`
-                : `${ticketKeys.join(', ')} moved to ${toName}`,
-            duration: getEffectiveDuration(5000),
+          // Check if tickets are returning to their origin column for position restoration
+          const allHaveOriginInTarget = ticketIds.every((id) => {
+            const origin = selectionStore.getTicketOrigin(id)
+            return origin?.columnId === targetColumn.id
           })
 
-          // Push to undo stack
-          useUndoStore
-            .getState()
-            .pushMove(projectId, moves, fromName, toName, originalColumns, afterColumns)
+          let targetPosition: number
+          if (allHaveOriginInTarget && ticketIds.length > 0) {
+            const firstTicketOrigin = selectionStore.getTicketOrigin(ticketIds[0])
+            targetPosition = firstTicketOrigin?.position ?? targetColumn.tickets.length
+          } else {
+            targetPosition = targetColumn.tickets.length
+          }
+
+          // Action handles: optimistic update, resolution coupling, undo, toast, API, error rollback
+          moveTicketsAction({
+            projectId,
+            ticketIds,
+            toColumnId: targetColumn.id,
+            toIndex: targetPosition,
+            tabId,
+          })
         }
 
         return
@@ -927,6 +725,87 @@ export function KeyboardShortcuts() {
             description: `Moved back to ${action.fromSprintName}`,
             duration: 3000,
           })
+        } else if (entry.action.type === 'columnCreate') {
+          const action = entry.action
+          // Undo column create: move tickets back (if any) and delete the column
+          const boardStore = useBoardStore.getState()
+          const cols = boardStore.getColumns(entry.projectId)
+
+          // Move tickets back to their original columns first
+          if (action.movedTickets && action.movedTickets.length > 0) {
+            const col = cols.find((c) => c.id === action.columnId)
+            const updatedCols = cols.map((c) => {
+              if (c.id === action.columnId) {
+                // Remove moved tickets from this column
+                const movedIds = new Set(action.movedTickets?.map((t) => t.ticketId))
+                return { ...c, tickets: c.tickets.filter((t) => !movedIds.has(t.id)) }
+              }
+              // Add tickets back to their original columns
+              const returningTickets =
+                action.movedTickets?.filter((t) => t.fromColumnId === c.id) ?? []
+              if (returningTickets.length > 0 && col) {
+                const ticketsToReturn = returningTickets
+                  .map((rt) => col.tickets.find((t) => t.id === rt.ticketId))
+                  .filter((t): t is typeof t & {} => t != null)
+                  .map((t) => ({ ...t, columnId: c.id }))
+                return { ...c, tickets: [...c.tickets, ...ticketsToReturn] }
+              }
+              return c
+            })
+            boardStore.setColumns(
+              entry.projectId,
+              updatedCols.filter((c) => c.id !== action.columnId),
+            )
+          } else {
+            boardStore.setColumns(
+              entry.projectId,
+              cols.filter((c) => c.id !== action.columnId),
+            )
+          }
+          undoStore.pushRedo(entry)
+
+          // Persist to server
+          undoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              // Move tickets back first
+              if (action.movedTickets && action.movedTickets.length > 0) {
+                for (const moved of action.movedTickets) {
+                  await apiFetch(`/api/projects/${entry.projectId}/tickets/${moved.ticketId}`, {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
+                    body: JSON.stringify({ columnId: moved.fromColumnId }),
+                  })
+                }
+              }
+              // Then delete the column
+              const res = await apiFetch(
+                `/api/projects/${entry.projectId}/columns/${action.columnId}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                },
+              )
+              if (!res.ok) throw new Error('Failed to delete column')
+              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+            } catch (err) {
+              console.error('Failed to undo column create:', err)
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Column creation undone',
+            description: `Removed "${action.columnName}"`,
+            duration: 3000,
+          })
         } else if (entry.action.type === 'columnRename') {
           const action = entry.action
           // Undo column rename: revert to old name/icon
@@ -947,7 +826,7 @@ export function KeyboardShortcuts() {
           ;(async () => {
             try {
               const tabId = getTabId()
-              await fetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
+              await apiFetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
                 method: 'PATCH',
                 headers: {
                   'Content-Type': 'application/json',
@@ -981,7 +860,7 @@ export function KeyboardShortcuts() {
             try {
               const tabId = getTabId()
               // Recreate column
-              const createRes = await fetch(`/api/projects/${entry.projectId}/columns`, {
+              const createRes = await apiFetch(`/api/projects/${entry.projectId}/columns`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -994,7 +873,7 @@ export function KeyboardShortcuts() {
 
               // Set icon and order if needed
               if (action.column.icon || newCol.order !== action.column.order) {
-                await fetch(`/api/projects/${entry.projectId}/columns/${newCol.id}`, {
+                await apiFetch(`/api/projects/${entry.projectId}/columns/${newCol.id}`, {
                   method: 'PATCH',
                   headers: {
                     'Content-Type': 'application/json',
@@ -1009,7 +888,7 @@ export function KeyboardShortcuts() {
 
               // Move tickets back
               for (const ticket of action.column.tickets) {
-                await fetch(`/api/projects/${entry.projectId}/tickets/${ticket.id}`, {
+                await apiFetch(`/api/projects/${entry.projectId}/tickets/${ticket.id}`, {
                   method: 'PATCH',
                   headers: {
                     'Content-Type': 'application/json',
@@ -1185,16 +1064,216 @@ export function KeyboardShortcuts() {
             description: 'Backlog order restored',
             duration: 3000,
           })
+        } else if (entry.action.type === 'linkCreate') {
+          // Undo link create: delete the created link
+          const action = entry.action
+          undoStore.setProcessing(true)
+          undoStore.pushRedo(entry)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                },
+              )
+              if (!res.ok) throw new Error('Failed to delete link')
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to undo link create:', err)
+              showToast.error('Failed to undo link creation')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('error', {
+            title: 'Link removed',
+            description: `${action.link.ticketKey} ${LINK_TYPE_LABELS[action.link.linkType].toLowerCase()} ${action.link.targetTicketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'bulkLinkCreate') {
+          // Undo bulk link create: delete all created links
+          const action = entry.action
+          undoStore.setProcessing(true)
+          undoStore.pushRedo(entry)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+                ...(tabId && { 'X-Tab-Id': tabId }),
+              }
+              await Promise.allSettled(
+                action.links.map((link) =>
+                  apiFetch(
+                    `/api/projects/${link.projectId}/tickets/${link.ticketId}/links/${link.linkId}`,
+                    { method: 'DELETE', headers },
+                  ),
+                ),
+              )
+              // Invalidate source ticket
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.links[0].projectId,
+                  action.links[0].ticketId,
+                ),
+              })
+              // Invalidate all target tickets
+              for (const link of action.links) {
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(link.projectId, link.targetTicketId),
+                })
+              }
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to undo bulk link create:', err)
+              showToast.error('Failed to undo link creation')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('error', {
+            title: `${action.links.length} link${action.links.length === 1 ? '' : 's'} removed`,
+            description: `Unlinked from ${action.links[0].ticketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'linkDelete') {
+          // Undo link delete: re-create the link
+          const action = entry.action
+          undoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                  body: JSON.stringify({
+                    linkType: action.link.linkType,
+                    targetTicketId: action.link.targetTicketId,
+                  }),
+                },
+              )
+              if (!res.ok) throw new Error('Failed to re-create link')
+              const newLink = await res.json()
+              // Update the link ID in the undo entry for future redo
+              const updatedEntry = {
+                ...entry,
+                action: {
+                  ...action,
+                  link: { ...action.link, linkId: newLink.id },
+                },
+              }
+              undoStore.pushRedo(updatedEntry)
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to undo link delete:', err)
+              showToast.error('Failed to restore link')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Link restored',
+            description: `${action.link.ticketKey} ${LINK_TYPE_LABELS[action.link.linkType].toLowerCase()} ${action.link.targetTicketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'linkUpdate') {
+          // Undo link update: revert to previous link type
+          const action = entry.action
+          undoStore.setProcessing(true)
+          undoStore.pushRedo(entry)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                  body: JSON.stringify({ linkType: action.oldLinkType }),
+                },
+              )
+              if (!res.ok) throw new Error('Failed to revert link type')
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to undo link update:', err)
+              showToast.error('Failed to revert link type')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Link type reverted',
+            description: `${action.link.ticketKey}: ${LINK_TYPE_LABELS[action.oldLinkType]}`,
+            duration: 3000,
+          })
         }
 
         // Release processing lock for types that don't have their own async lock management
-        // (ticketCreate, columnRename, columnDelete, attachment* handlers manage their own lock)
+        // (ticketCreate, columnRename, columnDelete, attachment*, link* handlers manage their own lock)
         const selfManagedTypes = [
           'ticketCreate',
+          'columnCreate',
           'columnRename',
           'columnDelete',
           'attachmentAdd',
           'attachmentDelete',
+          'linkCreate',
+          'bulkLinkCreate',
+          'linkDelete',
+          'linkUpdate',
         ]
         if (!selfManagedTypes.includes(entry.action.type)) {
           undoStore.setProcessing(false)
@@ -1513,6 +1592,77 @@ export function KeyboardShortcuts() {
             action.toSprintName,
             true,
           )
+        } else if (entry.action.type === 'columnCreate') {
+          const action = entry.action
+          // Redo column create: recreate column and move tickets back into it
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(`/api/projects/${entry.projectId}/columns`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(tabId && { 'X-Tab-Id': tabId }),
+                },
+                body: JSON.stringify({ name: action.columnName }),
+              })
+              if (!res.ok) throw new Error('Failed to recreate column')
+              const newCol = await res.json()
+
+              // Update board store
+              const bs = useBoardStore.getState()
+              const currentCols = bs.getColumns(entry.projectId)
+              bs.setColumns(entry.projectId, [...currentCols, { ...newCol, tickets: [] }])
+
+              // Move tickets back into the recreated column
+              if (action.movedTickets && action.movedTickets.length > 0) {
+                for (const moved of action.movedTickets) {
+                  await apiFetch(`/api/projects/${entry.projectId}/tickets/${moved.ticketId}`, {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
+                    body: JSON.stringify({ columnId: newCol.id }),
+                  })
+                  // Optimistic: move ticket in store
+                  const updatedBs = useBoardStore.getState()
+                  updatedBs.moveTicket(
+                    entry.projectId,
+                    moved.ticketId,
+                    moved.fromColumnId,
+                    newCol.id,
+                    0,
+                  )
+                }
+              }
+
+              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+
+              // Push to undo with new column ID and moved ticket info
+              redoStore.pushColumnCreate(
+                entry.projectId,
+                newCol.id,
+                action.columnName,
+                true,
+                action.movedTickets?.map((t) => ({
+                  ticketId: t.ticketId,
+                  fromColumnId: t.fromColumnId,
+                })),
+              )
+            } catch (err) {
+              console.error('Failed to redo column create:', err)
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Column recreated',
+            description: `"${action.columnName}" added back`,
+            duration: getEffectiveDuration(5000),
+          })
         } else if (entry.action.type === 'columnRename') {
           const action = entry.action
           // Redo column rename: re-apply new name/icon
@@ -1531,7 +1681,7 @@ export function KeyboardShortcuts() {
           ;(async () => {
             try {
               const tabId = getTabId()
-              await fetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
+              await apiFetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
                 method: 'PATCH',
                 headers: {
                   'Content-Type': 'application/json',
@@ -1597,7 +1747,7 @@ export function KeyboardShortcuts() {
             try {
               const tabId = getTabId()
               const deleteUrl = new URL(
-                `/api/projects/${entry.projectId}/columns/${action.column.id}`,
+                withBasePath(`/api/projects/${entry.projectId}/columns/${action.column.id}`),
                 window.location.origin,
               )
               if (action.column.tickets.length > 0) {
@@ -1748,16 +1898,235 @@ export function KeyboardShortcuts() {
             description: 'Backlog order restored',
             duration: 3000,
           })
+        } else if (entry.action.type === 'linkCreate') {
+          // Redo link create: re-create the link
+          const action = entry.action
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                  body: JSON.stringify({
+                    linkType: action.link.linkType,
+                    targetTicketId: action.link.targetTicketId,
+                  }),
+                },
+              )
+              if (!res.ok) throw new Error('Failed to re-create link')
+              const newLink = await res.json()
+              // Push with updated link ID
+              redoStore.pushLinkCreate(
+                entry.projectId,
+                { ...action.link, linkId: newLink.id },
+                true,
+              )
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to redo link create:', err)
+              showToast.error('Failed to redo link creation')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: 'Link re-created',
+            description: `${action.link.ticketKey} ${LINK_TYPE_LABELS[action.link.linkType].toLowerCase()} ${action.link.targetTicketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'bulkLinkCreate') {
+          // Redo bulk link create: re-create all links
+          const action = entry.action
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+                ...(tabId && { 'X-Tab-Id': tabId }),
+              }
+              const results = await Promise.allSettled(
+                action.links.map(async (link) => {
+                  const res = await apiFetch(
+                    `/api/projects/${link.projectId}/tickets/${link.ticketId}/links`,
+                    {
+                      method: 'POST',
+                      headers,
+                      body: JSON.stringify({
+                        linkType: link.linkType,
+                        targetTicketId: link.targetTicketId,
+                      }),
+                    },
+                  )
+                  if (!res.ok) throw new Error('Failed to re-create link')
+                  const newLink = await res.json()
+                  return { ...link, linkId: newLink.id }
+                }),
+              )
+              const updatedLinks = results
+                .filter((r): r is PromiseFulfilledResult<LinkAction> => r.status === 'fulfilled')
+                .map((r) => r.value)
+              if (updatedLinks.length > 0) {
+                redoStore.pushBulkLinkCreate(entry.projectId, updatedLinks, true)
+              }
+              // Invalidate source ticket
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.links[0].projectId,
+                  action.links[0].ticketId,
+                ),
+              })
+              for (const link of action.links) {
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(link.projectId, link.targetTicketId),
+                })
+              }
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to redo bulk link create:', err)
+              showToast.error('Failed to redo link creation')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          showUndoRedoToast('success', {
+            title: `${action.links.length} link${action.links.length === 1 ? '' : 's'} re-created`,
+            description: `Linked to ${action.links[0].ticketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'linkDelete') {
+          // Redo link delete: re-delete the link
+          const action = entry.action
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                },
+              )
+              if (!res.ok) throw new Error('Failed to re-delete link')
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to redo link delete:', err)
+              showToast.error('Failed to redo link deletion')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          redoStore.pushLinkDelete(entry.projectId, action.link, true)
+
+          showUndoRedoToast('error', {
+            title: 'Link removed',
+            description: `${action.link.ticketKey} ${LINK_TYPE_LABELS[action.link.linkType].toLowerCase()} ${action.link.targetTicketKey}`,
+            duration: 3000,
+          })
+        } else if (entry.action.type === 'linkUpdate') {
+          // Redo link update: re-apply the new link type
+          const action = entry.action
+          redoStore.setProcessing(true)
+          ;(async () => {
+            try {
+              const tabId = getTabId()
+              const res = await apiFetch(
+                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                  body: JSON.stringify({ linkType: action.newLinkType }),
+                },
+              )
+              if (!res.ok) throw new Error('Failed to re-apply link type')
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketLinkKeys.byTicket(
+                  action.link.projectId,
+                  action.link.targetTicketId,
+                ),
+              })
+              queryClient.invalidateQueries({
+                queryKey: ticketKeys.byProject(entry.projectId),
+              })
+            } catch (err) {
+              console.error('Failed to redo link update:', err)
+              showToast.error('Failed to redo link type change')
+            } finally {
+              useUndoStore.getState().setProcessing(false)
+            }
+          })()
+
+          redoStore.pushLinkUpdate(
+            entry.projectId,
+            action.link,
+            action.oldLinkType,
+            action.newLinkType,
+            true,
+          )
+
+          showUndoRedoToast('success', {
+            title: 'Link type changed',
+            description: `${action.link.ticketKey}: ${LINK_TYPE_LABELS[action.newLinkType]}`,
+            duration: 3000,
+          })
         }
 
         // Release processing lock for types that don't have their own async lock management
-        // (ticketCreate, columnRename, columnDelete, attachment* handlers manage their own lock)
+        // (ticketCreate, columnRename, columnDelete, attachment*, link* handlers manage their own lock)
         const selfManagedTypes = [
           'ticketCreate',
+          'columnCreate',
           'columnRename',
           'columnDelete',
           'attachmentAdd',
           'attachmentDelete',
+          'linkCreate',
+          'bulkLinkCreate',
+          'linkDelete',
+          'linkUpdate',
         ]
         if (!selfManagedTypes.includes(entry.action.type)) {
           redoStore.setProcessing(false)
@@ -1781,43 +2150,27 @@ export function KeyboardShortcuts() {
 
   return (
     <>
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">
-              Delete {ticketsToDelete.length === 1 ? 'ticket' : `${ticketsToDelete.length} tickets`}
-              ?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              {ticketsToDelete.length === 1 ? (
-                <>
-                  Are you sure you want to delete{' '}
-                  <span className="font-semibold text-zinc-300">{ticketsToDelete[0]?.title}</span>?
-                </>
-              ) : (
-                <>
-                  Are you sure you want to delete these {ticketsToDelete.length} tickets? This
-                  action can be undone with Ctrl+Z.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
-              <X className="h-4 w-4 mr-1" />
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              ref={deleteButtonRef}
-              onClick={confirmDelete}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title={`Delete ${ticketsToDelete.length === 1 ? 'ticket' : `${ticketsToDelete.length} tickets`}?`}
+        description={
+          ticketsToDelete.length === 1 ? (
+            <>
+              Are you sure you want to delete{' '}
+              <span className="font-semibold text-zinc-300">{ticketsToDelete[0]?.title}</span>?
+            </>
+          ) : (
+            <>
+              Are you sure you want to delete these {ticketsToDelete.length} tickets? This action
+              can be undone with Ctrl+Z.
+            </>
+          )
+        }
+        confirmLabel="Delete"
+        actionVariant="destructive"
+        onConfirm={confirmDelete}
+      />
 
       <Dialog open={showShortcuts} onOpenChange={setShowShortcuts}>
         <DialogContent className="bg-zinc-950 border-zinc-800 max-w-2xl max-h-[80vh] overflow-y-auto">
