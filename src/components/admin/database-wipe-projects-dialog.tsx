@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
+import { TypeToConfirmInput } from '@/components/ui/type-to-confirm'
 import { useWipeProjects } from '@/hooks/queries/use-database-backup'
 import { withBasePath } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
@@ -130,20 +130,13 @@ export function DatabaseWipeProjectsDialog({
                 if (confirmText === REQUIRED_CONFIRMATION) setShowReauthDialog(true)
               }}
             >
-              <div className="space-y-3">
-                <p className="text-sm text-zinc-400">
-                  To confirm, type{' '}
-                  <span className="font-mono text-amber-400">{REQUIRED_CONFIRMATION}</span> below:
-                </p>
-                <Input
-                  type="text"
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  placeholder={`Type ${REQUIRED_CONFIRMATION}`}
-                  className="bg-zinc-800 border-zinc-700 text-zinc-100 font-mono"
-                  autoComplete="off"
-                />
-              </div>
+              <TypeToConfirmInput
+                requiredText={REQUIRED_CONFIRMATION}
+                value={confirmText}
+                onChange={setConfirmText}
+                textColor="text-amber-400"
+                autoFocus
+              />
 
               <div className="flex justify-end gap-2 mt-4">
                 <Button type="button" variant="outline" onClick={() => setStep('warning')}>

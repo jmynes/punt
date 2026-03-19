@@ -44,17 +44,8 @@ import { PriorityBadge } from '@/components/common/priority-badge'
 import { resolutionConfig } from '@/components/common/resolution-badge'
 import { LinkTicketDialog } from '@/components/tickets/link-ticket-dialog'
 import { MoveToProjectDialog } from '@/components/tickets/move-to-project-dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { sprintKeys, useProjectSprints } from '@/hooks/queries/use-sprints'
 import { useTicketLinks } from '@/hooks/queries/use-ticket-links'
 import { ticketKeys as ticketQueryKeys, updateTicketAPI } from '@/hooks/queries/use-tickets'
@@ -146,7 +137,6 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
   const [pendingDelete, setPendingDelete] = useState<TicketWithRelations[]>([])
   const [showMoveToProject, setShowMoveToProject] = useState(false)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
-  const deleteButtonRef = useRef<HTMLButtonElement>(null)
   // Track if component has mounted to avoid hydration mismatch
   const [isMounted, setIsMounted] = useState(false)
 
@@ -1639,53 +1629,30 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
       {contextChild}
       {portalContent}
       {isMounted && (
-        <AlertDialog
+        <ConfirmDialog
           open={showDeleteConfirm}
           onOpenChange={(open) => {
-            setShowDeleteConfirm(open)
             if (!open) setPendingDelete([])
+            setShowDeleteConfirm(open)
           }}
-        >
-          <AlertDialogContent
-            className="bg-zinc-950 border-zinc-800"
-            onOpenAutoFocus={(e) => {
-              e.preventDefault()
-              deleteButtonRef.current?.focus()
-            }}
-          >
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-zinc-100">
-                Delete {pendingDelete.length === 1 ? 'ticket' : `${pendingDelete.length} tickets`}?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-zinc-400">
-                {pendingDelete.length === 1 ? (
-                  <>
-                    Are you sure you want to delete{' '}
-                    <span className="font-semibold text-zinc-300">{pendingDelete[0]?.title}</span>?
-                  </>
-                ) : (
-                  <>
-                    Are you sure you want to delete these {pendingDelete.length} tickets? This
-                    action can be undone with Ctrl+Z.
-                  </>
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                ref={deleteButtonRef}
-                onClick={confirmDeleteNow}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          title={`Delete ${pendingDelete.length === 1 ? 'ticket' : `${pendingDelete.length} tickets`}?`}
+          description={
+            pendingDelete.length === 1 ? (
+              <>
+                Are you sure you want to delete{' '}
+                <span className="font-semibold text-zinc-300">{pendingDelete[0]?.title}</span>?
+              </>
+            ) : (
+              <>
+                Are you sure you want to delete these {pendingDelete.length} tickets? This action
+                can be undone with Ctrl+Z.
+              </>
+            )
+          }
+          confirmLabel="Delete"
+          actionVariant="destructive"
+          onConfirm={confirmDeleteNow}
+        />
       )}
       {isMounted && (
         <MoveToProjectDialog

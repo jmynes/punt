@@ -24,18 +24,9 @@ import {
   type RoleItemAction,
   SortableRoleItem,
 } from '@/components/projects/permissions/sortable-role-item'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useCtrlSave } from '@/hooks/use-ctrl-save'
 import { getTabId } from '@/hooks/use-realtime'
@@ -917,81 +908,38 @@ export function RolePermissionsForm() {
       )}
 
       {/* Delete role confirmation dialog */}
-      <AlertDialog open={!!deletingRole} onOpenChange={(open) => !open && setDeletingRole(null)}>
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Delete Role</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete the role{' '}
-              <span className="text-zinc-200 font-medium">"{deletingRole?.name}"</span>? This will
-              remove it from the default roles for new projects.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={isDeleting}
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteRole}
-              className="bg-red-600 hover:bg-red-500 text-white"
-              disabled={isDeleting}
-            >
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete Role
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!deletingRole}
+        onOpenChange={(open) => !open && setDeletingRole(null)}
+        title="Delete Role"
+        description={
+          <>
+            Are you sure you want to delete the role{' '}
+            <span className="text-zinc-200 font-medium">"{deletingRole?.name}"</span>? This will
+            remove it from the default roles for new projects.
+          </>
+        }
+        confirmLabel="Delete Role"
+        actionVariant="destructive"
+        loading={isDeleting}
+        onConfirm={confirmDeleteRole}
+      />
 
       {/* Reset single built-in role to defaults confirmation dialog */}
-      <AlertDialog
+      <ConfirmDialog
         open={!!resetBuiltInRoleId}
         onOpenChange={(open) => !open && setResetBuiltInRoleId(null)}
-      >
-        <AlertDialogContent
-          className="bg-zinc-950 border-zinc-800"
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            setTimeout(() => {
-              ;(
-                (e.currentTarget as HTMLElement)?.querySelector(
-                  '[data-action]',
-                ) as HTMLButtonElement
-              )?.focus()
-            }, 0)
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">
-              Reset &quot;{resetBuiltInRoleId}&quot; to Defaults?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              This will reset the role&apos;s name, color, description, and permissions to the
-              hardcoded system defaults. You&apos;ll need to save to apply the changes.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              data-action
-              onClick={() => {
-                if (resetBuiltInRoleId) {
-                  handleResetBuiltInRole(resetBuiltInRoleId)
-                  setResetBuiltInRoleId(null)
-                }
-              }}
-              className="bg-red-600 hover:bg-red-500 text-white"
-            >
-              Reset to Defaults
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={`Reset "${resetBuiltInRoleId}" to Defaults?`}
+        description="This will reset the role's name, color, description, and permissions to the hardcoded system defaults. You'll need to save to apply the changes."
+        confirmLabel="Reset to Defaults"
+        actionVariant="destructive"
+        onConfirm={() => {
+          if (resetBuiltInRoleId) {
+            handleResetBuiltInRole(resetBuiltInRoleId)
+            setResetBuiltInRoleId(null)
+          }
+        }}
+      />
     </div>
   )
 }

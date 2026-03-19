@@ -19,7 +19,6 @@ import {
   Plus,
   RotateCcw,
   Trash2,
-  X,
   Zap,
 } from 'lucide-react'
 import type * as React from 'react'
@@ -38,6 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -224,8 +224,6 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
   const [_pendingClose, setPendingClose] = useState(false)
   const [rememberPreference, setRememberPreference] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const deleteButtonRef = useRef<HTMLButtonElement>(null)
-  const removeAllAttachmentsButtonRef = useRef<HTMLButtonElement>(null)
   const storyPointsInputRef = useRef<HTMLInputElement>(null)
   const commentsSectionRef = useRef<CommentsSectionRef>(null)
   const scrollViewportRef = useRef<HTMLDivElement>(null)
@@ -2039,113 +2037,80 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       </SheetContent>
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent
-          className="bg-zinc-950 border-zinc-800"
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            deleteButtonRef.current?.focus()
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Delete ticket?</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to delete{' '}
-              <span className="font-mono text-zinc-300">{ticketKey}</span>? This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
-              <X className="h-4 w-4 mr-1" />
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              ref={deleteButtonRef}
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete ticket?"
+        description={
+          <>
+            Are you sure you want to delete{' '}
+            <span className="font-mono text-zinc-300">{ticketKey}</span>? This action cannot be
+            undone.
+          </>
+        }
+        confirmLabel="Delete"
+        actionVariant="destructive"
+        onConfirm={handleDelete}
+      />
 
       {/* Remove all attachments confirmation dialog */}
-      <AlertDialog open={showRemoveAllAttachments} onOpenChange={setShowRemoveAllAttachments}>
-        <AlertDialogContent
-          className="bg-zinc-950 border-zinc-800"
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            removeAllAttachmentsButtonRef.current?.focus()
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-zinc-100">Remove all attachments?</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              Are you sure you want to remove{' '}
-              {tempAttachments.length === 1
-                ? 'this attachment'
-                : `all ${tempAttachments.length} attachments`}{' '}
-              from <span className="font-mono text-zinc-300">{ticketKey}</span>? This action can be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              ref={removeAllAttachmentsButtonRef}
-              onClick={() => {
-                if (!ticket) return
-                const attachmentsToRemove = [...tempAttachments]
-                const count = attachmentsToRemove.length
+      <ConfirmDialog
+        open={showRemoveAllAttachments}
+        onOpenChange={setShowRemoveAllAttachments}
+        title="Remove all attachments?"
+        description={
+          <>
+            Are you sure you want to remove{' '}
+            {tempAttachments.length === 1
+              ? 'this attachment'
+              : `all ${tempAttachments.length} attachments`}{' '}
+            from <span className="font-mono text-zinc-300">{ticketKey}</span>? This action can be
+            undone.
+          </>
+        }
+        confirmLabel="Remove all"
+        actionVariant="destructive"
+        onConfirm={() => {
+          if (!ticket) return
+          const attachmentsToRemove = [...tempAttachments]
+          const count = attachmentsToRemove.length
 
-                // Clear local state immediately
-                setTempAttachments([])
+          // Clear local state immediately
+          setTempAttachments([])
 
-                showUndoRedoToast('error', {
-                  title: `${count} attachment${count === 1 ? '' : 's'} removed`,
-                  description: ticketKey,
-                })
+          showUndoRedoToast('error', {
+            title: `${count} attachment${count === 1 ? '' : 's'} removed`,
+            description: ticketKey,
+          })
 
-                // Push to undo store
-                pushAttachmentDelete(
-                  projectId,
-                  attachmentsToRemove.map((a) => ({
-                    projectId,
-                    ticketId: ticket.id,
-                    ticketKey,
-                    attachment: {
-                      id: a.id,
-                      filename: a.filename,
-                      originalName: a.originalName,
-                      mimetype: a.mimetype,
-                      size: a.size,
-                      url: a.url,
-                    },
-                  })),
-                )
+          // Push to undo store
+          pushAttachmentDelete(
+            projectId,
+            attachmentsToRemove.map((a) => ({
+              projectId,
+              ticketId: ticket.id,
+              ticketKey,
+              attachment: {
+                id: a.id,
+                filename: a.filename,
+                originalName: a.originalName,
+                mimetype: a.mimetype,
+                size: a.size,
+                url: a.url,
+              },
+            })),
+          )
 
-                // Delete all attachments from server
-                for (const attachment of attachmentsToRemove) {
-                  removeAttachmentMutation.mutate({
-                    projectId,
-                    ticketId: ticket.id,
-                    attachmentId: attachment.id,
-                  })
-                }
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Remove all
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          // Delete all attachments from server
+          for (const attachment of attachmentsToRemove) {
+            removeAttachmentMutation.mutate({
+              projectId,
+              ticketId: ticket.id,
+              attachmentId: attachment.id,
+            })
+          }
+        }}
+      />
 
       {/* Unsaved changes confirmation dialog */}
       <AlertDialog

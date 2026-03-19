@@ -51,6 +51,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -2051,87 +2052,33 @@ export function RolesTab({ projectId, projectKey }: RolesTabProps) {
       )}
 
       {/* Reset to system defaults confirmation dialog */}
-      <AlertDialog open={showResetDefaultsDialog} onOpenChange={setShowResetDefaultsDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset Roles to System Defaults?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will update all built-in roles (Owner, Admin, Member) to match the system-wide
-              default configuration set by administrators. Custom roles without members will be
-              removed if they don&apos;t exist in the system defaults.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleResetToSystemDefaults}
-              disabled={resetRolesToDefaults.isPending}
-              className="bg-red-600 hover:bg-red-500 text-white"
-            >
-              {resetRolesToDefaults.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Resetting...
-                </>
-              ) : (
-                'Reset to Defaults'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showResetDefaultsDialog}
+        onOpenChange={setShowResetDefaultsDialog}
+        title="Reset Roles to System Defaults?"
+        description="This will update all built-in roles (Owner, Admin, Member) to match the system-wide default configuration set by administrators. Custom roles without members will be removed if they don't exist in the system defaults."
+        confirmLabel="Reset to Defaults"
+        actionVariant="destructive"
+        loading={resetRolesToDefaults.isPending}
+        onConfirm={handleResetToSystemDefaults}
+      />
 
       {/* Reset single role to defaults confirmation dialog */}
-      <AlertDialog
+      <ConfirmDialog
         open={!!resetSingleRole}
         onOpenChange={(open) => !open && setResetSingleRole(null)}
-      >
-        <AlertDialogContent
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            setTimeout(() => {
-              ;(
-                (e.currentTarget as HTMLElement)?.querySelector(
-                  '[data-action]',
-                ) as HTMLButtonElement
-              )?.focus()
-            }, 0)
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Reset &quot;{resetSingleRole?.name}&quot; to Defaults?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This will reset the role&apos;s name, color, description, and permissions to match the
-              system default configuration.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              data-action
-              onClick={async () => {
-                if (resetSingleRole) {
-                  await handleResetSingleRole(resetSingleRole)
-                  setResetSingleRole(null)
-                }
-              }}
-              disabled={updateRole.isPending}
-              className="bg-red-600 hover:bg-red-500 text-white"
-            >
-              {updateRole.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Resetting...
-                </>
-              ) : (
-                'Reset to Defaults'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={`Reset "${resetSingleRole?.name}" to Defaults?`}
+        description="This will reset the role's name, color, description, and permissions to match the system default configuration."
+        confirmLabel="Reset to Defaults"
+        actionVariant="destructive"
+        loading={updateRole.isPending}
+        onConfirm={async () => {
+          if (resetSingleRole) {
+            await handleResetSingleRole(resetSingleRole)
+            setResetSingleRole(null)
+          }
+        }}
+      />
     </div>
   )
 }

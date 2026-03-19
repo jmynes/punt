@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { TypeToConfirmInput } from '@/components/ui/type-to-confirm'
 import { useWipeDatabase } from '@/hooks/queries/use-database-backup'
 
 interface DatabaseWipeDialogProps {
@@ -201,20 +202,12 @@ export function DatabaseWipeDialog({ open, onOpenChange }: DatabaseWipeDialogPro
                 if (confirmText === 'WIPE ALL DATA') setShowReauthDialog(true)
               }}
             >
-              <div className="space-y-3">
-                <p className="text-sm text-zinc-400">
-                  To confirm, type <span className="font-mono text-red-400">WIPE ALL DATA</span>{' '}
-                  below:
-                </p>
-                <Input
-                  type="text"
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  placeholder="Type WIPE ALL DATA"
-                  className="bg-zinc-800 border-zinc-700 text-zinc-100 font-mono"
-                  autoComplete="off"
-                />
-              </div>
+              <TypeToConfirmInput
+                requiredText="WIPE ALL DATA"
+                value={confirmText}
+                onChange={setConfirmText}
+                autoFocus
+              />
 
               <div className="flex justify-end gap-2 mt-4">
                 <Button type="button" variant="outline" onClick={() => setStep('credentials')}>
