@@ -956,7 +956,11 @@ export function RolePermissionsForm() {
           onOpenAutoFocus={(e) => {
             e.preventDefault()
             setTimeout(() => {
-              ;(e.currentTarget?.querySelector('[data-action]') as HTMLButtonElement)?.focus()
+              ;(
+                (e.currentTarget as HTMLElement)?.querySelector(
+                  '[data-action]',
+                ) as HTMLButtonElement
+              )?.focus()
             }, 0)
           }}
         >
