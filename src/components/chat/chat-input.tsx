@@ -396,7 +396,7 @@ export function ChatInput({
                 setTimeout(() => {
                   textarea.focus()
                   textarea.setSelectionRange(pos + 1, pos + 1)
-                  setMentionTrigger({ type: 'user', query: '', startPos: pos })
+                  setMentionTrigger({ type: 'user', query: '', start: pos })
                   setMentionSelectedIndex(0)
                 }, 0)
               }}
@@ -421,7 +421,7 @@ export function ChatInput({
                 setTimeout(() => {
                   textarea.focus()
                   textarea.setSelectionRange(pos + 1, pos + 1)
-                  setMentionTrigger({ type: 'ticket', query: '', startPos: pos })
+                  setMentionTrigger({ type: 'ticket', query: '', start: pos })
                   setMentionSelectedIndex(0)
                 }, 0)
               }}
