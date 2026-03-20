@@ -5,7 +5,6 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
-  MoreHorizontal,
   Pencil,
   Play,
   RotateCcw,
@@ -14,13 +13,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { KebabMenu } from '@/components/ui/kebab-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useReopenSprint } from '@/hooks/queries/use-sprints'
 import { useHasPermission } from '@/hooks/use-permissions'
@@ -92,70 +85,38 @@ export function SprintCard({ sprint, projectId, ticketCount = 0, onDelete }: Spr
         </div>
 
         {canManageSprints && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-zinc-400 hover:text-zinc-100"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-700">
-              <DropdownMenuItem
-                onClick={() => openSprintEdit(sprint.id)}
-                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit Sprint
-              </DropdownMenuItem>
-
-              {isPlanning && (
-                <DropdownMenuItem
-                  onClick={() => openSprintStart(sprint.id)}
-                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Sprint
-                </DropdownMenuItem>
-              )}
-
-              {isActive && (
-                <DropdownMenuItem
-                  onClick={() => openSprintComplete(sprint.id)}
-                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Complete Sprint
-                </DropdownMenuItem>
-              )}
-
-              {isCompleted && (
-                <DropdownMenuItem
-                  onClick={() => reopenSprintMutation.mutate(sprint.id)}
-                  disabled={reopenSprintMutation.isPending}
-                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
-                >
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Reopen Sprint
-                </DropdownMenuItem>
-              )}
-
-              {isPlanning && onDelete && (
-                <>
-                  <DropdownMenuSeparator className="bg-zinc-700" />
-                  <DropdownMenuItem
-                    onClick={() => onDelete(sprint.id)}
-                    className="text-red-400 focus:bg-red-900/20 focus:text-red-400"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Sprint
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <KebabMenu
+            triggerClassName="h-8 w-8 text-zinc-400 hover:text-zinc-100"
+            actions={[
+              { icon: Pencil, label: 'Edit Sprint', onClick: () => openSprintEdit(sprint.id) },
+              isPlanning
+                ? { icon: Play, label: 'Start Sprint', onClick: () => openSprintStart(sprint.id) }
+                : null,
+              isActive
+                ? {
+                    icon: CheckCircle2,
+                    label: 'Complete Sprint',
+                    onClick: () => openSprintComplete(sprint.id),
+                  }
+                : null,
+              isCompleted
+                ? {
+                    icon: RotateCcw,
+                    label: 'Reopen Sprint',
+                    onClick: () => reopenSprintMutation.mutate(sprint.id),
+                    disabled: reopenSprintMutation.isPending,
+                  }
+                : null,
+              isPlanning && onDelete
+                ? {
+                    icon: Trash2,
+                    label: 'Delete Sprint',
+                    onClick: () => onDelete(sprint.id),
+                    variant: 'destructive' as const,
+                  }
+                : null,
+            ]}
+          />
         )}
       </CardHeader>
 

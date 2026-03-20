@@ -9,7 +9,6 @@ import {
   ChevronRight,
   Clock,
   Flame,
-  MoreHorizontal,
   Pencil,
   Play,
   Plus,
@@ -21,13 +20,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TicketListSection } from '@/components/table'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { KebabMenu } from '@/components/ui/kebab-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useReopenSprint } from '@/hooks/queries/use-sprints'
 import { useBudgetAlert } from '@/hooks/use-budget-alert'
@@ -435,70 +428,34 @@ export function SprintSection({
 
             {/* Sprint menu - only show if user can manage sprints */}
             {canManageSprints && !isBacklog && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-700">
-                  <DropdownMenuItem
-                    onClick={handleEditSprint}
-                    className="text-zinc-300 focus:bg-zinc-800"
-                  >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit Sprint
-                  </DropdownMenuItem>
-
-                  {isPlanning && (
-                    <DropdownMenuItem
-                      onClick={handleStartSprint}
-                      className="text-zinc-300 focus:bg-zinc-800"
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Start Sprint
-                    </DropdownMenuItem>
-                  )}
-
-                  {isActive && (
-                    <DropdownMenuItem
-                      onClick={handleCompleteSprint}
-                      className="text-zinc-300 focus:bg-zinc-800"
-                    >
-                      <Target className="h-4 w-4 mr-2" />
-                      Complete Sprint
-                    </DropdownMenuItem>
-                  )}
-
-                  {isCompleted && (
-                    <DropdownMenuItem
-                      onClick={handleReopenSprint}
-                      disabled={reopenSprintMutation.isPending}
-                      className="text-zinc-300 focus:bg-zinc-800"
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Reopen Sprint
-                    </DropdownMenuItem>
-                  )}
-
-                  {isPlanning && onDelete && (
-                    <>
-                      <DropdownMenuSeparator className="bg-zinc-700" />
-                      <DropdownMenuItem
-                        onClick={handleDeleteSprint}
-                        className="text-red-400 focus:bg-red-900/20"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Sprint
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <KebabMenu
+                triggerClassName="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                actions={[
+                  { icon: Pencil, label: 'Edit Sprint', onClick: handleEditSprint },
+                  isPlanning
+                    ? { icon: Play, label: 'Start Sprint', onClick: handleStartSprint }
+                    : null,
+                  isActive
+                    ? { icon: Target, label: 'Complete Sprint', onClick: handleCompleteSprint }
+                    : null,
+                  isCompleted
+                    ? {
+                        icon: RotateCcw,
+                        label: 'Reopen Sprint',
+                        onClick: handleReopenSprint,
+                        disabled: reopenSprintMutation.isPending,
+                      }
+                    : null,
+                  isPlanning && onDelete
+                    ? {
+                        icon: Trash2,
+                        label: 'Delete Sprint',
+                        onClick: handleDeleteSprint,
+                        variant: 'destructive' as const,
+                      }
+                    : null,
+                ]}
+              />
             )}
 
             {/* Create Sprint button for backlog (only when no active sprint) */}
