@@ -1146,6 +1146,13 @@ export default function BacklogPage() {
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={() => {
+          setActiveTicket(null)
+          setDraggingTicketIds([])
+          setDropPosition(null)
+          draggedIdsRef.current = []
+          activeDragDataRef.current = { type: undefined, sprintId: undefined }
+        }}
       >
         {/* Sprint sections (if any sprints exist) */}
         {hasActiveSprints && (
