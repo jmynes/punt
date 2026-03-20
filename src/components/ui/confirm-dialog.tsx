@@ -1,6 +1,5 @@
 'use client'
 
-import { Loader2 } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import {
   AlertDialog,
@@ -11,7 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
+import { LoadingButton } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface ConfirmDialogProps {
@@ -103,15 +102,15 @@ export function ConfirmDialog({
             <AlertDialogCancel type="button" disabled={loading}>
               {cancelLabel}
             </AlertDialogCancel>
-            <Button
+            <LoadingButton
               ref={confirmRef}
               type="submit"
-              disabled={loading || disabled}
+              loading={loading}
+              disabled={disabled}
               className={cn(actionClasses[actionVariant])}
             >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {confirmLabel}
-            </Button>
+            </LoadingButton>
           </AlertDialogFooter>
         </form>
       </AlertDialogContent>

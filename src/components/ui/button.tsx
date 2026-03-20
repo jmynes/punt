@@ -1,4 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority'
+import { Loader2 } from 'lucide-react'
 import { Slot as SlotPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
@@ -56,4 +57,22 @@ function Button({
   )
 }
 
-export { Button, buttonVariants }
+function LoadingButton({
+  loading,
+  loadingText,
+  disabled,
+  children,
+  ...props
+}: React.ComponentProps<typeof Button> & {
+  loading?: boolean
+  loadingText?: string
+}) {
+  return (
+    <Button disabled={disabled || loading} {...props}>
+      {loading && <Loader2 className="animate-spin" />}
+      {loading && loadingText ? loadingText : children}
+    </Button>
+  )
+}
+
+export { Button, buttonVariants, LoadingButton }

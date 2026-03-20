@@ -1,9 +1,9 @@
 'use client'
 
-import { ArrowRight, GitBranch, Info, Loader2, Palette, Plus, Save, Server, X } from 'lucide-react'
+import { ArrowRight, GitBranch, Info, Loader2, Palette, Plus, Server, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ColorPickerBody } from '@/components/tickets/label-select'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -569,23 +569,15 @@ export function RepositoryDefaultsForm() {
         >
           Reset
         </Button>
-        <Button
+        <LoadingButton
+          loading={isPending}
+          loadingText="Saving..."
           onClick={handleSave}
-          disabled={!hasChanges || !isValid || isPending}
+          disabled={!hasChanges || !isValid}
           className="bg-amber-600 hover:bg-amber-700 text-white"
         >
-          {isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Save Changes
-            </>
-          )}
-        </Button>
+          Save Changes
+        </LoadingButton>
       </div>
     </div>
   )

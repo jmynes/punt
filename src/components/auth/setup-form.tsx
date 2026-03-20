@@ -1,10 +1,10 @@
 'use client'
 
-import { Check, Eye, EyeOff, Loader2, Upload, UserPlus, X } from 'lucide-react'
+import { Check, Eye, EyeOff, Upload, UserPlus, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -324,21 +324,16 @@ function CreateAdminForm() {
         </div>
 
         <div className="px-6 pb-6 pt-2">
-          <Button
+          <LoadingButton
             type="submit"
             variant="primary"
+            loading={isLoading}
+            loadingText="Creating admin account..."
+            disabled={!canSubmit}
             className="w-full h-11 font-medium tracking-wide"
-            disabled={isLoading || !canSubmit}
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating admin account...
-              </>
-            ) : (
-              'Create admin account'
-            )}
-          </Button>
+            Create admin account
+          </LoadingButton>
         </div>
       </form>
     </div>
@@ -514,24 +509,17 @@ function ImportBackupForm() {
         </div>
 
         <div className="px-6 pb-6 pt-2">
-          <Button
+          <LoadingButton
             type="submit"
             variant="primary"
+            loading={isImporting}
+            loadingText="Importing..."
+            disabled={!importFileBase64 || (isEncrypted && !decryptionPassword)}
             className="w-full h-11 font-medium tracking-wide"
-            disabled={isImporting || !importFileBase64 || (isEncrypted && !decryptionPassword)}
           >
-            {isImporting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Importing...
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Import backup
-              </>
-            )}
-          </Button>
+            <Upload className="mr-2 h-4 w-4" />
+            Import backup
+          </LoadingButton>
         </div>
       </form>
     </div>

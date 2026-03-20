@@ -9,7 +9,6 @@ import {
   Eye,
   EyeOff,
   Filter,
-  Loader2,
   Lock,
   Minus,
   MoreHorizontal,
@@ -41,7 +40,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -1967,20 +1966,15 @@ export function UserList() {
                 >
                   Cancel
                 </Button>
-                <Button
+                <LoadingButton
                   type="submit"
-                  disabled={bulkPermanentDeleteUsers.isPending || !deletePassword}
+                  loading={bulkPermanentDeleteUsers.isPending}
+                  loadingText="Deleting..."
+                  disabled={!deletePassword}
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
-                  {bulkPermanentDeleteUsers.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    'Delete Permanently'
-                  )}
-                </Button>
+                  Delete Permanently
+                </LoadingButton>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -2119,24 +2113,17 @@ export function UserList() {
                 >
                   Cancel
                 </Button>
-                <Button
+                <LoadingButton
                   type="submit"
+                  loading={reset2faLoading}
+                  loadingText="Resetting..."
                   disabled={
-                    reset2faLoading ||
-                    !reset2faPassword ||
-                    (currentUserData?.totpEnabled ? !reset2faTotpCode : false)
+                    !reset2faPassword || (currentUserData?.totpEnabled ? !reset2faTotpCode : false)
                   }
                   className="bg-amber-600 hover:bg-amber-700 text-white"
                 >
-                  {reset2faLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Resetting...
-                    </>
-                  ) : (
-                    'Reset 2FA'
-                  )}
-                </Button>
+                  Reset 2FA
+                </LoadingButton>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -2320,10 +2307,11 @@ export function UserList() {
                 >
                   Cancel
                 </Button>
-                <Button
+                <LoadingButton
                   type="submit"
+                  loading={resetPwLoading}
+                  loadingText="Resetting..."
                   disabled={
-                    resetPwLoading ||
                     !resetPwNewPassword ||
                     !resetPwAdminPassword ||
                     (currentUserData?.totpEnabled ? !resetPwTotpCode : false) ||
@@ -2331,15 +2319,8 @@ export function UserList() {
                   }
                   className="bg-amber-600 hover:bg-amber-700 text-white"
                 >
-                  {resetPwLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Resetting...
-                    </>
-                  ) : (
-                    'Reset Password'
-                  )}
-                </Button>
+                  Reset Password
+                </LoadingButton>
               </DialogFooter>
             </form>
           </DialogContent>

@@ -1,10 +1,10 @@
 'use client'
 
-import { ArrowLeft, Eye, EyeOff, Loader2, Shield } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Shield } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { apiFetch } from '@/lib/base-path'
@@ -256,21 +256,15 @@ export function LoginForm() {
           </div>
 
           <div className="px-6 pb-6 pt-2 space-y-3">
-            <Button
+            <LoadingButton
               type="submit"
               variant="primary"
+              loading={isLoading}
+              loadingText="Verifying..."
               className="w-full h-11 font-medium tracking-wide"
-              disabled={isLoading}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                'Verify'
-              )}
-            </Button>
+              Verify
+            </LoadingButton>
 
             <Button
               type="button"
@@ -363,21 +357,15 @@ export function LoginForm() {
         </div>
 
         <div className="px-6 pb-6 pt-2">
-          <Button
+          <LoadingButton
             type="submit"
             variant="primary"
+            loading={isLoading}
+            loadingText="Signing in..."
             className="w-full h-11 font-medium tracking-wide"
-            disabled={isLoading}
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              'Sign in'
-            )}
-          </Button>
+            Sign in
+          </LoadingButton>
         </div>
       </form>
     </div>
