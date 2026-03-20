@@ -1,9 +1,11 @@
 'use client'
 
-import { ArrowRight, Calendar, Pencil, Tag, Target, User } from 'lucide-react'
+import { ArrowRight, Calendar, GitMerge, Pencil, Tag, Target, User } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
+import type { ParentTicketOption } from '@/components/tickets/create-ticket-dialog'
 import { DatePicker } from '@/components/tickets/date-picker'
 import { LabelSelect } from '@/components/tickets/label-select'
+import { ParentSelect } from '@/components/tickets/parent-select'
 import { PrioritySelect } from '@/components/tickets/priority-select'
 import { UserSelect } from '@/components/tickets/user-select'
 import { LoadingButton } from '@/components/ui/button'
@@ -24,6 +26,7 @@ import { updateTickets } from '@/lib/actions/ticket-actions'
 import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBoardStore } from '@/stores/board-store'
+import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import type { LabelSummary, Priority, TicketWithRelations } from '@/types'
 
@@ -41,6 +44,7 @@ interface FieldState {
   priority: { enabled: boolean; value: Priority }
   dueDate: { enabled: boolean; value: Date | null; clear: boolean }
   labels: { enabled: boolean; value: string[]; mode: 'add' | 'remove' | 'set' }
+  parent: { enabled: boolean; value: string | null; clear: boolean }
 }
 
 const INITIAL_FIELD_STATE: FieldState = {
@@ -48,6 +52,7 @@ const INITIAL_FIELD_STATE: FieldState = {
   priority: { enabled: false, value: 'medium' },
   dueDate: { enabled: false, value: null, clear: false },
   labels: { enabled: false, value: [], mode: 'add' },
+  parent: { enabled: false, value: null, clear: false },
 }
 
 export function BulkEditDialog({
@@ -64,22 +69,32 @@ export function BulkEditDialog({
   const currentUser = useCurrentUser()
   const { data: labels = [] } = useProjectLabels(projectId)
   const getColumns = useBoardStore((s) => s.getColumns)
+  const projectKey = useProjectsStore((s) => s.getProject(projectId)?.key ?? '')
   const clearSelection = useSelectionStore((s) => s.clearSelection)
 
   const count = selectedTicketIds.size
 
-  // Get selected tickets from board store
-  const selectedTickets = useMemo(() => {
+  // Build parent ticket options from all tickets in the project
+  const parentTicketOptions = useMemo(() => {
     const columns = getColumns(projectId)
     const all = columns.flatMap((c) => c.tickets)
-    return all.filter((t) => selectedTicketIds.has(t.id))
-  }, [projectId, selectedTicketIds, getColumns])
+    return all
+      .filter((t) => !selectedTicketIds.has(t.id) && t.type !== 'subtask')
+      .map((t) => ({
+        id: t.id,
+        number: t.number,
+        title: t.title,
+        type: t.type,
+        projectKey,
+      })) as ParentTicketOption[]
+  }, [projectId, projectKey, selectedTicketIds, getColumns])
 
   const hasChanges =
     fields.assignee.enabled ||
     fields.priority.enabled ||
     fields.dueDate.enabled ||
-    fields.labels.enabled
+    fields.labels.enabled ||
+    fields.parent.enabled
 
   const handleReset = useCallback(() => {
     setFields({ ...INITIAL_FIELD_STATE })
@@ -89,18 +104,24 @@ export function BulkEditDialog({
 
   const handleClose = useCallback(() => {
     onOpenChange(false)
-    // Reset after animation
-    setTimeout(handleReset, 200)
-  }, [onOpenChange, handleReset])
+  }, [onOpenChange])
+
+  // Read fresh ticket data from the store at apply time (not stale memoized data)
+  const getFreshSelectedTickets = useCallback(() => {
+    const columns = getColumns(projectId)
+    const all = columns.flatMap((c) => c.tickets)
+    return all.filter((t) => selectedTicketIds.has(t.id))
+  }, [projectId, selectedTicketIds, getColumns])
 
   const handleApply = useCallback(async () => {
-    if (!hasChanges || selectedTickets.length === 0) return
+    const freshTickets = getFreshSelectedTickets()
+    if (!hasChanges || freshTickets.length === 0) return
 
     setIsApplying(true)
     try {
       const updates: Array<{ ticketId: string; changes: Partial<TicketWithRelations> }> = []
 
-      for (const ticket of selectedTickets) {
+      for (const ticket of freshTickets) {
         const changes: Partial<TicketWithRelations> = {}
 
         if (fields.assignee.enabled) {
@@ -113,6 +134,10 @@ export function BulkEditDialog({
 
         if (fields.dueDate.enabled) {
           changes.dueDate = fields.dueDate.clear ? null : fields.dueDate.value
+        }
+
+        if (fields.parent.enabled) {
+          changes.parentId = fields.parent.clear ? null : fields.parent.value
         }
 
         if (fields.labels.enabled) {
@@ -168,7 +193,7 @@ export function BulkEditDialog({
     } finally {
       setIsApplying(false)
     }
-  }, [hasChanges, selectedTickets, fields, labels, projectId, clearSelection, handleClose])
+  }, [hasChanges, getFreshSelectedTickets, fields, labels, projectId, clearSelection, handleClose])
 
   // Build summary of changes for confirmation step
   const changeSummary = useMemo(() => {
@@ -200,6 +225,18 @@ export function BulkEditDialog({
       })
     }
 
+    if (fields.parent.enabled) {
+      if (fields.parent.clear) {
+        items.push({ field: 'Parent', description: 'Clear' })
+      } else {
+        const parent = parentTicketOptions.find((t) => t.id === fields.parent.value)
+        items.push({
+          field: 'Parent',
+          description: parent ? `${parent.projectKey}-${parent.number}: ${parent.title}` : 'None',
+        })
+      }
+    }
+
     if (fields.labels.enabled) {
       const labelNames = fields.labels.value
         .map((id) => labels.find((l) => l.id === id)?.name)
@@ -214,10 +251,16 @@ export function BulkEditDialog({
     }
 
     return items
-  }, [fields, members, labels])
+  }, [fields, members, labels, parentTicketOptions])
 
   return (
-    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : handleClose())}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (o) handleReset()
+        else handleClose()
+      }}
+    >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-zinc-100">
@@ -299,6 +342,37 @@ export function BulkEditDialog({
                     }))
                   }
                   disabled={!fields.dueDate.enabled}
+                />
+              )}
+            </FieldRow>
+
+            {/* Parent */}
+            <FieldRow
+              icon={GitMerge}
+              label="Parent"
+              enabled={fields.parent.enabled}
+              onToggle={(enabled) => setFields((f) => ({ ...f, parent: { ...f.parent, enabled } }))}
+              onClear={() =>
+                setFields((f) => ({
+                  ...f,
+                  parent: { enabled: true, value: null, clear: true },
+                }))
+              }
+              showClear={fields.parent.enabled && !fields.parent.clear}
+            >
+              {fields.parent.clear ? (
+                <p className="text-sm text-zinc-500 italic">Will be cleared</p>
+              ) : (
+                <ParentSelect
+                  value={fields.parent.value}
+                  onChange={(value) =>
+                    setFields((f) => ({
+                      ...f,
+                      parent: { enabled: true, value, clear: false },
+                    }))
+                  }
+                  parentTickets={parentTicketOptions}
+                  disabled={!fields.parent.enabled}
                 />
               )}
             </FieldRow>
@@ -427,13 +501,14 @@ function FieldRow({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Checkbox
+            id={`bulk-edit-${label}`}
             checked={enabled}
             onCheckedChange={(checked) => onToggle(checked === true)}
             className="border-zinc-600 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
           />
           <Label
+            htmlFor={`bulk-edit-${label}`}
             className="flex items-center gap-1.5 text-sm text-zinc-300 cursor-pointer"
-            onClick={() => onToggle(!enabled)}
           >
             <Icon className="h-3.5 w-3.5 text-zinc-500" />
             {label}

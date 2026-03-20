@@ -5,6 +5,8 @@ import { useState } from 'react'
 import { BulkEditDialog } from '@/components/tickets/bulk-edit-dialog'
 import { Button } from '@/components/ui/button'
 import { useClearSelectionOnBlur } from '@/hooks/use-clear-selection-on-blur'
+import { useHasAnyPermission } from '@/hooks/use-permissions'
+import { PERMISSIONS } from '@/lib/permissions'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 
@@ -17,6 +19,10 @@ export function SelectionIndicator() {
   const selectedTicketIds = useSelectionStore((state) => state.selectedTicketIds)
   const clearSelection = useSelectionStore((state) => state.clearSelection)
   const activeProjectId = useUIStore((state) => state.activeProjectId)
+  const canEdit = useHasAnyPermission(activeProjectId ?? '', [
+    PERMISSIONS.TICKETS_MANAGE_OWN,
+    PERMISSIONS.TICKETS_MANAGE_ANY,
+  ])
   const [bulkEditOpen, setBulkEditOpen] = useState(false)
 
   // Clear selection when switching to another browser tab
@@ -32,7 +38,7 @@ export function SelectionIndicator() {
           <span className="text-sm text-zinc-300 font-medium">
             {count} {count === 1 ? 'ticket' : 'tickets'} selected
           </span>
-          {count >= 2 && activeProjectId && (
+          {count >= 2 && activeProjectId && canEdit && (
             <Button
               variant="ghost"
               size="sm"
