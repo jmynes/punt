@@ -445,6 +445,14 @@ export function KanbanBoard({
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={() => {
+        setActiveTicket(null)
+        setActiveColumn(null)
+        setDraggingTicketIds([])
+        setInsertPosition(null)
+        beforeDragSnapshot.current = null
+        draggedIdsRef.current = []
+      }}
     >
       {columns.length === 0 ? (
         <EmptyState

@@ -617,6 +617,12 @@ export function SprintBacklogView({
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={() => {
+        setActiveTicket(null)
+        setDraggingTicketIds([])
+        setDropPosition(null)
+        draggedIdsRef.current = []
+      }}
     >
       <div className={cn('space-y-3', className)}>
         {/* Header */}
