@@ -17,7 +17,6 @@ import {
   Trash2,
   Webhook,
   X,
-  Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -121,11 +120,6 @@ function patternsMatch(a: CommitPattern[], b: CommitPattern[]): boolean {
       JSON.stringify(pa.keywords ?? []) === JSON.stringify(pb.keywords ?? [])
     )
   })
-}
-
-/** Check if current patterns match the defaults (ignoring IDs). */
-function isMatchingDefaults(patterns: CommitPattern[]): boolean {
-  return patternsMatch(patterns, DEFAULT_PATTERNS)
 }
 
 /**
@@ -280,10 +274,6 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
 
   const removePattern = useCallback((id: string) => {
     setPatterns((prev) => prev.filter((p) => p.id !== id))
-  }, [])
-
-  const resetPatternsToDefaults = useCallback(() => {
-    setPatterns(DEFAULT_PATTERNS.map((p) => ({ ...p, id: crypto.randomUUID() })))
   }, [])
 
   const systemDefaultPatterns: CommitPattern[] = useMemo(
@@ -640,7 +630,6 @@ export function HooksTab({ projectId, projectKey }: HooksTabProps) {
                 <ScrollArea className="max-h-[400px]">
                   <div className="space-y-1.5 pr-2">
                     {(patterns ?? []).map((pattern) => {
-                      const actionConfig = getActionConfig(pattern.action)
                       const allKeywords = [pattern.pattern, ...(pattern.keywords ?? [])].filter(
                         Boolean,
                       )
