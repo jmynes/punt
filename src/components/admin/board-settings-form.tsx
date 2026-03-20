@@ -1,8 +1,8 @@
 'use client'
 
-import { Loader2, Save } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Loader2, RotateCcw } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -21,6 +21,12 @@ export function BoardSettingsForm() {
       setShowAddColumnButton(settings.showAddColumnButton)
     }
   }, [settings])
+
+  const isAtSystemDefaults = showAddColumnButton === true
+
+  const handleResetToSystemDefaults = useCallback(() => {
+    setShowAddColumnButton(true)
+  }, [])
 
   const hasChanges = settings && showAddColumnButton !== settings.showAddColumnButton
 
@@ -56,6 +62,19 @@ export function BoardSettingsForm() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleResetToSystemDefaults}
+          disabled={isAtSystemDefaults || updateSettings.isPending}
+          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+        >
+          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+          Reset to System Defaults
+        </Button>
+      </div>
+
       <Card className="bg-zinc-900/50 border-zinc-800">
         <CardHeader>
           <CardTitle className="text-base text-zinc-100">Kanban Board</CardTitle>
@@ -94,23 +113,15 @@ export function BoardSettingsForm() {
             >
               Reset
             </Button>
-            <Button
+            <LoadingButton
+              loading={updateSettings.isPending}
+              loadingText="Saving..."
               onClick={handleSave}
-              disabled={!hasChanges || updateSettings.isPending}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              disabled={!hasChanges}
+              variant="primary"
             >
-              {updateSettings.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </>
-              )}
-            </Button>
+              Save Changes
+            </LoadingButton>
           </div>
         </CardContent>
       </Card>

@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowRight, GitCommitHorizontal, Info, Loader2, Plus, X } from 'lucide-react'
+import { ArrowRight, GitCommitHorizontal, Info, Loader2, Plus, RotateCcw, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Button, LoadingButton } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -89,6 +89,12 @@ export function HooksDefaultsForm() {
       )
     }
   }, [settings])
+
+  const isAtSystemDefaults = commitPatterns.length === 0
+
+  const handleResetToSystemDefaults = useCallback(() => {
+    setCommitPatterns([])
+  }, [])
 
   // Check for changes
   const hasChanges =
@@ -205,6 +211,19 @@ export function HooksDefaultsForm() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleResetToSystemDefaults}
+          disabled={isAtSystemDefaults || isPending}
+          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+        >
+          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+          Reset to System Defaults
+        </Button>
+      </div>
+
       {/* Info banner */}
       <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-950/30 border border-blue-900/50">
         <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
@@ -230,7 +249,7 @@ export function HooksDefaultsForm() {
                 Default commit patterns applied to new projects for webhook-based ticket automation.
               </CardDescription>
             </div>
-            {!isMatchingDefaults(commitPatterns) && (
+            {commitPatterns.length > 0 && !isMatchingDefaults(commitPatterns) && (
               <Button
                 type="button"
                 variant="outline"
@@ -239,7 +258,7 @@ export function HooksDefaultsForm() {
                 disabled={isPending}
                 className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
               >
-                {commitPatterns.length === 0 ? 'Load Defaults' : 'Reset to Defaults'}
+                Reset to Defaults
               </Button>
             )}
           </div>
@@ -259,10 +278,21 @@ export function HooksDefaultsForm() {
                   </div>
                 </div>
                 <p className="text-sm text-zinc-400 mb-1">No default commit patterns</p>
-                <p className="text-xs text-zinc-600 text-center max-w-[300px]">
+                <p className="text-xs text-zinc-600 mb-5 text-center max-w-[300px]">
                   New projects will start without custom commit patterns unless you configure
                   defaults here.
                 </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={loadDefaultPatterns}
+                  disabled={isPending}
+                  className="text-xs bg-zinc-800/50 border-zinc-700 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 hover:border-zinc-600"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Load Common Patterns
+                </Button>
               </div>
             </div>
           ) : (

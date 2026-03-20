@@ -1,8 +1,8 @@
 'use client'
 
-import { Loader2, Save } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Loader2, RotateCcw } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,6 +22,14 @@ interface FormData {
   defaultSprintStartTime: string
   defaultSprintEndTime: string
   storyPointScale: StoryPointScale
+}
+
+const SYSTEM_DEFAULTS: FormData = {
+  defaultSprintDuration: 14,
+  defaultAutoCarryOver: true,
+  defaultSprintStartTime: '09:00',
+  defaultSprintEndTime: '17:00',
+  storyPointScale: 'sequential',
 }
 
 export function SprintSettingsForm() {
@@ -56,6 +64,17 @@ export function SprintSettingsForm() {
       formData.defaultSprintStartTime !== settings.defaultSprintStartTime ||
       formData.defaultSprintEndTime !== settings.defaultSprintEndTime ||
       formData.storyPointScale !== settings.storyPointScale)
+
+  const isAtSystemDefaults =
+    formData.defaultSprintDuration === SYSTEM_DEFAULTS.defaultSprintDuration &&
+    formData.defaultAutoCarryOver === SYSTEM_DEFAULTS.defaultAutoCarryOver &&
+    formData.defaultSprintStartTime === SYSTEM_DEFAULTS.defaultSprintStartTime &&
+    formData.defaultSprintEndTime === SYSTEM_DEFAULTS.defaultSprintEndTime &&
+    formData.storyPointScale === SYSTEM_DEFAULTS.storyPointScale
+
+  const handleResetToSystemDefaults = useCallback(() => {
+    setFormData({ ...SYSTEM_DEFAULTS })
+  }, [])
 
   const isValid =
     typeof formData.defaultSprintDuration === 'number' &&
@@ -107,6 +126,19 @@ export function SprintSettingsForm() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleResetToSystemDefaults}
+          disabled={isAtSystemDefaults || updateSettings.isPending}
+          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+        >
+          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+          Reset to System Defaults
+        </Button>
+      </div>
+
       <Card className="bg-zinc-900/50 border-zinc-800">
         <CardHeader>
           <CardTitle className="text-base text-zinc-100">Sprint Defaults</CardTitle>
@@ -244,23 +276,15 @@ export function SprintSettingsForm() {
             >
               Reset
             </Button>
-            <Button
+            <LoadingButton
+              loading={updateSettings.isPending}
+              loadingText="Saving..."
               onClick={handleSave}
-              disabled={!hasChanges || !isValid || updateSettings.isPending}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              disabled={!hasChanges || !isValid}
+              variant="primary"
             >
-              {updateSettings.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </>
-              )}
-            </Button>
+              Save Changes
+            </LoadingButton>
           </div>
         </CardContent>
       </Card>
