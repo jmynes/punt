@@ -40,6 +40,7 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { evaluateQuery } from '@/lib/query-evaluator'
 import { parse, QueryParseError } from '@/lib/query-parser'
 import { sortTickets } from '@/lib/ticket-sort'
+import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { useBacklogStore } from '@/stores/backlog-store'
 import { useBoardStore } from '@/stores/board-store'
@@ -678,6 +679,13 @@ export default function BacklogPage() {
       const sectionId = (over.data.current?.sectionId as string) ?? 'backlog'
       const insertIndex = over.data.current?.insertIndex as number | undefined
 
+      // Suppress drop indicator when dragging within sorted backlog
+      const activeSprintId = activeDragDataRef.current.sprintId ?? null
+      if (sort !== null && sectionId === 'backlog' && activeSprintId === null) {
+        setDropPosition(null)
+        return
+      }
+
       if (insertIndex !== undefined) {
         setDropPosition({ sectionId, insertIndex })
         return
@@ -704,7 +712,7 @@ export default function BacklogPage() {
 
       setDropPosition(null)
     },
-    [ticketsBySprint],
+    [ticketsBySprint, sort],
   )
 
   const handleDragEnd = useCallback(
@@ -786,9 +794,13 @@ export default function BacklogPage() {
       const draggedIdSet = new Set(draggedIds)
 
       // Case A: Same-section reordering (within sprint or within backlog)
-      // Skip backlog reorder when a column sort is active (sorted view takes precedence)
-      // Sprint sections always allow reorder regardless of backlog sort
-      if (isSameSection && sort !== null && targetSectionKey === 'backlog') return
+      // Block backlog reorder when sort is active and show a helpful toast
+      if (isSameSection && sort !== null && targetSectionKey === 'backlog') {
+        showToast.info('Clear column sort to reorder manually', {
+          description: 'Click the sorted column header to remove sorting',
+        })
+        return
+      }
 
       if (isSameSection) {
         // Handle backlog reordering (uses local backlogOrder state)
