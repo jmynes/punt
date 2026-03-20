@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowRight, GitCommitHorizontal, Info, Loader2, Plus, X } from 'lucide-react'
+import { ArrowRight, GitCommitHorizontal, Info, Loader2, Plus, RotateCcw, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Button, LoadingButton } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -89,6 +89,12 @@ export function HooksDefaultsForm() {
       )
     }
   }, [settings])
+
+  const isAtSystemDefaults = commitPatterns.length === 0
+
+  const handleResetToSystemDefaults = useCallback(() => {
+    setCommitPatterns([])
+  }, [])
 
   // Check for changes
   const hasChanges =
@@ -205,6 +211,19 @@ export function HooksDefaultsForm() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleResetToSystemDefaults}
+          disabled={isAtSystemDefaults || isPending}
+          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+        >
+          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+          Reset to System Defaults
+        </Button>
+      </div>
+
       {/* Info banner */}
       <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-950/30 border border-blue-900/50">
         <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />

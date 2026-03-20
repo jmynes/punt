@@ -1,6 +1,6 @@
 'use client'
 
-import { Bot, Info, Loader2 } from 'lucide-react'
+import { Bot, Info, Loader2, RotateCcw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { GuidanceEditor } from '@/components/settings/guidance-editor'
 import { Button, LoadingButton } from '@/components/ui/button'
@@ -38,6 +38,12 @@ export function AgentsDefaultsForm() {
     }
   }, [settings])
 
+  const isAtSystemDefaults = !agentGuidance
+
+  const handleResetToSystemDefaults = useCallback(() => {
+    setAgentGuidance('')
+  }, [])
+
   const isPending = updateSettings.isPending
 
   // Ctrl+S / Cmd+S keyboard shortcut to save
@@ -66,6 +72,19 @@ export function AgentsDefaultsForm() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleResetToSystemDefaults}
+          disabled={isAtSystemDefaults || isPending}
+          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+        >
+          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+          Reset to System Defaults
+        </Button>
+      </div>
+
       {/* Info banner */}
       <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-950/30 border border-blue-900/50">
         <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />

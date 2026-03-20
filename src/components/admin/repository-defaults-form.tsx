@@ -1,6 +1,16 @@
 'use client'
 
-import { ArrowRight, GitBranch, Info, Loader2, Palette, Plus, Server, X } from 'lucide-react'
+import {
+  ArrowRight,
+  GitBranch,
+  Info,
+  Loader2,
+  Palette,
+  Plus,
+  RotateCcw,
+  Server,
+  X,
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ColorPickerBody } from '@/components/tickets/label-select'
 import { Button, LoadingButton } from '@/components/ui/button'
@@ -127,6 +137,16 @@ export function RepositoryDefaultsForm() {
     }
     setDuplicateBranchNames(dupes)
   }, [formData.environmentBranches])
+
+  const isAtSystemDefaults =
+    formData.branchTemplate === '{type}/{key}-{slug}' && formData.environmentBranches.length === 0
+
+  const handleResetToSystemDefaults = useCallback(() => {
+    setFormData({
+      branchTemplate: '{type}/{key}-{slug}',
+      environmentBranches: [],
+    })
+  }, [])
 
   // Check for changes
   const hasChanges =
@@ -270,6 +290,19 @@ export function RepositoryDefaultsForm() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleResetToSystemDefaults}
+          disabled={isAtSystemDefaults || isPending}
+          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+        >
+          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+          Reset to System Defaults
+        </Button>
+      </div>
+
       {/* Info banner */}
       <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-950/30 border border-blue-900/50">
         <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
