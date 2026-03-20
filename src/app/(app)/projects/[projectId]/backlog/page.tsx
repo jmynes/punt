@@ -679,9 +679,9 @@ export default function BacklogPage() {
       const sectionId = (over.data.current?.sectionId as string) ?? 'backlog'
       const insertIndex = over.data.current?.insertIndex as number | undefined
 
-      // Suppress drop indicator when dragging within sorted backlog
-      const activeSprintId = activeDragDataRef.current.sprintId ?? null
-      if (sort !== null && sectionId === 'backlog' && activeSprintId === null) {
+      // Suppress drop indicator when hovering over sorted backlog
+      // (reorder is blocked when sort is active, regardless of drag source)
+      if (sort !== null && sectionId === 'backlog') {
         setDropPosition(null)
         return
       }
@@ -793,15 +793,16 @@ export default function BacklogPage() {
 
       const draggedIdSet = new Set(draggedIds)
 
-      // Case A: Same-section reordering (within sprint or within backlog)
-      // Block backlog reorder when sort is active and show a helpful toast
-      if (isSameSection && sort !== null && targetSectionKey === 'backlog') {
+      // Block any drop targeting the backlog when sort is active
+      // (reorder/insert position is meaningless in a sorted view)
+      if (sort !== null && targetSectionKey === 'backlog') {
         showToast.info('Clear column sort to reorder manually', {
           description: 'Click the sorted column header to remove sorting',
         })
         return
       }
 
+      // Case A: Same-section reordering (within sprint or within backlog)
       if (isSameSection) {
         // Handle backlog reordering (uses local backlogOrder state)
         if (targetSectionKey === 'backlog') {
