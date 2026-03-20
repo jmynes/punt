@@ -249,7 +249,7 @@ export function HooksDefaultsForm() {
                 Default commit patterns applied to new projects for webhook-based ticket automation.
               </CardDescription>
             </div>
-            {!isMatchingDefaults(commitPatterns) && (
+            {commitPatterns.length > 0 && !isMatchingDefaults(commitPatterns) && (
               <Button
                 type="button"
                 variant="outline"
@@ -258,7 +258,7 @@ export function HooksDefaultsForm() {
                 disabled={isPending}
                 className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
               >
-                {commitPatterns.length === 0 ? 'Load Defaults' : 'Reset to Defaults'}
+                Reset to Defaults
               </Button>
             )}
           </div>
@@ -278,10 +278,21 @@ export function HooksDefaultsForm() {
                   </div>
                 </div>
                 <p className="text-sm text-zinc-400 mb-1">No default commit patterns</p>
-                <p className="text-xs text-zinc-600 text-center max-w-[300px]">
+                <p className="text-xs text-zinc-600 mb-5 text-center max-w-[300px]">
                   New projects will start without custom commit patterns unless you configure
                   defaults here.
                 </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={loadDefaultPatterns}
+                  disabled={isPending}
+                  className="text-xs bg-zinc-800/50 border-zinc-700 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 hover:border-zinc-600"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Load Common Patterns
+                </Button>
               </div>
             </div>
           ) : (
