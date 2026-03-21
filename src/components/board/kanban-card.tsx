@@ -114,7 +114,7 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [] }: KanbanCard
         {...(isMounted ? attributes : {})}
         {...(isMounted ? listeners : {})}
         className={cn(
-          'group relative cursor-grab border-zinc-800 bg-zinc-900/80 p-3 transition-colors select-none active:cursor-grabbing overflow-hidden',
+          'group relative cursor-grab border-zinc-800 bg-zinc-900/80 p-3 transition-colors select-none active:cursor-grabbing',
           !selected && 'hover:border-zinc-700 hover:bg-zinc-900',
           isDragging && 'opacity-50 shadow-lg ring-2 ring-amber-500/50',
           selected &&
@@ -127,7 +127,7 @@ export function KanbanCard({ ticket, projectKey, allTicketIds = [] }: KanbanCard
           <GripVertical className="h-4 w-4 text-zinc-600" />
         </div>
 
-        <div className="px-4 min-w-0">
+        <div className="px-2 min-w-0">
           {/* Header row: Type, Key, Blocked, Priority */}
           <div className="flex items-center gap-2 mb-2 min-w-0">
             <TypeBadge type={ticket.type as IssueType} size="sm" />
