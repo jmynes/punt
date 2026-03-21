@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getTabId } from '@/hooks/use-realtime'
 import { apiFetch } from '@/lib/base-path'
+import { isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 import type { LinkType, TicketLinkSummary } from '@/types'
 import { ticketKeys } from './use-tickets'
@@ -59,6 +60,7 @@ export function useCreateTicketLink() {
 
   return useMutation({
     mutationFn: async ({ projectId, ticketId, linkType, targetTicketId }: CreateLinkInput) => {
+      if (isDemoMode()) return {} as TicketLinkSummary
       const tabId = getTabId()
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -108,6 +110,7 @@ export function useUpdateTicketLink() {
 
   return useMutation({
     mutationFn: async ({ projectId, ticketId, linkId, linkType }: UpdateLinkInput) => {
+      if (isDemoMode()) return {}
       const tabId = getTabId()
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -166,6 +169,7 @@ export function useCreateTicketLinks() {
       ticketId,
       links,
     }: CreateBulkLinksInput): Promise<BulkLinkResult> => {
+      if (isDemoMode()) return { succeeded: [], failed: [] }
       const tabId = getTabId()
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -245,6 +249,7 @@ export function useDeleteTicketLink() {
 
   return useMutation({
     mutationFn: async ({ projectId, ticketId, linkId }: DeleteLinkInput) => {
+      if (isDemoMode()) return {}
       const tabId = getTabId()
       const headers: HeadersInit = {
         'Content-Type': 'application/json',

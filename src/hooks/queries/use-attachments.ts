@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
 import { apiFetch } from '@/lib/base-path'
+import { isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 import type { AttachmentInfo } from '@/types'
 
@@ -81,6 +82,7 @@ export function useAddAttachments() {
       ticketId: string
       attachments: AddAttachmentParams[]
     }) => {
+      if (isDemoMode()) return [] as AttachmentInfo[]
       const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/attachments`, {
         method: 'POST',
         headers: {
@@ -126,6 +128,7 @@ export function useRemoveAttachment() {
       ticketId: string
       attachmentId: string
     }) => {
+      if (isDemoMode()) return {}
       const res = await fetch(
         `/api/projects/${projectId}/tickets/${ticketId}/attachments/${attachmentId}`,
         {
