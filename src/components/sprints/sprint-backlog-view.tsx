@@ -23,6 +23,7 @@ import {
 } from '@/hooks/queries/use-sprints'
 import { updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { isCompletedColumn } from '@/lib/sprint-utils'
+import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
@@ -260,6 +261,12 @@ export function SprintBacklogView({
       const overData = over.data.current
       const draggedIds = draggedIdsRef.current
 
+      // Suppress drop indicator when sort is active
+      if (sort !== null) {
+        setDropPosition(null)
+        return
+      }
+
       // Check if hovering over a sprint section or end-of-list zone
       const isOverSection = overData?.type === 'sprint-section'
       const isOverSectionEnd = overData?.type === 'section-end'
@@ -312,7 +319,7 @@ export function SprintBacklogView({
         insertIndex,
       })
     },
-    [ticketsBySprint],
+    [ticketsBySprint, sort],
   )
 
   // Handle drag end
@@ -359,7 +366,12 @@ export function SprintBacklogView({
         ticketsChangingSprint.length === 0 &&
         (overData?.type === 'ticket' || overData?.type === 'section-end')
       ) {
-        if (sort !== null) return // Sort active, manual reorder disabled
+        if (sort !== null) {
+          showToast.info('Clear column sort to reorder manually', {
+            description: 'Click the sorted column header to remove sorting',
+          })
+          return
+        }
 
         const sourceSprintId = ticketsToMove[0]?.sprintId ?? null
         const sectionKey = sourceSprintId ?? 'backlog'
