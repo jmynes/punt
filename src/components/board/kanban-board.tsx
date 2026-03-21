@@ -73,20 +73,75 @@ export function KanbanBoard({
   // Refs for drag operation (no re-renders)
   const beforeDragSnapshot = useRef<ColumnWithTickets[] | null>(null)
   const draggedIdsRef = useRef<string[]>([])
-  const pointerYRef = useRef<number>(0)
   const insertPositionRef = useRef<{
     columnId: string
     index: number
     rawIndex: number
   } | null>(null)
 
-  // Track actual pointer position via native event (viewport coordinates guaranteed)
+  // Continuously calculate insert position on every pointer move.
+  // dnd-kit's onDragOver only fires when the `over` target changes,
+  // so moving within the same column wouldn't update the index.
+  // This listener fires on every move and determines both column and
+  // index from the DOM, completely independent of dnd-kit's over state.
   useEffect(() => {
     const handler = (e: PointerEvent) => {
-      pointerYRef.current = e.clientY
+      const snapshot = beforeDragSnapshot.current
+      const draggedIds = draggedIdsRef.current
+      if (!snapshot || draggedIds.length === 0) return
+
+      const pointerX = e.clientX
+      const pointerY = e.clientY
+
+      // Find which column the pointer is in
+      const columnEls = document.querySelectorAll<HTMLElement>('[data-column-id]')
+      let targetColumnId: string | null = null
+      for (const el of columnEls) {
+        const rect = el.getBoundingClientRect()
+        if (pointerX >= rect.left && pointerX <= rect.right) {
+          targetColumnId = el.getAttribute('data-column-id')
+          break
+        }
+      }
+
+      if (!targetColumnId) return
+
+      const targetColumn = snapshot.find((col) => col.id === targetColumnId)
+      if (!targetColumn) return
+
+      const visibleTickets = targetColumn.tickets.filter((t) => !draggedIds.includes(t.id))
+
+      // Find insert position from pointer Y against card midpoints
+      let visualIndex = visibleTickets.length
+      let insertBeforeTicketId: string | null = null
+
+      const columnEl = document.querySelector(`[data-column-id="${targetColumnId}"]`)
+      if (columnEl) {
+        const cardEls = columnEl.querySelectorAll('[data-ticket-card]')
+        for (let i = 0; i < cardEls.length; i++) {
+          const rect = cardEls[i].getBoundingClientRect()
+          if (pointerY < rect.top + rect.height / 2) {
+            visualIndex = i
+            const wrapper = cardEls[i].closest('[data-ticket-id]')
+            insertBeforeTicketId = wrapper?.getAttribute('data-ticket-id') ?? null
+            break
+          }
+        }
+      }
+
+      // Map visual index to raw index in store's ticket array
+      let rawIndex = visibleTickets.length
+      if (insertBeforeTicketId) {
+        rawIndex = visibleTickets.findIndex((t) => t.id === insertBeforeTicketId)
+        if (rawIndex === -1) rawIndex = visibleTickets.length
+      }
+
+      const pos = { columnId: targetColumnId, index: visualIndex, rawIndex }
+      insertPositionRef.current = pos
+      setInsertPosition(pos)
     }
-    window.addEventListener('pointermove', handler)
-    return () => window.removeEventListener('pointermove', handler)
+    document.addEventListener('pointermove', handler, { capture: true })
+    return () => document.removeEventListener('pointermove', handler, { capture: true })
   }, [])
 
   const sensors = useSensors(
@@ -187,97 +242,20 @@ export function KanbanBoard({
     [columns],
   )
 
-  const handleDragOver = useCallback(
-    (event: DragOverEvent) => {
-      const { active, over } = event
+  // handleDragOver only handles special zones (add-column).
+  // Insert position calculation is done in the pointermove listener above,
+  // which fires on every pointer move (unlike onDragOver which only fires
+  // when dnd-kit's `over` target changes).
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event
+    if (active.data.current?.type === 'sortable-column') return
 
-      // Skip drag-over logic for column drags (handled by SortableContext)
-      if (active.data.current?.type === 'sortable-column') return
-
-      if (!over) {
-        setInsertPosition(null)
-        return
-      }
-
-      const overId = over.id as string
-      const draggedIds = draggedIdsRef.current
-
-      // Use beforeDragSnapshot for calculations (stable reference)
-      const snapshotColumns = beforeDragSnapshot.current
-      if (!snapshotColumns) return
-
-      // Hovering over add-column zone — clear any column indicator
-      if (over.data.current?.type === 'add-column') {
-        setInsertPosition(null)
-        return
-      }
-
-      // Find which column we're hovering over
-      const isOverColumn = over.data.current?.type === 'column'
-      const isOverColumnEnd = over.data.current?.type === 'column-end'
-      let targetColumnId: string | undefined
-
-      if (isOverColumn) {
-        targetColumnId = overId
-      } else if (isOverColumnEnd) {
-        targetColumnId = over.data.current?.columnId
-      } else {
-        // Over a ticket — find its column
-        if (draggedIds.includes(overId)) {
-          const col = snapshotColumns.find((c) => c.tickets.some((t) => t.id === overId))
-          targetColumnId = col?.id
-        } else {
-          const col = snapshotColumns.find((c) => c.tickets.some((t) => t.id === overId))
-          targetColumnId = col?.id
-        }
-      }
-
-      if (!targetColumnId) {
-        setInsertPosition(null)
-        return
-      }
-
-      const targetColumn = snapshotColumns.find((col) => col.id === targetColumnId)
-      if (!targetColumn) return
-
-      // Calculate insertion index from pointer Y against live DOM card rects.
-      // Cards never shift during drag (indicator is absolutely positioned),
-      // so getBoundingClientRect() returns stable values — no compensation needed.
-      const visibleTickets = targetColumn.tickets.filter((t) => !draggedIds.includes(t.id))
-      const pointerY = pointerYRef.current
-
-      let visualIndex = visibleTickets.length // default: end of column
-      let insertBeforeTicketId: string | null = null // ticket at the visual drop position
-
-      const columnEl = document.querySelector(`[data-column-id="${targetColumnId}"]`)
-      if (columnEl) {
-        const cardEls = columnEl.querySelectorAll('[data-ticket-card]')
-        for (let i = 0; i < cardEls.length; i++) {
-          const rect = cardEls[i].getBoundingClientRect()
-          if (pointerY < rect.top + rect.height / 2) {
-            visualIndex = i
-            // Get the ticket ID from DOM to map back to raw index
-            const wrapper = cardEls[i].closest('[data-ticket-id]')
-            insertBeforeTicketId = wrapper?.getAttribute('data-ticket-id') ?? null
-            break
-          }
-        }
-      }
-
-      // Map visual index to raw index in store's ticket array.
-      // The DOM shows sorted tickets, but the store uses raw order.
-      let rawIndex = visibleTickets.length
-      if (insertBeforeTicketId) {
-        rawIndex = visibleTickets.findIndex((t) => t.id === insertBeforeTicketId)
-        if (rawIndex === -1) rawIndex = visibleTickets.length
-      }
-
-      const pos = { columnId: targetColumnId, index: visualIndex, rawIndex }
-      insertPositionRef.current = pos
-      setInsertPosition(pos)
-    },
-    [], // No dependencies - uses refs
-  )
+    // Clear indicator when pointer leaves all columns
+    if (!over) {
+      insertPositionRef.current = null
+      setInsertPosition(null)
+    }
+  }, [])
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
