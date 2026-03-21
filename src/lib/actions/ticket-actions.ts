@@ -11,6 +11,7 @@
  */
 
 import { apiFetch } from '@/lib/base-path'
+import { isDemoMode } from '@/lib/demo'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { toUpdateTicketInput } from '@/lib/ticket-mutations'
 import { showToast } from '@/lib/toast'
@@ -181,7 +182,7 @@ export async function moveTickets({
   try {
     if (actuallyMoving.length === 1) {
       const ticket = actuallyMoving[0]
-      if (!ticket.id.startsWith('ticket-')) {
+      if (!isDemoMode() && !ticket.id.startsWith('ticket-')) {
         const response = await apiFetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
@@ -192,7 +193,7 @@ export async function moveTickets({
     } else {
       const realTicketIds = actuallyMoving
         .map((t) => t.id)
-        .filter((id) => !id.startsWith('ticket-'))
+        .filter((id) => !isDemoMode() && !id.startsWith('ticket-'))
       if (realTicketIds.length > 0) {
         const response = await apiFetch(`/api/projects/${projectId}/tickets`, {
           method: 'PATCH',
@@ -311,7 +312,7 @@ export async function updateTickets({
   // 4. API persistence with activity capture
   try {
     for (const item of undoItems) {
-      if (item.ticketId.startsWith('ticket-')) continue
+      if (isDemoMode() || item.ticketId.startsWith('ticket-')) continue
 
       const apiUpdates = toUpdateTicketInput(item.after)
       // Filter to only changed fields
@@ -405,7 +406,7 @@ export async function reorderTickets({
     if (!updatedColumn) return
 
     for (const ticket of updatedColumn.tickets) {
-      if (ticket.id.startsWith('ticket-')) continue
+      if (isDemoMode() || ticket.id.startsWith('ticket-')) continue
       const apiUpdates = toUpdateTicketInput({
         order: ticket.order,
       } as Partial<TicketWithRelations>)

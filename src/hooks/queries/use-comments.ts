@@ -5,6 +5,7 @@ import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
 import { apiFetch } from '@/lib/base-path'
 import type { UserSummary } from '@/lib/data-provider'
+import { isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 
 export interface CommentInfo {
@@ -59,6 +60,7 @@ export function useAddComment() {
       ticketKey: string
       content: string
     }) => {
+      if (isDemoMode()) return {} as CommentInfo
       const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`, {
         method: 'POST',
         headers: {
@@ -109,6 +111,7 @@ export function useUpdateComment() {
       commentId: string
       content: string
     }) => {
+      if (isDemoMode()) return {} as CommentInfo
       const res = await fetch(
         `/api/projects/${projectId}/tickets/${ticketId}/comments/${commentId}`,
         {
@@ -184,6 +187,7 @@ export function useDeleteComment() {
       ticketKey: string
       commentId: string
     }) => {
+      if (isDemoMode()) return {}
       const res = await fetch(
         `/api/projects/${projectId}/tickets/${ticketId}/comments/${commentId}`,
         {

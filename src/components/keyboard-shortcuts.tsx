@@ -36,6 +36,7 @@ import {
   restoreCommentsAndLinks,
 } from '@/lib/actions/delete-tickets'
 import { apiFetch, withBasePath } from '@/lib/base-path'
+import { isDemoMode } from '@/lib/demo'
 import { isEditableTarget } from '@/lib/keyboard-utils'
 import { formatTicketId, formatTicketIds } from '@/lib/ticket-format'
 import { getEffectiveDuration, rawToast, showToast } from '@/lib/toast'
@@ -768,32 +769,34 @@ export function KeyboardShortcuts() {
           undoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              // Move tickets back first
-              if (action.movedTickets && action.movedTickets.length > 0) {
-                for (const moved of action.movedTickets) {
-                  await apiFetch(`/api/projects/${entry.projectId}/tickets/${moved.ticketId}`, {
-                    method: 'PATCH',
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                // Move tickets back first
+                if (action.movedTickets && action.movedTickets.length > 0) {
+                  for (const moved of action.movedTickets) {
+                    await apiFetch(`/api/projects/${entry.projectId}/tickets/${moved.ticketId}`, {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(tabId && { 'X-Tab-Id': tabId }),
+                      },
+                      body: JSON.stringify({ columnId: moved.fromColumnId }),
+                    })
+                  }
+                }
+                // Then delete the column
+                const res = await apiFetch(
+                  `/api/projects/${entry.projectId}/columns/${action.columnId}`,
+                  {
+                    method: 'DELETE',
                     headers: {
-                      'Content-Type': 'application/json',
                       ...(tabId && { 'X-Tab-Id': tabId }),
                     },
-                    body: JSON.stringify({ columnId: moved.fromColumnId }),
-                  })
-                }
-              }
-              // Then delete the column
-              const res = await apiFetch(
-                `/api/projects/${entry.projectId}/columns/${action.columnId}`,
-                {
-                  method: 'DELETE',
-                  headers: {
-                    ...(tabId && { 'X-Tab-Id': tabId }),
                   },
-                },
-              )
-              if (!res.ok) throw new Error('Failed to delete column')
-              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+                )
+                if (!res.ok) throw new Error('Failed to delete column')
+                queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+              }
             } catch (err) {
               console.error('Failed to undo column create:', err)
             } finally {
@@ -825,20 +828,22 @@ export function KeyboardShortcuts() {
           undoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              await apiFetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(tabId && { 'X-Tab-Id': tabId }),
-                },
-                body: JSON.stringify({
-                  name: action.oldName,
-                  icon: action.oldIcon,
-                  color: action.oldColor,
-                }),
-              })
-              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                await apiFetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                  body: JSON.stringify({
+                    name: action.oldName,
+                    icon: action.oldIcon,
+                    color: action.oldColor,
+                  }),
+                })
+                queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+              }
             } catch (err) {
               console.error('Failed to undo column rename:', err)
             } finally {
@@ -858,52 +863,62 @@ export function KeyboardShortcuts() {
           undoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              // Recreate column
-              const createRes = await apiFetch(`/api/projects/${entry.projectId}/columns`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(tabId && { 'X-Tab-Id': tabId }),
-                },
-                body: JSON.stringify({ name: action.column.name }),
-              })
-              if (!createRes.ok) throw new Error('Failed to recreate column')
-              const newCol = await createRes.json()
+              let newColId: string
 
-              // Set icon and order if needed
-              if (action.column.icon || newCol.order !== action.column.order) {
-                await apiFetch(`/api/projects/${entry.projectId}/columns/${newCol.id}`, {
-                  method: 'PATCH',
+              if (isDemoMode()) {
+                newColId = `column-${Date.now()}`
+              } else {
+                const tabId = getTabId()
+                // Recreate column
+                const createRes = await apiFetch(`/api/projects/${entry.projectId}/columns`, {
+                  method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
                     ...(tabId && { 'X-Tab-Id': tabId }),
                   },
-                  body: JSON.stringify({
-                    ...(action.column.icon && { icon: action.column.icon }),
-                    order: action.column.order,
-                  }),
+                  body: JSON.stringify({ name: action.column.name }),
                 })
-              }
+                if (!createRes.ok) throw new Error('Failed to recreate column')
+                const newCol = await createRes.json()
+                newColId = newCol.id
 
-              // Move tickets back
-              for (const ticket of action.column.tickets) {
-                await apiFetch(`/api/projects/${entry.projectId}/tickets/${ticket.id}`, {
-                  method: 'PATCH',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    ...(tabId && { 'X-Tab-Id': tabId }),
-                  },
-                  body: JSON.stringify({ columnId: newCol.id }),
-                })
+                // Set icon and order if needed
+                if (action.column.icon || newCol.order !== action.column.order) {
+                  await apiFetch(`/api/projects/${entry.projectId}/columns/${newCol.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
+                    body: JSON.stringify({
+                      ...(action.column.icon && { icon: action.column.icon }),
+                      order: action.column.order,
+                    }),
+                  })
+                }
+
+                // Move tickets back
+                for (const ticket of action.column.tickets) {
+                  await apiFetch(`/api/projects/${entry.projectId}/tickets/${ticket.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
+                    body: JSON.stringify({ columnId: newCol.id }),
+                  })
+                }
+
+                queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+                queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(entry.projectId) })
               }
 
               // Update board store
               const bs = useBoardStore.getState()
               const restoredColumn = {
                 ...action.column,
-                id: newCol.id,
-                tickets: action.column.tickets.map((t) => ({ ...t, columnId: newCol.id })),
+                id: newColId,
+                tickets: action.column.tickets.map((t) => ({ ...t, columnId: newColId })),
               }
               const currentCols = bs.getColumns(entry.projectId)
               const restoredCols = currentCols.map((c) => {
@@ -917,10 +932,7 @@ export function KeyboardShortcuts() {
               bs.setColumns(entry.projectId, restoredCols)
 
               // Update the action's column id for future redo
-              action.column.id = newCol.id
-
-              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
-              queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(entry.projectId) })
+              action.column.id = newColId
             } catch (err) {
               console.error('Failed to undo column delete:', err)
               showToast.error('Failed to restore column')
@@ -962,22 +974,24 @@ export function KeyboardShortcuts() {
           // Delete the attachments asynchronously
           ;(async () => {
             try {
-              const tabId = getTabId()
-              for (const att of action.attachments) {
-                await fetch(
-                  `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
-                  {
-                    method: 'DELETE',
-                    headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
-                  },
-                )
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                for (const att of action.attachments) {
+                  await fetch(
+                    `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
+                    {
+                      method: 'DELETE',
+                      headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
+                    },
+                  )
+                  queryClient.invalidateQueries({
+                    queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  })
+                }
                 queryClient.invalidateQueries({
-                  queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  queryKey: ticketKeys.byProject(entry.projectId),
                 })
               }
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
             } catch (err) {
               console.error('Failed to undo attachment add:', err)
               showToast.error('Failed to undo attachment add')
@@ -1013,39 +1027,41 @@ export function KeyboardShortcuts() {
           // Re-add the attachments asynchronously
           ;(async () => {
             try {
-              const tabId = getTabId()
-              for (const att of action.attachments) {
-                const res = await fetch(
-                  `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
-                  {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      ...(tabId && { 'X-Tab-Id': tabId }),
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                for (const att of action.attachments) {
+                  const res = await fetch(
+                    `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(tabId && { 'X-Tab-Id': tabId }),
+                      },
+                      body: JSON.stringify({
+                        attachments: [
+                          {
+                            filename: att.attachment.filename,
+                            originalName: att.attachment.originalName,
+                            mimeType: att.attachment.mimetype,
+                            size: att.attachment.size,
+                            url: att.attachment.url,
+                          },
+                        ],
+                      }),
                     },
-                    body: JSON.stringify({
-                      attachments: [
-                        {
-                          filename: att.attachment.filename,
-                          originalName: att.attachment.originalName,
-                          mimeType: att.attachment.mimetype,
-                          size: att.attachment.size,
-                          url: att.attachment.url,
-                        },
-                      ],
-                    }),
-                  },
-                )
-                if (res.ok) {
-                  await res.json()
+                  )
+                  if (res.ok) {
+                    await res.json()
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  })
                 }
                 queryClient.invalidateQueries({
-                  queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  queryKey: ticketKeys.byProject(entry.projectId),
                 })
               }
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
             } catch (err) {
               console.error('Failed to undo attachment delete:', err)
               showToast.error('Failed to restore attachments')
@@ -1071,30 +1087,32 @@ export function KeyboardShortcuts() {
           undoStore.pushRedo(entry)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              const res = await apiFetch(
-                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
-                {
-                  method: 'DELETE',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    ...(tabId && { 'X-Tab-Id': tabId }),
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                const res = await apiFetch(
+                  `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                  {
+                    method: 'DELETE',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
                   },
-                },
-              )
-              if (!res.ok) throw new Error('Failed to delete link')
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(
-                  action.link.projectId,
-                  action.link.targetTicketId,
-                ),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
+                )
+                if (!res.ok) throw new Error('Failed to delete link')
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(
+                    action.link.projectId,
+                    action.link.targetTicketId,
+                  ),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
+                })
+              }
             } catch (err) {
               console.error('Failed to undo link create:', err)
               showToast.error('Failed to undo link creation')
@@ -1115,35 +1133,37 @@ export function KeyboardShortcuts() {
           undoStore.pushRedo(entry)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              const headers: HeadersInit = {
-                'Content-Type': 'application/json',
-                ...(tabId && { 'X-Tab-Id': tabId }),
-              }
-              await Promise.allSettled(
-                action.links.map((link) =>
-                  apiFetch(
-                    `/api/projects/${link.projectId}/tickets/${link.ticketId}/links/${link.linkId}`,
-                    { method: 'DELETE', headers },
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                const headers: HeadersInit = {
+                  'Content-Type': 'application/json',
+                  ...(tabId && { 'X-Tab-Id': tabId }),
+                }
+                await Promise.allSettled(
+                  action.links.map((link) =>
+                    apiFetch(
+                      `/api/projects/${link.projectId}/tickets/${link.ticketId}/links/${link.linkId}`,
+                      { method: 'DELETE', headers },
+                    ),
                   ),
-                ),
-              )
-              // Invalidate source ticket
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(
-                  action.links[0].projectId,
-                  action.links[0].ticketId,
-                ),
-              })
-              // Invalidate all target tickets
-              for (const link of action.links) {
+                )
+                // Invalidate source ticket
                 queryClient.invalidateQueries({
-                  queryKey: ticketLinkKeys.byTicket(link.projectId, link.targetTicketId),
+                  queryKey: ticketLinkKeys.byTicket(
+                    action.links[0].projectId,
+                    action.links[0].ticketId,
+                  ),
+                })
+                // Invalidate all target tickets
+                for (const link of action.links) {
+                  queryClient.invalidateQueries({
+                    queryKey: ticketLinkKeys.byTicket(link.projectId, link.targetTicketId),
+                  })
+                }
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
                 })
               }
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
             } catch (err) {
               console.error('Failed to undo bulk link create:', err)
               showToast.error('Failed to undo link creation')
@@ -1163,44 +1183,48 @@ export function KeyboardShortcuts() {
           undoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              const res = await apiFetch(
-                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    ...(tabId && { 'X-Tab-Id': tabId }),
+              if (isDemoMode()) {
+                undoStore.pushRedo(entry)
+              } else {
+                const tabId = getTabId()
+                const res = await apiFetch(
+                  `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
+                    body: JSON.stringify({
+                      linkType: action.link.linkType,
+                      targetTicketId: action.link.targetTicketId,
+                    }),
                   },
-                  body: JSON.stringify({
-                    linkType: action.link.linkType,
-                    targetTicketId: action.link.targetTicketId,
-                  }),
-                },
-              )
-              if (!res.ok) throw new Error('Failed to re-create link')
-              const newLink = await res.json()
-              // Update the link ID in the undo entry for future redo
-              const updatedEntry = {
-                ...entry,
-                action: {
-                  ...action,
-                  link: { ...action.link, linkId: newLink.id },
-                },
+                )
+                if (!res.ok) throw new Error('Failed to re-create link')
+                const newLink = await res.json()
+                // Update the link ID in the undo entry for future redo
+                const updatedEntry = {
+                  ...entry,
+                  action: {
+                    ...action,
+                    link: { ...action.link, linkId: newLink.id },
+                  },
+                }
+                undoStore.pushRedo(updatedEntry)
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(
+                    action.link.projectId,
+                    action.link.targetTicketId,
+                  ),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
+                })
               }
-              undoStore.pushRedo(updatedEntry)
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(
-                  action.link.projectId,
-                  action.link.targetTicketId,
-                ),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
             } catch (err) {
               console.error('Failed to undo link delete:', err)
               showToast.error('Failed to restore link')
@@ -1221,31 +1245,33 @@ export function KeyboardShortcuts() {
           undoStore.pushRedo(entry)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              const res = await apiFetch(
-                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
-                {
-                  method: 'PATCH',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    ...(tabId && { 'X-Tab-Id': tabId }),
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                const res = await apiFetch(
+                  `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                  {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
+                    body: JSON.stringify({ linkType: action.oldLinkType }),
                   },
-                  body: JSON.stringify({ linkType: action.oldLinkType }),
-                },
-              )
-              if (!res.ok) throw new Error('Failed to revert link type')
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(
-                  action.link.projectId,
-                  action.link.targetTicketId,
-                ),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
+                )
+                if (!res.ok) throw new Error('Failed to revert link type')
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(
+                    action.link.projectId,
+                    action.link.targetTicketId,
+                  ),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
+                })
+              }
             } catch (err) {
               console.error('Failed to undo link update:', err)
               showToast.error('Failed to revert link type')
@@ -1598,52 +1624,76 @@ export function KeyboardShortcuts() {
           redoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              const res = await apiFetch(`/api/projects/${entry.projectId}/columns`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(tabId && { 'X-Tab-Id': tabId }),
-                },
-                body: JSON.stringify({ name: action.columnName }),
-              })
-              if (!res.ok) throw new Error('Failed to recreate column')
-              const newCol = await res.json()
+              let newColId: string
 
-              // Update board store
-              const bs = useBoardStore.getState()
-              const currentCols = bs.getColumns(entry.projectId)
-              bs.setColumns(entry.projectId, [...currentCols, { ...newCol, tickets: [] }])
+              if (isDemoMode()) {
+                newColId = `column-${Date.now()}`
+                const bs = useBoardStore.getState()
+                const currentCols = bs.getColumns(entry.projectId)
+                const newCol = {
+                  id: newColId,
+                  name: action.columnName,
+                  icon: null,
+                  color: null,
+                  order: currentCols.length,
+                  projectId: entry.projectId,
+                  tickets: [] as TicketWithRelations[],
+                }
+                bs.setColumns(entry.projectId, [...currentCols, newCol])
+              } else {
+                const tabId = getTabId()
+                const res = await apiFetch(`/api/projects/${entry.projectId}/columns`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                  body: JSON.stringify({ name: action.columnName }),
+                })
+                if (!res.ok) throw new Error('Failed to recreate column')
+                const newCol = await res.json()
+                newColId = newCol.id
 
-              // Move tickets back into the recreated column
+                // Update board store
+                const bs = useBoardStore.getState()
+                const currentCols = bs.getColumns(entry.projectId)
+                bs.setColumns(entry.projectId, [...currentCols, { ...newCol, tickets: [] }])
+
+                // Move tickets back into the recreated column
+                if (action.movedTickets && action.movedTickets.length > 0) {
+                  for (const moved of action.movedTickets) {
+                    await apiFetch(`/api/projects/${entry.projectId}/tickets/${moved.ticketId}`, {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(tabId && { 'X-Tab-Id': tabId }),
+                      },
+                      body: JSON.stringify({ columnId: newCol.id }),
+                    })
+                  }
+                }
+
+                queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+              }
+
+              // Move tickets in store (works for both demo and production)
               if (action.movedTickets && action.movedTickets.length > 0) {
                 for (const moved of action.movedTickets) {
-                  await apiFetch(`/api/projects/${entry.projectId}/tickets/${moved.ticketId}`, {
-                    method: 'PATCH',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      ...(tabId && { 'X-Tab-Id': tabId }),
-                    },
-                    body: JSON.stringify({ columnId: newCol.id }),
-                  })
-                  // Optimistic: move ticket in store
                   const updatedBs = useBoardStore.getState()
                   updatedBs.moveTicket(
                     entry.projectId,
                     moved.ticketId,
                     moved.fromColumnId,
-                    newCol.id,
+                    newColId,
                     0,
                   )
                 }
               }
 
-              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
-
               // Push to undo with new column ID and moved ticket info
               redoStore.pushColumnCreate(
                 entry.projectId,
-                newCol.id,
+                newColId,
                 action.columnName,
                 true,
                 action.movedTickets?.map((t) => ({
@@ -1680,20 +1730,22 @@ export function KeyboardShortcuts() {
           redoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              await apiFetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(tabId && { 'X-Tab-Id': tabId }),
-                },
-                body: JSON.stringify({
-                  name: action.newName,
-                  icon: action.newIcon,
-                  color: action.newColor,
-                }),
-              })
-              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                await apiFetch(`/api/projects/${entry.projectId}/columns/${action.columnId}`, {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(tabId && { 'X-Tab-Id': tabId }),
+                  },
+                  body: JSON.stringify({
+                    name: action.newName,
+                    icon: action.newIcon,
+                    color: action.newColor,
+                  }),
+                })
+                queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+              }
             } catch (err) {
               console.error('Failed to redo column rename:', err)
             } finally {
@@ -1745,20 +1797,22 @@ export function KeyboardShortcuts() {
           redoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              const deleteUrl = new URL(
-                withBasePath(`/api/projects/${entry.projectId}/columns/${action.column.id}`),
-                window.location.origin,
-              )
-              if (action.column.tickets.length > 0) {
-                deleteUrl.searchParams.set('moveTicketsTo', action.movedToColumnId)
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                const deleteUrl = new URL(
+                  withBasePath(`/api/projects/${entry.projectId}/columns/${action.column.id}`),
+                  window.location.origin,
+                )
+                if (action.column.tickets.length > 0) {
+                  deleteUrl.searchParams.set('moveTicketsTo', action.movedToColumnId)
+                }
+                await fetch(deleteUrl.toString(), {
+                  method: 'DELETE',
+                  headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
+                })
+                queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
+                queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(entry.projectId) })
               }
-              await fetch(deleteUrl.toString(), {
-                method: 'DELETE',
-                headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
-              })
-              queryClient.invalidateQueries({ queryKey: columnKeys.byProject(entry.projectId) })
-              queryClient.invalidateQueries({ queryKey: ticketKeys.byProject(entry.projectId) })
             } catch (err) {
               console.error('Failed to redo column delete:', err)
             } finally {
@@ -1798,39 +1852,41 @@ export function KeyboardShortcuts() {
           // Re-add the attachments and update IDs
           ;(async () => {
             try {
-              const tabId = getTabId()
-              for (const att of action.attachments) {
-                const res = await fetch(
-                  `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
-                  {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      ...(tabId && { 'X-Tab-Id': tabId }),
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                for (const att of action.attachments) {
+                  const res = await fetch(
+                    `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(tabId && { 'X-Tab-Id': tabId }),
+                      },
+                      body: JSON.stringify({
+                        attachments: [
+                          {
+                            filename: att.attachment.filename,
+                            originalName: att.attachment.originalName,
+                            mimeType: att.attachment.mimetype,
+                            size: att.attachment.size,
+                            url: att.attachment.url,
+                          },
+                        ],
+                      }),
                     },
-                    body: JSON.stringify({
-                      attachments: [
-                        {
-                          filename: att.attachment.filename,
-                          originalName: att.attachment.originalName,
-                          mimeType: att.attachment.mimetype,
-                          size: att.attachment.size,
-                          url: att.attachment.url,
-                        },
-                      ],
-                    }),
-                  },
-                )
-                if (res.ok) {
-                  await res.json()
+                  )
+                  if (res.ok) {
+                    await res.json()
+                  }
+                  queryClient.invalidateQueries({
+                    queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  })
                 }
                 queryClient.invalidateQueries({
-                  queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  queryKey: ticketKeys.byProject(entry.projectId),
                 })
               }
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
             } catch (err) {
               console.error('Failed to redo attachment add:', err)
             } finally {
@@ -1846,22 +1902,24 @@ export function KeyboardShortcuts() {
           redoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              for (const att of action.attachments) {
-                await fetch(
-                  `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
-                  {
-                    method: 'DELETE',
-                    headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
-                  },
-                )
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                for (const att of action.attachments) {
+                  await fetch(
+                    `/api/projects/${att.projectId}/tickets/${att.ticketId}/attachments/${att.attachment.id}`,
+                    {
+                      method: 'DELETE',
+                      headers: { ...(tabId && { 'X-Tab-Id': tabId }) },
+                    },
+                  )
+                  queryClient.invalidateQueries({
+                    queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  })
+                }
                 queryClient.invalidateQueries({
-                  queryKey: attachmentKeys.forTicket(att.projectId, att.ticketId),
+                  queryKey: ticketKeys.byProject(entry.projectId),
                 })
               }
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
             } catch (err) {
               console.error('Failed to redo attachment delete:', err)
             } finally {
@@ -1904,41 +1962,45 @@ export function KeyboardShortcuts() {
           redoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              const res = await apiFetch(
-                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    ...(tabId && { 'X-Tab-Id': tabId }),
+              if (isDemoMode()) {
+                redoStore.pushLinkCreate(entry.projectId, action.link, true)
+              } else {
+                const tabId = getTabId()
+                const res = await apiFetch(
+                  `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
+                    body: JSON.stringify({
+                      linkType: action.link.linkType,
+                      targetTicketId: action.link.targetTicketId,
+                    }),
                   },
-                  body: JSON.stringify({
-                    linkType: action.link.linkType,
-                    targetTicketId: action.link.targetTicketId,
-                  }),
-                },
-              )
-              if (!res.ok) throw new Error('Failed to re-create link')
-              const newLink = await res.json()
-              // Push with updated link ID
-              redoStore.pushLinkCreate(
-                entry.projectId,
-                { ...action.link, linkId: newLink.id },
-                true,
-              )
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(
-                  action.link.projectId,
-                  action.link.targetTicketId,
-                ),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
+                )
+                if (!res.ok) throw new Error('Failed to re-create link')
+                const newLink = await res.json()
+                // Push with updated link ID
+                redoStore.pushLinkCreate(
+                  entry.projectId,
+                  { ...action.link, linkId: newLink.id },
+                  true,
+                )
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(
+                    action.link.projectId,
+                    action.link.targetTicketId,
+                  ),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
+                })
+              }
             } catch (err) {
               console.error('Failed to redo link create:', err)
               showToast.error('Failed to redo link creation')
@@ -1958,50 +2020,54 @@ export function KeyboardShortcuts() {
           redoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              const headers: HeadersInit = {
-                'Content-Type': 'application/json',
-                ...(tabId && { 'X-Tab-Id': tabId }),
-              }
-              const results = await Promise.allSettled(
-                action.links.map(async (link) => {
-                  const res = await apiFetch(
-                    `/api/projects/${link.projectId}/tickets/${link.ticketId}/links`,
-                    {
-                      method: 'POST',
-                      headers,
-                      body: JSON.stringify({
-                        linkType: link.linkType,
-                        targetTicketId: link.targetTicketId,
-                      }),
-                    },
-                  )
-                  if (!res.ok) throw new Error('Failed to re-create link')
-                  const newLink = await res.json()
-                  return { ...link, linkId: newLink.id }
-                }),
-              )
-              const updatedLinks = results
-                .filter((r): r is PromiseFulfilledResult<LinkAction> => r.status === 'fulfilled')
-                .map((r) => r.value)
-              if (updatedLinks.length > 0) {
-                redoStore.pushBulkLinkCreate(entry.projectId, updatedLinks, true)
-              }
-              // Invalidate source ticket
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(
-                  action.links[0].projectId,
-                  action.links[0].ticketId,
-                ),
-              })
-              for (const link of action.links) {
+              if (isDemoMode()) {
+                redoStore.pushBulkLinkCreate(entry.projectId, action.links, true)
+              } else {
+                const tabId = getTabId()
+                const headers: HeadersInit = {
+                  'Content-Type': 'application/json',
+                  ...(tabId && { 'X-Tab-Id': tabId }),
+                }
+                const results = await Promise.allSettled(
+                  action.links.map(async (link) => {
+                    const res = await apiFetch(
+                      `/api/projects/${link.projectId}/tickets/${link.ticketId}/links`,
+                      {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({
+                          linkType: link.linkType,
+                          targetTicketId: link.targetTicketId,
+                        }),
+                      },
+                    )
+                    if (!res.ok) throw new Error('Failed to re-create link')
+                    const newLink = await res.json()
+                    return { ...link, linkId: newLink.id }
+                  }),
+                )
+                const updatedLinks = results
+                  .filter((r): r is PromiseFulfilledResult<LinkAction> => r.status === 'fulfilled')
+                  .map((r) => r.value)
+                if (updatedLinks.length > 0) {
+                  redoStore.pushBulkLinkCreate(entry.projectId, updatedLinks, true)
+                }
+                // Invalidate source ticket
                 queryClient.invalidateQueries({
-                  queryKey: ticketLinkKeys.byTicket(link.projectId, link.targetTicketId),
+                  queryKey: ticketLinkKeys.byTicket(
+                    action.links[0].projectId,
+                    action.links[0].ticketId,
+                  ),
+                })
+                for (const link of action.links) {
+                  queryClient.invalidateQueries({
+                    queryKey: ticketLinkKeys.byTicket(link.projectId, link.targetTicketId),
+                  })
+                }
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
                 })
               }
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
             } catch (err) {
               console.error('Failed to redo bulk link create:', err)
               showToast.error('Failed to redo link creation')
@@ -2021,30 +2087,32 @@ export function KeyboardShortcuts() {
           redoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              const res = await apiFetch(
-                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
-                {
-                  method: 'DELETE',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    ...(tabId && { 'X-Tab-Id': tabId }),
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                const res = await apiFetch(
+                  `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                  {
+                    method: 'DELETE',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
                   },
-                },
-              )
-              if (!res.ok) throw new Error('Failed to re-delete link')
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(
-                  action.link.projectId,
-                  action.link.targetTicketId,
-                ),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
+                )
+                if (!res.ok) throw new Error('Failed to re-delete link')
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(
+                    action.link.projectId,
+                    action.link.targetTicketId,
+                  ),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
+                })
+              }
             } catch (err) {
               console.error('Failed to redo link delete:', err)
               showToast.error('Failed to redo link deletion')
@@ -2066,31 +2134,33 @@ export function KeyboardShortcuts() {
           redoStore.setProcessing(true)
           ;(async () => {
             try {
-              const tabId = getTabId()
-              const res = await apiFetch(
-                `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
-                {
-                  method: 'PATCH',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    ...(tabId && { 'X-Tab-Id': tabId }),
+              if (!isDemoMode()) {
+                const tabId = getTabId()
+                const res = await apiFetch(
+                  `/api/projects/${action.link.projectId}/tickets/${action.link.ticketId}/links/${action.link.linkId}`,
+                  {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(tabId && { 'X-Tab-Id': tabId }),
+                    },
+                    body: JSON.stringify({ linkType: action.newLinkType }),
                   },
-                  body: JSON.stringify({ linkType: action.newLinkType }),
-                },
-              )
-              if (!res.ok) throw new Error('Failed to re-apply link type')
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketLinkKeys.byTicket(
-                  action.link.projectId,
-                  action.link.targetTicketId,
-                ),
-              })
-              queryClient.invalidateQueries({
-                queryKey: ticketKeys.byProject(entry.projectId),
-              })
+                )
+                if (!res.ok) throw new Error('Failed to re-apply link type')
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(action.link.projectId, action.link.ticketId),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketLinkKeys.byTicket(
+                    action.link.projectId,
+                    action.link.targetTicketId,
+                  ),
+                })
+                queryClient.invalidateQueries({
+                  queryKey: ticketKeys.byProject(entry.projectId),
+                })
+              }
             } catch (err) {
               console.error('Failed to redo link update:', err)
               showToast.error('Failed to redo link type change')

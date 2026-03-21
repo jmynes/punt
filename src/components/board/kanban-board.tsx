@@ -26,6 +26,7 @@ import {
   reorderTickets as reorderTicketsAction,
 } from '@/lib/actions'
 import { apiFetch } from '@/lib/base-path'
+import { isDemoMode } from '@/lib/demo'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showToast } from '@/lib/toast'
 import { useBoardStore } from '@/stores/board-store'
@@ -280,31 +281,33 @@ export function KanbanBoard({
         setColumns(projectId, reorderedColumns)
 
         // Persist to server
-        try {
-          const tabId = getTabId()
-          const headers: HeadersInit = {
-            'Content-Type': 'application/json',
-            ...(tabId && { 'X-Tab-Id': tabId }),
+        if (!isDemoMode()) {
+          try {
+            const tabId = getTabId()
+            const headers: HeadersInit = {
+              'Content-Type': 'application/json',
+              ...(tabId && { 'X-Tab-Id': tabId }),
+            }
+
+            const res = await apiFetch(`/api/projects/${projectKey}/columns/reorder`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ columnIds: reorderedColumns.map((c) => c.id) }),
+            })
+
+            if (!res.ok) {
+              const error = await res.json().catch(() => ({ error: 'Failed to reorder columns' }))
+              throw new Error(error.error ?? 'Failed to reorder columns')
+            }
+
+            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
+          } catch (error) {
+            // Rollback on failure
+            setColumns(projectId, columns)
+            showToast.error('Failed to reorder columns', {
+              description: error instanceof Error ? error.message : 'An error occurred',
+            })
           }
-
-          const res = await apiFetch(`/api/projects/${projectKey}/columns/reorder`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ columnIds: reorderedColumns.map((c) => c.id) }),
-          })
-
-          if (!res.ok) {
-            const error = await res.json().catch(() => ({ error: 'Failed to reorder columns' }))
-            throw new Error(error.error ?? 'Failed to reorder columns')
-          }
-
-          queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
-        } catch (error) {
-          // Rollback on failure
-          setColumns(projectId, columns)
-          showToast.error('Failed to reorder columns', {
-            description: error instanceof Error ? error.message : 'An error occurred',
-          })
         }
         return
       }

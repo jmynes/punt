@@ -22,6 +22,7 @@ import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { moveTickets as moveTicketsAction } from '@/lib/actions'
 import { apiFetch } from '@/lib/base-path'
+import { isDemoMode } from '@/lib/demo'
 import { PERMISSIONS } from '@/lib/permissions'
 import { COLUMN_ICON_OPTIONS, getColumnIcon, resolveColumnColor } from '@/lib/status-icons'
 import { showToast } from '@/lib/toast'
@@ -109,30 +110,51 @@ export function AddColumnButton({
 
     setIsCreating(true)
     try {
-      const tabId = getTabId()
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...(tabId && { 'X-Tab-Id': tabId }),
+      let newColumn: {
+        id: string
+        name: string
+        icon: string | null
+        color: string | null
+        order: number
+        projectId: string
       }
 
-      const body: { name: string; icon?: string | null; color?: string | null } = {
-        name: trimmedName,
+      if (isDemoMode()) {
+        const columns = getColumns(projectId)
+        newColumn = {
+          id: `column-${Date.now()}`,
+          name: trimmedName,
+          icon: iconValue ?? null,
+          color: colorValue ?? null,
+          order: columns.length,
+          projectId,
+        }
+      } else {
+        const tabId = getTabId()
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+          ...(tabId && { 'X-Tab-Id': tabId }),
+        }
+
+        const body: { name: string; icon?: string | null; color?: string | null } = {
+          name: trimmedName,
+        }
+        if (iconValue !== null) body.icon = iconValue
+        if (colorValue !== null) body.color = colorValue
+
+        const res = await apiFetch(`/api/projects/${projectKey}/columns`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        })
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ error: 'Failed to create column' }))
+          throw new Error(error.error || 'Failed to create column')
+        }
+
+        newColumn = await res.json()
       }
-      if (iconValue !== null) body.icon = iconValue
-      if (colorValue !== null) body.color = colorValue
-
-      const res = await apiFetch(`/api/projects/${projectKey}/columns`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-      })
-
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ error: 'Failed to create column' }))
-        throw new Error(error.error || 'Failed to create column')
-      }
-
-      const newColumn = await res.json()
 
       // Optimistically add the column to the board store
       const columns = getColumns(projectId)

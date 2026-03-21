@@ -102,6 +102,7 @@ export function useUpdateMember(projectId: string) {
 
   return useMutation({
     mutationFn: async ({ memberId, ...data }: UpdateMemberData) => {
+      if (isDemoMode()) return {} as MemberDetails
       const res = await apiFetch(`/api/projects/${projectId}/members/${memberId}`, {
         method: 'PATCH',
         headers: {
@@ -139,6 +140,7 @@ export function useRemoveMember(projectId: string) {
 
   return useMutation({
     mutationFn: async (memberId: string) => {
+      if (isDemoMode()) return {}
       const res = await apiFetch(`/api/projects/${projectId}/members/${memberId}`, {
         method: 'DELETE',
         headers: {
@@ -184,6 +186,7 @@ export function useAddMember(projectId: string) {
 
   return useMutation({
     mutationFn: async (data: AddMemberData) => {
+      if (isDemoMode()) return {} as ProjectMemberWithRole
       const res = await apiFetch(`/api/projects/${projectId}/members`, {
         method: 'POST',
         headers: {
