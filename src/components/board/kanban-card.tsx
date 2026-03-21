@@ -33,15 +33,9 @@ interface KanbanCardProps {
   ticket: TicketWithRelations
   projectKey: string
   allTicketIds?: string[]
-  isBeingDragged?: boolean
 }
 
-export function KanbanCard({
-  ticket,
-  projectKey,
-  allTicketIds = [],
-  isBeingDragged = false,
-}: KanbanCardProps) {
+export function KanbanCard({ ticket, projectKey, allTicketIds = [] }: KanbanCardProps) {
   const { setActiveTicketId } = useUIStore()
   const { isSelected, selectTicket, toggleTicket, selectRange } = useSelectionStore()
   const selected = isSelected(ticket.id)
@@ -110,11 +104,6 @@ export function KanbanCard({
         link.direction === 'inward' ? INVERSE_LINK_TYPES[link.linkType as LinkType] : link.linkType
       return displayType === 'is_blocked_by' && !link.linkedTicket.resolution
     }) ?? false
-
-  // Hide the card if it's being dragged (for multi-drag support)
-  if (isBeingDragged) {
-    return null
-  }
 
   return (
     <TicketContextMenu ticket={ticket} view="board">
