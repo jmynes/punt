@@ -3,6 +3,7 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { ArrowUpDown, Check, GripVertical, Plus } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -86,10 +87,36 @@ export function KanbanColumn({
     },
   })
 
-  // Exclude dragged tickets from SortableContext items to prevent transform calculation issues
-  const ticketIds = sortedTickets
-    .filter((t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId)
-    .map((t) => t.id)
+  // Exclude dragged tickets — they're represented by the DragOverlay
+  const visibleTickets = sortedTickets.filter(
+    (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
+  )
+  const ticketIds = visibleTickets.map((t) => t.id)
+
+  // Absolutely-positioned drop indicator — doesn't shift card layout
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [indicatorTop, setIndicatorTop] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (activeDragTarget === null || !contentRef.current) {
+      setIndicatorTop(null)
+      return
+    }
+    const container = contentRef.current
+    const wrappers = container.querySelectorAll<HTMLElement>(':scope > [data-ticket-id]')
+
+    if (wrappers.length === 0) {
+      setIndicatorTop(0)
+      return
+    }
+    if (activeDragTarget >= wrappers.length) {
+      const last = wrappers[wrappers.length - 1]
+      setIndicatorTop(last.offsetTop + last.offsetHeight + 4)
+    } else {
+      const target = wrappers[activeDragTarget]
+      setIndicatorTop(target.offsetTop - 4)
+    }
+  }, [activeDragTarget])
 
   const { icon: StatusIcon, color: statusColor } = getColumnIcon(
     column.icon,
@@ -259,79 +286,51 @@ export function KanbanColumn({
 
       {/* Column content - scrollable area */}
       <ScrollArea className="flex-1 min-h-0">
-        <div ref={setNodeRef} className="flex flex-col gap-2 min-h-[100px] p-2">
+        <div
+          ref={(node) => {
+            setNodeRef(node)
+            ;(contentRef as React.MutableRefObject<HTMLDivElement | null>).current = node
+          }}
+          data-column-id={column.id}
+          className="relative flex flex-col gap-2 min-h-[100px] p-2"
+        >
           <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
-            {sortedTickets.map((ticket, _index) => {
-              // Hide ticket if it's in the drag selection OR if it's the active ticket being dragged
-              const isBeingDragged =
-                dragSelectionIds.includes(ticket.id) || ticket.id === activeTicketId
-              // Calculate the visual index (excluding dragged tickets)
-              const visibleTickets = sortedTickets.filter(
-                (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
-              )
-              const visualIndex = visibleTickets.findIndex((t) => t.id === ticket.id)
-
-              // Show insertion point before this ticket if it's the target
-              const showInsertionPoint =
-                activeDragTarget !== null &&
-                !isBeingDragged &&
-                visualIndex === activeDragTarget &&
-                dragSelectionIds.length > 0
-
-              return (
-                <div key={ticket.id}>
-                  {/* Show full-size placeholder before this ticket if it's the target */}
-                  {showInsertionPoint && (
-                    <div className="mb-2 rounded-lg border-2 border-amber-500/50 border-dashed bg-amber-500/10 min-h-[120px] flex items-center justify-center pointer-events-none">
-                      <span className="text-xs text-amber-500/70">Drop here</span>
-                    </div>
-                  )}
-                  <KanbanCard
-                    ticket={ticket}
-                    projectKey={projectKey}
-                    allTicketIds={ticketIds}
-                    isBeingDragged={isBeingDragged}
-                  />
-                </div>
-              )
-            })}
+            {visibleTickets.map((ticket) => (
+              <div key={ticket.id} data-ticket-id={ticket.id}>
+                <KanbanCard ticket={ticket} projectKey={projectKey} allTicketIds={ticketIds} />
+              </div>
+            ))}
           </SortableContext>
 
-          {/* Drop zone at bottom - droppable area for inserting at end */}
-          {(() => {
-            const visibleCount = sortedTickets.filter(
-              (t) => !dragSelectionIds.includes(t.id) && t.id !== activeTicketId,
-            ).length
-            const isDragging = dragSelectionIds.length > 0 || activeTicketId
-            const showEndPlaceholder =
-              activeDragTarget !== null && activeDragTarget >= visibleCount && isDragging
-            return (
-              <div
-                ref={setEndDropRef}
-                className={cn(
-                  'min-h-[80px] flex-1 rounded-lg',
-                  isDragging && 'min-h-[100px]',
-                  isOverEnd &&
-                    !showEndPlaceholder &&
-                    'bg-amber-500/10 border-2 border-dashed border-amber-500/50',
-                )}
-              >
-                {/* Show full-size placeholder at the end if target is beyond last ticket */}
-                {showEndPlaceholder && (
-                  <div className="rounded-lg border-2 border-amber-500/50 border-dashed bg-amber-500/10 min-h-[120px] flex items-center justify-center pointer-events-none">
-                    <span className="text-xs text-amber-500/70">Drop here</span>
-                  </div>
-                )}
-
-                {/* Drop zone indicator when empty and not dragging */}
-                {sortedTickets.length === 0 && !activeTicketId && dragSelectionIds.length === 0 && (
-                  <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-lg">
-                    <span className="text-xs text-zinc-600 select-none">Drop tickets here</span>
-                  </div>
-                )}
+          {/* Drop zone at bottom */}
+          <div
+            ref={setEndDropRef}
+            className={cn(
+              'min-h-[80px] flex-1 rounded-lg',
+              (dragSelectionIds.length > 0 || activeTicketId) && 'min-h-[100px]',
+              isOverEnd && 'bg-amber-500/10 border-2 border-dashed border-amber-500/50',
+            )}
+          >
+            {sortedTickets.length === 0 && !activeTicketId && dragSelectionIds.length === 0 && (
+              <div className="flex items-center justify-center h-24 border-2 border-dashed border-zinc-800 rounded-lg">
+                <span className="text-xs text-zinc-600 select-none">Drop tickets here</span>
               </div>
-            )
-          })()}
+            )}
+          </div>
+
+          {/* Absolutely-positioned drop indicator line — doesn't shift card layout */}
+          {indicatorTop !== null && (
+            <div
+              className="absolute left-2 right-2 pointer-events-none z-10"
+              style={{ top: indicatorTop }}
+            >
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.6)]" />
+                <div className="flex-1 h-0.5 bg-amber-500" />
+                <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.6)]" />
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
 

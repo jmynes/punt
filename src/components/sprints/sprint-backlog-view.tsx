@@ -23,6 +23,7 @@ import {
 } from '@/hooks/queries/use-sprints'
 import { updateTicketAPI } from '@/hooks/queries/use-tickets'
 import { isCompletedColumn } from '@/lib/sprint-utils'
+import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
 import { cn } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
@@ -287,6 +288,19 @@ export function SprintBacklogView({
         return
       }
 
+      // When sort is active, positional reorder is meaningless
+      if (sort !== null) {
+        const sourceSectionKey = activeTicket?.sprintId ?? 'backlog'
+        if (targetSectionId === sourceSectionKey) {
+          // Same-section: suppress indicator entirely
+          setDropPosition(null)
+          return
+        }
+        // Cross-section: highlight target section (no line indicator)
+        setDropPosition({ sectionId: targetSectionId, insertIndex: -1 })
+        return
+      }
+
       const sectionTickets = ticketsBySprint[targetSectionId] ?? []
 
       let insertIndex: number
@@ -312,7 +326,7 @@ export function SprintBacklogView({
         insertIndex,
       })
     },
-    [ticketsBySprint],
+    [ticketsBySprint, sort, activeTicket],
   )
 
   // Handle drag end
@@ -359,7 +373,12 @@ export function SprintBacklogView({
         ticketsChangingSprint.length === 0 &&
         (overData?.type === 'ticket' || overData?.type === 'section-end')
       ) {
-        if (sort !== null) return // Sort active, manual reorder disabled
+        if (sort !== null) {
+          showToast.info('Clear column sort to reorder manually', {
+            description: 'Click the sorted column header to remove sorting',
+          })
+          return
+        }
 
         const sourceSprintId = ticketsToMove[0]?.sprintId ?? null
         const sectionKey = sourceSprintId ?? 'backlog'
