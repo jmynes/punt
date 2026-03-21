@@ -82,7 +82,17 @@ export function useAddAttachments() {
       ticketId: string
       attachments: AddAttachmentParams[]
     }) => {
-      if (isDemoMode()) return [] as AttachmentInfo[]
+      if (isDemoMode()) {
+        // Can't store actual files in localStorage; return mock attachments with metadata
+        return attachments.map((a) => ({
+          id: `demo-attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          filename: a.originalName,
+          mimeType: a.mimeType,
+          size: a.size,
+          url: a.url,
+          createdAt: new Date(),
+        })) as AttachmentInfo[]
+      }
       const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/attachments`, {
         method: 'POST',
         headers: {

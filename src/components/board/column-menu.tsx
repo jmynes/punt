@@ -42,7 +42,7 @@ import { columnKeys, ticketKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { apiFetch, withBasePath } from '@/lib/base-path'
-import { isDemoMode } from '@/lib/demo'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { PERMISSIONS } from '@/lib/permissions'
 import {
   COLUMN_ICON_OPTIONS,
@@ -112,7 +112,12 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       reorderedColumns.sort((a, b) => a.order - b.order)
       setColumns(projectId, reorderedColumns)
 
-      if (!isDemoMode()) {
+      if (isDemoMode()) {
+        demoStorage.reorderColumns(
+          projectId,
+          reorderedColumns.map((c) => c.id),
+        )
+      } else {
         try {
           const tabId = getTabId()
           const headers: HeadersInit = {
@@ -180,7 +185,13 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
 
     setRenameLoading(true)
     try {
-      if (!isDemoMode()) {
+      if (isDemoMode()) {
+        demoStorage.updateColumn(projectId, column.id, {
+          name: nameChanged ? trimmedName : undefined,
+          icon: iconValue,
+          color: colorValue,
+        })
+      } else {
         const tabId = getTabId()
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
@@ -272,7 +283,9 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
 
     setDeleteLoading(true)
     try {
-      if (!isDemoMode()) {
+      if (isDemoMode()) {
+        demoStorage.deleteColumn(projectId, column.id)
+      } else {
         const tabId = getTabId()
         const headers: HeadersInit = {
           ...(tabId && { 'X-Tab-Id': tabId }),

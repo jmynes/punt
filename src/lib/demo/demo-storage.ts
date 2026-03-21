@@ -36,6 +36,9 @@ const KEYS = {
   tickets: (projectId: string) => `${DEMO_STORAGE_PREFIX}tickets-${projectId}`,
   labels: (projectId: string) => `${DEMO_STORAGE_PREFIX}labels-${projectId}`,
   sprints: (projectId: string) => `${DEMO_STORAGE_PREFIX}sprints-${projectId}`,
+  comments: (projectId: string, ticketId: string) =>
+    `${DEMO_STORAGE_PREFIX}comments-${projectId}-${ticketId}`,
+  ticketLinks: (projectId: string) => `${DEMO_STORAGE_PREFIX}ticket-links-${projectId}`,
   members: (projectId: string) => `${DEMO_STORAGE_PREFIX}members-${projectId}`,
   roles: (projectId: string) => `${DEMO_STORAGE_PREFIX}roles-${projectId}`,
   ticketCounter: (projectId: string) => `${DEMO_STORAGE_PREFIX}ticket-counter-${projectId}`,
@@ -92,6 +95,9 @@ class DemoStorage {
 
       const projectSprints = DEMO_SPRINTS.filter((s) => s.projectId === project.id)
       localStorage.setItem(KEYS.sprints(project.id), JSON.stringify(projectSprints))
+
+      // Initialize empty ticket links
+      localStorage.setItem(KEYS.ticketLinks(project.id), JSON.stringify([]))
 
       // Seed members with varied roles per project
       const projectMembers = getDemoMembersForProject(project.id)
@@ -239,6 +245,58 @@ class DemoStorage {
     }))
   }
 
+  createColumn(
+    projectId: string,
+    data: { name: string; icon?: string | null; color?: string | null },
+  ): DemoColumn {
+    const columns = this.getColumns(projectId)
+    const newColumn: DemoColumn = {
+      id: `demo-col-${Date.now()}`,
+      name: data.name,
+      icon: data.icon ?? null,
+      color: data.color ?? null,
+      order: columns.length,
+      projectId,
+    }
+    columns.push(newColumn)
+    localStorage.setItem(KEYS.columns(projectId), JSON.stringify(columns))
+    return newColumn
+  }
+
+  updateColumn(
+    projectId: string,
+    columnId: string,
+    data: { name?: string; icon?: string | null; color?: string | null },
+  ): DemoColumn | null {
+    const columns = this.getColumns(projectId)
+    const index = columns.findIndex((c) => c.id === columnId)
+    if (index === -1) return null
+    columns[index] = { ...columns[index], ...data }
+    localStorage.setItem(KEYS.columns(projectId), JSON.stringify(columns))
+    return columns[index]
+  }
+
+  deleteColumn(projectId: string, columnId: string): void {
+    const columns = this.getColumns(projectId).filter((c) => c.id !== columnId)
+    // Reorder remaining columns
+    for (let i = 0; i < columns.length; i++) {
+      columns[i].order = i
+    }
+    localStorage.setItem(KEYS.columns(projectId), JSON.stringify(columns))
+  }
+
+  reorderColumns(projectId: string, columnIds: string[]): void {
+    const columns = this.getColumns(projectId)
+    const reordered = columnIds
+      .map((id, index) => {
+        const col = columns.find((c) => c.id === id)
+        if (!col) return null
+        return { ...col, order: index }
+      })
+      .filter((c): c is DemoColumn => c !== null)
+    localStorage.setItem(KEYS.columns(projectId), JSON.stringify(reordered))
+  }
+
   // ============================================================================
   // Tickets
   // ============================================================================
@@ -379,6 +437,96 @@ class DemoStorage {
           }
         : null,
     }
+  }
+
+  // ============================================================================
+  // Comments
+  // ============================================================================
+
+  getComments(projectId: string, ticketId: string): DemoComment[] {
+    if (!this.isClient) return []
+    const data = localStorage.getItem(KEYS.comments(projectId, ticketId))
+    if (!data) return []
+    const comments: DemoComment[] = JSON.parse(data)
+    return comments.map((c) => ({
+      ...c,
+      createdAt: new Date(c.createdAt),
+      updatedAt: new Date(c.updatedAt),
+    }))
+  }
+
+  createComment(projectId: string, ticketId: string, data: { content: string }): DemoComment {
+    const comments = this.getComments(projectId, ticketId)
+    const newComment: DemoComment = {
+      id: `demo-comment-${Date.now()}`,
+      content: data.content,
+      ticketId,
+      authorId: DEMO_USER.id,
+      author: DEMO_USER_SUMMARY,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    comments.push(newComment)
+    localStorage.setItem(KEYS.comments(projectId, ticketId), JSON.stringify(comments))
+    return newComment
+  }
+
+  updateComment(
+    projectId: string,
+    ticketId: string,
+    commentId: string,
+    data: { content: string },
+  ): DemoComment | null {
+    const comments = this.getComments(projectId, ticketId)
+    const index = comments.findIndex((c) => c.id === commentId)
+    if (index === -1) return null
+    comments[index] = { ...comments[index], content: data.content, updatedAt: new Date() }
+    localStorage.setItem(KEYS.comments(projectId, ticketId), JSON.stringify(comments))
+    return comments[index]
+  }
+
+  deleteComment(projectId: string, ticketId: string, commentId: string): void {
+    const comments = this.getComments(projectId, ticketId).filter((c) => c.id !== commentId)
+    localStorage.setItem(KEYS.comments(projectId, ticketId), JSON.stringify(comments))
+  }
+
+  // ============================================================================
+  // Ticket Links
+  // ============================================================================
+
+  getTicketLinks(projectId: string, ticketId: string): DemoTicketLink[] {
+    if (!this.isClient) return []
+    const data = localStorage.getItem(KEYS.ticketLinks(projectId))
+    if (!data) return []
+    const links: DemoTicketLink[] = JSON.parse(data)
+    return links.filter((l) => l.sourceTicketId === ticketId || l.targetTicketId === ticketId)
+  }
+
+  createTicketLink(
+    projectId: string,
+    data: { sourceTicketId: string; targetTicketId: string; linkType: string },
+  ): DemoTicketLink {
+    const allLinks = this.getAllTicketLinks(projectId)
+    const newLink: DemoTicketLink = {
+      id: `demo-link-${Date.now()}`,
+      sourceTicketId: data.sourceTicketId,
+      targetTicketId: data.targetTicketId,
+      linkType: data.linkType,
+    }
+    allLinks.push(newLink)
+    localStorage.setItem(KEYS.ticketLinks(projectId), JSON.stringify(allLinks))
+    return newLink
+  }
+
+  deleteTicketLink(projectId: string, linkId: string): void {
+    const links = this.getAllTicketLinks(projectId).filter((l) => l.id !== linkId)
+    localStorage.setItem(KEYS.ticketLinks(projectId), JSON.stringify(links))
+  }
+
+  private getAllTicketLinks(projectId: string): DemoTicketLink[] {
+    if (!this.isClient) return []
+    const data = localStorage.getItem(KEYS.ticketLinks(projectId))
+    return data ? JSON.parse(data) : []
   }
 
   // ============================================================================
@@ -547,6 +695,52 @@ class DemoStorage {
     return JSON.parse(data)
   }
 
+  addMember(projectId: string, data: { userId: string; roleId: string }): void {
+    const members = this.getMembers(projectId)
+    // Check if already a member
+    if (members.find((m: { userId: string }) => m.userId === data.userId)) return
+
+    // Find user info
+    const allUsers = [DEMO_USER, ...DEMO_TEAM_MEMBERS]
+    const user = allUsers.find((u) => u.id === data.userId)
+    if (!user) return
+
+    const roles = getDemoRolesForProject(projectId)
+    const role = roles.find((r) => r.id === data.roleId) || roles[roles.length - 1]
+
+    members.push({
+      id: `demo-member-${Date.now()}`,
+      userId: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      avatarColor: null,
+      roleId: role.id,
+      roleName: role.name,
+      joinedAt: new Date().toISOString(),
+    })
+    localStorage.setItem(KEYS.members(projectId), JSON.stringify(members))
+  }
+
+  updateMember(projectId: string, memberId: string, data: { roleId: string }): void {
+    const members = this.getMembers(projectId)
+    const index = members.findIndex((m: { id: string }) => m.id === memberId)
+    if (index === -1) return
+
+    const roles = getDemoRolesForProject(projectId)
+    const role = roles.find((r: { id: string }) => r.id === data.roleId)
+    if (role) {
+      members[index] = { ...members[index], roleId: role.id, roleName: role.name }
+      localStorage.setItem(KEYS.members(projectId), JSON.stringify(members))
+    }
+  }
+
+  removeMember(projectId: string, memberId: string): void {
+    const members = this.getMembers(projectId).filter((m: { id: string }) => m.id !== memberId)
+    localStorage.setItem(KEYS.members(projectId), JSON.stringify(members))
+  }
+
   // ============================================================================
   // Roles (Owner, Admin, Member) with member counts
   // ============================================================================
@@ -626,6 +820,29 @@ export interface DemoAdminUser {
   createdAt: string
   lastLoginAt: string | null
   _count: { projects: number }
+}
+
+export interface DemoComment {
+  id: string
+  content: string
+  ticketId: string
+  authorId: string
+  author: {
+    id: string
+    name: string
+    username: string
+    avatar: string | null
+    avatarColor: string | null
+  }
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface DemoTicketLink {
+  id: string
+  sourceTicketId: string
+  targetTicketId: string
+  linkType: string
 }
 
 export const demoStorage = new DemoStorage()

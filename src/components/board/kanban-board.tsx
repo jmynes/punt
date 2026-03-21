@@ -26,7 +26,7 @@ import {
   reorderTickets as reorderTicketsAction,
 } from '@/lib/actions'
 import { apiFetch } from '@/lib/base-path'
-import { isDemoMode } from '@/lib/demo'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showToast } from '@/lib/toast'
 import { useBoardStore } from '@/stores/board-store'
@@ -281,7 +281,12 @@ export function KanbanBoard({
         setColumns(projectId, reorderedColumns)
 
         // Persist to server
-        if (!isDemoMode()) {
+        if (isDemoMode()) {
+          demoStorage.reorderColumns(
+            projectId,
+            reorderedColumns.map((c) => c.id),
+          )
+        } else {
           try {
             const tabId = getTabId()
             const headers: HeadersInit = {
