@@ -39,7 +39,7 @@ export function useTicketComments(projectId: string, ticketId: string) {
           updatedAt: c.updatedAt.toISOString(),
           isSystemGenerated: false,
           source: null,
-        })) as CommentInfo[]
+        })) as unknown as CommentInfo[]
       }
       const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`)
       if (!res.ok) {

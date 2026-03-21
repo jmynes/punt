@@ -831,6 +831,7 @@ export interface DemoComment {
     id: string
     name: string
     username: string
+    email: string
     avatar: string | null
     avatarColor: string | null
   }
