@@ -679,10 +679,25 @@ export default function BacklogPage() {
       const sectionId = (over.data.current?.sectionId as string) ?? 'backlog'
       const insertIndex = over.data.current?.insertIndex as number | undefined
 
-      // Suppress drop indicator when sort is active
-      // (all sections share the backlog sort state)
+      // Resolve target section: for tickets, use their sprintId (sectionId may be absent)
+      const overSprintId = over.data.current?.sprintId as string | null | undefined
+      const targetSection =
+        overType === 'ticket' || overType === 'backlog-ticket'
+          ? (overSprintId ?? 'backlog')
+          : sectionId
+
+      // When sort is active, positional reorder is meaningless
       if (sort !== null) {
-        setDropPosition(null)
+        const sourceSprintId = activeDragDataRef.current?.sprintId ?? null
+        const sourceSectionKey = sourceSprintId ?? 'backlog'
+        if (targetSection === sourceSectionKey) {
+          // Same-section: suppress indicator entirely
+          setDropPosition(null)
+          return
+        }
+        // Cross-section: highlight the target section (no line indicator)
+        // -1 won't match any row index, but non-null triggers the section ring
+        setDropPosition({ sectionId: targetSection, insertIndex: -1 })
         return
       }
 
@@ -793,17 +808,15 @@ export default function BacklogPage() {
 
       const draggedIdSet = new Set(draggedIds)
 
-      // Block any reorder/move when sort is active
-      // (all sections share the sort state, so position is meaningless)
-      if (sort !== null) {
-        showToast.info('Clear column sort to reorder manually', {
-          description: 'Click the sorted column header to remove sorting',
-        })
-        return
-      }
-
       // Case A: Same-section reordering (within sprint or within backlog)
+      // Skip reorder when a column sort is active (sorted view takes precedence)
       if (isSameSection) {
+        if (sort !== null) {
+          showToast.info('Clear column sort to reorder manually', {
+            description: 'Click the sorted column header to remove sorting',
+          })
+          return
+        }
         // Handle backlog reordering (uses local backlogOrder state)
         if (targetSectionKey === 'backlog') {
           const rawBacklogTickets = ticketsBySprint.backlog ?? []

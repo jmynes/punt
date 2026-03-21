@@ -203,13 +203,61 @@ export function SprintSection({
         showCard &&
           isCompleted &&
           'ring-zinc-700 bg-zinc-900/20 opacity-75 [--table-header-bg:#161618]',
-        // Drop target styling - subtle glow when this section is a valid drop target
-        showCard && dropPosition !== null && 'ring-blue-500/40 ring-2',
+        // Drop target styling - ring + glow matched to section accent color
+        showCard &&
+          dropPosition !== null &&
+          isBacklog &&
+          'ring-zinc-400/50 ring-2 bg-zinc-500/10 shadow-[0_0_20px_rgba(161,161,170,0.08)]',
+        showCard &&
+          dropPosition !== null &&
+          isPlanning &&
+          'ring-blue-400/60 ring-2 bg-blue-500/10 shadow-[0_0_20px_rgba(96,165,250,0.12)]',
+        showCard &&
+          dropPosition !== null &&
+          isActive &&
+          !expired &&
+          'ring-emerald-400/60 ring-2 bg-emerald-500/10 shadow-[0_0_20px_rgba(52,211,153,0.12)]',
+        showCard &&
+          dropPosition !== null &&
+          isActive &&
+          expired &&
+          'ring-amber-400/60 ring-2 bg-amber-500/10 shadow-[0_0_20px_rgba(251,191,36,0.12)]',
+        showCard &&
+          dropPosition !== null &&
+          isCompleted &&
+          'ring-zinc-500/50 ring-2 bg-zinc-500/10 opacity-100 shadow-[0_0_20px_rgba(161,161,170,0.06)]',
+        // Non-card sections (e.g. backlog table) get a subtle background highlight
+        !showCard &&
+          dropPosition !== null &&
+          'bg-emerald-500/[0.04] rounded-lg ring-1 ring-emerald-500/20',
         // isOver is useful for empty sections (via callback from TicketListSection)
         showCard &&
           isOverSection &&
           filteredCount === 0 &&
-          'ring-blue-500/50 bg-blue-500/10 ring-2',
+          isBacklog &&
+          'ring-zinc-400/60 bg-zinc-500/10 ring-2',
+        showCard &&
+          isOverSection &&
+          filteredCount === 0 &&
+          isPlanning &&
+          'ring-blue-400/60 bg-blue-500/10 ring-2',
+        showCard &&
+          isOverSection &&
+          filteredCount === 0 &&
+          isActive &&
+          !expired &&
+          'ring-emerald-400/60 bg-emerald-500/10 ring-2',
+        showCard &&
+          isOverSection &&
+          filteredCount === 0 &&
+          isActive &&
+          expired &&
+          'ring-amber-400/60 bg-amber-500/10 ring-2',
+        showCard &&
+          isOverSection &&
+          filteredCount === 0 &&
+          isCompleted &&
+          'ring-zinc-500/60 bg-zinc-500/10 ring-2',
       )}
     >
       {/* Section Header */}
@@ -514,6 +562,36 @@ export function SprintSection({
               </Button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Cross-section drop banner (shown when sort is active, position is auto) */}
+      {dropPosition === -1 && (
+        <div
+          className={cn(
+            'mx-3 mb-2 rounded-lg border border-dashed px-4 py-3',
+            'flex items-center justify-center gap-2',
+            'text-sm font-medium animate-pulse',
+            isBacklog && 'border-zinc-500/40 bg-zinc-500/10 text-zinc-300',
+            isPlanning && 'border-blue-400/40 bg-blue-500/10 text-blue-300',
+            isActive && !expired && 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300',
+            isActive && expired && 'border-amber-400/40 bg-amber-500/10 text-amber-300',
+            isCompleted && 'border-zinc-500/40 bg-zinc-500/10 text-zinc-400',
+            !showCard && 'mx-0',
+          )}
+        >
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+            role="img"
+            aria-label="Drop here"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m0 0l-4-4m4 4l4-4" />
+          </svg>
+          Drop here to move to {isBacklog ? 'Backlog' : (sprint?.name ?? 'this sprint')}
         </div>
       )}
 

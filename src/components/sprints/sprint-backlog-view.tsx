@@ -261,12 +261,6 @@ export function SprintBacklogView({
       const overData = over.data.current
       const draggedIds = draggedIdsRef.current
 
-      // Suppress drop indicator when sort is active
-      if (sort !== null) {
-        setDropPosition(null)
-        return
-      }
-
       // Check if hovering over a sprint section or end-of-list zone
       const isOverSection = overData?.type === 'sprint-section'
       const isOverSectionEnd = overData?.type === 'section-end'
@@ -291,6 +285,19 @@ export function SprintBacklogView({
 
       if (!targetSectionId) {
         setDropPosition(null)
+        return
+      }
+
+      // When sort is active, positional reorder is meaningless
+      if (sort !== null) {
+        const sourceSectionKey = activeTicket?.sprintId ?? 'backlog'
+        if (targetSectionId === sourceSectionKey) {
+          // Same-section: suppress indicator entirely
+          setDropPosition(null)
+          return
+        }
+        // Cross-section: highlight target section (no line indicator)
+        setDropPosition({ sectionId: targetSectionId, insertIndex: -1 })
         return
       }
 
@@ -319,7 +326,7 @@ export function SprintBacklogView({
         insertIndex,
       })
     },
-    [ticketsBySprint, sort],
+    [ticketsBySprint, sort, activeTicket],
   )
 
   // Handle drag end
