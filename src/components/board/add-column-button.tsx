@@ -22,7 +22,7 @@ import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { moveTickets as moveTicketsAction } from '@/lib/actions'
 import { apiFetch } from '@/lib/base-path'
-import { isDemoMode } from '@/lib/demo'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { PERMISSIONS } from '@/lib/permissions'
 import { COLUMN_ICON_OPTIONS, getColumnIcon, resolveColumnColor } from '@/lib/status-icons'
 import { showToast } from '@/lib/toast'
@@ -120,13 +120,17 @@ export function AddColumnButton({
       }
 
       if (isDemoMode()) {
-        const columns = getColumns(projectId)
-        newColumn = {
-          id: `column-${Date.now()}`,
+        const created = demoStorage.createColumn(projectId, {
           name: trimmedName,
-          icon: iconValue ?? null,
-          color: colorValue ?? null,
-          order: columns.length,
+          icon: iconValue,
+          color: colorValue,
+        })
+        newColumn = {
+          id: created.id,
+          name: created.name,
+          icon: created.icon ?? null,
+          color: created.color ?? null,
+          order: created.order,
           projectId,
         }
       } else {
