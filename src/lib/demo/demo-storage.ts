@@ -833,7 +833,7 @@ export interface DemoComment {
     username: string
     email: string
     avatar: string | null
-    avatarColor: string | null
+    avatarColor?: string | null
   }
   createdAt: Date
   updatedAt: Date
