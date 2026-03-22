@@ -150,16 +150,16 @@ export async function moveTickets({
         updatedBoard.updateTicket(projectId, ticketId, changes)
       }
     }
-  }
 
-  // Persist to demoStorage (optimistic store is updated, now sync localStorage)
-  if (isDemoMode()) {
-    for (const ticket of actuallyMoving) {
-      demoStorage.updateTicket(projectId, ticket.id, { columnId: toColumnId, order: insertIndex })
-    }
-    if (resolutionUpdates.length > 0) {
-      for (const { ticketId, changes } of resolutionUpdates) {
-        demoStorage.updateTicket(projectId, ticketId, changes)
+    // Persist to demoStorage (optimistic store is updated, now sync localStorage)
+    if (isDemoMode()) {
+      for (const ticket of actuallyMoving) {
+        demoStorage.updateTicket(projectId, ticket.id, { columnId: toColumnId, order: insertIndex })
+      }
+      if (resolutionUpdates.length > 0) {
+        for (const { ticketId, changes } of resolutionUpdates) {
+          demoStorage.updateTicket(projectId, ticketId, changes)
+        }
       }
     }
   }
