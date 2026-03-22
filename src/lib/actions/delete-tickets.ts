@@ -6,6 +6,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/base-path'
 import { isDemoMode } from '@/lib/demo'
+import { demoStorage } from '@/lib/demo/demo-storage'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -329,6 +330,13 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
   // Optimistic delete - remove from UI immediately
   for (const { ticket } of tickets) {
     boardStore.removeTicket(projectId, ticket.id)
+  }
+
+  // Persist deletes to demoStorage
+  if (isDemoMode()) {
+    for (const { ticket } of tickets) {
+      demoStorage.deleteTicket(projectId, ticket.id)
+    }
   }
 
   // Clear selection (delete always clears since tickets are removed)
