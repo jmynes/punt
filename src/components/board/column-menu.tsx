@@ -42,6 +42,7 @@ import { columnKeys, ticketKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
 import { getTabId } from '@/hooks/use-realtime'
 import { apiFetch, withBasePath } from '@/lib/base-path'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { PERMISSIONS } from '@/lib/permissions'
 import {
   COLUMN_ICON_OPTIONS,
@@ -111,39 +112,45 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
       reorderedColumns.sort((a, b) => a.order - b.order)
       setColumns(projectId, reorderedColumns)
 
-      try {
-        const tabId = getTabId()
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          ...(tabId && { 'X-Tab-Id': tabId }),
+      if (isDemoMode()) {
+        demoStorage.reorderColumns(
+          projectId,
+          reorderedColumns.map((c) => c.id),
+        )
+      } else {
+        try {
+          const tabId = getTabId()
+          const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+            ...(tabId && { 'X-Tab-Id': tabId }),
+          }
+
+          const res = await apiFetch(`/api/projects/${projectKey}/columns/reorder`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ columnIds: reorderedColumns.map((c) => c.id) }),
+          })
+
+          if (!res.ok) {
+            const error = await res.json().catch(() => ({ error: 'Failed to move column' }))
+            throw new Error(error.error ?? 'Failed to move column')
+          }
+
+          // Invalidate column queries to refresh data
+          queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
+        } catch (error) {
+          // Rollback on failure
+          setColumns(projectId, currentColumns)
+          showToast.error('Failed to move column', {
+            description: error instanceof Error ? error.message : 'An error occurred',
+          })
         }
-
-        const res = await apiFetch(`/api/projects/${projectKey}/columns/reorder`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ columnIds: reorderedColumns.map((c) => c.id) }),
-        })
-
-        if (!res.ok) {
-          const error = await res.json().catch(() => ({ error: 'Failed to move column' }))
-          throw new Error(error.error ?? 'Failed to move column')
-        }
-
-        // Invalidate column queries to refresh data
-        queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
-
-        showToast.success('Column moved', {
-          description: `"${column.name}" moved ${direction}`,
-        })
-      } catch (error) {
-        // Rollback on failure
-        setColumns(projectId, currentColumns)
-        showToast.error('Failed to move column', {
-          description: error instanceof Error ? error.message : 'An error occurred',
-        })
-      } finally {
-        setMoveLoading(false)
       }
+
+      showToast.success('Column moved', {
+        description: `"${column.name}" moved ${direction}`,
+      })
+      setMoveLoading(false)
     },
     [column, projectId, projectKey, getColumns, setColumns, queryClient],
   )
@@ -178,26 +185,34 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
 
     setRenameLoading(true)
     try {
-      const tabId = getTabId()
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...(tabId && { 'X-Tab-Id': tabId }),
-      }
+      if (isDemoMode()) {
+        demoStorage.updateColumn(projectId, column.id, {
+          name: nameChanged ? trimmedName : undefined,
+          icon: iconValue,
+          color: colorValue,
+        })
+      } else {
+        const tabId = getTabId()
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+          ...(tabId && { 'X-Tab-Id': tabId }),
+        }
 
-      const body: { name?: string; icon?: string | null; color?: string | null } = {}
-      if (nameChanged) body.name = trimmedName
-      body.icon = iconValue
-      body.color = colorValue
+        const body: { name?: string; icon?: string | null; color?: string | null } = {}
+        if (nameChanged) body.name = trimmedName
+        body.icon = iconValue
+        body.color = colorValue
 
-      const res = await apiFetch(`/api/projects/${projectKey}/columns/${column.id}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify(body),
-      })
+        const res = await apiFetch(`/api/projects/${projectKey}/columns/${column.id}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify(body),
+        })
 
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ error: 'Failed to update column' }))
-        throw new Error(error.error || 'Failed to update column')
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ error: 'Failed to update column' }))
+          throw new Error(error.error || 'Failed to update column')
+        }
       }
 
       const oldName = column.name
@@ -268,27 +283,31 @@ export function ColumnMenu({ column, projectId, projectKey, allColumns }: Column
 
     setDeleteLoading(true)
     try {
-      const tabId = getTabId()
-      const headers: HeadersInit = {
-        ...(tabId && { 'X-Tab-Id': tabId }),
-      }
+      if (isDemoMode()) {
+        demoStorage.deleteColumn(projectId, column.id)
+      } else {
+        const tabId = getTabId()
+        const headers: HeadersInit = {
+          ...(tabId && { 'X-Tab-Id': tabId }),
+        }
 
-      const url = new URL(
-        withBasePath(`/api/projects/${projectKey}/columns/${column.id}`),
-        window.location.origin,
-      )
-      if (column.tickets.length > 0) {
-        url.searchParams.set('moveTicketsTo', moveToColumnId)
-      }
+        const url = new URL(
+          withBasePath(`/api/projects/${projectKey}/columns/${column.id}`),
+          window.location.origin,
+        )
+        if (column.tickets.length > 0) {
+          url.searchParams.set('moveTicketsTo', moveToColumnId)
+        }
 
-      const res = await fetch(url.toString(), {
-        method: 'DELETE',
-        headers,
-      })
+        const res = await fetch(url.toString(), {
+          method: 'DELETE',
+          headers,
+        })
 
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ error: 'Failed to delete column' }))
-        throw new Error(error.error || 'Failed to delete column')
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ error: 'Failed to delete column' }))
+          throw new Error(error.error || 'Failed to delete column')
+        }
       }
 
       // Snapshot the column (with tickets) before removing from store

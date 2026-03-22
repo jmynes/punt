@@ -5,6 +5,7 @@ import { ticketKeys } from '@/hooks/queries/use-tickets'
 import { getTabId } from '@/hooks/use-realtime'
 import { apiFetch } from '@/lib/base-path'
 import type { UserSummary } from '@/lib/data-provider'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 
 export interface CommentInfo {
@@ -31,6 +32,15 @@ export function useTicketComments(projectId: string, ticketId: string) {
   return useQuery<CommentInfo[]>({
     queryKey: commentKeys.forTicket(projectId, ticketId),
     queryFn: async () => {
+      if (isDemoMode()) {
+        return demoStorage.getComments(projectId, ticketId).map((c) => ({
+          ...c,
+          createdAt: c.createdAt.toISOString(),
+          updatedAt: c.updatedAt.toISOString(),
+          isSystemGenerated: false,
+          source: null,
+        })) as unknown as CommentInfo[]
+      }
       const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`)
       if (!res.ok) {
         const error = await res.json()
@@ -59,6 +69,16 @@ export function useAddComment() {
       ticketKey: string
       content: string
     }) => {
+      if (isDemoMode()) {
+        const comment = demoStorage.createComment(projectId, ticketId, { content })
+        return {
+          ...comment,
+          createdAt: comment.createdAt.toISOString(),
+          updatedAt: comment.updatedAt.toISOString(),
+          isSystemGenerated: false,
+          source: null,
+        } as CommentInfo
+      }
       const res = await apiFetch(`/api/projects/${projectId}/tickets/${ticketId}/comments`, {
         method: 'POST',
         headers: {
@@ -109,6 +129,17 @@ export function useUpdateComment() {
       commentId: string
       content: string
     }) => {
+      if (isDemoMode()) {
+        const updated = demoStorage.updateComment(projectId, ticketId, commentId, { content })
+        if (!updated) return {} as CommentInfo
+        return {
+          ...updated,
+          createdAt: updated.createdAt.toISOString(),
+          updatedAt: updated.updatedAt.toISOString(),
+          isSystemGenerated: false,
+          source: null,
+        } as CommentInfo
+      }
       const res = await fetch(
         `/api/projects/${projectId}/tickets/${ticketId}/comments/${commentId}`,
         {
@@ -184,6 +215,10 @@ export function useDeleteComment() {
       ticketKey: string
       commentId: string
     }) => {
+      if (isDemoMode()) {
+        demoStorage.deleteComment(projectId, ticketId, commentId)
+        return {}
+      }
       const res = await fetch(
         `/api/projects/${projectId}/tickets/${ticketId}/comments/${commentId}`,
         {

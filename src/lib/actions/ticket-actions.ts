@@ -11,6 +11,8 @@
  */
 
 import { apiFetch } from '@/lib/base-path'
+import { isDemoMode } from '@/lib/demo'
+import { demoStorage } from '@/lib/demo/demo-storage'
 import { isCompletedColumn } from '@/lib/sprint-utils'
 import { toUpdateTicketInput } from '@/lib/ticket-mutations'
 import { showToast } from '@/lib/toast'
@@ -148,6 +150,18 @@ export async function moveTickets({
         updatedBoard.updateTicket(projectId, ticketId, changes)
       }
     }
+
+    // Persist to demoStorage (optimistic store is updated, now sync localStorage)
+    if (isDemoMode()) {
+      for (const ticket of actuallyMoving) {
+        demoStorage.updateTicket(projectId, ticket.id, { columnId: toColumnId, order: insertIndex })
+      }
+      if (resolutionUpdates.length > 0) {
+        for (const { ticketId, changes } of resolutionUpdates) {
+          demoStorage.updateTicket(projectId, ticketId, changes)
+        }
+      }
+    }
   }
 
   const afterColumns = snapshotColumns(projectId)
@@ -181,7 +195,7 @@ export async function moveTickets({
   try {
     if (actuallyMoving.length === 1) {
       const ticket = actuallyMoving[0]
-      if (!ticket.id.startsWith('ticket-')) {
+      if (!isDemoMode() && !ticket.id.startsWith('ticket-')) {
         const response = await apiFetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'X-Tab-Id': tabId },
@@ -192,7 +206,7 @@ export async function moveTickets({
     } else {
       const realTicketIds = actuallyMoving
         .map((t) => t.id)
-        .filter((id) => !id.startsWith('ticket-'))
+        .filter((id) => !isDemoMode() && !id.startsWith('ticket-'))
       if (realTicketIds.length > 0) {
         const response = await apiFetch(`/api/projects/${projectId}/tickets`, {
           method: 'PATCH',
@@ -303,6 +317,28 @@ export async function updateTickets({
 
   if (undoItems.length === 0) return
 
+  // Persist to demoStorage
+  if (isDemoMode()) {
+    for (const { ticketId, after } of undoItems) {
+      const original = updates.find((u) => u.ticketId === ticketId)
+      if (original) {
+        // Build effective changes including auto-coupled fields
+        const effectiveChanges = { ...original.changes }
+        if ('resolution' in after && !('resolution' in original.changes)) {
+          effectiveChanges.resolution = after.resolution
+          effectiveChanges.resolvedAt = after.resolvedAt
+        }
+        if ('columnId' in after && !('columnId' in original.changes)) {
+          effectiveChanges.columnId = after.columnId
+        }
+        if ('resolvedAt' in after && !('resolvedAt' in original.changes)) {
+          effectiveChanges.resolvedAt = after.resolvedAt
+        }
+        demoStorage.updateTicket(projectId, ticketId, effectiveChanges)
+      }
+    }
+  }
+
   // 3. Undo registration
   if (undo) {
     useUndoStore.getState().pushUpdate(projectId, undoItems)
@@ -311,7 +347,7 @@ export async function updateTickets({
   // 4. API persistence with activity capture
   try {
     for (const item of undoItems) {
-      if (item.ticketId.startsWith('ticket-')) continue
+      if (isDemoMode() || item.ticketId.startsWith('ticket-')) continue
 
       const apiUpdates = toUpdateTicketInput(item.after)
       // Filter to only changed fields
@@ -380,6 +416,17 @@ export async function reorderTickets({
     }
   }
 
+  // Persist reorder to demoStorage
+  if (isDemoMode()) {
+    const updatedColumns = useBoardStore.getState().getColumns(projectId)
+    const updatedColumn = updatedColumns.find((c) => c.id === columnId)
+    if (updatedColumn) {
+      for (const ticket of updatedColumn.tickets) {
+        demoStorage.updateTicket(projectId, ticket.id, { order: ticket.order })
+      }
+    }
+  }
+
   const afterColumns = snapshotColumns(projectId)
 
   // 3. Undo registration
@@ -405,7 +452,7 @@ export async function reorderTickets({
     if (!updatedColumn) return
 
     for (const ticket of updatedColumn.tickets) {
-      if (ticket.id.startsWith('ticket-')) continue
+      if (isDemoMode() || ticket.id.startsWith('ticket-')) continue
       const apiUpdates = toUpdateTicketInput({
         order: ticket.order,
       } as Partial<TicketWithRelations>)

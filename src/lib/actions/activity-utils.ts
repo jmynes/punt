@@ -1,5 +1,6 @@
 import { getTabId } from '@/hooks/use-realtime'
 import { apiFetch } from '@/lib/base-path'
+import { isDemoMode } from '@/lib/demo'
 import type { ActivityMeta } from '@/stores/undo-store'
 
 /**
@@ -25,6 +26,8 @@ export async function deleteActivityEntries(
   if (!groupId && (!activityIds || activityIds.length === 0)) {
     return
   }
+
+  if (isDemoMode()) return
 
   try {
     await apiFetch(`/api/projects/${projectKey}/tickets/${ticketId}/activity/batch-delete`, {

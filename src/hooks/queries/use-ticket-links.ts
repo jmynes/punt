@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getTabId } from '@/hooks/use-realtime'
 import { apiFetch } from '@/lib/base-path'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { showToast } from '@/lib/toast'
 import type { LinkType, TicketLinkSummary } from '@/types'
 import { ticketKeys } from './use-tickets'
@@ -24,6 +25,33 @@ export function useTicketLinks(
   return useQuery<TicketLinkSummary[]>({
     queryKey: ticketLinkKeys.byTicket(projectId, ticketId),
     queryFn: async () => {
+      if (isDemoMode()) {
+        const links = demoStorage.getTicketLinks(projectId, ticketId)
+        return links
+          .map((link) => {
+            const isOutward = link.sourceTicketId === ticketId
+            const linkedTicketId = isOutward ? link.targetTicketId : link.sourceTicketId
+            const linkedTicket = demoStorage.getTicket(projectId, linkedTicketId)
+            if (!linkedTicket) return null
+            return {
+              id: link.id,
+              linkType: link.linkType as LinkType,
+              linkedTicket: {
+                id: linkedTicket.id,
+                number: linkedTicket.number,
+                title: linkedTicket.title,
+                type: linkedTicket.type,
+                priority: linkedTicket.priority,
+                columnId: linkedTicket.columnId,
+                resolution: linkedTicket.resolution,
+                storyPoints: linkedTicket.storyPoints,
+                assignee: linkedTicket.assignee,
+              },
+              direction: isOutward ? ('outward' as const) : ('inward' as const),
+            } satisfies TicketLinkSummary
+          })
+          .filter((l): l is TicketLinkSummary => l !== null)
+      }
       const tabId = getTabId()
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -59,6 +87,42 @@ export function useCreateTicketLink() {
 
   return useMutation({
     mutationFn: async ({ projectId, ticketId, linkType, targetTicketId }: CreateLinkInput) => {
+      if (isDemoMode()) {
+        const link = demoStorage.createTicketLink(projectId, {
+          sourceTicketId: ticketId,
+          targetTicketId,
+          linkType,
+        })
+        const linkedTicket = demoStorage.getTicket(projectId, targetTicketId)
+        return {
+          id: link.id,
+          linkType,
+          linkedTicket: linkedTicket
+            ? {
+                id: linkedTicket.id,
+                number: linkedTicket.number,
+                title: linkedTicket.title,
+                type: linkedTicket.type,
+                priority: linkedTicket.priority,
+                columnId: linkedTicket.columnId,
+                resolution: linkedTicket.resolution,
+                storyPoints: linkedTicket.storyPoints,
+                assignee: linkedTicket.assignee,
+              }
+            : {
+                id: targetTicketId,
+                number: 0,
+                title: '',
+                type: 'task' as const,
+                priority: 'medium' as const,
+                columnId: '',
+                resolution: null,
+                storyPoints: null,
+                assignee: null,
+              },
+          direction: 'outward' as const,
+        } as TicketLinkSummary
+      }
       const tabId = getTabId()
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -108,6 +172,20 @@ export function useUpdateTicketLink() {
 
   return useMutation({
     mutationFn: async ({ projectId, ticketId, linkId, linkType }: UpdateLinkInput) => {
+      if (isDemoMode()) {
+        // Demo storage doesn't support link updates; delete and recreate
+        const allLinks = demoStorage.getTicketLinks(projectId, ticketId)
+        const existing = allLinks.find((l) => l.id === linkId)
+        if (existing) {
+          demoStorage.deleteTicketLink(projectId, linkId)
+          demoStorage.createTicketLink(projectId, {
+            sourceTicketId: existing.sourceTicketId,
+            targetTicketId: existing.targetTicketId,
+            linkType,
+          })
+        }
+        return {}
+      }
       const tabId = getTabId()
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -166,6 +244,46 @@ export function useCreateTicketLinks() {
       ticketId,
       links,
     }: CreateBulkLinksInput): Promise<BulkLinkResult> => {
+      if (isDemoMode()) {
+        const succeeded: TicketLinkSummary[] = []
+        for (const { linkType: lt, targetTicketId: ttId } of links) {
+          const link = demoStorage.createTicketLink(projectId, {
+            sourceTicketId: ticketId,
+            targetTicketId: ttId,
+            linkType: lt,
+          })
+          const linkedTicket = demoStorage.getTicket(projectId, ttId)
+          succeeded.push({
+            id: link.id,
+            linkType: lt,
+            linkedTicket: linkedTicket
+              ? {
+                  id: linkedTicket.id,
+                  number: linkedTicket.number,
+                  title: linkedTicket.title,
+                  type: linkedTicket.type,
+                  priority: linkedTicket.priority,
+                  columnId: linkedTicket.columnId,
+                  resolution: linkedTicket.resolution,
+                  storyPoints: linkedTicket.storyPoints,
+                  assignee: linkedTicket.assignee,
+                }
+              : {
+                  id: ttId,
+                  number: 0,
+                  title: '',
+                  type: 'task' as const,
+                  priority: 'medium' as const,
+                  columnId: '',
+                  resolution: null,
+                  storyPoints: null,
+                  assignee: null,
+                },
+            direction: 'outward' as const,
+          })
+        }
+        return { succeeded, failed: [] }
+      }
       const tabId = getTabId()
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -245,6 +363,10 @@ export function useDeleteTicketLink() {
 
   return useMutation({
     mutationFn: async ({ projectId, ticketId, linkId }: DeleteLinkInput) => {
+      if (isDemoMode()) {
+        demoStorage.deleteTicketLink(projectId, linkId)
+        return {}
+      }
       const tabId = getTabId()
       const headers: HeadersInit = {
         'Content-Type': 'application/json',

@@ -16,7 +16,7 @@ import {
 import { arrayMove, horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable'
 import { useQueryClient } from '@tanstack/react-query'
 import { Layers } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { EmptyState } from '@/components/common/empty-state'
 import { columnKeys } from '@/hooks/queries/use-tickets'
 import { useHasPermission } from '@/hooks/use-permissions'
@@ -26,6 +26,7 @@ import {
   reorderTickets as reorderTicketsAction,
 } from '@/lib/actions'
 import { apiFetch } from '@/lib/base-path'
+import { demoStorage, isDemoMode } from '@/lib/demo'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showToast } from '@/lib/toast'
 import { useBoardStore } from '@/stores/board-store'
@@ -65,13 +66,84 @@ export function KanbanBoard({
   const [draggingTicketIds, setDraggingTicketIds] = useState<string[]>([])
   const [insertPosition, setInsertPosition] = useState<{
     columnId: string
-    index: number
+    index: number // visual index (for indicator rendering)
+    rawIndex: number // raw index in store's ticket array (for action)
   } | null>(null)
   const [addColumnPendingTicketIds, setAddColumnPendingTicketIds] = useState<string[]>([])
 
   // Refs for drag operation (no re-renders)
   const beforeDragSnapshot = useRef<ColumnWithTickets[] | null>(null)
   const draggedIdsRef = useRef<string[]>([])
+  const insertPositionRef = useRef<{
+    columnId: string
+    index: number
+    rawIndex: number
+  } | null>(null)
+
+  // Continuously calculate insert position on every pointer move.
+  // dnd-kit's onDragOver only fires when the `over` target changes,
+  // so moving within the same column wouldn't update the index.
+  // This listener fires on every move and determines both column and
+  // index from the DOM, completely independent of dnd-kit's over state.
+  useEffect(() => {
+    const handler = (e: PointerEvent) => {
+      const snapshot = beforeDragSnapshot.current
+      const draggedIds = draggedIdsRef.current
+      if (!snapshot || draggedIds.length === 0) return
+
+      const pointerX = e.clientX
+      const pointerY = e.clientY
+
+      // Find which column the pointer is in
+      const columnEls = document.querySelectorAll<HTMLElement>('[data-column-id]')
+      let targetColumnId: string | null = null
+      for (const el of columnEls) {
+        const rect = el.getBoundingClientRect()
+        if (pointerX >= rect.left && pointerX <= rect.right) {
+          targetColumnId = el.getAttribute('data-column-id')
+          break
+        }
+      }
+
+      if (!targetColumnId) return
+
+      const targetColumn = snapshot.find((col) => col.id === targetColumnId)
+      if (!targetColumn) return
+
+      const visibleTickets = targetColumn.tickets.filter((t) => !draggedIds.includes(t.id))
+
+      // Find insert position from pointer Y against card midpoints
+      let visualIndex = visibleTickets.length
+      let insertBeforeTicketId: string | null = null
+
+      const columnEl = document.querySelector(`[data-column-id="${targetColumnId}"]`)
+      if (columnEl) {
+        const cardEls = columnEl.querySelectorAll('[data-ticket-card]')
+        for (let i = 0; i < cardEls.length; i++) {
+          const rect = cardEls[i].getBoundingClientRect()
+          if (pointerY < rect.top + rect.height / 2) {
+            visualIndex = i
+            const wrapper = cardEls[i].closest('[data-ticket-id]')
+            insertBeforeTicketId = wrapper?.getAttribute('data-ticket-id') ?? null
+            break
+          }
+        }
+      }
+
+      // Map visual index to raw index in store's ticket array
+      let rawIndex = visibleTickets.length
+      if (insertBeforeTicketId) {
+        rawIndex = visibleTickets.findIndex((t) => t.id === insertBeforeTicketId)
+        if (rawIndex === -1) rawIndex = visibleTickets.length
+      }
+
+      const pos = { columnId: targetColumnId, index: visualIndex, rawIndex }
+      insertPositionRef.current = pos
+      setInsertPosition(pos)
+    }
+    document.addEventListener('pointermove', handler, { capture: true })
+    return () => document.removeEventListener('pointermove', handler, { capture: true })
+  }, [])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -171,94 +243,20 @@ export function KanbanBoard({
     [columns],
   )
 
-  const handleDragOver = useCallback(
-    (event: DragOverEvent) => {
-      const { active, over } = event
+  // handleDragOver only handles special zones (add-column).
+  // Insert position calculation is done in the pointermove listener above,
+  // which fires on every pointer move (unlike onDragOver which only fires
+  // when dnd-kit's `over` target changes).
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event
+    if (active.data.current?.type === 'sortable-column') return
 
-      // Skip drag-over logic for column drags (handled by SortableContext)
-      if (active.data.current?.type === 'sortable-column') return
-
-      if (!over) {
-        setInsertPosition(null)
-        return
-      }
-
-      const _activeId = active.id as string
-      const overId = over.id as string
-      const draggedIds = draggedIdsRef.current
-
-      // Use beforeDragSnapshot for calculations (stable reference)
-      const snapshotColumns = beforeDragSnapshot.current
-      if (!snapshotColumns) return
-
-      // Hovering over add-column zone — clear any column indicator
-      if (over.data.current?.type === 'add-column') {
-        setInsertPosition(null)
-        return
-      }
-
-      // Find which column we're hovering over
-      const isOverColumn = over.data.current?.type === 'column'
-      const isOverColumnEnd = over.data.current?.type === 'column-end'
-      let targetColumnId: string | undefined
-      let isHoveringOverDraggedTicket = false
-      let forceInsertAtEnd = false
-
-      if (isOverColumn) {
-        targetColumnId = overId
-      } else if (isOverColumnEnd) {
-        // Hovering over the "drop at end" zone
-        targetColumnId = over.data.current?.columnId
-        forceInsertAtEnd = true
-      } else {
-        // Check if hovering over a dragged ticket (it's hidden but still in DOM)
-        if (draggedIds.includes(overId)) {
-          isHoveringOverDraggedTicket = true
-          // Find which column the dragged ticket is from
-          const draggedTicketColumn = snapshotColumns.find((col) =>
-            col.tickets.some((t) => t.id === overId),
-          )
-          targetColumnId = draggedTicketColumn?.id
-        } else {
-          const targetColumn = snapshotColumns.find((col) =>
-            col.tickets.some((t) => t.id === overId),
-          )
-          targetColumnId = targetColumn?.id
-        }
-      }
-
-      if (!targetColumnId) {
-        setInsertPosition(null)
-        return
-      }
-
-      const targetColumn = snapshotColumns.find((col) => col.id === targetColumnId)
-      if (!targetColumn) return
-
-      // Calculate insertion index (excluding dragged tickets)
-      const visibleTickets = targetColumn.tickets.filter((t) => !draggedIds.includes(t.id))
-
-      let insertIndex: number
-      if (isOverColumn || isOverColumnEnd || forceInsertAtEnd) {
-        // Insert at the end of the column
-        insertIndex = visibleTickets.length
-      } else if (isHoveringOverDraggedTicket) {
-        // Hovering over a dragged ticket's original position
-        // Find its original index and use that as the insert position
-        const originalIndex = targetColumn.tickets.findIndex((t) => t.id === overId)
-        // Count how many visible tickets are before this position
-        const ticketsBefore = targetColumn.tickets.slice(0, originalIndex)
-        insertIndex = ticketsBefore.filter((t) => !draggedIds.includes(t.id)).length
-      } else {
-        const overTicketIndex = visibleTickets.findIndex((t) => t.id === overId)
-        insertIndex = overTicketIndex >= 0 ? overTicketIndex : visibleTickets.length
-      }
-
-      // Only update visual feedback (no store updates)
-      setInsertPosition({ columnId: targetColumnId, index: insertIndex })
-    },
-    [], // No dependencies - uses refs
-  )
+    // Clear indicator when pointer leaves all columns
+    if (!over) {
+      insertPositionRef.current = null
+      setInsertPosition(null)
+    }
+  }, [])
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
@@ -283,31 +281,38 @@ export function KanbanBoard({
         setColumns(projectId, reorderedColumns)
 
         // Persist to server
-        try {
-          const tabId = getTabId()
-          const headers: HeadersInit = {
-            'Content-Type': 'application/json',
-            ...(tabId && { 'X-Tab-Id': tabId }),
+        if (isDemoMode()) {
+          demoStorage.reorderColumns(
+            projectId,
+            reorderedColumns.map((c) => c.id),
+          )
+        } else {
+          try {
+            const tabId = getTabId()
+            const headers: HeadersInit = {
+              'Content-Type': 'application/json',
+              ...(tabId && { 'X-Tab-Id': tabId }),
+            }
+
+            const res = await apiFetch(`/api/projects/${projectKey}/columns/reorder`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ columnIds: reorderedColumns.map((c) => c.id) }),
+            })
+
+            if (!res.ok) {
+              const error = await res.json().catch(() => ({ error: 'Failed to reorder columns' }))
+              throw new Error(error.error ?? 'Failed to reorder columns')
+            }
+
+            queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
+          } catch (error) {
+            // Rollback on failure
+            setColumns(projectId, columns)
+            showToast.error('Failed to reorder columns', {
+              description: error instanceof Error ? error.message : 'An error occurred',
+            })
           }
-
-          const res = await apiFetch(`/api/projects/${projectKey}/columns/reorder`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ columnIds: reorderedColumns.map((c) => c.id) }),
-          })
-
-          if (!res.ok) {
-            const error = await res.json().catch(() => ({ error: 'Failed to reorder columns' }))
-            throw new Error(error.error ?? 'Failed to reorder columns')
-          }
-
-          queryClient.invalidateQueries({ queryKey: columnKeys.byProject(projectId) })
-        } catch (error) {
-          // Rollback on failure
-          setColumns(projectId, columns)
-          showToast.error('Failed to reorder columns', {
-            description: error instanceof Error ? error.message : 'An error occurred',
-          })
         }
         return
       }
@@ -327,14 +332,16 @@ export function KanbanBoard({
         return
       }
 
-      // Handle ticket drag end
+      // Handle ticket drag end — read from ref to avoid stale closure
       const draggedIds = draggedIdsRef.current
       const snapshot = beforeDragSnapshot.current
+      const dropPosition = insertPositionRef.current
 
-      if (!insertPosition || !snapshot || draggedIds.length === 0) {
+      if (!dropPosition || !snapshot || draggedIds.length === 0) {
         // Cleanup
         setActiveTicket(null)
         setDraggingTicketIds([])
+        insertPositionRef.current = null
         setInsertPosition(null)
         beforeDragSnapshot.current = null
         draggedIdsRef.current = []
@@ -348,14 +355,15 @@ export function KanbanBoard({
         // Cleanup
         setActiveTicket(null)
         setDraggingTicketIds([])
+        insertPositionRef.current = null
         setInsertPosition(null)
         beforeDragSnapshot.current = null
         draggedIdsRef.current = []
         return
       }
 
-      const targetColumnId = insertPosition.columnId
-      const insertIndex = insertPosition.index
+      const targetColumnId = dropPosition.columnId
+      const insertIndex = dropPosition.rawIndex
       const isSameColumn = sourceColumn.id === targetColumnId
       const tabId = getTabId()
 
@@ -396,6 +404,7 @@ export function KanbanBoard({
       // Cleanup
       setActiveTicket(null)
       setDraggingTicketIds([])
+      insertPositionRef.current = null
       setInsertPosition(null)
       beforeDragSnapshot.current = null
       draggedIdsRef.current = []
@@ -405,7 +414,7 @@ export function KanbanBoard({
         useSelectionStore.getState().clearSelection()
       }
     },
-    [insertPosition, projectId, projectKey, columns, setColumns, queryClient],
+    [projectId, projectKey, columns, setColumns, queryClient],
   )
 
   // Show loading skeleton until Zustand hydrates from localStorage
@@ -445,6 +454,14 @@ export function KanbanBoard({
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={() => {
+        setActiveTicket(null)
+        setActiveColumn(null)
+        setDraggingTicketIds([])
+        setInsertPosition(null)
+        beforeDragSnapshot.current = null
+        draggedIdsRef.current = []
+      }}
     >
       {columns.length === 0 ? (
         <EmptyState

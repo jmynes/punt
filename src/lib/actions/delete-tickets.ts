@@ -5,6 +5,8 @@
 
 import type { QueryClient } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/base-path'
+import { isDemoMode } from '@/lib/demo'
+import { demoStorage } from '@/lib/demo/demo-storage'
 import { formatTicketId } from '@/lib/ticket-format'
 import { showToast } from '@/lib/toast'
 import { showUndoRedoToast } from '@/lib/undo-toast'
@@ -183,6 +185,7 @@ export async function restoreAttachments(
   if (!attachments || attachments.length === 0) {
     return
   }
+  if (isDemoMode()) return
 
   try {
     await apiFetch(`/api/projects/${projectId}/tickets/${serverTicketId}/attachments`, {
@@ -220,6 +223,7 @@ export async function restoreCommentsAndLinks(
   if (!restoreData) {
     return
   }
+  if (isDemoMode()) return
 
   const { comments, links, activities } = restoreData
 
@@ -312,7 +316,9 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
   const boardStore = useBoardStore.getState()
 
   // Fetch comments and links BEFORE deletion (so we can restore them on undo)
-  const restoreDataMap = await fetchRestoreData(projectId, tickets)
+  const restoreDataMap = isDemoMode()
+    ? new Map<string, TicketRestoreData>()
+    : await fetchRestoreData(projectId, tickets)
 
   // Build tickets with restore data for the undo stack
   const ticketsWithRestoreData: TicketWithRestoreData[] = tickets.map(({ ticket, columnId }) => ({
@@ -326,28 +332,37 @@ export async function deleteTickets(params: DeleteTicketsParams): Promise<Delete
     boardStore.removeTicket(projectId, ticket.id)
   }
 
+  // Persist deletes to demoStorage
+  if (isDemoMode()) {
+    for (const { ticket } of tickets) {
+      demoStorage.deleteTicket(projectId, ticket.id)
+    }
+  }
+
   // Clear selection (delete always clears since tickets are removed)
   useSelectionStore.getState().clearSelection()
 
   // Call API to delete
-  try {
-    await Promise.all(
-      tickets.map(({ ticket }) =>
-        apiFetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
-          method: 'DELETE',
-        }).then((res) => {
-          if (!res.ok) throw new Error('Failed to delete ticket')
-        }),
-      ),
-    )
-  } catch (_error) {
-    // Rollback on error - restore all tickets
-    for (const { ticket, columnId } of tickets) {
-      boardStore.addTicket(projectId, columnId, ticket)
+  if (!isDemoMode()) {
+    try {
+      await Promise.all(
+        tickets.map(({ ticket }) =>
+          apiFetch(`/api/projects/${projectId}/tickets/${ticket.id}`, {
+            method: 'DELETE',
+          }).then((res) => {
+            if (!res.ok) throw new Error('Failed to delete ticket')
+          }),
+        ),
+      )
+    } catch (_error) {
+      // Rollback on error - restore all tickets
+      for (const { ticket, columnId } of tickets) {
+        boardStore.addTicket(projectId, columnId, ticket)
+      }
+      showToast.error('Failed to delete ticket(s)')
+      onComplete?.()
+      return { success: false, deletedTickets: [], error: 'API error' }
     }
-    showToast.error('Failed to delete ticket(s)')
-    onComplete?.()
-    return { success: false, deletedTickets: [], error: 'API error' }
   }
 
   // Format ticket IDs for notification
