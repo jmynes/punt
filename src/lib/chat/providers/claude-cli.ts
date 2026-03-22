@@ -41,8 +41,9 @@ const DISALLOWED_TOOLS = [
 // Maximum agentic turns before stopping
 const MAX_TURNS = 20
 
-// Timeout in milliseconds (2 hours) — TODO: Replace with activity-based timeout (PUNT-332)
-const TIMEOUT_MS = 7200000
+// Inactivity timeout — resets on each streaming event so long-running
+// operations that are making progress won't be killed (PUNT-332)
+const INACTIVITY_TIMEOUT_MS = 180000 // 3 minutes of silence
 
 interface StreamJsonEvent {
   type:
@@ -293,12 +294,21 @@ export class ClaudeCliProvider implements ChatProvider {
       let buffer = ''
       let timeoutHandle: NodeJS.Timeout
 
-      // Set up timeout
-      timeoutHandle = setTimeout(() => {
-        proc.kill('SIGKILL')
-        onEvent({ type: 'error', error: 'Request timed out after 3 minutes' })
-        resolve()
-      }, TIMEOUT_MS)
+      // Activity-based timeout: resets on each data event so long-running
+      // operations that are actively streaming won't be killed.
+      // Only triggers after INACTIVITY_TIMEOUT_MS of complete silence.
+      const resetTimeout = () => {
+        clearTimeout(timeoutHandle)
+        timeoutHandle = setTimeout(() => {
+          proc.kill('SIGKILL')
+          onEvent({
+            type: 'error',
+            error: `Request timed out after ${Math.round(INACTIVITY_TIMEOUT_MS / 60000)} minutes of inactivity`,
+          })
+          resolve()
+        }, INACTIVITY_TIMEOUT_MS)
+      }
+      resetTimeout()
 
       // Handle stdout (streaming JSON)
       if (proc.stdout) {
@@ -306,6 +316,7 @@ export class ClaudeCliProvider implements ChatProvider {
       }
 
       proc.stdout?.on('data', (chunk: Buffer) => {
+        resetTimeout() // Activity detected — reset inactivity timer
         const chunkStr = chunk.toString()
         buffer += chunkStr
 
