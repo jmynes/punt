@@ -5,14 +5,7 @@ import { RoleSimulationBanner } from '@/components/common/role-simulation-banner
 import { SearchClearOnLeave } from '@/components/common/search-clear-on-leave'
 import { Dialogs } from '@/components/dialogs'
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
-import {
-  ClickToDeselectWrapper,
-  Footer,
-  Header,
-  MobileNav,
-  MobileNotice,
-  Sidebar,
-} from '@/components/layout'
+import { ClickToDeselectWrapper, Footer, Header, MobileNav, Sidebar } from '@/components/layout'
 import { SelectionIndicator } from '@/components/selection-indicator'
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -29,7 +22,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
       <MobileNav />
-      <MobileNotice />
       <Dialogs />
       <KeyboardShortcuts />
       <SelectionIndicator />

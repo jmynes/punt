@@ -130,7 +130,7 @@ export function KanbanColumn({
   // Overlay: simplified column for drag preview
   if (isOverlay) {
     return (
-      <div className="flex w-72 flex-shrink-0 flex-col rounded-lg border border-amber-500/50 bg-zinc-900/90 max-h-full min-h-0">
+      <div className="flex w-[85vw] sm:w-72 snap-center flex-shrink-0 flex-col rounded-lg border border-amber-500/50 bg-zinc-900/90 max-h-full min-h-0">
         <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
           <div className="flex items-center gap-2 select-none">
             <StatusIcon
@@ -196,7 +196,7 @@ export function KanbanColumn({
   return (
     <div
       className={cn(
-        'flex w-72 flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-900/30 h-full max-h-full min-h-0',
+        'flex w-[85vw] sm:w-72 snap-center flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-900/30 h-full max-h-full min-h-0',
         isOver && 'border-amber-500/50 bg-amber-500/5',
       )}
     >
@@ -237,7 +237,7 @@ export function KanbanColumn({
                     variant="ghost"
                     size="icon"
                     className={cn(
-                      'h-6 w-6',
+                      'h-8 w-8 md:h-6 md:w-6',
                       sortOption !== 'manual'
                         ? 'text-amber-500 hover:text-amber-400'
                         : 'text-zinc-500 hover:text-zinc-300',
@@ -271,7 +271,7 @@ export function KanbanColumn({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
+                className="h-8 w-8 md:h-6 md:w-6 text-zinc-500 hover:text-zinc-300"
                 onClick={handleCreateTicket}
               >
                 <Plus className="h-3.5 w-3.5" />

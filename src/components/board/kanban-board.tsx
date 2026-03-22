@@ -10,6 +10,7 @@ import {
   type DragStartEvent,
   PointerSensor,
   rectIntersection,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -149,6 +150,12 @@ export function KanbanBoard({
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
       },
     }),
   )
@@ -420,7 +427,7 @@ export function KanbanBoard({
   // Show loading skeleton until Zustand hydrates from localStorage
   if (!_hasHydrated) {
     return (
-      <div className="flex gap-4 h-full min-h-0 overflow-x-auto pb-4">
+      <div className="flex gap-4 h-full min-h-0 overflow-x-auto snap-x snap-mandatory md:snap-none pb-4">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={`skeleton-${i}`}
@@ -475,7 +482,7 @@ export function KanbanBoard({
         />
       ) : (
         <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-          <div className="flex gap-4 h-full min-h-0 overflow-x-auto pb-4">
+          <div className="flex gap-4 h-full min-h-0 overflow-x-auto snap-x snap-mandatory md:snap-none pb-4">
             {filteredColumns.map((column) => (
               <SortableColumn
                 key={column.id}

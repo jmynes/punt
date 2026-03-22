@@ -11,6 +11,7 @@ import {
   KeyboardSensor,
   PointerSensor,
   rectIntersection,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -366,6 +367,12 @@ export default function BacklogPage() {
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {

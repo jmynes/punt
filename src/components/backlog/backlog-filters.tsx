@@ -1165,7 +1165,7 @@ export function BacklogFilters({
   const visibleFilterButtons = filterButtons.filter((btn) => btn.visible)
 
   return (
-    <div className="flex flex-1 items-center gap-3">
+    <div className="flex flex-1 items-center gap-2 md:gap-3 overflow-x-auto">
       {/* Filter config button */}
       <Button
         variant="ghost"

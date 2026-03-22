@@ -983,7 +983,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
       >
         <div className="flex h-full flex-col overflow-hidden">
           {/* Header - pr-14 gives space for the close button */}
-          <SheetHeader className="border-b border-zinc-800 px-6 pr-14 py-4 flex-shrink-0">
+          <SheetHeader className="border-b border-zinc-800 px-4 md:px-6 pr-14 py-3 md:py-4 flex-shrink-0">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 <TypeBadge type={ticket.type} size="md" />
@@ -1015,7 +1015,7 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
             viewportRef={scrollViewportRef}
             viewportProps={{ tabIndex: 0 }}
           >
-            <div className="space-y-6 p-6">
+            <div className="space-y-4 md:space-y-6 p-4 md:p-6">
               {/* Title */}
               <div className="space-y-2">
                 <Label className="text-zinc-400">Title</Label>

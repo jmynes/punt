@@ -2,5 +2,5 @@ export { ClickToDeselectWrapper } from './click-to-deselect-wrapper'
 export { Footer } from './footer'
 export { Header } from './header'
 export { MobileNav } from './mobile-nav'
-export { MobileNotice } from './mobile-notice'
+
 export { Sidebar } from './sidebar'

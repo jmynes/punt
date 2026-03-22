@@ -229,7 +229,7 @@ export function SprintHeader({
         )}
       />
 
-      <div className="relative flex items-center justify-between px-5 py-4">
+      <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-5 py-4">
         {/* Left: Sprint info */}
         <div className="flex items-center gap-4 min-w-0">
           {/* Sprint icon with status indicator */}
@@ -451,7 +451,7 @@ function ProgressMeters({
   const textColor = textColors[colorScheme]
 
   return (
-    <div className="hidden md:flex items-center gap-6">
+    <div className="flex items-center gap-4 md:gap-6 overflow-x-auto">
       {/* Issues progress */}
       <Tooltip>
         <TooltipTrigger asChild>
