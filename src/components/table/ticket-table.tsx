@@ -47,52 +47,50 @@ export function TicketTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse table-fixed min-w-[640px]">
-        {showHeader && (
-          <TicketTableHeader
-            columns={visibleColumns}
-            sort={sort}
-            onToggleSort={onToggleSort}
-            onSetSort={onSetSort}
-            enableColumnReorder={enableColumnReorder}
-            onHideColumn={onHideColumn}
-          />
-        )}
+    <table className="w-full border-collapse table-fixed">
+      {showHeader && (
+        <TicketTableHeader
+          columns={visibleColumns}
+          sort={sort}
+          onToggleSort={onToggleSort}
+          onSetSort={onSetSort}
+          enableColumnReorder={enableColumnReorder}
+          onHideColumn={onHideColumn}
+        />
+      )}
 
-        <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
-          <tbody>
-            {tickets.map((ticket, index) => {
-              const isBeingDragged = draggingTicketIds.includes(ticket.id)
-              // Show drop indicator before this ticket if this is the drop position
-              // Don't show indicator on the dragged ticket itself
-              const showIndicator = !isBeingDragged && index === dropPosition
+      <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
+        <tbody>
+          {tickets.map((ticket, index) => {
+            const isBeingDragged = draggingTicketIds.includes(ticket.id)
+            // Show drop indicator before this ticket if this is the drop position
+            // Don't show indicator on the dragged ticket itself
+            const showIndicator = !isBeingDragged && index === dropPosition
 
-              return (
-                <TicketTableRow
-                  key={ticket.id}
-                  ticket={ticket}
-                  context={context}
-                  columns={visibleColumns}
-                  allTicketIds={allTicketIds}
-                  isBeingDragged={isBeingDragged}
-                  showDropIndicator={showIndicator}
-                  draggingCount={draggingTicketIds.length}
-                  reorderDisabled={reorderDisabled}
-                />
-              )
-            })}
-            {/* Drop indicator at end of list */}
-            {dropPosition !== null && dropPosition >= tickets.length && tickets.length > 0 && (
-              <tr>
-                <td colSpan={visibleColumns.length + 1} className="p-0">
-                  <DropIndicator itemCount={draggingTicketIds.length} />
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </SortableContext>
-      </table>
-    </div>
+            return (
+              <TicketTableRow
+                key={ticket.id}
+                ticket={ticket}
+                context={context}
+                columns={visibleColumns}
+                allTicketIds={allTicketIds}
+                isBeingDragged={isBeingDragged}
+                showDropIndicator={showIndicator}
+                draggingCount={draggingTicketIds.length}
+                reorderDisabled={reorderDisabled}
+              />
+            )
+          })}
+          {/* Drop indicator at end of list */}
+          {dropPosition !== null && dropPosition >= tickets.length && tickets.length > 0 && (
+            <tr>
+              <td colSpan={visibleColumns.length + 1} className="p-0">
+                <DropIndicator itemCount={draggingTicketIds.length} />
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </SortableContext>
+    </table>
   )
 }
