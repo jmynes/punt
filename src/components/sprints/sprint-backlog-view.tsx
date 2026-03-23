@@ -8,6 +8,7 @@ import {
   type DragStartEvent,
   PointerSensor,
   pointerWithin,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -136,6 +137,12 @@ export function SprintBacklogView({
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8, // Minimum drag distance before activating
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
       },
     }),
   )

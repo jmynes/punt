@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -98,7 +99,7 @@ export function SprintHeader({
     return (
       <div
         className={cn(
-          'flex items-center justify-between px-5 py-4 rounded-xl',
+          'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 md:px-5 md:py-4 rounded-xl',
           'bg-gradient-to-r from-zinc-900/80 to-zinc-900/40',
           'border border-zinc-800/50',
           className,
@@ -229,157 +230,170 @@ export function SprintHeader({
         )}
       />
 
-      <div className="relative flex items-center justify-between px-5 py-4">
-        {/* Left: Sprint info */}
-        <div className="flex items-center gap-4 min-w-0">
-          {/* Sprint icon with status indicator */}
-          <div className="relative">
-            <div className={cn('p-2.5 rounded-xl', colors.icon)}>
-              <Zap className={cn('h-5 w-5', colors.iconText)} />
-            </div>
-            {/* Pulse indicator */}
-            <span
-              className={cn(
-                'absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full animate-pulse',
-                colors.pulse,
-              )}
-            />
-          </div>
-
-          {/* Sprint name and dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-2 hover:bg-white/5 px-2 py-1 rounded-lg transition-colors"
-              >
-                <div className="text-left min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-zinc-100 truncate">{activeSprint.name}</h3>
-                    <span
-                      className={cn(
-                        'px-2 py-0.5 text-[10px] font-semibold rounded-full uppercase tracking-wider',
-                        colors.badge,
-                      )}
-                    >
-                      {expired ? 'Overdue' : getSprintStatusLabel(activeSprint.status)}
-                    </span>
-                  </div>
-                  {activeSprint.goal && (
-                    <p className="text-xs text-zinc-500 truncate max-w-[200px]">
-                      {activeSprint.goal}
-                    </p>
-                  )}
+      {/*
+        Layout: CSS flex-wrap handles reflow naturally.
+        - Mobile (<lg):     Stack: [icon+name ... date+time] / [meters]
+        - Desktop (lg+):    Single row when space allows, wraps meters below when tight.
+        Identity row: grow shrink-0 so it takes remaining space and wraps meters
+        when they don't fit. justify-between pushes name left, date right.
+        Meters NEVER wrap individually — always one non-breaking row.
+      */}
+      <div className="relative px-4 py-3 md:px-5 md:py-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+          {/* Sprint identity — icon + name + date, stretches to fill */}
+          <div className="flex items-center justify-between gap-2 md:gap-4 lg:grow lg:shrink-0">
+            {/* Icon + name grouped — never separate */}
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="relative shrink-0">
+                <div className={cn('p-2.5 rounded-xl', colors.icon)}>
+                  <Zap className={cn('h-5 w-5', colors.iconText)} />
                 </div>
-                <ChevronDown className="h-4 w-4 text-zinc-500 flex-shrink-0" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 bg-zinc-900 border-zinc-700">
-              {canManageSprints && (
-                <>
-                  <DropdownMenuItem
-                    onClick={() => openSprintEdit(activeSprint.id)}
-                    className="text-zinc-300 focus:bg-zinc-800"
+                <span
+                  className={cn(
+                    'absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full animate-pulse',
+                    colors.pulse,
+                  )}
+                />
+              </div>
+
+              {/* Name dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 hover:bg-white/5 px-2 py-1 rounded-lg transition-colors shrink-0"
                   >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit Sprint
-                  </DropdownMenuItem>
-
-                  {isPlanning && (
-                    <DropdownMenuItem
-                      onClick={() => openSprintStart(activeSprint.id)}
-                      className="text-zinc-300 focus:bg-zinc-800"
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Start Sprint
-                    </DropdownMenuItem>
-                  )}
-
-                  {isActive && (
-                    <DropdownMenuItem
-                      onClick={() => openSprintComplete(activeSprint.id)}
-                      className="text-zinc-300 focus:bg-zinc-800"
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Complete Sprint
-                    </DropdownMenuItem>
-                  )}
-
-                  {isPlanning && (
+                    <div className="text-left min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-zinc-100 whitespace-nowrap">
+                          {activeSprint.name}
+                        </h3>
+                        <span
+                          className={cn(
+                            'px-2 py-0.5 text-[10px] font-semibold rounded-full uppercase tracking-wider whitespace-nowrap',
+                            colors.badge,
+                          )}
+                        >
+                          {expired ? 'Overdue' : getSprintStatusLabel(activeSprint.status)}
+                        </span>
+                      </div>
+                      {activeSprint.goal && (
+                        <p className="text-xs text-zinc-500 truncate max-w-[200px]">
+                          {activeSprint.goal}
+                        </p>
+                      )}
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-zinc-500 flex-shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 bg-zinc-900 border-zinc-700">
+                  {canManageSprints && (
                     <>
-                      <DropdownMenuSeparator className="bg-zinc-700" />
                       <DropdownMenuItem
-                        onClick={() => deleteSprint.mutate(activeSprint.id)}
-                        className="text-red-400 focus:bg-red-900/20"
+                        onClick={() => openSprintEdit(activeSprint.id)}
+                        className="text-zinc-300 focus:bg-zinc-800"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Sprint
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit Sprint
                       </DropdownMenuItem>
+
+                      {isPlanning && (
+                        <DropdownMenuItem
+                          onClick={() => openSprintStart(activeSprint.id)}
+                          className="text-zinc-300 focus:bg-zinc-800"
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          Start Sprint
+                        </DropdownMenuItem>
+                      )}
+
+                      {isActive && (
+                        <DropdownMenuItem
+                          onClick={() => openSprintComplete(activeSprint.id)}
+                          className="text-zinc-300 focus:bg-zinc-800"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Complete Sprint
+                        </DropdownMenuItem>
+                      )}
+
+                      {isPlanning && (
+                        <>
+                          <DropdownMenuSeparator className="bg-zinc-700" />
+                          <DropdownMenuItem
+                            onClick={() => deleteSprint.mutate(activeSprint.id)}
+                            className="text-red-400 focus:bg-red-900/20"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Sprint
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </>
                   )}
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Date range */}
-          {activeSprint.startDate && activeSprint.endDate && (
-            <div className="hidden md:flex items-center gap-1.5 text-xs text-zinc-500">
-              <CalendarDays className="h-3.5 w-3.5" />
-              <span>
-                {format(new Date(activeSprint.startDate), 'MMM d')} -{' '}
-                {format(new Date(activeSprint.endDate), 'MMM d')}
-              </span>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          )}
+            {/* Date + time — always inline with title (hidden on xs only) */}
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
+              {activeSprint.startDate && activeSprint.endDate && (
+                <div className="flex items-center gap-1.5 text-xs text-zinc-500 whitespace-nowrap">
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    {format(new Date(activeSprint.startDate), 'MMM d')} -{' '}
+                    {format(new Date(activeSprint.endDate), 'MMM d')}
+                  </span>
+                </div>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default whitespace-nowrap',
+                      expired ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-400',
+                    )}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>{daysText}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {activeSprint.endDate
+                    ? `Ends ${format(new Date(activeSprint.endDate), 'PPP')} at ${format(new Date(activeSprint.endDate), 'p')}`
+                    : 'No end date set'}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
 
-          {/* Time remaining */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  'hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default',
-                  expired ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-400',
-                )}
-              >
-                <Clock className="h-3.5 w-3.5" />
-                <span>{daysText}</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              {activeSprint.endDate
-                ? `Ends ${format(new Date(activeSprint.endDate), 'PPP')} at ${format(new Date(activeSprint.endDate), 'p')}`
-                : 'No end date set'}
-            </TooltipContent>
-          </Tooltip>
-        </div>
+          {/* Meters + complete button */}
+          <div className="flex flex-col items-end gap-3 shrink-0 ml-auto">
+            {/* Meters row */}
+            <div className="flex flex-nowrap items-center justify-end">
+              <ProgressMeters
+                completedCount={completedCount}
+                totalCount={totalCount}
+                completedPoints={completedPoints}
+                totalPoints={totalPoints}
+                colorScheme={colorScheme}
+                filteredCompletedCount={filteredCompletedCount}
+                filteredTotalCount={filteredTotalCount}
+                filteredCompletedPoints={filteredCompletedPoints}
+                filteredTotalPoints={filteredTotalPoints}
+                budget={activeSprint.budget}
+              />
 
-        {/* Right: Progress and stats */}
-        <div className="flex items-center gap-6">
-          {/* Progress meters (issues, points, budget) */}
-          <ProgressMeters
-            completedCount={completedCount}
-            totalCount={totalCount}
-            completedPoints={completedPoints}
-            totalPoints={totalPoints}
-            colorScheme={colorScheme}
-            filteredCompletedCount={filteredCompletedCount}
-            filteredTotalCount={filteredTotalCount}
-            filteredCompletedPoints={filteredCompletedPoints}
-            filteredTotalPoints={filteredTotalPoints}
-            budget={activeSprint.budget}
-          />
-
-          {/* Complete button when expired */}
-          {expired && canManageSprints && (
-            <Button
-              onClick={() => openSprintComplete(activeSprint.id)}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Complete
-            </Button>
-          )}
+              {expired && canManageSprints && (
+                <Button
+                  onClick={() => openSprintComplete(activeSprint.id)}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-medium whitespace-nowrap ml-4"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Complete
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -451,193 +465,198 @@ function ProgressMeters({
   const textColor = textColors[colorScheme]
 
   return (
-    <div className="hidden md:flex items-center gap-6">
-      {/* Issues progress */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex flex-col gap-1.5">
-            {/* Label row */}
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-zinc-500" />
-              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
-                Issues
-              </span>
-            </div>
+    <>
+      {/* Issues + Points grouped — never separate */}
+      <div className="flex items-center shrink-0">
+        {/* Issues progress */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex flex-col gap-px">
+              {/* Label row */}
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-zinc-500" />
+                <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                  Issues
+                </span>
+              </div>
 
-            {/* Progress bar with numbers */}
-            <div className="flex items-center gap-4">
-              <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
-                {/* Total completion bar (dimmed when filtered) */}
-                <div
-                  className={cn(
-                    'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
-                    hasFilter ? dimmedColor : progressColor,
-                  )}
-                  style={{ width: `${issuePercent}%` }}
-                />
-                {/* Filtered completion overlay */}
-                {filteredIssuePercent != null && (
+              {/* Progress bar with numbers */}
+              <div className="flex items-center gap-3">
+                <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
+                  {/* Total completion bar (dimmed when filtered) */}
                   <div
                     className={cn(
                       'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
-                      progressColor,
+                      hasFilter ? dimmedColor : progressColor,
                     )}
-                    style={{ width: `${filteredIssuePercent}%` }}
+                    style={{ width: `${issuePercent}%` }}
                   />
-                )}
+                  {/* Filtered completion overlay */}
+                  {filteredIssuePercent != null && (
+                    <div
+                      className={cn(
+                        'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                        progressColor,
+                      )}
+                      style={{ width: `${filteredIssuePercent}%` }}
+                    />
+                  )}
+                </div>
+                <div className="flex items-center gap-0.5 text-sm">
+                  {hasFilter ? (
+                    <>
+                      <span className={cn('font-semibold tabular-nums', textColor)}>
+                        {filteredCompletedCount}
+                      </span>
+                      <span className="text-zinc-600">/</span>
+                      <span className="text-zinc-500 font-medium tabular-nums">
+                        {filteredTotalCount}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={cn('font-semibold tabular-nums', textColor)}>
+                        {completedCount}
+                      </span>
+                      <span className="text-zinc-600">/</span>
+                      <span className="text-zinc-500 font-medium tabular-nums">{totalCount}</span>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-0.5 text-sm min-w-[52px]">
-                {hasFilter ? (
-                  <>
-                    <span className={cn('font-semibold tabular-nums', textColor)}>
-                      {filteredCompletedCount}
-                    </span>
-                    <span className="text-zinc-600">/</span>
-                    <span className="text-zinc-500 font-medium tabular-nums">
-                      {filteredTotalCount}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className={cn('font-semibold tabular-nums', textColor)}>
-                      {completedCount}
-                    </span>
-                    <span className="text-zinc-600">/</span>
-                    <span className="text-zinc-500 font-medium tabular-nums">{totalCount}</span>
-                  </>
-                )}
-              </div>
-            </div>
 
-            {/* Overall stats shown below when filtered */}
-            {hasFilter && (
-              <div className="flex items-center gap-1 text-xs text-zinc-600">
-                <span>Sprint:</span>
-                <span className="font-medium tabular-nums">
-                  {completedCount}/{totalCount}
+              {/* Overall stats shown below when filtered */}
+              {hasFilter && (
+                <div className="flex items-center gap-1 text-xs text-zinc-600">
+                  <span>Sprint:</span>
+                  <span className="font-medium tabular-nums">
+                    {completedCount}/{totalCount}
+                  </span>
+                </div>
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+            {hasFilter ? (
+              <div className="space-y-1">
+                <p className="text-xs text-zinc-100">
+                  Filtered: {filteredCompletedCount} of {filteredTotalCount} issues completed
+                </p>
+                <p className="text-xs text-zinc-400">
+                  Sprint total: {completedCount} of {totalCount} issues ({issuePercent}%)
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-100">
+                {completedCount} of {totalCount} issues completed ({issuePercent}%)
+              </p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Divider — symmetric px-4 so it's visually centered between meters */}
+        <div className="px-4">
+          <div className={cn('w-px bg-zinc-700/50', hasFilter ? 'h-12' : 'h-8')} />
+        </div>
+
+        {/* Story points progress */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex flex-col gap-px">
+              {/* Label row */}
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="h-3.5 w-3.5 text-zinc-500" />
+                <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                  Points
                 </span>
               </div>
-            )}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
-          {hasFilter ? (
-            <div className="space-y-1">
-              <p className="text-xs text-zinc-100">
-                Filtered: {filteredCompletedCount} of {filteredTotalCount} issues completed
-              </p>
-              <p className="text-xs text-zinc-400">
-                Sprint total: {completedCount} of {totalCount} issues ({issuePercent}%)
-              </p>
-            </div>
-          ) : (
-            <p className="text-xs text-zinc-100">
-              {completedCount} of {totalCount} issues completed ({issuePercent}%)
-            </p>
-          )}
-        </TooltipContent>
-      </Tooltip>
 
-      {/* Divider */}
-      <div className={cn('w-px bg-zinc-800/60', hasFilter ? 'h-14' : 'h-10')} />
-
-      {/* Story points progress */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex flex-col gap-1.5">
-            {/* Label row */}
-            <div className="flex items-center gap-1.5">
-              <TrendingUp className="h-3.5 w-3.5 text-zinc-500" />
-              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
-                Points
-              </span>
-            </div>
-
-            {/* Progress bar with numbers */}
-            <div className="flex items-center gap-4">
-              <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
-                {/* Total completion bar (dimmed when filtered) */}
-                <div
-                  className={cn(
-                    'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
-                    hasFilter ? dimmedColor : progressColor,
-                  )}
-                  style={{ width: `${pointsPercent}%` }}
-                />
-                {/* Filtered completion overlay */}
-                {filteredPointsPercent != null && (
+              {/* Progress bar with numbers */}
+              <div className="flex items-center gap-3">
+                <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
+                  {/* Total completion bar (dimmed when filtered) */}
                   <div
                     className={cn(
                       'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
-                      progressColor,
+                      hasFilter ? dimmedColor : progressColor,
                     )}
-                    style={{ width: `${filteredPointsPercent}%` }}
+                    style={{ width: `${pointsPercent}%` }}
                   />
-                )}
+                  {/* Filtered completion overlay */}
+                  {filteredPointsPercent != null && (
+                    <div
+                      className={cn(
+                        'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
+                        progressColor,
+                      )}
+                      style={{ width: `${filteredPointsPercent}%` }}
+                    />
+                  )}
+                </div>
+                <div className="flex items-center gap-0.5 text-sm">
+                  {hasFilter ? (
+                    <>
+                      <span className={cn('font-semibold tabular-nums', textColor)}>
+                        {filteredCompletedPoints}
+                      </span>
+                      <span className="text-zinc-600">/</span>
+                      <span className="text-zinc-500 font-medium tabular-nums">
+                        {filteredTotalPoints}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={cn('font-semibold tabular-nums', textColor)}>
+                        {completedPoints}
+                      </span>
+                      <span className="text-zinc-600">/</span>
+                      <span className="text-zinc-500 font-medium tabular-nums">{totalPoints}</span>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-0.5 text-sm min-w-[52px]">
-                {hasFilter ? (
-                  <>
-                    <span className={cn('font-semibold tabular-nums', textColor)}>
-                      {filteredCompletedPoints}
-                    </span>
-                    <span className="text-zinc-600">/</span>
-                    <span className="text-zinc-500 font-medium tabular-nums">
-                      {filteredTotalPoints}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className={cn('font-semibold tabular-nums', textColor)}>
-                      {completedPoints}
-                    </span>
-                    <span className="text-zinc-600">/</span>
-                    <span className="text-zinc-500 font-medium tabular-nums">{totalPoints}</span>
-                  </>
-                )}
-              </div>
-            </div>
 
-            {/* Overall stats shown below when filtered */}
-            {hasFilter && (
-              <div className="flex items-center gap-1 text-xs text-zinc-600">
-                <span>Sprint:</span>
-                <span className="font-medium tabular-nums">
-                  {completedPoints}/{totalPoints}
-                </span>
+              {/* Overall stats shown below when filtered */}
+              {hasFilter && (
+                <div className="flex items-center gap-1 text-xs text-zinc-600">
+                  <span>Sprint:</span>
+                  <span className="font-medium tabular-nums">
+                    {completedPoints}/{totalPoints}
+                  </span>
+                </div>
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
+            {hasFilter ? (
+              <div className="space-y-1">
+                <p className="text-xs text-zinc-100">
+                  Filtered: {filteredCompletedPoints} of {filteredTotalPoints} story points
+                  completed
+                </p>
+                <p className="text-xs text-zinc-400">
+                  Sprint total: {completedPoints} of {totalPoints} points ({pointsPercent}%)
+                </p>
               </div>
-            )}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="bg-zinc-900 border-zinc-700">
-          {hasFilter ? (
-            <div className="space-y-1">
+            ) : (
               <p className="text-xs text-zinc-100">
-                Filtered: {filteredCompletedPoints} of {filteredTotalPoints} story points completed
+                {completedPoints} of {totalPoints} story points completed ({pointsPercent}%)
               </p>
-              <p className="text-xs text-zinc-400">
-                Sprint total: {completedPoints} of {totalPoints} points ({pointsPercent}%)
-              </p>
-            </div>
-          ) : (
-            <p className="text-xs text-zinc-100">
-              {completedPoints} of {totalPoints} story points completed ({pointsPercent}%)
-            </p>
-          )}
-        </TooltipContent>
-      </Tooltip>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </div>
 
-      {/* Budget meter - only shown when budget is set */}
+      {/* Budget meter — separate flex item so it can wrap to its own line */}
       {budget != null && budget > 0 && (
-        <>
-          {/* Divider */}
-          <div className={cn('w-px bg-zinc-800/60', hasFilter ? 'h-14' : 'h-10')} />
-
-          {/* Budget progress */}
+        <div className="flex items-center shrink-0">
+          <div className="px-4">
+            <div className={cn('w-px bg-zinc-700/50', hasFilter ? 'h-12' : 'h-8')} />
+          </div>
           <BudgetMeter totalPoints={totalPoints} budget={budget} />
-        </>
+        </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -665,7 +684,7 @@ function BudgetMeter({ totalPoints, budget }: { totalPoints: number; budget: num
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-px">
           {/* Label row */}
           <div className="flex items-center gap-1.5">
             <Target className={cn('h-3.5 w-3.5', colors.icon)} />
@@ -675,8 +694,8 @@ function BudgetMeter({ totalPoints, budget }: { totalPoints: number; budget: num
           </div>
 
           {/* Progress bar with numbers */}
-          <div className="flex items-center gap-4">
-            <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="flex items-center gap-3">
+            <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
               <div
                 className={cn(
                   'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
@@ -685,7 +704,7 @@ function BudgetMeter({ totalPoints, budget }: { totalPoints: number; budget: num
                 style={{ width: `${budgetPercent}%` }}
               />
             </div>
-            <div className="flex items-center gap-0.5 text-sm min-w-[52px]">
+            <div className="flex items-center gap-0.5 text-sm">
               <span className={cn('font-semibold tabular-nums', colors.text)}>{totalPoints}</span>
               <span className="text-zinc-600">/</span>
               <span className="text-zinc-500 font-medium tabular-nums">{budget}</span>

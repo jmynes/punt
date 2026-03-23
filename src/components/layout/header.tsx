@@ -3,7 +3,6 @@
 import { LogOut, Shield, SlidersHorizontal, User, UserCircle } from 'lucide-react'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
-import { AnimatedMenuIcon } from '@/components/ui/animated-menu-icon'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,15 +16,15 @@ import {
 import { SidebarToggleIcon } from '@/components/ui/sidebar-toggle-icon'
 import { useBranding } from '@/hooks/queries/use-branding'
 import { useCurrentUser } from '@/hooks/use-current-user'
-import { useIsMobile } from '@/hooks/use-media-query'
+import { useIsDesktop } from '@/hooks/use-media-query'
 import { withBasePath } from '@/lib/base-path'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 import { GlobalTicketSearch } from './ticket-search'
 
 export function Header() {
-  const isMobile = useIsMobile()
-  const { sidebarOpen, toggleSidebar, mobileNavOpen, setMobileNavOpen } = useUIStore()
+  const isDesktop = useIsDesktop()
+  const { sidebarOpen, toggleSidebar } = useUIStore()
   const currentUser = useCurrentUser()
   const { data: branding } = useBranding()
 
@@ -36,22 +35,15 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-zinc-800 bg-zinc-950/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60 lg:px-6">
-      {/* Menu toggle button */}
-      {isMobile ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0 lg:hidden"
-          onClick={() => setMobileNavOpen(!mobileNavOpen)}
-        >
-          <AnimatedMenuIcon isOpen={mobileNavOpen} />
-          <span className="sr-only">Toggle navigation menu</span>
-        </Button>
-      ) : (
+      {/* Menu toggle button — mobile hamburger is portalled from MobileNav component */}
+      {isDesktop ? (
         <Button variant="ghost" size="icon" className="shrink-0" onClick={toggleSidebar}>
           <SidebarToggleIcon isOpen={sidebarOpen} />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
+      ) : (
+        /* Spacer matching the portalled hamburger button size */
+        <div className="h-9 w-9 shrink-0" />
       )}
 
       {/* Logo */}

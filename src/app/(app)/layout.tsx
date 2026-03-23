@@ -29,13 +29,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
       <MobileNav />
-      <MobileNotice />
       <Dialogs />
       <KeyboardShortcuts />
       <SelectionIndicator />
       <ChatPanel />
       <ChatFAB />
       <SearchClearOnLeave />
+      <MobileNotice />
     </ClickToDeselectWrapper>
   )
 }

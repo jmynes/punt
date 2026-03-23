@@ -11,6 +11,7 @@ import {
   KeyboardSensor,
   PointerSensor,
   rectIntersection,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -366,6 +367,12 @@ export default function BacklogPage() {
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -1149,12 +1156,10 @@ export default function BacklogPage() {
         </div>
 
         {canCreateTickets && (
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="primary" onClick={() => setCreateTicketOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">New Ticket</span>
-            </Button>
-          </div>
+          <Button size="sm" variant="primary" onClick={() => setCreateTicketOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            New Ticket
+          </Button>
         )}
       </div>
 

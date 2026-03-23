@@ -441,7 +441,7 @@ export default function BoardPage() {
             }}
           >
             <Plus className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">New Ticket</span>
+            New Ticket
           </Button>
         )}
       </div>
@@ -468,7 +468,7 @@ export default function BoardPage() {
       </div>
 
       {/* Board content */}
-      <div className="flex-1 min-h-0 overflow-hidden p-4 lg:p-6">
+      <div className="flex-1 min-h-0 overflow-hidden p-2 sm:p-4 lg:p-6">
         <div className="h-full">
           <KanbanBoard
             projectKey={projectKey}

@@ -33,8 +33,8 @@ export function SelectionIndicator() {
 
   return (
     <>
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
-        <div className="flex items-center gap-2 pl-4 pr-2 py-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/50">
+      <div className="fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
+        <div className="flex items-center gap-2 pl-3 md:pl-4 pr-2 py-2 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/50">
           <span className="text-sm text-zinc-300 font-medium">
             {count} {count === 1 ? 'ticket' : 'tickets'} selected
           </span>
