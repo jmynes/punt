@@ -371,7 +371,7 @@ export function SprintHeader({
           </div>
 
           {/* Meters + complete button — min-w prevents compression until left side wraps first */}
-          <div className="flex flex-wrap xl:flex-nowrap items-center gap-4 lg:justify-end">
+          <div className="flex flex-wrap xl:flex-nowrap items-center lg:justify-end">
             <ProgressMeters
               completedCount={completedCount}
               totalCount={totalCount}
@@ -388,7 +388,7 @@ export function SprintHeader({
             {expired && canManageSprints && (
               <Button
                 onClick={() => openSprintComplete(activeSprint.id)}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-medium whitespace-nowrap"
+                className="bg-orange-500 hover:bg-orange-600 text-white font-medium whitespace-nowrap ml-4"
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" />
                 Complete
@@ -468,7 +468,7 @@ function ProgressMeters({
   return (
     <>
       {/* Issues + Points grouped — never separate */}
-      <div className="flex items-center gap-5 shrink-0">
+      <div className="flex items-center shrink-0">
         {/* Issues progress */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -503,7 +503,7 @@ function ProgressMeters({
                     />
                   )}
                 </div>
-                <div className="flex items-center gap-0.5 text-sm min-w-[52px]">
+                <div className="flex items-center gap-0.5 text-sm">
                   {hasFilter ? (
                     <>
                       <span className={cn('font-semibold tabular-nums', textColor)}>
@@ -555,8 +555,10 @@ function ProgressMeters({
           </TooltipContent>
         </Tooltip>
 
-        {/* Divider */}
-        <div className={cn('w-px bg-zinc-700/50', hasFilter ? 'h-12' : 'h-8')} />
+        {/* Divider — symmetric px-4 so it's visually centered between meters */}
+        <div className="px-4">
+          <div className={cn('w-px bg-zinc-700/50', hasFilter ? 'h-12' : 'h-8')} />
+        </div>
 
         {/* Story points progress */}
         <Tooltip>
@@ -592,7 +594,7 @@ function ProgressMeters({
                     />
                   )}
                 </div>
-                <div className="flex items-center gap-0.5 text-sm min-w-[52px]">
+                <div className="flex items-center gap-0.5 text-sm">
                   {hasFilter ? (
                     <>
                       <span className={cn('font-semibold tabular-nums', textColor)}>
@@ -650,8 +652,10 @@ function ProgressMeters({
 
       {/* Budget meter — separate flex item so it can wrap to its own line */}
       {budget != null && budget > 0 && (
-        <div className="flex items-center gap-5 shrink-0">
-          <div className={cn('w-px bg-zinc-700/50', hasFilter ? 'h-12' : 'h-8')} />
+        <div className="flex items-center shrink-0">
+          <div className="px-4">
+            <div className={cn('w-px bg-zinc-700/50', hasFilter ? 'h-12' : 'h-8')} />
+          </div>
           <BudgetMeter totalPoints={totalPoints} budget={budget} />
         </div>
       )}
