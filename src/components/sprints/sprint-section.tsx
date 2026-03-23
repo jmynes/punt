@@ -395,11 +395,11 @@ export function SprintSection({
                 </div>
               </div>
 
-              {/* Date, time, goal — grouped so they align right when stacked */}
-              <div ref={identityEndRef} className="hidden sm:flex items-center gap-3 shrink-0">
+              {/* Date + actions — grouped so they align right together when stacked */}
+              <div ref={identityEndRef} className="flex items-center gap-3 shrink-0">
                 {/* Sprint dates */}
                 {sprint?.startDate && sprint.endDate && (
-                  <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                  <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500">
                     <CalendarDays className="h-3.5 w-3.5" />
                     <span>
                       {format(new Date(sprint.startDate), 'MMM d')} -{' '}
@@ -414,7 +414,7 @@ export function SprintSection({
                     <TooltipTrigger asChild>
                       <div
                         className={cn(
-                          'flex items-center gap-1.5 text-xs cursor-default',
+                          'hidden sm:flex items-center gap-1.5 text-xs cursor-default',
                           expired ? 'text-orange-400' : 'text-zinc-400',
                         )}
                       >
@@ -442,10 +442,99 @@ export function SprintSection({
                     </TooltipContent>
                   </Tooltip>
                 )}
+                {/* Action buttons */}
+                <div
+                  className="flex items-center gap-1 shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Create ticket button */}
+                  {onCreateTicket && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onCreateTicket(sprint?.id ?? null)}
+                      className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
+
+                  {/* Start Sprint button for planning sprints */}
+                  {canManageSprints && isPlanning && filteredCount > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={handleStartSprint}
+                      className="h-7 px-3 bg-green-600 hover:bg-green-700 text-white text-xs font-medium"
+                    >
+                      <Play className="h-3 w-3 mr-1" />
+                      Start
+                    </Button>
+                  )}
+
+                  {/* Complete Sprint button for expired active sprints */}
+                  {canManageSprints && isActive && expired && (
+                    <Button
+                      size="sm"
+                      onClick={handleCompleteSprint}
+                      className="h-7 px-3 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium"
+                    >
+                      Complete
+                    </Button>
+                  )}
+
+                  {/* Sprint menu - only show if user can manage sprints */}
+                  {canManageSprints && !isBacklog && (
+                    <KebabMenu
+                      triggerClassName="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                      actions={[
+                        { icon: Pencil, label: 'Edit Sprint', onClick: handleEditSprint },
+                        isPlanning
+                          ? { icon: Play, label: 'Start Sprint', onClick: handleStartSprint }
+                          : null,
+                        isActive
+                          ? {
+                              icon: Target,
+                              label: 'Complete Sprint',
+                              onClick: handleCompleteSprint,
+                            }
+                          : null,
+                        isCompleted
+                          ? {
+                              icon: RotateCcw,
+                              label: 'Reopen Sprint',
+                              onClick: handleReopenSprint,
+                              disabled: reopenSprintMutation.isPending,
+                            }
+                          : null,
+                        isPlanning && onDelete
+                          ? {
+                              icon: Trash2,
+                              label: 'Delete Sprint',
+                              onClick: handleDeleteSprint,
+                              variant: 'destructive' as const,
+                            }
+                          : null,
+                      ]}
+                    />
+                  )}
+
+                  {/* Create Sprint button for backlog (only when no active sprint) */}
+                  {canManageSprints && isBacklog && !hasActiveSprint && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSprintCreateOpen(true)}
+                      className="h-7 px-3 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Create Sprint
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Stats + actions row */}
+            {/* Stats row */}
             <div
               ref={statsRef}
               className={cn('flex items-center gap-3 shrink-0', statsStacked && 'justify-end')}
@@ -501,89 +590,6 @@ export function SprintSection({
                   </div>
                 </div>
               )}
-
-              {/* Action buttons */}
-              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                {/* Create ticket button */}
-                {onCreateTicket && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onCreateTicket(sprint?.id ?? null)}
-                    className="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                )}
-
-                {/* Start Sprint button for planning sprints */}
-                {canManageSprints && isPlanning && filteredCount > 0 && (
-                  <Button
-                    size="sm"
-                    onClick={handleStartSprint}
-                    className="h-7 px-3 bg-green-600 hover:bg-green-700 text-white text-xs font-medium"
-                  >
-                    <Play className="h-3 w-3 mr-1" />
-                    Start
-                  </Button>
-                )}
-
-                {/* Complete Sprint button for expired active sprints */}
-                {canManageSprints && isActive && expired && (
-                  <Button
-                    size="sm"
-                    onClick={handleCompleteSprint}
-                    className="h-7 px-3 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium"
-                  >
-                    Complete
-                  </Button>
-                )}
-
-                {/* Sprint menu - only show if user can manage sprints */}
-                {canManageSprints && !isBacklog && (
-                  <KebabMenu
-                    triggerClassName="h-7 w-7 p-0 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
-                    actions={[
-                      { icon: Pencil, label: 'Edit Sprint', onClick: handleEditSprint },
-                      isPlanning
-                        ? { icon: Play, label: 'Start Sprint', onClick: handleStartSprint }
-                        : null,
-                      isActive
-                        ? { icon: Target, label: 'Complete Sprint', onClick: handleCompleteSprint }
-                        : null,
-                      isCompleted
-                        ? {
-                            icon: RotateCcw,
-                            label: 'Reopen Sprint',
-                            onClick: handleReopenSprint,
-                            disabled: reopenSprintMutation.isPending,
-                          }
-                        : null,
-                      isPlanning && onDelete
-                        ? {
-                            icon: Trash2,
-                            label: 'Delete Sprint',
-                            onClick: handleDeleteSprint,
-                            variant: 'destructive' as const,
-                          }
-                        : null,
-                    ]}
-                  />
-                )}
-
-                {/* Create Sprint button for backlog (only when no active sprint) */}
-                {canManageSprints && isBacklog && !hasActiveSprint && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSprintCreateOpen(true)}
-                    className="h-7 px-3 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Create Sprint
-                  </Button>
-                )}
-              </div>
             </div>
           </div>
         </div>
@@ -870,7 +876,10 @@ function SprintProgressBars({
         <span className="tabular-nums text-zinc-400">
           {completedCount}/{totalCount} issues
         </span>
-        <span className="tabular-nums text-zinc-400">{completedPoints} pts</span>
+        <span className="flex items-center gap-1.5 tabular-nums text-zinc-400">
+          <TrendingUp className="h-3.5 w-3.5 text-zinc-500" />
+          {completedPoints} pts
+        </span>
       </div>
     </>
   )
