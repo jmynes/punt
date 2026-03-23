@@ -371,7 +371,7 @@ export function SprintHeader({
           </div>
 
           {/* Meters + complete button — min-w prevents compression until left side wraps first */}
-          <div className="flex flex-nowrap lg:flex-wrap xl:flex-nowrap items-center lg:justify-end">
+          <div className="flex flex-nowrap lg:flex-wrap xl:flex-nowrap items-center lg:justify-end gap-x-4 gap-y-1">
             <ProgressMeters
               completedCount={completedCount}
               totalCount={totalCount}
@@ -467,8 +467,8 @@ function ProgressMeters({
 
   return (
     <>
-      {/* Issues + Points grouped — never separate */}
-      <div className="flex items-center shrink-0">
+      {/* Issues + Points grouped — never separate. order-last when budget wraps (lg-xl) */}
+      <div className="flex items-center shrink-0 lg:order-last xl:order-none">
         {/* Issues progress */}
         <Tooltip>
           <TooltipTrigger asChild>
