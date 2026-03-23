@@ -105,6 +105,7 @@ export function useSystemSettings() {
 export interface UpdateSystemSettingsParams {
   // Branding settings
   appName?: string
+  logoMode?: string
   logoLetter?: string
   logoGradientFrom?: string
   logoGradientTo?: string
