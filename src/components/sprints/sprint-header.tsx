@@ -99,15 +99,18 @@ export function SprintHeader({
 
   const metersRef = useRef<HTMLDivElement>(null)
   const pendingRef = useRef<number | null>(null)
-  const cachedDateWidthRef = useRef(0) // real measured width from when date was last inline
+  // Cache the content widths from side-by-side layout for restore calculation
+  const cachedIdentityWidthRef = useRef(0)
+  const cachedMetersWidthRef = useRef(0)
   const checkOverflow = useCallback(() => {
     if (pendingRef.current) cancelAnimationFrame(pendingRef.current)
     pendingRef.current = requestAnimationFrame(() => {
+      const rowEl = rowRef.current
       const dateEl = dateRef.current
       const metersEl = metersRef.current
-      if (!dateEl || !metersEl) return
-      const isRow = window.matchMedia('(min-width: 1024px)').matches
-      if (!isRow) {
+      if (!rowEl || !dateEl || !metersEl) return
+      const isDesktop = window.matchMedia('(min-width: 1024px)').matches
+      if (!isDesktop) {
         if (dateAboveRef.current) {
           dateAboveRef.current = false
           setDateAboveMeters(false)
@@ -115,26 +118,26 @@ export function SprintHeader({
         return
       }
 
-      let shouldBeAbove: boolean
+      let shouldStack: boolean
       if (dateAboveRef.current) {
-        // Date is above meters. To restore inline, we need enough room for the
-        // cached date width + a 32px comfort buffer. Since removing the date
-        // freed exactly cachedDateWidth of space, the gap must grow an additional
-        // 32px beyond that before we restore — preventing oscillation at the boundary.
-        const dateWidth = cachedDateWidthRef.current || 150
-        const identityRight = identityRef.current?.getBoundingClientRect().right ?? 0
-        const availableGap = metersEl.getBoundingClientRect().left - identityRight
-        shouldBeAbove = availableGap < dateWidth + 32
+        // Currently stacked (flex-col). Identity stretches to full width, so we
+        // use cached content widths from the last side-by-side layout. Restore
+        // only when the container can fit both + 32px buffer.
+        const containerWidth = rowEl.clientWidth
+        const needed =
+          (cachedIdentityWidthRef.current || 400) + (cachedMetersWidthRef.current || 300)
+        shouldStack = containerWidth < needed + 32
       } else {
-        // Date is inline — cache its actual width for later restore calculation
-        cachedDateWidthRef.current = dateEl.getBoundingClientRect().width
+        // Currently side-by-side (flex-row). Cache content widths and measure gap.
+        cachedIdentityWidthRef.current = identityRef.current?.getBoundingClientRect().width ?? 0
+        cachedMetersWidthRef.current = metersEl.getBoundingClientRect().width
         const gap = metersEl.getBoundingClientRect().left - dateEl.getBoundingClientRect().right
-        shouldBeAbove = gap < 16
+        shouldStack = gap < 16
       }
 
-      if (shouldBeAbove !== dateAboveRef.current) {
-        dateAboveRef.current = shouldBeAbove
-        setDateAboveMeters(shouldBeAbove)
+      if (shouldStack !== dateAboveRef.current) {
+        dateAboveRef.current = shouldStack
+        setDateAboveMeters(shouldStack)
       }
     })
   }, []) // no dependencies — reads refs only
@@ -288,22 +291,30 @@ export function SprintHeader({
       />
 
       {/*
-        Layout tiers (no flex-wrap, explicit breakpoints):
-        - Mobile (<md):     Stack everything. Icon+name row, meters row.
-        - Tablet (md-lg):   Icon+name+time row, meters row below.
-        - Desktop (lg+):    Single row: icon+name+date+time | meters | [complete btn]
-        Meters NEVER wrap individually — they're always in one non-breaking row.
-        Dividers between meters are always shown since they never reflow.
+        Layout tiers:
+        - Mobile (<sm):     Stack: [icon+name] / [meters]
+        - Tablet (sm-lg):   [icon+name ... date+time] / [meters]
+        - Desktop (lg+):    [icon+name date+time .... meters+complete]  (one row)
+        - Desktop narrow:   Detection-based stack when meters crowd the date:
+                            [icon+name .............. date+time]
+                            [........................... meters]
+        Meters NEVER wrap individually — always one non-breaking row.
       */}
       <div className="relative px-4 py-3 md:px-5 md:py-4">
         <div
           ref={rowRef}
-          className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+          className={cn(
+            'flex flex-col gap-3',
+            !dateAboveMeters && 'lg:flex-row lg:items-center lg:justify-between',
+          )}
         >
-          {/* Sprint identity — icon + name, with date inline below lg */}
+          {/* Sprint identity — icon + name, with date inline below lg and when reflowed */}
           <div
             ref={identityRef}
-            className="flex items-center justify-between gap-2 md:gap-4 min-w-0 lg:justify-start"
+            className={cn(
+              'flex items-center justify-between gap-2 md:gap-4 min-w-0',
+              !dateAboveMeters && 'lg:justify-start',
+            )}
           >
             {/* Icon + name grouped — never separate */}
             <div className="flex items-center gap-2 xl:gap-4 min-w-0">
@@ -397,14 +408,8 @@ export function SprintHeader({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            {/* Date + time — inline with title when not overflowing */}
-            <div
-              ref={dateRef}
-              className={cn(
-                'hidden sm:flex items-center gap-2 shrink-0',
-                dateAboveMeters && 'lg:hidden',
-              )}
-            >
+            {/* Date + time — always inline with title (hidden on xs only) */}
+            <div ref={dateRef} className="hidden sm:flex items-center gap-2 shrink-0">
               {activeSprint.startDate && activeSprint.endDate && (
                 <div className="flex items-center gap-1.5 text-xs text-zinc-500 whitespace-nowrap">
                   <CalendarDays className="h-3.5 w-3.5 shrink-0" />
@@ -436,38 +441,10 @@ export function SprintHeader({
           </div>
 
           {/* Meters + complete button */}
-          <div ref={metersRef} className="flex flex-col items-end gap-3">
-            {/* Date + time — above meters when overflowing on desktop */}
-            <div className={cn('hidden items-center gap-2', dateAboveMeters && 'lg:flex')}>
-              {activeSprint.startDate && activeSprint.endDate && (
-                <div className="flex items-center gap-1.5 text-xs text-zinc-500 whitespace-nowrap">
-                  <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                  <span>
-                    {format(new Date(activeSprint.startDate), 'MMM d')} -{' '}
-                    {format(new Date(activeSprint.endDate), 'MMM d')}
-                  </span>
-                </div>
-              )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className={cn(
-                      'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default whitespace-nowrap',
-                      expired ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-400',
-                    )}
-                  >
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{daysText}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {activeSprint.endDate
-                    ? `Ends ${format(new Date(activeSprint.endDate), 'PPP')} at ${format(new Date(activeSprint.endDate), 'p')}`
-                    : 'No end date set'}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-
+          <div
+            ref={metersRef}
+            className={cn('flex flex-col items-end gap-3', dateAboveMeters && 'self-end')}
+          >
             {/* Meters row */}
             <div className="flex flex-nowrap items-center justify-end gap-x-4">
               <ProgressMeters
