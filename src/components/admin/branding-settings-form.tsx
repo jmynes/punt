@@ -157,24 +157,11 @@ export function BrandingSettingsForm() {
             <div className="space-y-2">
               <Label className="text-zinc-300">Current Logo</Label>
               <div className="flex items-center gap-4">
-                {settings?.logoUrl ? (
-                  <div className="relative">
-                    <img
-                      src={withBasePath(settings.logoUrl)}
-                      alt="Logo"
-                      className="h-12 w-12 rounded-lg object-contain bg-zinc-800"
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="flex h-12 w-12 items-center justify-center rounded-lg text-white select-none"
-                    style={{
-                      background: `linear-gradient(to bottom right, ${logoGradientFrom}, ${logoGradientTo})`,
-                    }}
-                  >
-                    <span className="text-lg font-bold">{logoLetter}</span>
-                  </div>
-                )}
+                <img
+                  src={withBasePath(settings?.logoUrl || '/punt-icon.svg')}
+                  alt="Logo"
+                  className="h-12 w-12 rounded-lg object-contain bg-zinc-800"
+                />
                 <span className="text-xl font-semibold text-zinc-100">{appName}</span>
               </div>
             </div>
@@ -186,15 +173,15 @@ export function BrandingSettingsForm() {
           <div className="space-y-3">
             <Label className="text-zinc-300 font-medium">Custom Logo</Label>
             <p className="text-sm text-zinc-500">
-              Upload a custom logo image (JPEG, PNG, GIF, or WebP). Max 2MB, will be resized to
-              128x128.
+              Upload a custom logo image (JPEG, PNG, GIF, WebP, or SVG). Max 2MB. Raster images will
+              be resized to 128x128.
             </p>
             <div className="flex items-center gap-3">
               <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileSelect}
-                accept="image/jpeg,image/png,image/gif,image/webp"
+                accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
                 className="hidden"
               />
               <Button

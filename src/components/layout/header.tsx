@@ -48,22 +48,11 @@ export function Header() {
 
       {/* Logo */}
       <div className="flex items-center gap-2 font-semibold select-none">
-        {branding?.logoUrl ? (
-          <img
-            src={withBasePath(branding.logoUrl)}
-            alt={branding.appName}
-            className="h-8 w-8 rounded-lg object-contain"
-          />
-        ) : (
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
-            style={{
-              background: `linear-gradient(to bottom right, ${branding?.logoGradientFrom || '#f59e0b'}, ${branding?.logoGradientTo || '#ea580c'})`,
-            }}
-          >
-            <span className="text-sm font-bold">{branding?.logoLetter || 'P'}</span>
-          </div>
-        )}
+        <img
+          src={withBasePath(branding?.logoUrl || '/punt-icon.svg')}
+          alt={branding?.appName || 'PUNT'}
+          className="h-8 w-8 rounded-lg object-contain"
+        />
         <span className="hidden text-lg tracking-tight text-white sm:inline-block">
           {branding?.appName || 'PUNT'}
         </span>
