@@ -108,50 +108,6 @@ export function SprintSection({
     return () => observer.disconnect()
   }, [])
 
-  // Detection-based stacking for stats row (same pattern as sprint-header)
-  const headerRowRef = useRef<HTMLDivElement>(null)
-  const identityEndRef = useRef<HTMLDivElement>(null)
-  const statsRef = useRef<HTMLDivElement>(null)
-  const [statsStacked, setStatsStacked] = useState(false)
-  const statsStackedRef = useRef(false)
-  const statsThresholdRef = useRef(0)
-  const statsPendingRef = useRef<number | null>(null)
-
-  const checkStatsOverflow = useCallback(() => {
-    if (statsPendingRef.current) cancelAnimationFrame(statsPendingRef.current)
-    statsPendingRef.current = requestAnimationFrame(() => {
-      const rowEl = headerRowRef.current
-      const identityEl = identityEndRef.current
-      const statsEl = statsRef.current
-      if (!rowEl || !identityEl || !statsEl) return
-      const isDesktop = window.matchMedia('(min-width: 1024px)').matches
-      if (!isDesktop) return
-
-      let shouldStack: boolean
-      if (statsStackedRef.current) {
-        shouldStack = rowEl.clientWidth < statsThresholdRef.current + 32
-      } else {
-        const gap = statsEl.getBoundingClientRect().left - identityEl.getBoundingClientRect().right
-        if (gap < 16) {
-          statsThresholdRef.current = rowEl.clientWidth
-          shouldStack = true
-        } else {
-          shouldStack = false
-        }
-      }
-
-      if (shouldStack !== statsStackedRef.current) {
-        statsStackedRef.current = shouldStack
-        setStatsStacked(shouldStack)
-      }
-    })
-  }, [])
-
-  useEffect(() => {
-    checkStatsOverflow()
-    window.addEventListener('resize', checkStatsOverflow)
-    return () => window.removeEventListener('resize', checkStatsOverflow)
-  }, [checkStatsOverflow])
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
   const { sort, toggleSort, setSort, toggleColumnVisibility } = useBacklogStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
@@ -311,17 +267,12 @@ export function SprintSection({
           )}
           style={{ backgroundColor: 'var(--table-header-bg, rgb(9 9 11))' }}
         >
-          <div
-            ref={headerRowRef}
-            className={cn('flex gap-3', statsStacked ? 'flex-col' : 'items-center')}
-          >
-            {/* Identity row: chevron + icon + name + dates + time + goal */}
-            <div
-              className={cn(
-                'flex items-center gap-3 min-w-0 flex-1',
-                statsStacked && 'justify-between',
-              )}
-            >
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Identity row: chevron + icon + name + dates + time + goal.
+                grow + shrink-0 = takes remaining space but won't compress.
+                When stats don't fit, flex-wrap moves them to next row and
+                identity stretches to full width with justify-between. */}
+            <div className="flex items-center gap-3 grow shrink-0 justify-between">
               {/* Chevron + icon + name grouped together */}
               <div className="flex items-center gap-3 min-w-0">
                 {/* Expand/Collapse chevron (only when collapsible) */}
@@ -396,7 +347,7 @@ export function SprintSection({
               </div>
 
               {/* Date + actions — grouped so they align right together when stacked */}
-              <div ref={identityEndRef} className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-3 shrink-0">
                 {/* Sprint dates */}
                 {sprint?.startDate && sprint.endDate && (
                   <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500">
@@ -535,10 +486,7 @@ export function SprintSection({
             </div>
 
             {/* Stats row */}
-            <div
-              ref={statsRef}
-              className={cn('flex items-center gap-3 shrink-0', statsStacked && 'justify-end')}
-            >
+            <div className="flex items-center gap-3 shrink-0 ml-auto">
               {/* Stats */}
               {sprint ? (
                 <SprintProgressBars
@@ -880,6 +828,9 @@ function SprintProgressBars({
           <TrendingUp className="h-3.5 w-3.5 text-zinc-500" />
           {completedPoints} pts
         </span>
+        {budget != null && budget > 0 && (
+          <BudgetIndicator totalPoints={unfilteredTotalPoints} budget={budget} />
+        )}
       </div>
     </>
   )

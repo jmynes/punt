@@ -140,11 +140,16 @@ export function SprintHeader({
 
   useEffect(() => {
     checkOverflow()
-    // Use window resize instead of ResizeObserver — ResizeObserver fires on
-    // our own layout changes (state toggle → class change → size change → observer)
-    // creating feedback loops. Window resize only fires on actual viewport changes.
+    // Re-check after fonts load — fallback fonts are narrower, so initial
+    // measurement underestimates content width and misses overflow
+    document.fonts.ready.then(checkOverflow)
     window.addEventListener('resize', checkOverflow)
-    return () => window.removeEventListener('resize', checkOverflow)
+    const observer = new ResizeObserver(checkOverflow)
+    if (rowRef.current) observer.observe(rowRef.current)
+    return () => {
+      window.removeEventListener('resize', checkOverflow)
+      observer.disconnect()
+    }
   }, [checkOverflow])
 
   if (isLoading) {
