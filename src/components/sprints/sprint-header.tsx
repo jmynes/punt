@@ -317,10 +317,10 @@ export function SprintHeader({
             )}
           >
             {/* Icon + name grouped — never separate */}
-            <div className="flex items-center gap-2 xl:gap-4 min-w-0">
+            <div className="flex items-center gap-4 min-w-0">
               <div className="relative shrink-0">
-                <div className={cn('p-1.5 xl:p-2.5 rounded-lg xl:rounded-xl', colors.icon)}>
-                  <Zap className={cn('h-4 w-4 xl:h-5 xl:w-5', colors.iconText)} />
+                <div className={cn('p-2.5 rounded-xl', colors.icon)}>
+                  <Zap className={cn('h-5 w-5', colors.iconText)} />
                 </div>
                 <span
                   className={cn(
