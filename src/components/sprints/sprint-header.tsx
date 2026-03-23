@@ -559,7 +559,7 @@ function ProgressMeters({
 
               {/* Progress bar with numbers */}
               <div className="flex items-center gap-3">
-                <div className="relative h-1.5 w-20 md:w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
+                <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
                   {/* Total completion bar (dimmed when filtered) */}
                   <div
                     className={cn(
@@ -650,7 +650,7 @@ function ProgressMeters({
 
               {/* Progress bar with numbers */}
               <div className="flex items-center gap-3">
-                <div className="relative h-1.5 w-20 md:w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
+                <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
                   {/* Total completion bar (dimmed when filtered) */}
                   <div
                     className={cn(
@@ -772,7 +772,7 @@ function BudgetMeter({ totalPoints, budget }: { totalPoints: number; budget: num
 
           {/* Progress bar with numbers */}
           <div className="flex items-center gap-3">
-            <div className="relative h-1.5 w-20 md:w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
+            <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
               <div
                 className={cn(
                   'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
