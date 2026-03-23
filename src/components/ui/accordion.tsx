@@ -85,7 +85,7 @@ export function Accordion({
         </Button>
       </div>
       {isOpen && (
-        <div ref={contentRef} className="pt-4 space-y-4 pb-0">
+        <div ref={contentRef} className="pt-4 space-y-4 pb-4">
           {children}
         </div>
       )}
