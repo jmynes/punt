@@ -371,7 +371,7 @@ export function SprintHeader({
           </div>
 
           {/* Meters + complete button — min-w prevents compression until left side wraps first */}
-          <div className="flex flex-wrap items-center gap-4 lg:justify-end lg:min-w-[420px]">
+          <div className="flex flex-wrap xl:flex-nowrap items-center gap-4 lg:justify-end">
             <ProgressMeters
               completedCount={completedCount}
               totalCount={totalCount}
@@ -602,6 +602,7 @@ function ProgressMeters({
                       <span className="text-zinc-500 font-medium tabular-nums">
                         {filteredTotalPoints}
                       </span>
+                      <span className="xl:hidden text-zinc-600 text-xs ml-0.5">pts</span>
                     </>
                   ) : (
                     <>
@@ -610,6 +611,7 @@ function ProgressMeters({
                       </span>
                       <span className="text-zinc-600">/</span>
                       <span className="text-zinc-500 font-medium tabular-nums">{totalPoints}</span>
+                      <span className="xl:hidden text-zinc-600 text-xs ml-0.5">pts</span>
                     </>
                   )}
                 </div>
