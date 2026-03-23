@@ -243,7 +243,7 @@ export function SprintHeader({
           {/* Sprint identity — flex-wrap lets date/time drop below name.
               shrink-[3] makes this side compress 3x faster than meters,
               so date/time wraps well before budget does. */}
-          <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0 lg:shrink-[3]">
+          <div className="flex flex-wrap items-center justify-between gap-2 md:gap-4 min-w-0 lg:shrink-[3] lg:justify-start">
             {/* Icon + name grouped — never separate */}
             <div className="flex items-center gap-2 xl:gap-4 min-w-0">
               <div className="relative shrink-0">
@@ -371,7 +371,7 @@ export function SprintHeader({
           </div>
 
           {/* Meters + complete button — min-w prevents compression until left side wraps first */}
-          <div className="flex flex-nowrap lg:flex-wrap xl:flex-nowrap items-center lg:justify-end gap-x-4 gap-y-1">
+          <div className="flex flex-nowrap lg:flex-wrap xl:flex-nowrap items-center justify-end gap-x-4 gap-y-3">
             <ProgressMeters
               completedCount={completedCount}
               totalCount={totalCount}
@@ -472,7 +472,7 @@ function ProgressMeters({
         {/* Issues progress */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-px">
               {/* Label row */}
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 text-zinc-500" />
@@ -563,7 +563,7 @@ function ProgressMeters({
         {/* Story points progress */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-px">
               {/* Label row */}
               <div className="flex items-center gap-1.5">
                 <TrendingUp className="h-3.5 w-3.5 text-zinc-500" />
@@ -687,7 +687,7 @@ function BudgetMeter({ totalPoints, budget }: { totalPoints: number; budget: num
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-px">
           {/* Label row */}
           <div className="flex items-center gap-1.5">
             <Target className={cn('h-3.5 w-3.5', colors.icon)} />
