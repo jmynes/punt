@@ -5,6 +5,7 @@ import { SessionProvider, useSession } from 'next-auth/react'
 import { type ReactNode, useState } from 'react'
 import { DemoInitializer } from '@/components/demo'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { useDynamicFavicon } from '@/hooks/use-dynamic-favicon'
 import { useRealtimeUsers } from '@/hooks/use-realtime-users'
 import { isDemoMode } from '@/lib/demo'
 
@@ -17,6 +18,12 @@ function RealtimeUsersProvider({ children }: { children: ReactNode }) {
   const { status } = useSession()
   // Only enable SSE when authenticated and not in demo mode
   useRealtimeUsers(status === 'authenticated' && !isDemoMode())
+  return <>{children}</>
+}
+
+/** Updates the favicon based on branding logo mode. */
+function DynamicFaviconProvider({ children }: { children: ReactNode }) {
+  useDynamicFavicon()
   return <>{children}</>
 }
 
@@ -38,7 +45,9 @@ export function Providers({ children }: { children: ReactNode }) {
     return (
       <DemoInitializer>
         <QueryClientProvider client={queryClient}>
-          <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+          <DynamicFaviconProvider>
+            <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+          </DynamicFaviconProvider>
         </QueryClientProvider>
       </DemoInitializer>
     )
@@ -50,9 +59,11 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <SessionProvider basePath={basePath ? `${basePath}/api/auth` : undefined}>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider delayDuration={300}>
-          <RealtimeUsersProvider>{children}</RealtimeUsersProvider>
-        </TooltipProvider>
+        <DynamicFaviconProvider>
+          <TooltipProvider delayDuration={300}>
+            <RealtimeUsersProvider>{children}</RealtimeUsersProvider>
+          </TooltipProvider>
+        </DynamicFaviconProvider>
       </QueryClientProvider>
     </SessionProvider>
   )
