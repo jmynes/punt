@@ -503,7 +503,7 @@ function ProgressMeters({
                     />
                   )}
                 </div>
-                <div className="flex items-center gap-0.5 text-sm xl:w-auto w-[85px]">
+                <div className="flex items-center gap-0.5 text-sm">
                   {hasFilter ? (
                     <>
                       <span className={cn('font-semibold tabular-nums', textColor)}>
