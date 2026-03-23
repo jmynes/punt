@@ -141,6 +141,9 @@ model User {
 
   // Agent relations
   agents Agent[] @relation("OwnedAgents")
+
+  // MCP API keys (multiple keys per user)
+  mcpApiKeys McpApiKey[]
 }
 
 // Auth.js Account model for OAuth providers (future-proofing)
@@ -716,6 +719,21 @@ model Agent {
   ticketsCreated Ticket[] @relation("AgentCreatedTickets")
 
   @@index([ownerId])
+}
+
+// MCP API keys - supports multiple named keys per user
+model McpApiKey {
+  id         String    @id @default(cuid())
+  name       String    // User-chosen label (e.g., "Work laptop", "CI server")
+  keyHash    String    @unique // SHA-256 hash of the full API key
+  keyPrefix  String    // First 8 chars of key for display (e.g., "mcp_a1b2")
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime? // Updated on successful authentication
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // Chat session for storing conversation history

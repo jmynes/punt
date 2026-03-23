@@ -76,6 +76,25 @@ async function authenticateApiKey() {
   // Hash the incoming key - database stores hashed keys
   const keyHash = hashMcpKey(apiKey)
 
+  // First, check the new McpApiKey table (PUNT-376: multiple keys per user)
+  const mcpApiKey = await db.mcpApiKey.findUnique({
+    where: { keyHash },
+    select: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          isActive: true,
+        },
+      },
+    },
+  })
+
+  if (mcpApiKey?.user?.isActive) {
+    return mcpApiKey.user
+  }
+
+  // Fallback: check legacy User.mcpApiKey field
   const user = await db.user.findUnique({
     where: { mcpApiKey: keyHash },
     select: {
