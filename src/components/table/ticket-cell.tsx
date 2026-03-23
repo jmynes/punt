@@ -2,6 +2,7 @@
 
 import { format, isBefore, isToday } from 'date-fns'
 import { Ban, CircleCheck, Eye, User } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { AgentIdenticon } from '@/components/common'
 import { InlineCodeText } from '@/components/common/inline-code'
 import { PriorityBadge } from '@/components/common/priority-badge'
@@ -9,6 +10,7 @@ import { ResolutionBadge } from '@/components/common/resolution-badge'
 import { TypeBadge } from '@/components/common/type-badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getStatusIcon } from '@/lib/status-icons'
 import { cn, getAvatarColor, getInitials } from '@/lib/utils'
 import type { LinkType, Resolution } from '@/types'
@@ -31,48 +33,8 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
         </span>
       )
 
-    case 'title': {
-      // Check if ticket is blocked by unresolved tickets
-      const isBlocked =
-        ticket.links?.some((link) => {
-          const displayType =
-            link.direction === 'inward'
-              ? INVERSE_LINK_TYPES[link.linkType as LinkType]
-              : link.linkType
-          return displayType === 'is_blocked_by' && !link.linkedTicket.resolution
-        }) ?? false
-
-      return (
-        <div className="flex items-center gap-2">
-          {isBlocked && (
-            <Badge variant="destructive" className="shrink-0 text-xs px-1.5 py-0">
-              <Ban className="h-3 w-3 mr-0.5" />
-              Blocked
-            </Badge>
-          )}
-          <InlineCodeText text={ticket.title} className="truncate font-medium" />
-          {ticket._count &&
-            ticket._count.subtasks > 0 &&
-            (() => {
-              const resolved = ticket.subtasks?.filter((s) => s.resolution != null).length ?? 0
-              const total = ticket._count.subtasks
-              const allDone = resolved === total
-              return (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    'shrink-0 text-xs',
-                    allDone && 'border-emerald-700 text-emerald-400 bg-emerald-950/30',
-                  )}
-                >
-                  {allDone && <CircleCheck className="h-3 w-3 mr-0.5" />}
-                  {resolved}/{total} subtasks
-                </Badge>
-              )
-            })()}
-        </div>
-      )
-    }
+    case 'title':
+      return <TitleCell ticket={ticket} />
 
     case 'status': {
       const statusName = getStatusName(ticket.columnId)
@@ -311,4 +273,68 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
     default:
       return null
   }
+}
+
+function TitleCell({ ticket }: { ticket: TicketCellProps['ticket'] }) {
+  const titleRef = useRef<HTMLSpanElement>(null)
+  const [isTruncated, setIsTruncated] = useState(false)
+
+  useEffect(() => {
+    const el = titleRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const check = () => setIsTruncated(el.scrollWidth > el.clientWidth)
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  const isBlocked =
+    ticket.links?.some((link) => {
+      const displayType =
+        link.direction === 'inward' ? INVERSE_LINK_TYPES[link.linkType as LinkType] : link.linkType
+      return displayType === 'is_blocked_by' && !link.linkedTicket.resolution
+    }) ?? false
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center gap-2 min-w-0">
+          {isBlocked && (
+            <Badge variant="destructive" className="shrink-0 text-xs px-1.5 py-0">
+              <Ban className="h-3 w-3 mr-0.5" />
+              Blocked
+            </Badge>
+          )}
+          <span ref={titleRef} className="truncate">
+            <InlineCodeText text={ticket.title} className="font-medium" />
+          </span>
+          {ticket._count &&
+            ticket._count.subtasks > 0 &&
+            (() => {
+              const resolved = ticket.subtasks?.filter((s) => s.resolution != null).length ?? 0
+              const total = ticket._count.subtasks
+              const allDone = resolved === total
+              return (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'shrink-0 text-xs',
+                    allDone && 'border-emerald-700 text-emerald-400 bg-emerald-950/30',
+                  )}
+                >
+                  {allDone && <CircleCheck className="h-3 w-3 mr-0.5" />}
+                  {resolved}/{total} subtasks
+                </Badge>
+              )
+            })()}
+        </div>
+      </TooltipTrigger>
+      {isTruncated && (
+        <TooltipContent side="top" sideOffset={8}>
+          {ticket.title}
+        </TooltipContent>
+      )}
+    </Tooltip>
+  )
 }
