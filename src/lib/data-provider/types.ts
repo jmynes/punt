@@ -178,6 +178,7 @@ export interface DashboardStats {
 
 export interface BrandingSettings {
   appName: string
+  logoMode: 'default' | 'letter' | 'custom'
   logoUrl: string | null
   logoLetter: string
   logoGradientFrom: string

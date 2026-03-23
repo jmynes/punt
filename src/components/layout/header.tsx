@@ -49,7 +49,7 @@ export function Header() {
 
       {/* Logo */}
       <div className="flex items-center gap-2 font-semibold select-none">
-        {branding?.logoUrl ? (
+        {branding?.logoMode === 'custom' && branding.logoUrl ? (
           <img
             src={withBasePath(branding.logoUrl)}
             alt={branding.appName}
@@ -57,6 +57,15 @@ export function Header() {
             height={32}
             className="h-8 w-8 rounded-lg object-contain"
           />
+        ) : branding?.logoMode === 'letter' ? (
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
+            style={{
+              background: `linear-gradient(to bottom right, ${branding.logoGradientFrom}, ${branding.logoGradientTo})`,
+            }}
+          >
+            <span className="text-sm font-bold">{branding.logoLetter}</span>
+          </div>
         ) : (
           <PuntLogo className="h-8 w-8 rounded-lg" />
         )}

@@ -44,6 +44,7 @@ export interface SystemSettings {
   updatedBy: string | null
   // Branding
   appName: string
+  logoMode: string
   logoUrl: string | null
   logoLetter: string
   logoGradientFrom: string
@@ -132,6 +133,7 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     updatedBy: settings.updatedBy,
     // Branding
     appName: settings.appName,
+    logoMode: settings.logoMode,
     logoUrl: settings.logoUrl,
     logoLetter: settings.logoLetter,
     logoGradientFrom: settings.logoGradientFrom,
@@ -194,6 +196,7 @@ export async function getBrandingSettings(): Promise<BrandingSettings> {
     where: { id: 'system-settings' },
     select: {
       appName: true,
+      logoMode: true,
       logoUrl: true,
       logoLetter: true,
       logoGradientFrom: true,
@@ -207,6 +210,7 @@ export async function getBrandingSettings(): Promise<BrandingSettings> {
 
   return {
     appName: settings.appName,
+    logoMode: settings.logoMode as BrandingSettings['logoMode'],
     logoUrl: settings.logoUrl,
     logoLetter: settings.logoLetter,
     logoGradientFrom: settings.logoGradientFrom,
