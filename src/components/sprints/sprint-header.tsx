@@ -240,10 +240,8 @@ export function SprintHeader({
       <div className="relative px-4 py-3 md:px-5 md:py-4">
         {/* Desktop: single row */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          {/* Sprint identity — flex-wrap lets date/time drop below name.
-              shrink-[3] makes this side compress 3x faster than meters,
-              so date/time wraps well before budget does. */}
-          <div className="flex flex-wrap items-center justify-between gap-2 md:gap-4 min-w-0 lg:shrink-[3] lg:justify-start">
+          {/* Sprint identity — icon + name, with date inline below lg */}
+          <div className="flex items-center justify-between gap-2 md:gap-4 min-w-0 lg:justify-start">
             {/* Icon + name grouped — never separate */}
             <div className="flex items-center gap-2 xl:gap-4 min-w-0">
               <div className="relative shrink-0">
@@ -336,9 +334,8 @@ export function SprintHeader({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-
-            {/* Date + time — grouped so they wrap together */}
-            <div className="hidden sm:flex items-center gap-2 shrink-0">
+            {/* Date + time — inline with title on mobile (<lg) and wide desktop (xl+) */}
+            <div className="hidden sm:flex lg:hidden xl:flex items-center gap-2 shrink-0">
               {activeSprint.startDate && activeSprint.endDate && (
                 <div className="flex items-center gap-1.5 text-xs text-zinc-500 whitespace-nowrap">
                   <CalendarDays className="h-3.5 w-3.5 shrink-0" />
@@ -348,7 +345,6 @@ export function SprintHeader({
                   </span>
                 </div>
               )}
-
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
@@ -370,30 +366,64 @@ export function SprintHeader({
             </div>
           </div>
 
-          {/* Meters + complete button — min-w prevents compression until left side wraps first */}
-          <div className="flex flex-nowrap lg:flex-wrap xl:flex-nowrap items-center justify-end gap-x-4 gap-y-3">
-            <ProgressMeters
-              completedCount={completedCount}
-              totalCount={totalCount}
-              completedPoints={completedPoints}
-              totalPoints={totalPoints}
-              colorScheme={colorScheme}
-              filteredCompletedCount={filteredCompletedCount}
-              filteredTotalCount={filteredTotalCount}
-              filteredCompletedPoints={filteredCompletedPoints}
-              filteredTotalPoints={filteredTotalPoints}
-              budget={activeSprint.budget}
-            />
+          {/* Meters + complete button */}
+          <div className="flex flex-col items-end gap-3">
+            {/* Date + time — above meters only on mid-range (lg to xl) */}
+            <div className="hidden lg:flex xl:hidden items-center gap-2">
+              {activeSprint.startDate && activeSprint.endDate && (
+                <div className="flex items-center gap-1.5 text-xs text-zinc-500 whitespace-nowrap">
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    {format(new Date(activeSprint.startDate), 'MMM d')} -{' '}
+                    {format(new Date(activeSprint.endDate), 'MMM d')}
+                  </span>
+                </div>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default whitespace-nowrap',
+                      expired ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-400',
+                    )}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>{daysText}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {activeSprint.endDate
+                    ? `Ends ${format(new Date(activeSprint.endDate), 'PPP')} at ${format(new Date(activeSprint.endDate), 'p')}`
+                    : 'No end date set'}
+                </TooltipContent>
+              </Tooltip>
+            </div>
 
-            {expired && canManageSprints && (
-              <Button
-                onClick={() => openSprintComplete(activeSprint.id)}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-medium whitespace-nowrap ml-4"
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Complete
-              </Button>
-            )}
+            {/* Meters row */}
+            <div className="flex flex-nowrap items-center justify-end gap-x-4">
+              <ProgressMeters
+                completedCount={completedCount}
+                totalCount={totalCount}
+                completedPoints={completedPoints}
+                totalPoints={totalPoints}
+                colorScheme={colorScheme}
+                filteredCompletedCount={filteredCompletedCount}
+                filteredTotalCount={filteredTotalCount}
+                filteredCompletedPoints={filteredCompletedPoints}
+                filteredTotalPoints={filteredTotalPoints}
+                budget={activeSprint.budget}
+              />
+
+              {expired && canManageSprints && (
+                <Button
+                  onClick={() => openSprintComplete(activeSprint.id)}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-medium whitespace-nowrap ml-4"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Complete
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -467,8 +497,8 @@ function ProgressMeters({
 
   return (
     <>
-      {/* Issues + Points grouped — never separate. order-last when budget wraps (lg-xl) */}
-      <div className="flex items-center shrink-0 lg:order-last xl:order-none">
+      {/* Issues + Points grouped — never separate */}
+      <div className="flex items-center shrink-0">
         {/* Issues progress */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -594,7 +624,7 @@ function ProgressMeters({
                     />
                   )}
                 </div>
-                <div className="flex items-center gap-0.5 text-sm xl:w-auto w-[85px]">
+                <div className="flex items-center gap-0.5 text-sm">
                   {hasFilter ? (
                     <>
                       <span className={cn('font-semibold tabular-nums', textColor)}>
@@ -604,7 +634,6 @@ function ProgressMeters({
                       <span className="text-zinc-500 font-medium tabular-nums">
                         {filteredTotalPoints}
                       </span>
-                      <span className="xl:hidden text-zinc-600 text-xs ml-0.5">pts</span>
                     </>
                   ) : (
                     <>
@@ -613,7 +642,6 @@ function ProgressMeters({
                       </span>
                       <span className="text-zinc-600">/</span>
                       <span className="text-zinc-500 font-medium tabular-nums">{totalPoints}</span>
-                      <span className="xl:hidden text-zinc-600 text-xs ml-0.5">pts</span>
                     </>
                   )}
                 </div>
@@ -652,7 +680,7 @@ function ProgressMeters({
 
       {/* Budget meter — separate flex item so it can wrap to its own line */}
       {budget != null && budget > 0 && (
-        <div className="flex items-center shrink-0 xl:w-auto lg:w-full lg:justify-end">
+        <div className="flex items-center shrink-0">
           <div className="px-4 hidden xl:block">
             <div className={cn('w-px bg-zinc-700/50', hasFilter ? 'h-12' : 'h-8')} />
           </div>
@@ -707,7 +735,7 @@ function BudgetMeter({ totalPoints, budget }: { totalPoints: number; budget: num
                 style={{ width: `${budgetPercent}%` }}
               />
             </div>
-            <div className="flex items-center gap-0.5 text-sm xl:w-auto w-[85px]">
+            <div className="flex items-center gap-0.5 text-sm">
               <span className={cn('font-semibold tabular-nums', colors.text)}>{totalPoints}</span>
               <span className="text-zinc-600">/</span>
               <span className="text-zinc-500 font-medium tabular-nums">{budget}</span>
