@@ -40,6 +40,7 @@ const DEMO_SYSTEM_SETTINGS: CombinedSystemSettings = {
   ],
   // Branding settings
   appName: 'PUNT',
+  logoMode: 'default',
   logoLetter: 'P',
   logoGradientFrom: '#f59e0b',
   logoGradientTo: '#d97706',
@@ -104,6 +105,7 @@ export function useSystemSettings() {
 export interface UpdateSystemSettingsParams {
   // Branding settings
   appName?: string
+  logoMode?: string
   logoLetter?: string
   logoGradientFrom?: string
   logoGradientTo?: string

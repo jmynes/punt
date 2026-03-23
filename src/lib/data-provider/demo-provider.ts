@@ -526,6 +526,7 @@ export class DemoDataProvider implements DataProvider {
   async getBranding(): Promise<BrandingSettings> {
     return {
       appName: 'PUNT',
+      logoMode: 'default',
       logoUrl: null,
       logoLetter: 'P',
       logoGradientFrom: '#f59e0b',

@@ -23,6 +23,7 @@ export const SystemSettingsSchema = z.object({
   updatedBy: z.string().nullable(),
   // Branding
   appName: z.string(),
+  logoMode: z.string().default('default'),
   logoUrl: z.string().nullable(),
   logoLetter: z.string(),
   logoGradientFrom: z.string(),

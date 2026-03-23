@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/punt-icon.svg" alt="PUNT" width="96" height="96">
+</p>
+
 # PUNT
 
 A self-hosted issue tracker with backlog and Kanban views. Keep your data on your own infrastructure.
