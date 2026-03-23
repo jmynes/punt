@@ -170,7 +170,7 @@ function TruncatedProjectLink({
   }, [])
 
   return (
-    <Tooltip open={isTruncated ? undefined : false}>
+    <Tooltip>
       <TooltipTrigger asChild>
         <Link
           href={`/projects/${project.key}/${defaultProjectView}`}
@@ -204,9 +204,11 @@ function TruncatedProjectLink({
           </Button>
         </Link>
       </TooltipTrigger>
-      <TooltipContent side="right" sideOffset={8}>
-        {project.name}
-      </TooltipContent>
+      {isTruncated && (
+        <TooltipContent side="right" sideOffset={8}>
+          {project.name}
+        </TooltipContent>
+      )}
     </Tooltip>
   )
 }
