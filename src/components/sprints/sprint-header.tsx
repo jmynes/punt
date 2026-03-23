@@ -503,7 +503,7 @@ function ProgressMeters({
                     />
                   )}
                 </div>
-                <div className="flex items-center gap-0.5 text-sm">
+                <div className="flex items-center gap-0.5 text-sm xl:w-auto w-[85px]">
                   {hasFilter ? (
                     <>
                       <span className={cn('font-semibold tabular-nums', textColor)}>
@@ -594,7 +594,7 @@ function ProgressMeters({
                     />
                   )}
                 </div>
-                <div className="flex items-center gap-0.5 text-sm">
+                <div className="flex items-center gap-0.5 text-sm xl:w-auto w-[85px]">
                   {hasFilter ? (
                     <>
                       <span className={cn('font-semibold tabular-nums', textColor)}>
@@ -652,7 +652,7 @@ function ProgressMeters({
 
       {/* Budget meter — separate flex item so it can wrap to its own line */}
       {budget != null && budget > 0 && (
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center shrink-0 xl:w-auto w-full justify-end">
           <div className="px-4 hidden xl:block">
             <div className={cn('w-px bg-zinc-700/50', hasFilter ? 'h-12' : 'h-8')} />
           </div>
@@ -707,7 +707,7 @@ function BudgetMeter({ totalPoints, budget }: { totalPoints: number; budget: num
                 style={{ width: `${budgetPercent}%` }}
               />
             </div>
-            <div className="flex items-center gap-0.5 text-sm">
+            <div className="flex items-center gap-0.5 text-sm xl:w-auto w-[85px]">
               <span className={cn('font-semibold tabular-nums', colors.text)}>{totalPoints}</span>
               <span className="text-zinc-600">/</span>
               <span className="text-zinc-500 font-medium tabular-nums">{budget}</span>
