@@ -129,7 +129,7 @@ export function MobileNav() {
         <SheetContent
           side="left"
           hideClose
-          className="w-80 border-zinc-800 bg-zinc-950 p-0"
+          className="w-full sm:w-80 border-zinc-800 bg-zinc-950 p-0"
           onInteractOutside={(e) => {
             // Don't close if clicking the hamburger button (it handles its own toggle)
             const target = e.target as HTMLElement
