@@ -322,74 +322,77 @@ export function SprintSection({
                 statsStacked && 'justify-between',
               )}
             >
-              {/* Expand/Collapse chevron (only when collapsible) */}
-              {collapsible && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setExpanded(!expanded)
-                  }}
-                  className="text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
-                >
-                  {expanded ? (
-                    <ChevronDown className="h-5 w-5" />
+              {/* Chevron + icon + name grouped together */}
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Expand/Collapse chevron (only when collapsible) */}
+                {collapsible && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setExpanded(!expanded)
+                    }}
+                    className="text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
+                  >
+                    {expanded ? (
+                      <ChevronDown className="h-5 w-5" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5" />
+                    )}
+                  </button>
+                )}
+
+                {/* Sprint icon and name */}
+                <div className="flex items-center gap-2 min-w-0">
+                  {isBacklog ? (
+                    <div className="p-1.5 rounded-lg bg-zinc-800">
+                      <Target className="h-4 w-4 text-zinc-400" />
+                    </div>
                   ) : (
-                    <ChevronRight className="h-5 w-5" />
-                  )}
-                </button>
-              )}
-
-              {/* Sprint icon and name */}
-              <div className="flex items-center gap-2 min-w-0">
-                {isBacklog ? (
-                  <div className="p-1.5 rounded-lg bg-zinc-800">
-                    <Target className="h-4 w-4 text-zinc-400" />
-                  </div>
-                ) : (
-                  <div
-                    className={cn(
-                      'p-1.5 rounded-lg',
-                      isPlanning && 'bg-blue-500/20',
-                      isActive && !expired && 'bg-emerald-500/20',
-                      isActive && expired && 'bg-orange-500/20',
-                      isCompleted && 'bg-zinc-700',
-                    )}
-                  >
-                    <Target
+                    <div
                       className={cn(
-                        'h-4 w-4',
-                        isPlanning && 'text-blue-400',
-                        isActive && !expired && 'text-emerald-400',
-                        isActive && expired && 'text-orange-400',
-                        isCompleted && 'text-zinc-400',
+                        'p-1.5 rounded-lg',
+                        isPlanning && 'bg-blue-500/20',
+                        isActive && !expired && 'bg-emerald-500/20',
+                        isActive && expired && 'bg-orange-500/20',
+                        isCompleted && 'bg-zinc-700',
                       )}
-                    />
-                  </div>
-                )}
-                <h3
-                  className={cn(
-                    'font-semibold text-sm truncate',
-                    isBacklog ? 'text-zinc-400' : 'text-zinc-100',
+                    >
+                      <Target
+                        className={cn(
+                          'h-4 w-4',
+                          isPlanning && 'text-blue-400',
+                          isActive && !expired && 'text-emerald-400',
+                          isActive && expired && 'text-orange-400',
+                          isCompleted && 'text-zinc-400',
+                        )}
+                      />
+                    </div>
                   )}
-                >
-                  {isBacklog ? 'Backlog' : sprint.name}
-                </h3>
-
-                {/* Status badge */}
-                {!isBacklog && (
-                  <span
+                  <h3
                     className={cn(
-                      'px-2 py-0.5 text-[10px] font-medium rounded-full uppercase tracking-wide whitespace-nowrap',
-                      isPlanning && 'bg-blue-500/20 text-blue-400',
-                      isActive && !expired && 'bg-emerald-500/20 text-emerald-400',
-                      isActive && expired && 'bg-orange-500/20 text-orange-400',
-                      isCompleted && 'bg-zinc-700 text-zinc-400',
+                      'font-semibold text-sm truncate',
+                      isBacklog ? 'text-zinc-400' : 'text-zinc-100',
                     )}
                   >
-                    {isActive && expired ? 'Overdue' : sprint.status}
-                  </span>
-                )}
+                    {isBacklog ? 'Backlog' : sprint.name}
+                  </h3>
+
+                  {/* Status badge */}
+                  {!isBacklog && (
+                    <span
+                      className={cn(
+                        'px-2 py-0.5 text-[10px] font-medium rounded-full uppercase tracking-wide whitespace-nowrap',
+                        isPlanning && 'bg-blue-500/20 text-blue-400',
+                        isActive && !expired && 'bg-emerald-500/20 text-emerald-400',
+                        isActive && expired && 'bg-orange-500/20 text-orange-400',
+                        isCompleted && 'bg-zinc-700 text-zinc-400',
+                      )}
+                    >
+                      {isActive && expired ? 'Overdue' : sprint.status}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Date, time, goal — grouped so they align right when stacked */}
