@@ -17,14 +17,14 @@ import {
 import { SidebarToggleIcon } from '@/components/ui/sidebar-toggle-icon'
 import { useBranding } from '@/hooks/queries/use-branding'
 import { useCurrentUser } from '@/hooks/use-current-user'
-import { useIsMobile } from '@/hooks/use-media-query'
+import { useIsDesktop } from '@/hooks/use-media-query'
 import { withBasePath } from '@/lib/base-path'
 import { getAvatarColor, getInitials } from '@/lib/utils'
 import { useUIStore } from '@/stores/ui-store'
 import { GlobalTicketSearch } from './ticket-search'
 
 export function Header() {
-  const isMobile = useIsMobile()
+  const isDesktop = useIsDesktop()
   const { sidebarOpen, toggleSidebar, mobileNavOpen, setMobileNavOpen } = useUIStore()
   const currentUser = useCurrentUser()
   const { data: branding } = useBranding()
@@ -37,20 +37,20 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-zinc-800 bg-zinc-950/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60 lg:px-6">
       {/* Menu toggle button */}
-      {isMobile ? (
+      {isDesktop ? (
+        <Button variant="ghost" size="icon" className="shrink-0" onClick={toggleSidebar}>
+          <SidebarToggleIcon isOpen={sidebarOpen} />
+          <span className="sr-only">Toggle sidebar</span>
+        </Button>
+      ) : (
         <Button
           variant="ghost"
           size="icon"
-          className="shrink-0 lg:hidden"
+          className="shrink-0"
           onClick={() => setMobileNavOpen(!mobileNavOpen)}
         >
           <AnimatedMenuIcon isOpen={mobileNavOpen} />
           <span className="sr-only">Toggle navigation menu</span>
-        </Button>
-      ) : (
-        <Button variant="ghost" size="icon" className="shrink-0" onClick={toggleSidebar}>
-          <SidebarToggleIcon isOpen={sidebarOpen} />
-          <span className="sr-only">Toggle sidebar</span>
         </Button>
       )}
 
