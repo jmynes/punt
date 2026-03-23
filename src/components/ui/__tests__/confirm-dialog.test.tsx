@@ -71,7 +71,7 @@ describe('ConfirmDialog', () => {
   })
 
   it('shows loading state when onConfirm returns a promise', async () => {
-    let resolvePromise: () => void
+    let resolvePromise: () => void = () => {}
     const onConfirm = vi.fn(
       () =>
         new Promise<void>((resolve) => {
@@ -98,8 +98,7 @@ describe('ConfirmDialog', () => {
     })
 
     // Resolve the promise
-    // biome-ignore lint/style/noNonNullAssertion: test variable assigned in callback
-    resolvePromise!()
+    resolvePromise()
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Delete' })).not.toBeDisabled()

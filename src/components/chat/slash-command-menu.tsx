@@ -36,10 +36,10 @@ export function SlashCommandMenu({
   }, [selectedIndex, open])
 
   // Reset selection when filter changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: onSelectedIndexChange is stable
+  // biome-ignore lint/correctness/useExhaustiveDependencies: filter is an intentional trigger to reset selection when it changes
   useEffect(() => {
     onSelectedIndexChange(0)
-  }, [filter])
+  }, [filter, onSelectedIndexChange])
 
   if (!open || commands.length === 0) {
     return null
