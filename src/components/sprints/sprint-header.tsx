@@ -446,7 +446,7 @@ export function SprintHeader({
             className={cn('flex flex-col items-end gap-3', dateAboveMeters && 'self-end')}
           >
             {/* Meters row */}
-            <div className="flex flex-nowrap items-center justify-end gap-x-4">
+            <div className="flex flex-nowrap items-center justify-end">
               <ProgressMeters
                 completedCount={completedCount}
                 totalCount={totalCount}
@@ -727,7 +727,7 @@ function ProgressMeters({
       {/* Budget meter — separate flex item so it can wrap to its own line */}
       {budget != null && budget > 0 && (
         <div className="flex items-center shrink-0">
-          <div className="px-4 hidden xl:block">
+          <div className="px-4">
             <div className={cn('w-px bg-zinc-700/50', hasFilter ? 'h-12' : 'h-8')} />
           </div>
           <BudgetMeter totalPoints={totalPoints} budget={budget} />
