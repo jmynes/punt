@@ -229,158 +229,170 @@ export function SprintHeader({
         )}
       />
 
-      <div className="relative flex flex-col gap-3 px-4 py-3 md:px-5 md:py-4 lg:flex-row lg:items-center lg:justify-between">
-        {/* Left: Sprint info */}
-        <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
-          {/* Sprint icon with status indicator */}
-          <div className="relative">
-            <div className={cn('p-2.5 rounded-xl', colors.icon)}>
-              <Zap className={cn('h-5 w-5', colors.iconText)} />
-            </div>
-            {/* Pulse indicator */}
-            <span
-              className={cn(
-                'absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full animate-pulse',
-                colors.pulse,
-              )}
-            />
-          </div>
-
-          {/* Sprint name and dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-2 hover:bg-white/5 px-2 py-1 rounded-lg transition-colors"
-              >
-                <div className="text-left min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-zinc-100 truncate">{activeSprint.name}</h3>
-                    <span
-                      className={cn(
-                        'px-2 py-0.5 text-[10px] font-semibold rounded-full uppercase tracking-wider',
-                        colors.badge,
-                      )}
-                    >
-                      {expired ? 'Overdue' : getSprintStatusLabel(activeSprint.status)}
-                    </span>
-                  </div>
-                  {activeSprint.goal && (
-                    <p className="text-xs text-zinc-500 truncate max-w-[200px]">
-                      {activeSprint.goal}
-                    </p>
-                  )}
+      {/*
+        Layout tiers (no flex-wrap, explicit breakpoints):
+        - Mobile (<md):     Stack everything. Icon+name row, meters row.
+        - Tablet (md-lg):   Icon+name+time row, meters row below.
+        - Desktop (lg+):    Single row: icon+name+date+time | meters | [complete btn]
+        Meters NEVER wrap individually — they're always in one non-breaking row.
+        Dividers between meters are always shown since they never reflow.
+      */}
+      <div className="relative px-4 py-3 md:px-5 md:py-4">
+        {/* Desktop: single row */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {/* Sprint identity — wraps so date/time drops below name before truncating */}
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
+            {/* Icon + name grouped — never separate */}
+            <div className="flex items-center gap-3 md:gap-4 min-w-0">
+              <div className="relative shrink-0">
+                <div className={cn('p-2.5 rounded-xl', colors.icon)}>
+                  <Zap className={cn('h-5 w-5', colors.iconText)} />
                 </div>
-                <ChevronDown className="h-4 w-4 text-zinc-500 flex-shrink-0" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 bg-zinc-900 border-zinc-700">
-              {canManageSprints && (
-                <>
-                  <DropdownMenuItem
-                    onClick={() => openSprintEdit(activeSprint.id)}
-                    className="text-zinc-300 focus:bg-zinc-800"
+                <span
+                  className={cn(
+                    'absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full animate-pulse',
+                    colors.pulse,
+                  )}
+                />
+              </div>
+
+              {/* Name dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 hover:bg-white/5 px-2 py-1 rounded-lg transition-colors min-w-0"
                   >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit Sprint
-                  </DropdownMenuItem>
-
-                  {isPlanning && (
-                    <DropdownMenuItem
-                      onClick={() => openSprintStart(activeSprint.id)}
-                      className="text-zinc-300 focus:bg-zinc-800"
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Start Sprint
-                    </DropdownMenuItem>
-                  )}
-
-                  {isActive && (
-                    <DropdownMenuItem
-                      onClick={() => openSprintComplete(activeSprint.id)}
-                      className="text-zinc-300 focus:bg-zinc-800"
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Complete Sprint
-                    </DropdownMenuItem>
-                  )}
-
-                  {isPlanning && (
+                    <div className="text-left min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-zinc-100 truncate">
+                          {activeSprint.name}
+                        </h3>
+                        <span
+                          className={cn(
+                            'px-2 py-0.5 text-[10px] font-semibold rounded-full uppercase tracking-wider whitespace-nowrap',
+                            colors.badge,
+                          )}
+                        >
+                          {expired ? 'Overdue' : getSprintStatusLabel(activeSprint.status)}
+                        </span>
+                      </div>
+                      {activeSprint.goal && (
+                        <p className="text-xs text-zinc-500 truncate max-w-[200px]">
+                          {activeSprint.goal}
+                        </p>
+                      )}
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-zinc-500 flex-shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 bg-zinc-900 border-zinc-700">
+                  {canManageSprints && (
                     <>
-                      <DropdownMenuSeparator className="bg-zinc-700" />
                       <DropdownMenuItem
-                        onClick={() => deleteSprint.mutate(activeSprint.id)}
-                        className="text-red-400 focus:bg-red-900/20"
+                        onClick={() => openSprintEdit(activeSprint.id)}
+                        className="text-zinc-300 focus:bg-zinc-800"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Sprint
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit Sprint
                       </DropdownMenuItem>
+
+                      {isPlanning && (
+                        <DropdownMenuItem
+                          onClick={() => openSprintStart(activeSprint.id)}
+                          className="text-zinc-300 focus:bg-zinc-800"
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          Start Sprint
+                        </DropdownMenuItem>
+                      )}
+
+                      {isActive && (
+                        <DropdownMenuItem
+                          onClick={() => openSprintComplete(activeSprint.id)}
+                          className="text-zinc-300 focus:bg-zinc-800"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Complete Sprint
+                        </DropdownMenuItem>
+                      )}
+
+                      {isPlanning && (
+                        <>
+                          <DropdownMenuSeparator className="bg-zinc-700" />
+                          <DropdownMenuItem
+                            onClick={() => deleteSprint.mutate(activeSprint.id)}
+                            className="text-red-400 focus:bg-red-900/20"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Sprint
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </>
                   )}
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
-          {/* Date range + Time remaining — grouped so they wrap together */}
-          <div className="hidden sm:flex items-center gap-2">
-            {activeSprint.startDate && activeSprint.endDate && (
-              <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-                <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                <span className="whitespace-nowrap">
-                  {format(new Date(activeSprint.startDate), 'MMM d')} -{' '}
-                  {format(new Date(activeSprint.endDate), 'MMM d')}
-                </span>
-              </div>
-            )}
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default whitespace-nowrap',
-                    expired ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-400',
-                  )}
-                >
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>{daysText}</span>
+            {/* Date + time — grouped so they wrap together */}
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
+              {activeSprint.startDate && activeSprint.endDate && (
+                <div className="flex items-center gap-1.5 text-xs text-zinc-500 whitespace-nowrap">
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    {format(new Date(activeSprint.startDate), 'MMM d')} -{' '}
+                    {format(new Date(activeSprint.endDate), 'MMM d')}
+                  </span>
                 </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                {activeSprint.endDate
-                  ? `Ends ${format(new Date(activeSprint.endDate), 'PPP')} at ${format(new Date(activeSprint.endDate), 'p')}`
-                  : 'No end date set'}
-              </TooltipContent>
-            </Tooltip>
+              )}
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default whitespace-nowrap',
+                      expired ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-400',
+                    )}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>{daysText}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {activeSprint.endDate
+                    ? `Ends ${format(new Date(activeSprint.endDate), 'PPP')} at ${format(new Date(activeSprint.endDate), 'p')}`
+                    : 'No end date set'}
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
-        </div>
 
-        {/* Right: Progress and stats */}
-        <div className="flex items-center gap-3 md:gap-6 shrink-0">
-          {/* Progress meters (issues, points, budget) */}
-          <ProgressMeters
-            completedCount={completedCount}
-            totalCount={totalCount}
-            completedPoints={completedPoints}
-            totalPoints={totalPoints}
-            colorScheme={colorScheme}
-            filteredCompletedCount={filteredCompletedCount}
-            filteredTotalCount={filteredTotalCount}
-            filteredCompletedPoints={filteredCompletedPoints}
-            filteredTotalPoints={filteredTotalPoints}
-            budget={activeSprint.budget}
-          />
+          {/* Meters + complete button — never wraps internally, always one row */}
+          <div className="flex items-center gap-4 shrink-0">
+            <ProgressMeters
+              completedCount={completedCount}
+              totalCount={totalCount}
+              completedPoints={completedPoints}
+              totalPoints={totalPoints}
+              colorScheme={colorScheme}
+              filteredCompletedCount={filteredCompletedCount}
+              filteredTotalCount={filteredTotalCount}
+              filteredCompletedPoints={filteredCompletedPoints}
+              filteredTotalPoints={filteredTotalPoints}
+              budget={activeSprint.budget}
+            />
 
-          {/* Complete button when expired */}
-          {expired && canManageSprints && (
-            <Button
-              onClick={() => openSprintComplete(activeSprint.id)}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Complete
-            </Button>
-          )}
+            {expired && canManageSprints && (
+              <Button
+                onClick={() => openSprintComplete(activeSprint.id)}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-medium whitespace-nowrap"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Complete
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -452,7 +464,7 @@ function ProgressMeters({
   const textColor = textColors[colorScheme]
 
   return (
-    <div className="flex items-center gap-3 md:gap-6 overflow-x-auto">
+    <div className="flex items-center gap-4 md:gap-6">
       {/* Issues progress */}
       <Tooltip>
         <TooltipTrigger asChild>
@@ -628,13 +640,10 @@ function ProgressMeters({
         </TooltipContent>
       </Tooltip>
 
-      {/* Budget meter - only shown when budget is set */}
+      {/* Budget meter */}
       {budget != null && budget > 0 && (
         <>
-          {/* Divider */}
           <div className={cn('w-px bg-zinc-800/60', hasFilter ? 'h-14' : 'h-10')} />
-
-          {/* Budget progress */}
           <BudgetMeter totalPoints={totalPoints} budget={budget} />
         </>
       )}
