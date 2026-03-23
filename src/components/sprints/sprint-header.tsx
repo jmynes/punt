@@ -98,7 +98,7 @@ export function SprintHeader({
     return (
       <div
         className={cn(
-          'flex items-center justify-between px-5 py-4 rounded-xl',
+          'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3 md:px-5 md:py-4 rounded-xl',
           'bg-gradient-to-r from-zinc-900/80 to-zinc-900/40',
           'border border-zinc-800/50',
           className,
@@ -229,9 +229,9 @@ export function SprintHeader({
         )}
       />
 
-      <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-5 py-4">
+      <div className="relative flex flex-col gap-3 px-4 py-3 md:px-5 md:py-4 lg:flex-row lg:items-center lg:justify-between">
         {/* Left: Sprint info */}
-        <div className="flex items-center gap-4 min-w-0">
+        <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
           {/* Sprint icon with status indicator */}
           <div className="relative">
             <div className={cn('p-2.5 rounded-xl', colors.icon)}>
@@ -322,40 +322,41 @@ export function SprintHeader({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Date range */}
-          {activeSprint.startDate && activeSprint.endDate && (
-            <div className="hidden md:flex items-center gap-1.5 text-xs text-zinc-500">
-              <CalendarDays className="h-3.5 w-3.5" />
-              <span>
-                {format(new Date(activeSprint.startDate), 'MMM d')} -{' '}
-                {format(new Date(activeSprint.endDate), 'MMM d')}
-              </span>
-            </div>
-          )}
-
-          {/* Time remaining */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  'hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default',
-                  expired ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-400',
-                )}
-              >
-                <Clock className="h-3.5 w-3.5" />
-                <span>{daysText}</span>
+          {/* Date range + Time remaining — grouped so they wrap together */}
+          <div className="hidden sm:flex items-center gap-2">
+            {activeSprint.startDate && activeSprint.endDate && (
+              <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                <span className="whitespace-nowrap">
+                  {format(new Date(activeSprint.startDate), 'MMM d')} -{' '}
+                  {format(new Date(activeSprint.endDate), 'MMM d')}
+                </span>
               </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              {activeSprint.endDate
-                ? `Ends ${format(new Date(activeSprint.endDate), 'PPP')} at ${format(new Date(activeSprint.endDate), 'p')}`
-                : 'No end date set'}
-            </TooltipContent>
-          </Tooltip>
+            )}
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default whitespace-nowrap',
+                    expired ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-400',
+                  )}
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{daysText}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {activeSprint.endDate
+                  ? `Ends ${format(new Date(activeSprint.endDate), 'PPP')} at ${format(new Date(activeSprint.endDate), 'p')}`
+                  : 'No end date set'}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
         {/* Right: Progress and stats */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 md:gap-6 shrink-0">
           {/* Progress meters (issues, points, budget) */}
           <ProgressMeters
             completedCount={completedCount}
@@ -451,7 +452,7 @@ function ProgressMeters({
   const textColor = textColors[colorScheme]
 
   return (
-    <div className="flex items-center gap-4 md:gap-6 overflow-x-auto">
+    <div className="flex items-center gap-3 md:gap-6 overflow-x-auto">
       {/* Issues progress */}
       <Tooltip>
         <TooltipTrigger asChild>
@@ -466,7 +467,7 @@ function ProgressMeters({
 
             {/* Progress bar with numbers */}
             <div className="flex items-center gap-4">
-              <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="relative h-1.5 w-16 md:w-24 bg-zinc-800 rounded-full overflow-hidden">
                 {/* Total completion bar (dimmed when filtered) */}
                 <div
                   className={cn(
@@ -555,7 +556,7 @@ function ProgressMeters({
 
             {/* Progress bar with numbers */}
             <div className="flex items-center gap-4">
-              <div className="relative h-1.5 w-24 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="relative h-1.5 w-16 md:w-24 bg-zinc-800 rounded-full overflow-hidden">
                 {/* Total completion bar (dimmed when filtered) */}
                 <div
                   className={cn(
