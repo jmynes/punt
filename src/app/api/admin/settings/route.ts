@@ -14,6 +14,7 @@ const urlRegex = /^https?:\/\/[^\s/$.?#].[^\s]*$/i
 const UpdateSettingsSchema = z.object({
   // Branding settings
   appName: z.string().min(1).max(50).optional(),
+  logoMode: z.enum(['default', 'letter', 'custom']).optional(),
   logoLetter: z.string().min(1).max(2).optional(),
   logoGradientFrom: z
     .string()
@@ -148,6 +149,9 @@ export async function PATCH(request: Request) {
     // Branding updates
     if (updates.appName !== undefined) {
       updateData.appName = updates.appName
+    }
+    if (updates.logoMode !== undefined) {
+      updateData.logoMode = updates.logoMode
     }
     if (updates.logoLetter !== undefined) {
       updateData.logoLetter = updates.logoLetter
@@ -287,6 +291,7 @@ export async function PATCH(request: Request) {
     // Emit branding event if any branding field was updated
     const hasBrandingUpdate =
       updates.appName !== undefined ||
+      updates.logoMode !== undefined ||
       updates.logoLetter !== undefined ||
       updates.logoGradientFrom !== undefined ||
       updates.logoGradientTo !== undefined
