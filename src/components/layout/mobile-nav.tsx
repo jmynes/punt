@@ -1,7 +1,7 @@
 'use client'
 
 import { Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import {
@@ -30,11 +30,27 @@ export function MobileNav() {
   const {
     mobileNavOpen,
     setMobileNavOpen,
+    sidebarOpen,
+    setSidebarOpen,
     activeProjectId,
     setActiveProjectId,
     setCreateProjectOpen,
     openEditProject,
   } = useUIStore()
+
+  // When window resizes past lg (1024px) while mobile nav is open,
+  // close the drawer and ensure the desktop sidebar is visible
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const handler = (e: MediaQueryListEvent) => {
+      if (e.matches && mobileNavOpen) {
+        setMobileNavOpen(false)
+        if (!sidebarOpen) setSidebarOpen(true)
+      }
+    }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [mobileNavOpen, sidebarOpen, setMobileNavOpen, setSidebarOpen])
   const { projects, isLoading } = useProjectsStore()
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
