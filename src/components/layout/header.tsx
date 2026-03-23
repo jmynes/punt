@@ -49,26 +49,27 @@ export function Header() {
 
       {/* Logo */}
       <div className="flex items-center gap-2 font-semibold select-none">
-        {branding?.logoMode === 'custom' && branding.logoUrl ? (
-          <img
-            src={withBasePath(branding.logoUrl)}
-            alt={branding.appName}
-            width={32}
-            height={32}
-            className="h-8 w-8 rounded-lg object-contain"
-          />
-        ) : branding?.logoMode === 'letter' ? (
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
-            style={{
-              background: `linear-gradient(to bottom right, ${branding.logoGradientFrom}, ${branding.logoGradientTo})`,
-            }}
-          >
-            <span className="text-sm font-bold">{branding.logoLetter}</span>
-          </div>
-        ) : (
-          <PuntLogo className="h-8 w-8 rounded-lg" />
-        )}
+        <div className="relative h-8 w-8 shrink-0">
+          <PuntLogo className="absolute inset-0 h-8 w-8 rounded-lg" />
+          {branding?.logoMode === 'custom' && branding.logoUrl ? (
+            <img
+              src={withBasePath(branding.logoUrl)}
+              alt={branding.appName}
+              width={32}
+              height={32}
+              className="relative h-8 w-8 rounded-lg object-contain"
+            />
+          ) : branding?.logoMode === 'letter' ? (
+            <div
+              className="relative flex h-8 w-8 items-center justify-center rounded-lg text-white"
+              style={{
+                background: `linear-gradient(to bottom right, ${branding.logoGradientFrom}, ${branding.logoGradientTo})`,
+              }}
+            >
+              <span className="text-sm font-bold">{branding.logoLetter}</span>
+            </div>
+          ) : null}
+        </div>
         <span className="hidden text-lg tracking-tight text-white sm:inline-block">
           {branding?.appName || 'PUNT'}
         </span>

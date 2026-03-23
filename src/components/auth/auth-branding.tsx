@@ -18,24 +18,25 @@ export function AuthBranding({ title, subtitle = 'Sign in to your account' }: Au
     <div className="text-center space-y-4">
       {/* Logo */}
       <div className="flex justify-center">
-        {branding?.logoMode === 'custom' && branding.logoUrl ? (
-          <img
-            src={withBasePath(branding.logoUrl)}
-            alt={appName}
-            className="h-16 w-16 rounded-xl object-contain"
-          />
-        ) : branding?.logoMode === 'letter' ? (
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-xl text-white"
-            style={{
-              background: `linear-gradient(to bottom right, ${branding.logoGradientFrom}, ${branding.logoGradientTo})`,
-            }}
-          >
-            <span className="text-2xl font-bold">{branding.logoLetter}</span>
-          </div>
-        ) : (
-          <PuntLogo className="h-16 w-16 rounded-xl" />
-        )}
+        <div className="relative h-16 w-16">
+          <PuntLogo className="absolute inset-0 h-16 w-16 rounded-xl" />
+          {branding?.logoMode === 'custom' && branding.logoUrl ? (
+            <img
+              src={withBasePath(branding.logoUrl)}
+              alt={appName}
+              className="relative h-16 w-16 rounded-xl object-contain"
+            />
+          ) : branding?.logoMode === 'letter' ? (
+            <div
+              className="relative flex h-16 w-16 items-center justify-center rounded-xl text-white"
+              style={{
+                background: `linear-gradient(to bottom right, ${branding.logoGradientFrom}, ${branding.logoGradientTo})`,
+              }}
+            >
+              <span className="text-2xl font-bold">{branding.logoLetter}</span>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {/* Title */}
