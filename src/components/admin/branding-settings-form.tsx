@@ -282,13 +282,7 @@ export function BrandingSettingsForm() {
             {/* Custom Upload */}
             <button
               type="button"
-              onClick={() => {
-                if (settings?.logoUrl) {
-                  setLogoMode('custom')
-                } else {
-                  fileInputRef.current?.click()
-                }
-              }}
+              onClick={() => setLogoMode('custom')}
               className={cn(
                 'relative flex flex-col items-center gap-3 rounded-lg border p-4 transition-colors',
                 logoMode === 'custom'
