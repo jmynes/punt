@@ -982,9 +982,9 @@ export function TicketDetailDrawer({ ticket, projectKey, onClose }: TicketDetail
         className="w-full border-zinc-800 bg-zinc-950 p-0 sm:max-w-2xl md:max-w-3xl lg:max-w-4xl"
       >
         <div className="flex h-full flex-col overflow-hidden">
-          {/* Header - pr-14 gives space for the close button */}
-          <SheetHeader className="border-b border-zinc-800 px-4 md:px-6 pr-14 py-3 md:py-4 flex-shrink-0">
-            <div className="flex items-start justify-between gap-4">
+          {/* Header - pr-14 gives space for the close button (absolute top-4 right-4) */}
+          <SheetHeader className="border-b border-zinc-800 pl-14 md:pl-6 pr-14 py-4 flex-shrink-0">
+            <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <TypeBadge type={ticket.type} size="md" />
                 <SheetTitle className="text-base font-mono text-zinc-400">{ticketKey}</SheetTitle>
