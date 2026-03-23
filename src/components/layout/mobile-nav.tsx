@@ -94,11 +94,7 @@ export function MobileNav() {
             data-hamburger
             className="fixed left-4 top-3 z-[9999] flex h-9 w-9 items-center justify-center rounded-md hover:bg-white/10 active:bg-white/15 transition-colors duration-150 text-zinc-400 lg:hidden"
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation()
-              e.preventDefault()
-              setMobileNavOpen(!mobileNavOpen)
-            }}
+            onClick={() => setMobileNavOpen(!mobileNavOpen)}
             style={{ pointerEvents: 'auto' }}
           >
             <AnimatedMenuIcon isOpen={mobileNavOpen} />
