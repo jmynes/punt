@@ -119,12 +119,16 @@ function CollapsibleSection({
     return () => observer.disconnect()
   }, [])
 
+  // On initial mount with expanded=true, use 'none' until we have a real measurement
+  // to prevent content being clipped to 0px before scrollHeight is available
+  const hasValidHeight = heightRef.current > 0
+
   return (
     <div
       ref={outerRef}
       className="overflow-hidden transition-[max-height] ease-in-out"
       style={{
-        maxHeight: expanded ? `${heightRef.current}px` : '0px',
+        maxHeight: expanded ? (hasValidHeight ? `${heightRef.current}px` : 'none') : '0px',
         transitionDuration: '200ms',
       }}
     >
@@ -306,6 +310,10 @@ export function SidebarContent({
 
   useEffect(() => {
     if (!activeProjectId || !projectsExpandedRef.current) return
+    // Only auto-scroll on desktop sidebar — on mobile the nav drawer
+    // opens at scroll top and scrolling away is disorienting
+    const isDesktop = window.matchMedia('(min-width: 1024px)').matches
+    if (!isDesktop) return
     // Small delay to allow the DOM to update after project list re-renders
     const timer = setTimeout(() => {
       const el = sidebarRef.current?.querySelector(`[data-project-id="${activeProjectId}"]`)
