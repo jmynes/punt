@@ -15,7 +15,7 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -89,68 +89,6 @@ export function SprintHeader({
 
   // Monitor budget and trigger fire effect when crossing over-budget threshold
   useBudgetAlert(projectId, activeSprint)
-
-  // Detect when desktop row overflows — date should move above meters
-  const rowRef = useRef<HTMLDivElement>(null)
-  const [dateAboveMeters, setDateAboveMeters] = useState(false)
-  const dateAboveRef = useRef(false) // mirror of state, readable without re-renders
-  const dateRef = useRef<HTMLDivElement>(null)
-  const identityRef = useRef<HTMLDivElement>(null)
-
-  const metersRef = useRef<HTMLDivElement>(null)
-  const pendingRef = useRef<number | null>(null)
-  // Container width at which stacking was triggered — restore only when 32px wider
-  const stackThresholdRef = useRef(0)
-  const checkOverflow = useCallback(() => {
-    if (pendingRef.current) cancelAnimationFrame(pendingRef.current)
-    pendingRef.current = requestAnimationFrame(() => {
-      const rowEl = rowRef.current
-      const dateEl = dateRef.current
-      const metersEl = metersRef.current
-      if (!rowEl || !dateEl || !metersEl) return
-      // Below lg, dateAboveMeters has no visual effect (all conditional classes
-      // use lg: prefix), so we intentionally do NOT reset it. This prevents
-      // flash when resizing from mobile back to desktop — the stacked state
-      // is preserved across the breakpoint crossing.
-      const isDesktop = window.matchMedia('(min-width: 1024px)').matches
-      if (!isDesktop) return
-
-      let shouldStack: boolean
-      if (dateAboveRef.current) {
-        // Currently stacked. Restore only when container is 32px wider than
-        // the width at which stacking was triggered.
-        shouldStack = rowEl.clientWidth < stackThresholdRef.current + 32
-      } else {
-        // Currently side-by-side. Stack when gap between date and meters < 16px.
-        const gap = metersEl.getBoundingClientRect().left - dateEl.getBoundingClientRect().right
-        if (gap < 16) {
-          stackThresholdRef.current = rowEl.clientWidth
-          shouldStack = true
-        } else {
-          shouldStack = false
-        }
-      }
-
-      if (shouldStack !== dateAboveRef.current) {
-        dateAboveRef.current = shouldStack
-        setDateAboveMeters(shouldStack)
-      }
-    })
-  }, []) // no dependencies — reads refs only
-
-  useEffect(() => {
-    checkOverflow()
-    // Re-check after fonts load — fallback fonts are narrower, so initial
-    // measurement underestimates content width and misses overflow
-    document.fonts.ready.then(checkOverflow)
-    window.addEventListener('resize', checkOverflow)
-    const observer = new ResizeObserver(checkOverflow)
-    if (rowRef.current) observer.observe(rowRef.current)
-    return () => {
-      window.removeEventListener('resize', checkOverflow)
-      observer.disconnect()
-    }
-  }, [checkOverflow])
 
   if (isLoading) {
     return <div className={cn('h-16 bg-zinc-900/50 rounded-xl animate-pulse', className)} />
@@ -293,31 +231,17 @@ export function SprintHeader({
       />
 
       {/*
-        Layout tiers:
-        - Mobile (<sm):     Stack: [icon+name] / [meters]
-        - Tablet (sm-lg):   [icon+name ... date+time] / [meters]
-        - Desktop (lg+):    [icon+name date+time .... meters+complete]  (one row)
-        - Desktop narrow:   Detection-based stack when meters crowd the date:
-                            [icon+name .............. date+time]
-                            [........................... meters]
+        Layout: CSS flex-wrap handles reflow naturally.
+        - Mobile (<lg):     Stack: [icon+name ... date+time] / [meters]
+        - Desktop (lg+):    Single row when space allows, wraps meters below when tight.
+        Identity row: grow shrink-0 so it takes remaining space and wraps meters
+        when they don't fit. justify-between pushes name left, date right.
         Meters NEVER wrap individually — always one non-breaking row.
       */}
       <div className="relative px-4 py-3 md:px-5 md:py-4">
-        <div
-          ref={rowRef}
-          className={cn(
-            'flex flex-col gap-3',
-            !dateAboveMeters && 'lg:flex-row lg:items-center lg:justify-between',
-          )}
-        >
-          {/* Sprint identity — icon + name, with date inline below lg and when reflowed */}
-          <div
-            ref={identityRef}
-            className={cn(
-              'flex items-center justify-between gap-2 md:gap-4 min-w-0',
-              !dateAboveMeters && 'lg:justify-start',
-            )}
-          >
+        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+          {/* Sprint identity — icon + name + date, stretches to fill */}
+          <div className="flex items-center justify-between gap-2 md:gap-4 lg:grow lg:shrink-0">
             {/* Icon + name grouped — never separate */}
             <div className="flex items-center gap-4 min-w-0">
               <div className="relative shrink-0">
@@ -411,7 +335,7 @@ export function SprintHeader({
               </DropdownMenu>
             </div>
             {/* Date + time — always inline with title (hidden on xs only) */}
-            <div ref={dateRef} className="hidden sm:flex items-center gap-2 shrink-0">
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
               {activeSprint.startDate && activeSprint.endDate && (
                 <div className="flex items-center gap-1.5 text-xs text-zinc-500 whitespace-nowrap">
                   <CalendarDays className="h-3.5 w-3.5 shrink-0" />
@@ -443,10 +367,7 @@ export function SprintHeader({
           </div>
 
           {/* Meters + complete button */}
-          <div
-            ref={metersRef}
-            className={cn('flex flex-col items-end gap-3', dateAboveMeters && 'lg:self-end')}
-          >
+          <div className="flex flex-col items-end gap-3 shrink-0 ml-auto">
             {/* Meters row */}
             <div className="flex flex-nowrap items-center justify-end">
               <ProgressMeters
