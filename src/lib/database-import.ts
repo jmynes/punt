@@ -394,6 +394,7 @@ async function wipeDatabase(tx: Parameters<Parameters<typeof db.$transaction>[0]
   await tx.ticketLink.deleteMany()
   await tx.ticket.deleteMany()
   await safeDeleteAll('Agent')
+  await safeDeleteAll('McpApiKey')
   await tx.projectSprintSettings.deleteMany()
   await tx.projectMember.deleteMany()
   await tx.sprint.deleteMany()
@@ -959,6 +960,29 @@ export async function importDatabase(
             })
           }
           counts.agents = agents.length
+        }
+      }
+
+      // Step 20: Import MCP API Keys (table may not exist in older database schemas)
+      const mcpApiKeys = dataToImport.mcpApiKeys ?? []
+      if (mcpApiKeys.length > 0) {
+        const mcpApiKeyTableExists = await tx.$queryRaw<{ exists: boolean }[]>`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = 'McpApiKey'
+          ) as exists
+        `
+        if (mcpApiKeyTableExists[0]?.exists) {
+          for (const mcpApiKey of mcpApiKeys) {
+            await tx.mcpApiKey.create({
+              data: {
+                ...mcpApiKey,
+                createdAt: new Date(mcpApiKey.createdAt),
+                lastUsedAt: mcpApiKey.lastUsedAt ? new Date(mcpApiKey.lastUsedAt) : null,
+              },
+              select: { id: true },
+            })
+          }
         }
       }
     },
