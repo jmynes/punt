@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   description:
     'A lightweight, self-hosted ticket tracker and kanban board. Jira-like without the bloat.',
   icons: {
-    icon: '/favicon.ico',
+    icon: [{ url: 'data:,', type: 'image/x-icon' }],
   },
 }
 

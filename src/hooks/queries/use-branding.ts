@@ -22,7 +22,5 @@ export function useBranding() {
       return provider.getBranding()
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
-    // Return defaults while loading
-    placeholderData: { ...DEFAULT_BRANDING },
   })
 }

@@ -11,12 +11,12 @@ import { logger } from '@/lib/logger'
 
 const fileStorage = new FilesystemStorage()
 
-const ALLOWED_LOGO_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const ALLOWED_LOGO_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
 const MAX_LOGO_SIZE = 2 * 1024 * 1024 // 2MB
 
-function generateLogoFilename(): string {
+function generateLogoFilename(isSvg: boolean): string {
   const timestamp = Date.now()
-  return `logo-${timestamp}.webp`
+  return `logo-${timestamp}.${isSvg ? 'svg' : 'webp'}`
 }
 
 /**
@@ -61,30 +61,36 @@ export async function POST(request: Request) {
     const logoDir = fileStorage.join(process.cwd(), 'public', 'uploads', 'branding')
     await fileStorage.ensureDirectoryExists(logoDir)
 
-    const filename = generateLogoFilename()
+    const isSvg = file.type === 'image/svg+xml'
+    const filename = generateLogoFilename(isSvg)
     const filepath = fileStorage.join(logoDir, filename)
 
     const bytes = await file.arrayBuffer()
     const rawBuffer = Buffer.from(bytes)
 
-    // Process image: resize, strip metadata, convert to WebP
-    let processedBuffer: Buffer
-    try {
-      processedBuffer = await processLogoImage(rawBuffer)
-      logger.debug('Logo processed successfully', {
-        originalSize: rawBuffer.length,
-        processedSize: processedBuffer.length,
-        reduction: `${Math.round((1 - processedBuffer.length / rawBuffer.length) * 100)}%`,
-      })
-    } catch (error) {
-      logger.error('Failed to process logo image', error instanceof Error ? error : undefined)
-      return NextResponse.json(
-        { error: 'Failed to process image. Please try a different file.' },
-        { status: 400 },
-      )
+    let finalBuffer: Buffer
+    if (isSvg) {
+      // SVG: store as-is (admin-only upload, sanitization tracked in PUNT-400)
+      finalBuffer = rawBuffer
+    } else {
+      // Raster images: resize, strip metadata, convert to WebP
+      try {
+        finalBuffer = await processLogoImage(rawBuffer)
+        logger.debug('Logo processed successfully', {
+          originalSize: rawBuffer.length,
+          processedSize: finalBuffer.length,
+          reduction: `${Math.round((1 - finalBuffer.length / rawBuffer.length) * 100)}%`,
+        })
+      } catch (error) {
+        logger.error('Failed to process logo image', error instanceof Error ? error : undefined)
+        return NextResponse.json(
+          { error: 'Failed to process image. Please try a different file.' },
+          { status: 400 },
+        )
+      }
     }
 
-    await fileStorage.writeFile(filepath, processedBuffer)
+    await fileStorage.writeFile(filepath, finalBuffer)
 
     const logoUrl = `/uploads/branding/${filename}`
 

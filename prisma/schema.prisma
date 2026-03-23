@@ -611,6 +611,7 @@ model SystemSettings {
 
   // Branding settings
   appName          String  @default("PUNT")
+  logoMode         String  @default("default") // "default" | "letter" | "custom"
   logoUrl          String? // URL to uploaded logo image
   logoLetter       String  @default("P")
   logoGradientFrom String  @default("#f59e0b")
