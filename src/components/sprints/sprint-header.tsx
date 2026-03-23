@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -88,6 +89,63 @@ export function SprintHeader({
 
   // Monitor budget and trigger fire effect when crossing over-budget threshold
   useBudgetAlert(projectId, activeSprint)
+
+  // Detect when desktop row overflows — date should move above meters
+  const rowRef = useRef<HTMLDivElement>(null)
+  const [dateAboveMeters, setDateAboveMeters] = useState(false)
+  const dateAboveRef = useRef(false) // mirror of state, readable without re-renders
+  const dateRef = useRef<HTMLDivElement>(null)
+  const identityRef = useRef<HTMLDivElement>(null)
+
+  const metersRef = useRef<HTMLDivElement>(null)
+  const pendingRef = useRef<number | null>(null)
+  const cachedDateWidthRef = useRef(0) // real measured width from when date was last inline
+  const checkOverflow = useCallback(() => {
+    if (pendingRef.current) cancelAnimationFrame(pendingRef.current)
+    pendingRef.current = requestAnimationFrame(() => {
+      const dateEl = dateRef.current
+      const metersEl = metersRef.current
+      if (!dateEl || !metersEl) return
+      const isRow = window.matchMedia('(min-width: 1024px)').matches
+      if (!isRow) {
+        if (dateAboveRef.current) {
+          dateAboveRef.current = false
+          setDateAboveMeters(false)
+        }
+        return
+      }
+
+      let shouldBeAbove: boolean
+      if (dateAboveRef.current) {
+        // Date is above meters. To restore inline, we need enough room for the
+        // cached date width + a 32px comfort buffer. Since removing the date
+        // freed exactly cachedDateWidth of space, the gap must grow an additional
+        // 32px beyond that before we restore — preventing oscillation at the boundary.
+        const dateWidth = cachedDateWidthRef.current || 150
+        const identityRight = identityRef.current?.getBoundingClientRect().right ?? 0
+        const availableGap = metersEl.getBoundingClientRect().left - identityRight
+        shouldBeAbove = availableGap < dateWidth + 32
+      } else {
+        // Date is inline — cache its actual width for later restore calculation
+        cachedDateWidthRef.current = dateEl.getBoundingClientRect().width
+        const gap = metersEl.getBoundingClientRect().left - dateEl.getBoundingClientRect().right
+        shouldBeAbove = gap < 16
+      }
+
+      if (shouldBeAbove !== dateAboveRef.current) {
+        dateAboveRef.current = shouldBeAbove
+        setDateAboveMeters(shouldBeAbove)
+      }
+    })
+  }, []) // no dependencies — reads refs only
+
+  useEffect(() => {
+    checkOverflow()
+    const observer = new ResizeObserver(checkOverflow)
+    if (rowRef.current) observer.observe(rowRef.current)
+    if (metersRef.current) observer.observe(metersRef.current)
+    return () => observer.disconnect()
+  }, [checkOverflow])
 
   if (isLoading) {
     return <div className={cn('h-16 bg-zinc-900/50 rounded-xl animate-pulse', className)} />
@@ -238,10 +296,15 @@ export function SprintHeader({
         Dividers between meters are always shown since they never reflow.
       */}
       <div className="relative px-4 py-3 md:px-5 md:py-4">
-        {/* Desktop: single row */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div
+          ref={rowRef}
+          className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+        >
           {/* Sprint identity — icon + name, with date inline below lg */}
-          <div className="flex items-center justify-between gap-2 md:gap-4 min-w-0 lg:justify-start">
+          <div
+            ref={identityRef}
+            className="flex items-center justify-between gap-2 md:gap-4 min-w-0 lg:justify-start"
+          >
             {/* Icon + name grouped — never separate */}
             <div className="flex items-center gap-2 xl:gap-4 min-w-0">
               <div className="relative shrink-0">
@@ -334,8 +397,14 @@ export function SprintHeader({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            {/* Date + time — inline with title on mobile (<lg) and wide desktop (xl+) */}
-            <div className="hidden sm:flex lg:hidden xl:flex items-center gap-2 shrink-0">
+            {/* Date + time — inline with title when not overflowing */}
+            <div
+              ref={dateRef}
+              className={cn(
+                'hidden sm:flex items-center gap-2 shrink-0',
+                dateAboveMeters && 'lg:hidden',
+              )}
+            >
               {activeSprint.startDate && activeSprint.endDate && (
                 <div className="flex items-center gap-1.5 text-xs text-zinc-500 whitespace-nowrap">
                   <CalendarDays className="h-3.5 w-3.5 shrink-0" />
@@ -367,9 +436,9 @@ export function SprintHeader({
           </div>
 
           {/* Meters + complete button */}
-          <div className="flex flex-col items-end gap-3">
-            {/* Date + time — above meters only on mid-range (lg to xl) */}
-            <div className="hidden lg:flex xl:hidden items-center gap-2">
+          <div ref={metersRef} className="flex flex-col items-end gap-3">
+            {/* Date + time — above meters when overflowing on desktop */}
+            <div className={cn('hidden items-center gap-2', dateAboveMeters && 'lg:flex')}>
               {activeSprint.startDate && activeSprint.endDate && (
                 <div className="flex items-center gap-1.5 text-xs text-zinc-500 whitespace-nowrap">
                   <CalendarDays className="h-3.5 w-3.5 shrink-0" />
