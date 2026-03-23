@@ -279,6 +279,7 @@ export function DatabaseSettings() {
                 allProjectsExcluded
               if (!isDisabled) handleExportClick()
             }}
+            className="space-y-5"
           >
             <Accordion
               title={
