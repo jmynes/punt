@@ -3,6 +3,7 @@
 import { LogOut, Shield, SlidersHorizontal, User, UserCircle } from 'lucide-react'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
+import { PuntLogo } from '@/components/common/punt-logo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -48,11 +49,17 @@ export function Header() {
 
       {/* Logo */}
       <div className="flex items-center gap-2 font-semibold select-none">
-        <img
-          src={withBasePath(branding?.logoUrl || '/punt-icon.svg')}
-          alt={branding?.appName || 'PUNT'}
-          className="h-8 w-8 rounded-lg object-contain"
-        />
+        {branding?.logoUrl ? (
+          <img
+            src={withBasePath(branding.logoUrl)}
+            alt={branding.appName}
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-lg object-contain"
+          />
+        ) : (
+          <PuntLogo className="h-8 w-8 rounded-lg" />
+        )}
         <span className="hidden text-lg tracking-tight text-white sm:inline-block">
           {branding?.appName || 'PUNT'}
         </span>

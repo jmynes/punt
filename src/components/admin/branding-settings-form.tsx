@@ -2,6 +2,7 @@
 
 import { ImageIcon, Loader2, RotateCcw, Save, Trash2, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { PuntLogo } from '@/components/common/punt-logo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -157,11 +158,15 @@ export function BrandingSettingsForm() {
             <div className="space-y-2">
               <Label className="text-zinc-300">Current Logo</Label>
               <div className="flex items-center gap-4">
-                <img
-                  src={withBasePath(settings?.logoUrl || '/punt-icon.svg')}
-                  alt="Logo"
-                  className="h-12 w-12 rounded-lg object-contain bg-zinc-800"
-                />
+                {settings?.logoUrl ? (
+                  <img
+                    src={withBasePath(settings.logoUrl)}
+                    alt="Logo"
+                    className="h-12 w-12 rounded-lg object-contain bg-zinc-800"
+                  />
+                ) : (
+                  <PuntLogo className="h-12 w-12 rounded-lg" />
+                )}
                 <span className="text-xl font-semibold text-zinc-100">{appName}</span>
               </div>
             </div>

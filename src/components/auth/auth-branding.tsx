@@ -1,5 +1,6 @@
 'use client'
 
+import { PuntLogo } from '@/components/common/punt-logo'
 import { useBranding } from '@/hooks/queries/use-branding'
 import { withBasePath } from '@/lib/base-path'
 
@@ -17,11 +18,15 @@ export function AuthBranding({ title, subtitle = 'Sign in to your account' }: Au
     <div className="text-center space-y-4">
       {/* Logo */}
       <div className="flex justify-center">
-        <img
-          src={withBasePath(branding?.logoUrl || '/punt-icon.svg')}
-          alt={appName}
-          className="h-16 w-16 rounded-xl object-contain"
-        />
+        {branding?.logoUrl ? (
+          <img
+            src={withBasePath(branding.logoUrl)}
+            alt={appName}
+            className="h-16 w-16 rounded-xl object-contain"
+          />
+        ) : (
+          <PuntLogo className="h-16 w-16 rounded-xl" />
+        )}
       </div>
 
       {/* Title */}
