@@ -389,10 +389,9 @@ export function QueryInput({
     setSelectedIndex(0)
   }, [value])
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: updateAutocomplete recalculates when value changes
   useEffect(() => {
     updateAutocomplete()
-  }, [value, updateAutocomplete])
+  }, [updateAutocomplete])
 
   // Auto-focus input and open autocomplete on mount when autoFocus is true
   // biome-ignore lint/correctness/useExhaustiveDependencies: only run on mount
