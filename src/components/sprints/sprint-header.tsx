@@ -472,7 +472,7 @@ function ProgressMeters({
         {/* Issues progress */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex flex-col gap-1.5 w-[130px] md:w-[160px]">
+            <div className="flex flex-col gap-1.5">
               {/* Label row */}
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 text-zinc-500" />
@@ -483,7 +483,7 @@ function ProgressMeters({
 
               {/* Progress bar with numbers */}
               <div className="flex items-center gap-3">
-                <div className="relative h-1.5 flex-1 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="relative h-1.5 w-20 md:w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
                   {/* Total completion bar (dimmed when filtered) */}
                   <div
                     className={cn(
@@ -563,7 +563,7 @@ function ProgressMeters({
         {/* Story points progress */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex flex-col gap-1.5 w-[130px] md:w-[160px]">
+            <div className="flex flex-col gap-1.5">
               {/* Label row */}
               <div className="flex items-center gap-1.5">
                 <TrendingUp className="h-3.5 w-3.5 text-zinc-500" />
@@ -574,7 +574,7 @@ function ProgressMeters({
 
               {/* Progress bar with numbers */}
               <div className="flex items-center gap-3">
-                <div className="relative h-1.5 flex-1 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="relative h-1.5 w-20 md:w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
                   {/* Total completion bar (dimmed when filtered) */}
                   <div
                     className={cn(
@@ -687,7 +687,7 @@ function BudgetMeter({ totalPoints, budget }: { totalPoints: number; budget: num
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="flex flex-col gap-1.5 w-[130px] md:w-[160px]">
+        <div className="flex flex-col gap-1.5">
           {/* Label row */}
           <div className="flex items-center gap-1.5">
             <Target className={cn('h-3.5 w-3.5', colors.icon)} />
@@ -698,7 +698,7 @@ function BudgetMeter({ totalPoints, budget }: { totalPoints: number; budget: num
 
           {/* Progress bar with numbers */}
           <div className="flex items-center gap-3">
-            <div className="relative h-1.5 flex-1 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="relative h-1.5 w-20 md:w-24 bg-zinc-800 rounded-full overflow-hidden shrink-0">
               <div
                 className={cn(
                   'absolute inset-y-0 left-0 rounded-full transition-all duration-500',
