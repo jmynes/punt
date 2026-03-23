@@ -1156,12 +1156,10 @@ export default function BacklogPage() {
         </div>
 
         {canCreateTickets && (
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="primary" onClick={() => setCreateTicketOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              New Ticket
-            </Button>
-          </div>
+          <Button size="sm" variant="primary" onClick={() => setCreateTicketOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            New Ticket
+          </Button>
         )}
       </div>
 
