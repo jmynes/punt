@@ -99,9 +99,8 @@ export function SprintHeader({
 
   const metersRef = useRef<HTMLDivElement>(null)
   const pendingRef = useRef<number | null>(null)
-  // Cache the content widths from side-by-side layout for restore calculation
-  const cachedIdentityWidthRef = useRef(0)
-  const cachedMetersWidthRef = useRef(0)
+  // Container width at which stacking was triggered — restore only when 32px wider
+  const stackThresholdRef = useRef(0)
   const checkOverflow = useCallback(() => {
     if (pendingRef.current) cancelAnimationFrame(pendingRef.current)
     pendingRef.current = requestAnimationFrame(() => {
@@ -109,30 +108,27 @@ export function SprintHeader({
       const dateEl = dateRef.current
       const metersEl = metersRef.current
       if (!rowEl || !dateEl || !metersEl) return
+      // Below lg, dateAboveMeters has no visual effect (all conditional classes
+      // use lg: prefix), so we intentionally do NOT reset it. This prevents
+      // flash when resizing from mobile back to desktop — the stacked state
+      // is preserved across the breakpoint crossing.
       const isDesktop = window.matchMedia('(min-width: 1024px)').matches
-      if (!isDesktop) {
-        if (dateAboveRef.current) {
-          dateAboveRef.current = false
-          setDateAboveMeters(false)
-        }
-        return
-      }
+      if (!isDesktop) return
 
       let shouldStack: boolean
       if (dateAboveRef.current) {
-        // Currently stacked (flex-col). Identity stretches to full width, so we
-        // use cached content widths from the last side-by-side layout. Restore
-        // only when the container can fit both + 32px buffer.
-        const containerWidth = rowEl.clientWidth
-        const needed =
-          (cachedIdentityWidthRef.current || 400) + (cachedMetersWidthRef.current || 300)
-        shouldStack = containerWidth < needed + 32
+        // Currently stacked. Restore only when container is 32px wider than
+        // the width at which stacking was triggered.
+        shouldStack = rowEl.clientWidth < stackThresholdRef.current + 32
       } else {
-        // Currently side-by-side (flex-row). Cache content widths and measure gap.
-        cachedIdentityWidthRef.current = identityRef.current?.getBoundingClientRect().width ?? 0
-        cachedMetersWidthRef.current = metersEl.getBoundingClientRect().width
+        // Currently side-by-side. Stack when gap between date and meters < 16px.
         const gap = metersEl.getBoundingClientRect().left - dateEl.getBoundingClientRect().right
-        shouldStack = gap < 16
+        if (gap < 16) {
+          stackThresholdRef.current = rowEl.clientWidth
+          shouldStack = true
+        } else {
+          shouldStack = false
+        }
       }
 
       if (shouldStack !== dateAboveRef.current) {
@@ -144,10 +140,11 @@ export function SprintHeader({
 
   useEffect(() => {
     checkOverflow()
-    const observer = new ResizeObserver(checkOverflow)
-    if (rowRef.current) observer.observe(rowRef.current)
-    if (metersRef.current) observer.observe(metersRef.current)
-    return () => observer.disconnect()
+    // Use window resize instead of ResizeObserver — ResizeObserver fires on
+    // our own layout changes (state toggle → class change → size change → observer)
+    // creating feedback loops. Window resize only fires on actual viewport changes.
+    window.addEventListener('resize', checkOverflow)
+    return () => window.removeEventListener('resize', checkOverflow)
   }, [checkOverflow])
 
   if (isLoading) {
@@ -443,7 +440,7 @@ export function SprintHeader({
           {/* Meters + complete button */}
           <div
             ref={metersRef}
-            className={cn('flex flex-col items-end gap-3', dateAboveMeters && 'self-end')}
+            className={cn('flex flex-col items-end gap-3', dateAboveMeters && 'lg:self-end')}
           >
             {/* Meters row */}
             <div className="flex flex-nowrap items-center justify-end">
