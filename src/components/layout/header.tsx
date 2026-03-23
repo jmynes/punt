@@ -36,22 +36,26 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-zinc-800 bg-zinc-950/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/60 lg:px-6">
-      {/* Menu toggle button */}
+      {/* Menu toggle button — desktop: inline sidebar toggle, mobile: fixed above drawer */}
       {isDesktop ? (
         <Button variant="ghost" size="icon" className="shrink-0" onClick={toggleSidebar}>
           <SidebarToggleIcon isOpen={sidebarOpen} />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
       ) : (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0"
-          onClick={() => setMobileNavOpen(!mobileNavOpen)}
-        >
-          <AnimatedMenuIcon isOpen={mobileNavOpen} />
-          <span className="sr-only">Toggle navigation menu</span>
-        </Button>
+        <>
+          {/* Spacer to keep header layout consistent */}
+          <div className="h-9 w-9 shrink-0" />
+          {/* Fixed hamburger that stays above the sheet overlay (z-50) */}
+          <button
+            type="button"
+            className="fixed left-4 top-3 z-[60] flex h-9 w-9 items-center justify-center rounded-md hover:bg-white/10 active:bg-white/15 transition-colors duration-150 text-zinc-400"
+            onClick={() => setMobileNavOpen(!mobileNavOpen)}
+          >
+            <AnimatedMenuIcon isOpen={mobileNavOpen} />
+            <span className="sr-only">Toggle navigation menu</span>
+          </button>
+        </>
       )}
 
       {/* Logo */}
