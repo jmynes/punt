@@ -441,7 +441,7 @@ export default function BoardPage() {
             }}
           >
             <Plus className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">New Ticket</span>
+            New Ticket
           </Button>
         )}
       </div>
