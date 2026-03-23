@@ -468,7 +468,7 @@ function ProgressMeters({
   return (
     <>
       {/* Issues + Points grouped — never separate */}
-      <div className="flex items-center gap-4 md:gap-6 shrink-0">
+      <div className="flex items-center gap-5 shrink-0">
         {/* Issues progress */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -482,7 +482,7 @@ function ProgressMeters({
               </div>
 
               {/* Progress bar with numbers */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <div className="relative h-1.5 w-16 md:w-24 bg-zinc-800 rounded-full overflow-hidden">
                   {/* Total completion bar (dimmed when filtered) */}
                   <div
@@ -556,7 +556,7 @@ function ProgressMeters({
         </Tooltip>
 
         {/* Divider */}
-        <div className={cn('w-px bg-zinc-800/60', hasFilter ? 'h-14' : 'h-10')} />
+        <div className={cn('w-px bg-zinc-700/50', hasFilter ? 'h-12' : 'h-8')} />
 
         {/* Story points progress */}
         <Tooltip>
@@ -571,7 +571,7 @@ function ProgressMeters({
               </div>
 
               {/* Progress bar with numbers */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <div className="relative h-1.5 w-16 md:w-24 bg-zinc-800 rounded-full overflow-hidden">
                   {/* Total completion bar (dimmed when filtered) */}
                   <div
@@ -648,8 +648,8 @@ function ProgressMeters({
 
       {/* Budget meter — separate flex item so it can wrap to its own line */}
       {budget != null && budget > 0 && (
-        <div className="flex items-center gap-4 md:gap-6 shrink-0">
-          <div className={cn('w-px bg-zinc-800/60', hasFilter ? 'h-14' : 'h-10')} />
+        <div className="flex items-center gap-5 shrink-0">
+          <div className={cn('w-px bg-zinc-700/50', hasFilter ? 'h-12' : 'h-8')} />
           <BudgetMeter totalPoints={totalPoints} budget={budget} />
         </div>
       )}
