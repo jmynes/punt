@@ -2,6 +2,7 @@
 
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ReauthDialog } from '@/components/profile/reauth-dialog'
 import {
   AlertDialog,
@@ -12,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { AnimatedMenuIcon } from '@/components/ui/animated-menu-icon'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -83,13 +85,49 @@ export function MobileNav() {
 
   return (
     <>
-      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-        <SheetContent side="left" className="w-80 border-zinc-800 bg-zinc-950 p-0">
-          <SheetHeader className="border-b border-zinc-800 px-4 py-3">
+      {/* Portalled hamburger button — rendered to document.body so it's above ALL stacking contexts.
+          Always visible, animates from ☰ to ✕ in the same position as the header button. */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <button
+            type="button"
+            data-hamburger
+            className="fixed left-4 top-3 z-[9999] flex h-9 w-9 items-center justify-center rounded-md hover:bg-white/10 active:bg-white/15 transition-colors duration-150 text-zinc-400 lg:hidden"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              setMobileNavOpen(!mobileNavOpen)
+            }}
+            style={{ pointerEvents: 'auto' }}
+          >
+            <AnimatedMenuIcon isOpen={mobileNavOpen} />
+            <span className="sr-only">Toggle navigation menu</span>
+          </button>,
+          document.body,
+        )}
+
+      <Sheet
+        open={mobileNavOpen}
+        onOpenChange={(open) => {
+          // Only allow Sheet to close via overlay click, not to interfere with hamburger toggle
+          if (!open) setMobileNavOpen(false)
+        }}
+      >
+        <SheetContent
+          side="left"
+          hideClose
+          className="w-80 border-zinc-800 bg-zinc-950 p-0"
+          onInteractOutside={(e) => {
+            // Don't close if clicking the hamburger button (it handles its own toggle)
+            const target = e.target as HTMLElement
+            if (target?.closest('[data-hamburger]')) {
+              e.preventDefault()
+            }
+          }}
+        >
+          <SheetHeader className="border-b border-zinc-800 pl-14 pr-4 py-3">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white">
-                <span className="text-sm font-bold">P</span>
-              </div>
               <SheetTitle className="text-lg text-white">PUNT</SheetTitle>
             </div>
           </SheetHeader>
