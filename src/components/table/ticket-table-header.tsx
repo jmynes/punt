@@ -104,10 +104,10 @@ function SortableHeaderCell({
 
   const headerContent = (
     <div className="flex items-center gap-1">
-      {/* Drag handle */}
+      {/* Drag handle — absolute so it doesn't offset the label */}
       <button
         type="button"
-        className="cursor-grab touch-none text-zinc-600 hover:text-zinc-400 active:cursor-grabbing"
+        className="absolute left-0 top-1/2 -translate-y-1/2 cursor-grab touch-none text-zinc-600 hover:text-zinc-400 active:cursor-grabbing"
         {...attributes}
         {...listeners}
         onClick={(e) => e.stopPropagation()}

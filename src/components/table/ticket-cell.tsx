@@ -40,10 +40,10 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
       const statusName = getStatusName(ticket.columnId)
       const { icon: StatusIcon, color } = getStatusIcon(statusName)
       return (
-        <Badge variant="secondary" className="whitespace-nowrap flex items-center gap-1">
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm text-zinc-300">
           <StatusIcon className={cn('h-3.5 w-3.5', color)} aria-hidden />
           {statusName}
-        </Badge>
+        </span>
       )
     }
 
@@ -170,9 +170,7 @@ export function TicketCell({ column, ticket, projectKey, getStatusName }: Ticket
 
     case 'storyPoints':
       return ticket.storyPoints !== null ? (
-        <Badge variant="outline" className="font-mono">
-          {ticket.storyPoints}
-        </Badge>
+        <span className="text-sm font-mono text-zinc-300">{ticket.storyPoints}</span>
       ) : (
         <span className="text-zinc-500">—</span>
       )
