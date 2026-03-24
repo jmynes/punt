@@ -17,10 +17,11 @@ function findLabelByName<T extends { name: string }>(
   labels: T[],
   labelName: string,
 ): T | undefined {
+  if (!labelName.trim()) return undefined
   const nameLower = labelName.toLowerCase()
   const exactMatch = labels.find((l) => l.name.toLowerCase() === nameLower)
-  const substringMatch = labels.find((l) => l.name.toLowerCase().includes(nameLower))
-  return exactMatch ?? substringMatch
+  if (exactMatch) return exactMatch
+  return labels.find((l) => l.name.toLowerCase().includes(nameLower))
 }
 
 /**
