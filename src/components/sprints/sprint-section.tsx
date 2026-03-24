@@ -5,10 +5,12 @@ import {
   AlertTriangle,
   CalendarDays,
   CheckCircle2,
+  CheckIcon,
   ChevronDown,
   ChevronRight,
   Clock,
   Flame,
+  MinusIcon,
   Pencil,
   Play,
   Plus,
@@ -30,6 +32,7 @@ import { formatDaysRemaining, isCompletedColumn, isSprintExpired } from '@/lib/s
 import { sortTickets } from '@/lib/ticket-sort'
 import { cn } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
+import { useSelectionStore } from '@/stores/selection-store'
 import { useUIStore } from '@/stores/ui-store'
 import type {
   ColumnWithTickets,
@@ -112,6 +115,37 @@ export function SprintSection({
   const { sort, toggleSort, setSort, toggleColumnVisibility } = useBacklogStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
   const reopenSprintMutation = useReopenSprint(projectId)
+  const { selectedTicketIds, addToSelection, clearSelection } = useSelectionStore()
+
+  // Select-all for this section
+  const sectionTicketIds = useMemo(() => tickets.map((t) => t.id), [tickets])
+  const allSectionSelected =
+    sectionTicketIds.length > 0 && sectionTicketIds.every((id) => selectedTicketIds.has(id))
+  const someSectionSelected =
+    sectionTicketIds.some((id) => selectedTicketIds.has(id)) && !allSectionSelected
+
+  const handleSelectAllSection = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (allSectionSelected) {
+        // Deselect all in this section
+        const remaining = new Set(selectedTicketIds)
+        for (const id of sectionTicketIds) {
+          remaining.delete(id)
+        }
+        if (remaining.size === 0) {
+          clearSelection()
+        } else {
+          // We need to clear and re-add only the remaining
+          clearSelection()
+          addToSelection(Array.from(remaining))
+        }
+      } else {
+        addToSelection(sectionTicketIds)
+      }
+    },
+    [allSectionSelected, sectionTicketIds, selectedTicketIds, addToSelection, clearSelection],
+  )
 
   // Sort tickets locally using the shared sort utility
   const sortedTickets = useMemo(
@@ -268,13 +302,30 @@ export function SprintSection({
           style={{ backgroundColor: 'var(--table-header-bg, rgb(9 9 11))' }}
         >
           <div className="flex flex-wrap items-center gap-3">
-            {/* Identity row: chevron + icon + name + dates + time + goal.
+            {/* Identity row: checkbox + chevron + icon + name + dates + time + goal.
                 grow + shrink-0 = takes remaining space but won't compress.
                 When stats don't fit, flex-wrap moves them to next row and
                 identity stretches to full width with justify-between. */}
             <div className="flex items-center gap-3 grow shrink-0 justify-between">
-              {/* Chevron + icon + name grouped together */}
+              {/* Select-all checkbox + Chevron + icon + name grouped together */}
               <div className="flex items-center gap-3 min-w-0">
+                {/* Select all checkbox for this section */}
+                <button
+                  type="button"
+                  onClick={handleSelectAllSection}
+                  className={cn(
+                    'h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors',
+                    allSectionSelected
+                      ? 'border-amber-500 bg-amber-500 text-white'
+                      : someSectionSelected
+                        ? 'border-amber-500 bg-amber-500/30 text-amber-400'
+                        : 'border-zinc-600 bg-transparent hover:border-zinc-400',
+                  )}
+                >
+                  {allSectionSelected && <CheckIcon className="h-3 w-3" />}
+                  {someSectionSelected && !allSectionSelected && <MinusIcon className="h-3 w-3" />}
+                </button>
+
                 {/* Expand/Collapse chevron (only when collapsible) */}
                 {collapsible && (
                   <button

@@ -1,7 +1,7 @@
 'use client'
 
 import { useSortable } from '@dnd-kit/sortable'
-import { GripVertical } from 'lucide-react'
+import { CheckIcon, GripVertical } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 import { TicketContextMenu } from '@/components/board/ticket-context-menu'
 import { cn } from '@/lib/utils'
@@ -30,6 +30,7 @@ export function TicketTableRow({
   const { setActiveTicketId } = useUIStore()
   const { isSelected, selectTicket, toggleTicket, selectRange } = useSelectionStore()
   const selected = isSelected(ticket.id)
+  const hasAnySelection = useSelectionStore((s) => s.selectedTicketIds.size > 0)
 
   const { attributes, listeners, setNodeRef } = useSortable({
     id: ticket.id,
@@ -78,6 +79,14 @@ export function TicketTableRow({
     [ticket.id, selected, allTicketIds, toggleTicket, selectRange, selectTicket, setActiveTicketId],
   )
 
+  const handleCheckboxClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      toggleTicket(ticket.id)
+    },
+    [ticket.id, toggleTicket],
+  )
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -116,6 +125,14 @@ export function TicketTableRow({
       <table className="w-full border-collapse bg-zinc-800 rounded-lg shadow-2xl shadow-black/50 ring-2 ring-blue-500/50">
         <tbody>
           <tr className="select-none">
+            {/* Checkbox cell (placeholder in overlay) */}
+            <td className="w-8 px-1 py-2">
+              <div className="flex h-6 w-6 items-center justify-center">
+                <div className="h-4 w-4 rounded-[4px] border border-amber-500 bg-amber-500 flex items-center justify-center">
+                  <CheckIcon className="h-3 w-3 text-white" />
+                </div>
+              </div>
+            </td>
             <td className="w-8 px-1 py-2">
               <div className="flex h-6 w-6 items-center justify-center">
                 <GripVertical className="h-4 w-4 text-zinc-500" />
@@ -149,7 +166,7 @@ export function TicketTableRow({
       {/* Drop indicator before this row */}
       {showDropIndicator && (
         <tr>
-          <td colSpan={columns.length + 1} className="p-0">
+          <td colSpan={columns.length + 2} className="p-0">
             <DropIndicator itemCount={draggingCount} />
           </td>
         </tr>
@@ -165,6 +182,31 @@ export function TicketTableRow({
           onClick={handleClick}
           onKeyDown={handleKeyDown}
         >
+          {/* Selection checkbox */}
+          <td className="w-8 px-1 py-2">
+            <div
+              className={cn(
+                'flex h-6 w-6 items-center justify-center',
+                // Always visible when selected or any selection exists; otherwise show on hover
+                !selected && !hasAnySelection && 'opacity-0 group-hover:opacity-100',
+                'transition-opacity',
+              )}
+            >
+              <button
+                type="button"
+                onClick={handleCheckboxClick}
+                className={cn(
+                  'h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors',
+                  selected
+                    ? 'border-amber-500 bg-amber-500 text-white'
+                    : 'border-zinc-600 bg-transparent hover:border-zinc-400',
+                )}
+              >
+                {selected && <CheckIcon className="h-3 w-3" />}
+              </button>
+            </div>
+          </td>
+
           {/* Drag handle */}
           <td className="w-8 px-1 py-2">
             {!reorderDisabled && (

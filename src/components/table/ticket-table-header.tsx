@@ -2,7 +2,8 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ArrowDown, ArrowUp, EyeOff, GripVertical, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, CheckIcon, EyeOff, GripVertical, MinusIcon, X } from 'lucide-react'
+import { useCallback } from 'react'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -12,6 +13,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
+import { useSelectionStore } from '@/stores/selection-store'
 import type {
   BacklogColumn,
   SortableHeaderCellProps,
@@ -328,8 +330,24 @@ export function TicketTableHeader({
   onSetSort,
   enableColumnReorder = false,
   onHideColumn,
+  allTicketIds = [],
 }: TicketTableHeaderProps) {
   const HeaderCell = enableColumnReorder ? SortableHeaderCell : StaticHeaderCell
+  const { selectedTicketIds, addToSelection, clearSelection } = useSelectionStore()
+  const hasAnySelection = selectedTicketIds.size > 0
+
+  // Determine select-all state
+  const allSelected =
+    allTicketIds.length > 0 && allTicketIds.every((id) => selectedTicketIds.has(id))
+  const someSelected = hasAnySelection && !allSelected
+
+  const handleSelectAll = useCallback(() => {
+    if (allSelected) {
+      clearSelection()
+    } else {
+      addToSelection(allTicketIds)
+    }
+  }, [allSelected, allTicketIds, addToSelection, clearSelection])
 
   return (
     <thead
@@ -340,6 +358,26 @@ export function TicketTableHeader({
       }}
     >
       <tr className="border-b border-zinc-800">
+        {/* Select all checkbox */}
+        <th className="w-8 px-1 py-2">
+          <div className="flex h-6 w-6 items-center justify-center">
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className={cn(
+                'h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors',
+                allSelected
+                  ? 'border-amber-500 bg-amber-500 text-white'
+                  : someSelected
+                    ? 'border-amber-500 bg-amber-500/30 text-amber-400'
+                    : 'border-zinc-600 bg-transparent hover:border-zinc-400',
+              )}
+            >
+              {allSelected && <CheckIcon className="h-3 w-3" />}
+              {someSelected && !allSelected && <MinusIcon className="h-3 w-3" />}
+            </button>
+          </div>
+        </th>
         {/* Empty cell for drag handle column */}
         <th className="w-8" />
         {columns.map((column) => (

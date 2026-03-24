@@ -56,6 +56,7 @@ export function TicketTable({
           onSetSort={onSetSort}
           enableColumnReorder={enableColumnReorder}
           onHideColumn={onHideColumn}
+          allTicketIds={allTicketIds}
         />
       )}
 
@@ -84,7 +85,7 @@ export function TicketTable({
           {/* Drop indicator at end of list */}
           {dropPosition !== null && dropPosition >= tickets.length && tickets.length > 0 && (
             <tr>
-              <td colSpan={visibleColumns.length + 1} className="p-0">
+              <td colSpan={visibleColumns.length + 2} className="p-0">
                 <DropIndicator itemCount={draggingTicketIds.length} />
               </td>
             </tr>
