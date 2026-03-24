@@ -341,6 +341,9 @@ export function TicketTableHeader({
     allTicketIds.length > 0 && allTicketIds.every((id) => selectedTicketIds.has(id))
   const someSelected = hasAnySelection && !allSelected
 
+  // Header-level select-all clears the entire selection globally.
+  // This is intentionally different from section-level select-all (in SprintSection),
+  // which only removes that section's tickets and preserves cross-section selections.
   const handleSelectAll = useCallback(() => {
     if (allSelected) {
       clearSelection()
@@ -363,6 +366,9 @@ export function TicketTableHeader({
           <div className="flex h-6 w-6 items-center justify-center">
             <button
               type="button"
+              role="checkbox"
+              aria-checked={allSelected ? true : someSelected ? 'mixed' : false}
+              aria-label="Select all tickets"
               onClick={handleSelectAll}
               className={cn(
                 'h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors',

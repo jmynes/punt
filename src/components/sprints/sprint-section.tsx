@@ -115,7 +115,7 @@ export function SprintSection({
   const { sort, toggleSort, setSort, toggleColumnVisibility } = useBacklogStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
   const reopenSprintMutation = useReopenSprint(projectId)
-  const { selectedTicketIds, addToSelection, clearSelection } = useSelectionStore()
+  const { selectedTicketIds, addToSelection } = useSelectionStore()
 
   // Select-all for this section
   const sectionTicketIds = useMemo(() => tickets.map((t) => t.id), [tickets])
@@ -128,23 +128,22 @@ export function SprintSection({
     (e: React.MouseEvent) => {
       e.stopPropagation()
       if (allSectionSelected) {
-        // Deselect all in this section
+        // Deselect only this section's tickets, preserving cross-section selections.
+        // (Header-level select-all clears everything; section-level is scoped.)
         const remaining = new Set(selectedTicketIds)
         for (const id of sectionTicketIds) {
           remaining.delete(id)
         }
-        if (remaining.size === 0) {
-          clearSelection()
-        } else {
-          // We need to clear and re-add only the remaining
-          clearSelection()
-          addToSelection(Array.from(remaining))
-        }
+        // Atomic update to avoid flash from clearing then re-adding
+        useSelectionStore.setState({
+          selectedTicketIds: remaining,
+          ...(remaining.size === 0 ? { lastSelectedId: null, ticketOrigins: new Map() } : {}),
+        })
       } else {
         addToSelection(sectionTicketIds)
       }
     },
-    [allSectionSelected, sectionTicketIds, selectedTicketIds, addToSelection, clearSelection],
+    [allSectionSelected, sectionTicketIds, selectedTicketIds, addToSelection],
   )
 
   // Sort tickets locally using the shared sort utility
@@ -312,6 +311,9 @@ export function SprintSection({
                 {/* Select all checkbox for this section */}
                 <button
                   type="button"
+                  role="checkbox"
+                  aria-checked={allSectionSelected ? true : someSectionSelected ? 'mixed' : false}
+                  aria-label={`Select all tickets in ${sprint ? sprint.name : 'backlog'}`}
                   onClick={handleSelectAllSection}
                   className={cn(
                     'h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors',

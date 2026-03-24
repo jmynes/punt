@@ -194,6 +194,9 @@ export function TicketTableRow({
             >
               <button
                 type="button"
+                role="checkbox"
+                aria-checked={selected}
+                aria-label={`Select ticket ${context.projectKey}-${ticket.number ?? ticket.id}`}
                 onClick={handleCheckboxClick}
                 className={cn(
                   'h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors',
