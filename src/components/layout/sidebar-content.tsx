@@ -608,7 +608,7 @@ export function SidebarContent({
                       variant="ghost"
                       size="sm"
                       className={cn(
-                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+                        'w-full justify-start gap-2 font-medium text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
                         pathname.startsWith('/admin/system') && 'bg-zinc-800/50 text-zinc-100',
                       )}
                     >
@@ -620,7 +620,7 @@ export function SidebarContent({
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-system-settings'] ?? false}
                 >
-                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
+                  <div className="ml-4 mt-0.5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
                     <Link href="/admin/system/branding" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -708,7 +708,7 @@ export function SidebarContent({
                       variant="ghost"
                       size="sm"
                       className={cn(
-                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+                        'w-full justify-start gap-2 font-medium text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
                         pathname.startsWith('/admin/defaults') && 'bg-zinc-800/50 text-zinc-100',
                       )}
                     >
@@ -720,7 +720,7 @@ export function SidebarContent({
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-project-defaults'] ?? false}
                 >
-                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
+                  <div className="ml-4 mt-0.5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
                     <Link href="/admin/defaults/agents" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -1092,7 +1092,7 @@ function ProjectSettingsLink({
             variant="ghost"
             size="sm"
             className={cn(
-              'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+              'w-full justify-start gap-2 font-medium text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
               isOnSettingsPage && 'bg-zinc-800/50 text-zinc-100',
             )}
           >
@@ -1102,7 +1102,7 @@ function ProjectSettingsLink({
         </Link>
       </div>
       <CollapsibleSection expanded={expanded}>
-        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
+        <div className="ml-4 mt-0.5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
           {canViewSettings && (
             <Link href={`/projects/${projectKey}/settings/general`} onClick={onClick}>
               <Button
