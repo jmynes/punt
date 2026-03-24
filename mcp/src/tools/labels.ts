@@ -11,6 +11,19 @@ import {
 import { errorResponse, escapeMarkdown, safeTableCell, textResponse } from '../utils.js'
 
 /**
+ * Find a label by name using tiered matching: exact match first, then substring fallback.
+ */
+function findLabelByName<T extends { name: string }>(
+  labels: T[],
+  labelName: string,
+): T | undefined {
+  const nameLower = labelName.toLowerCase()
+  const exactMatch = labels.find((l) => l.name.toLowerCase() === nameLower)
+  const substringMatch = labels.find((l) => l.name.toLowerCase().includes(nameLower))
+  return exactMatch ?? substringMatch
+}
+
+/**
  * Format a list of labels for display
  */
 function formatLabelList(labels: LabelData[], projectKey: string): string {
@@ -94,9 +107,7 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse(listResult.error)
       }
 
-      const label = listResult.data?.find((l) =>
-        l.name.toLowerCase().includes(labelName.toLowerCase()),
-      )
+      const label = listResult.data ? findLabelByName(listResult.data, labelName) : undefined
 
       if (!label) {
         return errorResponse(`Label not found: ${labelName}`)
@@ -145,9 +156,7 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse(listResult.error)
       }
 
-      const label = listResult.data?.find((l) =>
-        l.name.toLowerCase().includes(labelName.toLowerCase()),
-      )
+      const label = listResult.data ? findLabelByName(listResult.data, labelName) : undefined
 
       if (!label) {
         return errorResponse(`Label not found: ${labelName}`)
@@ -188,9 +197,7 @@ export function registerLabelTools(server: McpServer) {
         return errorResponse(labelsResult.error)
       }
 
-      const label = labelsResult.data?.find((l) =>
-        l.name.toLowerCase().includes(labelName.toLowerCase()),
-      )
+      const label = labelsResult.data ? findLabelByName(labelsResult.data, labelName) : undefined
 
       if (!label) {
         return errorResponse(`Label not found: ${labelName}`)
@@ -257,9 +264,7 @@ export function registerLabelTools(server: McpServer) {
       }
 
       // Find the label on the ticket
-      const label = ticket.labels.find((l) =>
-        l.name.toLowerCase().includes(labelName.toLowerCase()),
-      )
+      const label = findLabelByName(ticket.labels, labelName)
 
       if (!label) {
         return errorResponse(
