@@ -620,7 +620,7 @@ export function SidebarContent({
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-system-settings'] ?? false}
                 >
-                  <div className="ml-4 mt-0.5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
+                  <div className="ml-5 mt-0.5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
                     <Link href="/admin/system/branding" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -720,7 +720,7 @@ export function SidebarContent({
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-project-defaults'] ?? false}
                 >
-                  <div className="ml-4 mt-0.5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
+                  <div className="ml-5 mt-0.5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
                     <Link href="/admin/defaults/agents" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
@@ -1102,7 +1102,7 @@ function ProjectSettingsLink({
         </Link>
       </div>
       <CollapsibleSection expanded={expanded}>
-        <div className="ml-4 mt-0.5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
+        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
           {canViewSettings && (
             <Link href={`/projects/${projectKey}/settings/general`} onClick={onClick}>
               <Button
