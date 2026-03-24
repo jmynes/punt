@@ -90,6 +90,7 @@ function SortableHeaderCell({
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column.id,
+    data: { type: 'column' },
   })
 
   const handleSortClick =
