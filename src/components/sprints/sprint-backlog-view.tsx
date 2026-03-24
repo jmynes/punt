@@ -258,7 +258,11 @@ export function SprintBacklogView({
   // Tickets stay visible during drag, so we use their actual index
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
-      const { over } = event
+      const { active, over } = event
+
+      // Column reordering is handled by dnd-kit's SortableContext — skip ticket logic
+      if (active.data.current?.type === 'column') return
+
       if (!over) {
         setDropPosition(null)
         return
@@ -341,6 +345,9 @@ export function SprintBacklogView({
     (event: DragEndEvent) => {
       const draggedIds = draggedIdsRef.current
       const { active, over } = event
+
+      // Column reordering is handled by dnd-kit's SortableContext — skip ticket logic
+      if (active.data.current?.type === 'column') return
 
       // Capture drop position before clearing state
       const currentDropPosition = dropPosition

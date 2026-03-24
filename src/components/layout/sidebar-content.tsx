@@ -594,7 +594,7 @@ export function SidebarContent({
                 <div className="flex items-center">
                   <button
                     type="button"
-                    className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
+                    className="ml-0.5 h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
                     onClick={() => toggleSidebarSection('section-system-settings')}
                   >
                     {(sidebarExpandedSections['section-system-settings'] ?? false) ? (
@@ -608,7 +608,7 @@ export function SidebarContent({
                       variant="ghost"
                       size="sm"
                       className={cn(
-                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+                        'w-full justify-start gap-2 font-medium text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
                         pathname.startsWith('/admin/system') && 'bg-zinc-800/50 text-zinc-100',
                       )}
                     >
@@ -620,13 +620,13 @@ export function SidebarContent({
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-system-settings'] ?? false}
                 >
-                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
+                  <div className="ml-4.5 mt-0.5 space-y-0.5 border-l border-zinc-700/50 pl-4 pb-1">
                     <Link href="/admin/system/branding" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                           pathname === '/admin/system/branding' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
@@ -639,7 +639,7 @@ export function SidebarContent({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                           pathname === '/admin/system/database' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
@@ -652,7 +652,7 @@ export function SidebarContent({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                           pathname === '/admin/system/email' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
@@ -665,7 +665,7 @@ export function SidebarContent({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                           pathname === '/admin/system/uploads' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
@@ -678,7 +678,7 @@ export function SidebarContent({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                           pathname === '/admin/system/updates' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
@@ -694,7 +694,7 @@ export function SidebarContent({
                 <div className="flex items-center">
                   <button
                     type="button"
-                    className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
+                    className="ml-0.5 h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
                     onClick={() => toggleSidebarSection('section-project-defaults')}
                   >
                     {(sidebarExpandedSections['section-project-defaults'] ?? false) ? (
@@ -708,7 +708,7 @@ export function SidebarContent({
                       variant="ghost"
                       size="sm"
                       className={cn(
-                        'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+                        'w-full justify-start gap-2 font-medium text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
                         pathname.startsWith('/admin/defaults') && 'bg-zinc-800/50 text-zinc-100',
                       )}
                     >
@@ -720,13 +720,13 @@ export function SidebarContent({
                 <CollapsibleSection
                   expanded={sidebarExpandedSections['section-project-defaults'] ?? false}
                 >
-                  <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
+                  <div className="ml-4.5 mt-0.5 space-y-0.5 border-l border-zinc-700/50 pl-4 pb-1">
                     <Link href="/admin/defaults/agents" onClick={handleLinkClick}>
                       <Button
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                           pathname === '/admin/defaults/agents' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
@@ -739,7 +739,7 @@ export function SidebarContent({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                           pathname === '/admin/defaults/board' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
@@ -752,7 +752,7 @@ export function SidebarContent({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                           pathname === '/admin/defaults/hooks' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
@@ -765,7 +765,7 @@ export function SidebarContent({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                           pathname === '/admin/defaults/repository' &&
                             'bg-zinc-800/50 text-zinc-100',
                         )}
@@ -779,7 +779,7 @@ export function SidebarContent({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                           pathname === '/admin/defaults/roles' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
@@ -792,7 +792,7 @@ export function SidebarContent({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                          'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                           pathname === '/admin/defaults/sprints' && 'bg-zinc-800/50 text-zinc-100',
                         )}
                       >
@@ -1074,7 +1074,7 @@ function ProjectSettingsLink({
       <div className="flex items-center">
         <button
           type="button"
-          className="h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
+          className="ml-0.5 h-8 w-8 shrink-0 flex items-center justify-center text-zinc-500 hover:text-zinc-300 select-none rounded hover:bg-zinc-800/50"
           onClick={onToggleExpanded}
         >
           {expanded ? (
@@ -1092,7 +1092,7 @@ function ProjectSettingsLink({
             variant="ghost"
             size="sm"
             className={cn(
-              'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
+              'w-full justify-start gap-2 font-medium text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800/50 h-8 pl-1',
               isOnSettingsPage && 'bg-zinc-800/50 text-zinc-100',
             )}
           >
@@ -1102,14 +1102,14 @@ function ProjectSettingsLink({
         </Link>
       </div>
       <CollapsibleSection expanded={expanded}>
-        <div className="ml-4 space-y-0.5 border-l border-zinc-800 pl-3 pb-1">
+        <div className="ml-4.5 mt-0.5 space-y-0.5 border-l border-zinc-700/50 pl-4 pb-1">
           {canViewSettings && (
             <Link href={`/projects/${projectKey}/settings/general`} onClick={onClick}>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                   pathname === `/projects/${projectKey}/settings/general` &&
                     'bg-zinc-800/50 text-zinc-100',
                 )}
@@ -1125,7 +1125,7 @@ function ProjectSettingsLink({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                   pathname === `/projects/${projectKey}/settings/agents` &&
                     'bg-zinc-800/50 text-zinc-100',
                 )}
@@ -1141,7 +1141,7 @@ function ProjectSettingsLink({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                   pathname === `/projects/${projectKey}/settings/hooks` &&
                     'bg-zinc-800/50 text-zinc-100',
                 )}
@@ -1157,7 +1157,7 @@ function ProjectSettingsLink({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                   pathname === `/projects/${projectKey}/settings/labels` &&
                     'bg-zinc-800/50 text-zinc-100',
                 )}
@@ -1173,7 +1173,7 @@ function ProjectSettingsLink({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                   pathname === `/projects/${projectKey}/settings/members` &&
                     'bg-zinc-800/50 text-zinc-100',
                 )}
@@ -1189,7 +1189,7 @@ function ProjectSettingsLink({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                   pathname === `/projects/${projectKey}/settings/repository` &&
                     'bg-zinc-800/50 text-zinc-100',
                 )}
@@ -1205,7 +1205,7 @@ function ProjectSettingsLink({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                   pathname === `/projects/${projectKey}/settings/roles` &&
                     'bg-zinc-800/50 text-zinc-100',
                 )}
@@ -1221,7 +1221,7 @@ function ProjectSettingsLink({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'w-full justify-start gap-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 h-7 text-xs',
+                  'w-full justify-start gap-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/50 h-6 text-xs',
                   pathname === `/projects/${projectKey}/settings/sprints` &&
                     'bg-zinc-800/50 text-zinc-100',
                 )}

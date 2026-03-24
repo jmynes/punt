@@ -66,7 +66,12 @@ const createPointerCollisionDetection = (
   sprintContainerRef?: React.RefObject<HTMLDivElement | null>,
 ): CollisionDetection => {
   return (args) => {
-    const { pointerCoordinates, droppableRects, droppableContainers } = args
+    const { pointerCoordinates, droppableRects, droppableContainers, active } = args
+
+    // Column reordering uses standard rect intersection (not custom ticket logic)
+    if (active.data.current?.type === 'column') {
+      return rectIntersection(args)
+    }
 
     // Fallback to rect intersection for keyboard navigation
     if (!pointerCoordinates) {
@@ -665,7 +670,11 @@ export default function BacklogPage() {
 
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
-      const { over } = event
+      const { active, over } = event
+
+      // Column reordering is handled by dnd-kit's SortableContext — skip ticket logic
+      if (active.data.current?.type === 'column') return
+
       if (!over) {
         setDropPosition(null)
         return
@@ -760,11 +769,8 @@ export default function BacklogPage() {
       // Clear the captured drag data
       activeDragDataRef.current = { type: undefined, sprintId: undefined }
 
-      // Get visible backlog column IDs for column reordering detection
-      const visibleColumnIds = backlogColumns.filter((c) => c.visible).map((c) => c.id)
-
       // Case 1: Column reordering in backlog table
-      if (visibleColumnIds.includes(activeId as (typeof visibleColumnIds)[number])) {
+      if (active.data.current?.type === 'column') {
         if (activeId !== overId) {
           const oldIndex = backlogColumns.findIndex((c) => c.id === activeId)
           const newIndex = backlogColumns.findIndex((c) => c.id === overId)
