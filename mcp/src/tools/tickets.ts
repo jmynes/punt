@@ -14,6 +14,7 @@ import {
   listSprints,
   listTicketLinks,
   listTickets,
+  moveTicketToProject,
   searchTickets,
   type TicketData,
   type TicketLinkData,
@@ -1298,6 +1299,64 @@ export function registerTicketTools(server: McpServer) {
       }
 
       return textResponse(`Removed link from **${key}**`)
+    },
+  )
+
+  // move_ticket_to_project - Move a ticket to a different project
+  server.tool(
+    'move_ticket_to_project',
+    'Move a ticket to a different project. The ticket gets re-keyed (e.g., PUNT-5 → DLS-12). ' +
+      'Project-scoped fields (sprint, labels, parent, ticket links) are cleared. ' +
+      'Assignee is cleared if not a member of the target project.',
+    {
+      key: z.string().describe('Ticket key (e.g., PUNT-5)'),
+      targetProject: z.string().describe('Target project key (e.g., DLS)'),
+    },
+    async ({ key, targetProject }) => {
+      const parsed = parseTicketKey(key)
+      if (!parsed) {
+        return errorResponse(`Invalid ticket key format: ${key}`)
+      }
+
+      if (parsed.projectKey.toUpperCase() === targetProject.toUpperCase()) {
+        return errorResponse('Cannot move ticket to the same project')
+      }
+
+      // Get the ticket to find its ID
+      const ticketsResult = await listTickets(parsed.projectKey)
+      if (ticketsResult.error) {
+        return errorResponse(ticketsResult.error)
+      }
+
+      const existingTicket = ticketsResult.data?.find((t) => t.number === parsed.number)
+      if (!existingTicket) {
+        return errorResponse(`Ticket not found: ${key}`)
+      }
+
+      const result = await moveTicketToProject(parsed.projectKey, existingTicket.id, targetProject)
+      if (result.error) {
+        return errorResponse(result.error)
+      }
+
+      const moved = result.data
+      const newKey = moved
+        ? `${targetProject.toUpperCase()}-${moved.ticket.number}`
+        : targetProject.toUpperCase()
+
+      const lines: string[] = []
+      lines.push(`Moved **${key}** → **${newKey}**`)
+      lines.push('')
+      lines.push(`**Title:** ${escapeMarkdown(existingTicket.title)}`)
+      if (moved) {
+        lines.push(`**Status:** ${escapeMarkdown(moved.ticket.column.name)}`)
+        if (moved.ticket.assignee) {
+          lines.push(`**Assignee:** ${escapeMarkdown(moved.ticket.assignee.name)}`)
+        } else if (existingTicket.assignee) {
+          lines.push('**Assignee:** cleared (not a member of target project)')
+        }
+      }
+
+      return textResponse(lines.join('\n'))
     },
   )
 }
