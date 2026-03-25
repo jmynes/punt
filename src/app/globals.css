@@ -87,9 +87,6 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    /* Global custom scrollbar for all scrollable elements */
-    scrollbar-width: thin;
-    scrollbar-color: oklch(0.4 0 0) transparent;
   }
 
   /* Webkit (Chromium, Safari) global scrollbar styles */
