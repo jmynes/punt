@@ -239,13 +239,14 @@ export function GlobalTicketSearch() {
       >
         <Search className="h-4 w-4 shrink-0" />
         <span className="flex-1 text-left">Search tickets...</span>
-        <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border border-zinc-700 bg-zinc-800 px-1.5 font-mono text-[10px] font-medium text-zinc-500 sm:flex">
-          <span className="text-xs">
+        <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border border-zinc-700 bg-zinc-800 px-1.5 font-mono text-[10px] font-medium text-zinc-500 sm:inline-flex">
+          <span>
             {typeof navigator !== 'undefined' && /Mac/i.test(navigator.userAgent)
               ? '\u2318'
               : 'Ctrl'}
           </span>
-          K
+          <span>+</span>
+          <span>K</span>
         </kbd>
       </button>
 
