@@ -30,7 +30,7 @@ import { formatDaysRemaining, isCompletedColumn, isSprintExpired } from '@/lib/s
 import { sortTickets } from '@/lib/ticket-sort'
 import { cn } from '@/lib/utils'
 import { useBacklogStore } from '@/stores/backlog-store'
-import { useSelectionStore } from '@/stores/selection-store'
+
 import { useUIStore } from '@/stores/ui-store'
 import type {
   ColumnWithTickets,
@@ -113,7 +113,6 @@ export function SprintSection({
   const { sort, toggleSort, setSort, toggleColumnVisibility } = useBacklogStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
   const reopenSprintMutation = useReopenSprint(projectId)
-  const { selectedTicketIds } = useSelectionStore()
 
   // Sort tickets locally using the shared sort utility
   const sortedTickets = useMemo(

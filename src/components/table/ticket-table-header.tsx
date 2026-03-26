@@ -333,24 +333,27 @@ export function TicketTableHeader({
   allTicketIds = [],
 }: TicketTableHeaderProps) {
   const HeaderCell = enableColumnReorder ? SortableHeaderCell : StaticHeaderCell
-  const { selectedTicketIds, addToSelection, clearSelection } = useSelectionStore()
-  const hasAnySelection = selectedTicketIds.size > 0
-
-  // Determine select-all state
+  const { selectedTicketIds, addToSelection } = useSelectionStore()
+  // Determine select-all state scoped to this table's tickets only
   const allSelected =
     allTicketIds.length > 0 && allTicketIds.every((id) => selectedTicketIds.has(id))
-  const someSelected = hasAnySelection && !allSelected
+  const someSelected = allTicketIds.some((id) => selectedTicketIds.has(id)) && !allSelected
 
-  // Header-level select-all clears the entire selection globally.
-  // This is intentionally different from section-level select-all (in SprintSection),
-  // which only removes that section's tickets and preserves cross-section selections.
+  // Scoped select-all: only toggles this table's tickets, preserving other sections' selections.
   const handleSelectAll = useCallback(() => {
     if (allSelected) {
-      clearSelection()
+      const remaining = new Set(selectedTicketIds)
+      for (const id of allTicketIds) {
+        remaining.delete(id)
+      }
+      useSelectionStore.setState({
+        selectedTicketIds: remaining,
+        ...(remaining.size === 0 ? { lastSelectedId: null, ticketOrigins: new Map() } : {}),
+      })
     } else {
       addToSelection(allTicketIds)
     }
-  }, [allSelected, allTicketIds, addToSelection, clearSelection])
+  }, [allSelected, allTicketIds, selectedTicketIds, addToSelection])
 
   return (
     <thead
