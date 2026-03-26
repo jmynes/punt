@@ -326,7 +326,6 @@ export default function BacklogPage() {
     setQueryMode,
     sort: globalSort,
     setSort: globalSetSort,
-    toggleSort: globalToggleSort,
     setColumnConfigOpen,
     filterByType,
     filterByPriority,
@@ -346,7 +345,8 @@ export default function BacklogPage() {
 
   // Per-section sort support
   const unifiedSort = useSettingsStore((s) => s.unifiedSort)
-  const { getSprintSort, setSprintSort, clearAllSprintSorts } = useSprintStore()
+  const persistTableSort = useSettingsStore((s) => s.persistTableSort)
+  const { getSprintSort, clearAllSprintSorts } = useSprintStore()
 
   // Helper to get the effective sort for a section
   const getSectionSort = useCallback(
@@ -360,47 +360,16 @@ export default function BacklogPage() {
   // Effective sort for the backlog section
   const sort = getSectionSort('backlog')
 
-  // Set sort for backlog section (used by backlog table header)
-  const setSort = useCallback(
-    (newSort: typeof globalSort) => {
-      if (unifiedSort) {
-        globalSetSort(newSort)
-      } else {
-        setSprintSort('backlog', newSort)
-      }
-    },
-    [unifiedSort, globalSetSort, setSprintSort],
-  )
-
-  // Toggle sort for backlog section
-  const toggleSort = useCallback(
-    (columnId: string) => {
-      if (unifiedSort) {
-        globalToggleSort(columnId as Parameters<typeof globalToggleSort>[0])
-      } else {
-        const column = backlogColumns.find((c) => c.id === columnId)
-        if (!column?.sortable) return
-
-        const currentSort = getSprintSort('backlog')
-        if (currentSort?.column === columnId) {
-          if (currentSort.direction === 'asc') {
-            setSprintSort('backlog', {
-              column: columnId as Parameters<typeof globalToggleSort>[0],
-              direction: 'desc',
-            })
-          } else {
-            setSprintSort('backlog', null)
-          }
-        } else {
-          setSprintSort('backlog', {
-            column: columnId as Parameters<typeof globalToggleSort>[0],
-            direction: 'asc',
-          })
-        }
-      }
-    },
-    [unifiedSort, globalToggleSort, backlogColumns, getSprintSort, setSprintSort],
-  )
+  // Clear sprint sorts after hydration when sort persistence is disabled
+  const sprintHydrated = useSprintStore((s) => s._hasHydrated)
+  const sortResetRef = useRef(false)
+  useEffect(() => {
+    if (!sortResetRef.current && sprintHydrated && !persistTableSort) {
+      sortResetRef.current = true
+      globalSetSort({ column: 'key', direction: 'desc' })
+      clearAllSprintSorts()
+    }
+  }, [sprintHydrated, persistTableSort, globalSetSort, clearAllSprintSorts])
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
   useTabCycleShortcut({ tabs: getProjectViewTabs(projectKey) })
@@ -551,19 +520,6 @@ export default function BacklogPage() {
 
     return groups
   }, [allTickets, sprints])
-
-  // Sort persistence reset
-  const persistTableSort = useSettingsStore((s) => s.persistTableSort)
-  const sortResetRef = useRef(false)
-  useEffect(() => {
-    if (!sortResetRef.current) {
-      sortResetRef.current = true
-      if (!persistTableSort) {
-        globalSetSort({ column: 'key', direction: 'desc' })
-        clearAllSprintSorts()
-      }
-    }
-  }, [persistTableSort, globalSetSort, clearAllSprintSorts])
 
   // Debounce query text
   const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)

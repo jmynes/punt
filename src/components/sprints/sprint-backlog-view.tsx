@@ -92,16 +92,15 @@ export function SprintBacklogView({
     [unifiedSort, globalSort, getSprintSort],
   )
 
-  // Clear sprint sorts on mount when sort persistence is disabled
+  // Clear sprint sorts after hydration when sort persistence is disabled
+  const sprintHydrated = useSprintStore((s) => s._hasHydrated)
   const sortResetRef = useRef(false)
   useEffect(() => {
-    if (!sortResetRef.current) {
+    if (!sortResetRef.current && sprintHydrated && !persistTableSort) {
       sortResetRef.current = true
-      if (!persistTableSort) {
-        clearAllSprintSorts()
-      }
+      clearAllSprintSorts()
     }
-  }, [persistTableSort, clearAllSprintSorts])
+  }, [sprintHydrated, persistTableSort, clearAllSprintSorts])
 
   // Extract dynamic values for query autocomplete
   const dynamicValues = useMemo(() => {
