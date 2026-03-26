@@ -54,7 +54,7 @@ export function KanbanBoard({
   activeSprintId = null,
 }: KanbanBoardProps) {
   const queryClient = useQueryClient()
-  const { getColumns, setColumns, _hasHydrated } = useBoardStore()
+  const { getColumns, setColumns, getColumnSort, _hasHydrated } = useBoardStore()
   const { setCreateTicketOpen } = useUIStore()
   const canManageBoard = useHasPermission(projectId, PERMISSIONS.BOARD_MANAGE)
 
@@ -374,6 +374,20 @@ export function KanbanBoard({
       const isSameColumn = sourceColumn.id === targetColumnId
       const tabId = getTabId()
 
+      // Block reorder when column has an active sort
+      if (isSameColumn && getColumnSort(targetColumnId) !== 'manual') {
+        showToast.info('Clear column sort to reorder manually', {
+          description: 'Click the sort option in the column menu to remove sorting',
+        })
+        setActiveTicket(null)
+        setDraggingTicketIds([])
+        insertPositionRef.current = null
+        setInsertPosition(null)
+        beforeDragSnapshot.current = null
+        draggedIdsRef.current = []
+        return
+      }
+
       // Delegate to unified action layer (handles optimistic update, resolution coupling,
       // undo registration, toast, API persistence, and error rollback)
       if (isSameColumn) {
@@ -421,7 +435,7 @@ export function KanbanBoard({
         useSelectionStore.getState().clearSelection()
       }
     },
-    [projectId, projectKey, columns, setColumns, queryClient],
+    [projectId, projectKey, columns, setColumns, getColumnSort, queryClient],
   )
 
   // Show loading skeleton until Zustand hydrates from localStorage
